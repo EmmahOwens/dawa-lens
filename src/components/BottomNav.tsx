@@ -13,8 +13,8 @@ export default function BottomNav() {
   const location = useLocation();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-lg safe-bottom">
-      <div className="mx-auto flex max-w-lg items-center justify-around py-2">
+    <nav className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg md:hidden">
+      <div className="flex items-center justify-around rounded-2xl border border-border bg-card/80 py-2 shadow-lg backdrop-blur-xl safe-bottom">
         {navItems.map(({ to, icon: Icon, label }) => {
           const active = location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
           return (
