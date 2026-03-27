@@ -1,25 +1,52 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AppProvider } from "@/contexts/AppContext";
+import AppShell from "@/components/AppShell";
+import Dashboard from "@/pages/Dashboard";
+import ScanPage from "@/pages/ScanPage";
+import ResultsPage from "@/pages/ResultsPage";
+import MedicineInfoPage from "@/pages/MedicineInfoPage";
+import AddReminderPage from "@/pages/AddReminderPage";
+import HistoryPage from "@/pages/HistoryPage";
+import SettingsPage from "@/pages/SettingsPage";
+import AuthPage from "@/pages/AuthPage";
+import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AppProvider>
+        <Toaster />
+        <BrowserRouter>
+          <Routes>
+            {/* Scan page is full-screen, no shell */}
+            <Route path="/scan" element={<ScanPage />} />
+            <Route path="/auth" element={<AuthPage />} />
+            {/* All other pages use AppShell with bottom nav */}
+            <Route
+              path="*"
+              element={
+                <AppShell>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/results" element={<ResultsPage />} />
+                    <Route path="/medicine/:name" element={<MedicineInfoPage />} />
+                    <Route path="/search" element={<MedicineInfoPage />} />
+                    <Route path="/reminders/new" element={<AddReminderPage />} />
+                    <Route path="/history" element={<HistoryPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </AppShell>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </AppProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
