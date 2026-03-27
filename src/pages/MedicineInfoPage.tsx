@@ -5,51 +5,30 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-type DrugInfo = {
-  name: string;
-  genericName: string;
-  uses: string;
-  warnings: string;
-  sideEffects: string;
-  dosage: string;
-  source: string;
-};
-
-const demoInfo: DrugInfo = {
-  name: "Ibuprofen 200mg",
-  genericName: "Ibuprofen",
-  uses: "Used to reduce fever and treat pain or inflammation. Common for headaches, toothaches, back pain, arthritis, menstrual cramps, and minor injuries.",
-  warnings: "Do not use if you have had an allergic reaction to aspirin or any other NSAID. May increase risk of heart attack or stroke with long-term use.",
-  sideEffects: "Stomach pain, nausea, vomiting, headache, dizziness, drowsiness. Serious: stomach bleeding, kidney problems, allergic reactions.",
-  dosage: "Adults: 200-400mg every 4-6 hours as needed. Maximum 1200mg per day unless directed by a doctor.",
-  source: "FDA / DailyMed",
-};
+import { useDrugData } from "@/hooks/useDrugData";
 
 export default function MedicineInfoPage() {
   const { name } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [query, setQuery] = useState(name || searchParams.get("q") || "");
-  const [info, setInfo] = useState<DrugInfo | null>(name ? demoInfo : null);
-  const [searching, setSearching] = useState(false);
+  const initialQuery = name || searchParams.get("q") || "";
+  const [searchInput, setSearchInput] = useState(initialQuery);
+  const [activeQuery, setActiveQuery] = useState(initialQuery);
+  
+  const { data: info, isLoading: searching, isError, error } = useDrugData(activeQuery);
 
   const handleSearch = () => {
-    if (!query.trim()) return;
-    setSearching(true);
-    // Simulated lookup
-    setTimeout(() => {
-      setInfo({ ...demoInfo, name: query, genericName: query.split(" ")[0] });
-      setSearching(false);
-    }, 800);
+    if (!searchInput.trim()) return;
+    setActiveQuery(searchInput);
   };
 
   const sections = info
     ? [
-        { title: "Uses", content: info.uses },
-        { title: "Dosage", content: info.dosage },
-        { title: "Warnings", content: info.warnings },
-        { title: "Side Effects", content: info.sideEffects },
-      ]
+        { title: "Uses", content: info.indications || "Not available" },
+        { title: "Dosage", content: info.instructions || info.dosageForm || "Not available" },
+        { title: "Warnings", content: info.warnings || "Not available" },
+        { title: "Side Effects", content: info.sideEffects || "Not available" },
+      ].filter(s => s.content && s.content !== "Not available")
     : [];
 
   return (
@@ -66,8 +45,8 @@ export default function MedicineInfoPage() {
       {/* Search bar */}
       <div className="flex gap-2 mb-6">
         <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder="Search medicine name..."
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
         />
@@ -76,11 +55,22 @@ export default function MedicineInfoPage() {
         </Button>
       </div>
 
+      {isError && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 mb-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={16} className="text-destructive mt-0.5 shrink-0" />
+            <p className="text-xs text-destructive leading-relaxed">
+              {error instanceof Error ? error.message : "Failed to load information."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {info && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
             <h2 className="text-lg font-bold text-foreground">{info.name}</h2>
-            <p className="text-sm text-muted-foreground">Generic: {info.genericName}</p>
+            {info.genericName && <p className="text-sm text-muted-foreground">Generic: {info.genericName}</p>}
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
               <ExternalLink size={12} /> Source: {info.source}
             </p>
@@ -104,7 +94,7 @@ export default function MedicineInfoPage() {
         </motion.div>
       )}
 
-      {!info && !searching && (
+      {!info && !searching && !isError && (
         <div className="text-center py-16">
           <Pill size={40} className="text-muted-foreground/40 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">Enter a medicine name to look up information</p>
