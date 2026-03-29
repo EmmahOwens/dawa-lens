@@ -1,9 +1,13 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, AlertTriangle, ExternalLink, Pill } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, AlertTriangle, ExternalLink, Pill, ShieldAlert } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useApp } from "@/contexts/AppContext";
+import { getRxCUI, checkInteractions } from "@/services/interactionChecker";
+import { ParsedInteraction } from "@/types/interactions";
 
 import { useDrugData } from "@/hooks/useDrugData";
 
@@ -16,6 +20,34 @@ export default function MedicineInfoPage() {
   const [activeQuery, setActiveQuery] = useState(initialQuery);
   
   const { data: info, isLoading: searching, isError, error } = useDrugData(activeQuery);
+  const { medicines } = useApp();
+  const [interactions, setInteractions] = useState<ParsedInteraction[]>([]);
+
+  useEffect(() => {
+    async function checkCurrentDrug() {
+      if (!info?.name) {
+        setInteractions([]);
+        return;
+      }
+      
+      const targetRxcui = await getRxCUI(info.name);
+      if (!targetRxcui) return;
+
+      const savedRxcuis = medicines.map(m => m.rxcui).filter((id): id is string => !!id);
+      if (savedRxcuis.length === 0) return;
+
+      const allRxcuis = [...savedRxcuis, targetRxcui];
+      const results = await checkInteractions(allRxcuis);
+      const preExisting = await checkInteractions(savedRxcuis);
+      
+      const newInteractions = results.filter(r => 
+        !preExisting.some(pre => (pre.drug1 === r.drug1 && pre.drug2 === r.drug2) || (pre.drug1 === r.drug2 && pre.drug2 === r.drug1))
+      );
+      
+      setInteractions(newInteractions);
+    }
+    checkCurrentDrug();
+  }, [info?.name, medicines]);
 
   const handleSearch = () => {
     if (!searchInput.trim()) return;
@@ -68,6 +100,21 @@ export default function MedicineInfoPage() {
 
       {info && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+          
+          {interactions.length > 0 && (
+            <div className="space-y-2 mb-2">
+              {interactions.map((interaction, i) => (
+                <Alert key={i} variant="destructive" className="bg-destructive/10 border-destructive">
+                  <ShieldAlert className="h-5 w-5" />
+                  <AlertTitle>Severe Interaction Warning!</AlertTitle>
+                  <AlertDescription className="text-sm mt-1 leading-relaxed">
+                    <strong>{interaction.drug1}</strong> and <strong>{interaction.drug2}</strong>: {interaction.description}
+                  </AlertDescription>
+                </Alert>
+              ))}
+            </div>
+          )}
+
           <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
             <h2 className="text-lg font-bold text-foreground">{info.name}</h2>
             {info.genericName && <p className="text-sm text-muted-foreground">Generic: {info.genericName}</p>}

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { getRxCUI } from "../services/interactionChecker";
 
 export type Medicine = {
   id: string;
@@ -7,6 +8,7 @@ export type Medicine = {
   dosage: string;
   imageUrl?: string;
   notes?: string;
+  rxcui?: string;
   addedAt: string;
 };
 
@@ -40,6 +42,7 @@ type AppContextType = {
   privacyMode: boolean;
   isLoggedIn: boolean;
   addMedicine: (med: Omit<Medicine, "id" | "addedAt">) => Medicine;
+  updateMedicine: (id: string, updates: Partial<Medicine>) => void;
   addReminder: (rem: Omit<Reminder, "id" | "createdAt">) => void;
   updateReminder: (id: string, rem: Partial<Reminder>) => void;
   deleteReminder: (id: string) => void;
@@ -74,9 +77,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem("med_loggedin", JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
 
   const addMedicine = (med: Omit<Medicine, "id" | "addedAt">) => {
-    const newMed: Medicine = { ...med, id: crypto.randomUUID(), addedAt: new Date().toISOString() };
+    const newId = crypto.randomUUID();
+    const newMed: Medicine = { ...med, id: newId, addedAt: new Date().toISOString() };
     setMedicines((p) => [...p, newMed]);
+    
+    if (!newMed.rxcui) {
+      getRxCUI(newMed.name).then(rxcui => {
+        if (rxcui) {
+          setMedicines((p) => p.map((m) => (m.id === newId ? { ...m, rxcui } : m)));
+        }
+      });
+    }
+
     return newMed;
+  };
+
+  const updateMedicine = (id: string, updates: Partial<Medicine>) => {
+    setMedicines((p) => p.map((m) => (m.id === id ? { ...m, ...updates } : m)));
   };
 
   const addReminder = (rem: Omit<Reminder, "id" | "createdAt">) => {
@@ -103,7 +120,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppContext.Provider
-      value={{ medicines, reminders, doseLogs, privacyMode, isLoggedIn, addMedicine, addReminder, updateReminder, deleteReminder, logDose, setPrivacyMode, setIsLoggedIn, clearAllData }}
+      value={{ medicines, reminders, doseLogs, privacyMode, isLoggedIn, addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder, logDose, setPrivacyMode, setIsLoggedIn, clearAllData }}
     >
       {children}
     </AppContext.Provider>

@@ -13,6 +13,7 @@ import HistoryPage from "@/pages/HistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
+import InteractionsPage from "@/pages/InteractionsPage";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
                     <Route path="/search" element={<MedicineInfoPage />} />
                     <Route path="/reminders/new" element={<AddReminderPage />} />
                     <Route path="/history" element={<HistoryPage />} />
+                    <Route path="/interactions" element={<InteractionsPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>

@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Camera, Clock, History, Settings } from "lucide-react";
+import { Home, Camera, Clock, History, Settings, ShieldAlert } from "lucide-react";
 
 const navItems = [
   { to: "/", icon: Home, label: "Home" },
   { to: "/scan", icon: Camera, label: "Scan" },
-  { to: "/reminders/new", icon: Clock, label: "Remind" },
   { to: "/history", icon: History, label: "History" },
-  { to: "/settings", icon: Settings, label: "Settings" },
+  { to: "/interactions", icon: ShieldAlert, label: "Safety" },
+  { to: "/settings", icon: Settings, label: "Options" },
 ];
 
 export default function BottomNav() {

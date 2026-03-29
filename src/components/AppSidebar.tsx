@@ -1,4 +1,4 @@
-import { Home, Camera, Clock, History, Settings } from "lucide-react";
+import { Home, Camera, Clock, History, Settings, CopyPlus } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -18,6 +18,7 @@ const items = [
   { title: "Scan", url: "/scan", icon: Camera },
   { title: "Remind", url: "/reminders/new", icon: Clock },
   { title: "History", url: "/history", icon: History },
+  { title: "Safety checks", url: "/interactions", icon: CopyPlus },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
