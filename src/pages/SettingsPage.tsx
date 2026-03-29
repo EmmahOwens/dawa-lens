@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { privacyMode, setPrivacyMode, clearAllData, isLoggedIn, setIsLoggedIn } = useApp();
+  const { privacyMode, setPrivacyMode, clearAllData, isLoggedIn, logoutUser } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
 
@@ -67,7 +67,7 @@ export default function SettingsPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  setIsLoggedIn(false);
+                  logoutUser();
                   toast({ title: "Logged out" });
                 }}
               >
