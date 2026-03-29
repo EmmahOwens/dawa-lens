@@ -1,8 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Camera, X, SwitchCamera, Zap, Upload } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Camera, X, SwitchCamera, Zap, Upload, Pill, FileText, ScanBarcode } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
+
+export type ScanMode = "pill" | "text" | "barcode";
 
 export default function ScanPage() {
   const navigate = useNavigate();
@@ -12,12 +15,21 @@ export default function ScanPage() {
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [capturing, setCapturing] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
+  
+  const [scanMode, setScanMode] = useState<ScanMode>("pill");
+  const [scanner, setScanner] = useState<Html5Qrcode | null>(null);
 
   const startCamera = useCallback(async () => {
+    if (scanMode === "barcode") return; // Let html5-qrcode handle it
+    
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
+      if (scanner) {
+        if (scanner.isScanning) await scanner.stop();
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 960 } },
       });
@@ -30,17 +42,52 @@ export default function ScanPage() {
     } catch {
       // camera unavailable
     }
-  }, [facingMode]);
+  }, [facingMode, scanMode, scanner]);
+
+  const startBarcodeScanner = useCallback(async () => {
+    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+    setStreaming(true);
+    
+    const html5Qrcode = new Html5Qrcode("barcode-reader");
+    setScanner(html5Qrcode);
+    
+    try {
+      await html5Qrcode.start(
+        { facingMode },
+        { fps: 10, qrbox: { width: 250, height: 100 } },
+        (decodedText) => {
+          // Send barcode immediately to results
+          html5Qrcode.stop();
+          navigate("/results", { state: { barcode: decodedText, mode: "barcode" } });
+        },
+        (errorMessage) => {
+          // ignore scan errors, they happen constantly
+        }
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  }, [facingMode, navigate]);
 
   useEffect(() => {
-    startCamera();
+    if (scanMode === "barcode") {
+      startBarcodeScanner();
+    } else {
+      startCamera();
+    }
+    
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (scanner && scanner.isScanning) {
+        scanner.stop().catch(()=>console.log("stop error"));
+      }
     };
-  }, [startCamera]);
+  }, [startCamera, startBarcodeScanner, scanMode]);
 
   const capture = () => {
+    if (scanMode === "barcode") return;
     if (!videoRef.current || !canvasRef.current) return;
+    
     setCapturing(true);
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -48,9 +95,9 @@ export default function ScanPage() {
     canvas.height = video.videoHeight;
     canvas.getContext("2d")!.drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-    // Navigate to results with captured image
+    
     setTimeout(() => {
-      navigate("/results", { state: { imageUrl: dataUrl } });
+      navigate("/results", { state: { imageUrl: dataUrl, mode: scanMode } });
     }, 400);
   };
 
@@ -59,61 +106,92 @@ export default function ScanPage() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      navigate("/results", { state: { imageUrl: reader.result as string } });
+      navigate("/results", { state: { imageUrl: reader.result as string, mode: scanMode } });
     };
     reader.readAsDataURL(file);
   };
 
   return (
-    <div className="relative min-h-screen bg-foreground">
+    <div className="relative min-h-screen bg-foreground flex flex-col">
+      {/* Top Mode Segmented Control */}
+      <div className="absolute top-0 left-0 right-0 z-50 pt-12 pb-4 bg-gradient-to-b from-foreground/90 to-transparent">
+        <div className="flex mx-auto w-max bg-card/10 backdrop-blur-md p-1 rounded-full border border-card/20 text-card-foreground shadow-xl">
+          <button
+            onClick={() => setScanMode("pill")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "pill" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
+          >
+            <Pill size={14} /> Pill
+          </button>
+          <button
+            onClick={() => setScanMode("text")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "text" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
+          >
+            <FileText size={14} /> Label OCR
+          </button>
+          <button
+            onClick={() => setScanMode("barcode")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "barcode" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
+          >
+            <ScanBarcode size={14} /> Barcode
+          </button>
+        </div>
+      </div>
+
       {/* Camera view */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden">
+      <div className="flex-1 w-full bg-black relative">
+        <div className={`absolute inset-0 ${scanMode === "barcode" ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"}`}>
+          <div id="barcode-reader" style={{ width: "100%", height: "100%" }}></div>
+        </div>
+
         <video
           ref={videoRef}
-          className="h-full w-full object-cover"
+          className={`h-full w-full object-cover ${scanMode === "barcode" ? "hidden" : "block"}`}
           playsInline
           muted
           autoPlay
         />
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Scan overlay */}
-        {streaming && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        {/* Scan overlays */}
+        {streaming && scanMode === "pill" && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-56 h-56 rounded-3xl border-2 border-primary/70"
-            >
-              <motion.div
-                className="absolute left-0 right-0 h-0.5 bg-primary/80"
-                animate={{ top: ["10%", "90%", "10%"] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-              />
-            </motion.div>
+              className="w-56 h-56 rounded-full border-2 border-primary/70"
+            />
           </div>
         )}
 
-        {!streaming && (
+        {streaming && scanMode === "text" && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-72 h-40 rounded-xl border-dashed border-2 border-primary/70"
+            />
+          </div>
+        )}
+
+        {!streaming && scanMode !== "barcode" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-card">
             <Camera size={48} className="text-muted-foreground mb-3" />
             <p className="text-sm text-muted-foreground">Camera loading...</p>
           </div>
         )}
 
-        {/* Flash indicator */}
         {capturing && (
           <motion.div
             initial={{ opacity: 1 }}
             animate={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="absolute inset-0 bg-primary-foreground"
+            className="absolute inset-0 bg-primary-foreground z-50"
           />
         )}
       </div>
 
       {/* Controls */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-foreground/95 to-transparent pt-16 pb-8 px-6 safe-bottom">
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-foreground/95 to-transparent pt-16 pb-8 px-6 safe-bottom z-30">
         <div className="flex items-center justify-between max-w-sm mx-auto">
           <button
             onClick={() => navigate(-1)}
@@ -122,14 +200,18 @@ export default function ScanPage() {
             <X size={22} className="text-primary-foreground" />
           </button>
 
-          <button
-            onClick={capture}
-            disabled={!streaming}
-            className="flex items-center justify-center w-18 h-18 rounded-full border-4 border-primary-foreground/60 bg-primary transition-transform active:scale-90 disabled:opacity-40"
-            style={{ width: 72, height: 72 }}
-          >
-            <Zap size={28} className="text-primary-foreground" />
-          </button>
+          {scanMode !== "barcode" ? (
+             <button
+               onClick={capture}
+               disabled={!streaming}
+               className="flex items-center justify-center w-18 h-18 rounded-full border-4 border-primary-foreground/60 bg-primary transition-transform active:scale-90 disabled:opacity-40"
+               style={{ width: 72, height: 72 }}
+             >
+               <Zap size={28} className="text-primary-foreground" />
+             </button>
+          ) : (
+            <div className="text-primary-foreground/60 text-xs text-center">Point at barcode</div>
+          )}
 
           <div className="flex flex-col gap-2">
             <button
@@ -144,9 +226,6 @@ export default function ScanPage() {
             </label>
           </div>
         </div>
-        <p className="text-center text-xs text-primary-foreground/60 mt-4">
-          Position the pill inside the frame and tap to capture
-        </p>
       </div>
     </div>
   );

@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown } from "lucide-react";
+import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, ScanBarcode, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
-import { useState } from "react";
+import { extractTextFromImage } from "@/services/visionService";
+import { resolveBarcodeToDrugName } from "@/services/barcodeResolver";
 
 type MatchResult = {
   name: string;
@@ -11,7 +13,7 @@ type MatchResult = {
   confidence: number;
 };
 
-// Simulated results for demo
+// Simulated results for demo (Pill ML model)
 const demoResults: MatchResult[] = [
   { name: "Ibuprofen 200mg", genericName: "Ibuprofen", confidence: 0.92 },
   { name: "Acetaminophen 500mg", genericName: "Paracetamol", confidence: 0.74 },
@@ -22,35 +24,82 @@ export default function ResultsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { addMedicine } = useApp();
-  const imageUrl = (location.state as any)?.imageUrl;
+  
+  const state = location.state as any;
+  const imageUrl = state?.imageUrl;
+  const mode = state?.mode || "pill";
+  const barcode = state?.barcode;
+
   const [confirmed, setConfirmed] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  
+  // OCR & Barcode State
+  const [loading, setLoading] = useState(mode !== "pill");
+  const [extractedText, setExtractedText] = useState("");
+  const [resolvedBarcodeDrug, setResolvedBarcodeDrug] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function process() {
+      if (mode === "text" && imageUrl) {
+        setLoading(true);
+        try {
+          const text = await extractTextFromImage(imageUrl);
+          setExtractedText(text);
+        } catch (e) {
+          console.error(e);
+          setExtractedText("Failed to extract text. Please try again.");
+        }
+        setLoading(false);
+      } else if (mode === "barcode" && barcode) {
+        setLoading(true);
+        try {
+          const drugName = await resolveBarcodeToDrugName(barcode);
+          setResolvedBarcodeDrug(drugName);
+        } catch (e) {
+          console.error(e);
+        }
+        setLoading(false);
+      }
+    }
+    process();
+  }, [mode, imageUrl, barcode]);
 
   const highConfidence = demoResults.filter((r) => r.confidence >= 0.7);
   const lowConfidence = demoResults.filter((r) => r.confidence < 0.7);
 
-  const handleConfirm = (result: MatchResult) => {
-    setConfirmed(result.name);
+  const handleConfirm = (result: Partial<MatchResult>) => {
+    const finalName = result.name || "Unknown Medicine";
+    setConfirmed(finalName);
     addMedicine({
-      name: result.name,
-      genericName: result.genericName,
-      dosage: result.name.split(" ").pop() || "",
-      imageUrl,
+      name: finalName,
+      genericName: result.genericName || "",
+      dosage: finalName.split(" ").pop() || "",
+      imageUrl: imageUrl || undefined,
     });
     setSaved(true);
   };
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 min-h-screen">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} /> Back to Scanner
       </button>
 
-      <h1 className="text-xl font-bold text-foreground mb-4">Recognition Results</h1>
+      <h1 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+        {mode === "text" && <FileText size={20} className="text-primary" />}
+        {mode === "barcode" && <ScanBarcode size={20} className="text-primary" />}
+        Recognition Results
+      </h1>
 
-      {imageUrl && (
-        <div className="mb-6 rounded-xl overflow-hidden border border-border">
-          <img src={imageUrl} alt="Captured pill" className="w-full h-48 object-cover" />
+      {imageUrl && mode !== "barcode" && (
+        <div className="mb-6 rounded-xl overflow-hidden border border-border bg-black/5 flex items-center justify-center relative">
+          <img src={imageUrl} alt="Captured scan" className="w-full max-h-[300px] object-contain" />
+          {loading && (
+             <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center">
+                <Loader2 size={32} className="animate-spin text-primary mb-2" />
+                <span className="text-sm font-medium">Extracting Text...</span>
+             </div>
+          )}
         </div>
       )}
 
@@ -61,96 +110,149 @@ export default function ResultsPage() {
           className="mb-4 rounded-xl bg-success/10 border border-success/30 p-4 flex items-center gap-3"
         >
           <Check size={18} className="text-success" />
-          <p className="text-sm text-success font-medium">Medicine saved successfully!</p>
+          <p className="text-sm text-success font-medium">Medicine saved securely!</p>
         </motion.div>
       )}
 
-      {/* High confidence matches */}
-      {highConfidence.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <ThumbsUp size={14} className="text-success" /> High Confidence Matches
-          </h2>
-          <div className="space-y-3">
-            {highConfidence.map((r) => (
-              <motion.div
-                key={r.name}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                className={`rounded-xl border p-4 ${confirmed === r.name ? "border-success bg-success/5" : "border-border bg-card"}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-card-foreground">{r.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{r.genericName}</p>
-                  </div>
-                  <span className="rounded-lg bg-success/15 px-2 py-1 text-xs font-bold text-success">
-                    {Math.round(r.confidence * 100)}%
-                  </span>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <Button size="sm" onClick={() => handleConfirm(r)} disabled={!!confirmed}>
-                    <Check size={14} className="mr-1" /> Confirm
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate(`/medicine/${encodeURIComponent(r.name)}`)}
+      {/* --- PILL ML MODE --- */}
+      {mode === "pill" && !loading && (
+        <>
+          {highConfidence.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <ThumbsUp size={14} className="text-success" /> High Confidence Matches
+              </h2>
+              <div className="space-y-3">
+                {highConfidence.map((r) => (
+                  <motion.div
+                    key={r.name}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`rounded-xl border p-4 ${confirmed === r.name ? "border-success bg-success/5" : "border-border bg-card"}`}
                   >
-                    View Details
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Low confidence - triggers online search */}
-      {lowConfidence.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <ThumbsDown size={14} className="text-warning" /> Low Confidence – Needs Verification
-          </h2>
-          <div className="space-y-3">
-            {lowConfidence.map((r) => (
-              <div key={r.name} className="rounded-xl border border-warning/30 bg-warning/5 p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-card-foreground">{r.name}</p>
-                    <p className="text-xs text-muted-foreground">{r.genericName}</p>
-                  </div>
-                  <span className="rounded-lg bg-warning/15 px-2 py-1 text-xs font-bold text-warning">
-                    {Math.round(r.confidence * 100)}%
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 mt-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate(`/search?q=${encodeURIComponent(r.name)}`)}
-                  >
-                    <Search size={14} className="mr-1" /> Online Lookup
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleConfirm(r)} disabled={!!confirmed}>
-                    Still Confirm
-                  </Button>
-                </div>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-semibold text-card-foreground">{r.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{r.genericName}</p>
+                      </div>
+                      <span className="rounded-lg bg-success/15 px-2 py-1 text-xs font-bold text-success">
+                        {Math.round(r.confidence * 100)}%
+                      </span>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" onClick={() => handleConfirm(r)} disabled={!!confirmed}>
+                        <Check size={14} className="mr-1" /> Confirm
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/medicine/${encodeURIComponent(r.name)}`)}
+                      >
+                        Details
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+          {lowConfidence.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                <ThumbsDown size={14} className="text-warning" /> Needs Verification
+              </h2>
+              <div className="space-y-3">
+                {lowConfidence.map((r) => (
+                  <div key={r.name} className="rounded-xl border border-warning/30 bg-warning/5 p-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-semibold text-card-foreground">{r.name}</p>
+                      </div>
+                      <span className="rounded-lg bg-warning/15 px-2 py-1 text-xs font-bold text-warning">
+                        {Math.round(r.confidence * 100)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button size="sm" variant="outline" onClick={() => navigate(`/search?q=${encodeURIComponent(r.name)}`)}>
+                        <Search size={14} className="mr-1" /> Verify
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* --- TEXT OCR MODE --- */}
+      {mode === "text" && !loading && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl border border-primary/30 bg-primary/5">
+             <h3 className="font-semibold text-sm mb-2 text-primary">Extracted Text</h3>
+             <p className="text-sm leading-relaxed whitespace-pre-wrap font-mono text-muted-foreground bg-background p-3 rounded-lg border">
+                {extractedText || "No readable text found."}
+             </p>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+             <p className="text-xs text-muted-foreground mb-1">
+                Found the medication name in the text above? Search for it directly to verify.
+             </p>
+             <div className="flex gap-2">
+               <Button className="w-full" onClick={() => navigate(`/search?q=${encodeURIComponent(extractedText.split(" ")[0] || "")}`)}>
+                  Search Primary Word
+               </Button>
+               <Button variant="outline" className="w-full" onClick={() => navigate('/search')}>
+                  Manual Search
+               </Button>
+             </div>
           </div>
         </div>
       )}
 
-      {/* Feedback */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-start gap-3">
-          <AlertTriangle size={16} className="text-warning mt-0.5 shrink-0" />
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Recognition accuracy improves with user corrections. If none of these results match, use the online search to find the correct medicine.
-          </p>
+      {/* --- BARCODE MODE --- */}
+      {mode === "barcode" && !loading && (
+        <div className="space-y-4">
+          <div className="p-6 rounded-xl border border-border bg-card text-center flex flex-col items-center">
+             <ScanBarcode size={48} className="text-muted-foreground/30 mb-4" />
+             <h3 className="font-semibold text-lg">{barcode}</h3>
+             <p className="text-xs text-muted-foreground mt-1 tracking-wider uppercase">Scanned Code</p>
+          </div>
+
+          {resolvedBarcodeDrug ? (
+             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-5 rounded-xl border border-success/30 bg-success/5 pt-4">
+                <span className="text-xs font-bold text-success uppercase tracking-wider block mb-1">Drug Identified</span>
+                <h3 className="text-xl font-bold text-foreground mb-4">{resolvedBarcodeDrug}</h3>
+                
+                <div className="flex gap-3 mt-4">
+                   <Button onClick={() => handleConfirm({ name: resolvedBarcodeDrug, genericName: "" })} disabled={!!confirmed}>
+                      <Check size={16} className="mr-2" /> Save to Profile
+                   </Button>
+                   <Button variant="outline" onClick={() => navigate(`/medicine/${encodeURIComponent(resolvedBarcodeDrug)}`)}>
+                      View Details
+                   </Button>
+                </div>
+             </motion.div>
+          ) : (
+             <div className="p-4 rounded-xl border border-warning/30 bg-warning/5">
+                <div className="flex items-start gap-2 text-warning">
+                   <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                   <div>
+                     <p className="font-semibold text-sm">Unknown Barcode</p>
+                     <p className="text-xs opacity-90 mt-1">
+                       We couldn't immediately resolve this barcode to a registered FDA drug. 
+                     </p>
+                     <Button className="mt-3" size="sm" variant="outline" onClick={() => navigate('/search')}>
+                        Search Manually
+                     </Button>
+                   </div>
+                </div>
+             </div>
+          )}
         </div>
-      </div>
+      )}
+
     </div>
   );
 }
