@@ -15,6 +15,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
 import InteractionsPage from "@/pages/InteractionsPage";
+import VerifyEmailPage from "@/pages/VerifyEmailPage";
 import { preloadOCRModel } from "@/services/visionService";
 
 const queryClient = new QueryClient();
@@ -31,9 +32,10 @@ const App = () => {
         <Toaster />
         <BrowserRouter>
           <Routes>
-            {/* Scan page is full-screen, no shell */}
+            {/* Full-screen pages — no AppShell */}
             <Route path="/scan" element={<ScanPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
             {/* All other pages use AppShell with bottom nav */}
             <Route
               path="*"
