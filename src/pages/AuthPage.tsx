@@ -1,32 +1,52 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
+import { authApi } from "@/services/api";
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const { setIsLoggedIn } = useApp();
+  const { loginUser } = useApp();
   const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
       toast({ title: "Please fill all fields", variant: "destructive" });
       return;
     }
-    // Demo auth
-    setIsLoggedIn(true);
-    toast({ title: isLogin ? "Welcome back!" : "Account created!", description: "You're now signed in." });
-    navigate("/");
+
+    setLoading(true);
+    try {
+      let user;
+      if (isLogin) {
+        user = await authApi.login(email, password);
+        toast({ title: "Welcome back!", description: `Signed in as ${user.email}` });
+      } else {
+        user = await authApi.register(email, password);
+        toast({ title: "Account created!", description: "You're now signed in." });
+      }
+      loginUser(user._id, user.email);
+      navigate("/");
+    } catch (err: any) {
+      toast({
+        title: isLogin ? "Sign in failed" : "Registration failed",
+        description: err.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,6 +82,7 @@ export default function AuthPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 className="pl-10"
+                disabled={loading}
               />
             </div>
           </div>
@@ -77,6 +98,7 @@ export default function AuthPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="pl-10 pr-10"
+                disabled={loading}
               />
               <button
                 type="button"
@@ -88,8 +110,11 @@ export default function AuthPage() {
             </div>
           </div>
 
-          <Button type="submit" className="w-full" size="lg">
-            {isLogin ? "Sign In" : "Create Account"}
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            {loading
+              ? <><Loader2 size={16} className="mr-2 animate-spin" /> Please wait...</>
+              : isLogin ? "Sign In" : "Create Account"
+            }
           </Button>
         </form>
 

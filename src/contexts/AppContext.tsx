@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { getRxCUI } from "../services/interactionChecker";
+import { medicinesApi, remindersApi, doseLogsApi } from "../services/api";
 
 export type Medicine = {
-  id: string;
+  id: string;           // maps to MongoDB _id
   name: string;
   genericName?: string;
   dosage: string;
@@ -41,20 +42,23 @@ type AppContextType = {
   doseLogs: DoseLog[];
   privacyMode: boolean;
   isLoggedIn: boolean;
-  addMedicine: (med: Omit<Medicine, "id" | "addedAt">) => Medicine;
-  updateMedicine: (id: string, updates: Partial<Medicine>) => void;
-  addReminder: (rem: Omit<Reminder, "id" | "createdAt">) => void;
-  updateReminder: (id: string, rem: Partial<Reminder>) => void;
-  deleteReminder: (id: string) => void;
-  logDose: (log: Omit<DoseLog, "id" | "actionTime">) => void;
+  currentUserId: string | null;
+  addMedicine: (med: Omit<Medicine, "id" | "addedAt">) => Promise<Medicine>;
+  updateMedicine: (id: string, updates: Partial<Medicine>) => Promise<void>;
+  addReminder: (rem: Omit<Reminder, "id" | "createdAt">) => Promise<void>;
+  updateReminder: (id: string, rem: Partial<Reminder>) => Promise<void>;
+  deleteReminder: (id: string) => Promise<void>;
+  logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>;
   setPrivacyMode: (v: boolean) => void;
   setIsLoggedIn: (v: boolean) => void;
+  loginUser: (userId: string, email: string) => void;
+  logoutUser: () => void;
   clearAllData: () => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-function load<T>(key: string, fallback: T): T {
+function loadLocal<T>(key: string, fallback: T): T {
   try {
     const s = localStorage.getItem(key);
     return s ? JSON.parse(s) : fallback;
@@ -63,28 +67,75 @@ function load<T>(key: string, fallback: T): T {
   }
 }
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const [medicines, setMedicines] = useState<Medicine[]>(() => load("med_medicines", []));
-  const [reminders, setReminders] = useState<Reminder[]>(() => load("med_reminders", []));
-  const [doseLogs, setDoseLogs] = useState<DoseLog[]>(() => load("med_doselogs", []));
-  const [privacyMode, setPrivacyMode] = useState(() => load("med_privacy", false));
-  const [isLoggedIn, setIsLoggedIn] = useState(() => load("med_loggedin", false));
+/** Normalize a MongoDB doc's _id → id for the frontend. */
+function normalize<T extends { _id?: string; id?: string }>(doc: T): T & { id: string } {
+  const id = doc._id || doc.id || "";
+  const { _id, ...rest } = doc as any;
+  return { ...rest, id };
+}
 
-  useEffect(() => { localStorage.setItem("med_medicines", JSON.stringify(medicines)); }, [medicines]);
-  useEffect(() => { localStorage.setItem("med_reminders", JSON.stringify(reminders)); }, [reminders]);
-  useEffect(() => { localStorage.setItem("med_doselogs", JSON.stringify(doseLogs)); }, [doseLogs]);
+export function AppProvider({ children }: { children: ReactNode }) {
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
+  const [privacyMode, setPrivacyMode] = useState(() => loadLocal("med_privacy", false));
+  const [isLoggedIn, setIsLoggedIn] = useState(() => loadLocal("med_loggedin", false));
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() => loadLocal("med_userId", null));
+
+  // Persist simple flags to localStorage (no sensitive data, just UI state)
   useEffect(() => { localStorage.setItem("med_privacy", JSON.stringify(privacyMode)); }, [privacyMode]);
   useEffect(() => { localStorage.setItem("med_loggedin", JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
+  useEffect(() => { localStorage.setItem("med_userId", JSON.stringify(currentUserId)); }, [currentUserId]);
 
-  const addMedicine = (med: Omit<Medicine, "id" | "addedAt">) => {
-    const newId = crypto.randomUUID();
-    const newMed: Medicine = { ...med, id: newId, addedAt: new Date().toISOString() };
+  const loginUser = useCallback((userId: string, email: string) => {
+    setCurrentUserId(userId);
+    setIsLoggedIn(true);
+  }, []);
+
+  const logoutUser = useCallback(() => {
+    setCurrentUserId(null);
+    setIsLoggedIn(false);
+    setMedicines([]);
+    setReminders([]);
+    setDoseLogs([]);
+  }, []);
+
+  // Fetch all data from backend when a user logs in
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const fetchAll = async () => {
+      try {
+        const [meds, rems, logs] = await Promise.all([
+          medicinesApi.getAll(currentUserId),
+          remindersApi.getAll(currentUserId),
+          doseLogsApi.getAll(currentUserId),
+        ]);
+        setMedicines(meds.map(normalize));
+        setReminders(rems.map(normalize));
+        setDoseLogs(logs.map(normalize));
+      } catch (err) {
+        console.error("Failed to load data from backend:", err);
+      }
+    };
+
+    fetchAll();
+  }, [currentUserId]);
+
+  // --- CRUD Operations ---
+
+  const addMedicine = async (med: Omit<Medicine, "id" | "addedAt">): Promise<Medicine> => {
+    if (!currentUserId) throw new Error("Not logged in");
+    const created = await medicinesApi.create({ ...med, userId: currentUserId });
+    const newMed = normalize(created) as Medicine;
     setMedicines((p) => [...p, newMed]);
-    
+
+    // Fetch RxCUI in background and sync to DB
     if (!newMed.rxcui) {
-      getRxCUI(newMed.name).then(rxcui => {
+      getRxCUI(newMed.name).then(async (rxcui) => {
         if (rxcui) {
-          setMedicines((p) => p.map((m) => (m.id === newId ? { ...m, rxcui } : m)));
+          await medicinesApi.update(newMed.id, { rxcui });
+          setMedicines((p) => p.map((m) => (m.id === newMed.id ? { ...m, rxcui } : m)));
         }
       });
     }
@@ -92,24 +143,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return newMed;
   };
 
-  const updateMedicine = (id: string, updates: Partial<Medicine>) => {
+  const updateMedicine = async (id: string, updates: Partial<Medicine>) => {
+    await medicinesApi.update(id, updates);
     setMedicines((p) => p.map((m) => (m.id === id ? { ...m, ...updates } : m)));
   };
 
-  const addReminder = (rem: Omit<Reminder, "id" | "createdAt">) => {
-    setReminders((p) => [...p, { ...rem, id: crypto.randomUUID(), createdAt: new Date().toISOString() }]);
+  const addReminder = async (rem: Omit<Reminder, "id" | "createdAt">) => {
+    if (!currentUserId) throw new Error("Not logged in");
+    const created = await remindersApi.create({ ...rem, userId: currentUserId });
+    setReminders((p) => [...p, normalize(created) as Reminder]);
   };
 
-  const updateReminder = (id: string, updates: Partial<Reminder>) => {
+  const updateReminder = async (id: string, updates: Partial<Reminder>) => {
+    await remindersApi.update(id, updates);
     setReminders((p) => p.map((r) => (r.id === id ? { ...r, ...updates } : r)));
   };
 
-  const deleteReminder = (id: string) => {
+  const deleteReminder = async (id: string) => {
+    await remindersApi.remove(id);
     setReminders((p) => p.filter((r) => r.id !== id));
   };
 
-  const logDose = (log: Omit<DoseLog, "id" | "actionTime">) => {
-    setDoseLogs((p) => [...p, { ...log, id: crypto.randomUUID(), actionTime: new Date().toISOString() }]);
+  const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
+    if (!currentUserId) throw new Error("Not logged in");
+    const created = await doseLogsApi.create({ ...log, userId: currentUserId });
+    setDoseLogs((p) => [...p, normalize(created) as DoseLog]);
   };
 
   const clearAllData = () => {
@@ -120,7 +178,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppContext.Provider
-      value={{ medicines, reminders, doseLogs, privacyMode, isLoggedIn, addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder, logDose, setPrivacyMode, setIsLoggedIn, clearAllData }}
+      value={{
+        medicines, reminders, doseLogs, privacyMode, isLoggedIn, currentUserId,
+        addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
+        logDose, setPrivacyMode, setIsLoggedIn, loginUser, logoutUser, clearAllData,
+      }}
     >
       {children}
     </AppContext.Provider>
