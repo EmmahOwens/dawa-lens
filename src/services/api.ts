@@ -5,14 +5,23 @@
 
 const BASE_URL = 'http://localhost:5000/api';
 
+/** Custom error that carries extra fields from the backend JSON response. */
+class ApiError extends Error {
+  [key: string]: any;
+  constructor(data: Record<string, any>) {
+    super(data.error || 'Request failed');
+    Object.assign(this, data);
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Network error' }));
-    throw new Error(err.error || 'Request failed');
+    const data = await res.json().catch(() => ({ error: 'Network error' }));
+    throw new ApiError(data);
   }
   return res.json() as Promise<T>;
 }
@@ -20,7 +29,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 // --- Auth ---
 export const authApi = {
   register: (email: string, password: string) =>
-    request<{ _id: string; email: string }>('/auth/register', {
+    request<{ message: string; email: string; verificationUrl?: string }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
@@ -29,6 +38,12 @@ export const authApi = {
     request<{ _id: string; email: string; languagePreference: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    }),
+
+  resendVerification: (email: string) =>
+    request<{ message: string; verificationUrl?: string }>('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     }),
 };
 

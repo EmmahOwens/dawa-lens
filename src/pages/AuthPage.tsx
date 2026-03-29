@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2, RefreshCw, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,15 +9,24 @@ import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { authApi } from "@/services/api";
 
+type Stage = "form" | "awaiting-verification";
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const { loginUser } = useApp();
   const { toast } = useToast();
+
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [stage, setStage] = useState<Stage>("form");
+
+  // In development, the verification URL comes back from the API so you can
+  // open it directly. In production this is delivered only via email.
+  const [devVerifyUrl, setDevVerifyUrl] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,24 +37,42 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
-      let user;
       if (isLogin) {
-        user = await authApi.login(email, password);
+        const user = await authApi.login(email, password);
+        loginUser(user._id, user.email);
         toast({ title: "Welcome back!", description: `Signed in as ${user.email}` });
+        navigate("/");
       } else {
-        user = await authApi.register(email, password);
-        toast({ title: "Account created!", description: "You're now signed in." });
+        const result = await authApi.register(email, password);
+        setDevVerifyUrl(result.verificationUrl || null);
+        setStage("awaiting-verification");
       }
-      loginUser(user._id, user.email);
-      navigate("/");
     } catch (err: any) {
-      toast({
-        title: isLogin ? "Sign in failed" : "Registration failed",
-        description: err.message || "Please try again.",
-        variant: "destructive",
-      });
+      // If login blocked due to unverified email, push to awaiting screen
+      if (err.needsVerification) {
+        setStage("awaiting-verification");
+      } else {
+        toast({
+          title: isLogin ? "Sign in failed" : "Registration failed",
+          description: err.message || "Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    try {
+      const result = await authApi.resendVerification(email);
+      setDevVerifyUrl(result.verificationUrl || null);
+      toast({ title: "New verification link generated!" });
+    } catch (err: any) {
+      toast({ title: "Failed to resend", description: err.message, variant: "destructive" });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -55,76 +82,116 @@ export default function AuthPage() {
         <ArrowLeft size={16} /> Back
       </button>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full"
-      >
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Lock size={28} className="text-primary" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">{isLogin ? "Welcome Back" : "Create Account"}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isLogin ? "Sign in to sync your medication data" : "Start managing your medications safely"}
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <div className="relative mt-1.5">
-              <Mail size={16} className="absolute left-3 top-3 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="pl-10"
-                disabled={loading}
-              />
+      <AnimatePresence mode="wait">
+        {stage === "form" && (
+          <motion.div
+            key="form"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full"
+          >
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <Lock size={28} className="text-primary" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">{isLogin ? "Welcome Back" : "Create Account"}</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {isLogin ? "Sign in to sync your medication data" : "Start managing your medications safely"}
+              </p>
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <div className="relative mt-1.5">
-              <Lock size={16} className="absolute left-3 top-3 text-muted-foreground" />
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="pl-10 pr-10"
-                disabled={loading}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-muted-foreground"
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <div className="relative mt-1.5">
+                  <Mail size={16} className="absolute left-3 top-3 text-muted-foreground" />
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com" className="pl-10" disabled={loading} />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <div className="relative mt-1.5">
+                  <Lock size={16} className="absolute left-3 top-3 text-muted-foreground" />
+                  <Input id="password" type={showPassword ? "text" : "password"} value={password}
+                    onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
+                    className="pl-10 pr-10" disabled={loading} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-muted-foreground">
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                {loading
+                  ? <><Loader2 size={16} className="mr-2 animate-spin" /> Please wait...</>
+                  : isLogin ? "Sign In" : "Create Account"}
+              </Button>
+            </form>
+
+            <p className="text-center text-sm text-muted-foreground mt-6">
+              {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
+              <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-medium hover:underline">
+                {isLogin ? "Sign Up" : "Sign In"}
               </button>
+            </p>
+          </motion.div>
+        )}
+
+        {stage === "awaiting-verification" && (
+          <motion.div
+            key="verify"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full text-center"
+          >
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <Mail size={36} className="text-primary" />
             </div>
-          </div>
 
-          <Button type="submit" className="w-full" size="lg" disabled={loading}>
-            {loading
-              ? <><Loader2 size={16} className="mr-2 animate-spin" /> Please wait...</>
-              : isLogin ? "Sign In" : "Create Account"
-            }
-          </Button>
-        </form>
+            <h1 className="text-2xl font-bold text-foreground">Check Your Email</h1>
+            <p className="text-sm text-muted-foreground mt-2 mb-6 leading-relaxed">
+              We sent a verification link to <strong className="text-foreground">{email}</strong>.
+              Click the link in that email to activate your account.
+            </p>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-          <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-medium hover:underline">
-            {isLogin ? "Sign Up" : "Sign In"}
-          </button>
-        </p>
-      </motion.div>
+            {/* DEV ONLY: direct link when running locally */}
+            {devVerifyUrl && (
+              <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4 text-left">
+                <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
+                  🛠 Development Mode — Verification Link
+                </p>
+                <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                  In production, this link is delivered by email only. For now, open it directly:
+                </p>
+                <a
+                  href={devVerifyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs font-medium text-primary hover:underline break-all"
+                >
+                  <ExternalLink size={12} /> Verify My Email
+                </a>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Button className="w-full" onClick={() => { setStage("form"); setIsLogin(true); }}>
+                <CheckCircle2 size={16} className="mr-2" /> I've Verified — Sign In
+              </Button>
+              <Button variant="outline" className="w-full" onClick={handleResend} disabled={resending}>
+                {resending
+                  ? <><Loader2 size={14} className="mr-2 animate-spin" /> Resending...</>
+                  : <><RefreshCw size={14} className="mr-2" /> Resend Verification Link</>}
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
