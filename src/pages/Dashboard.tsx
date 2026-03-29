@@ -2,13 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Camera, Plus, History, Search, Pill, Bell } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
-
-const quickActions = [
-  { icon: Camera, label: "Scan Pill", to: "/scan", color: "bg-primary text-primary-foreground" },
-  { icon: Plus, label: "Add Reminder", to: "/reminders/new", color: "bg-success text-success-foreground" },
-  { icon: History, label: "View History", to: "/history", color: "bg-accent text-accent-foreground" },
-  { icon: Search, label: "Search Medicine", to: "/search", color: "bg-warning text-warning-foreground" },
-];
+import { useTranslation } from "react-i18next";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
@@ -16,6 +10,14 @@ const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 export default function Dashboard() {
   const navigate = useNavigate();
   const { reminders, doseLogs } = useApp();
+  const { t } = useTranslation();
+
+  const quickActions = [
+    { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary text-primary-foreground" },
+    { icon: Plus, label: t("dashboard.quick_add"), to: "/reminders/new", color: "bg-success text-success-foreground" },
+    { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent text-accent-foreground" },
+    { icon: Search, label: t("dashboard.quick_search"), to: "/search", color: "bg-warning text-warning-foreground" },
+  ];
 
   const todayReminders = reminders.filter((r) => r.enabled);
   const takenToday = doseLogs.filter(
@@ -26,8 +28,8 @@ export default function Dashboard() {
     <div className="px-4 pt-12 pb-4">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">MedRemind</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Your smart medicine companion</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("dashboard.title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("dashboard.subtitle")}</p>
       </motion.div>
 
       {/* Stats */}
@@ -38,11 +40,11 @@ export default function Dashboard() {
       >
         <div className="flex items-center gap-3 mb-3">
           <Pill size={20} />
-          <span className="text-sm font-medium opacity-90">Today's Progress</span>
+          <span className="text-sm font-medium opacity-90">{t("dashboard.todays_progress")}</span>
         </div>
         <div className="flex items-end gap-2">
           <span className="text-4xl font-bold">{takenToday}</span>
-          <span className="mb-1 text-sm opacity-80">/ {todayReminders.length} doses</span>
+          <span className="mb-1 text-sm opacity-80">/ {todayReminders.length} {t("dashboard.doses")}</span>
         </div>
         <div className="mt-3 h-2 rounded-full bg-primary-foreground/20 overflow-hidden">
           <motion.div
@@ -73,11 +75,11 @@ export default function Dashboard() {
       <div className="mb-4">
         <h2 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
           <Bell size={16} />
-          Upcoming Reminders
+          {t("dashboard.upcoming_reminders")}
         </h2>
         {todayReminders.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-6 text-center">
-            <p className="text-sm text-muted-foreground">No reminders yet. Add one to get started!</p>
+            <p className="text-sm text-muted-foreground">{t("dashboard.no_reminders")}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -104,7 +106,7 @@ export default function Dashboard() {
       {/* Disclaimer */}
       <div className="mt-6 rounded-xl border border-warning/30 bg-warning/10 p-4">
         <p className="text-xs text-warning-foreground leading-relaxed">
-          ⚠️ <strong>Disclaimer:</strong> Medicine information provided is for reference only. Always confirm with your pharmacist or doctor before making any medical decisions.
+          ⚠️ <strong>{t("dashboard.disclaimer")}</strong>
         </p>
       </div>
     </div>

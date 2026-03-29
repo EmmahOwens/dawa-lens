@@ -4,11 +4,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, X, SwitchCamera, Zap, Upload, Pill, FileText, ScanBarcode } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 export type ScanMode = "pill" | "text" | "barcode";
 
 export default function ScanPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [streaming, setStreaming] = useState(false);
@@ -20,14 +22,14 @@ export default function ScanPage() {
   const [scanner, setScanner] = useState<Html5Qrcode | null>(null);
 
   const startCamera = useCallback(async () => {
-    if (scanMode === "barcode") return; // Let html5-qrcode handle it
+    if (scanMode === "barcode") return; 
     
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
-      if (scanner) {
-        if (scanner.isScanning) await scanner.stop();
+      if (scanner && scanner.isScanning) {
+        await scanner.stop();
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -45,7 +47,7 @@ export default function ScanPage() {
   }, [facingMode, scanMode, scanner]);
 
   const startBarcodeScanner = useCallback(async () => {
-    if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
+    if (streamRef.current) streamRef.current.getTracks().forEach((tk) => tk.stop());
     setStreaming(true);
     
     const html5Qrcode = new Html5Qrcode("barcode-reader");
@@ -56,12 +58,11 @@ export default function ScanPage() {
         { facingMode },
         { fps: 10, qrbox: { width: 250, height: 100 } },
         (decodedText) => {
-          // Send barcode immediately to results
           html5Qrcode.stop();
           navigate("/results", { state: { barcode: decodedText, mode: "barcode" } });
         },
         (errorMessage) => {
-          // ignore scan errors, they happen constantly
+          // ignore scan errors
         }
       );
     } catch (err) {
@@ -77,7 +78,7 @@ export default function ScanPage() {
     }
     
     return () => {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current?.getTracks().forEach((tk) => tk.stop());
       if (scanner && scanner.isScanning) {
         scanner.stop().catch(()=>console.log("stop error"));
       }
@@ -120,19 +121,19 @@ export default function ScanPage() {
             onClick={() => setScanMode("pill")}
             className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "pill" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
           >
-            <Pill size={14} /> Pill
+            <Pill size={14} /> {t("scan.pill")}
           </button>
           <button
             onClick={() => setScanMode("text")}
             className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "text" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
           >
-            <FileText size={14} /> Label OCR
+            <FileText size={14} /> {t("scan.label")}
           </button>
           <button
             onClick={() => setScanMode("barcode")}
             className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "barcode" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
           >
-            <ScanBarcode size={14} /> Barcode
+            <ScanBarcode size={14} /> {t("scan.barcode")}
           </button>
         </div>
       </div>
@@ -176,7 +177,7 @@ export default function ScanPage() {
         {!streaming && scanMode !== "barcode" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-card">
             <Camera size={48} className="text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">Camera loading...</p>
+            <p className="text-sm text-muted-foreground">{t("scan.camera_loading")}</p>
           </div>
         )}
 
@@ -210,7 +211,7 @@ export default function ScanPage() {
                <Zap size={28} className="text-primary-foreground" />
              </button>
           ) : (
-            <div className="text-primary-foreground/60 text-xs text-center">Point at barcode</div>
+            <div className="text-primary-foreground/60 text-xs text-center font-semibold">{t("scan.point_barcode")}</div>
           )}
 
           <div className="flex flex-col gap-2">
@@ -226,6 +227,12 @@ export default function ScanPage() {
             </label>
           </div>
         </div>
+        
+        {scanMode !== "barcode" && (
+           <p className="text-center text-xs font-semibold text-primary-foreground/70 mt-6">
+             {t("scan.capture_hint")}
+           </p>
+        )}
       </div>
     </div>
   );

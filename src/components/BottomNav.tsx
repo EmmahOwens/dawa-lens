@@ -1,16 +1,18 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Camera, Clock, History, Settings, ShieldAlert } from "lucide-react";
-
-const navItems = [
-  { to: "/", icon: Home, label: "Home" },
-  { to: "/scan", icon: Camera, label: "Scan" },
-  { to: "/history", icon: History, label: "History" },
-  { to: "/interactions", icon: ShieldAlert, label: "Safety" },
-  { to: "/settings", icon: Settings, label: "Options" },
-];
+import { useTranslation } from "react-i18next";
 
 export default function BottomNav() {
   const location = useLocation();
+  const { t } = useTranslation();
+
+  const navItems = [
+    { to: "/", icon: Home, label: t("nav.home") },
+    { to: "/scan", icon: Camera, label: t("nav.scan") },
+    { to: "/history", icon: History, label: t("nav.history") },
+    { to: "/interactions", icon: ShieldAlert, label: t("nav.safety") },
+    { to: "/settings", icon: Settings, label: t("nav.settings") },
+  ];
 
   return (
     <nav className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg md:hidden">

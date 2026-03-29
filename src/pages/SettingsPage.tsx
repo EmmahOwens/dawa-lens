@@ -1,15 +1,21 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Eye, EyeOff, Globe } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { privacyMode, setPrivacyMode, clearAllData, isLoggedIn, setIsLoggedIn } = useApp();
   const { toast } = useToast();
+  const { t, i18n } = useTranslation();
+
+  const handleLanguageChange = (lang: string) => {
+    i18n.changeLanguage(lang);
+  };
 
   return (
     <div className="px-4 pt-6 pb-4">
@@ -22,10 +28,33 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="text-xl font-bold text-foreground mb-6"
       >
-        Settings
+        {t("settings.title", "Settings")}
       </motion.h1>
 
       <div className="space-y-3">
+        {/* Language */}
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Globe size={14} /> {t("settings.language_preferences", "Language")}
+          </h2>
+          <div className="flex gap-2">
+            <Button
+              variant={i18n.language.startsWith('en') ? "default" : "outline"}
+              onClick={() => handleLanguageChange('en')}
+              className="px-6"
+            >
+              {t("settings.english", "English")}
+            </Button>
+            <Button
+              variant={i18n.language.startsWith('sw') ? "default" : "outline"}
+              onClick={() => handleLanguageChange('sw')}
+              className="px-6"
+            >
+              {t("settings.swahili", "Kiswahili")}
+            </Button>
+          </div>
+        </div>
+
         {/* Account */}
         <div className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">

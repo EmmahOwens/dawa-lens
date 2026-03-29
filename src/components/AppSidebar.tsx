@@ -1,5 +1,6 @@
 import { Home, Camera, Clock, History, Settings, CopyPlus } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -13,19 +14,20 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const items = [
-  { title: "Home", url: "/", icon: Home },
-  { title: "Scan", url: "/scan", icon: Camera },
-  { title: "Remind", url: "/reminders/new", icon: Clock },
-  { title: "History", url: "/history", icon: History },
-  { title: "Safety checks", url: "/interactions", icon: CopyPlus },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
-
 export function AppSidebar() {
+  const { t } = useTranslation();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+
+  const items = [
+    { title: t("nav.home"), url: "/", icon: Home },
+    { title: t("nav.scan"), url: "/scan", icon: Camera },
+    { title: t("nav.remind"), url: "/reminders/new", icon: Clock },
+    { title: t("nav.history"), url: "/history", icon: History },
+    { title: t("nav.safety"), url: "/interactions", icon: CopyPlus },
+    { title: t("nav.settings"), url: "/settings", icon: Settings },
+  ];
 
   const isActive = (path: string) =>
     location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
