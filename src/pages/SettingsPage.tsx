@@ -6,15 +6,23 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { privacyMode, setPrivacyMode, clearAllData, isLoggedIn, logoutUser } = useApp();
+  const { privacyMode, setPrivacyMode, clearAllData, isLoggedIn, logoutUser, userProfile } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
 
   const handleLanguageChange = (lang: string) => {
     i18n.changeLanguage(lang);
+  };
+
+  const calculateAge = (dob: string | null) => {
+    if (!dob) return null;
+    const diffMs = Date.now() - new Date(dob).getTime();
+    const ageDt = new Date(diffMs);
+    return Math.abs(ageDt.getUTCFullYear() - 1970);
   };
 
   return (
@@ -26,10 +34,20 @@ export default function SettingsPage() {
       <motion.h1
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-xl font-bold text-foreground mb-6"
+        className="text-xl font-bold text-foreground mb-1"
       >
         {t("settings.title", "Settings")}
       </motion.h1>
+      
+      {userProfile && (
+        <motion.p 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          className="text-sm text-muted-foreground mb-6"
+        >
+          {userProfile.name} • {calculateAge(userProfile.dateOfBirth)} years old
+        </motion.p>
+      )}
 
       <div className="space-y-3">
         {/* Language */}
@@ -52,6 +70,20 @@ export default function SettingsPage() {
             >
               {t("settings.swahili", "Kiswahili")}
             </Button>
+          </div>
+        </div>
+
+        {/* Appearance */}
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Moon size={14} /> Theme & Appearance
+          </h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-card-foreground font-medium">Dark Mode</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Choose your preferred theme</p>
+            </div>
+            <ThemeToggle />
           </div>
         </div>
 

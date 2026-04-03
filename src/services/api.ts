@@ -26,25 +26,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// --- Auth ---
-export const authApi = {
-  register: (email: string, password: string) =>
-    request<{ message: string; email: string; verificationUrl?: string }>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
 
-  login: (email: string, password: string) =>
-    request<{ _id: string; email: string; languagePreference: string }>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
 
-  resendVerification: (email: string) =>
-    request<{ message: string; verificationUrl?: string }>('/auth/resend-verification', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    }),
+// --- Users ---
+export const usersApi = {
+  getProfile: (uid: string) =>
+    request<any>(`/users/${uid}`),
+
+  upsertProfile: (data: Record<string, unknown>) =>
+    request<any>('/users', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // --- Medicines ---

@@ -1,12 +1,13 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+// db.js initializes firebase admin
+import { db } from './db.js';
 
 import medicinesRouter from './routes/medicines.js';
 import remindersRouter from './routes/reminders.js';
 import doseLogsRouter from './routes/doseLogs.js';
-import authRouter from './routes/auth.js';
+import usersRouter from './routes/users.js';
 
 dotenv.config();
 
@@ -20,26 +21,13 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' })); // 10mb to allow base64 image uploads
 
-// MongoDB Connection
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`❌ MongoDB Connection Error: ${error.message}`);
-    process.exit(1);
-  }
-};
-
-connectDB();
-
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Pill-Pal API is running 🚀' });
+  res.status(200).json({ status: 'ok', message: 'Pill-Pal API is running 🚀 (Firebase Powered)' });
 });
 
 // Mount Routes
-app.use('/api/auth', authRouter);
+app.use('/api/users', usersRouter);
 app.use('/api/medicines', medicinesRouter);
 app.use('/api/reminders', remindersRouter);
 app.use('/api/doselogs', doseLogsRouter);

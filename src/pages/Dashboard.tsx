@@ -9,8 +9,15 @@ const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { reminders, doseLogs } = useApp();
+  const { reminders, doseLogs, userProfile } = useApp();
   const { t } = useTranslation();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t("dashboard.good_morning", "Good morning");
+    if (hour < 18) return t("dashboard.good_afternoon", "Good afternoon");
+    return t("dashboard.good_evening", "Good evening");
+  };
 
   const quickActions = [
     { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary text-primary-foreground" },
@@ -28,7 +35,9 @@ export default function Dashboard() {
     <div className="px-4 pt-12 pb-4">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("dashboard.title")}</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          {getGreeting()}, {userProfile?.name?.split(" ")[0] || "there"}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("dashboard.subtitle")}</p>
       </motion.div>
 

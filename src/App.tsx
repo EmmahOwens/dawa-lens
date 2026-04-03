@@ -16,9 +16,41 @@ import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/NotFound";
 import InteractionsPage from "@/pages/InteractionsPage";
 import VerifyEmailPage from "@/pages/VerifyEmailPage";
+import OnboardingPage from "@/pages/OnboardingPage";
+import { useApp } from "@/contexts/AppContext";
+import { Navigate } from "react-router-dom";
 import { preloadOCRModel } from "@/services/visionService";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const queryClient = new QueryClient();
+
+// A wrapper to enforce onboarding redirect
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isLoggedIn, needsOnboarding, isInitializing } = useApp();
+  
+  if (isInitializing) {
+    return <div className="h-screen w-screen flex items-center justify-center bg-background"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+  }
+  
+  if (!isLoggedIn) {
+    return <Navigate to="/auth" replace />;
+  }
+  
+  if (needsOnboarding) {
+    return <Navigate to="/onboarding" replace />;
+  }
+  
+  return <>{children}</>;
+}
+
+// A wrapper to enforce authentication redirect for onboarding
+function OnboardingRoute({ children }: { children: React.ReactNode }) {
+  const { isLoggedIn, needsOnboarding, isInitializing } = useApp();
+  if (isInitializing) return <div className="h-screen w-screen flex items-center justify-center bg-background"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+  if (!isLoggedIn) return <Navigate to="/auth" replace />;
+  if (!needsOnboarding) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 const App = () => {
   useEffect(() => {
@@ -26,40 +58,45 @@ const App = () => {
   }, []);
 
   return (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AppProvider>
-        <Toaster />
-        <BrowserRouter>
-          <Routes>
-            {/* Full-screen pages — no AppShell */}
-            <Route path="/scan" element={<ScanPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/verify-email" element={<VerifyEmailPage />} />
-            {/* All other pages use AppShell with bottom nav */}
-            <Route
-              path="*"
-              element={
-                <AppShell>
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/results" element={<ResultsPage />} />
-                    <Route path="/medicine/:name" element={<MedicineInfoPage />} />
-                    <Route path="/search" element={<MedicineInfoPage />} />
-                    <Route path="/reminders/new" element={<AddReminderPage />} />
-                    <Route path="/history" element={<HistoryPage />} />
-                    <Route path="/interactions" element={<InteractionsPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </AppShell>
-              }
-            />
-          </Routes>
-        </BrowserRouter>
-      </AppProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme" attribute="class">
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AppProvider>
+          <Toaster />
+          <BrowserRouter>
+            <Routes>
+              {/* Full-screen pages — no AppShell */}
+              <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
+              {/* All other pages use AppShell with bottom nav */}
+              <Route
+                path="*"
+                element={
+                  <ProtectedRoute>
+                    <AppShell>
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/results" element={<ResultsPage />} />
+                        <Route path="/medicine/:name" element={<MedicineInfoPage />} />
+                        <Route path="/search" element={<MedicineInfoPage />} />
+                        <Route path="/reminders/new" element={<AddReminderPage />} />
+                        <Route path="/history" element={<HistoryPage />} />
+                        <Route path="/interactions" element={<InteractionsPage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </AppShell>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </BrowserRouter>
+        </AppProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
   );
 };
 
