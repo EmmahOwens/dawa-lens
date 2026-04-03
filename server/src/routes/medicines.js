@@ -1,14 +1,23 @@
 import express from 'express';
-import Medicine from '../models/Medicine.js';
+import { db } from '../db.js';
 
 const router = express.Router();
+const medicinesCol = db.collection('medicines');
 
 // GET all medicines for a user
 router.get('/', async (req, res) => {
   try {
     const { userId } = req.query;
     if (!userId) return res.status(400).json({ error: 'userId query param required' });
-    const medicines = await Medicine.find({ userId }).sort({ createdAt: -1 });
+    
+    // In firestore, sorting requires an index if combining multiple fields, but since we are filtering by userId and sorting by createdAt, we will fetch and sort in memory if no index exists, but letting firestore do it where possible.
+    const snapshot = await medicinesCol.where('userId', '==', userId).orderBy('createdAt', 'desc').get();
+    
+    const medicines = [];
+    snapshot.forEach(doc => {
+      medicines.push({ id: doc.id, _id: doc.id, ...doc.data() });
+    });
+    
     res.json(medicines);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -18,9 +27,12 @@ router.get('/', async (req, res) => {
 // POST create a new medicine
 router.post('/', async (req, res) => {
   try {
-    const medicine = new Medicine(req.body);
-    const saved = await medicine.save();
-    res.status(201).json(saved);
+    const data = req.body;
+    data.createdAt = new Date().toISOString(); // manually set timestamp
+    data.updatedAt = data.createdAt;
+    
+    const docRef = await medicinesCol.add(data);
+    res.status(201).json({ id: docRef.id, _id: docRef.id, ...data });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -29,8 +41,14 @@ router.post('/', async (req, res) => {
 // PATCH update a medicine by id
 router.patch('/:id', async (req, res) => {
   try {
-    const updated = await Medicine.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(updated);
+    const uid = req.params.id;
+    const updates = req.body;
+    updates.updatedAt = new Date().toISOString();
+    
+    await medicinesCol.doc(uid).update(updates);
+    
+    const docRef = await medicinesCol.doc(uid).get();
+    res.json({ id: docRef.id, _id: docRef.id, ...docRef.data() });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -39,7 +57,7 @@ router.patch('/:id', async (req, res) => {
 // DELETE remove a medicine by id
 router.delete('/:id', async (req, res) => {
   try {
-    await Medicine.findByIdAndDelete(req.params.id);
+    await medicinesCol.doc(req.params.id).delete();
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
     res.status(400).json({ error: err.message });

@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { getRxCUI } from "../services/interactionChecker";
-import { medicinesApi, remindersApi, doseLogsApi } from "../services/api";
+import { medicinesApi, remindersApi, doseLogsApi, usersApi } from "../services/api";
+import { auth } from "../lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 
 export type Medicine = {
   id: string;           // maps to MongoDB _id
@@ -36,12 +38,21 @@ export type DoseLog = {
   action: "taken" | "skipped" | "snoozed";
 };
 
+export type UserProfile = {
+  id: string;
+  name: string;
+  dateOfBirth: string | null;
+  gender: "male" | "female" | null;
+};
+
 type AppContextType = {
   medicines: Medicine[];
   reminders: Reminder[];
   doseLogs: DoseLog[];
+  userProfile: UserProfile | null;
   privacyMode: boolean;
   isLoggedIn: boolean;
+  needsOnboarding: boolean;
   currentUserId: string | null;
   addMedicine: (med: Omit<Medicine, "id" | "addedAt">) => Promise<Medicine>;
   updateMedicine: (id: string, updates: Partial<Medicine>) => Promise<void>;
@@ -51,9 +62,12 @@ type AppContextType = {
   logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>;
   setPrivacyMode: (v: boolean) => void;
   setIsLoggedIn: (v: boolean) => void;
+  setNeedsOnboarding: (v: boolean) => void;
+  completeOnboarding: (profile: Omit<UserProfile, "id">) => Promise<void>;
   loginUser: (userId: string, email: string) => void;
   logoutUser: () => void;
   clearAllData: () => void;
+  isInitializing: boolean;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -78,6 +92,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  
   const [privacyMode, setPrivacyMode] = useState(() => loadLocal("med_privacy", false));
   const [isLoggedIn, setIsLoggedIn] = useState(() => loadLocal("med_loggedin", false));
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => loadLocal("med_userId", null));
@@ -87,40 +104,84 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem("med_loggedin", JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
   useEffect(() => { localStorage.setItem("med_userId", JSON.stringify(currentUserId)); }, [currentUserId]);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user && user.emailVerified) {
+        setCurrentUserId(user.uid);
+        setIsLoggedIn(true);
+      } else {
+        setCurrentUserId(null);
+        setIsLoggedIn(false);
+        setUserProfile(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
     setIsLoggedIn(true);
   }, []);
 
-  const logoutUser = useCallback(() => {
+  const logoutUser = useCallback(async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
     setCurrentUserId(null);
     setIsLoggedIn(false);
+    setUserProfile(null);
     setMedicines([]);
     setReminders([]);
     setDoseLogs([]);
   }, []);
 
+  const [isInitializing, setIsInitializing] = useState(true);
+
   // Fetch all data from backend when a user logs in
   useEffect(() => {
-    if (!currentUserId) return;
+    if (!currentUserId) {
+      setIsInitializing(false);
+      return;
+    }
 
     const fetchAll = async () => {
       try {
+        // Evaluate profile first to immediately block/allow onboarding independently
+        const prof = await usersApi.getProfile(currentUserId).catch(() => null);
+        if (!prof || !prof.dateOfBirth || !prof.gender) {
+          setNeedsOnboarding(true);
+          setUserProfile(prof ? { ...prof, id: currentUserId } : null);
+        } else {
+          setNeedsOnboarding(false);
+          setUserProfile({ ...prof, id: currentUserId });
+        }
+
         const [meds, rems, logs] = await Promise.all([
-          medicinesApi.getAll(currentUserId),
-          remindersApi.getAll(currentUserId),
-          doseLogsApi.getAll(currentUserId),
+          medicinesApi.getAll(currentUserId).catch(() => []),
+          remindersApi.getAll(currentUserId).catch(() => []),
+          doseLogsApi.getAll(currentUserId).catch(() => []),
         ]);
         setMedicines(meds.map(normalize));
         setReminders(rems.map(normalize));
         setDoseLogs(logs.map(normalize));
       } catch (err) {
         console.error("Failed to load data from backend:", err);
+      } finally {
+        setIsInitializing(false);
       }
     };
 
     fetchAll();
   }, [currentUserId]);
+
+  const completeOnboarding = async (profile: Omit<UserProfile, "id">) => {
+    if (!currentUserId) throw new Error("Not logged in");
+    const updated = await usersApi.upsertProfile({ uid: currentUserId, ...profile });
+    setUserProfile({ ...updated, id: currentUserId });
+    setNeedsOnboarding(false);
+  };
 
   // --- CRUD Operations ---
 
@@ -179,9 +240,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
-        medicines, reminders, doseLogs, privacyMode, isLoggedIn, currentUserId,
+        medicines, reminders, doseLogs, userProfile, privacyMode, isLoggedIn, needsOnboarding, currentUserId,
         addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
-        logDose, setPrivacyMode, setIsLoggedIn, loginUser, logoutUser, clearAllData,
+        logDose, setPrivacyMode, setIsLoggedIn, setNeedsOnboarding, completeOnboarding, loginUser, logoutUser, clearAllData, isInitializing
       }}
     >
       {children}
