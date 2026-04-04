@@ -3,7 +3,7 @@
  * All functions return typed data or throw on error.
  */
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 /** Custom error that carries extra fields from the backend JSON response. */
 class ApiError extends Error {
