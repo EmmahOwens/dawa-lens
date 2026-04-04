@@ -1,14 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, X, Clock, Download, Upload, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, Download, Upload } from "lucide-react";
 import { useApp, DoseLog } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
   const { doseLogs, reminders, logDose } = useApp();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   // Group by date
   const grouped = doseLogs.reduce<Record<string, DoseLog[]>>((acc, log) => {
@@ -25,7 +27,7 @@ export default function HistoryPage() {
       scheduledTime: r.time,
       action: "taken",
     });
-    toast({ title: "Dose logged", description: `${r.medicineName} marked as taken` });
+    toast({ title: t("history.dose_logged"), description: `${r.medicineName} ${t("history.marked_as")} ${t("history.taken")}` });
   };
 
   const exportCSV = () => {
@@ -40,7 +42,7 @@ export default function HistoryPage() {
     a.download = `dawalens-history-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: "Exported!", description: "History downloaded as CSV" });
+    toast({ title: t("history.exported"), description: t("history.exported_desc") });
   };
 
   const importCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,7 +66,7 @@ export default function HistoryPage() {
           count++;
         }
       });
-      toast({ title: "Imported!", description: `${count} records imported` });
+      toast({ title: t("history.imported"), description: `${count} ${t("history.imported_desc")}` });
     };
     reader.readAsText(file);
   };
@@ -74,18 +76,18 @@ export default function HistoryPage() {
   return (
     <div className="px-4 pt-6 pb-4">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} /> {t("common.back")}
       </button>
 
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-foreground">Medication Log</h1>
+        <h1 className="text-xl font-bold text-foreground">{t("history.title")}</h1>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={exportCSV}>
-            <Download size={14} className="mr-1" /> Export
+            <Download size={14} className="mr-1" /> {t("history.export")}
           </Button>
           <label>
             <Button size="sm" variant="outline" asChild>
-              <span><Upload size={14} className="mr-1" /> Import</span>
+              <span><Upload size={14} className="mr-1" /> {t("history.import")}</span>
             </Button>
             <input type="file" accept=".csv" className="hidden" onChange={importCSV} />
           </label>
@@ -95,7 +97,7 @@ export default function HistoryPage() {
       {/* Quick log from active reminders */}
       {reminders.filter((r) => r.enabled).length > 0 && (
         <div className="mb-6">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3">Quick Log</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3">{t("history.quick_log")}</h2>
           <div className="space-y-2">
             {reminders.filter((r) => r.enabled).map((r) => (
               <div key={r.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
@@ -113,7 +115,7 @@ export default function HistoryPage() {
                   <button
                     onClick={() => {
                       logDose({ reminderId: r.id, medicineName: r.medicineName, dose: r.dose, scheduledTime: r.time, action: "skipped" });
-                      toast({ title: "Skipped", description: `${r.medicineName} marked as skipped` });
+                      toast({ title: t("history.skipped"), description: `${r.medicineName} ${t("history.marked_as")} ${t("history.skipped")}` });
                     }}
                     className="rounded-lg bg-destructive/10 p-2 text-destructive hover:bg-destructive/20 transition-colors"
                   >
@@ -122,7 +124,7 @@ export default function HistoryPage() {
                   <button
                     onClick={() => {
                       logDose({ reminderId: r.id, medicineName: r.medicineName, dose: r.dose, scheduledTime: r.time, action: "snoozed" });
-                      toast({ title: "Snoozed", description: `${r.medicineName} snoozed` });
+                      toast({ title: t("history.snoozed"), description: `${r.medicineName} ${t("history.snoozed")}` });
                     }}
                     className="rounded-lg bg-warning/15 p-2 text-warning hover:bg-warning/25 transition-colors"
                   >
@@ -139,7 +141,7 @@ export default function HistoryPage() {
       {days.length === 0 ? (
         <div className="text-center py-16">
           <Clock size={40} className="text-muted-foreground/40 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No dose history yet. Start logging!</p>
+          <p className="text-sm text-muted-foreground">{t("history.no_history")}</p>
         </div>
       ) : (
         <div className="space-y-5">

@@ -9,11 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 export default function AddReminderPage() {
   const navigate = useNavigate();
   const { addReminder } = useApp();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [medicineName, setMedicineName] = useState("");
   const [dose, setDose] = useState("");
@@ -23,7 +25,11 @@ export default function AddReminderPage() {
 
   const handleSave = () => {
     if (!medicineName.trim() || !dose.trim()) {
-      toast({ title: "Missing fields", description: "Please fill in medicine name and dose.", variant: "destructive" });
+      toast({ 
+        title: t("reminders.missing_fields"), 
+        description: t("reminders.missing_fields_desc"), 
+        variant: "destructive" 
+      });
       return;
     }
     addReminder({
@@ -34,14 +40,14 @@ export default function AddReminderPage() {
       notes: notes.trim() || undefined,
       enabled: true,
     });
-    toast({ title: "Reminder created!", description: `${medicineName} at ${time}` });
+    toast({ title: t("reminders.created"), description: `${medicineName} @ ${time}` });
     navigate("/");
   };
 
   return (
     <div className="px-4 pt-6 pb-4">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} /> {t("common.back")}
       </button>
 
       <motion.h1
@@ -49,7 +55,7 @@ export default function AddReminderPage() {
         animate={{ opacity: 1, y: 0 }}
         className="text-xl font-bold text-foreground mb-6"
       >
-        Add Reminder
+        {t("reminders.add_title")}
       </motion.h1>
 
       <motion.div
@@ -59,29 +65,29 @@ export default function AddReminderPage() {
         className="space-y-5"
       >
         <div>
-          <Label htmlFor="medName">Medicine Name</Label>
+          <Label htmlFor="medName">{t("reminders.med_name")}</Label>
           <Input
             id="medName"
             value={medicineName}
             onChange={(e) => setMedicineName(e.target.value)}
-            placeholder="e.g. Ibuprofen 200mg"
+            placeholder={t("reminders.med_name_placeholder")}
             className="mt-1.5"
           />
         </div>
 
         <div>
-          <Label htmlFor="dose">Dose Amount</Label>
+          <Label htmlFor="dose">{t("reminders.dose")}</Label>
           <Input
             id="dose"
             value={dose}
             onChange={(e) => setDose(e.target.value)}
-            placeholder="e.g. 1 tablet, 5ml"
+            placeholder={t("reminders.dose_placeholder")}
             className="mt-1.5"
           />
         </div>
 
         <div>
-          <Label htmlFor="time">Time</Label>
+          <Label htmlFor="time">{t("reminders.time")}</Label>
           <Input
             id="time"
             type="time"
@@ -92,34 +98,34 @@ export default function AddReminderPage() {
         </div>
 
         <div>
-          <Label>Repeat Schedule</Label>
+          <Label>{t("reminders.repeat")}</Label>
           <Select value={repeat} onValueChange={(v) => setRepeat(v as any)}>
             <SelectTrigger className="mt-1.5">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="once">Once</SelectItem>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
+              <SelectItem value="once">{t("reminders.once")}</SelectItem>
+              <SelectItem value="daily">{t("reminders.daily")}</SelectItem>
+              <SelectItem value="weekly">{t("reminders.weekly")}</SelectItem>
+              <SelectItem value="custom">{t("reminders.custom")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div>
-          <Label htmlFor="notes">Notes (optional)</Label>
+          <Label htmlFor="notes">{t("reminders.notes")}</Label>
           <Textarea
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Take with food, etc."
+            placeholder={t("reminders.notes_placeholder")}
             className="mt-1.5"
             rows={3}
           />
         </div>
 
         <Button onClick={handleSave} className="w-full" size="lg">
-          <Save size={16} className="mr-2" /> Save Reminder
+          <Save size={16} className="mr-2" /> {t("reminders.save_reminder")}
         </Button>
       </motion.div>
     </div>

@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Eye, EyeOff, Globe } from "lucide-react";
+import { ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
@@ -28,7 +28,7 @@ export default function SettingsPage() {
   return (
     <div className="px-4 pt-6 pb-4">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} /> {t("common.back")}
       </button>
 
       <motion.h1
@@ -36,7 +36,7 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="text-xl font-bold text-foreground mb-1"
       >
-        {t("settings.title", "Settings")}
+        {t("settings.title")}
       </motion.h1>
       
       {userProfile && (
@@ -53,7 +53,7 @@ export default function SettingsPage() {
         {/* Language */}
         <div className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Globe size={14} /> {t("settings.language_preferences", "Language")}
+            <Globe size={14} /> {t("settings.language_preferences")}
           </h2>
           <div className="flex gap-2">
             <Button
@@ -61,14 +61,14 @@ export default function SettingsPage() {
               onClick={() => handleLanguageChange('en')}
               className="px-6"
             >
-              {t("settings.english", "English")}
+              {t("settings.english")}
             </Button>
             <Button
               variant={i18n.language.startsWith('sw') ? "default" : "outline"}
               onClick={() => handleLanguageChange('sw')}
               className="px-6"
             >
-              {t("settings.swahili", "Kiswahili")}
+              {t("settings.swahili")}
             </Button>
           </div>
         </div>
@@ -76,12 +76,12 @@ export default function SettingsPage() {
         {/* Appearance */}
         <div className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Moon size={14} /> Theme & Appearance
+            <Moon size={14} /> {t("settings.appearance")}
           </h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-card-foreground font-medium">Dark Mode</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Choose your preferred theme</p>
+              <p className="text-sm text-card-foreground font-medium">{t("settings.dark_mode")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.theme_desc")}</p>
             </div>
             <ThemeToggle />
           </div>
@@ -90,25 +90,25 @@ export default function SettingsPage() {
         {/* Account */}
         <div className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Lock size={14} /> Account
+            <Lock size={14} /> {t("settings.account")}
           </h2>
           {isLoggedIn ? (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">Signed in</p>
+              <p className="text-sm text-muted-foreground">{t("settings.signed_in")}</p>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => {
                   logoutUser();
-                  toast({ title: "Logged out" });
+                  toast({ title: t("settings.logout") });
                 }}
               >
-                Log Out
+                {t("settings.logout")}
               </Button>
             </div>
           ) : (
             <Button size="sm" onClick={() => navigate("/auth")}>
-              Sign In / Sign Up
+              {t("settings.login_btn")}
             </Button>
           )}
         </div>
@@ -116,33 +116,33 @@ export default function SettingsPage() {
         {/* Privacy */}
         <div className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Shield size={14} /> Privacy
+            <Shield size={14} /> {t("settings.privacy")}
           </h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-card-foreground font-medium">Local-Only Mode</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Data stays on this device only</p>
+              <p className="text-sm text-card-foreground font-medium">{t("settings.local_mode")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.local_mode_desc")}</p>
             </div>
             <Switch checked={privacyMode} onCheckedChange={setPrivacyMode} />
           </div>
           <div className="flex items-center justify-between mt-4">
             <div>
-              <p className="text-sm text-card-foreground font-medium">Encrypted Storage</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Medication data is encrypted at rest</p>
+              <p className="text-sm text-card-foreground font-medium">{t("settings.encrypted")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.encrypted_desc")}</p>
             </div>
-            <span className="text-xs text-success font-medium bg-success/10 rounded-lg px-2 py-1">Active</span>
+            <span className="text-xs text-success font-medium bg-success/10 rounded-lg px-2 py-1">{t("settings.active")}</span>
           </div>
         </div>
 
         {/* Notifications */}
         <div className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Bell size={14} /> Notifications
+            <Bell size={14} /> {t("settings.notifications")}
           </h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-card-foreground font-medium">Push Notifications</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Receive reminders when app is closed</p>
+              <p className="text-sm text-card-foreground font-medium">{t("settings.push_notifs")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.push_desc")}</p>
             </div>
             <Button
               size="sm"
@@ -157,7 +157,7 @@ export default function SettingsPage() {
                 }
               }}
             >
-              Enable
+              {t("settings.enable")}
             </Button>
           </div>
         </div>
@@ -165,19 +165,19 @@ export default function SettingsPage() {
         {/* Danger zone */}
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
           <h2 className="text-sm font-semibold text-destructive mb-4 flex items-center gap-2">
-            <Trash2 size={14} /> Danger Zone
+            <Trash2 size={14} /> {t("settings.danger_zone")}
           </h2>
           <Button
             variant="destructive"
             size="sm"
             onClick={() => {
-              if (window.confirm("Delete all medication data? This cannot be undone.")) {
+              if (window.confirm(t("settings.confirm_delete"))) {
                 clearAllData();
-                toast({ title: "All data cleared", variant: "destructive" });
+                toast({ title: t("settings.data_cleared"), variant: "destructive" });
               }
             }}
           >
-            Clear All Data
+            {t("settings.clear_data")}
           </Button>
         </div>
       </div>

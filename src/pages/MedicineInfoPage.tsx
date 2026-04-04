@@ -8,8 +8,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useApp } from "@/contexts/AppContext";
 import { getRxCUI, checkInteractions } from "@/services/interactionChecker";
 import { ParsedInteraction } from "@/types/interactions";
-
 import { useDrugData } from "@/hooks/useDrugData";
+import { useTranslation } from "react-i18next";
 
 export default function MedicineInfoPage() {
   const { name } = useParams();
@@ -18,6 +18,7 @@ export default function MedicineInfoPage() {
   const initialQuery = name || searchParams.get("q") || "";
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [activeQuery, setActiveQuery] = useState(initialQuery);
+  const { t } = useTranslation();
   
   const { data: info, isLoading: searching, isError, error } = useDrugData(activeQuery);
   const { medicines } = useApp();
@@ -56,22 +57,22 @@ export default function MedicineInfoPage() {
 
   const sections = info
     ? [
-        { title: "Uses", content: info.indications || "Not available" },
-        { title: "Dosage", content: info.instructions || info.dosageForm || "Not available" },
-        { title: "Warnings", content: info.warnings || "Not available" },
-        { title: "Side Effects", content: info.sideEffects || "Not available" },
-      ].filter(s => s.content && s.content !== "Not available")
+        { title: t("medicine_info.uses"), content: info.indications || t("medicine_info.not_available") },
+        { title: t("medicine_info.dosage"), content: info.instructions || info.dosageForm || t("medicine_info.not_available") },
+        { title: t("medicine_info.warnings"), content: info.warnings || t("medicine_info.not_available") },
+        { title: t("medicine_info.side_effects"), content: info.sideEffects || t("medicine_info.not_available") },
+      ].filter(s => s.content && s.content !== t("medicine_info.not_available"))
     : [];
 
   return (
     <div className="px-4 pt-6 pb-4">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} /> {t("common.back")}
       </button>
 
       <h1 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
         <Pill size={20} className="text-primary" />
-        Medicine Info
+        {t("medicine_info.title")}
       </h1>
 
       {/* Search bar */}
@@ -79,11 +80,11 @@ export default function MedicineInfoPage() {
         <Input
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search medicine name..."
+          placeholder={t("medicine_info.search_placeholder")}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
         />
         <Button onClick={handleSearch} disabled={searching}>
-          {searching ? "..." : "Search"}
+          {searching ? "..." : t("common.search")}
         </Button>
       </div>
 
@@ -92,7 +93,7 @@ export default function MedicineInfoPage() {
           <div className="flex items-start gap-2">
             <AlertTriangle size={16} className="text-destructive mt-0.5 shrink-0" />
             <p className="text-xs text-destructive leading-relaxed">
-              {error instanceof Error ? error.message : "Failed to load information."}
+              {error instanceof Error ? error.message : t("medicine_info.failed_load")}
             </p>
           </div>
         </div>
@@ -106,7 +107,7 @@ export default function MedicineInfoPage() {
               {interactions.map((interaction, i) => (
                 <Alert key={i} variant="destructive" className="bg-destructive/10 border-destructive">
                   <ShieldAlert className="h-5 w-5" />
-                  <AlertTitle>Severe Interaction Warning!</AlertTitle>
+                  <AlertTitle>{t("medicine_info.severe_warning")}</AlertTitle>
                   <AlertDescription className="text-sm mt-1 leading-relaxed">
                     <strong>{interaction.drug1}</strong> and <strong>{interaction.drug2}</strong>: {interaction.description}
                   </AlertDescription>
@@ -117,9 +118,9 @@ export default function MedicineInfoPage() {
 
           <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
             <h2 className="text-lg font-bold text-foreground">{info.name}</h2>
-            {info.genericName && <p className="text-sm text-muted-foreground">Generic: {info.genericName}</p>}
+            {info.genericName && <p className="text-sm text-muted-foreground">{t("medicine_info.generic")}: {info.genericName}</p>}
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <ExternalLink size={12} /> Source: {info.source}
+              <ExternalLink size={12} /> {t("medicine_info.source")}: {info.source}
             </p>
           </div>
 
@@ -134,7 +135,7 @@ export default function MedicineInfoPage() {
             <div className="flex items-start gap-2 text-warning">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               <p className="text-xs leading-relaxed">
-                This information is for reference only. Always consult a healthcare professional before starting, changing, or stopping any medication.
+                {t("dashboard.disclaimer")}
               </p>
             </div>
           </div>
@@ -144,7 +145,7 @@ export default function MedicineInfoPage() {
       {!info && !searching && !isError && (
         <div className="text-center py-16">
           <Pill size={40} className="text-muted-foreground/40 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Enter a medicine name to look up information</p>
+          <p className="text-sm text-muted-foreground">{t("medicine_info.enter_name")}</p>
         </div>
       )}
     </div>

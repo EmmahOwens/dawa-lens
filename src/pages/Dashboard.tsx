@@ -36,7 +36,7 @@ export default function Dashboard() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {getGreeting()}, {userProfile?.name?.split(" ")[0] || "there"}
+          {getGreeting()}, {userProfile?.name?.split(" ")[0] || t("dashboard.greeting_there")}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("dashboard.subtitle")}</p>
       </motion.div>
