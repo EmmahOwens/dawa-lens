@@ -131,8 +131,8 @@ export default function AuthPage() {
             className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full"
           >
             <div className="text-center mb-8">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Lock size={28} className="text-primary" />
+              <div className="mb-4">
+                <img src="/logo.png" alt="Dawa Lens Logo" className="w-20 h-20 mx-auto object-contain" />
               </div>
               <h1 className="text-2xl font-bold text-foreground">{isLogin ? "Welcome Back" : "Create Account"}</h1>
               <p className="text-sm text-muted-foreground mt-1">

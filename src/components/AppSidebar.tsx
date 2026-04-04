@@ -38,9 +38,12 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>
             {!collapsed && (
-              <span className="text-base font-bold tracking-tight text-primary">
-                Dawa Lens
-              </span>
+              <div className="flex items-center gap-2">
+                <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
+                <span className="text-base font-bold tracking-tight text-primary">
+                  Dawa Lens
+                </span>
+              </div>
             )}
           </SidebarGroupLabel>
           <SidebarGroupContent>

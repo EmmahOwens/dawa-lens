@@ -66,8 +66,8 @@ export default function OnboardingPage() {
           className="flex-1 flex flex-col max-w-sm mx-auto w-full mt-10"
         >
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <UserSquare2 size={28} className="text-primary" />
+            <div className="mb-4">
+              <img src="/logo.png" alt="Dawa Lens Logo" className="w-20 h-20 mx-auto object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">Complete Your Profile</h1>
             <p className="text-sm text-muted-foreground mt-2">
