@@ -3,24 +3,20 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, ScanBarcode, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import { useApp } from "@/contexts/AppContext";
 import { extractTextFromImage } from "@/services/visionService";
 import { resolveBarcodeToDrugName } from "@/services/barcodeResolver";
+import { identifyPill, PillMatch } from "@/services/pillIdService";
 
 type MatchResult = {
   name: string;
-  genericName: string;
+  genericName?: string;
   confidence: number;
 };
 
-// Simulated results for demo (Pill ML model)
-const demoResults: MatchResult[] = [
-  { name: "Ibuprofen 200mg", genericName: "Ibuprofen", confidence: 0.92 },
-  { name: "Acetaminophen 500mg", genericName: "Paracetamol", confidence: 0.74 },
-  { name: "Aspirin 325mg", genericName: "Acetylsalicylic acid", confidence: 0.45 },
-];
-
 export default function ResultsPage() {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { addMedicine } = useApp();
@@ -34,38 +30,38 @@ export default function ResultsPage() {
   const [saved, setSaved] = useState(false);
   
   // OCR & Barcode State
-  const [loading, setLoading] = useState(mode !== "pill");
+  const [loading, setLoading] = useState(true);
   const [extractedText, setExtractedText] = useState("");
   const [resolvedBarcodeDrug, setResolvedBarcodeDrug] = useState<string | null>(null);
+  const [aiMatches, setAiMatches] = useState<MatchResult[]>([]);
 
   useEffect(() => {
     async function process() {
-      if (mode === "text" && imageUrl) {
-        setLoading(true);
-        try {
+      setLoading(true);
+      try {
+        if (mode === "pill" && imageUrl) {
+          const res = await identifyPill(imageUrl);
+          if (res.success) {
+            setAiMatches(res.matches);
+          }
+        } else if (mode === "text" && imageUrl) {
           const text = await extractTextFromImage(imageUrl);
           setExtractedText(text);
-        } catch (e) {
-          console.error(e);
-          setExtractedText("Failed to extract text. Please try again.");
-        }
-        setLoading(false);
-      } else if (mode === "barcode" && barcode) {
-        setLoading(true);
-        try {
+        } else if (mode === "barcode" && barcode) {
           const drugName = await resolveBarcodeToDrugName(barcode);
           setResolvedBarcodeDrug(drugName);
-        } catch (e) {
-          console.error(e);
         }
-        setLoading(false);
+      } catch (e) {
+        console.error(e);
+        if (mode === "text") setExtractedText("Failed to extract text. Please try again.");
       }
+      setLoading(false);
     }
     process();
   }, [mode, imageUrl, barcode]);
 
-  const highConfidence = demoResults.filter((r) => r.confidence >= 0.7);
-  const lowConfidence = demoResults.filter((r) => r.confidence < 0.7);
+  const highConfidence = aiMatches.filter((r) => r.confidence >= 0.7);
+  const lowConfidence = aiMatches.filter((r) => r.confidence < 0.7);
 
   const handleConfirm = (result: Partial<MatchResult>) => {
     const finalName = result.name || "Unknown Medicine";
@@ -97,7 +93,7 @@ export default function ResultsPage() {
           {loading && (
              <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center">
                 <Loader2 size={32} className="animate-spin text-primary mb-2" />
-                <span className="text-sm font-medium">Extracting Text...</span>
+                <span className="text-sm font-medium">{t("scan.ai_loading")}</span>
              </div>
           )}
         </div>
@@ -110,7 +106,7 @@ export default function ResultsPage() {
           className="mb-4 rounded-xl bg-success/10 border border-success/30 p-4 flex items-center gap-3"
         >
           <Check size={18} className="text-success" />
-          <p className="text-sm text-success font-medium">Medicine saved securely!</p>
+          <p className="text-sm text-success font-medium">{t("common.success")}!</p>
         </motion.div>
       )}
 
@@ -120,12 +116,12 @@ export default function ResultsPage() {
           {highConfidence.length > 0 && (
             <div className="mb-6">
               <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <ThumbsUp size={14} className="text-success" /> High Confidence Matches
+                <ThumbsUp size={14} className="text-success" /> {t("scan.high_confidence")}
               </h2>
               <div className="space-y-3">
-                {highConfidence.map((r) => (
+                {highConfidence.map((r, idx) => (
                   <motion.div
-                    key={r.name}
+                    key={r.name + idx}
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     className={`rounded-xl border p-4 ${confirmed === r.name ? "border-success bg-success/5" : "border-border bg-card"}`}
@@ -133,7 +129,7 @@ export default function ResultsPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="font-semibold text-card-foreground">{r.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{r.genericName}</p>
+                        {r.genericName && <p className="text-xs text-muted-foreground mt-0.5">{r.genericName}</p>}
                       </div>
                       <span className="rounded-lg bg-success/15 px-2 py-1 text-xs font-bold text-success">
                         {Math.round(r.confidence * 100)}%
@@ -141,14 +137,14 @@ export default function ResultsPage() {
                     </div>
                     <div className="flex gap-2 mt-3">
                       <Button size="sm" onClick={() => handleConfirm(r)} disabled={!!confirmed}>
-                        <Check size={14} className="mr-1" /> Confirm
+                        <Check size={14} className="mr-1" /> {t("common.save")}
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => navigate(`/medicine/${encodeURIComponent(r.name)}`)}
                       >
-                        Details
+                        {t("nav.remind")}
                       </Button>
                     </div>
                   </motion.div>
@@ -159,7 +155,7 @@ export default function ResultsPage() {
           {lowConfidence.length > 0 && (
             <div className="mb-6">
               <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <ThumbsDown size={14} className="text-warning" /> Needs Verification
+                <ThumbsDown size={14} className="text-warning" /> {t("scan.low_confidence")}
               </h2>
               <div className="space-y-3">
                 {lowConfidence.map((r) => (
