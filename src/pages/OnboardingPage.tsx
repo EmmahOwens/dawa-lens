@@ -71,7 +71,7 @@ export default function OnboardingPage() {
             </div>
             <h1 className="text-2xl font-bold text-foreground">Complete Your Profile</h1>
             <p className="text-sm text-muted-foreground mt-2">
-              We just need a few details to personalize your Pill-Pal experience and calculate interactions accurately.
+              We just need a few details to personalize your Dawa Lens experience and calculate interactions accurately.
             </p>
           </div>
 

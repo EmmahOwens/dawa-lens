@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 export type Theme = "day" | "night" | "system";
 
-const STORAGE_KEY = "pill-pal-theme";
+const STORAGE_KEY = "dawa-lens-theme";
 
 function applyTheme(theme: Theme) {
   const root = document.documentElement;
