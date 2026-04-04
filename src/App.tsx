@@ -21,6 +21,7 @@ import { useApp } from "@/contexts/AppContext";
 import { Navigate } from "react-router-dom";
 import { preloadOCRModel } from "@/services/visionService";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import OfflineOverlay from "@/components/OfflineOverlay";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AppProvider>
+          <OfflineOverlay />
           <Toaster />
           <BrowserRouter>
             <Routes>
