@@ -75,3 +75,9 @@ export const doseLogsApi = {
   create: (data: Record<string, unknown>) =>
     request<any>('/doselogs', { method: 'POST', body: JSON.stringify(data) }),
 };
+
+// --- Vision AI ---
+export const visionApi = {
+  identifyPill: (data: { image: string }) =>
+    request<any>('/vision/pill-id', { method: 'POST', body: JSON.stringify(data) }),
+};

@@ -59,7 +59,10 @@ const en = {
       barcode: "Barcode",
       camera_loading: "Camera loading...",
       point_barcode: "Point at barcode",
-      capture_hint: "Position the pill inside the frame and tap to capture"
+      capture_hint: "Position the pill inside the frame and tap to capture",
+      ai_loading: "AI identifying your medicine...",
+      high_confidence: "High Confidence Matches",
+      low_confidence: "Needs Verification"
     },
     history: {
       title: "Medication Log",
@@ -195,7 +198,10 @@ const sw = {
       barcode: "Msimbopau",
       camera_loading: "Kamera inafunguka...",
       point_barcode: "Elekeza kwenye msimbopau",
-      capture_hint: "Weka kidonge ndani ya fremu kisha gusa ili kupiga picha"
+      capture_hint: "Weka kidonge ndani ya fremu kisha gusa ili kupiga picha",
+      ai_loading: "AI inatambua dawa yako...",
+      high_confidence: "Uhakika wa Juu",
+      low_confidence: "Inahitaji Uhakiki"
     },
     history: {
       title: "Kumbukumbu ya Dawa",
