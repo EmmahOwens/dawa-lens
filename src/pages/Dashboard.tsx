@@ -112,10 +112,10 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Disclaimer */}
-      <div className="mt-6 rounded-xl border border-warning/30 bg-warning/10 p-4">
-        <p className="text-xs text-warning-foreground leading-relaxed">
-          ⚠️ <strong>{t("dashboard.disclaimer")}</strong>
+      <div className="mt-6 rounded-xl border border-warning/30 bg-warning/10 p-4 font-medium">
+        <p className="text-xs text-warning leading-relaxed flex items-start gap-2">
+          <span className="shrink-0">⚠️</span>
+          <span>{t("dashboard.disclaimer")}</span>
         </p>
       </div>
     </div>
