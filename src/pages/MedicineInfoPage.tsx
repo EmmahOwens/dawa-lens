@@ -130,10 +130,10 @@ export default function MedicineInfoPage() {
             </div>
           ))}
 
-          <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
-            <div className="flex items-start gap-2">
-              <AlertTriangle size={16} className="text-warning mt-0.5 shrink-0" />
-              <p className="text-xs text-warning-foreground leading-relaxed">
+          <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 font-medium">
+            <div className="flex items-start gap-2 text-warning">
+              <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+              <p className="text-xs leading-relaxed">
                 This information is for reference only. Always consult a healthcare professional before starting, changing, or stopping any medication.
               </p>
             </div>
