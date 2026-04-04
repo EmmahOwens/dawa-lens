@@ -13,7 +13,7 @@ const en = {
       remind: "Remind"
     },
     dashboard: {
-      title: "MedRemind",
+      title: "Dawa Lens",
       subtitle: "Your smart medicine companion",
       todays_progress: "Today's Progress",
       doses: "doses",
@@ -54,7 +54,7 @@ const sw = {
       remind: "Kumbusha"
     },
     dashboard: {
-      title: "MedRemind",
+      title: "Dawa Lens",
       subtitle: "Msaidizi wako wa akili wa dawa",
       todays_progress: "Maendeleo ya Leo",
       doses: "dozi",

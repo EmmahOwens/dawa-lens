@@ -23,7 +23,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="flex-1 flex flex-col">
           <header className="h-12 flex items-center border-b border-border px-4">
             <SidebarTrigger />
-            <span className="ml-3 text-sm font-semibold text-foreground">MedRemind</span>
+            <span className="ml-3 text-sm font-semibold text-foreground">Dawa Lens</span>
           </header>
           <main className="flex-1 mx-auto w-full max-w-4xl p-6">{children}</main>
         </div>

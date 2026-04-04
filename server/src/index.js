@@ -23,7 +23,7 @@ app.use(express.json({ limit: '10mb' })); // 10mb to allow base64 image uploads
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Pill-Pal API is running 🚀 (Firebase Powered)' });
+  res.status(200).json({ status: 'ok', message: 'Dawa Lens API is running 🚀 (Firebase Powered)' });
 });
 
 // Mount Routes

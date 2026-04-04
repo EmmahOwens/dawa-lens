@@ -1,6 +1,6 @@
 {
-  "name": "MedRemind - Smart Medicine Reminder",
-  "short_name": "MedRemind",
+  "name": "Dawa Lens - Smart Medicine Reminder",
+  "short_name": "Dawa Lens",
   "description": "Identify medicines, manage schedules, and never miss a dose.",
   "start_url": "/",
   "display": "standalone",

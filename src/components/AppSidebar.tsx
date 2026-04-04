@@ -39,7 +39,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>
             {!collapsed && (
               <span className="text-base font-bold tracking-tight text-primary">
-                MedRemind
+                Dawa Lens
               </span>
             )}
           </SidebarGroupLabel>
