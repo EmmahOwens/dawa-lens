@@ -6,6 +6,7 @@ import { ParsedInteraction } from "@/types/interactions";
 import { ShieldAlert, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -14,6 +15,7 @@ export default function InteractionsPage() {
   const { medicines } = useApp();
   const [interactions, setInteractions] = useState<ParsedInteraction[]>([]);
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
   
   useEffect(() => {
     const fetchInteractions = async () => {
@@ -48,10 +50,10 @@ export default function InteractionsPage() {
       >
         <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
           <ShieldAlert size={28} className="text-primary" />
-          My Interactions
+          {t("safety.title")}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          A dynamic check of how your saved medications might interact with each other.
+          {t("safety.subtitle")}
         </p>
       </motion.div>
 
@@ -63,10 +65,12 @@ export default function InteractionsPage() {
       >
         <div className="flex items-start gap-2 text-warning">
           <Info size={16} className="mt-0.5 shrink-0" />
-          <p className="text-xs leading-relaxed">
-            The information provided here is for educational purposes only. Sourced from the NIH NLM API. 
-            <strong> Do not alter your medications without consulting a physician.</strong>
-          </p>
+          <div className="text-xs leading-relaxed">
+            <p className="font-bold mb-1">{t("safety.disclaimer_title")}</p>
+            <p>
+              {t("safety.disclaimer_body")}
+            </p>
+          </div>
         </div>
       </motion.div>
 
@@ -80,7 +84,7 @@ export default function InteractionsPage() {
             <ShieldAlert size={32} className="opacity-40 text-muted-foreground" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">
-            Add at least two medications to your profile to check for interactions.
+            {t("safety.no_medicines")}
           </p>
         </motion.div>
       )}
@@ -99,10 +103,7 @@ export default function InteractionsPage() {
           className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-6 text-center"
         >
           <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
-          <h3 className="font-bold text-emerald-600 dark:text-emerald-400">No Known Interactions</h3>
-          <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80 mt-1">
-            No major interactions found between your saved medications.
-          </p>
+          <h3 className="font-bold text-emerald-600 dark:text-emerald-400">{t("safety.no_interactions")}</h3>
         </motion.div>
       )}
 
@@ -115,7 +116,7 @@ export default function InteractionsPage() {
         >
           <h3 className="font-semibold text-base text-foreground mb-4 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-warning" />
-            Detected Interactions ({interactions.length})
+            {t("safety.detected")} ({interactions.length})
           </h3>
           {interactions.map((interaction, idx) => (
             <motion.div 
@@ -132,9 +133,9 @@ export default function InteractionsPage() {
                   <span className="font-bold text-sm text-card-foreground lowercase capitalize">{interaction.drug2}</span>
                 </div>
                 {interaction.severity === 'high' ? (
-                  <Badge variant="destructive" className="ml-2 px-2 py-0 text-[10px] uppercase font-bold tracking-wider">Severe</Badge>
+                  <Badge variant="destructive" className="ml-2 px-2 py-0 text-[10px] uppercase font-bold tracking-wider">{t("safety.severe")}</Badge>
                 ) : (
-                  <Badge variant="secondary" className="bg-warning/20 text-warning-foreground dark:bg-warning/30 px-2 py-0 text-[10px] uppercase font-bold tracking-wider">Warning</Badge>
+                  <Badge variant="secondary" className="bg-warning/20 text-warning-foreground dark:bg-warning/30 px-2 py-0 text-[10px] uppercase font-bold tracking-wider">{t("safety.warning")}</Badge>
                 )}
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">

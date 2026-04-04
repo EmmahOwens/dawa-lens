@@ -4,6 +4,16 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 
 const en = {
   translation: {
+    common: {
+      back: "Back",
+      save: "Save",
+      search: "Search",
+      loading: "Loading...",
+      error: "Error",
+      success: "Success",
+      cancel: "Cancel",
+      delete: "Delete"
+    },
     nav: {
       home: "Home",
       scan: "Scan",
@@ -15,6 +25,10 @@ const en = {
     dashboard: {
       title: "Dawa Lens",
       subtitle: "Your smart medicine companion",
+      good_morning: "Good morning",
+      good_afternoon: "Good afternoon",
+      good_evening: "Good evening",
+      greeting_there: "there",
       todays_progress: "Today's Progress",
       doses: "doses",
       quick_scan: "Scan Pill",
@@ -25,6 +39,20 @@ const en = {
       no_reminders: "No reminders yet. Add one to get started!",
       disclaimer: "Disclaimer: Medicine information provided is for reference only. Always confirm with your pharmacist or doctor before making any medical decisions."
     },
+    medicine_info: {
+      title: "Medicine Info",
+      search_placeholder: "Search medicine name...",
+      enter_name: "Enter a medicine name to look up information",
+      failed_load: "Failed to load information.",
+      severe_warning: "Severe Interaction Warning!",
+      generic: "Generic",
+      source: "Source",
+      uses: "Uses",
+      dosage: "Dosage",
+      warnings: "Warnings",
+      side_effects: "Side Effects",
+      not_available: "Not available"
+    },
     scan: {
       pill: "Pill",
       label: "Label OCR",
@@ -33,18 +61,95 @@ const en = {
       point_barcode: "Point at barcode",
       capture_hint: "Position the pill inside the frame and tap to capture"
     },
+    history: {
+      title: "Medication Log",
+      export: "Export",
+      import: "Import",
+      quick_log: "Quick Log",
+      no_history: "No dose history yet. Start logging!",
+      dose_logged: "Dose logged",
+      marked_as: "marked as",
+      taken: "taken",
+      skipped: "skipped",
+      snoozed: "snoozed",
+      exported: "Exported!",
+      exported_desc: "History downloaded as CSV",
+      imported: "Imported!",
+      imported_desc: "records imported"
+    },
+    safety: {
+      title: "My Interactions",
+      subtitle: "A dynamic check of how your saved medications might interact with each other.",
+      disclaimer_title: "Medical Disclaimer",
+      disclaimer_body: "The information provided here is for educational purposes only. Sourced from the NIH NLM API. Do not alter your medications without consulting a physician.",
+      no_medicines: "Add at least two medications to your profile to check for interactions.",
+      no_interactions: "No major interactions found between your saved medications.",
+      detected: "Detected Interactions",
+      severe: "Severe",
+      warning: "Warning"
+    },
+    reminders: {
+      add_title: "Add Reminder",
+      med_name: "Medicine Name",
+      med_name_placeholder: "e.g. Ibuprofen 200mg",
+      dose: "Dose Amount",
+      dose_placeholder: "e.g. 1 tablet, 5ml",
+      time: "Time",
+      repeat: "Repeat Schedule",
+      notes: "Notes (optional)",
+      notes_placeholder: "Take with food, etc.",
+      save_reminder: "Save Reminder",
+      once: "Once",
+      daily: "Daily",
+      weekly: "Weekly",
+      custom: "Custom",
+      missing_fields: "Missing fields",
+      missing_fields_desc: "Please fill in medicine name and dose.",
+      created: "Reminder created!"
+    },
     settings: {
       title: "Settings",
       language_preferences: "Language Preferences",
       language_select: "App Language",
       english: "English",
-      swahili: "Kiswahili"
+      swahili: "Kiswahili",
+      appearance: "Theme & Appearance",
+      dark_mode: "Dark Mode",
+      theme_desc: "Choose your preferred theme",
+      account: "Account",
+      signed_in: "Signed in",
+      logout: "Log Out",
+      login_btn: "Sign In / Sign Up",
+      privacy: "Privacy",
+      local_mode: "Local-Only Mode",
+      local_mode_desc: "Data stays on this device only",
+      encrypted: "Encrypted Storage",
+      encrypted_desc: "Medication data is encrypted at rest",
+      active: "Active",
+      notifications: "Notifications",
+      push_notifs: "Push Notifications",
+      push_desc: "Receive reminders when app is closed",
+      enable: "Enable",
+      danger_zone: "Danger Zone",
+      clear_data: "Clear All Data",
+      confirm_delete: "Delete all medication data? This cannot be undone.",
+      data_cleared: "All data cleared"
     }
   }
 };
 
 const sw = {
   translation: {
+    common: {
+      back: "Nyuma",
+      save: "Hifadhi",
+      search: "Tafuta",
+      loading: "Inapakia...",
+      error: "Hitilafu",
+      success: "Mafanikio",
+      cancel: "Ghairi",
+      delete: "Futa"
+    },
     nav: {
       home: "Nyumbani",
       scan: "Changanua",
@@ -56,6 +161,10 @@ const sw = {
     dashboard: {
       title: "Dawa Lens",
       subtitle: "Msaidizi wako wa akili wa dawa",
+      good_morning: "Habari za asubuhi",
+      good_afternoon: "Habari za mchana",
+      good_evening: "Habari za jioni",
+      greeting_there: "mwenzangu",
       todays_progress: "Maendeleo ya Leo",
       doses: "dozi",
       quick_scan: "Changanua Kidonge",
@@ -66,6 +175,20 @@ const sw = {
       no_reminders: "Hakuna vikumbusho bado. Ongeza kimoja ili kuanza!",
       disclaimer: "Kanusho: Taarifa za dawa zinazotolewa ni kwa kumbukumbu tu. Kila mara thibitisha na daktari wako kabla ya kufanya maamuzi yoyote ya matibabu."
     },
+    medicine_info: {
+      title: "Maelezo ya Dawa",
+      search_placeholder: "Tafuta jina la dawa...",
+      enter_name: "Andika jina la dawa ili kupata maelezo",
+      failed_load: "Imeshindwa kupata maelezo.",
+      severe_warning: "Tahadhari ya Mwingiliano Hatari!",
+      generic: "Jina la Asili",
+      source: "Chanzo",
+      uses: "Matumizi",
+      dosage: "Dozi",
+      warnings: "Tahadhari",
+      side_effects: "Madhara ya Dawa",
+      not_available: "Haikupatikana"
+    },
     scan: {
       pill: "Kidonge",
       label: "Maandishi (OCR)",
@@ -74,12 +197,79 @@ const sw = {
       point_barcode: "Elekeza kwenye msimbopau",
       capture_hint: "Weka kidonge ndani ya fremu kisha gusa ili kupiga picha"
     },
+    history: {
+      title: "Kumbukumbu ya Dawa",
+      export: "Safirisha",
+      import: "Ingiza",
+      quick_log: "Kumbukumbu ya Haraka",
+      no_history: "Hakuna historia ya dozi bado. Anza kuhifadhi!",
+      dose_logged: "Dozi imehifadhiwa",
+      marked_as: "imewekwa kama",
+      taken: "imekunywa",
+      skipped: "imeachwa",
+      snoozed: "imesogezwa",
+      exported: "Imesafirishwa!",
+      exported_desc: "Historia imepakuliwa kama CSV",
+      imported: "Imeingizwa!",
+      imported_desc: "kumbukumbu zimeingizwa"
+    },
+    safety: {
+      title: "Mwingiliano wa Dawa",
+      subtitle: "Uchunguzi wa jinsi dawa zako zinaweza kuingiliana zenyewe.",
+      disclaimer_title: "Kanusho la Matibabu",
+      disclaimer_body: "Taarifa zinazotolewa hapa ni kwa madhumuni ya elimu tu. Inatoka kwa NIH NLM API. Usibadilishe dawa zako bila kushauriana na daktari.",
+      no_medicines: "Ongeza angalau dawa mbili kwenye wasifu wako ili kuangalia mwingiliano.",
+      no_interactions: "Hakuna mwingiliano mkubwa uliopatikana kati ya dawa zako zilizohifadhiwa.",
+      detected: "Mwingiliano Uliopatikana",
+      severe: "Mbaya",
+      warning: "Tahadhari"
+    },
+    reminders: {
+      add_title: "Weka Kikumbusho",
+      med_name: "Jina la Dawa",
+      med_name_placeholder: "mfn. Ibuprofen 200mg",
+      dose: "Kiwango cha Dozi",
+      dose_placeholder: "mfn. kidonge 1, 5ml",
+      time: "Muda",
+      repeat: "Ratiba ya Kurudia",
+      notes: "Maelezo (hiari)",
+      notes_placeholder: "Kunywa baada ya chakula, nk.",
+      save_reminder: "Hifadhi Kikumbusho",
+      once: "Mara moja",
+      daily: "Kila siku",
+      weekly: "Kila wiki",
+      custom: "Maalum",
+      missing_fields: "Sehemu ambazo hazikujazwa",
+      missing_fields_desc: "Tafadhali jaza jina la dawa na dozi.",
+      created: "Kikumbusho kimeundwa!"
+    },
     settings: {
       title: "Mipangilio",
       language_preferences: "Lugha",
       language_select: "Lugha ya Programu",
       english: "Kiingereza",
-      swahili: "Kiswahili"
+      swahili: "Kiswahili",
+      appearance: "Mandhari na Mwonekano",
+      dark_mode: "Modi ya Giza",
+      theme_desc: "Chagua mandhari unayopendelea",
+      account: "Akaunti",
+      signed_in: "Umeingia",
+      logout: "Ondoka",
+      login_btn: "Ingia / Jisajili",
+      privacy: "Faragha",
+      local_mode: "Modi ya Kifaa Pekee",
+      local_mode_desc: "Data inabaki kwenye kifaa hiki pekee",
+      encrypted: "Hifadhi Iliyosimbwa",
+      encrypted_desc: "Data ya dawa imesimbwa kwa usalama",
+      active: "Inatumika",
+      notifications: "Arifa",
+      push_notifs: "Arifa za Kusukuma",
+      push_desc: "Pokea vikumbusho wakati programu imefungwa",
+      enable: "Washa",
+      danger_zone: "Eneo Hatari",
+      clear_data: "Futa Data Zote",
+      confirm_delete: "Futa data zote za dawa? Hii haiwezi kurejeshwa.",
+      data_cleared: "Data zote zimefutwa"
     }
   }
 };
