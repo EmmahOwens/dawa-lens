@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
 import { checkInteractions } from "@/services/interactionChecker";
 import { ParsedInteraction } from "@/types/interactions";
-import { CopyPlus, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ShieldAlert, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
+const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
 export default function InteractionsPage() {
   const { medicines } = useApp();
@@ -15,7 +17,6 @@ export default function InteractionsPage() {
   
   useEffect(() => {
     const fetchInteractions = async () => {
-      // Filter out medicines that don't have an rxcui yet
       const rxcuis = medicines.map(m => m.rxcui).filter((id): id is string => !!id);
       
       if (rxcuis.length < 2) {
@@ -38,84 +39,110 @@ export default function InteractionsPage() {
   }, [medicines]);
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
-          <CopyPlus className="w-8 h-8 text-indigo-500" />
+    <div className="px-4 pt-12 pb-4">
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        className="mb-8"
+      >
+        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <ShieldAlert size={28} className="text-primary" />
           My Interactions
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="mt-1 text-sm text-muted-foreground">
           A dynamic check of how your saved medications might interact with each other.
         </p>
-      </header>
+      </motion.div>
 
-      <Alert className="bg-muted/50 border-muted">
-        <Info className="h-4 w-4 text-muted-foreground" />
-        <AlertTitle className="text-muted-foreground font-semibold">Important Medical Disclaimer</AlertTitle>
-        <AlertDescription className="text-xs text-muted-foreground leading-relaxed mt-1">
-          The information provided here is for educational purposes only. It is sourced from the NIH NLM REST API. 
-          <strong> Do not alter your medications or dosages without consulting a physician or qualified healthcare provider.</strong>
-        </AlertDescription>
-      </Alert>
+      {/* Disclaimer */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="mb-6 rounded-xl border border-warning/30 bg-warning/10 p-4 font-medium"
+      >
+        <div className="flex items-start gap-2 text-warning">
+          <Info size={16} className="mt-0.5 shrink-0" />
+          <p className="text-xs leading-relaxed">
+            The information provided here is for educational purposes only. Sourced from the NIH NLM API. 
+            <strong> Do not alter your medications without consulting a physician.</strong>
+          </p>
+        </div>
+      </motion.div>
 
       {medicines.length < 2 && (
-        <Card className="bg-card/50 backdrop-blur-sm mt-8 border-dashed">
-          <CardContent className="flex flex-col items-center p-8 text-center text-muted-foreground space-y-4">
-            <CopyPlus className="w-12 h-12 opacity-20" />
-            <p className="max-w-[200px] text-sm">
-              Add at least two medications to your profile to check for interactions.
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-border bg-card p-10 text-center"
+        >
+          <div className="mx-auto w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
+            <ShieldAlert size={32} className="opacity-40 text-muted-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground font-medium">
+            Add at least two medications to your profile to check for interactions.
+          </p>
+        </motion.div>
       )}
 
       {medicines.length >= 2 && loading && (
         <div className="space-y-4">
-          <Skeleton className="h-[120px] w-full rounded-xl" />
-          <Skeleton className="h-[120px] w-full rounded-xl" />
+          <Skeleton className="h-[100px] w-full rounded-2xl" />
+          <Skeleton className="h-[100px] w-full rounded-2xl" />
         </div>
       )}
 
       {medicines.length >= 2 && !loading && interactions.length === 0 && (
-        <Alert className="bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-          <AlertTitle>No Known Interactions Found</AlertTitle>
-          <AlertDescription>
-            We didn't find any documented major interactions between your saved medications.
-          </AlertDescription>
-        </Alert>
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-6 text-center"
+        >
+          <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
+          <h3 className="font-bold text-emerald-600 dark:text-emerald-400">No Known Interactions</h3>
+          <p className="text-sm text-emerald-600/80 dark:text-emerald-400/80 mt-1">
+            No major interactions found between your saved medications.
+          </p>
+        </motion.div>
       )}
 
       {medicines.length >= 2 && !loading && interactions.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="font-semibold text-lg flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
+        <motion.div 
+          variants={container} 
+          initial="hidden" 
+          animate="show" 
+          className="space-y-4"
+        >
+          <h3 className="font-semibold text-base text-foreground mb-4 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-warning" />
             Detected Interactions ({interactions.length})
           </h3>
           {interactions.map((interaction, idx) => (
-            <Card key={idx} className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-all">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <span className="font-bold">{interaction.drug1}</span>
-                    <span className="text-muted-foreground text-sm font-normal">and</span>
-                    <span className="font-bold">{interaction.drug2}</span>
-                  </CardTitle>
-                  {interaction.severity === 'high' ? (
-                    <Badge variant="destructive" className="ml-2 shadow-sm shadow-destructive/20">High Severity</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 ml-2">Warning</Badge>
-                  )}
+            <motion.div 
+              key={idx} 
+              variants={item}
+              className="rounded-2xl border border-border bg-card p-5 shadow-sm overflow-hidden relative"
+            >
+              <div className={`absolute top-0 left-0 w-1.5 h-full ${interaction.severity === 'high' ? 'bg-destructive' : 'bg-warning'}`} />
+              
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-sm text-card-foreground lowercase capitalize">{interaction.drug1}</span>
+                  <span className="text-muted-foreground text-xs font-normal">&</span>
+                  <span className="font-bold text-sm text-card-foreground lowercase capitalize">{interaction.drug2}</span>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {interaction.description}
-                </p>
-              </CardContent>
-            </Card>
+                {interaction.severity === 'high' ? (
+                  <Badge variant="destructive" className="ml-2 px-2 py-0 text-[10px] uppercase font-bold tracking-wider">Severe</Badge>
+                ) : (
+                  <Badge variant="secondary" className="bg-warning/20 text-warning-foreground dark:bg-warning/30 px-2 py-0 text-[10px] uppercase font-bold tracking-wider">Warning</Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {interaction.description}
+              </p>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );
