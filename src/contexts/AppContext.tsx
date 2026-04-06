@@ -3,6 +3,7 @@ import { getRxCUI } from "../services/interactionChecker";
 import { medicinesApi, remindersApi, doseLogsApi, usersApi } from "../services/api";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { localPersistence } from "../services/localPersistence";
 
 export type Medicine = {
   id: string;           // maps to MongoDB _id
@@ -13,6 +14,7 @@ export type Medicine = {
   notes?: string;
   rxcui?: string;
   addedAt: string;
+  isConflict?: boolean;
 };
 
 export type Reminder = {
@@ -50,7 +52,7 @@ type AppContextType = {
   reminders: Reminder[];
   doseLogs: DoseLog[];
   userProfile: UserProfile | null;
-  privacyMode: boolean;
+  storageMode: "local" | "cloud";
   isLoggedIn: boolean;
   needsOnboarding: boolean;
   currentUserId: string | null;
@@ -60,13 +62,14 @@ type AppContextType = {
   updateReminder: (id: string, rem: Partial<Reminder>) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
   logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>;
-  setPrivacyMode: (v: boolean) => void;
+  setStorageMode: (v: "local" | "cloud") => void;
   setIsLoggedIn: (v: boolean) => void;
   setNeedsOnboarding: (v: boolean) => void;
   completeOnboarding: (profile: Omit<UserProfile, "id">) => Promise<void>;
   loginUser: (userId: string, email: string) => void;
   logoutUser: () => void;
   clearAllData: () => void;
+  syncLocalToCloud: () => Promise<void>;
   isInitializing: boolean;
 };
 
@@ -95,12 +98,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   
-  const [privacyMode, setPrivacyMode] = useState(() => loadLocal("med_privacy", false));
+  const [storageMode, setStorageMode] = useState<"local" | "cloud">(() => loadLocal("med_storage_mode", "cloud"));
   const [isLoggedIn, setIsLoggedIn] = useState(() => loadLocal("med_loggedin", false));
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => loadLocal("med_userId", null));
 
   // Persist simple flags to localStorage (no sensitive data, just UI state)
-  useEffect(() => { localStorage.setItem("med_privacy", JSON.stringify(privacyMode)); }, [privacyMode]);
+  useEffect(() => { localStorage.setItem("med_storage_mode", JSON.stringify(storageMode)); }, [storageMode]);
   useEffect(() => { localStorage.setItem("med_loggedin", JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
   useEffect(() => { localStorage.setItem("med_userId", JSON.stringify(currentUserId)); }, [currentUserId]);
 
@@ -139,16 +142,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [isInitializing, setIsInitializing] = useState(true);
 
-  // Fetch all data from backend when a user logs in
+  // Fetch all data based on storageMode
   useEffect(() => {
-    if (!currentUserId) {
-      setIsInitializing(false);
-      return;
-    }
-
     const fetchAll = async () => {
+      if (storageMode === "local") {
+        setMedicines(localPersistence.medicines.getAll());
+        setReminders(localPersistence.reminders.getAll());
+        setDoseLogs(localPersistence.doseLogs.getAll());
+        setIsInitializing(false);
+        return;
+      }
+
+      if (!currentUserId) {
+        setIsInitializing(false);
+        return;
+      }
+
       try {
-        // Evaluate profile first to immediately block/allow onboarding independently
+        // Evaluate profile first
         const prof = await usersApi.getProfile(currentUserId).catch(() => null);
         if (!prof || !prof.dateOfBirth || !prof.gender) {
           setNeedsOnboarding(true);
@@ -174,7 +185,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     fetchAll();
-  }, [currentUserId]);
+  }, [currentUserId, storageMode]);
 
   const completeOnboarding = async (profile: Omit<UserProfile, "id">) => {
     if (!currentUserId) throw new Error("Not logged in");
@@ -186,16 +197,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // --- CRUD Operations ---
 
   const addMedicine = async (med: Omit<Medicine, "id" | "addedAt">): Promise<Medicine> => {
-    if (!currentUserId) throw new Error("Not logged in");
-    const created = await medicinesApi.create({ ...med, userId: currentUserId });
-    const newMed = normalize(created) as Medicine;
+    let newMed: Medicine;
+    
+    if (storageMode === "local") {
+      newMed = localPersistence.medicines.create(med);
+    } else {
+      if (!currentUserId) throw new Error("Not logged in");
+      const created = await medicinesApi.create({ ...med, userId: currentUserId });
+      newMed = normalize(created) as Medicine;
+    }
+    
     setMedicines((p) => [...p, newMed]);
 
-    // Fetch RxCUI in background and sync to DB
+    // Fetch RxCUI in background
     if (!newMed.rxcui) {
       getRxCUI(newMed.name).then(async (rxcui) => {
         if (rxcui) {
-          await medicinesApi.update(newMed.id, { rxcui });
+          if (storageMode === "local") {
+             localPersistence.medicines.update(newMed.id, { rxcui });
+          } else {
+             await medicinesApi.update(newMed.id, { rxcui });
+          }
           setMedicines((p) => p.map((m) => (m.id === newMed.id ? { ...m, rxcui } : m)));
         }
       });
@@ -205,31 +227,102 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateMedicine = async (id: string, updates: Partial<Medicine>) => {
-    await medicinesApi.update(id, updates);
+    if (storageMode === "local") {
+      localPersistence.medicines.update(id, updates);
+    } else {
+      await medicinesApi.update(id, updates);
+    }
     setMedicines((p) => p.map((m) => (m.id === id ? { ...m, ...updates } : m)));
   };
 
   const addReminder = async (rem: Omit<Reminder, "id" | "createdAt">) => {
-    if (!currentUserId) throw new Error("Not logged in");
-    const created = await remindersApi.create({ ...rem, userId: currentUserId });
-    setReminders((p) => [...p, normalize(created) as Reminder]);
+    if (storageMode === "local") {
+      const created = localPersistence.reminders.create(rem);
+      setReminders((p) => [...p, created]);
+    } else {
+      if (!currentUserId) throw new Error("Not logged in");
+      const created = await remindersApi.create({ ...rem, userId: currentUserId });
+      setReminders((p) => [...p, normalize(created) as Reminder]);
+    }
   };
 
   const updateReminder = async (id: string, updates: Partial<Reminder>) => {
-    await remindersApi.update(id, updates);
+    if (storageMode === "local") {
+      localPersistence.reminders.update(id, updates);
+    } else {
+      await remindersApi.update(id, updates);
+    }
     setReminders((p) => p.map((r) => (r.id === id ? { ...r, ...updates } : r)));
   };
 
   const deleteReminder = async (id: string) => {
-    await remindersApi.remove(id);
+    if (storageMode === "local") {
+      localPersistence.reminders.remove(id);
+    } else {
+      await remindersApi.remove(id);
+    }
     setReminders((p) => p.filter((r) => r.id !== id));
   };
 
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
-    if (!currentUserId) throw new Error("Not logged in");
-    const created = await doseLogsApi.create({ ...log, userId: currentUserId });
-    setDoseLogs((p) => [...p, normalize(created) as DoseLog]);
+    if (storageMode === "local") {
+      const created = localPersistence.doseLogs.create(log);
+      setDoseLogs((p) => [...p, created]);
+    } else {
+      if (!currentUserId) throw new Error("Not logged in");
+      const created = await doseLogsApi.create({ ...log, userId: currentUserId });
+      setDoseLogs((p) => [...p, normalize(created) as DoseLog]);
+    }
   };
+
+  const syncLocalToCloud = useCallback(async () => {
+    if (!currentUserId || storageMode === "local") return;
+
+    const localMeds = localPersistence.medicines.getAll();
+    const localRems = localPersistence.reminders.getAll();
+    const localLogs = localPersistence.doseLogs.getAll();
+
+    if (localMeds.length === 0 && localRems.length === 0 && localLogs.length === 0) return;
+
+    try {
+      // 1. Sync Medicines
+      for (const med of localMeds) {
+        // Simple conflict check: same name
+        const exists = medicines.some(m => m.name.toLowerCase() === med.name.toLowerCase());
+        if (exists) {
+          // Mark as conflict but don't stop
+          setMedicines(p => p.map(m => m.name.toLowerCase() === med.name.toLowerCase() ? { ...m, isConflict: true } : m));
+          continue;
+        }
+
+        const { id, addedAt, ...data } = med;
+        const created = await medicinesApi.create({ ...data, userId: currentUserId });
+        setMedicines(p => [...p, normalize(created)]);
+      }
+
+      // 2. Sync Reminders
+      for (const rem of localRems) {
+        const { id, createdAt, ...data } = rem;
+        const created = await remindersApi.create({ ...data, userId: currentUserId });
+        setReminders(p => [...p, normalize(created)]);
+      }
+
+      // 3. Sync Logs
+      for (const log of localLogs) {
+        const { id, actionTime, ...data } = log;
+        const created = await doseLogsApi.create({ ...data, userId: currentUserId });
+        setDoseLogs(p => [...p, normalize(created)]);
+      }
+
+      // Clear local storage after successful sync
+      localStorage.removeItem("dawa_local_medicines");
+      localStorage.removeItem("dawa_local_reminders");
+      localStorage.removeItem("dawa_local_doselogs");
+
+    } catch (err) {
+      console.error("Sync failed:", err);
+    }
+  }, [currentUserId, storageMode, medicines]);
 
   const clearAllData = () => {
     setMedicines([]);
@@ -240,9 +333,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
-        medicines, reminders, doseLogs, userProfile, privacyMode, isLoggedIn, needsOnboarding, currentUserId,
+        medicines, reminders, doseLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, currentUserId,
         addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
-        logDose, setPrivacyMode, setIsLoggedIn, setNeedsOnboarding, completeOnboarding, loginUser, logoutUser, clearAllData, isInitializing
+        logDose, setStorageMode, setIsLoggedIn, setNeedsOnboarding, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing
       }}
     >
       {children}

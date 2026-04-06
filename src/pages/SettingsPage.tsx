@@ -10,9 +10,18 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { privacyMode, setPrivacyMode, clearAllData, isLoggedIn, logoutUser, userProfile } = useApp();
+  const { storageMode, setStorageMode, clearAllData, isLoggedIn, logoutUser, userProfile, syncLocalToCloud } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+
+  const handleStorageModeChange = async (mode: "local" | "cloud") => {
+    setStorageMode(mode);
+    if (mode === "cloud" && isLoggedIn) {
+      toast({ title: t("settings.sync_start"), description: t("settings.sync_desc") });
+      await syncLocalToCloud();
+      toast({ title: t("settings.sync_complete") });
+    }
+  };
 
   const handleLanguageChange = (lang: string) => {
     i18n.changeLanguage(lang);
@@ -113,19 +122,37 @@ export default function SettingsPage() {
           )}
         </div>
 
-        {/* Privacy */}
+        {/* Privacy & Storage */}
         <div className="rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Shield size={14} /> {t("settings.privacy")}
+            <Shield size={14} /> {t("settings.storage_privacy")}
           </h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-card-foreground font-medium">{t("settings.local_mode")}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.local_mode_desc")}</p>
+          
+          <div className="space-y-4">
+            <div 
+              onClick={() => handleStorageModeChange("local")}
+              className={`p-3 rounded-xl border-2 transition-all cursor-pointer ${storageMode === "local" ? "border-primary bg-primary/5" : "border-transparent bg-muted/30"}`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-semibold text-foreground">{t("settings.local_only")}</p>
+                {storageMode === "local" && <div className="w-2 h-2 rounded-full bg-primary" />}
+              </div>
+              <p className="text-xs text-muted-foreground">{t("settings.local_desc")}</p>
             </div>
-            <Switch checked={privacyMode} onCheckedChange={setPrivacyMode} />
+
+            <div 
+              onClick={() => handleStorageModeChange("cloud")}
+              className={`p-3 rounded-xl border-2 transition-all cursor-pointer ${storageMode === "cloud" ? "border-primary bg-primary/5" : "border-transparent bg-muted/30"}`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-semibold text-foreground">{t("settings.cloud_sync")}</p>
+                {storageMode === "cloud" && <div className="w-2 h-2 rounded-full bg-primary" />}
+              </div>
+              <p className="text-xs text-muted-foreground">{t("settings.cloud_desc")}</p>
+            </div>
           </div>
-          <div className="flex items-center justify-between mt-4">
+
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
             <div>
               <p className="text-sm text-card-foreground font-medium">{t("settings.encrypted")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{t("settings.encrypted_desc")}</p>

@@ -5,11 +5,13 @@ import { fetchFromRxNorm } from './fallback/rxnorm';
 import { fetchFromDailyMed } from './fallback/dailymed';
 import { fetchFromMedlinePlus } from './fallback/medlineplus';
 
+import { fetchFromANDA } from './fallback/anda';
+
 /**
  * Orchestrates fetching drug information.
  * Prioritizes the ML model. If it fails or returns nothing,
  * falls back to external APIs in a specific order:
- * openFDA -> RxNorm -> DailyMed -> MedlinePlus.
+ * ANDA (African regional) -> openFDA -> RxNorm -> DailyMed -> MedlinePlus.
  */
 export const getDrugInfo = async (query: string): Promise<DrugInformation> => {
   if (!query || query.trim() === '') {
@@ -20,7 +22,11 @@ export const getDrugInfo = async (query: string): Promise<DrugInformation> => {
   const mlResult = await fetchFromMLModel(query);
   if (mlResult) return mlResult;
 
-  // 2. Try openFDA
+  // 2. Try ANDA (African regional - highest priority fallback)
+  const andaResult = await fetchFromANDA(query);
+  if (andaResult) return andaResult;
+
+  // 3. Try openFDA
   const openFdaResult = await fetchFromOpenFDA(query);
   if (openFdaResult) return openFdaResult;
 

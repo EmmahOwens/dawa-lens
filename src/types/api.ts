@@ -9,5 +9,5 @@ export interface DrugInformation {
   warnings?: string;
   sideEffects?: string;
   instructions?: string; // How to take it
-  source: "ML_MODEL" | "RXNORM" | "OPENFDA" | "DAILYMED" | "MEDLINEPLUS";
+  source: "ML_MODEL" | "RXNORM" | "OPENFDA" | "DAILYMED" | "MEDLINEPLUS" | "ANDA";
 }
