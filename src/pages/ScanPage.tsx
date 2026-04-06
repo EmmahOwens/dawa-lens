@@ -130,30 +130,30 @@ export default function ScanPage() {
     <div className="relative min-h-screen bg-foreground flex flex-col">
       {/* Top Mode Segmented Control */}
       <div className="absolute top-0 left-0 right-0 z-50 pt-12 pb-4 bg-gradient-to-b from-foreground/90 to-transparent">
-        <div className="flex mx-auto w-max bg-card/10 backdrop-blur-md p-1 rounded-full border border-card/20 text-card-foreground shadow-xl">
+        <div className="flex mx-auto w-max bg-muted/20 backdrop-blur-md p-1.5 rounded-full border border-white/10 shadow-2xl">
           <button
             onClick={() => setScanMode("pill")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "pill" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all text-[11px] font-black uppercase tracking-widest ${scanMode === "pill" ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-105" : "text-white/60 hover:text-white"}`}
           >
-            <Pill size={14} /> {t("scan.pill")}
+            <Pill size={16} /> {t("scan.pill")}
           </button>
           <button
             onClick={() => setScanMode("text")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "text" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all text-[11px] font-black uppercase tracking-widest ${scanMode === "text" ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-105" : "text-white/60 hover:text-white"}`}
           >
-            <FileText size={14} /> {t("scan.label")}
+            <FileText size={16} /> {t("scan.label")}
           </button>
           <button
             onClick={() => setScanMode("barcode")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "barcode" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all text-[11px] font-black uppercase tracking-widest ${scanMode === "barcode" ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-105" : "text-white/60 hover:text-white"}`}
           >
-            <ScanBarcode size={14} /> {t("scan.barcode")}
+            <ScanBarcode size={16} /> {t("scan.barcode")}
           </button>
           <button
             onClick={() => setScanMode("verify")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "verify" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all text-[11px] font-black uppercase tracking-widest ${scanMode === "verify" ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-105" : "text-white/60 hover:text-white"}`}
           >
-            <Shield size={14} /> {t("scan.verify")}
+            <Shield size={16} /> {t("scan.verify")}
           </button>
         </div>
       </div>
@@ -238,44 +238,45 @@ export default function ScanPage() {
       </div>
 
       {/* Controls */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-foreground/95 to-transparent pt-16 pb-8 px-6 safe-bottom z-30">
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent pt-32 pb-12 px-8 safe-bottom z-30">
         <div className="flex items-center justify-between max-w-sm mx-auto">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-foreground/10"
+            className="flex items-center justify-center w-14 h-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90"
           >
-            <X size={22} className="text-primary-foreground" />
+            <X size={24} />
           </button>
 
           {scanMode !== "barcode" ? (
              <button
                onClick={capture}
                disabled={!streaming}
-               className="flex items-center justify-center w-18 h-18 rounded-full border-4 border-primary-foreground/60 bg-primary transition-transform active:scale-90 disabled:opacity-40"
-               style={{ width: 72, height: 72 }}
+               className="flex items-center justify-center w-24 h-24 rounded-full border-[6px] border-white/20 bg-primary/10 backdrop-blur-md transition-all active:scale-90 disabled:opacity-40 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
              >
-               <Zap size={28} className="text-primary-foreground" />
+               <div className="w-18 h-18 rounded-full bg-white shadow-inner flex items-center justify-center">
+                  <div className="w-4 h-4 rounded-full border-2 border-primary animate-pulse" />
+               </div>
              </button>
           ) : (
-            <div className="text-primary-foreground/60 text-xs text-center font-semibold">{t("scan.point_barcode")}</div>
+            <div className="text-white/60 text-[10px] text-center font-black uppercase tracking-widest leading-tight w-24 h-24 flex items-center justify-center">{t("scan.point_barcode")}</div>
           )}
 
-          <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => setFacingMode((m) => (m === "environment" ? "user" : "environment"))}
-              className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-foreground/10"
+               onClick={() => setFacingMode((m) => (m === "environment" ? "user" : "environment"))}
+               className="flex items-center justify-center w-14 h-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90"
             >
-              <SwitchCamera size={20} className="text-primary-foreground" />
+               <SwitchCamera size={22} />
             </button>
-            <label className="flex items-center justify-center w-12 h-12 rounded-full bg-primary-foreground/10 cursor-pointer">
-              <Upload size={18} className="text-primary-foreground" />
-              <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+            <label className="flex items-center justify-center w-14 h-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90 cursor-pointer">
+               <Upload size={22} />
+               <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
             </label>
           </div>
         </div>
         
         {scanMode !== "barcode" && (
-           <p className="text-center text-xs font-semibold text-primary-foreground/70 mt-6">
+           <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-white/50 mt-10">
              {t("scan.capture_hint")}
            </p>
         )}

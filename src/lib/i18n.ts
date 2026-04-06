@@ -147,6 +147,14 @@ const en = {
       clear_data: "Clear All Data",
       confirm_delete: "Delete all medication data? This cannot be undone.",
       data_cleared: "All data cleared"
+    },
+    Intelligence: {
+      snapshot: "Health Snapshot",
+      adherence: "Medication Adherence",
+      doses_taken: "doses taken today",
+      watchdog: "Interaction Watchdog",
+      no_interactions: "No interactions detected.",
+      active_context: "Active Context",
     }
   }
 };
@@ -296,6 +304,14 @@ const sw = {
       clear_data: "Futa Data Zote",
       confirm_delete: "Futa data zote za dawa? Hii haiwezi kurejeshwa.",
       data_cleared: "Data zote zimefutwa"
+    },
+    Intelligence: {
+      snapshot: "Mtazamo wa Afya",
+      adherence: "Uzingatiaji wa Dawa",
+      doses_taken: "doses zilizochukuliwa leo",
+      watchdog: "Mlinzi wa Maingiliano",
+      no_interactions: "Hakuna mwingiliano uliogunduliwa.",
+      active_context: "Muktadha Amilifu",
     }
   }
 };

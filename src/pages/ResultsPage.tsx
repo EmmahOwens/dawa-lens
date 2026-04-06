@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, ScanBarcode, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, ScanBarcode, FileText, Loader2, Pill, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useApp } from "@/contexts/AppContext";
@@ -85,23 +85,27 @@ export default function ResultsPage() {
 
   return (
     <div className="px-4 pt-6 pb-4 min-h-screen">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <ArrowLeft size={16} /> Back to Scanner
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-8 hover:text-primary transition-colors group">
+        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> {t("common.back")}
       </button>
 
-      <h1 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-        {mode === "text" && <FileText size={20} className="text-primary" />}
-        {mode === "barcode" && <ScanBarcode size={20} className="text-primary" />}
-        Recognition Results
+      <h1 className="text-3xl font-black text-foreground mb-6 tracking-tighter flex items-center gap-3">
+        {mode === "text" && <FileText size={28} className="text-primary" />}
+        {mode === "barcode" && <ScanBarcode size={28} className="text-primary" />}
+        {mode === "pill" && <Pill size={28} className="text-primary" />}
+        {t("scan.recognition_results", "Recognition Results")}
       </h1>
 
       {imageUrl && mode !== "barcode" && (
-        <div className="mb-6 rounded-xl overflow-hidden border border-border bg-black/5 flex items-center justify-center relative">
-          <img src={imageUrl} alt="Captured scan" className="w-full max-h-[300px] object-contain" />
+        <div className="mb-8 rounded-[2.5rem] overflow-hidden border-4 border-card shadow-2xl bg-black/5 flex items-center justify-center relative aspect-square max-h-[400px] mx-auto">
+          <img src={imageUrl} alt="Captured scan" className="w-full h-full object-cover" />
           {loading && (
-             <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center">
-                <Loader2 size={32} className="animate-spin text-primary mb-2" />
-                <span className="text-sm font-medium">{t("scan.ai_loading")}</span>
+             <div className="absolute inset-0 bg-background/60 backdrop-blur-md flex flex-col items-center justify-center">
+                <div className="relative">
+                   <Loader2 size={48} className="animate-spin text-primary" />
+                   <Sparkles className="absolute -top-2 -right-2 text-primary animate-pulse" size={16} />
+                </div>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-primary mt-4">{t("scan.ai_loading")}</span>
              </div>
           )}
         </div>
@@ -109,12 +113,12 @@ export default function ResultsPage() {
 
       {saved && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 rounded-xl bg-success/10 border border-success/30 p-4 flex items-center gap-3"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="mb-6 rounded-full bg-success/10 border border-success/30 p-4 pl-6 flex items-center gap-3 animate-bounce-subtle"
         >
-          <Check size={18} className="text-success" />
-          <p className="text-sm text-success font-medium">{t("common.success")}!</p>
+          <Check size={20} className="text-success" />
+          <p className="text-sm text-success font-black uppercase tracking-tighter">{t("common.success")}! {t("medicine.saved", "Medicine Saved")}</p>
         </motion.div>
       )}
 
@@ -122,37 +126,38 @@ export default function ResultsPage() {
       {mode === "pill" && !loading && (
         <>
           {highConfidence.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <div className="mb-8">
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">
                 <ThumbsUp size={14} className="text-success" /> {t("scan.high_confidence")}
               </h2>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {highConfidence.map((r, idx) => (
                   <motion.div
                     key={r.name + idx}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className={`rounded-xl border p-4 ${confirmed === r.name ? "border-success bg-success/5" : "border-border bg-card"}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ y: -5 }}
+                    className={`rounded-[2rem] border-2 p-6 transition-all ${confirmed === r.name ? "border-success bg-success/5 shadow-lg" : "border-border bg-card hover:border-primary/30 hover:shadow-xl"}`}
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between mb-4">
                       <div>
-                        <p className="font-semibold text-card-foreground">{r.name}</p>
-                        {r.genericName && <p className="text-xs text-muted-foreground mt-0.5">{r.genericName}</p>}
+                        <h3 className="text-xl font-black text-card-foreground leading-tight">{r.name}</h3>
+                        {r.genericName && <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-70">{r.genericName}</p>}
                       </div>
-                      <span className="rounded-lg bg-success/15 px-2 py-1 text-xs font-bold text-success">
-                        {Math.round(r.confidence * 100)}%
-                      </span>
+                      <div className="bg-success text-success-foreground rounded-full px-3 py-1 text-[11px] font-black shadow-lg">
+                        {Math.round(r.confidence * 100)}% Match
+                      </div>
                     </div>
-                    <div className="flex gap-2 mt-3">
-                      <Button size="sm" onClick={() => handleConfirm(r)} disabled={!!confirmed}>
-                        <Check size={14} className="mr-1" /> {t("common.save")}
+                    <div className="flex gap-2">
+                      <Button className="rounded-full flex-1 h-12" onClick={() => handleConfirm(r)} disabled={!!confirmed}>
+                        <Check size={18} className="mr-2" /> {t("common.save")}
                       </Button>
                       <Button
-                        size="sm"
                         variant="outline"
+                        className="rounded-full w-12 h-12 p-0"
                         onClick={() => navigate(`/medicine/${encodeURIComponent(r.name)}`)}
                       >
-                        {t("nav.remind")}
+                         <ArrowLeft size={18} className="rotate-180" />
                       </Button>
                     </div>
                   </motion.div>
@@ -259,82 +264,86 @@ export default function ResultsPage() {
 
       {/* --- VERIFICATION MODE --- */}
       {mode === "verify" && !loading && verificationResult && (
-        <div className="space-y-6">
+        <div className="space-y-8">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`p-6 rounded-2xl border-2 flex flex-col items-center text-center ${
+            className={`p-8 rounded-[3rem] border-4 flex flex-col items-center text-center shadow-2xl relative overflow-hidden ${
               verificationResult.status === "authentic" ? "border-success/40 bg-success/5" :
               verificationResult.status === "fake" ? "border-destructive/40 bg-destructive/5" :
               "border-warning/40 bg-warning/5"
             }`}
           >
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
-              verificationResult.status === "authentic" ? "bg-success/20 text-success" :
-              verificationResult.status === "fake" ? "bg-destructive/20 text-destructive" :
-              "bg-warning/20 text-warning"
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-xl ${
+              verificationResult.status === "authentic" ? "bg-success text-success-foreground" :
+              verificationResult.status === "fake" ? "bg-destructive text-destructive-foreground animate-pulse" :
+              "bg-warning text-warning-foreground"
             }`}>
-              {verificationResult.status === "authentic" && <ShieldCheck size={32} />}
-              {verificationResult.status === "fake" && <ShieldAlert size={32} />}
-              {verificationResult.status === "expired" && <CalendarClock size={32} />}
-              {verificationResult.status === "unknown" && <ShieldQuestion size={32} />}
+              {verificationResult.status === "authentic" && <ShieldCheck size={48} />}
+              {verificationResult.status === "fake" && <ShieldAlert size={48} />}
+              {verificationResult.status === "expired" && <CalendarClock size={48} />}
+              {verificationResult.status === "unknown" && <ShieldQuestion size={48} />}
             </div>
 
-            <h2 className="text-xl font-bold mb-2 uppercase tracking-wide">
-              {verificationResult.status === "authentic" ? "Medication Authentic" : 
-               verificationResult.status === "fake" ? "Counterfeit Alert!" :
-               "Check Failed"}
+            <h2 className="text-3xl font-black mb-2 uppercase tracking-tighter leading-none">
+              {verificationResult.status === "authentic" ? "Authentic" : 
+               verificationResult.status === "fake" ? "Counterfeit!" :
+               "Failed"}
             </h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60 mb-4">Verification Result</p>
             
-            <p className="text-sm text-foreground/80 leading-relaxed mb-6 px-4">
+            <p className="text-sm font-medium text-foreground/80 leading-relaxed mb-8 px-6 bg-white/50 dark:bg-black/20 p-4 rounded-2xl">
               {verificationResult.message}
             </p>
 
             {verificationResult.drugName && (
-              <div className="w-full bg-background/50 rounded-xl p-4 border border-border/50 text-left mb-6">
-                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+              <div className="w-full bg-background rounded-[2rem] p-6 border border-border/50 text-left mb-8 shadow-inner">
+                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Medicine</p>
-                    <p className="text-sm font-semibold">{verificationResult.drugName}</p>
+                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Medicine</p>
+                    <p className="text-sm font-bold truncate">{verificationResult.drugName}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Manufacturer</p>
-                    <p className="text-sm font-semibold">{verificationResult.manufacturer || "N/A"}</p>
+                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Producer</p>
+                    <p className="text-sm font-bold truncate">{verificationResult.manufacturer || "N/A"}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Batch</p>
-                    <p className="text-sm font-semibold">{verificationResult.batchNumber || "Unknown"}</p>
+                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Batch #</p>
+                    <p className="text-sm font-bold font-mono">{verificationResult.batchNumber || "Unknown"}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Expires</p>
-                    <p className="text-sm font-semibold">{verificationResult.expiryDate || "Unknown"}</p>
+                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Expiry</p>
+                    <p className="text-sm font-bold text-destructive">{verificationResult.expiryDate || "Unknown"}</p>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="flex flex-col gap-2 w-full">
+            <div className="flex flex-col gap-3 w-full">
               {verificationResult.status === "authentic" && (
-                <Button onClick={() => handleConfirm({ name: verificationResult.drugName })} className="w-full">
-                  <Check size={16} className="mr-2" /> {t("common.save")}
+                <Button onClick={() => handleConfirm({ name: verificationResult.drugName })} className="w-full h-14 rounded-full text-base font-bold shadow-lg">
+                  <Check size={20} className="mr-2" /> {t("common.save")}
                 </Button>
               )}
               {verificationResult.status === "fake" && (
-                <Button variant="destructive" className="w-full">
-                  <Flag size={16} className="mr-2" /> Report to Authorities
+                <Button variant="destructive" className="w-full h-14 rounded-full text-base font-bold shadow-lg">
+                  <Flag size={20} className="mr-2" /> {t("results.report_fake", "Report to Authorities")}
                 </Button>
               )}
-              <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
+              <Button variant="outline" onClick={() => navigate(-1)} className="w-full h-14 rounded-full text-base font-bold">
                 Scan Another
               </Button>
             </div>
           </motion.div>
 
-          <div className="p-4 rounded-xl border bg-muted/20">
-             <h4 className="text-xs font-bold uppercase text-muted-foreground mb-2">How this works</h4>
-             <p className="text-[11px] text-muted-foreground leading-relaxed">
-               Dawa Lens verifies the unique 10-12 digit scratch code against the National Drug Authority (NDA) and regional anti-counterfeit registries. 
-               Always ensure the scratch panel was intact before you revealed the code.
+          <div className="p-6 rounded-[2rem] border bg-card/50 backdrop-blur-sm relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-4 opacity-5">
+                <ShieldCheck size={64} />
+             </div>
+             <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-3">Verification Security</h4>
+             <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+               Dawa Lens verifies unique 12-digit scratch codes against the **African Regional Anti-Counterfeit Registry**. 
+               Always check the holographic seal on the outer packaging.
              </p>
           </div>
         </div>
