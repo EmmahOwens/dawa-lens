@@ -55,6 +55,7 @@ type AppContextType = {
   storageMode: "local" | "cloud";
   isLoggedIn: boolean;
   needsOnboarding: boolean;
+  hasSeenWelcome: boolean;
   currentUserId: string | null;
   addMedicine: (med: Omit<Medicine, "id" | "addedAt">) => Promise<Medicine>;
   updateMedicine: (id: string, updates: Partial<Medicine>) => Promise<void>;
@@ -65,6 +66,7 @@ type AppContextType = {
   setStorageMode: (v: "local" | "cloud") => void;
   setIsLoggedIn: (v: boolean) => void;
   setNeedsOnboarding: (v: boolean) => void;
+  setHasSeenWelcome: (v: boolean) => void;
   completeOnboarding: (profile: Omit<UserProfile, "id">) => Promise<void>;
   loginUser: (userId: string, email: string) => void;
   logoutUser: () => void;
@@ -97,6 +99,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(() => loadLocal("med_has_seen_welcome", false));
   
   const [storageMode, setStorageMode] = useState<"local" | "cloud">(() => loadLocal("med_storage_mode", "cloud"));
   const [isLoggedIn, setIsLoggedIn] = useState(() => loadLocal("med_loggedin", false));
@@ -106,6 +109,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem("med_storage_mode", JSON.stringify(storageMode)); }, [storageMode]);
   useEffect(() => { localStorage.setItem("med_loggedin", JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
   useEffect(() => { localStorage.setItem("med_userId", JSON.stringify(currentUserId)); }, [currentUserId]);
+  useEffect(() => { localStorage.setItem("med_has_seen_welcome", JSON.stringify(hasSeenWelcome)); }, [hasSeenWelcome]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -333,9 +337,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
-        medicines, reminders, doseLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, currentUserId,
+        medicines, reminders, doseLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId,
         addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
-        logDose, setStorageMode, setIsLoggedIn, setNeedsOnboarding, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing
+        logDose, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing
       }}
     >
       {children}

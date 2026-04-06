@@ -17,6 +17,7 @@ import NotFound from "@/pages/NotFound";
 import InteractionsPage from "@/pages/InteractionsPage";
 import VerifyEmailPage from "@/pages/VerifyEmailPage";
 import OnboardingPage from "@/pages/OnboardingPage";
+import WelcomePage from "@/pages/WelcomePage";
 import { useApp } from "@/contexts/AppContext";
 import { Navigate } from "react-router-dom";
 import { preloadOCRModel } from "@/services/visionService";
@@ -28,13 +29,14 @@ const queryClient = new QueryClient();
 
 // A wrapper to enforce onboarding redirect
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isLoggedIn, needsOnboarding, isInitializing } = useApp();
+  const { isLoggedIn, needsOnboarding, hasSeenWelcome, isInitializing } = useApp();
   
   if (isInitializing) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
   }
   
   if (!isLoggedIn) {
+    if (!hasSeenWelcome) return <Navigate to="/welcome" replace />;
     return <Navigate to="/auth" replace />;
   }
   
@@ -72,6 +74,7 @@ const App = () => {
               {/* Full-screen pages — no AppShell */}
               <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/welcome" element={<WelcomePage />} />
               <Route path="/verify-email" element={<VerifyEmailPage />} />
               <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
               {/* All other pages use AppShell with bottom nav */}
