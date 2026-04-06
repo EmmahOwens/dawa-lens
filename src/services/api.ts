@@ -83,3 +83,12 @@ export const visionApi = {
   identifyPill: (data: { image: string }) =>
     request<any>('/vision/pill-id', { method: 'POST', body: JSON.stringify(data) }),
 };
+
+// --- Generative AI (Coaching & Holistic Safety) ---
+export const aiApi = {
+  getCoachAdvice: (data: { logs: any[]; medicines: any[]; userName?: string }) =>
+    request<any>('/ai/coach', { method: 'POST', body: JSON.stringify(data) }),
+  
+  checkHolisticSafety: (data: { medicines: any[]; lifestyleFactors: string[] }) =>
+    request<any>('/ai/holistic-safety', { method: 'POST', body: JSON.stringify(data) }),
+};

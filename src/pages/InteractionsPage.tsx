@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import PremiumLoader from "@/components/PremiumLoader";
+import { aiApi } from "@/services/api";
+import { Coffee, Wine, GlassWater, Beef, Salad, Sparkles, Loader2 } from "lucide-react";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -18,6 +20,41 @@ export default function InteractionsPage() {
   const [loading, setLoading] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
   const { t } = useTranslation();
+
+  // Holistic/Lifestyle State
+  const [lifestyleFactors, setLifestyleFactors] = useState<string[]>([]);
+  const [holisticLoading, setHolisticLoading] = useState(false);
+  const [holisticReport, setHolisticReport] = useState<any[]>([]);
+
+  const availableFactors = [
+    { id: "Alcohol", icon: Wine },
+    { id: "Caffeine", icon: Coffee },
+    { id: "Dairy", icon: GlassWater },
+    { id: "Grapefruit", icon: Salad },
+    { id: "High-fat meals", icon: Beef },
+  ];
+
+  const toggleFactor = (id: string) => {
+    setLifestyleFactors(prev => 
+      prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
+    );
+  };
+
+  const checkHolistic = async () => {
+    if (medicines.length === 0 || lifestyleFactors.length === 0) return;
+    setHolisticLoading(true);
+    try {
+      const res = await aiApi.checkHolisticSafety({
+        medicines,
+        lifestyleFactors
+      });
+      setHolisticReport(res.interactions || []);
+    } catch (err) {
+      console.error("Holistic check failed", err);
+    } finally {
+      setHolisticLoading(false);
+    }
+  };
   
   useEffect(() => {
     const fetchInteractions = async () => {
@@ -153,6 +190,88 @@ export default function InteractionsPage() {
           ))}
         </motion.div>
       )}
+
+      {/* Holistic Interaction Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mt-12 pt-12 border-t border-border/50"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-black text-foreground flex items-center gap-2">
+              <Sparkles size={22} className="text-primary" />
+              Holistic Safety
+            </h2>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">Check interactions with lifestyle & diet</p>
+          </div>
+          <button 
+            onClick={checkHolistic}
+            disabled={holisticLoading || lifestyleFactors.length === 0 || medicines.length === 0}
+            className="h-10 px-5 rounded-full bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 disabled:opacity-50 transition-all active:scale-95 flex items-center gap-2"
+          >
+            {holisticLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            Analyze
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-8">
+          {availableFactors.map(({ id, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => toggleFactor(id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all ${
+                lifestyleFactors.includes(id) 
+                  ? "bg-primary border-primary text-primary-foreground shadow-md" 
+                  : "bg-card border-border text-muted-foreground hover:border-primary/30"
+              }`}
+            >
+              <Icon size={16} />
+              <span className="text-[11px] font-black uppercase tracking-tight">{id}</span>
+            </button>
+          ))}
+        </div>
+
+        {holisticReport.length > 0 && (
+          <div className="space-y-4">
+            {holisticReport.map((interaction, idx) => (
+              <motion.div 
+                key={idx}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-6 rounded-[2rem] bg-card border border-border shadow-sm relative overflow-hidden"
+              >
+                <div className={`absolute top-0 left-0 w-1.5 h-full ${
+                  interaction.risk === "High" ? "bg-destructive" : interaction.risk === "Medium" ? "bg-warning" : "bg-primary"
+                }`} />
+                <div className="flex items-center justify-between mb-3">
+                   <h4 className="font-black text-sm uppercase tracking-tight flex items-center gap-2">
+                     {interaction.factor}
+                   </h4>
+                   <Badge className={
+                     interaction.risk === "High" ? "bg-destructive text-destructive-foreground" : 
+                     interaction.risk === "Medium" ? "bg-warning text-warning-foreground" : "bg-primary text-primary-foreground"
+                   }>
+                     {interaction.risk} Risk
+                   </Badge>
+                </div>
+                <p className="text-sm text-foreground/80 leading-relaxed mb-4">{interaction.explanation}</p>
+                <div className="bg-muted/30 p-4 rounded-2xl border border-border/50">
+                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Safety Advice</p>
+                   <p className="text-xs font-bold text-foreground">{interaction.advice}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {holisticReport.length === 0 && !holisticLoading && (
+          <div className="p-8 rounded-[2rem] border-2 border-dashed border-border flex flex-col items-center text-center opacity-40">
+             <Info size={32} className="mb-3" />
+             <p className="text-xs font-bold uppercase tracking-widest">Select lifestyle factors and tap Analyze</p>
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 }

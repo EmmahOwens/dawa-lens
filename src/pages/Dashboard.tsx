@@ -1,19 +1,26 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Plus, History, Search, Pill, Bell } from "lucide-react";
+import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import AchievementOverlay from "@/components/AchievementOverlay";
+import { calculateRefillStatus, RefillStatus } from "@/services/refillService";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { reminders, doseLogs, userProfile } = useApp();
+  const { reminders, doseLogs, userProfile, medicines } = useApp();
   const { t } = useTranslation();
   const [showAchievement, setShowAchievement] = useState(false);
+
+  const refillStatuses = useMemo(() => {
+    return medicines
+      .map(m => calculateRefillStatus(m, reminders))
+      .filter((s): s is RefillStatus => s !== null && s.isLow);
+  }, [medicines, reminders]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -65,6 +72,40 @@ export default function Dashboard() {
         </h1>
         <p className="mt-2 text-sm font-medium text-muted-foreground uppercase tracking-widest opacity-70 italic">{t("dashboard.subtitle")}</p>
       </motion.div>
+
+      {/* Refill Alerts */}
+      {refillStatuses.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="mb-8 space-y-3"
+        >
+          {refillStatuses.map(status => (
+            <div 
+              key={status.medicineId}
+              className="rounded-[2rem] border-2 border-warning/30 bg-warning/5 p-5 flex items-center justify-between shadow-lg shadow-warning/5"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-warning/20 flex items-center justify-center text-warning">
+                  <Package2 size={24} />
+                </div>
+                <div>
+                   <p className="text-sm font-black text-foreground uppercase tracking-tight">{status.medicineName}</p>
+                   <p className="text-[10px] font-bold text-warning uppercase tracking-widest mt-0.5">
+                     Only {status.daysRemaining} days left
+                   </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => navigate(`/medicine/${encodeURIComponent(status.medicineName)}`)}
+                className="bg-warning text-warning-foreground text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-widest shadow-md active:scale-95 transition-transform"
+              >
+                Refill
+              </button>
+            </div>
+          ))}
+        </motion.div>
+      )}
 
       {/* Stats */}
       <motion.div
