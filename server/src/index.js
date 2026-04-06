@@ -9,6 +9,7 @@ import remindersRouter from './routes/reminders.js';
 import doseLogsRouter from './routes/doseLogs.js';
 import usersRouter from './routes/users.js';
 import visionRouter from './routes/vision.js';
+import aiRouter from './routes/ai.js';
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use('/api/medicines', medicinesRouter);
 app.use('/api/reminders', remindersRouter);
 app.use('/api/doselogs', doseLogsRouter);
 app.use('/api/vision', visionRouter);
+app.use('/api/ai', aiRouter);
 
 // 404 fallback
 app.use((req, res) => {

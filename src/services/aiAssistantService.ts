@@ -4,14 +4,17 @@
  * Focused on regional (East African) context and user safety.
  */
 
-import { Medicine, UserProfile } from "../contexts/AppContext";
+import { Medicine, UserProfile, DoseLog } from "../contexts/AppContext";
 import { checkConditionSafety } from "./conditionInteractionService";
+import { aiApi } from "./api";
 
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
-  source?: "ANDA" | "WHO" | "openFDA" | "System";
+  source?: "ANDA" | "WHO" | "openFDA" | "System" | "Gemini";
+  patterns?: string[];
+  score?: number;
 }
 
 const FAQ_RESPONSE_MAP: Record<string, string> = {
@@ -24,19 +27,18 @@ const FAQ_RESPONSE_MAP: Record<string, string> = {
 export const generateDawaGPTResponse = async (
   query: string,
   activeMedicine: Medicine | null,
-  userProfile: UserProfile | null
+  userProfile: UserProfile | null,
+  allMedicines: Medicine[] = [],
+  doseLogs: DoseLog[] = []
 ): Promise<ChatMessage> => {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-
   const normalizedQuery = query.toLowerCase().trim();
-  
-  // 1. Check for specific safety issues (RAG logic)
+
+  // 1. Check for specific safety issues (local rule-based check)
   if (activeMedicine && userProfile) {
     const safetyChecks = checkConditionSafety(
       activeMedicine.name, 
       activeMedicine.genericName, 
-      userProfile.gender === "female" ? ["Pregnancy"] : [] // Mocking a check
+      userProfile.gender === "female" ? ["Pregnancy"] : [] // Placeholder logic
     );
 
     if (safetyChecks.length > 0) {
@@ -49,7 +51,32 @@ export const generateDawaGPTResponse = async (
     }
   }
 
-  // 2. Check FAQ Map
+  // 2. Behavioral Coaching Analysis (Complex Pattern Detection)
+  const coachingKeywords = ["log", "miss", "pattern", "adherence", "track", "help", "coach", "why"];
+  const isCoachingRequest = coachingKeywords.some(k => normalizedQuery.includes(k));
+
+  if (isCoachingRequest && doseLogs.length > 0) {
+    try {
+      const res = await aiApi.getCoachAdvice({
+        logs: doseLogs.slice(0, 50), // Send recent history
+        medicines: allMedicines,
+        userName: userProfile?.name
+      });
+
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: res.advice,
+        source: "Gemini",
+        patterns: res.patterns,
+        score: res.adherenceScore
+      };
+    } catch (err) {
+      console.warn("AI coaching failed, falling back to basic response.", err);
+    }
+  }
+
+  // 3. Common Questions Map (Offline/Fast)
   const knownResp = Object.entries(FAQ_RESPONSE_MAP).find(([key]) => normalizedQuery.includes(key));
   if (knownResp) {
     return {
@@ -60,11 +87,11 @@ export const generateDawaGPTResponse = async (
     };
   }
 
-  // 3. Default generic response
+  // 4. Default generic response
   return {
     id: Date.now().toString(),
     role: "assistant",
-    text: "I am helpful assistant for the Dawa Lens project. I recommend checking the 'Safety' tab for specific interactions or talking to your pharmacist for the most accurate guidance.",
+    text: "I am your Dawa-Lens assistant. You can ask about your medication logs, patterns in missing doses, or general safety. For urgent medical issues, please contact a professional.",
     source: "System"
   };
 };

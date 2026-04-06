@@ -6,14 +6,19 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { localPersistence } from "../services/localPersistence";
 
 export type Medicine = {
-  id: string;           // maps to MongoDB _id
+  id: string;           // maps to Firestore doc.id
   name: string;
   genericName?: string;
-  dosage: string;
+  dosage: string;       // e.g. "500mg"
+  totalQuantity?: number; // Starting amount
+  currentQuantity?: number; // What's left
+  dosagePerDose?: number; // e.g. 1 
+  unit?: string;         // "tablets", "ml", etc.
   imageUrl?: string;
   notes?: string;
   rxcui?: string;
   addedAt: string;
+  updatedAt?: string;
   isConflict?: boolean;
 };
 
