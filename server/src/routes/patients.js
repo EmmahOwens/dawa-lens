@@ -2,67 +2,64 @@ import express from 'express';
 import { db } from '../db.js';
 
 const router = express.Router();
-const remindersCol = db.collection('reminders');
+const patientsCol = db.collection('patients');
 
-// GET all reminders for a user
+// GET all patients managed by a user
 router.get('/', async (req, res) => {
   try {
-    const { userId, patientId } = req.query;
-    if (!userId) return res.status(400).json({ error: 'userId query param required' });
+    const { managedBy } = req.query;
+    if (!managedBy) return res.status(400).json({ error: 'managedBy query param required' });
     
-    let query = remindersCol.where('userId', '==', userId);
-    if (patientId) {
-      query = query.where('patientId', '==', patientId);
-    }
+    const snapshot = await patientsCol.where('managedBy', '==', managedBy).get();
     
-    const snapshot = await query.orderBy('createdAt', 'desc').get();
-    
-    const reminders = [];
+    const patients = [];
     snapshot.forEach(doc => {
-      reminders.push({ id: doc.id, _id: doc.id, ...doc.data() });
+      patients.push({ id: doc.id, _id: doc.id, ...doc.data() });
     });
     
-    res.json(reminders);
+    res.json(patients);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST create a new reminder
+// POST create a new patient profile
 router.post('/', async (req, res) => {
   try {
     const data = req.body;
-    data.createdAt = new Date().toISOString(); 
+    if (!data.managedBy) return res.status(400).json({ error: 'managedBy is required' });
+    
+    data.createdAt = new Date().toISOString();
     data.updatedAt = data.createdAt;
     
-    const docRef = await remindersCol.add(data);
+    const docRef = await patientsCol.add(data);
     res.status(201).json({ id: docRef.id, _id: docRef.id, ...data });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// PATCH update a reminder
+// PATCH update a patient by id
 router.patch('/:id', async (req, res) => {
   try {
     const uid = req.params.id;
     const updates = req.body;
     updates.updatedAt = new Date().toISOString();
     
-    await remindersCol.doc(uid).update(updates);
+    await patientsCol.doc(uid).update(updates);
     
-    const docRef = await remindersCol.doc(uid).get();
+    const docRef = await patientsCol.doc(uid).get();
     res.json({ id: docRef.id, _id: docRef.id, ...docRef.data() });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// DELETE a reminder
+// DELETE remove a patient by id
 router.delete('/:id', async (req, res) => {
   try {
-    await remindersCol.doc(req.params.id).delete();
-    res.json({ message: 'Deleted successfully' });
+    await patientsCol.doc(req.params.id).delete();
+    res.json({ message: 'Patient profile deleted' });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

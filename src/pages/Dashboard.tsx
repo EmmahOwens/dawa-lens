@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2 } from "lucide-react";
+import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Users, User, Plane } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState, useMemo } from "react";
@@ -12,7 +12,7 @@ const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { reminders, doseLogs, userProfile, medicines } = useApp();
+  const { reminders, doseLogs, userProfile, medicines, isProfessionalMode, patients, selectedPatientId, setSelectedPatientId } = useApp();
   const { t } = useTranslation();
   const [showAchievement, setShowAchievement] = useState(false);
 
@@ -31,9 +31,9 @@ export default function Dashboard() {
 
   const quickActions = [
     { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary text-primary-foreground" },
-    { icon: Plus, label: t("dashboard.quick_add"), to: "/reminders/new", color: "bg-success text-success-foreground" },
+    { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success text-success-foreground" },
     { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent text-accent-foreground" },
-    { icon: Search, label: t("dashboard.quick_search"), to: "/search", color: "bg-warning text-warning-foreground" },
+    { icon: Plane, label: "Travel", to: "/travel", color: "bg-warning text-warning-foreground" },
   ];
 
   const todayReminders = reminders.filter((r) => r.enabled);
@@ -62,15 +62,31 @@ export default function Dashboard() {
         subtitle="You've taken all your scheduled medications for today. Keep up the great work!"
         emoji="🏆"
       />
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-        <h1 className="text-4xl font-black tracking-tighter text-foreground leading-tight">
-          {getGreeting()},<br />
-          <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            {userProfile?.name?.split(" ")[0] || t("dashboard.greeting_there")}
-          </span>
-        </h1>
-        <p className="mt-2 text-sm font-medium text-muted-foreground uppercase tracking-widest opacity-70 italic">{t("dashboard.subtitle")}</p>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-10 flex items-start justify-between">
+        <div>
+          <h1 className="text-4xl font-black tracking-tighter text-foreground leading-tight">
+            {getGreeting()},<br />
+            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              {userProfile?.name?.split(" ")[0] || t("dashboard.greeting_there")}
+            </span>
+          </h1>
+          <p className="mt-2 text-sm font-medium text-muted-foreground uppercase tracking-widest opacity-70 italic">
+            {isProfessionalMode ? "CHW Professional Dashboard" : t("dashboard.subtitle")}
+          </p>
+        </div>
+        {selectedPatientId && (
+          <motion.button 
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            onClick={() => navigate("/family")}
+            className="mt-2 flex flex-col items-center gap-1"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 border-2 border-primary/30 flex items-center justify-center text-primary">
+              <User size={20} />
+            </div>
+            <span className="text-[10px] font-black uppercase text-primary tracking-widest">Switch</span>
+          </motion.button>
+        )}
       </motion.div>
 
       {/* Refill Alerts */}
@@ -107,30 +123,61 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* Stats */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="mb-10 rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 p-8 text-primary-foreground shadow-[0_20px_50px_rgba(var(--primary-rgb),0.3)] relative overflow-hidden group"
-      >
-        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700" />
-        <div className="flex items-center gap-3 mb-3">
-          <Pill size={20} />
-          <span className="text-sm font-medium opacity-90">{t("dashboard.todays_progress")}</span>
-        </div>
-        <div className="flex items-end gap-2">
-          <span className="text-4xl font-bold">{takenToday}</span>
-          <span className="mb-1 text-sm opacity-80">/ {todayReminders.length} {t("dashboard.doses")}</span>
-        </div>
-        <div className="mt-6 h-3 rounded-full bg-primary-foreground/20 overflow-hidden border border-white/10">
-          <motion.div
-            className="h-full rounded-full bg-primary-foreground shadow-[0_0_15px_rgba(255,255,255,0.5)]"
-            initial={{ width: 0 }}
-            animate={{ width: todayReminders.length ? `${(takenToday / todayReminders.length) * 100}%` : "0%" }}
-            transition={{ duration: 1.2, ease: "circOut" }}
-          />
-        </div>
-      </motion.div>
+      {/* Stats or Professional Hub */}
+      {isProfessionalMode && !selectedPatientId ? (
+        <motion.div 
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           className="mb-10 space-y-4"
+        >
+          <div className="p-8 rounded-[2.5rem] bg-card border-2 border-border shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Managed Patients</p>
+              <h2 className="text-3xl font-black text-foreground">{patients.length}</h2>
+            </div>
+            <div className="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center text-success">
+              <Users size={28} />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-6 rounded-[2rem] bg-warning/5 border border-warning/20">
+               <p className="text-[9px] font-black uppercase tracking-widest text-warning mb-1">Refills Needed</p>
+               <h3 className="text-2xl font-bold text-foreground">12</h3>
+            </div>
+            <div className="p-6 rounded-[2rem] bg-destructive/5 border border-destructive/20">
+               <p className="text-[9px] font-black uppercase tracking-widest text-destructive mb-1">Missed Doses</p>
+               <h3 className="text-2xl font-bold text-foreground">5</h3>
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="mb-10 rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 p-8 text-primary-foreground shadow-[0_20px_50px_rgba(var(--primary-rgb),0.3)] relative overflow-hidden group"
+        >
+          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700" />
+          <div className="flex items-center gap-3 mb-3">
+            <Pill size={20} />
+            <span className="text-sm font-medium opacity-90">
+              {selectedPatientId ? `${patients.find(p => p.id === selectedPatientId)?.name}'s Progress` : t("dashboard.todays_progress")}
+            </span>
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-4xl font-bold">{takenToday}</span>
+            <span className="mb-1 text-sm opacity-80">/ {todayReminders.length} {t("dashboard.doses")}</span>
+          </div>
+          <div className="mt-6 h-3 rounded-full bg-primary-foreground/20 overflow-hidden border border-white/10">
+            <motion.div
+              className="h-full rounded-full bg-primary-foreground shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+              initial={{ width: 0 }}
+              animate={{ width: todayReminders.length ? `${(takenToday / todayReminders.length) * 100}%` : "0%" }}
+              transition={{ duration: 1.2, ease: "circOut" }}
+            />
+          </div>
+        </motion.div>
+      )}
 
       {/* Quick Actions */}
       <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 gap-3 mb-8">

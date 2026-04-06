@@ -39,10 +39,24 @@ export const usersApi = {
     request<any>('/users', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// --- Patients (Family/CHW Profiles) ---
+export const patientsApi = {
+  getAll: (managedBy: string) => 
+    request<any[]>(`/patients?managedBy=${managedBy}`),
+  create: (data: Record<string, unknown>) => 
+    request<any>('/patients', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: Record<string, unknown>) => 
+    request<any>(`/patients/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  remove: (id: string) => 
+    request<void>(`/patients/${id}`, { method: 'DELETE' }),
+};
+
 // --- Medicines ---
 export const medicinesApi = {
-  getAll: (userId: string) =>
-    request<any[]>(`/medicines?userId=${userId}`),
+  getAll: (userId: string, patientId?: string) => {
+    const url = `/medicines?userId=${userId}${patientId ? `&patientId=${patientId}` : ''}`;
+    return request<any[]>(url);
+  },
 
   create: (data: Record<string, unknown>) =>
     request<any>('/medicines', { method: 'POST', body: JSON.stringify(data) }),
@@ -56,8 +70,10 @@ export const medicinesApi = {
 
 // --- Reminders ---
 export const remindersApi = {
-  getAll: (userId: string) =>
-    request<any[]>(`/reminders?userId=${userId}`),
+  getAll: (userId: string, patientId?: string) => {
+    const url = `/reminders?userId=${userId}${patientId ? `&patientId=${patientId}` : ''}`;
+    return request<any[]>(url);
+  },
 
   create: (data: Record<string, unknown>) =>
     request<any>('/reminders', { method: 'POST', body: JSON.stringify(data) }),
@@ -71,8 +87,10 @@ export const remindersApi = {
 
 // --- Dose Logs ---
 export const doseLogsApi = {
-  getAll: (userId: string) =>
-    request<any[]>(`/doselogs?userId=${userId}`),
+  getAll: (userId: string, patientId?: string) => {
+    const url = `/doselogs?userId=${userId}${patientId ? `&patientId=${patientId}` : ''}`;
+    return request<any[]>(url);
+  },
 
   create: (data: Record<string, unknown>) =>
     request<any>('/doselogs', { method: 'POST', body: JSON.stringify(data) }),
@@ -91,4 +109,13 @@ export const aiApi = {
   
   checkHolisticSafety: (data: { medicines: any[]; lifestyleFactors: string[] }) =>
     request<any>('/ai/holistic-safety', { method: 'POST', body: JSON.stringify(data) }),
+
+  getTravelAdvice: (data: { 
+    medicines: any[]; 
+    destination: string; 
+    currentCity?: string; 
+    homeTimezone?: string; 
+    targetTimezone?: string;
+  }) =>
+    request<any>('/ai/travel', { method: 'POST', body: JSON.stringify(data) }),
 };
