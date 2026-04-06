@@ -11,7 +11,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
-        <main className="mx-auto max-w-lg pb-24">{children}</main>
+        <main className="mx-auto max-w-lg pb-32">{children}</main>
         <BottomNav />
       </div>
     );
