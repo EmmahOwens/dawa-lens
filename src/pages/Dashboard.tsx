@@ -34,19 +34,23 @@ export default function Dashboard() {
   return (
     <div className="px-4 pt-12 pb-4">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {getGreeting()}, {userProfile?.name?.split(" ")[0] || t("dashboard.greeting_there")}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+        <h1 className="text-4xl font-black tracking-tighter text-foreground leading-tight">
+          {getGreeting()},<br />
+          <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            {userProfile?.name?.split(" ")[0] || t("dashboard.greeting_there")}
+          </span>
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("dashboard.subtitle")}</p>
+        <p className="mt-2 text-sm font-medium text-muted-foreground uppercase tracking-widest opacity-70 italic">{t("dashboard.subtitle")}</p>
       </motion.div>
 
       {/* Stats */}
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mb-6 rounded-2xl bg-primary p-5 text-primary-foreground"
+        className="mb-10 rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 p-8 text-primary-foreground shadow-[0_20px_50px_rgba(var(--primary-rgb),0.3)] relative overflow-hidden group"
       >
+        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700" />
         <div className="flex items-center gap-3 mb-3">
           <Pill size={20} />
           <span className="text-sm font-medium opacity-90">{t("dashboard.todays_progress")}</span>
@@ -55,12 +59,12 @@ export default function Dashboard() {
           <span className="text-4xl font-bold">{takenToday}</span>
           <span className="mb-1 text-sm opacity-80">/ {todayReminders.length} {t("dashboard.doses")}</span>
         </div>
-        <div className="mt-3 h-2 rounded-full bg-primary-foreground/20 overflow-hidden">
+        <div className="mt-6 h-3 rounded-full bg-primary-foreground/20 overflow-hidden border border-white/10">
           <motion.div
-            className="h-full rounded-full bg-primary-foreground/80"
+            className="h-full rounded-full bg-primary-foreground shadow-[0_0_15px_rgba(255,255,255,0.5)]"
             initial={{ width: 0 }}
             animate={{ width: todayReminders.length ? `${(takenToday / todayReminders.length) * 100}%` : "0%" }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 1.2, ease: "circOut" }}
           />
         </div>
       </motion.div>
@@ -71,11 +75,15 @@ export default function Dashboard() {
           <motion.button
             key={to}
             variants={item}
+            whileHover={{ scale: 1.05, y: -5 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => navigate(to)}
-            className={`flex items-center gap-3 rounded-xl p-4 text-left transition-transform active:scale-[0.97] ${color}`}
+            className={`flex flex-col items-start gap-4 rounded-[2rem] p-6 text-left transition-all shadow-sm border border-transparent hover:border-white/20 active:scale-[0.97] ${color}`}
           >
-            <Icon size={22} />
-            <span className="text-sm font-semibold">{label}</span>
+            <div className="p-3 rounded-2xl bg-white/20 shadow-inner">
+               <Icon size={26} />
+            </div>
+            <span className="text-sm font-bold tracking-tight leading-tight">{label}</span>
           </motion.button>
         ))}
       </motion.div>
@@ -91,19 +99,25 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground">{t("dashboard.no_reminders")}</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {todayReminders.slice(0, 5).map((r) => (
               <motion.div
                 key={r.id}
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="flex items-center justify-between rounded-xl border border-border bg-card p-4"
+                whileHover={{ x: 5 }}
+                className="flex items-center justify-between rounded-[1.5rem] border border-border/50 bg-card p-5 group transition-all hover:shadow-md"
               >
-                <div>
-                  <p className="text-sm font-semibold text-card-foreground">{r.medicineName}</p>
-                  <p className="text-xs text-muted-foreground">{r.dose} • {r.time}</p>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <Pill size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-card-foreground">{r.medicineName}</p>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mt-0.5">{r.dose} • {r.time}</p>
+                  </div>
                 </div>
-                <span className="rounded-lg bg-accent px-3 py-1 text-xs font-medium text-accent-foreground">
+                <span className="rounded-full bg-primary/5 px-4 py-1.5 text-[10px] font-black text-primary uppercase tracking-tighter">
                   {r.repeatSchedule}
                 </span>
               </motion.div>

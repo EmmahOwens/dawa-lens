@@ -15,23 +15,24 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-lg md:hidden">
-      <div className="flex items-center justify-around rounded-2xl border border-border bg-card/80 py-2 shadow-lg backdrop-blur-xl safe-bottom">
+    <nav className="fixed bottom-6 left-6 right-6 z-50 mx-auto max-w-lg md:hidden">
+      <div className="flex items-center justify-around rounded-[3rem] border border-border/50 bg-card/70 px-4 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] backdrop-blur-2xl safe-bottom relative overflow-hidden">
         {navItems.map(({ to, icon: Icon, label }) => {
           const active = location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
           return (
             <NavLink
               key={to}
               to={to}
-              className="flex flex-col items-center gap-0.5 px-3 py-1 transition-colors"
+              className="relative flex flex-col items-center gap-1.5 px-4 py-1 group"
             >
+              <div className={`absolute inset-0 rounded-full bg-primary/10 transition-all duration-300 scale-0 ${active ? 'scale-100' : 'group-hover:scale-75'}`} />
               <Icon
-                size={22}
-                className={active ? "text-primary" : "text-muted-foreground"}
-                strokeWidth={active ? 2.5 : 1.8}
+                size={24}
+                className={`relative z-10 transition-all duration-300 ${active ? "text-primary scale-110" : "text-muted-foreground"}`}
+                strokeWidth={active ? 2.8 : 2}
               />
               <span
-                className={`text-[10px] font-medium ${active ? "text-primary" : "text-muted-foreground"}`}
+                className={`relative z-10 text-[10px] font-bold tracking-tight transition-all ${active ? "text-primary" : "text-muted-foreground opacity-70"}`}
               >
                 {label}
               </span>

@@ -40,7 +40,7 @@ export function AppSidebar() {
             {!collapsed && (
               <div className="flex items-center gap-2">
                 <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
-                <span className="text-base font-bold tracking-tight text-primary">
+                <span className="text-lg font-black bg-gradient-to-br from-primary to-primary/50 bg-clip-text text-transparent uppercase tracking-tighter">
                   Dawa Lens
                 </span>
               </div>
@@ -54,11 +54,11 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
-                      className="hover:bg-muted/50"
-                      activeClassName="bg-accent text-accent-foreground font-medium"
+                      className="hover:bg-primary/5 transition-all duration-300 rounded-full py-6 px-4 group"
+                      activeClassName="bg-primary text-primary-foreground font-bold shadow-[0_8px_20px_rgba(var(--primary-rgb),0.3)] scale-[1.02]"
                     >
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className={`mr-3 h-5 w-5 transition-transform group-hover:scale-110 ${isActive(item.url) ? 'scale-110' : ''}`} />
+                      {!collapsed && <span className="tracking-tight">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
