@@ -7,6 +7,7 @@ import { ShieldAlert, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
+import PremiumLoader from "@/components/PremiumLoader";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -15,6 +16,7 @@ export default function InteractionsPage() {
   const { medicines } = useApp();
   const [interactions, setInteractions] = useState<ParsedInteraction[]>([]);
   const [loading, setLoading] = useState(false);
+  const [animationComplete, setAnimationComplete] = useState(false);
   const { t } = useTranslation();
   
   useEffect(() => {
@@ -42,6 +44,12 @@ export default function InteractionsPage() {
 
   return (
     <div className="px-4 pt-12 pb-4">
+      {medicines.length >= 2 && loading && !animationComplete && (
+        <PremiumLoader 
+          onComplete={() => setAnimationComplete(true)} 
+          durationPerStep={1000} 
+        />
+      )}
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }} 
@@ -89,14 +97,14 @@ export default function InteractionsPage() {
         </motion.div>
       )}
 
-      {medicines.length >= 2 && loading && (
+      {medicines.length >= 2 && loading && animationComplete && (
         <div className="space-y-4">
           <Skeleton className="h-[100px] w-full rounded-2xl" />
           <Skeleton className="h-[100px] w-full rounded-2xl" />
         </div>
       )}
 
-      {medicines.length >= 2 && !loading && interactions.length === 0 && (
+      {medicines.length >= 2 && (!loading || animationComplete) && interactions.length === 0 && (
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -107,7 +115,7 @@ export default function InteractionsPage() {
         </motion.div>
       )}
 
-      {medicines.length >= 2 && !loading && interactions.length > 0 && (
+      {medicines.length >= 2 && (!loading || animationComplete) && interactions.length > 0 && (
         <motion.div 
           variants={container} 
           initial="hidden" 
