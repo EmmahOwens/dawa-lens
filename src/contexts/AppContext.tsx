@@ -137,7 +137,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [isProfessionalMode, setIsProfessionalMode] = useState(() => loadLocal("med_professional_mode", false));
+  const [isProfessionalMode, setIsProfessionalModeState] = useState(() => loadLocal("med_professional_mode", false));
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(() => loadLocal("med_has_seen_welcome", false));
   
@@ -145,12 +145,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(() => loadLocal("med_loggedin", false));
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => loadLocal("med_userId", null));
 
+  const setIsProfessionalMode = useCallback(async (v: boolean) => {
+    setIsProfessionalModeState(v);
+    localStorage.setItem("med_professional_mode", JSON.stringify(v));
+    
+    // Sync to cloud if logged in
+    if (storageMode === "cloud" && currentUserId) {
+      try {
+        await usersApi.upsertProfile({ uid: currentUserId, isProfessional: v });
+        setUserProfile(p => p ? { ...p, isProfessional: v } : null);
+      } catch (err) {
+        console.error("Failed to sync professional mode to cloud:", err);
+      }
+    }
+  }, [currentUserId, storageMode]);
+
+
   // Persist simple flags to localStorage (no sensitive data, just UI state)
   useEffect(() => { localStorage.setItem("med_storage_mode", JSON.stringify(storageMode)); }, [storageMode]);
   useEffect(() => { localStorage.setItem("med_loggedin", JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
   useEffect(() => { localStorage.setItem("med_userId", JSON.stringify(currentUserId)); }, [currentUserId]);
   useEffect(() => { localStorage.setItem("med_has_seen_welcome", JSON.stringify(hasSeenWelcome)); }, [hasSeenWelcome]);
-  useEffect(() => { localStorage.setItem("med_professional_mode", JSON.stringify(isProfessionalMode)); }, [isProfessionalMode]);
+  // Note: med_professional_mode handled by setter now
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {

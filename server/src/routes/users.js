@@ -20,7 +20,7 @@ router.get('/:uid', async (req, res) => {
 // POST update/create user profile
 router.post('/', async (req, res) => {
   try {
-    const { uid, name, dateOfBirth, gender } = req.body;
+    const { uid, name, dateOfBirth, gender, isProfessional } = req.body;
     if (!uid) {
       return res.status(400).json({ error: 'uid is required' });
     }
@@ -29,6 +29,7 @@ router.post('/', async (req, res) => {
       name: name || '',
       dateOfBirth: dateOfBirth || null,
       gender: gender || null,
+      isProfessional: isProfessional ?? false,
       updatedAt: new Date().toISOString()
     };
 
