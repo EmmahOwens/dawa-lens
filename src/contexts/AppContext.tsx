@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { getRxCUI } from "../services/interactionChecker";
-import { medicinesApi, remindersApi, doseLogsApi, usersApi, patientsApi } from "../services/api";
+import { medicinesApi, remindersApi, doseLogsApi, usersApi, patientsApi, wellnessApi } from "../services/api";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { localPersistence } from "../services/localPersistence";
@@ -45,6 +45,15 @@ export type DoseLog = {
   action: "taken" | "skipped" | "snoozed";
 };
 
+export type WellnessLog = {
+  id: string;
+  type: "food" | "symptom";
+  timestamp: string;
+  data: any; // e.g., { meal: "...", risk: "..." } or { mood: 4, symptoms: [] }
+  userId: string;
+  patientId?: string | null;
+};
+
 export type UserProfile = {
   id: string;
   name: string;
@@ -68,6 +77,7 @@ type AppContextType = {
   reminders: Reminder[];
   doseLogs: DoseLog[];
   patients: Patient[];
+  wellnessLogs: WellnessLog[];
   userProfile: UserProfile | null;
   storageMode: "local" | "cloud";
   isLoggedIn: boolean;
@@ -83,6 +93,7 @@ type AppContextType = {
   updateReminder: (id: string, rem: Partial<Reminder>) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
   logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>;
+  addWellnessLog: (log: Omit<WellnessLog, "id" | "timestamp" | "userId">) => Promise<void>;
   
   addPatient: (patient: Omit<Patient, "id" | "createdAt" | "managedBy">) => Promise<void>;
   setSelectedPatientId: (id: string | null) => void;
@@ -123,6 +134,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [isProfessionalMode, setIsProfessionalMode] = useState(() => loadLocal("med_professional_mode", false));
@@ -173,6 +185,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setReminders([]);
     setDoseLogs([]);
     setPatients([]);
+    setWellnessLogs([]);
   }, []);
 
   const [isInitializing, setIsInitializing] = useState(true);
@@ -205,16 +218,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setIsProfessionalMode(prof.isProfessional || false);
         }
 
-        const [meds, rems, logs, pats] = await Promise.all([
+        const [meds, rems, logs, pats, wells] = await Promise.all([
           medicinesApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
           remindersApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
           doseLogsApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
           patientsApi.getAll(currentUserId).catch(() => []),
+          wellnessApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
         ]);
         setMedicines(meds.map(normalize));
         setReminders(rems.map(normalize));
         setDoseLogs(logs.map(normalize));
         setPatients(pats.map(normalize));
+        setWellnessLogs(wells.map(normalize));
       } catch (err) {
         console.error("Failed to load data from backend:", err);
       } finally {
@@ -313,6 +328,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addWellnessLog = async (log: Omit<WellnessLog, "id" | "timestamp" | "userId">) => {
+    if (storageMode === "local") {
+       // Simple local save for wellness (optional, mainly cloud focused for AI)
+    } else {
+      if (!currentUserId) throw new Error("Not logged in");
+      const created = await wellnessApi.log({ ...log, userId: currentUserId, patientId: selectedPatientId });
+      setWellnessLogs((p) => [normalize(created) as WellnessLog, ...p]);
+    }
+  };
+
   const syncLocalToCloud = useCallback(async () => {
     if (!currentUserId || storageMode === "local") return;
 
@@ -377,9 +402,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
-        medicines, reminders, doseLogs, patients, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId, selectedPatientId, isProfessionalMode,
+        medicines, reminders, doseLogs, patients, wellnessLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId, selectedPatientId, isProfessionalMode,
         addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
-        logDose, addPatient, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing
+        logDose, addPatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing
       }}
     >
       {children}

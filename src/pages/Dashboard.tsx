@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Users, User, Plane } from "lucide-react";
+import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Users, User, Plane, Heart, FileText } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState, useMemo } from "react";
@@ -32,6 +32,8 @@ export default function Dashboard() {
   const quickActions = [
     { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary text-primary-foreground" },
     { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success text-success-foreground" },
+    { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive text-destructive-foreground shadow-lg shadow-destructive/10" },
+    { icon: FileText, label: "Dossier", to: "/report", color: "bg-indigo-600 text-white shadow-lg shadow-indigo-600/10" },
     { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent text-accent-foreground" },
     { icon: Plane, label: "Travel", to: "/travel", color: "bg-warning text-warning-foreground" },
   ];
@@ -179,8 +181,8 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* Quick Actions */}
-      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 gap-3 mb-8">
+      {/* Quick Actions Grid */}
+      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 gap-3 mb-10">
         {quickActions.map(({ icon: Icon, label, to, color }) => (
           <motion.button
             key={to}
@@ -188,12 +190,12 @@ export default function Dashboard() {
             whileHover={{ scale: 1.05, y: -5 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate(to)}
-            className={`flex flex-col items-start gap-4 rounded-[2rem] p-6 text-left transition-all shadow-sm border border-transparent hover:border-white/20 active:scale-[0.97] ${color}`}
+            className={`flex flex-col items-start gap-4 rounded-[2.2rem] p-6 text-left transition-all shadow-sm border border-transparent hover:border-white/20 active:scale-[0.97] ${color}`}
           >
             <div className="p-3 rounded-2xl bg-white/20 shadow-inner">
-               <Icon size={26} />
+               <Icon size={24} />
             </div>
-            <span className="text-sm font-bold tracking-tight leading-tight">{label}</span>
+            <span className="text-xs font-black uppercase tracking-tighter leading-tight">{label}</span>
           </motion.button>
         ))}
       </motion.div>
