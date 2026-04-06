@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { getRxCUI } from "../services/interactionChecker";
-import { medicinesApi, remindersApi, doseLogsApi, usersApi } from "../services/api";
+import { medicinesApi, remindersApi, doseLogsApi, usersApi, patientsApi } from "../services/api";
 import { auth } from "../lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { localPersistence } from "../services/localPersistence";
@@ -50,24 +50,44 @@ export type UserProfile = {
   name: string;
   dateOfBirth: string | null;
   gender: "male" | "female" | null;
+  isProfessional?: boolean; // CHW Mode
+};
+
+export type Patient = {
+  id: string;
+  name: string;
+  age?: number;
+  gender?: "male" | "female" | "other";
+  relation?: string; // e.g. "Mother", "Client"
+  managedBy: string;
+  createdAt: string;
 };
 
 type AppContextType = {
   medicines: Medicine[];
   reminders: Reminder[];
   doseLogs: DoseLog[];
+  patients: Patient[];
   userProfile: UserProfile | null;
   storageMode: "local" | "cloud";
   isLoggedIn: boolean;
   needsOnboarding: boolean;
   hasSeenWelcome: boolean;
   currentUserId: string | null;
+  selectedPatientId: string | null; // null = self
+  isProfessionalMode: boolean;
+  
   addMedicine: (med: Omit<Medicine, "id" | "addedAt">) => Promise<Medicine>;
   updateMedicine: (id: string, updates: Partial<Medicine>) => Promise<void>;
   addReminder: (rem: Omit<Reminder, "id" | "createdAt">) => Promise<void>;
   updateReminder: (id: string, rem: Partial<Reminder>) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
   logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>;
+  
+  addPatient: (patient: Omit<Patient, "id" | "createdAt" | "managedBy">) => Promise<void>;
+  setSelectedPatientId: (id: string | null) => void;
+  setIsProfessionalMode: (v: boolean) => void;
+
   setStorageMode: (v: "local" | "cloud") => void;
   setIsLoggedIn: (v: boolean) => void;
   setNeedsOnboarding: (v: boolean) => void;
@@ -102,7 +122,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [isProfessionalMode, setIsProfessionalMode] = useState(() => loadLocal("med_professional_mode", false));
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(() => loadLocal("med_has_seen_welcome", false));
   
@@ -115,6 +138,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem("med_loggedin", JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
   useEffect(() => { localStorage.setItem("med_userId", JSON.stringify(currentUserId)); }, [currentUserId]);
   useEffect(() => { localStorage.setItem("med_has_seen_welcome", JSON.stringify(hasSeenWelcome)); }, [hasSeenWelcome]);
+  useEffect(() => { localStorage.setItem("med_professional_mode", JSON.stringify(isProfessionalMode)); }, [isProfessionalMode]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -144,9 +168,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentUserId(null);
     setIsLoggedIn(false);
     setUserProfile(null);
+    setSelectedPatientId(null);
     setMedicines([]);
     setReminders([]);
     setDoseLogs([]);
+    setPatients([]);
   }, []);
 
   const [isInitializing, setIsInitializing] = useState(true);
@@ -176,16 +202,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } else {
           setNeedsOnboarding(false);
           setUserProfile({ ...prof, id: currentUserId });
+          setIsProfessionalMode(prof.isProfessional || false);
         }
 
-        const [meds, rems, logs] = await Promise.all([
-          medicinesApi.getAll(currentUserId).catch(() => []),
-          remindersApi.getAll(currentUserId).catch(() => []),
-          doseLogsApi.getAll(currentUserId).catch(() => []),
+        const [meds, rems, logs, pats] = await Promise.all([
+          medicinesApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
+          remindersApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
+          doseLogsApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
+          patientsApi.getAll(currentUserId).catch(() => []),
         ]);
         setMedicines(meds.map(normalize));
         setReminders(rems.map(normalize));
         setDoseLogs(logs.map(normalize));
+        setPatients(pats.map(normalize));
       } catch (err) {
         console.error("Failed to load data from backend:", err);
       } finally {
@@ -194,7 +223,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     fetchAll();
-  }, [currentUserId, storageMode]);
+  }, [currentUserId, storageMode, selectedPatientId]);
 
   const completeOnboarding = async (profile: Omit<UserProfile, "id">) => {
     if (!currentUserId) throw new Error("Not logged in");
@@ -212,7 +241,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       newMed = localPersistence.medicines.create(med);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      const created = await medicinesApi.create({ ...med, userId: currentUserId });
+      const created = await medicinesApi.create({ ...med, userId: currentUserId, patientId: selectedPatientId });
       newMed = normalize(created) as Medicine;
     }
     
@@ -250,7 +279,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReminders((p) => [...p, created]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      const created = await remindersApi.create({ ...rem, userId: currentUserId });
+      const created = await remindersApi.create({ ...rem, userId: currentUserId, patientId: selectedPatientId });
       setReminders((p) => [...p, normalize(created) as Reminder]);
     }
   };
@@ -279,7 +308,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDoseLogs((p) => [...p, created]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      const created = await doseLogsApi.create({ ...log, userId: currentUserId });
+      const created = await doseLogsApi.create({ ...log, userId: currentUserId, patientId: selectedPatientId });
       setDoseLogs((p) => [...p, normalize(created) as DoseLog]);
     }
   };
@@ -333,6 +362,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUserId, storageMode, medicines]);
 
+  const addPatient = async (patient: Omit<Patient, "id" | "createdAt" | "managedBy">) => {
+    if (!currentUserId) throw new Error("Not logged in");
+    const created = await patientsApi.create({ ...patient, managedBy: currentUserId });
+    setPatients((p) => [...p, normalize(created) as Patient]);
+  };
+
   const clearAllData = () => {
     setMedicines([]);
     setReminders([]);
@@ -342,9 +377,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
-        medicines, reminders, doseLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId,
+        medicines, reminders, doseLogs, patients, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId, selectedPatientId, isProfessionalMode,
         addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
-        logDose, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing
+        logDose, addPatient, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing
       }}
     >
       {children}

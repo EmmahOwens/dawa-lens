@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AppProvider } from "@/contexts/AppContext";
+import { AppProvider, useApp } from "@/contexts/AppContext";
 import AppShell from "@/components/AppShell";
 import Dashboard from "@/pages/Dashboard";
 import ScanPage from "@/pages/ScanPage";
@@ -18,8 +18,8 @@ import InteractionsPage from "@/pages/InteractionsPage";
 import VerifyEmailPage from "@/pages/VerifyEmailPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import WelcomePage from "@/pages/WelcomePage";
-import { useApp } from "@/contexts/AppContext";
-import { Navigate } from "react-router-dom";
+import FamilyHubPage from "@/pages/FamilyHubPage";
+import TravelCompanionPage from "@/pages/TravelCompanionPage";
 import { preloadOCRModel } from "@/services/visionService";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import OfflineOverlay from "@/components/OfflineOverlay";
@@ -91,6 +91,8 @@ const App = () => {
                         <Route path="/reminders/new" element={<AddReminderPage />} />
                         <Route path="/history" element={<HistoryPage />} />
                         <Route path="/interactions" element={<InteractionsPage />} />
+                        <Route path="/family" element={<FamilyHubPage />} />
+                        <Route path="/travel" element={<TravelCompanionPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>

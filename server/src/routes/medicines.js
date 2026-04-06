@@ -7,11 +7,18 @@ const medicinesCol = db.collection('medicines');
 // GET all medicines for a user
 router.get('/', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, patientId } = req.query;
     if (!userId) return res.status(400).json({ error: 'userId query param required' });
     
-    // In firestore, sorting requires an index if combining multiple fields, but since we are filtering by userId and sorting by createdAt, we will fetch and sort in memory if no index exists, but letting firestore do it where possible.
-    const snapshot = await medicinesCol.where('userId', '==', userId).orderBy('createdAt', 'desc').get();
+    let query = medicinesCol.where('userId', '==', userId);
+    if (patientId) {
+      query = query.where('patientId', '==', patientId);
+    } else {
+      // If no patientId provided, we could return all or just "self" meds. 
+      // For now, let's treat no patientId as "all meds" for that user.
+    }
+
+    const snapshot = await query.orderBy('createdAt', 'desc').get();
     
     const medicines = [];
     snapshot.forEach(doc => {

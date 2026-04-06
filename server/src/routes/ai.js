@@ -114,4 +114,57 @@ router.post('/holistic-safety', async (req, res) => {
   }
 });
 
+/**
+ * Medication Travel Companion
+ * Finds equivalents and handles timezone shifts.
+ */
+router.post('/travel', async (req, res) => {
+  const { medicines, destination, currentCity, homeTimezone, targetTimezone } = req.body;
+
+  if (!GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'AI key not set', code: 'API_KEY_MISSING' });
+  }
+
+  const prompt = `
+    You are the "Dawa-Lens Global Travel Companion".
+    User is traveling from ${currentCity || 'Home'} (${homeTimezone || 'Local'}) to ${destination} (${targetTimezone || 'Destination'}).
+    
+    Current Medications:
+    ${JSON.stringify(medicines.map(m => ({ name: m.name, generic: m.genericName, dosage: m.dosage })))}
+    
+    Your task:
+    1. For each medication, find the most common equivalent brand name in ${destination}.
+    2. Provide specific advice on how to shift dose timings if there's a significant timezone change.
+    3. Advise on any known customs restrictions for these specific types of drugs in ${destination} (if applicable).
+    4. Keep the tone professional, reassuring, and clear.
+
+    Respond in JSON format:
+    {
+      "equivalents": [
+        { "original": "Brand X", "equivalent": "Local Brand Y", "country": "Destination" }
+      ],
+      "timezoneAdvice": "How to shift doses (e.g., 'Take dose 2 hours later each day until aligned')",
+      "customsNotes": "General or specific alerts about traveling with these meds"
+    }
+  `;
+
+  try {
+    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+
+    const reply = JSON.parse(response.data.candidates[0].content.parts[0].text);
+    res.json(reply);
+  } catch (error) {
+    const errorData = error.response?.data || error.message;
+    console.error('Travel AI Error:', JSON.stringify(errorData, null, 2));
+    res.status(500).json({ 
+      error: 'Travel analysis failed', 
+      details: error.response?.data?.error?.message || error.message,
+      code: 'AI_ERROR' 
+    });
+  }
+});
+
 export default router;

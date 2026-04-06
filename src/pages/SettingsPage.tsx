@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe } from "lucide-react";
+import { ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe, Users } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { storageMode, setStorageMode, clearAllData, isLoggedIn, logoutUser, userProfile, syncLocalToCloud } = useApp();
+  const { storageMode, setStorageMode, clearAllData, isLoggedIn, logoutUser, userProfile, syncLocalToCloud, isProfessionalMode, setIsProfessionalMode } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
 
@@ -79,6 +79,26 @@ export default function SettingsPage() {
             >
               {t("settings.swahili")}
             </Button>
+          </div>
+        </div>
+
+        {/* CHW Mode */}
+        <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Users size={60} className="text-primary" />
+          </div>
+          <h2 className="text-sm font-black text-primary mb-4 flex items-center gap-2 uppercase tracking-tighter">
+            <Users size={16} /> Professional Mode
+          </h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-foreground font-bold">Community Health Worker (CHW)</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed max-w-[200px]">Enable this if you manage medications for multiple clients/patients.</p>
+            </div>
+            <Switch 
+               checked={isProfessionalMode} 
+               onCheckedChange={setIsProfessionalMode}
+            />
           </div>
         </div>
 
