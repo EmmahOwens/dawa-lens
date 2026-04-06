@@ -24,6 +24,24 @@ export default function ScanPage() {
   
   const [showAR, setShowAR] = useState(false);
   const [detectedInstructions, setDetectedInstructions] = useState<ARInstructionType[]>([]);
+  const [flashlightOn, setFlashlightOn] = useState(false);
+
+  const toggleFlashlight = useCallback(async () => {
+    try {
+      const track = streamRef.current?.getVideoTracks()[0];
+      if (track) {
+        const capabilities = track.getCapabilities() as any;
+        if (capabilities.torch) {
+          await track.applyConstraints({
+            advanced: [{ torch: !flashlightOn }]
+          } as any);
+          setFlashlightOn(!flashlightOn);
+        }
+      }
+    } catch (err) {
+      console.error("Flashlight error:", err);
+    }
+  }, [flashlightOn]);
 
   const startCamera = useCallback(async () => {
     if (scanMode === "barcode") return; 
@@ -128,32 +146,63 @@ export default function ScanPage() {
 
   return (
     <div className="relative min-h-screen bg-foreground flex flex-col">
-      {/* Top Mode Segmented Control */}
-      <div className="absolute top-0 left-0 right-0 z-50 pt-12 pb-4 bg-gradient-to-b from-foreground/90 to-transparent">
-        <div className="flex mx-auto w-max bg-muted/20 backdrop-blur-md p-1.5 rounded-full border border-white/10 shadow-2xl">
+      {/* Top App Bar with X, Mode Selector, and Flashlight */}
+      <div className="absolute top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top,2rem)] px-4 pb-4 bg-gradient-to-b from-black/80 to-transparent">
+        <div className="flex items-center justify-between gap-4 max-w-lg mx-auto">
+          {/* Top Left: Exit Button */}
           <button
-            onClick={() => setScanMode("pill")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all text-[11px] font-black uppercase tracking-widest ${scanMode === "pill" ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-105" : "text-white/60 hover:text-white"}`}
+            onClick={() => navigate("/")}
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white"
           >
-            <Pill size={16} /> {t("scan.pill")}
+            <X size={20} />
           </button>
+
+          {/* Center: Mode Selector Pill */}
+          <div className="flex-1 flex bg-white/5 backdrop-blur-xl p-1 rounded-full border border-white/5 shadow-2xl relative overflow-hidden h-11">
+            <AnimatePresence mode="popLayout">
+              {["pill", "text", "barcode", "verify"].map((mode) => {
+                const active = scanMode === mode;
+                const Icon = 
+                  mode === "pill" ? Pill : 
+                  mode === "text" ? FileText : 
+                  mode === "barcode" ? ScanBarcode : 
+                  Shield;
+                
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => setScanMode(mode as ScanMode)}
+                    className={`relative flex-1 flex items-center justify-center gap-1.5 rounded-full transition-all duration-300 z-10 ${active ? "text-primary-foreground" : "text-white/40 hover:text-white"}`}
+                  >
+                    {active && (
+                      <motion.div
+                        layoutId="active-pill"
+                        className="absolute inset-0 bg-primary rounded-full -z-10"
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                      />
+                    )}
+                    <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+                    {active && (
+                      <motion.span 
+                        initial={{ opacity: 0, x: -5 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="text-[10px] font-black uppercase tracking-widest hidden sm:inline"
+                      >
+                        {t(`scan.${mode}`)}
+                      </motion.span>
+                    )}
+                  </button>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+
+          {/* Top Right: Flashlight Toggle */}
           <button
-            onClick={() => setScanMode("text")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all text-[11px] font-black uppercase tracking-widest ${scanMode === "text" ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-105" : "text-white/60 hover:text-white"}`}
+            onClick={toggleFlashlight}
+            className={`flex items-center justify-center w-10 h-10 rounded-full backdrop-blur-md border transition-all ${flashlightOn ? "bg-primary border-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.5)]" : "bg-white/10 border-white/10 text-white"}`}
           >
-            <FileText size={16} /> {t("scan.label")}
-          </button>
-          <button
-            onClick={() => setScanMode("barcode")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all text-[11px] font-black uppercase tracking-widest ${scanMode === "barcode" ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-105" : "text-white/60 hover:text-white"}`}
-          >
-            <ScanBarcode size={16} /> {t("scan.barcode")}
-          </button>
-          <button
-            onClick={() => setScanMode("verify")}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all text-[11px] font-black uppercase tracking-widest ${scanMode === "verify" ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-105" : "text-white/60 hover:text-white"}`}
-          >
-            <Shield size={16} /> {t("scan.verify")}
+            <Zap size={20} fill={flashlightOn ? "currentColor" : "none"} />
           </button>
         </div>
       </div>
@@ -240,12 +289,7 @@ export default function ScanPage() {
       {/* Controls */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent pt-32 pb-12 px-8 safe-bottom z-30">
         <div className="flex items-center justify-between max-w-sm mx-auto">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center justify-center w-14 h-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90"
-          >
-            <X size={24} />
-          </button>
+          <div className="w-14 h-14" />
 
           {scanMode !== "barcode" ? (
              <button
