@@ -10,6 +10,7 @@ import { resolveBarcodeToDrugName } from "@/services/barcodeResolver";
 import { identifyPill, PillMatch } from "@/services/pillIdService";
 import { verifyScratchCode, VerificationResult } from "@/services/fakeMedService";
 import { ShieldCheck, ShieldAlert, ShieldQuestion, CalendarClock, Flag } from "lucide-react";
+import PremiumLoader from "@/components/PremiumLoader";
 
 type MatchResult = {
   name: string;
@@ -37,6 +38,7 @@ export default function ResultsPage() {
   const [resolvedBarcodeDrug, setResolvedBarcodeDrug] = useState<string | null>(null);
   const [aiMatches, setAiMatches] = useState<MatchResult[]>([]);
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [animationComplete, setAnimationComplete] = useState(false);
 
   useEffect(() => {
     async function process() {
@@ -63,6 +65,7 @@ export default function ResultsPage() {
         console.error(e);
         if (mode === "text") setExtractedText("Failed to extract text. Please try again.");
       }
+      // AI processing is done, but we wait for the animation to finish
       setLoading(false);
     }
     process();
@@ -96,18 +99,13 @@ export default function ResultsPage() {
         {t("scan.recognition_results", "Recognition Results")}
       </h1>
 
+      {(!animationComplete || loading) && (
+        <PremiumLoader onComplete={() => setAnimationComplete(true)} />
+      )}
+
       {imageUrl && mode !== "barcode" && (
         <div className="mb-8 rounded-[2.5rem] overflow-hidden border-4 border-card shadow-2xl bg-black/5 flex items-center justify-center relative aspect-square max-h-[400px] mx-auto">
           <img src={imageUrl} alt="Captured scan" className="w-full h-full object-cover" />
-          {loading && (
-             <div className="absolute inset-0 bg-background/60 backdrop-blur-md flex flex-col items-center justify-center">
-                <div className="relative">
-                   <Loader2 size={48} className="animate-spin text-primary" />
-                   <Sparkles className="absolute -top-2 -right-2 text-primary animate-pulse" size={16} />
-                </div>
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-primary mt-4">{t("scan.ai_loading")}</span>
-             </div>
-          )}
         </div>
       )}
 
@@ -123,7 +121,7 @@ export default function ResultsPage() {
       )}
 
       {/* --- PILL ML MODE --- */}
-      {mode === "pill" && !loading && (
+      {mode === "pill" && !loading && animationComplete && (
         <>
           {highConfidence.length > 0 && (
             <div className="mb-8">
@@ -195,7 +193,7 @@ export default function ResultsPage() {
       )}
 
       {/* --- TEXT OCR MODE --- */}
-      {mode === "text" && !loading && (
+      {mode === "text" && !loading && animationComplete && (
         <div className="space-y-4">
           <div className="p-4 rounded-xl border border-primary/30 bg-primary/5">
              <h3 className="font-semibold text-sm mb-2 text-primary">Extracted Text</h3>
@@ -221,7 +219,7 @@ export default function ResultsPage() {
       )}
 
       {/* --- BARCODE MODE --- */}
-      {mode === "barcode" && !loading && (
+      {mode === "barcode" && !loading && animationComplete && (
         <div className="space-y-4">
           <div className="p-6 rounded-xl border border-border bg-card text-center flex flex-col items-center">
              <ScanBarcode size={48} className="text-muted-foreground/30 mb-4" />
@@ -263,7 +261,7 @@ export default function ResultsPage() {
       )}
 
       {/* --- VERIFICATION MODE --- */}
-      {mode === "verify" && !loading && verificationResult && (
+      {mode === "verify" && !loading && animationComplete && verificationResult && (
         <div className="space-y-8">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

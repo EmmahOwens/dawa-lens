@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Camera, Plus, History, Search, Pill, Bell } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
+import AchievementOverlay from "@/components/AchievementOverlay";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
@@ -11,6 +13,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { reminders, doseLogs, userProfile } = useApp();
   const { t } = useTranslation();
+  const [showAchievement, setShowAchievement] = useState(false);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -31,8 +34,27 @@ export default function Dashboard() {
     (l) => l.action === "taken" && new Date(l.actionTime).toDateString() === new Date().toDateString()
   ).length;
 
+  useEffect(() => {
+    if (todayReminders.length > 0 && takenToday === todayReminders.length) {
+      const today = new Date().toDateString();
+      const lastCelebrated = localStorage.getItem("last_celebration_date");
+      
+      if (lastCelebrated !== today) {
+        setShowAchievement(true);
+        localStorage.setItem("last_celebration_date", today);
+      }
+    }
+  }, [takenToday, todayReminders.length]);
+
   return (
     <div className="px-4 pt-12 pb-4">
+      <AchievementOverlay 
+        open={showAchievement}
+        onClose={() => setShowAchievement(false)}
+        title="Perfect Day!"
+        subtitle="You've taken all your scheduled medications for today. Keep up the great work!"
+        emoji="🏆"
+      />
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
         <h1 className="text-4xl font-black tracking-tighter text-foreground leading-tight">
