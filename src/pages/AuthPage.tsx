@@ -13,8 +13,12 @@ import {
   createUserWithEmailAndPassword, 
   sendEmailVerification,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  AuthError
 } from "firebase/auth";
+import SuccessState from "@/components/SuccessState";
+import ErrorDialog from "@/components/ErrorDialog";
+import { notify } from "@/lib/notifications";
 
 type Stage = "form" | "awaiting-verification";
 
@@ -30,11 +34,17 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [stage, setStage] = useState<Stage>("form");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errorDialog, setErrorDialog] = useState<{ open: boolean; title: string; description: string; type?: "critical" | "warning" | "error" }>({
+    open: false,
+    title: "",
+    description: "",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      toast({ title: "Please fill all fields", variant: "destructive" });
+      notify.warning("Missing Fields", "Please fill in both email and password.");
       return;
     }
 
@@ -46,10 +56,11 @@ export default function AuthPage() {
         
         if (!user.emailVerified) {
           setStage("awaiting-verification");
+          notify.info("Verification Required", "Please verify your email before signing in.");
         } else {
+          setShowSuccess(true);
           loginUser(user.uid, user.email || "");
-          toast({ title: "Welcome back!", description: `Signed in as ${user.email}` });
-          navigate("/");
+          setTimeout(() => navigate("/"), 2000);
         }
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -57,13 +68,33 @@ export default function AuthPage() {
         await sendEmailVerification(user);
         
         setStage("awaiting-verification");
+        notify.success("Account Created!", "A verification link has been sent to your email.");
       }
     } catch (err: any) {
-      toast({
-        title: isLogin ? "Sign in failed" : "Registration failed",
-        description: err.message || "Please try again.",
-        variant: "destructive",
-      });
+      const error = err as AuthError;
+      
+      if (error.code === "auth/user-not-found") {
+        setErrorDialog({
+          open: true,
+          title: "Account Not Found",
+          description: "We couldn't find an account with this email address. Would you like to create one instead?",
+          type: "warning"
+        });
+      } else if (error.code === "auth/wrong-password") {
+        notify.error("Incorrect Password", "The password you entered is incorrect. Please try again.");
+      } else if (error.code === "auth/too-many-requests") {
+        setErrorDialog({
+          open: true,
+          title: "Access Restricted",
+          description: "Too many failed attempts. Your account is temporarily locked for safety. Please try again later.",
+          type: "critical"
+        });
+      } else {
+        notify.error(
+          isLogin ? "Sign in failed" : "Registration failed", 
+          error.message || "Please try again."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -74,12 +105,12 @@ export default function AuthPage() {
     try {
       if (auth.currentUser) {
         await sendEmailVerification(auth.currentUser);
-        toast({ title: "New verification link generated!" });
+        notify.success("Email Sent!", "A new verification link has been generated.");
       } else {
-        toast({ title: "Error", description: "Not logged in, please sign in first.", variant: "destructive" });
+        notify.error("Error", "Not logged in, please sign in first.");
       }
     } catch (err: any) {
-      toast({ title: "Failed to resend", description: err.message, variant: "destructive" });
+      notify.error("Failed to resend", err.message);
     } finally {
       setResending(false);
     }
@@ -90,11 +121,11 @@ export default function AuthPage() {
       // Reload user to get latest verification status
       await auth.currentUser.reload();
       if (auth.currentUser.emailVerified) {
+        setShowSuccess(true);
         loginUser(auth.currentUser.uid, auth.currentUser.email || "");
-        toast({ title: "Welcome!", description: "Your email has been verified." });
-        navigate("/");
+        setTimeout(() => navigate("/"), 1500);
       } else {
-        toast({ title: "Still not verified", description: "Please check your inbox.", variant: "destructive" });
+        notify.warning("Still not verified", "Please check your inbox for the activation link.");
       }
     } else {
       setStage("form");
@@ -107,16 +138,38 @@ export default function AuthPage() {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       // Google emails are pre-verified. 
+      setShowSuccess(true);
       loginUser(result.user.uid, result.user.email || "");
-      toast({ title: "Welcome!", description: `Signed in as ${result.user.email}` });
-      navigate("/");
+      setTimeout(() => navigate("/"), 2000);
     } catch (err: any) {
-      toast({ title: "Google Sign In failed", description: err.message, variant: "destructive" });
+      notify.error("Google Sign In failed", err.message);
     }
   };
 
   return (
     <div className="px-4 pt-6 pb-4 min-h-screen flex flex-col">
+      <AnimatePresence>
+        {showSuccess && (
+          <SuccessState 
+            title="Welcome Back!" 
+            subtitle="Successfully signed in. Preparing your health lens..." 
+          />
+        )}
+      </AnimatePresence>
+
+      <ErrorDialog 
+        open={errorDialog.open}
+        onOpenChange={(open) => setErrorDialog(prev => ({ ...prev, open }))}
+        title={errorDialog.title}
+        description={errorDialog.description}
+        type={errorDialog.type}
+        actionText={errorDialog.type === "warning" ? "Switch to Sign Up" : "Try Again"}
+        onAction={() => {
+          if (errorDialog.type === "warning") {
+            setIsLogin(false);
+          }
+        }}
+      />
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
         <ArrowLeft size={16} /> Back
       </button>

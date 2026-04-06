@@ -13,13 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useApp } from "@/contexts/AppContext";
-import { useToast } from "@/hooks/use-toast";
+import { notify } from "@/lib/notifications";
+import SuccessState from "@/components/SuccessState";
 import { auth } from "@/lib/firebase";
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const { completeOnboarding, userProfile } = useApp();
-  const { toast } = useToast();
 
   const currentUser = auth.currentUser;
   
@@ -28,11 +28,12 @@ export default function OnboardingPage() {
   const [dateOfBirth, setDateOfBirth] = useState(userProfile?.dateOfBirth || "");
   const [gender, setGender] = useState<"male" | "female" | "">(userProfile?.gender || "");
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !dateOfBirth || !gender) {
-      toast({ title: "Please fill all fields", variant: "destructive" });
+      notify.warning("Missing Info", "Please fill in all profile details.");
       return;
     }
 
@@ -43,14 +44,10 @@ export default function OnboardingPage() {
         dateOfBirth, 
         gender: gender as "male" | "female" 
       });
-      toast({ title: "Profile completed successfully!" });
-      navigate("/");
+      setShowSuccess(true);
+      setTimeout(() => navigate("/"), 2000);
     } catch (err: any) {
-      toast({
-        title: "Failed to update profile",
-        description: err.message || "Please try again.",
-        variant: "destructive",
-      });
+      notify.error("Profile Update Failed", err.message || "Please try again.");
     } finally {
       setLoading(false);
     }
@@ -58,6 +55,14 @@ export default function OnboardingPage() {
 
   return (
     <div className="px-4 pt-12 pb-4 min-h-screen flex flex-col bg-background">
+      <AnimatePresence>
+        {showSuccess && (
+          <SuccessState 
+            title="Profile Ready!" 
+            subtitle="Your personalized health experience is now active." 
+          />
+        )}
+      </AnimatePresence>
       <AnimatePresence mode="wait">
         <motion.div
           key="onboarding"
