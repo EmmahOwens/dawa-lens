@@ -37,17 +37,21 @@ export default function ResultsPage() {
   const [extractedText, setExtractedText] = useState("");
   const [resolvedBarcodeDrug, setResolvedBarcodeDrug] = useState<string | null>(null);
   const [aiMatches, setAiMatches] = useState<MatchResult[]>([]);
+  const [aiSummary, setAiSummary] = useState<string>("");
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [animationComplete, setAnimationComplete] = useState(false);
+  const [scanError, setScanError] = useState<{message: string; code?: string; fixUrl?: string} | null>(null);
 
   useEffect(() => {
     async function process() {
       setLoading(true);
+      setScanError(null);
       try {
         if (mode === "pill" && imageUrl) {
           const res = await identifyPill(imageUrl);
           if (res.success) {
             setAiMatches(res.matches);
+            setAiSummary((res as any).summary || "");
           }
         } else if (mode === "text" && imageUrl) {
           const text = await extractTextFromImage(imageUrl);
@@ -56,14 +60,26 @@ export default function ResultsPage() {
           const drugName = await resolveBarcodeToDrugName(barcode);
           setResolvedBarcodeDrug(drugName);
         } else if (mode === "verify" && imageUrl) {
-          // In a real app, we'd OCR the image to find the code. 
-          // For the prototype, we simulate finding the 'authentic' code from our mock DB.
           const res = await verifyScratchCode("1234567890"); 
           setVerificationResult(res);
         }
-      } catch (e) {
+      } catch (e: any) {
         console.error(e);
-        if (mode === "text") setExtractedText("Failed to extract text. Please try again.");
+        const code = e?.code as string | undefined;
+        const errorMessages: Record<string, string> = {
+          API_KEY_MISSING: 'Gemini API key is not configured. Add GEMINI_API_KEY to server/.env.',
+          INVALID_API_KEY: 'The Gemini API key is invalid or expired. Check server/.env.',
+          BILLING_DISABLED: 'Google Cloud Vision billing is not enabled on this GCP project.',
+          RATE_LIMITED: 'AI rate limit reached. Please wait a moment and try again.',
+          SAFETY_BLOCKED: 'The image was blocked by safety filters. Please try a clearer photo.',
+        };
+        if (code && code in errorMessages) {
+          setScanError({ message: errorMessages[code], code, fixUrl: e?.fixUrl });
+        } else if (mode === "text") {
+          setExtractedText("Failed to extract text. Please try again.");
+        } else {
+          setScanError({ message: e?.message || 'An unknown error occurred during scan processing.', code });
+        }
       }
       // AI processing is done, but we wait for the animation to finish
       setLoading(false);
@@ -120,9 +136,66 @@ export default function ResultsPage() {
         </motion.div>
       )}
 
+      {/* --- SCAN ERROR BANNER --- */}
+      {scanError && !loading && animationComplete && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 rounded-3xl border-2 border-destructive/30 bg-destructive/5 p-6"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={22} className="text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-black text-sm text-destructive uppercase tracking-tight mb-1">
+                {scanError.code === 'API_KEY_MISSING' || scanError.code === 'INVALID_API_KEY'
+                  ? 'API Key Not Configured'
+                  : scanError.code === 'RATE_LIMITED'
+                  ? 'Rate Limit Reached'
+                  : scanError.code === 'SAFETY_BLOCKED'
+                  ? 'Image Blocked'
+                  : 'Scan Failed'}
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{scanError.message}</p>
+              {(scanError.code === 'API_KEY_MISSING' || scanError.code === 'INVALID_API_KEY') && (
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-primary hover:underline"
+                >
+                  <Sparkles size={12} /> Get Free Gemini API Key →
+                </a>
+              )}
+              {scanError.fixUrl && scanError.code !== 'API_KEY_MISSING' && scanError.code !== 'INVALID_API_KEY' && (
+                <a
+                  href={scanError.fixUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-primary hover:underline"
+                >
+                  <Sparkles size={12} /> Fix This →
+                </a>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* --- PILL ML MODE --- */}
       {mode === "pill" && !loading && animationComplete && (
         <>
+          {/* AI Summary from Gemini */}
+          {aiSummary && !scanError && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 px-5 py-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-start gap-3"
+            >
+              <Sparkles size={16} className="text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground/80 leading-relaxed font-medium italic">{aiSummary}</p>
+            </motion.div>
+          )}
+
           {highConfidence.length > 0 && (
             <div className="mb-8">
               <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">

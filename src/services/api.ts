@@ -8,8 +8,10 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 /** Custom error that carries extra fields from the backend JSON response. */
 class ApiError extends Error {
   [key: string]: any;
+  code?: string;
   constructor(data: Record<string, any>) {
     super(data.error || 'Request failed');
+    this.code = data.code;
     Object.assign(this, data);
   }
 }
