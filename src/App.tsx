@@ -22,6 +22,7 @@ import { Navigate } from "react-router-dom";
 import { preloadOCRModel } from "@/services/visionService";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import OfflineOverlay from "@/components/OfflineOverlay";
+import DawaGPT from "@/components/DawaGPT";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +65,7 @@ const App = () => {
       <TooltipProvider>
         <AppProvider>
           <OfflineOverlay />
+          <DawaGPT />
           <Toaster />
           <BrowserRouter>
             <Routes>

@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, X, SwitchCamera, Zap, Upload, Pill, FileText, ScanBarcode } from "lucide-react";
+import { Camera, X, SwitchCamera, Zap, Upload, Pill, FileText, ScanBarcode, Shield } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { ARInstructionOverlay, ARInstructionType } from "@/components/ui/ARInstruction";
 
-export type ScanMode = "pill" | "text" | "barcode";
+export type ScanMode = "pill" | "text" | "barcode" | "verify";
 
 export default function ScanPage() {
   const navigate = useNavigate();
@@ -20,6 +21,9 @@ export default function ScanPage() {
   
   const [scanMode, setScanMode] = useState<ScanMode>("pill");
   const [scanner, setScanner] = useState<Html5Qrcode | null>(null);
+  
+  const [showAR, setShowAR] = useState(false);
+  const [detectedInstructions, setDetectedInstructions] = useState<ARInstructionType[]>([]);
 
   const startCamera = useCallback(async () => {
     if (scanMode === "barcode") return; 
@@ -96,10 +100,20 @@ export default function ScanPage() {
     canvas.height = video.videoHeight;
     canvas.getContext("2d")!.drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-    
-    setTimeout(() => {
-      navigate("/results", { state: { imageUrl: dataUrl, mode: scanMode } });
-    }, 400);
+
+    // Simulate AR detection for the 'mega project' showcase
+    if (scanMode === "pill" || scanMode === "text") {
+      setDetectedInstructions(["water", "timed", "food"]);
+      setShowAR(true);
+      
+      setTimeout(() => {
+        navigate("/results", { state: { imageUrl: dataUrl, mode: scanMode } });
+      }, 3500); // Wait for AR display
+    } else {
+      setTimeout(() => {
+        navigate("/results", { state: { imageUrl: dataUrl, mode: scanMode } });
+      }, 400);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,6 +148,12 @@ export default function ScanPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "barcode" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
           >
             <ScanBarcode size={14} /> {t("scan.barcode")}
+          </button>
+          <button
+            onClick={() => setScanMode("verify")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-xs font-semibold ${scanMode === "verify" ? "bg-primary text-primary-foreground shadow-sm" : "text-card-foreground/70 hover:text-card-foreground"}`}
+          >
+            <Shield size={14} /> {t("scan.verify")}
           </button>
         </div>
       </div>
@@ -174,6 +194,18 @@ export default function ScanPage() {
           </div>
         )}
 
+        {streaming && scanMode === "verify" && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-80 h-24 rounded-lg border-2 border-primary/70 bg-primary/5 backdrop-blur-sm"
+            >
+               <div className="absolute top-[-24px] left-0 right-0 text-center text-[10px] font-bold text-primary uppercase tracking-widest">{t("scan.align_scratch_code")}</div>
+            </motion.div>
+          </div>
+        )}
+
         {!streaming && scanMode !== "barcode" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-card">
             <Camera size={48} className="text-muted-foreground mb-3" />
@@ -184,10 +216,24 @@ export default function ScanPage() {
         {capturing && (
           <motion.div
             initial={{ opacity: 1 }}
-            animate={{ opacity: 0 }}
+            animate={{ opacity: showAR ? 0.8 : 0 }}
             transition={{ duration: 0.3 }}
-            className="absolute inset-0 bg-primary-foreground z-50"
-          />
+            className="absolute inset-0 bg-primary-foreground/20 backdrop-blur-sm z-50 flex flex-col items-center justify-center"
+          >
+            {showAR && (
+              <>
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mb-8 text-center"
+                >
+                  <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">Dawa-AR Detected</p>
+                  <h2 className="text-xl font-bold text-white tracking-tight">Usage Instructions</h2>
+                </motion.div>
+                <ARInstructionOverlay instructions={detectedInstructions} />
+              </>
+            )}
+          </motion.div>
         )}
       </div>
 

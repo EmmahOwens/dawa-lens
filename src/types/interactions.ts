@@ -41,3 +41,11 @@ export interface ParsedInteraction {
   severity: string;
   description: string;
 }
+
+export interface ConditionSafetyCheck {
+  condition: string;
+  drug: string;
+  severity: "high" | "moderate" | "low";
+  warning: string;
+  source: string;
+}

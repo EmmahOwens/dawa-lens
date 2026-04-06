@@ -8,6 +8,8 @@ import { useApp } from "@/contexts/AppContext";
 import { extractTextFromImage } from "@/services/visionService";
 import { resolveBarcodeToDrugName } from "@/services/barcodeResolver";
 import { identifyPill, PillMatch } from "@/services/pillIdService";
+import { verifyScratchCode, VerificationResult } from "@/services/fakeMedService";
+import { ShieldCheck, ShieldAlert, ShieldQuestion, CalendarClock, Flag } from "lucide-react";
 
 type MatchResult = {
   name: string;
@@ -34,6 +36,7 @@ export default function ResultsPage() {
   const [extractedText, setExtractedText] = useState("");
   const [resolvedBarcodeDrug, setResolvedBarcodeDrug] = useState<string | null>(null);
   const [aiMatches, setAiMatches] = useState<MatchResult[]>([]);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
 
   useEffect(() => {
     async function process() {
@@ -50,6 +53,11 @@ export default function ResultsPage() {
         } else if (mode === "barcode" && barcode) {
           const drugName = await resolveBarcodeToDrugName(barcode);
           setResolvedBarcodeDrug(drugName);
+        } else if (mode === "verify" && imageUrl) {
+          // In a real app, we'd OCR the image to find the code. 
+          // For the prototype, we simulate finding the 'authentic' code from our mock DB.
+          const res = await verifyScratchCode("1234567890"); 
+          setVerificationResult(res);
         }
       } catch (e) {
         console.error(e);
@@ -246,6 +254,89 @@ export default function ResultsPage() {
                 </div>
              </div>
           )}
+        </div>
+      )}
+
+      {/* --- VERIFICATION MODE --- */}
+      {mode === "verify" && !loading && verificationResult && (
+        <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`p-6 rounded-2xl border-2 flex flex-col items-center text-center ${
+              verificationResult.status === "authentic" ? "border-success/40 bg-success/5" :
+              verificationResult.status === "fake" ? "border-destructive/40 bg-destructive/5" :
+              "border-warning/40 bg-warning/5"
+            }`}
+          >
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
+              verificationResult.status === "authentic" ? "bg-success/20 text-success" :
+              verificationResult.status === "fake" ? "bg-destructive/20 text-destructive" :
+              "bg-warning/20 text-warning"
+            }`}>
+              {verificationResult.status === "authentic" && <ShieldCheck size={32} />}
+              {verificationResult.status === "fake" && <ShieldAlert size={32} />}
+              {verificationResult.status === "expired" && <CalendarClock size={32} />}
+              {verificationResult.status === "unknown" && <ShieldQuestion size={32} />}
+            </div>
+
+            <h2 className="text-xl font-bold mb-2 uppercase tracking-wide">
+              {verificationResult.status === "authentic" ? "Medication Authentic" : 
+               verificationResult.status === "fake" ? "Counterfeit Alert!" :
+               "Check Failed"}
+            </h2>
+            
+            <p className="text-sm text-foreground/80 leading-relaxed mb-6 px-4">
+              {verificationResult.message}
+            </p>
+
+            {verificationResult.drugName && (
+              <div className="w-full bg-background/50 rounded-xl p-4 border border-border/50 text-left mb-6">
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Medicine</p>
+                    <p className="text-sm font-semibold">{verificationResult.drugName}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Manufacturer</p>
+                    <p className="text-sm font-semibold">{verificationResult.manufacturer || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Batch</p>
+                    <p className="text-sm font-semibold">{verificationResult.batchNumber || "Unknown"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Expires</p>
+                    <p className="text-sm font-semibold">{verificationResult.expiryDate || "Unknown"}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 w-full">
+              {verificationResult.status === "authentic" && (
+                <Button onClick={() => handleConfirm({ name: verificationResult.drugName })} className="w-full">
+                  <Check size={16} className="mr-2" /> {t("common.save")}
+                </Button>
+              )}
+              {verificationResult.status === "fake" && (
+                <Button variant="destructive" className="w-full">
+                  <Flag size={16} className="mr-2" /> Report to Authorities
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
+                Scan Another
+              </Button>
+            </div>
+          </motion.div>
+
+          <div className="p-4 rounded-xl border bg-muted/20">
+             <h4 className="text-xs font-bold uppercase text-muted-foreground mb-2">How this works</h4>
+             <p className="text-[11px] text-muted-foreground leading-relaxed">
+               Dawa Lens verifies the unique 10-12 digit scratch code against the National Drug Authority (NDA) and regional anti-counterfeit registries. 
+               Always ensure the scratch panel was intact before you revealed the code.
+             </p>
+          </div>
         </div>
       )}
 
