@@ -167,4 +167,106 @@ router.post('/travel', async (req, res) => {
   }
 });
 
+/**
+ * Wellness Pattern Insight
+ * Correlates dose logs + wellness logs (symptoms/mood).
+ */
+router.post('/wellness-insight', async (req, res) => {
+  const { doseLogs, wellnessLogs, medicines } = req.body;
+
+  if (!GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'AI key not set', code: 'API_KEY_MISSING' });
+  }
+
+  const prompt = `
+    You are the "Dawa-Lens Wellness Analyst".
+    
+    Data:
+    Medications: ${JSON.stringify(medicines.map(m => m.name))}
+    Medication Logs (last 7-14 days): ${JSON.stringify(doseLogs)}
+    Wellness Logs (Mood/Energy/Symptoms): ${JSON.stringify(wellnessLogs)}
+    
+    Your task:
+    1. Identify any correlations between medication adherence (taken/skipped) and wellness trends.
+    2. Look for potential side effects (e.g., "Fatigue on days Med X was taken").
+    3. Look for positive outcomes (e.g., "Mood improves 2 days after starting Med Y").
+    4. Provide 3 actionable wellness insights.
+    5. Maintain a professional, data-driven yet encouraging tone.
+
+    Respond in JSON format:
+    {
+      "summary": "Overall trend summary",
+      "insights": ["Insight 1", "Insight 2", "Insight 3"],
+      "correlationScore": 0-100
+    }
+  `;
+
+  try {
+    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+
+    const reply = JSON.parse(response.data.candidates[0].content.parts[0].text);
+    res.json(reply);
+  } catch (error) {
+    const errorData = error.response?.data || error.message;
+    console.error('Wellness AI Error:', JSON.stringify(errorData, null, 2));
+    res.status(500).json({ 
+      error: 'Wellness analysis failed', 
+      details: error.response?.data?.error?.message || error.message,
+      code: 'AI_ERROR' 
+    });
+  }
+});
+
+/**
+ * Instant Meal Safety Check
+ * Checks a specific meal against current medications.
+ */
+router.post('/meal-check', async (req, res) => {
+  const { medicines, mealDescription } = req.body;
+
+  if (!GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'AI key not set', code: 'API_KEY_MISSING' });
+  }
+
+  const prompt = `
+    You are "Dawa-Lens Meal Safety Checker".
+    Current Medications: ${JSON.stringify(medicines.map(m => m.name + (m.genericName ? ` (${m.genericName})` : '')))}
+    User is about to eat: "${mealDescription}"
+
+    Your task:
+    1. Check for any dangerous or efficacy-reducing interactions between the food mentioned and the user's meds.
+    2. Specifically look for: Dairy (with antibiotics), Grapefruit (with statins), Alcohol, Tyramine-rich foods, etc.
+    3. Categorize risk as "High", "Medium", or "Safe".
+    4. Provide a very brief, clear explanation.
+
+    Respond in JSON format:
+    {
+      "risk": "High/Medium/Safe",
+      "verdict": "Clear concise verdict",
+      "explanation": "Why?"
+    }
+  `;
+
+  try {
+    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+
+    const reply = JSON.parse(response.data.candidates[0].content.parts[0].text);
+    res.json(reply);
+  } catch (error) {
+    const errorData = error.response?.data || error.message;
+    console.error('Meal AI Error:', JSON.stringify(errorData, null, 2));
+    res.status(500).json({ 
+      error: 'Meal check failed', 
+      details: error.response?.data?.error?.message || error.message,
+      code: 'AI_ERROR' 
+    });
+  }
+});
+
 export default router;

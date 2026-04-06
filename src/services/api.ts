@@ -96,6 +96,20 @@ export const doseLogsApi = {
     request<any>('/doselogs', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// --- Wellness Journals (Food/Symptoms) ---
+export const wellnessApi = {
+  getAll: (userId: string, patientId?: string) => {
+    const url = `/wellness?userId=${userId}${patientId ? `&patientId=${patientId}` : ''}`;
+    return request<any[]>(url);
+  },
+  
+  log: (data: Record<string, unknown>) => 
+    request<any>('/wellness', { method: 'POST', body: JSON.stringify(data) }),
+
+  remove: (id: string) => 
+    request<void>(`/wellness/${id}`, { method: 'DELETE' }),
+};
+
 // --- Vision AI ---
 export const visionApi = {
   identifyPill: (data: { image: string }) =>
@@ -118,4 +132,10 @@ export const aiApi = {
     targetTimezone?: string;
   }) =>
     request<any>('/ai/travel', { method: 'POST', body: JSON.stringify(data) }),
+
+  getWellnessInsight: (data: { doseLogs: any[]; wellnessLogs: any[]; medicines: any[] }) =>
+    request<any>('/ai/wellness-insight', { method: 'POST', body: JSON.stringify(data) }),
+
+  checkMealSafety: (data: { medicines: any[]; mealDescription: string }) =>
+    request<any>('/ai/meal-check', { method: 'POST', body: JSON.stringify(data) }),
 };

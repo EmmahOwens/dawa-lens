@@ -20,6 +20,8 @@ import OnboardingPage from "@/pages/OnboardingPage";
 import WelcomePage from "@/pages/WelcomePage";
 import FamilyHubPage from "@/pages/FamilyHubPage";
 import TravelCompanionPage from "@/pages/TravelCompanionPage";
+import WellnessPage from "@/pages/WellnessPage";
+import ReportPage from "@/pages/ReportPage";
 import { preloadOCRModel } from "@/services/visionService";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import OfflineOverlay from "@/components/OfflineOverlay";
@@ -93,6 +95,8 @@ const App = () => {
                         <Route path="/interactions" element={<InteractionsPage />} />
                         <Route path="/family" element={<FamilyHubPage />} />
                         <Route path="/travel" element={<TravelCompanionPage />} />
+                        <Route path="/wellness" element={<WellnessPage />} />
+                        <Route path="/report" element={<ReportPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>

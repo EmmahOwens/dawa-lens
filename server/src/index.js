@@ -11,6 +11,7 @@ import usersRouter from './routes/users.js';
 import visionRouter from './routes/vision.js';
 import aiRouter from './routes/ai.js';
 import patientsRouter from './routes/patients.js';
+import wellnessRouter from './routes/wellness.js';
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use('/api/doselogs', doseLogsRouter);
 app.use('/api/vision', visionRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/patients', patientsRouter);
+app.use('/api/wellness', wellnessRouter);
 
 // 404 fallback
 app.use((req, res) => {
