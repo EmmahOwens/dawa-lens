@@ -24,11 +24,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-16 flex items-center justify-between border-b border-border/50 px-6 bg-background/50 backdrop-blur-md sticky top-0 z-30">
+          <header className="h-14 flex items-center justify-between border-b border-border/80 px-6 bg-background/70 backdrop-blur-xl sticky top-0 z-30">
             <div className="flex items-center gap-4">
               <SidebarTrigger />
               <div className="h-4 w-px bg-border" />
-              <span className="text-sm font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent uppercase tracking-wider">
+              <span className="text-[15px] font-semibold text-foreground tracking-tight">
                 Dawa Lens Core
               </span>
             </div>

@@ -19,8 +19,8 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-6 left-6 right-6 z-50 mx-auto max-w-lg md:hidden">
-      <div className="flex items-center justify-between rounded-[2.5rem] border border-white/20 bg-background/60 px-2 py-2 shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-3xl safe-bottom relative overflow-hidden">
+    <nav className="fixed bottom-6 left-0 right-0 z-50 mx-auto max-w-sm md:hidden px-6">
+      <div className="flex items-center justify-between rounded-full border border-border/50 bg-background/70 px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.12)] backdrop-blur-2xl safe-bottom relative">
         {/* Left Side Items */}
         <div className="flex flex-1 justify-around items-center">
           {navItems.slice(0, 2).map((item) => (
@@ -31,21 +31,14 @@ export default function BottomNav() {
         {/* Central Scan Button */}
         <NavLink
           to="/scan"
-          className="relative flex h-16 w-16 items-center justify-center -mt-8"
+          className="relative flex h-14 w-14 items-center justify-center -mt-6"
         >
           <motion.div
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="absolute h-full w-full rounded-full bg-primary shadow-[0_8px_20px_rgba(var(--primary),0.4)] flex items-center justify-center border-4 border-background"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="absolute h-full w-full rounded-full bg-primary shadow-[0_4px_14px_rgba(0,122,255,0.4)] flex items-center justify-center text-primary-foreground border-2 border-background"
           >
-            <Camera size={28} className="text-primary-foreground" strokeWidth={2.5} />
-            
-            {/* Pulsing effect */}
-            <motion.div
-              animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0, 0.3] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute inset-0 rounded-full bg-white opacity-20"
-            />
+            <Camera size={24} strokeWidth={2.5} />
           </motion.div>
         </NavLink>
 
@@ -64,24 +57,12 @@ function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: a
   return (
     <NavLink
       to={to}
-      className="relative flex flex-col items-center justify-center w-14 h-14 group"
+      className="relative flex flex-col items-center justify-center w-12 h-12 group"
     >
-      <AnimatePresence>
-        {active && (
-          <motion.div
-            layoutId="nav-bg"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute inset-0 rounded-full bg-primary/10"
-          />
-        )}
-      </AnimatePresence>
-
-      <div className="relative">
+      <div className="relative flex flex-col items-center">
         <Icon
           size={24}
-          className={`relative z-10 transition-colors duration-300 ${active ? "text-primary" : "text-muted-foreground/60 group-hover:text-muted-foreground"}`}
+          className={`relative z-10 transition-colors duration-300 ${active ? "text-primary dark:text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
           strokeWidth={active ? 2.5 : 2}
         />
         
@@ -89,23 +70,23 @@ function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: a
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-destructive border-2 border-background shadow-sm z-20"
+            className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive border-2 border-background z-20"
           />
         )}
-      </div>
 
-      <AnimatePresence>
-        {active && (
-          <motion.span
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
-            className="text-[9px] font-black uppercase tracking-widest text-primary mt-1 relative z-10"
-          >
-            {label}
-          </motion.span>
-        )}
-      </AnimatePresence>
+        {/* macOS Dock style dot indicator */}
+        <AnimatePresence>
+          {active && (
+            <motion.div
+              layoutId="nav-indicator"
+              className="absolute -bottom-3 w-1 h-1 rounded-full bg-primary dark:bg-foreground"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0 }}
+            />
+          )}
+        </AnimatePresence>
+      </div>
     </NavLink>
   );
 }
