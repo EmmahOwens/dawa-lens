@@ -30,12 +30,12 @@ export default function Dashboard() {
   };
 
   const quickActions = [
-    { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary text-primary-foreground" },
-    { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success text-success-foreground" },
-    { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive text-destructive-foreground shadow-lg shadow-destructive/10" },
-    { icon: FileText, label: "Dossier", to: "/report", color: "bg-indigo-600 text-white shadow-lg shadow-indigo-600/10" },
-    { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent text-accent-foreground" },
-    { icon: Plane, label: "Travel", to: "/travel", color: "bg-warning text-warning-foreground" },
+    { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary/10 border border-primary/20 text-primary backdrop-blur-xl shadow-lg shadow-primary/5", ringScale: 1.05 },
+    { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success/10 border border-success/20 text-success backdrop-blur-xl shadow-lg shadow-success/5", ringScale: 1 },
+    { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive/10 border border-destructive/20 text-destructive backdrop-blur-xl shadow-lg shadow-destructive/5", ringScale: 1.1 },
+    { icon: FileText, label: "Dossier", to: "/report", color: "bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 backdrop-blur-xl shadow-lg shadow-indigo-500/5", ringScale: 1 },
+    { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent/50 border border-accent/60 text-accent-foreground backdrop-blur-xl shadow-lg shadow-accent/5", ringScale: 1 },
+    { icon: Plane, label: "Travel", to: "/travel", color: "bg-warning/10 border border-warning/20 text-warning backdrop-blur-xl shadow-lg shadow-warning/5", ringScale: 1.05 },
   ];
 
   const todayReminders = reminders.filter((r) => r.enabled);
@@ -64,17 +64,33 @@ export default function Dashboard() {
         subtitle="You've taken all your scheduled medications for today. Keep up the great work!"
         emoji="🏆"
       />
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-10 flex items-start justify-between">
+      <motion.div 
+        variants={container} 
+        initial="hidden" 
+        animate="show" 
+        className="mb-10 flex items-start justify-between"
+      >
         <div>
-          <h1 className="text-4xl font-black tracking-tighter text-foreground leading-tight">
+          <motion.h1 
+            variants={item}
+            className="text-4xl font-black tracking-tighter text-foreground leading-tight"
+          >
             {getGreeting()},<br />
-            <span className="text-foreground">
+            <motion.span 
+              initial={{ opacity: 0, filter: "blur(10px)" }}
+              animate={{ opacity: 1, filter: "blur(0px)" }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              className="text-foreground inline-block"
+            >
               {userProfile?.name?.split(" ")[0] || t("dashboard.greeting_there")}
-            </span>
-          </h1>
-          <p className="mt-2 text-sm font-medium text-muted-foreground uppercase tracking-widest opacity-70 italic">
+            </motion.span>
+          </motion.h1>
+          <motion.p 
+            variants={item}
+            className="mt-2 text-sm font-medium text-muted-foreground uppercase tracking-widest opacity-70 italic"
+          >
             {isProfessionalMode ? "CHW Professional Dashboard" : t("dashboard.subtitle")}
-          </p>
+          </motion.p>
         </div>
         {selectedPatientId && (
           <motion.button 
@@ -155,47 +171,98 @@ export default function Dashboard() {
         </motion.div>
       ) : (
         <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="mb-10 rounded-2xl bg-primary p-8 text-primary-foreground shadow-lg relative overflow-hidden group"
+          initial={{ opacity: 0, rotateX: 10, scale: 0.95 }}
+          animate={{ opacity: 1, rotateX: 0, scale: 1 }}
+          transition={{ duration: 0.8, type: "spring", bounce: 0.4 }}
+          className="mb-10 rounded-[2.5rem] bg-gradient-to-br from-card to-card/50 border border-border p-8 shadow-2xl shadow-primary/5 relative overflow-hidden group flex items-center justify-between"
         >
-          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700" />
-          <div className="flex items-center gap-3 mb-3">
-            <Pill size={20} />
-            <span className="text-sm font-medium opacity-90">
-              {selectedPatientId ? `${patients.find(p => p.id === selectedPatientId)?.name}'s Progress` : t("dashboard.todays_progress")}
-            </span>
+          <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-700" />
+          
+          <div className="z-10 flex flex-col justify-between h-full">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-primary/10 rounded-full text-primary">
+                <Pill size={20} />
+              </div>
+              <span className="text-sm font-bold uppercase tracking-tight text-foreground/80">
+                {selectedPatientId ? `${patients.find(p => p.id === selectedPatientId)?.name}'s Progress` : t("dashboard.todays_progress")}
+              </span>
+            </div>
+            <div className="flex items-end gap-2 text-foreground">
+              <span className="text-5xl font-black tracking-tighter">{takenToday}</span>
+              <span className="mb-1.5 text-sm font-bold opacity-50">/ {todayReminders.length} {t("dashboard.doses")}</span>
+            </div>
           </div>
-          <div className="flex items-end gap-2">
-            <span className="text-4xl font-bold">{takenToday}</span>
-            <span className="mb-1 text-sm opacity-80">/ {todayReminders.length} {t("dashboard.doses")}</span>
-          </div>
-          <div className="mt-6 h-3 rounded-full bg-primary-foreground/20 overflow-hidden border border-white/10">
-            <motion.div
-              className="h-full rounded-full bg-primary-foreground shadow-[0_0_15px_rgba(255,255,255,0.5)]"
-              initial={{ width: 0 }}
-              animate={{ width: todayReminders.length ? `${(takenToday / todayReminders.length) * 100}%` : "0%" }}
-              transition={{ duration: 1.2, ease: "circOut" }}
-            />
+
+          <div className="relative z-10 w-28 h-28 flex items-center justify-center">
+            {/* Background Track */}
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="transparent"
+                stroke="currentColor"
+                strokeWidth="12"
+                className="text-muted-foreground/10"
+              />
+              {/* Animated Progress Ring */}
+              <motion.circle
+                cx="50"
+                cy="50"
+                r="40"
+                fill="transparent"
+                stroke="url(#gradient)"
+                strokeWidth="12"
+                strokeLinecap="round"
+                initial={{ strokeDasharray: "251.2", strokeDashoffset: "251.2" }}
+                animate={{ 
+                  strokeDashoffset: todayReminders.length 
+                    ? 251.2 - ((takenToday / todayReminders.length) * 251.2) 
+                    : 251.2 
+                }}
+                transition={{ duration: 1.5, ease: "anticipate", delay: 0.2 }}
+              />
+              <defs>
+                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="hsl(var(--primary))" />
+                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.6" />
+                </linearGradient>
+              </defs>
+            </svg>
+            {takenToday === todayReminders.length && todayReminders.length > 0 && (
+              <motion.div 
+                initial={{ scale: 0 }} 
+                animate={{ scale: 1 }} 
+                transition={{ delay: 1.2, type: "spring" }}
+                className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+              >
+                <span className="text-2xl ml-1">🏆</span>
+              </motion.div>
+            )}
           </div>
         </motion.div>
       )}
 
       {/* Quick Actions Grid */}
       <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 gap-3 mb-10">
-        {quickActions.map(({ icon: Icon, label, to, color }) => (
+        {quickActions.map(({ icon: Icon, label, to, color, ringScale }) => (
           <motion.button
             key={to}
             variants={item}
-            whileHover={{ scale: 1.05, y: -5 }}
+            whileHover={{ scale: 1.03, y: -3 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate(to)}
-            className={`flex flex-col items-start gap-4 rounded-[2.2rem] p-6 text-left transition-all shadow-sm border border-transparent hover:border-white/20 active:scale-[0.97] ${color}`}
+            className={`flex flex-col items-start gap-4 rounded-[2.2rem] p-6 text-left transition-all relative overflow-hidden group ${color}`}
           >
-            <div className="p-3 rounded-2xl bg-white/20 shadow-inner">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <motion.div 
+               animate={{ scale: [1, ringScale, 1], rotate: [0, -2, 2, 0] }}
+               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+               className="p-3 rounded-2xl bg-white/40 dark:bg-black/10 shadow-inner z-10"
+            >
                <Icon size={24} />
-            </div>
-            <span className="text-xs font-black uppercase tracking-tighter leading-tight">{label}</span>
+            </motion.div>
+            <span className="text-xs font-black uppercase tracking-widest leading-tight z-10">{label}</span>
           </motion.button>
         ))}
       </motion.div>
