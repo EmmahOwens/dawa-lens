@@ -19,6 +19,7 @@ import {
 import SuccessState from "@/components/SuccessState";
 import ErrorDialog from "@/components/ErrorDialog";
 import { notify } from "@/lib/notifications";
+import { usersApi } from "@/services/api";
 
 type Stage = "form" | "awaiting-verification";
 
@@ -65,7 +66,12 @@ export default function AuthPage() {
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
-        await sendEmailVerification(user);
+        
+        const actionCodeSettings = {
+          url: `${window.location.origin}/`,
+          handleCodeInApp: false, // Use the standard Firebase interstitial
+        };
+        await sendEmailVerification(user, actionCodeSettings);
         
         setStage("awaiting-verification");
         notify.success("Account Created!", "A verification link has been sent to your email.");
@@ -104,7 +110,11 @@ export default function AuthPage() {
     setResending(true);
     try {
       if (auth.currentUser) {
-        await sendEmailVerification(auth.currentUser);
+        const actionCodeSettings = {
+          url: `${window.location.origin}/`,
+          handleCodeInApp: false,
+        };
+        await sendEmailVerification(auth.currentUser, actionCodeSettings);
         notify.success("Email Sent!", "A new verification link has been generated.");
       } else {
         notify.error("Error", "Not logged in, please sign in first.");
@@ -137,6 +147,18 @@ export default function AuthPage() {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
+      
+      // Attempt to provision basic profile in backend proactively
+      try {
+        await usersApi.upsertProfile({
+          uid: result.user.uid,
+          name: result.user.displayName || "",
+          // If the profile already exists, merge: true will keep existing DOB/gender intact
+        });
+      } catch (upsertErr) {
+        console.error("Failed to provision proactive profile:", upsertErr);
+      }
+
       // Google emails are pre-verified. 
       setShowSuccess(true);
       loginUser(result.user.uid, result.user.email || "");

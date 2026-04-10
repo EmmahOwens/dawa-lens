@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, X, Send, Bot, Sparkles, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { ChatMessage, generateDawaGPTResponse } from "@/services/aiAssistantService";
 
 export default function DawaGPT() {
   const { t } = useTranslation();
+  const location = useLocation();
   const { userProfile, medicines } = useApp();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -53,13 +55,17 @@ export default function DawaGPT() {
         text: "Sorry, I'm having trouble connecting right now.",
         source: "System"
       }]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  return (
-    <>
+      } finally {
+        setIsTyping(false);
+      }
+    };
+  
+    // Hide DawaGPT completely during auth and onboarding flows
+    const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email"];
+    if (hiddenPaths.includes(location.pathname)) return null;
+  
+    return (
+      <>
       {/* Floating Toggle Button */}
       <motion.button
         whileHover={{ scale: 1.05 }}
