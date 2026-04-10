@@ -84,59 +84,68 @@ export default function FamilyHubPage() {
         </Button>
       </div>
 
-      {/* Profile List */}
+      {/* Profile Carousel */}
       <motion.div 
         variants={container}
         initial="hidden"
         animate="show"
-        className="space-y-4"
+        className="mt-8"
       >
-        <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground px-2">Family Members</h3>
+        <div className="flex items-center justify-between px-2 mb-4">
+          <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Circle Members</h3>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-50 tracking-widest bg-muted px-2 py-0.5 rounded">Swipe</span>
+        </div>
         
-        {/* Main User (Self) */}
-        <motion.div 
-          variants={item}
-          onClick={() => setSelectedPatientId(null)}
-          className={`p-5 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center justify-between ${
-            selectedPatientId === null ? "border-primary bg-primary/5 shadow-md" : "border-border bg-card hover:border-primary/30"
-          }`}
-        >
-          <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedPatientId === null ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-              <User size={24} />
-            </div>
-            <div>
-              <p className="font-bold text-foreground">{userProfile?.name || "Self"}</p>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Account Owner</p>
-            </div>
-          </div>
-          {selectedPatientId === null && <ShieldCheck size={20} className="text-primary" />}
-        </motion.div>
-
-        {/* Patients */}
-        {patients.map((patient) => (
+        <div className="flex gap-4 overflow-x-auto pb-8 pt-2 px-2 -mx-2 snap-x snap-mandatory drop-shadow-xl" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <style>{`
+            div::-webkit-scrollbar { display: none; }
+          `}</style>
+          
+          {/* Main User (Self) */}
           <motion.div 
-            key={patient.id}
             variants={item}
-            onClick={() => setSelectedPatientId(patient.id)}
-            className={`p-5 rounded-[2rem] border-2 transition-all cursor-pointer flex items-center justify-between ${
-              selectedPatientId === patient.id ? "border-primary bg-primary/5 shadow-md" : "border-border bg-card hover:border-primary/30"
+            onClick={() => setSelectedPatientId(null)}
+            className={`min-w-[200px] snap-center p-6 rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col justify-between shrink-0 h-48 active:scale-95 ${
+              selectedPatientId === null ? "border-primary bg-primary/10 shadow-2xl shadow-primary/20" : "border-border bg-card hover:border-primary/30"
             }`}
           >
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedPatientId === patient.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                <User size={24} />
+            <div className="flex justify-between items-start">
+              <div className={`w-14 h-14 rounded-[1.5rem] flex items-center justify-center ${selectedPatientId === null ? "bg-primary text-primary-foreground shadow-lg" : "bg-muted text-muted-foreground"}`}>
+                <User size={28} />
+              </div>
+              {selectedPatientId === null && <ShieldCheck size={24} className="text-primary" />}
+            </div>
+            <div>
+              <p className="text-xl font-bold text-foreground mb-1 tracking-tight truncate">{userProfile?.name?.split(' ')[0] || "Self"}</p>
+              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Account Owner</p>
+            </div>
+          </motion.div>
+
+          {/* Patients */}
+          {patients.map((patient) => (
+            <motion.div 
+              key={patient.id}
+              variants={item}
+              onClick={() => setSelectedPatientId(patient.id)}
+              className={`min-w-[200px] snap-center p-6 rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col justify-between shrink-0 h-48 active:scale-95 ${
+                selectedPatientId === patient.id ? "border-primary bg-primary/10 shadow-2xl shadow-primary/20" : "border-border bg-card hover:border-primary/30"
+              }`}
+            >
+              <div className="flex justify-between items-start">
+                <div className={`w-14 h-14 rounded-[1.5rem] flex items-center justify-center ${selectedPatientId === patient.id ? "bg-primary text-primary-foreground shadow-lg" : "bg-muted text-muted-foreground"}`}>
+                  <User size={28} />
+                </div>
+                {selectedPatientId === patient.id && <ShieldCheck size={24} className="text-primary" />}
               </div>
               <div>
-                <p className="font-bold text-foreground">{patient.name}</p>
-                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
-                  {patient.relation || "Family"} {patient.age ? `• ${patient.age} yrs` : ""}
+                <p className="text-xl font-bold text-foreground mb-1 tracking-tight truncate">{patient.name.split(' ')[0]}</p>
+                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest line-clamp-1">
+                  {patient.relation || "Family"} {patient.age ? `• ${patient.age}y` : ""}
                 </p>
               </div>
-            </div>
-            <ChevronRight size={20} className={selectedPatientId === patient.id ? "text-primary" : "text-muted-foreground/30"} />
-          </motion.div>
-        ))}
+            </motion.div>
+          ))}
+        </div>
 
         {/* Add Member Button */}
         {!showAddForm ? (

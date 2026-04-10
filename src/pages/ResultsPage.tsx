@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, ScanBarcode, FileText, Loader2, Pill, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
@@ -100,6 +100,7 @@ export default function ResultsPage() {
       imageUrl: imageUrl || undefined,
     });
     setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   };
 
   return (
@@ -122,19 +123,54 @@ export default function ResultsPage() {
       {imageUrl && mode !== "barcode" && (
         <div className="mb-8 rounded-[2.5rem] overflow-hidden border-4 border-card shadow-2xl bg-black/5 flex items-center justify-center relative aspect-square max-h-[400px] mx-auto">
           <img src={imageUrl} alt="Captured scan" className="w-full h-full object-cover" />
+          {(!animationComplete || loading) && (
+            <motion.div 
+               className="absolute top-0 left-0 w-full h-[15%] bg-gradient-to-b from-transparent to-primary/40 border-b-[3px] border-primary z-10 box-border"
+               animate={{ y: [0, 340, 0] }}
+               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            />
+          )}
         </div>
       )}
 
-      {saved && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="mb-6 rounded-full bg-success/10 border border-success/30 p-4 pl-6 flex items-center gap-3 animate-bounce-subtle"
-        >
-          <Check size={20} className="text-success" />
-          <p className="text-sm text-success font-black uppercase tracking-tighter">{t("common.success")}! {t("medicine.saved", "Medicine Saved")}</p>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {saved && (
+          <motion.div
+            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            animate={{ opacity: 1, backdropFilter: "blur(5px)" }}
+            exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-background/50 pointer-events-none"
+          >
+             <motion.div 
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                className="w-48 h-48 bg-card/90 backdrop-blur-3xl rounded-[3rem] border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.2)] flex flex-col items-center justify-center gap-5"
+             >
+                <div className="relative">
+                  <motion.svg width="60" height="60" viewBox="0 0 50 50">
+                    <motion.circle 
+                      cx="25" cy="25" r="23" 
+                      fill="transparent" stroke="hsl(var(--success))" strokeWidth="4" 
+                      initial={{ strokeDasharray: "150", strokeDashoffset: "150" }}
+                      animate={{ strokeDashoffset: 0 }}
+                      transition={{ duration: 0.5, ease: "easeOut" }}
+                    />
+                    <motion.path 
+                      d="M14 26 L22 34 L38 16" 
+                      fill="transparent" stroke="hsl(var(--success))" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
+                    />
+                  </motion.svg>
+                </div>
+                <p className="text-sm font-black uppercase tracking-widest text-success">Saved</p>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* --- SCAN ERROR BANNER --- */}
       {scanError && !loading && animationComplete && (

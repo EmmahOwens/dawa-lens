@@ -226,20 +226,34 @@ export default function ScanPage() {
         {streaming && scanMode === "pill" && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="w-56 h-56 rounded-full border-2 border-primary/70"
-            />
+              initial={{ scale: 1.1, opacity: 0 }}
+              animate={{ scale: [1, 1.02, 1], opacity: 1 }}
+              transition={{ scale: { repeat: Infinity, duration: 2, ease: "easeInOut" }, opacity: { duration: 0.5 } }}
+              className="relative w-64 h-64"
+            >
+               <div className="absolute inset-0 border-[0.5px] border-white/20" />
+               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary" />
+               <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary" />
+               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary" />
+               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary" />
+            </motion.div>
           </div>
         )}
 
         {streaming && scanMode === "text" && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="w-72 h-40 rounded-xl border-dashed border-2 border-primary/70"
-            />
+              initial={{ scale: 1.1, opacity: 0 }}
+              animate={{ scale: [1, 1.02, 1], opacity: 1 }}
+              transition={{ scale: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }, opacity: { duration: 0.5 } }}
+              className="relative w-80 h-40"
+            >
+               <div className="absolute inset-0 border-[0.5px] border-white/20" />
+               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary" />
+               <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary" />
+               <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary" />
+               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary" />
+            </motion.div>
           </div>
         )}
 
@@ -292,15 +306,17 @@ export default function ScanPage() {
           <div className="w-14 h-14" />
 
           {scanMode !== "barcode" ? (
-             <button
+             <motion.button
+               whileTap={{ scale: 0.95 }}
                onClick={capture}
                disabled={!streaming}
-               className="flex items-center justify-center w-24 h-24 rounded-full border-[6px] border-white/20 bg-primary/10 backdrop-blur-md transition-all active:scale-90 disabled:opacity-40 shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+               className="flex items-center justify-center w-[84px] h-[84px] rounded-full border-[4px] border-white/70 bg-transparent disabled:opacity-40"
              >
-               <div className="w-18 h-18 rounded-full bg-white shadow-inner flex items-center justify-center">
-                  <div className="w-4 h-4 rounded-full border-2 border-primary animate-pulse" />
-               </div>
-             </button>
+               <motion.div 
+                 whileTap={{ scale: 0.88 }}
+                 className="w-[66px] h-[66px] rounded-full bg-white shadow-inner flex items-center justify-center"
+               />
+             </motion.button>
           ) : (
             <div className="text-white/60 text-[10px] text-center font-black uppercase tracking-widest leading-tight w-24 h-24 flex items-center justify-center">{t("scan.point_barcode")}</div>
           )}
