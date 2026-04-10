@@ -1,99 +1,100 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   :root {
-    --background: 260 25% 99%;
-    --foreground: 260 40% 10%;
+    --background: 0 0% 100%;
+    --foreground: 240 3% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 260 40% 12%;
+    --card-foreground: 240 3% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 260 40% 12%;
+    --popover-foreground: 240 3% 12%;
 
-    --primary: 250 85% 62%;
+    --primary: 211 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 250 40% 94%;
-    --secondary-foreground: 250 60% 25%;
+    --secondary: 240 9% 96%;
+    --secondary-foreground: 240 3% 12%;
 
-    --muted: 260 20% 94%;
-    --muted-foreground: 260 15% 45%;
+    --muted: 240 9% 96%;
+    --muted-foreground: 240 2% 54%;
 
-    --accent: 250 50% 92%;
-    --accent-foreground: 250 70% 20%;
+    --accent: 240 9% 96%;
+    --accent-foreground: 211 100% 50%;
 
-    --destructive: 0 90% 64%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 145 75% 42%;
+    --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 100% 55%;
-    --warning-foreground: 38 100% 12%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
 
-    --border: 260 20% 90%;
-    --input: 260 20% 90%;
-    --ring: 250 85% 62%;
+    --border: 240 4% 83%;
+    --input: 240 4% 83%;
+    --ring: 211 100% 50%;
 
-    --radius: 2.25rem; /* Expressive bold rounding */
+    --radius: 1rem; /* Apple standard rounding */
 
-    --sidebar-background: 260 25% 98%;
-    --sidebar-foreground: 260 40% 14%;
-    --sidebar-primary: 250 85% 62%;
+    --sidebar-background: 240 9% 96%;
+    --sidebar-foreground: 240 3% 12%;
+    --sidebar-primary: 211 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 250 50% 92%;
-    --sidebar-accent-foreground: 250 70% 30%;
-    --sidebar-border: 260 20% 90%;
-    --sidebar-ring: 250 85% 62%;
+    --sidebar-accent: 240 5% 90%;
+    --sidebar-accent-foreground: 240 3% 12%;
+    --sidebar-border: 240 4% 83%;
+    --sidebar-ring: 211 100% 50%;
 
-    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   }
 
   .dark {
-    --background: 260 10% 8%;
-    --foreground: 260 15% 92%;
+    --background: 0 0% 0%;
+    --foreground: 240 9% 96%;
 
-    --card: 260 12% 12%;
-    --card-foreground: 260 15% 92%;
+    --card: 240 3% 11%;
+    --card-foreground: 240 9% 96%;
 
-    --popover: 260 12% 12%;
-    --popover-foreground: 260 15% 92%;
+    --popover: 240 3% 11%;
+    --popover-foreground: 240 9% 96%;
 
-    --primary: 247 65% 70%;
-    --primary-foreground: 247 60% 15%;
+    --primary: 210 100% 52%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 247 20% 20%;
-    --secondary-foreground: 247 30% 85%;
+    --secondary: 240 2% 18%;
+    --secondary-foreground: 240 9% 96%;
 
-    --muted: 260 12% 18%;
-    --muted-foreground: 260 10% 65%;
+    --muted: 240 3% 11%;
+    --muted-foreground: 240 1% 61%;
 
-    --accent: 260 20% 20%;
-    --accent-foreground: 260 30% 85%;
+    --accent: 240 2% 18%;
+    --accent-foreground: 210 100% 52%;
 
-    --destructive: 0 60% 50%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 240 9% 96%;
 
-    --success: 150 50% 45%;
-    --success-foreground: 0 0% 100%;
+    --success: 149 61% 20%;
+    --success-foreground: 240 9% 96%;
 
-    --warning: 40 80% 60%;
-    --warning-foreground: 40 90% 10%;
+    --warning: 48 96% 15%;
+    --warning-foreground: 240 9% 96%;
 
-    --border: 260 15% 20%;
-    --input: 260 15% 20%;
-    --ring: 247 65% 70%;
+    --border: 240 2% 23%;
+    --input: 240 2% 23%;
+    --ring: 210 100% 52%;
 
-    --sidebar-background: 260 12% 12%;
-    --sidebar-foreground: 260 15% 92%;
-    --sidebar-primary: 247 65% 70%;
-    --sidebar-primary-foreground: 247 60% 15%;
-    --sidebar-accent: 260 20% 20%;
-    --sidebar-accent-foreground: 260 30% 85%;
-    --sidebar-border: 260 15% 20%;
-    --sidebar-ring: 247 65% 70%;
+    --sidebar-background: 240 3% 11%;
+    --sidebar-foreground: 240 9% 96%;
+    --sidebar-primary: 210 100% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 2% 18%;
+    --sidebar-accent-foreground: 240 9% 96%;
+    --sidebar-border: 240 2% 23%;
+    --sidebar-ring: 210 100% 52%;
   }
 }
 
@@ -114,3 +115,4 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
+

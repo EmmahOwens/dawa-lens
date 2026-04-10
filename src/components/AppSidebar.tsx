@@ -38,9 +38,9 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>
             {!collapsed && (
-              <div className="flex items-center gap-2">
-                <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
-                <span className="text-lg font-black bg-gradient-to-br from-primary to-primary/50 bg-clip-text text-transparent uppercase tracking-tighter">
+              <div className="flex items-center gap-3">
+                <img src="/logo.png" alt="Logo" className="w-5 h-5 object-contain" />
+                <span className="text-[15px] font-semibold tracking-tight text-foreground">
                   Dawa Lens
                 </span>
               </div>
@@ -54,10 +54,10 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/"}
-                      className="hover:bg-primary/5 transition-all duration-300 rounded-full py-6 px-4 group"
-                      activeClassName="bg-primary text-primary-foreground font-bold shadow-[0_8px_20px_rgba(var(--primary-rgb),0.3)] scale-[1.02]"
+                      className="hover:bg-black/5 dark:hover:bg-white/10 transition-colors duration-200 rounded-lg py-2 px-3 group text-[14px]"
+                      activeClassName="bg-primary text-primary-foreground font-medium dark:bg-primary shadow-sm"
                     >
-                      <item.icon className={`mr-3 h-5 w-5 transition-transform group-hover:scale-110 ${isActive(item.url) ? 'scale-110' : ''}`} />
+                      <item.icon className={`mr-3 h-[18px] w-[18px] ${isActive(item.url) ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
                       {!collapsed && <span className="tracking-tight">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>

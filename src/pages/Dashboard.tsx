@@ -68,7 +68,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-4xl font-black tracking-tighter text-foreground leading-tight">
             {getGreeting()},<br />
-            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            <span className="text-foreground">
               {userProfile?.name?.split(" ")[0] || t("dashboard.greeting_there")}
             </span>
           </h1>
@@ -157,7 +157,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mb-10 rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 p-8 text-primary-foreground shadow-[0_20px_50px_rgba(var(--primary-rgb),0.3)] relative overflow-hidden group"
+          className="mb-10 rounded-2xl bg-primary p-8 text-primary-foreground shadow-lg relative overflow-hidden group"
         >
           <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700" />
           <div className="flex items-center gap-3 mb-3">
