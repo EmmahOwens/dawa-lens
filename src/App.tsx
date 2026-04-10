@@ -69,9 +69,9 @@ const App = () => {
       <TooltipProvider>
         <AppProvider>
           <OfflineOverlay />
-          <DawaGPT />
           <Toaster richColors closeButton position="top-center" />
           <BrowserRouter>
+            <DawaGPT />
             <Routes>
               {/* Full-screen pages — no AppShell */}
               <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
