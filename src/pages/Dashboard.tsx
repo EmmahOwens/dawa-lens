@@ -5,6 +5,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState, useMemo } from "react";
 import AchievementOverlay from "@/components/AchievementOverlay";
+import { DashboardBanner } from "@/components/DashboardBanner";
 import { calculateRefillStatus, RefillStatus } from "@/services/refillService";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
@@ -106,6 +107,8 @@ export default function Dashboard() {
           </motion.button>
         )}
       </motion.div>
+
+      <DashboardBanner />
 
       {/* Refill Alerts */}
       {refillStatuses.length > 0 && (
