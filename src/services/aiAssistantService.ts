@@ -12,9 +12,10 @@ export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
-  source?: "ANDA" | "WHO" | "openFDA" | "System" | "Gemini";
+  source?: "ANDA" | "WHO" | "openFDA" | "System" | "Gemini" | "MoH";
   patterns?: string[];
   score?: number;
+  suggestions?: string[];
 }
 
 const FAQ_RESPONSE_MAP: Record<string, string> = {
@@ -94,4 +95,34 @@ export const generateDawaGPTResponse = async (
     text: "I am your Dawa-Lens assistant. You can ask about your medication logs, patterns in missing doses, or general safety. For urgent medical issues, please contact a professional.",
     source: "System"
   };
+};
+
+export const chatWithDawaGPT = async (
+  messages: ChatMessage[],
+  medicines: Medicine[],
+  userProfile: UserProfile | null
+): Promise<ChatMessage> => {
+  try {
+    const response = await aiApi.chat({
+      messages,
+      medicines,
+      userProfile
+    });
+
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: response.text,
+      source: response.source || "Gemini",
+      suggestions: response.suggestions
+    };
+  } catch (err) {
+    console.error("DawaGPT Chat Error:", err);
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "I'm having trouble connecting to my medical intelligence core. Please check your connection and try again.",
+      source: "System"
+    };
+  }
 };
