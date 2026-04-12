@@ -10,8 +10,7 @@ import { ChatMessage, generateDawaGPTResponse } from "@/services/aiAssistantServ
 export default function DawaGPT() {
   const { t } = useTranslation();
   const location = useLocation();
-  const { userProfile, medicines } = useApp();
-  const [isOpen, setIsOpen] = useState(false);
+  const { userProfile, medicines, isDawaGPTOpen: isOpen, setIsDawaGPTOpen: setIsOpen } = useApp();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);

@@ -4,9 +4,11 @@ import { AppSidebar } from "./AppSidebar";
 import BottomNav from "./BottomNav";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { IntelligencePanel } from "./IntelligencePanel";
+import { useApp } from "@/contexts/AppContext";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const isMobile = useIsMobile();
+  const { isIntelligenceCollapsed } = useApp();
 
   if (isMobile) {
     return (
@@ -45,7 +47,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         {/* Column 3: Intelligence Panel (Hidden on screens smaller than large) */}
-        <div className="hidden xl:block">
+        <div className={`hidden xl:block transition-all duration-500 ease-in-out ${isIntelligenceCollapsed ? "w-[70px]" : "w-[340px]"}`}>
            <IntelligencePanel />
         </div>
       </div>
