@@ -269,4 +269,73 @@ router.post('/meal-check', async (req, res) => {
   }
 });
 
+/**
+ * Conversational AI Assistant (Dawa-GPT)
+ * Maintains history and provides contextual follow-up suggestions.
+ */
+router.post('/chat', async (req, res) => {
+  const { messages, medicines, userProfile } = req.body;
+
+  if (!GEMINI_API_KEY) {
+    return res.status(500).json({ error: 'AI key not set', code: 'API_KEY_MISSING' });
+  }
+
+  const activeMeds = medicines?.map(m => m.name).join(', ') || 'No active medications';
+  
+  const systemInstruction = `
+    You are "Dawa-GPT", a premium medical AI assistant integrated into the Dawa-Lens app.
+    Your primary focus is the health and safety of users in Uganda and East Africa.
+    
+    Context:
+    - User Name: ${userProfile?.name || 'User'}
+    - Active Medications: ${activeMeds}
+    - Regional Context: Uganda (Ministry of Health / NDA guidelines).
+    
+    Rules:
+    1. Prioritize East African medication names and regional health standards.
+    2. Maintain a professional, warm, and helpful tone (the "Dawa-Lens signature").
+    3. Never officially alter dosages; always advise consulting a professional for prescription changes.
+    4. Based on the conversation, yield 3 concise "Next Prompt Suggestions" that the user might want to click.
+    
+    Response Format (Strict JSON):
+    {
+      "text": "Your helpful response here (Markdown supported)",
+      "suggestions": ["Next prompt 1", "Next prompt 2", "Next prompt 3"],
+      "source": "Gemini/MoH"
+    }
+  `;
+
+  // Convert frontend messages to Gemini format
+  const contents = messages.map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'model',
+    parts: [{ text: msg.text }]
+  }));
+
+  // Embed system instruction at the start of the conversation
+  const finalContents = [
+    { role: 'user', parts: [{ text: `System Instruction: ${systemInstruction}` }] },
+    { role: 'model', parts: [{ text: "Understood. I am Dawa-GPT, focusing on Uganda and East African health context. How can I help you today?" }] },
+    ...contents
+  ];
+
+  try {
+    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      contents: finalContents,
+      generationConfig: { 
+        responseMimeType: 'application/json' 
+      }
+    });
+
+    const replyText = response.data.candidates[0].content.parts[0].text;
+    res.json(JSON.parse(replyText));
+  } catch (error) {
+    console.error('Chat AI Error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      error: 'AI chat failed', 
+      details: error.response?.data?.error?.message || error.message,
+      code: 'AI_ERROR' 
+    });
+  }
+});
+
 export default router;
