@@ -16,13 +16,14 @@ type MatchResult = {
   name: string;
   genericName?: string;
   confidence: number;
+  recommendedDosage?: string;
 };
 
 export default function ResultsPage() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { addMedicine } = useApp();
+  const { addMedicine, userProfile, patients, selectedPatientId } = useApp();
   
   const state = location.state as any;
   const imageUrl = state?.imageUrl;
@@ -47,15 +48,23 @@ export default function ResultsPage() {
       setLoading(true);
       setScanError(null);
       try {
-        if (mode === "pill" && imageUrl) {
-          const res = await identifyPill(imageUrl);
+        let ageString = undefined;
+        if (selectedPatientId) {
+          const patient = patients.find(p => p.id === selectedPatientId);
+          if (patient && patient.age) ageString = patient.age.toString();
+        } else if (userProfile && userProfile.dateOfBirth) {
+          const dob = new Date(userProfile.dateOfBirth);
+          const ageDifMs = Date.now() - dob.getTime();
+          const ageDate = new Date(ageDifMs);
+          ageString = Math.abs(ageDate.getUTCFullYear() - 1970).toString();
+        }
+
+        if ((mode === "pill" || mode === "text") && imageUrl) {
+          const res = await identifyPill(imageUrl, ageString);
           if (res.success) {
             setAiMatches(res.matches);
             setAiSummary((res as any).summary || "");
           }
-        } else if (mode === "text" && imageUrl) {
-          const text = await extractTextFromImage(imageUrl);
-          setExtractedText(text);
         } else if (mode === "barcode" && barcode) {
           const drugName = await resolveBarcodeToDrugName(barcode);
           setResolvedBarcodeDrug(drugName);
@@ -96,7 +105,7 @@ export default function ResultsPage() {
     addMedicine({
       name: finalName,
       genericName: result.genericName || "",
-      dosage: finalName.split(" ").pop() || "",
+      dosage: result.recommendedDosage || finalName.split(" ").pop() || "",
       imageUrl: imageUrl || undefined,
     });
     setSaved(true);
@@ -217,8 +226,8 @@ export default function ResultsPage() {
         </motion.div>
       )}
 
-      {/* --- PILL ML MODE --- */}
-      {mode === "pill" && !loading && animationComplete && (
+      {/* --- ML MATCHES MODE (PILL & TEXT) --- */}
+      {(mode === "pill" || mode === "text") && !loading && animationComplete && (
         <>
           {/* AI Summary from Gemini */}
           {aiSummary && !scanError && (
@@ -250,6 +259,7 @@ export default function ResultsPage() {
                       <div>
                         <h3 className="text-xl font-black text-card-foreground leading-tight">{r.name}</h3>
                         {r.genericName && <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-70">{r.genericName}</p>}
+                        {r.recommendedDosage && <p className="text-xs font-bold text-primary mt-2">Recommended Dose: {r.recommendedDosage}</p>}
                       </div>
                       <div className="bg-success text-success-foreground rounded-full px-3 py-1 text-[11px] font-black shadow-lg">
                         {Math.round(r.confidence * 100)}% Match
@@ -301,31 +311,6 @@ export default function ResultsPage() {
         </>
       )}
 
-      {/* --- TEXT OCR MODE --- */}
-      {mode === "text" && !loading && animationComplete && (
-        <div className="space-y-4">
-          <div className="p-4 rounded-xl border border-primary/30 bg-primary/5">
-             <h3 className="font-semibold text-sm mb-2 text-primary">Extracted Text</h3>
-             <p className="text-sm leading-relaxed whitespace-pre-wrap font-mono text-muted-foreground bg-background p-3 rounded-lg border">
-                {extractedText || "No readable text found."}
-             </p>
-          </div>
-          
-          <div className="flex flex-col gap-2">
-             <p className="text-xs text-muted-foreground mb-1">
-                Found the medication name in the text above? Search for it directly to verify.
-             </p>
-             <div className="flex gap-2">
-               <Button className="w-full" onClick={() => navigate(`/search?q=${encodeURIComponent(extractedText.split(" ")[0] || "")}`)}>
-                  Search Primary Word
-               </Button>
-               <Button variant="outline" className="w-full" onClick={() => navigate('/search')}>
-                  Manual Search
-               </Button>
-             </div>
-          </div>
-        </div>
-      )}
 
       {/* --- BARCODE MODE --- */}
       {mode === "barcode" && !loading && animationComplete && (
