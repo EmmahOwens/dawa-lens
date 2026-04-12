@@ -112,7 +112,7 @@ export const wellnessApi = {
 
 // --- Vision AI ---
 export const visionApi = {
-  identifyPill: (data: { image: string }) =>
+  identifyPill: (data: { image: string, patientAge?: string }) =>
     request<any>('/vision/pill-id', { method: 'POST', body: JSON.stringify(data) }),
 };
 
