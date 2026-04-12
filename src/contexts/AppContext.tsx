@@ -109,6 +109,10 @@ type AppContextType = {
   clearAllData: () => void;
   syncLocalToCloud: () => Promise<void>;
   isInitializing: boolean;
+  isDawaGPTOpen: boolean;
+  setIsDawaGPTOpen: (v: boolean) => void;
+  isIntelligenceCollapsed: boolean;
+  setIsIntelligenceCollapsed: (v: boolean) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -144,6 +148,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [storageMode, setStorageMode] = useState<"local" | "cloud">(() => loadLocal("med_storage_mode", "cloud"));
   const [isLoggedIn, setIsLoggedIn] = useState(() => loadLocal("med_loggedin", false));
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => loadLocal("med_userId", null));
+  const [isDawaGPTOpen, setIsDawaGPTOpen] = useState(false);
+  const [isIntelligenceCollapsed, setIntelligenceCollapsedState] = useState(() => loadLocal("med_intelligence_collapsed", false));
 
   const setIsProfessionalMode = useCallback(async (v: boolean) => {
     setIsProfessionalModeState(v);
@@ -159,6 +165,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
   }, [currentUserId, storageMode]);
+  
+  const setIsIntelligenceCollapsed = useCallback((v: boolean) => {
+    setIntelligenceCollapsedState(v);
+    localStorage.setItem("med_intelligence_collapsed", JSON.stringify(v));
+  }, []);
 
 
   // Persist simple flags to localStorage (no sensitive data, just UI state)
@@ -421,7 +432,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         medicines, reminders, doseLogs, patients, wellnessLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId, selectedPatientId, isProfessionalMode,
         addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
-        logDose, addPatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing
+        logDose, addPatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing,
+        isDawaGPTOpen, setIsDawaGPTOpen, isIntelligenceCollapsed, setIsIntelligenceCollapsed
       }}
     >
       {children}
