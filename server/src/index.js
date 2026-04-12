@@ -22,7 +22,9 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  'https://dawalens256.vercel.app'
+  'https://dawalens256.vercel.app',
+  'https://dawalens.web.app',
+  'https://medicine-d3ba2.web.app'
 ];
 
 if (process.env.ALLOWED_ORIGINS) {
