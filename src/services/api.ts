@@ -28,9 +28,11 @@ const BASE_URL = getBaseUrl();
 class ApiError extends Error {
   [key: string]: any;
   code?: string;
-  constructor(data: Record<string, any>) {
-    super(data.error || 'Request failed');
+  statusCode?: number;
+  constructor(data: Record<string, any>, statusCode?: number) {
+    super(data.error || data.message || 'Request failed');
     this.code = data.code;
+    this.statusCode = statusCode;
     Object.assign(this, data);
   }
 }
@@ -56,7 +58,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'Network error' }));
-    throw new ApiError(data);
+    throw new ApiError(data, res.status);
   }
   return res.json() as Promise<T>;
 }
