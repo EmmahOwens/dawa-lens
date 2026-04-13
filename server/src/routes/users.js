@@ -1,45 +1,33 @@
 import express from 'express';
-import { db } from '../db.js';
+import * as userService from '../services/userService.js';
+import { protect, restrictToOwner } from '../middleware/authMiddleware.js';
+import { validate } from '../middleware/validateMiddleware.js';
+import { getUserSchema, upsertUserSchema } from '../validations/userValidation.js';
+import AppError from '../utils/AppError.js';
 
 const router = express.Router();
-const usersCol = db.collection('users');
 
 // GET user profile
-router.get('/:uid', async (req, res) => {
+router.get('/:uid', protect, validate(getUserSchema), restrictToOwner, async (req, res, next) => {
   try {
-    const docRef = await usersCol.doc(req.params.uid).get();
-    if (!docRef.exists) {
-      return res.status(404).json({ error: 'User profile not found' });
+    const profile = await userService.getUserProfile(req.params.uid);
+    if (!profile) {
+      return next(new AppError('User profile not found', 404));
     }
-    res.json({ id: docRef.id, ...docRef.data() });
+    res.json(profile);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // POST update/create user profile
-router.post('/', async (req, res) => {
+router.post('/', protect, validate(upsertUserSchema), restrictToOwner, async (req, res, next) => {
   try {
-    const { uid, name, dateOfBirth, gender, isProfessional } = req.body;
-    if (!uid) {
-      return res.status(400).json({ error: 'uid is required' });
-    }
-
-    const payload = {
-      name: name || '',
-      dateOfBirth: dateOfBirth || null,
-      gender: gender || null,
-      isProfessional: isProfessional ?? false,
-      updatedAt: new Date().toISOString()
-    };
-
-    await usersCol.doc(uid).set(payload, { merge: true });
-    
-    // Return the updated doc
-    const updatedRef = await usersCol.doc(uid).get();
-    res.json({ id: updatedRef.id, ...updatedRef.data() });
+    const { uid } = req.body;
+    const profile = await userService.upsertUserProfile(uid, req.body);
+    res.json(profile);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    next(err);
   }
 });
 

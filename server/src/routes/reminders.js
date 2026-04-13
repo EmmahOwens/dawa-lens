@@ -1,70 +1,49 @@
 import express from 'express';
-import { db } from '../db.js';
+import * as reminderService from '../services/reminderService.js';
+import { protect, restrictToOwner } from '../middleware/authMiddleware.js';
+import { validate } from '../middleware/validateMiddleware.js';
+import { createReminderSchema, updateReminderSchema, getRemindersSchema } from '../validations/reminderValidation.js';
 
 const router = express.Router();
-const remindersCol = db.collection('reminders');
 
 // GET all reminders for a user
-router.get('/', async (req, res) => {
+router.get('/', protect, validate(getRemindersSchema), restrictToOwner, async (req, res, next) => {
   try {
     const { userId, patientId } = req.query;
-    if (!userId) return res.status(400).json({ error: 'userId query param required' });
-    
-    let query = remindersCol.where('userId', '==', userId);
-    if (patientId) {
-      query = query.where('patientId', '==', patientId);
-    }
-    
-    const snapshot = await query.orderBy('createdAt', 'desc').get();
-    
-    const reminders = [];
-    snapshot.forEach(doc => {
-      reminders.push({ id: doc.id, _id: doc.id, ...doc.data() });
-    });
-    
+    const reminders = await reminderService.getAllReminders(userId, patientId);
     res.json(reminders);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // POST create a new reminder
-router.post('/', async (req, res) => {
+router.post('/', protect, validate(createReminderSchema), restrictToOwner, async (req, res, next) => {
   try {
-    const data = req.body;
-    data.createdAt = new Date().toISOString(); 
-    data.updatedAt = data.createdAt;
-    
-    const docRef = await remindersCol.add(data);
-    res.status(201).json({ id: docRef.id, _id: docRef.id, ...data });
+    const reminder = await reminderService.createReminder(req.body);
+    res.status(201).json(reminder);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    next(err);
   }
 });
 
 // PATCH update a reminder
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', protect, validate(updateReminderSchema), async (req, res, next) => {
   try {
-    const uid = req.params.id;
-    const updates = req.body;
-    updates.updatedAt = new Date().toISOString();
-    
-    await remindersCol.doc(uid).update(updates);
-    
-    const docRef = await remindersCol.doc(uid).get();
-    res.json({ id: docRef.id, _id: docRef.id, ...docRef.data() });
+    const reminder = await reminderService.updateReminder(req.params.id, req.body);
+    res.json(reminder);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    next(err);
   }
 });
 
 // DELETE a reminder
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res, next) => {
   try {
-    await remindersCol.doc(req.params.id).delete();
+    await reminderService.deleteReminder(req.params.id);
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    next(err);
   }
 });
 
