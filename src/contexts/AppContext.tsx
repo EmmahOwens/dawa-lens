@@ -235,15 +235,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        // Evaluate profile first
-        const prof = await usersApi.getProfile(currentUserId).catch(() => null);
-        if (!prof || !prof.dateOfBirth || !prof.gender) {
-          setNeedsOnboarding(true);
-          setUserProfile(prof ? { ...prof, id: currentUserId } : null);
-        } else {
-          setNeedsOnboarding(false);
-          setUserProfile({ ...prof, id: currentUserId });
-          setIsProfessionalMode(prof.isProfessional || false);
+        // Evaluate profile first — distinguish between a missing profile and a server error
+        let prof: any = null;
+        try {
+          prof = await usersApi.getProfile(currentUserId);
+        } catch (profileErr: any) {
+          // A 404 means the profile hasn't been created yet → trigger onboarding
+          // A 500 means the server has an issue → don't assume missing profile
+          const isNotFound = profileErr?.statusCode === 404 || profileErr?.message?.includes('not found') || profileErr?.message?.includes('404');
+          if (!isNotFound) {
+            console.error("Backend server error fetching profile — skipping onboarding check:", profileErr);
+            // Don't set needsOnboarding here; leave the app in its current state
+          } else {
+            console.warn("User profile not found — prompting onboarding.");
+            setNeedsOnboarding(true);
+          }
+        }
+
+        if (prof) {
+          if (!prof.dateOfBirth || !prof.gender) {
+            setNeedsOnboarding(true);
+            setUserProfile({ ...prof, id: currentUserId });
+          } else {
+            setNeedsOnboarding(false);
+            setUserProfile({ ...prof, id: currentUserId });
+            setIsProfessionalMode(prof.isProfessional || false);
+          }
         }
 
         const [meds, rems, logs, pats, wells] = await Promise.all([

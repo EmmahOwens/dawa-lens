@@ -26,6 +26,7 @@ export const protect = async (req, res, next) => {
     req.user = decodedToken;
     next();
   } catch (error) {
+    console.error('Token verification failed:', error?.message || error);
     return next(new AppError('Invalid token. Please log in again.', 401));
   }
 };
@@ -35,6 +36,11 @@ export const protect = async (req, res, next) => {
  * Assumes 'uid' is passed in either params or body.
  */
 export const restrictToOwner = (req, res, next) => {
+  // Safety guard: req.user should always be set by `protect`, but guard defensively
+  if (!req.user || !req.user.uid) {
+    return next(new AppError('Authentication data missing. Please log in again.', 401));
+  }
+
   const requestedUid = req.params.uid || req.body.uid || req.params.userId || req.query.userId || req.body.userId || req.query.managedBy || req.body.managedBy;
   
   if (!requestedUid) return next(); // Fall through if no UID is present to check

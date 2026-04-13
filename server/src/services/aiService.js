@@ -1,5 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import AppError from '../utils/AppError.js';
 
 dotenv.config();
 
@@ -7,19 +8,48 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
+/**
+ * Strip markdown code fences that Gemini sometimes wraps JSON responses in.
+ * e.g. ```json\n{...}\n``` → {...}
+ */
+const sanitizeJson = (text) => {
+  return text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+};
+
 const callGemini = async (prompt, isJson = true) => {
   if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured');
+    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
   }
 
-  const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: isJson ? { responseMimeType: 'application/json' } : {}
-  });
+  try {
+    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: isJson ? { responseMimeType: 'application/json' } : {}
+    });
 
-  const text = response.data.candidates[0].content.parts[0].text;
-  return isJson ? JSON.parse(text) : text;
+    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new AppError('AI returned an empty response.', 502);
+    }
+
+    return isJson ? JSON.parse(sanitizeJson(text)) : text;
+  } catch (err) {
+    // Re-throw AppErrors (operational errors) as-is
+    if (err.isOperational) throw err;
+    // Axios network/API errors
+    if (err.response) {
+      const status = err.response.status;
+      const msg = err.response.data?.error?.message || 'AI API request failed';
+      throw new AppError(`Gemini API error (${status}): ${msg}`, 502);
+    }
+    // JSON parse errors
+    if (err instanceof SyntaxError) {
+      throw new AppError('AI returned malformed data. Please try again.', 502);
+    }
+    throw new AppError('Unexpected AI service error. Please try again.', 500);
+  }
 };
+
 
 export const getCoachAdvice = async (logs, medicines, userName) => {
   const prompt = `
@@ -138,10 +168,30 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     ...contents
   ];
 
-  const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-    contents: finalContents,
-    generationConfig: { responseMimeType: 'application/json' }
-  });
+  if (!GEMINI_API_KEY) {
+    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
+  }
 
-  return JSON.parse(response.data.candidates[0].content.parts[0].text);
+  try {
+    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      contents: finalContents,
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+
+    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new AppError('AI returned an empty response.', 502);
+    return JSON.parse(sanitizeJson(text));
+  } catch (err) {
+    if (err.isOperational) throw err;
+    if (err.response) {
+      const status = err.response.status;
+      const msg = err.response.data?.error?.message || 'AI API request failed';
+      throw new AppError(`Gemini API error (${status}): ${msg}`, 502);
+    }
+    if (err instanceof SyntaxError) {
+      throw new AppError('AI returned malformed data. Please try again.', 502);
+    }
+    throw new AppError('Unexpected AI service error. Please try again.', 500);
+  }
 };
+
