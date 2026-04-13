@@ -1,40 +1,29 @@
 import express from 'express';
-import { db } from '../db.js';
+import * as doseLogService from '../services/doseLogService.js';
+import { protect, restrictToOwner } from '../middleware/authMiddleware.js';
+import { validate } from '../middleware/validateMiddleware.js';
+import { createDoseLogSchema, getDoseLogsSchema } from '../validations/doseLogValidation.js';
 
 const router = express.Router();
-const doseLogsCol = db.collection('doseLogs');
 
 // GET all dose logs for a user
-router.get('/', async (req, res) => {
+router.get('/', protect, validate(getDoseLogsSchema), restrictToOwner, async (req, res, next) => {
   try {
     const { userId } = req.query;
-    if (!userId) return res.status(400).json({ error: 'userId query param required' });
-    
-    const snapshot = await doseLogsCol.where('userId', '==', userId).orderBy('actionTime', 'desc').limit(200).get();
-    
-    const logs = [];
-    snapshot.forEach(doc => {
-      logs.push({ id: doc.id, _id: doc.id, ...doc.data() });
-    });
-    
+    const logs = await doseLogService.getDoseLogs(userId);
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // POST log a dose action
-router.post('/', async (req, res) => {
+router.post('/', protect, validate(createDoseLogSchema), restrictToOwner, async (req, res, next) => {
   try {
-    const data = req.body;
-    if (!data.actionTime) {
-      data.actionTime = new Date().toISOString();
-    }
-    
-    const docRef = await doseLogsCol.add(data);
-    res.status(201).json({ id: docRef.id, _id: docRef.id, ...data });
+    const log = await doseLogService.createDoseLog(req.body);
+    res.status(201).json(log);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    next(err);
   }
 });
 

@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
+import morgan from 'morgan';
 // db.js initializes firebase admin
 import { db } from './db.js';
 
@@ -13,10 +15,25 @@ import aiRouter from './routes/ai.js';
 import patientsRouter from './routes/patients.js';
 import wellnessRouter from './routes/wellness.js';
 
+import errorMiddleware from './middleware/errorMiddleware.js';
+import { globalLimiter, aiLimiter } from './middleware/rateLimiter.js';
+import AppError from './utils/AppError.js';
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Security Headers
+app.use(helmet());
+
+// Logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+
+// Rate Limiting
+app.use('/api', globalLimiter);
 
 // Middleware
 const allowedOrigins = [
@@ -37,25 +54,32 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' })); // 10mb to allow base64 image uploads
 
+// API Routes (v1)
+const v1Router = express.Router();
+
+v1Router.use('/users', usersRouter);
+v1Router.use('/medicines', medicinesRouter);
+v1Router.use('/reminders', remindersRouter);
+v1Router.use('/doselogs', doseLogsRouter);
+v1Router.use('/vision', aiLimiter, visionRouter);
+v1Router.use('/ai', aiLimiter, aiRouter);
+v1Router.use('/patients', patientsRouter);
+v1Router.use('/wellness', wellnessRouter);
+
+app.use('/api/v1', v1Router);
+
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Dawa Lens API is running 🚀 (Firebase Powered)' });
+  res.status(200).json({ status: 'ok', message: 'Dawa Lens API is running (v1 ready)' });
 });
-
-// Mount Routes
-app.use('/api/users', usersRouter);
-app.use('/api/medicines', medicinesRouter);
-app.use('/api/reminders', remindersRouter);
-app.use('/api/doselogs', doseLogsRouter);
-app.use('/api/vision', visionRouter);
-app.use('/api/ai', aiRouter);
-app.use('/api/patients', patientsRouter);
-app.use('/api/wellness', wellnessRouter);
 
 // 404 fallback
-app.use((req, res) => {
-  res.status(404).json({ error: `Route ${req.originalUrl} not found` });
+app.all('*', (req, res, next) => {
+  next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
+
+// Global Error Handler
+app.use(errorMiddleware);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

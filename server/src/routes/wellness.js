@@ -1,57 +1,39 @@
 import express from 'express';
-import { db } from '../db.js';
+import * as wellnessService from '../services/wellnessService.js';
+import { protect, restrictToOwner } from '../middleware/authMiddleware.js';
+import { validate } from '../middleware/validateMiddleware.js';
+import { logWellnessSchema, getWellnessSchema } from '../validations/wellnessValidation.js';
 
 const router = express.Router();
-const wellnessCol = db.collection('wellness');
 
 // GET all wellness logs (food/symptom) for a user
-router.get('/', async (req, res) => {
+router.get('/', protect, validate(getWellnessSchema), restrictToOwner, async (req, res, next) => {
   try {
     const { userId, patientId } = req.query;
-    if (!userId) return res.status(400).json({ error: 'userId query param required' });
-    
-    let query = wellnessCol.where('userId', '==', userId);
-    if (patientId) {
-      query = query.where('patientId', '==', patientId);
-    }
-    
-    const snapshot = await query.orderBy('timestamp', 'desc').limit(100).get();
-    
-    const logs = [];
-    snapshot.forEach(doc => {
-      logs.push({ id: doc.id, _id: doc.id, ...doc.data() });
-    });
-    
+    const logs = await wellnessService.getWellnessLogs(userId, patientId);
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // POST log a food or symptom entry
-router.post('/', async (req, res) => {
+router.post('/', protect, validate(logWellnessSchema), restrictToOwner, async (req, res, next) => {
   try {
-    const data = req.body;
-    if (!data.userId) return res.status(400).json({ error: 'userId is required' });
-    
-    if (!data.timestamp) {
-      data.timestamp = new Date().toISOString();
-    }
-    
-    const docRef = await wellnessCol.add(data);
-    res.status(201).json({ id: docRef.id, _id: docRef.id, ...data });
+    const log = await wellnessService.createWellnessLog(req.body);
+    res.status(201).json(log);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    next(err);
   }
 });
 
 // DELETE a wellness log
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', protect, async (req, res, next) => {
   try {
-    await wellnessCol.doc(req.params.id).delete();
+    await wellnessService.deleteWellnessLog(req.params.id);
     res.json({ message: 'Log deleted' });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    next(err);
   }
 });
 

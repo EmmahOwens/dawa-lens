@@ -3,7 +3,9 @@
  * All functions return typed data or throw on error.
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://dawa-lens.onrender.com/api';
+import { auth } from "@/lib/firebase";
+
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://dawa-lens.onrender.com/api/v1';
 
 /** Custom error that carries extra fields from the backend JSON response. */
 class ApiError extends Error {
@@ -17,9 +19,23 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Add Firebase ID Token if user is logged in
+  const user = auth.currentUser;
+  if (user) {
+    const token = await user.getIdToken();
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers: {
+      ...headers,
+      ...options?.headers as Record<string, string>,
+    },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'Network error' }));
