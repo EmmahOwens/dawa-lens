@@ -140,7 +140,7 @@ export default function WelcomePage() {
               }}
               className="relative mb-12"
             >
-              <div className="w-48 h-48 rounded-[3rem] bg-white/40 backdrop-blur-xl flex items-center justify-center shadow-2xl border border-white/50 relative overflow-hidden group">
+              <div className="w-48 h-48 rounded-2xl bg-white/40 backdrop-blur-xl flex items-center justify-center shadow-2xl border border-white/50 relative overflow-hidden group">
                 <span className="text-8xl select-none filter drop-shadow-lg">
                   {step.emoji}
                 </span>
@@ -156,8 +156,8 @@ export default function WelcomePage() {
               </div>
               
               {/* Decorative rings */}
-              <div className="absolute -inset-4 border-2 border-white/20 rounded-[3.5rem] animate-pulse" />
-              <div className="absolute -inset-8 border border-white/10 rounded-[4rem] animate-pulse delay-75" />
+              <div className="absolute -inset-4 border-2 border-white/20 rounded-3xl animate-pulse" />
+              <div className="absolute -inset-8 border border-white/10 rounded-[2.5rem] animate-pulse delay-75" />
             </motion.div>
 
             {/* Text Content */}
@@ -165,7 +165,7 @@ export default function WelcomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-4xl font-black text-foreground mb-4 tracking-tight leading-tight"
+              className="text-4xl font-bold text-foreground mb-4 tracking-tight leading-tight"
             >
               {step.title}
             </motion.h1>
@@ -174,7 +174,7 @@ export default function WelcomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-lg text-muted-foreground leading-relaxed px-4"
+              className="text-lg text-muted-foreground leading-relaxed px-4 font-medium opacity-80"
             >
               {step.subtitle}
             </motion.p>
@@ -213,7 +213,7 @@ export default function WelcomePage() {
 
           <Button
             size="lg"
-            className={`h-14 rounded-full text-lg font-bold flex-1 shadow-lg shadow-primary/20 ${currentStep === 0 ? "w-full" : ""}`}
+            className={`h-14 rounded-xl text-lg font-bold flex-1 shadow-lg shadow-primary/20 transition-all active:scale-[0.98] ${currentStep === 0 ? "w-full" : ""}`}
             onClick={handleNext}
           >
             {currentStep === ONBOARDING_STEPS.length - 1 ? (

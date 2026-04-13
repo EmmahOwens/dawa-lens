@@ -64,7 +64,7 @@ export default function SettingsPage() {
       <motion.h1
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-xl font-bold text-foreground mb-1"
+        className="text-2xl font-bold text-foreground mb-1 tracking-tight"
       >
         {t("settings.title")}
       </motion.h1>
@@ -73,7 +73,7 @@ export default function SettingsPage() {
         <motion.p 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
-          className="text-sm text-muted-foreground mb-6"
+          className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-8 opacity-80"
         >
           {userProfile.name} {calculateAge(userProfile.dateOfBirth) !== null && `• ${t("settings.years_old", { age: calculateAge(userProfile.dateOfBirth) })}`}
         </motion.p>
@@ -81,22 +81,22 @@ export default function SettingsPage() {
 
       <div className="space-y-3">
         {/* Language */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+        <div className="premium-card">
+          <h2 className="section-title flex items-center gap-2">
             <Globe size={14} /> {t("settings.language_preferences")}
           </h2>
           <div className="flex gap-2">
             <Button
               variant={i18n.language.startsWith('en') ? "default" : "outline"}
               onClick={() => handleLanguageChange('en')}
-              className="px-6"
+              className="flex-1 rounded-xl h-11 text-xs font-bold uppercase tracking-wider"
             >
               {t("settings.english")}
             </Button>
             <Button
               variant={i18n.language.startsWith('sw') ? "default" : "outline"}
               onClick={() => handleLanguageChange('sw')}
-              className="px-6"
+              className="flex-1 rounded-xl h-11 text-xs font-bold uppercase tracking-wider"
             >
               {t("settings.swahili")}
             </Button>
@@ -104,12 +104,12 @@ export default function SettingsPage() {
         </div>
 
         {/* CHW Mode */}
-        <div className="rounded-[2rem] border-2 border-primary/20 bg-primary/5 p-6 relative overflow-hidden group shadow-lg shadow-primary/5">
-          <div className="absolute top-[-10%] right-[-5%] p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+        <div className="premium-card border-primary/20 bg-primary/5 relative overflow-hidden group">
+          <div className="absolute top-[-10%] right-[-5%] p-4 opacity-0 group-hover:opacity-5 transition-opacity">
             <Users size={120} className="text-primary" />
           </div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xs font-black text-primary flex items-center gap-2 uppercase tracking-[0.2em]">
+            <h2 className="section-title flex items-center gap-2 text-primary mb-0">
               <Users size={16} /> {t("settings.professional_hub")}
             </h2>
             <Switch 
@@ -126,8 +126,8 @@ export default function SettingsPage() {
             />
           </div>
           <div>
-            <p className="text-base text-foreground font-black tracking-tight">{t("settings.chw_label")}</p>
-            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed max-w-[260px]">
+            <p className="text-sm text-foreground font-bold tracking-tight">{t("settings.chw_label")}</p>
+            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed max-w-[260px] opacity-80">
               {t("settings.chw_desc")}
             </p>
           </div>
@@ -136,7 +136,7 @@ export default function SettingsPage() {
             {isProfessionalMode && (
               <motion.div 
                 initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                animate={{ opacity: 1, height: "auto", marginTop: 24 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 20 }}
                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
                 className="pt-4 border-t border-primary/10"
               >
@@ -144,7 +144,7 @@ export default function SettingsPage() {
                   variant="default" 
                   size="lg" 
                   onClick={() => navigate("/family")}
-                  className="w-full bg-primary text-primary-foreground font-black uppercase tracking-widest text-[10px] rounded-2xl h-12 shadow-lg shadow-primary/20"
+                  className="w-full bg-primary text-primary-foreground font-bold uppercase tracking-wider text-[10px] rounded-xl h-11 shadow-lg shadow-primary/10"
                 >
                   {t("settings.manage_patients")} <ArrowRight size={14} className="ml-2" />
                 </Button>
@@ -154,30 +154,31 @@ export default function SettingsPage() {
         </div>
 
         {/* Appearance */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+        <div className="premium-card">
+          <h2 className="section-title flex items-center gap-2">
             <Moon size={14} /> {t("settings.appearance")}
           </h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-card-foreground font-medium">{t("settings.dark_mode")}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.theme_desc")}</p>
+              <p className="text-sm text-card-foreground font-semibold">{t("settings.dark_mode")}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 opacity-80">{t("settings.theme_desc")}</p>
             </div>
             <ThemeToggle id="theme-toggle" />
           </div>
         </div>
 
         {/* Account */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+        <div className="premium-card">
+          <h2 className="section-title flex items-center gap-2">
             <Lock size={14} /> {t("settings.account")}
           </h2>
           {isLoggedIn ? (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{t("settings.signed_in")}</p>
+              <p className="text-sm text-muted-foreground font-medium">{t("settings.signed_in")}</p>
               <Button
                 size="sm"
                 variant="outline"
+                className="rounded-lg h-9 px-4 text-xs font-bold uppercase tracking-wider"
                 aria-label={t("settings.logout")}
                 onClick={() => {
                   logoutUser();
@@ -188,64 +189,64 @@ export default function SettingsPage() {
               </Button>
             </div>
           ) : (
-            <Button size="sm" onClick={() => navigate("/auth")}>
+            <Button size="sm" className="rounded-lg h-9 px-6 text-xs font-bold uppercase tracking-wider" onClick={() => navigate("/auth")}>
               {t("settings.login_btn")}
             </Button>
           )}
         </div>
 
         {/* Privacy & Storage */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+        <div className="premium-card">
+          <h2 className="section-title flex items-center gap-2">
             <Shield size={14} /> {t("settings.storage_privacy")}
           </h2>
           
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div 
               onClick={() => handleStorageModeChange("local")}
-              className={`p-3 rounded-xl border-2 transition-all cursor-pointer ${storageMode === "local" ? "border-primary bg-primary/5" : "border-transparent bg-muted/30"}`}
+              className={`p-4 rounded-xl border transition-all cursor-pointer ${storageMode === "local" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-muted/30 hover:border-border"}`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-semibold text-foreground">{t("settings.local_only")}</p>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-sm font-bold text-foreground">{t("settings.local_only")}</p>
                 {storageMode === "local" && <div className="w-2 h-2 rounded-full bg-primary" />}
               </div>
-              <p className="text-xs text-muted-foreground">{t("settings.local_desc")}</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed opacity-80">{t("settings.local_desc")}</p>
             </div>
 
             <div 
               onClick={() => handleStorageModeChange("cloud")}
-              className={`p-3 rounded-xl border-2 transition-all cursor-pointer ${storageMode === "cloud" ? "border-primary bg-primary/5" : "border-transparent bg-muted/30"}`}
+              className={`p-4 rounded-xl border transition-all cursor-pointer ${storageMode === "cloud" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-muted/30 hover:border-border"}`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-semibold text-foreground">{t("settings.cloud_sync")}</p>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-sm font-bold text-foreground">{t("settings.cloud_sync")}</p>
                 {storageMode === "cloud" && <div className="w-2 h-2 rounded-full bg-primary" />}
               </div>
-              <p className="text-xs text-muted-foreground">{t("settings.cloud_desc")}</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed opacity-80">{t("settings.cloud_desc")}</p>
             </div>
           </div>
 
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/50">
             <div>
-              <p className="text-sm text-card-foreground font-medium">{t("settings.encrypted")}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.encrypted_desc")}</p>
+              <p className="text-xs text-foreground font-bold">{t("settings.encrypted")}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 opacity-80">{t("settings.encrypted_desc")}</p>
             </div>
-            <span className="text-xs text-success font-medium bg-success/10 rounded-lg px-2 py-1">{t("settings.active")}</span>
+            <span className="text-[10px] text-success font-bold bg-success/10 rounded-lg px-2 py-1 tracking-wider uppercase">{t("settings.active")}</span>
           </div>
         </div>
 
         {/* Notifications */}
-        <div className="rounded-xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+        <div className="premium-card">
+          <h2 className="section-title flex items-center gap-2">
             <Bell size={14} /> {t("settings.notifications")}
           </h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-card-foreground font-medium">{t("settings.push_notifs")}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.push_desc")}</p>
+              <p className="text-sm text-card-foreground font-semibold">{t("settings.push_notifs")}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 opacity-80">{t("settings.push_desc")}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className={`text-[10px] font-black uppercase tracking-widest ${
+                <p className={`text-[9px] font-bold uppercase tracking-wider ${
                   typeof Notification !== 'undefined' && Notification.permission === 'granted' ? 'text-success' : 'text-muted-foreground'
                 }`}>
                   {typeof Notification !== 'undefined' ? Notification.permission : 'Not Supported'}
@@ -254,6 +255,7 @@ export default function SettingsPage() {
               <Button
                 size="sm"
                 variant="outline"
+                className="rounded-lg h-9 px-4 text-xs font-bold uppercase tracking-wider"
                 aria-label={t("settings.enable_notifs", "Enable Notifications")}
                 onClick={async () => {
                   if ("Notification" in window) {
@@ -272,13 +274,14 @@ export default function SettingsPage() {
         </div>
 
         {/* Danger zone */}
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <h2 className="text-sm font-semibold text-destructive mb-4 flex items-center gap-2">
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6">
+          <h2 className="section-title text-destructive flex items-center gap-2 mb-4">
             <Trash2 size={14} /> {t("settings.danger_zone")}
           </h2>
           <Button
             variant="destructive"
             size="sm"
+            className="rounded-lg h-9 w-full sm:w-auto px-6 text-xs font-bold uppercase tracking-wider shadow-lg shadow-destructive/10"
             onClick={() => {
               if (window.confirm(t("settings.confirm_delete"))) {
                 clearAllData();

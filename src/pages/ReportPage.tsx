@@ -67,10 +67,10 @@ export default function ReportPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-start justify-between print:mb-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-foreground print:text-black">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground print:text-black">
             Health Dossier
           </h1>
-          <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest opacity-70 print:text-black/60">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 print:text-black/60">
             Official health summary for {patientName}
           </p>
         </div>
@@ -79,9 +79,9 @@ export default function ReportPage() {
             variant="outline" 
             size="icon" 
             onClick={handlePrint}
-            className="rounded-2xl w-12 h-12 border-2"
+            className="rounded-xl w-11 h-11 border-border/50 shadow-sm"
           >
-            <Printer size={20} />
+            <Printer size={18} />
           </Button>
         </div>
       </motion.div>
@@ -93,26 +93,26 @@ export default function ReportPage() {
         className="space-y-6"
       >
         {/* Adherence Score Card */}
-        <motion.div variants={item} className="p-8 rounded-[2.5rem] bg-primary text-primary-foreground shadow-2xl shadow-primary/20 relative overflow-hidden print:shadow-none print:border print:text-black print:bg-white">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Activity size={100} />
+        <motion.div variants={item} className="p-8 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/10 relative overflow-hidden print:shadow-none print:border print:text-black print:bg-white transition-all hover:scale-[1.01]">
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+            <Activity size={96} />
           </div>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-1">Adherence Rating</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider opacity-80 mb-1">Adherence Rating</p>
           <div className="flex items-end gap-3">
-             <h2 className="text-5xl font-black italic">
+             <h2 className="text-5xl font-bold tracking-tight">
                {Math.round(chartData.reduce((acc, d) => acc + d.adherence, 0) / 7)}%
              </h2>
-             <p className="text-sm font-bold mb-2 opacity-90">Perfect Score</p>
+             <p className="text-xs font-bold mb-2 opacity-90 uppercase tracking-widest">Perfect Score</p>
           </div>
-          <p className="mt-4 text-xs font-medium opacity-70 leading-relaxed max-w-[240px]">
+          <p className="mt-4 text-[11px] font-medium opacity-70 leading-relaxed max-w-[240px]">
             Based on the last 7 days of recorded dosages.
           </p>
         </motion.div>
 
         {/* Charts Section */}
-        <motion.div variants={item} className="p-8 rounded-[2.5rem] bg-card border-2 border-border shadow-xl shadow-black/5 print:shadow-none print:border">
-          <h3 className="text-sm font-black uppercase tracking-widest text-foreground mb-8 flex items-center gap-2">
-            <TrendingUp size={16} className="text-primary" /> Vitality Trends
+        <motion.div variants={item} className="premium-card">
+          <h3 className="section-title flex items-center gap-2">
+            <TrendingUp size={14} className="text-primary" /> Vitality Trends
           </h3>
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -128,13 +128,13 @@ export default function ReportPage() {
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 700, fill: "hsl(var(--muted-foreground))" }} 
+                  tick={{ fontSize: 9, fontWeight: 600, fill: "hsl(var(--muted-foreground))" }} 
                   dy={10}
                 />
                 <YAxis hide />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
-                  itemStyle={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}
+                  contentStyle={{ borderRadius: '0.75rem', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', background: 'hsl(var(--card))' }}
+                  itemStyle={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}
                 />
                 <Area 
                   type="monotone" 
@@ -154,41 +154,41 @@ export default function ReportPage() {
               </AreaChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex justify-center gap-6 mt-6">
+          <div className="flex justify-center gap-6 mt-8">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Adherence</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Adherence</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-success" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Energy</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-success" />
+              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Energy</span>
             </div>
           </div>
         </motion.div>
 
         {/* AI Insight Summary */}
-        <motion.div variants={item} className="p-8 rounded-[2.5rem] bg-card border-2 border-border shadow-xl shadow-black/5 print:shadow-none print:border">
+        <motion.div variants={item} className="premium-card">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-black uppercase tracking-widest text-foreground flex items-center gap-2">
-              <Sparkles size={16} className="text-primary" /> AI Health Analysis
+            <h3 className="section-title flex items-center gap-2 mb-0">
+              <Sparkles size={14} className="text-primary" /> AI Health Analysis
             </h3>
-            {loading && <Loader2 size={16} className="animate-spin text-primary" />}
+            {loading && <Loader2 size={14} className="animate-spin text-primary opacity-50" />}
           </div>
 
           {insights ? (
             <div className="space-y-6">
-              <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
-                <p className="text-xs font-bold text-foreground leading-relaxed italic">
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                <p className="text-xs font-semibold text-foreground leading-relaxed italic opacity-90">
                   "{insights.summary}"
                 </p>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {insights.insights.map((insight: string, idx: number) => (
-                  <div key={idx} className="flex gap-4 items-start">
-                    <div className="w-6 h-6 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <CheckCircle2 size={14} className="text-success" />
+                  <div key={idx} className="flex gap-3 items-start p-3 rounded-lg hover:bg-muted/30 transition-colors">
+                    <div className="w-5 h-5 rounded-lg bg-success/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <CheckCircle2 size={12} className="text-success" />
                     </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{insight}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">{insight}</p>
                   </div>
                 ))}
               </div>

@@ -93,11 +93,15 @@ export default function InteractionsPage() {
         animate={{ opacity: 1, y: 0 }} 
         className="mb-8"
       >
-        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-          <ShieldAlert size={28} className="text-primary" />
-          {t("safety.title")}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            {t("safety.title")}
+          </h1>
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+            <ShieldAlert size={20} />
+          </div>
+        </div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80">
           {t("safety.subtitle")}
         </p>
       </motion.div>
@@ -106,13 +110,13 @@ export default function InteractionsPage() {
       <motion.div 
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mb-6 rounded-xl border border-warning/30 bg-warning/10 p-4 font-medium"
+        className="mb-8 p-4 rounded-xl border border-warning/20 bg-warning/5 transition-all hover:bg-warning/10"
       >
-        <div className="flex items-start gap-2 text-warning">
-          <Info size={16} className="mt-0.5 shrink-0" />
-          <div className="text-xs leading-relaxed">
-            <p className="font-bold mb-1">{t("safety.disclaimer_title")}</p>
-            <p>
+        <div className="flex items-start gap-3 text-warning">
+          <Info size={16} className="mt-0.5 shrink-0 opacity-80" />
+          <div className="text-[11px] leading-relaxed">
+            <p className="font-bold mb-1 uppercase tracking-wider">{t("safety.disclaimer_title")}</p>
+            <p className="opacity-90">
               {t("safety.disclaimer_body")}
             </p>
           </div>
@@ -123,12 +127,12 @@ export default function InteractionsPage() {
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-border bg-card p-10 text-center"
+          className="premium-card p-12 text-center"
         >
-          <div className="mx-auto w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
-            <ShieldAlert size={32} className="opacity-40 text-muted-foreground" />
+          <div className="mx-auto w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center mb-4 text-muted-foreground/40">
+            <ShieldAlert size={24} />
           </div>
-          <p className="text-sm text-muted-foreground font-medium">
+          <p className="text-sm text-muted-foreground font-semibold">
             {t("safety.no_medicines")}
           </p>
         </motion.div>
@@ -145,10 +149,10 @@ export default function InteractionsPage() {
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-6 text-center"
+          className="rounded-2xl bg-emerald-500/5 border border-emerald-500/20 p-8 text-center"
         >
-          <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
-          <h3 className="font-bold text-emerald-600 dark:text-emerald-400">{t("safety.no_interactions")}</h3>
+          <CheckCircle2 className="h-10 w-10 text-emerald-500/80 mx-auto mb-4" />
+          <h3 className="font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">{t("safety.no_interactions")}</h3>
         </motion.div>
       )}
 
@@ -159,31 +163,31 @@ export default function InteractionsPage() {
           animate="show" 
           className="space-y-4"
         >
-          <h3 className="font-semibold text-base text-foreground mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-warning" />
+          <h3 className="section-title flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-warning" />
             {t("safety.detected")} ({interactions.length})
           </h3>
           {interactions.map((interaction, idx) => (
             <motion.div 
               key={idx} 
               variants={item}
-              className="rounded-2xl border border-border bg-card p-5 shadow-sm overflow-hidden relative"
+              className="rounded-xl border border-border/50 bg-card p-5 shadow-sm overflow-hidden relative transition-all hover:bg-accent/5"
             >
-              <div className={`absolute top-0 left-0 w-1.5 h-full ${interaction.severity === 'high' ? 'bg-destructive' : 'bg-warning'}`} />
+              <div className={`absolute top-0 left-0 w-1 h-full ${interaction.severity === 'high' ? 'bg-destructive' : 'bg-warning'}`} />
               
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-bold text-sm text-card-foreground lowercase capitalize">{interaction.drug1}</span>
-                  <span className="text-muted-foreground text-xs font-normal">&</span>
-                  <span className="font-bold text-sm text-card-foreground lowercase capitalize">{interaction.drug2}</span>
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-bold text-sm text-card-foreground lowercase capitalize tracking-tight">{interaction.drug1}</span>
+                  <span className="text-muted-foreground text-[10px] font-bold uppercase opacity-50">&</span>
+                  <span className="font-bold text-sm text-card-foreground lowercase capitalize tracking-tight">{interaction.drug2}</span>
                 </div>
                 {interaction.severity === 'high' ? (
-                  <Badge variant="destructive" className="ml-2 px-2 py-0 text-[10px] uppercase font-bold tracking-wider">{t("safety.severe")}</Badge>
+                  <Badge variant="destructive" className="ml-2 px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.severe")}</Badge>
                 ) : (
-                  <Badge variant="secondary" className="bg-warning/20 text-warning-foreground dark:bg-warning/30 px-2 py-0 text-[10px] uppercase font-bold tracking-wider">{t("safety.warning")}</Badge>
+                  <Badge variant="secondary" className="bg-warning/10 text-warning-foreground px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.warning")}</Badge>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs text-muted-foreground leading-relaxed font-medium">
                 {interaction.description}
               </p>
             </motion.div>
@@ -197,37 +201,37 @@ export default function InteractionsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mt-12 pt-12 border-t border-border/50"
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-xl font-black text-foreground flex items-center gap-2">
-              <Sparkles size={22} className="text-primary" />
+            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 tracking-tight">
+              <Sparkles size={20} className="text-primary" />
               Holistic Safety
             </h2>
-            <p className="text-xs text-muted-foreground mt-1 font-medium">Check interactions with lifestyle & diet</p>
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 opacity-80">Check interactions with lifestyle & diet</p>
           </div>
           <button 
             onClick={checkHolistic}
             disabled={holisticLoading || lifestyleFactors.length === 0 || medicines.length === 0}
-            className="h-10 px-5 rounded-full bg-primary text-primary-foreground text-xs font-black uppercase tracking-widest shadow-lg shadow-primary/20 disabled:opacity-50 transition-all active:scale-95 flex items-center gap-2"
+            className="h-10 px-5 rounded-lg bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-primary/10 disabled:opacity-50 transition-all active:scale-95 flex items-center gap-2"
           >
-            {holisticLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {holisticLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
             Analyze
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-10">
           {availableFactors.map(({ id, icon: Icon }) => (
             <button
               key={id}
               onClick={() => toggleFactor(id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border transition-all ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
                 lifestyleFactors.includes(id) 
-                  ? "bg-primary border-primary text-primary-foreground shadow-md" 
-                  : "bg-card border-border text-muted-foreground hover:border-primary/30"
+                  ? "bg-primary border-primary text-primary-foreground shadow-md ring-1 ring-primary/20" 
+                  : "bg-card border-border/50 text-muted-foreground hover:border-primary/20"
               }`}
             >
-              <Icon size={16} />
-              <span className="text-[11px] font-black uppercase tracking-tight">{id}</span>
+              <Icon size={14} />
+              <span className="text-[10px] font-bold uppercase tracking-wider">{id}</span>
             </button>
           ))}
         </div>
@@ -239,26 +243,26 @@ export default function InteractionsPage() {
                 key={idx}
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="p-6 rounded-[2rem] bg-card border border-border shadow-sm relative overflow-hidden"
+                className="premium-card relative overflow-hidden group"
               >
-                <div className={`absolute top-0 left-0 w-1.5 h-full ${
+                <div className={`absolute top-0 left-0 w-1 h-full transition-all group-hover:w-1.5 ${
                   interaction.risk === "High" ? "bg-destructive" : interaction.risk === "Medium" ? "bg-warning" : "bg-primary"
                 }`} />
-                <div className="flex items-center justify-between mb-3">
-                   <h4 className="font-black text-sm uppercase tracking-tight flex items-center gap-2">
+                <div className="flex items-center justify-between mb-4">
+                   <h4 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
                      {interaction.factor}
                    </h4>
-                   <Badge className={
+                   <Badge className={`px-2 py-0 text-[10px] font-bold uppercase tracking-widest ${
                      interaction.risk === "High" ? "bg-destructive text-destructive-foreground" : 
                      interaction.risk === "Medium" ? "bg-warning text-warning-foreground" : "bg-primary text-primary-foreground"
-                   }>
+                   }`}>
                      {interaction.risk} Risk
                    </Badge>
                 </div>
-                <p className="text-sm text-foreground/80 leading-relaxed mb-4">{interaction.explanation}</p>
-                <div className="bg-muted/30 p-4 rounded-2xl border border-border/50">
-                   <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Safety Advice</p>
-                   <p className="text-xs font-bold text-foreground">{interaction.advice}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed mb-6 font-medium">{interaction.explanation}</p>
+                <div className="bg-muted/10 p-4 rounded-xl border border-border/50">
+                   <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1.5">Safety Advice</p>
+                   <p className="text-xs font-semibold text-foreground leading-relaxed">{interaction.advice}</p>
                 </div>
               </motion.div>
             ))}
@@ -266,9 +270,11 @@ export default function InteractionsPage() {
         )}
 
         {holisticReport.length === 0 && !holisticLoading && (
-          <div className="p-8 rounded-[2rem] border-2 border-dashed border-border flex flex-col items-center text-center opacity-40">
-             <Info size={32} className="mb-3" />
-             <p className="text-xs font-bold uppercase tracking-widest">Select lifestyle factors and tap Analyze</p>
+          <div className="p-12 rounded-2xl border border-dashed border-border/50 flex flex-col items-center text-center opacity-60 bg-muted/5">
+             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4 text-muted-foreground/40">
+               <Info size={24} />
+             </div>
+             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Select lifestyle factors and tap Analyze</p>
           </div>
         )}
       </motion.div>
