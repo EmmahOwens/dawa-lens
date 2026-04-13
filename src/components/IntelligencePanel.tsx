@@ -59,10 +59,17 @@ export function IntelligencePanel() {
     setIsTyping(true);
 
     try {
-      const response = await chatWithDawaGPT([...messages, userMsg], medicines, userProfile);
+      const response = await chatWithDawaGPT([...messages, userMsg], medicines, userProfile, doseLogs);
       setMessages(prev => [...prev, response]);
     } catch (err) {
       console.error("Mini Chat Error:", err);
+      const errorMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        text: "I'm having trouble connecting to my medical intelligence core on Render. Please ensure the backend is active.",
+        source: "System"
+      };
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsTyping(false);
     }

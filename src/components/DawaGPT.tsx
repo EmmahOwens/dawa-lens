@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
-import { ChatMessage, generateDawaGPTResponse } from "@/services/aiAssistantService";
+import { ChatMessage, chatWithDawaGPT } from "@/services/aiAssistantService";
 
 export default function DawaGPT() {
   const { t } = useTranslation();
   const location = useLocation();
-  const { userProfile, medicines, isDawaGPTOpen: isOpen, setIsDawaGPTOpen: setIsOpen } = useApp();
+  const { userProfile, medicines, doseLogs, isDawaGPTOpen: isOpen, setIsDawaGPTOpen: setIsOpen } = useApp();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -37,7 +37,7 @@ export default function DawaGPT() {
   }, [isOpen]);
 
   const handleSend = async (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || isTyping) return;
     
     const userMsg: ChatMessage = { id: Date.now().toString(), role: "user", text };
     setMessages(prev => [...prev, userMsg]);
@@ -45,19 +45,19 @@ export default function DawaGPT() {
     setIsTyping(true);
 
     try {
-      const response = await generateDawaGPTResponse(text, activeMed, userProfile);
+      const response = await chatWithDawaGPT([...messages, userMsg], medicines, userProfile, doseLogs);
       setMessages(prev => [...prev, response]);
     } catch (e) {
       setMessages(prev => [...prev, {
         id: "error",
         role: "assistant",
-        text: "Sorry, I'm having trouble connecting right now.",
+        text: "Sorry, I'm having trouble connecting to my medical intelligence core right now.",
         source: "System"
       }]);
-      } finally {
-        setIsTyping(false);
-      }
-    };
+    } finally {
+      setIsTyping(false);
+    }
+  };
   
     // Hide DawaGPT completely during auth and onboarding flows
     const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email"];
@@ -149,11 +149,25 @@ export default function DawaGPT() {
 
               {/* Footer / Input */}
               <div className="p-4 bg-background border-t border-border">
-                {/* quick suggestions */}
+                {/* dynamic suggestions */}
                 <div className="flex gap-2 mb-4 overflow-x-auto pb-2 no-scrollbar">
-                   <button onClick={() => handleSend("Is this safe for me?")} className="shrink-0 text-[11px] font-semibold border rounded-full px-3 py-1.5 hover:bg-muted transition-colors">Is this safe for me?</button>
-                   <button onClick={() => handleSend("Can I take this with milk?")} className="shrink-0 text-[11px] font-semibold border rounded-full px-3 py-1.5 hover:bg-muted transition-colors">With milk?</button>
-                   <button onClick={() => handleSend("What are the side effects?")} className="shrink-0 text-[11px] font-semibold border rounded-full px-3 py-1.5 hover:bg-muted transition-colors">Side effects?</button>
+                  {messages.length > 0 && messages[messages.length - 1].suggestions ? (
+                    messages[messages.length - 1].suggestions?.map((s, i) => (
+                      <button 
+                        key={i} 
+                        onClick={() => handleSend(s)} 
+                        className="shrink-0 text-[11px] font-semibold border border-primary/20 bg-primary/5 text-primary rounded-full px-3 py-1.5 hover:bg-primary/10 transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))
+                  ) : (
+                    <>
+                      <button onClick={() => handleSend("Is this safe for me?")} className="shrink-0 text-[11px] font-semibold border rounded-full px-3 py-1.5 hover:bg-muted transition-colors">Is this safe for me?</button>
+                      <button onClick={() => handleSend("Can I take this with milk?")} className="shrink-0 text-[11px] font-semibold border rounded-full px-3 py-1.5 hover:bg-muted transition-colors">With milk?</button>
+                      <button onClick={() => handleSend("What are the side effects?")} className="shrink-0 text-[11px] font-semibold border rounded-full px-3 py-1.5 hover:bg-muted transition-colors">Side effects?</button>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex gap-2">

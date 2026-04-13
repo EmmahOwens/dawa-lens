@@ -3,7 +3,7 @@
  * All functions return typed data or throw on error.
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://dawa-lens.onrender.com/api';
 
 /** Custom error that carries extra fields from the backend JSON response. */
 class ApiError extends Error {
@@ -139,6 +139,6 @@ export const aiApi = {
   checkMealSafety: (data: { medicines: any[]; mealDescription: string }) =>
     request<any>('/ai/meal-check', { method: 'POST', body: JSON.stringify(data) }),
 
-  chat: (data: { messages: any[]; medicines: any[]; userProfile: any }) =>
+  chat: (data: { messages: any[]; medicines: any[]; userProfile: any; doseLogs: any[] }) =>
     request<any>('/ai/chat', { method: 'POST', body: JSON.stringify(data) }),
 };

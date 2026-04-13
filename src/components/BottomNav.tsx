@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Camera, Clock, History, Settings, ShieldAlert } from "lucide-react";
+import { Home, Camera, Clock, History, Settings, ShieldAlert, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
@@ -13,7 +13,7 @@ export default function BottomNav() {
 
   const navItems = [
     { to: "/", icon: Home, label: t("nav.home") },
-    { to: "/history", icon: History, label: t("nav.history") },
+    { to: isProfessionalMode ? "/family" : "/history", icon: isProfessionalMode ? Users : History, label: isProfessionalMode ? "Family" : t("nav.history") },
     { to: "/interactions", icon: ShieldAlert, label: t("nav.safety"), badge: hasSafetyAlert },
     { to: "/settings", icon: Settings, label: t("nav.settings") },
   ];
