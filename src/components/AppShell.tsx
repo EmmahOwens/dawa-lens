@@ -12,8 +12,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-background">
-        <main className="mx-auto max-w-lg pb-32">{children}</main>
+      <div className="min-h-screen bg-background selection:bg-primary/10">
+        <main className="mx-auto max-w-lg px-4 pt-6 pb-32">{children}</main>
         <BottomNav />
       </div>
     );
@@ -39,8 +39,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto no-scrollbar">
-            <div className="mx-auto w-full max-w-5xl p-6 lg:p-10">
+          <main className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+            <div className="mx-auto w-full max-w-5xl px-6 py-8 lg:px-12 lg:py-12">
                {children}
             </div>
           </main>

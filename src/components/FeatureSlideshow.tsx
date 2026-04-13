@@ -53,7 +53,7 @@ export function FeatureSlideshow() {
   const current = shuffledActions[currentIndex];
 
   return (
-    <div className="relative w-full h-56 mb-10 overflow-hidden rounded-[2.5rem] group">
+    <div className="relative w-full h-52 mb-10 overflow-hidden rounded-2xl group">
       <AnimatePresence mode="wait">
         <motion.div
           key={current.to}
@@ -68,8 +68,8 @@ export function FeatureSlideshow() {
           <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl" />
           
           <div className="relative z-10 flex items-center justify-between">
-            <div className="p-4 rounded-2xl bg-white/20 backdrop-blur-md shadow-lg">
-              <current.icon size={32} />
+            <div className="p-3 rounded-xl bg-white/20 backdrop-blur-md shadow-lg border border-white/10">
+              <current.icon size={24} />
             </div>
             <div className="flex gap-1.5">
               {shuffledActions.map((_, i) => (
@@ -88,7 +88,7 @@ export function FeatureSlideshow() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="text-2xl font-black uppercase tracking-tighter"
+              className="text-2xl font-bold tracking-tight"
             >
               {current.label}
             </motion.h3>
@@ -96,14 +96,14 @@ export function FeatureSlideshow() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="text-white/80 text-xs font-bold uppercase tracking-widest mt-1 opacity-80"
+              className="text-white/80 text-xs font-semibold uppercase tracking-wider mt-1"
             >
               {current.description}
             </motion.p>
           </div>
           
           <div className="absolute bottom-6 right-8 opacity-0 group-hover:opacity-100 transition-opacity">
-             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] bg-white text-black px-4 py-2 rounded-full shadow-xl">
+             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider bg-white text-black px-4 py-2 rounded-lg shadow-xl">
                Explore Now
              </div>
           </div>

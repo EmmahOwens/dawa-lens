@@ -21,10 +21,9 @@ export function DashboardBanner() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, ease: "easeOut" }}
-      className="relative mb-10 overflow-hidden rounded-[2.5rem] bg-white/40 dark:bg-black/10 border border-white/60 dark:border-white/10 p-8 backdrop-blur-2xl shadow-xl shadow-primary/5 group"
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="relative mb-10 premium-card overflow-hidden group"
     >
       {/* Calm background shapes */}
       <motion.div 
@@ -51,30 +50,30 @@ export function DashboardBanner() {
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-full bg-white/80 dark:bg-white/5 shadow-sm">
-              <Sparkles size={16} className="text-primary/70" />
+            <div className="p-1.5 rounded-lg bg-primary/10">
+              <Sparkles size={14} className="text-primary" />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Wellness Pulse</span>
+            <span className="section-title mb-0">Wellness Pulse</span>
           </div>
           
-          <h2 className="text-2xl font-black text-foreground max-w-sm leading-tight tracking-tight">
-            Consistency is your <span className="text-primary/80">greatest strength</span>, {userProfile?.name?.split(" ")[0] || "friend"}.
+          <h2 className="text-2xl font-bold text-foreground max-w-sm leading-tight tracking-tight">
+            Consistency is your <span className="text-primary italic">greatest strength</span>, {userProfile?.name?.split(" ")[0] || "friend"}.
           </h2>
 
           <div className="flex items-center gap-6 pt-2">
             <div className="flex flex-col">
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">7-Day Consistency</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">7-Day Consistency</span>
               <div className="flex items-center gap-2 mt-1">
-                <TrendingUp size={14} className="text-success" />
-                <span className="text-lg font-black text-foreground">{adherencePercent}%</span>
+                <TrendingUp size={16} className="text-success" />
+                <span className="text-xl font-bold text-foreground tracking-tight">{adherencePercent}%</span>
               </div>
             </div>
-            <div className="w-[1px] h-8 bg-border/40" />
+            <div className="w-[1px] h-8 bg-border" />
             <div className="flex flex-col">
-              <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Success Streak</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Success Streak</span>
               <div className="flex items-center gap-2 mt-1">
-                <Calendar size={14} className="text-primary/60" />
-                <span className="text-lg font-black text-foreground">12 Days</span>
+                <Calendar size={16} className="text-primary" />
+                <span className="text-xl font-bold text-foreground tracking-tight">12 Days</span>
               </div>
             </div>
           </div>
@@ -83,9 +82,9 @@ export function DashboardBanner() {
 
         <button 
           onClick={() => navigate('/report')}
-          className="self-start md:self-center group/btn flex items-center gap-3 bg-white/80 dark:bg-white/5 border border-white/60 dark:border-white/10 px-6 py-3 rounded-full shadow-lg shadow-black/5 hover:bg-white dark:hover:bg-white/10 transition-all active:scale-95"
+          className="self-start md:self-center group/btn flex items-center gap-3 bg-primary text-primary-foreground px-6 py-3 rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
         >
-          <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Detailed Report</span>
+          <span className="text-xs font-bold uppercase tracking-wider">Detailed Report</span>
           <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
         </button>
       </div>

@@ -186,7 +186,7 @@ export default function ScanPage() {
                       <motion.span 
                         initial={{ opacity: 0, x: -5 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="text-[10px] font-black uppercase tracking-widest hidden sm:inline"
+                        className="text-[10px] font-bold uppercase tracking-wider hidden sm:inline"
                       >
                         {t(`scan.${mode}`)}
                       </motion.span>
@@ -262,9 +262,9 @@ export default function ScanPage() {
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-80 h-24 rounded-lg border-2 border-primary/70 bg-primary/5 backdrop-blur-sm"
+              className="w-80 h-24 rounded-xl border border-primary bg-primary/10 backdrop-blur-md"
             >
-               <div className="absolute top-[-24px] left-0 right-0 text-center text-[10px] font-bold text-primary uppercase tracking-widest">{t("scan.align_scratch_code")}</div>
+               <div className="absolute top-[-28px] left-0 right-0 text-center text-[10px] font-bold text-primary uppercase tracking-wider">{t("scan.align_scratch_code")}</div>
             </motion.div>
           </div>
         )}
@@ -286,12 +286,12 @@ export default function ScanPage() {
             {showAR && (
               <>
                 <motion.div 
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                   initial={{ opacity: 0, y: 10 }}
+                   animate={{ opacity: 1, y: 0 }}
                   className="mb-8 text-center"
                 >
-                  <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">Dawa-AR Detected</p>
-                  <h2 className="text-xl font-bold text-white tracking-tight">Usage Instructions</h2>
+                  <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5 px-3 py-0.5 bg-primary/10 rounded-full inline-block">Dawa-AR Detected</p>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">Usage Instructions</h2>
                 </motion.div>
                 <ARInstructionOverlay instructions={detectedInstructions} />
               </>
@@ -336,7 +336,7 @@ export default function ScanPage() {
         </div>
         
         {scanMode !== "barcode" && (
-           <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-white/50 mt-10">
+           <p className="text-center text-[10px] font-bold uppercase tracking-wider text-white/40 mt-10">
              {t("scan.capture_hint")}
            </p>
         )}

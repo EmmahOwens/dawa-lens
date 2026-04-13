@@ -79,14 +79,14 @@ export default function HistoryPage() {
         <ArrowLeft size={16} /> {t("common.back")}
       </button>
 
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-foreground">{t("history.title")}</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-bold text-foreground">{t("history.title")}</h1>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={exportCSV}>
+          <Button size="sm" variant="outline" onClick={exportCSV} className="rounded-lg h-9">
             <Download size={14} className="mr-1" /> {t("history.export")}
           </Button>
           <label>
-            <Button size="sm" variant="outline" asChild>
+            <Button size="sm" variant="outline" asChild className="rounded-lg h-9">
               <span><Upload size={14} className="mr-1" /> {t("history.import")}</span>
             </Button>
             <input type="file" accept=".csv" className="hidden" onChange={importCSV} />
@@ -96,19 +96,19 @@ export default function HistoryPage() {
 
       {/* Quick log from active reminders */}
       {reminders.filter((r) => r.enabled).length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-sm font-semibold text-muted-foreground mb-3">{t("history.quick_log")}</h2>
-          <div className="space-y-2">
+        <div className="mb-8">
+          <h2 className="section-title">{t("history.quick_log")}</h2>
+          <div className="space-y-3">
             {reminders.filter((r) => r.enabled).map((r) => (
-              <div key={r.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
+              <div key={r.id} className="flex items-center justify-between rounded-xl border border-border/50 bg-card p-4 transition-all hover:bg-accent/5">
                 <div>
-                  <p className="text-sm font-medium text-card-foreground">{r.medicineName}</p>
-                  <p className="text-xs text-muted-foreground">{r.dose} • {r.time}</p>
+                  <p className="text-sm font-semibold text-card-foreground">{r.medicineName}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{r.dose} • {r.time}</p>
                 </div>
-                <div className="flex gap-1.5">
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleMarkTaken(r)}
-                    className="rounded-lg bg-success/15 p-2 text-success hover:bg-success/25 transition-colors"
+                    className="rounded-lg bg-success/10 p-2 text-success hover:bg-success/20 transition-colors shadow-sm"
                   >
                     <Check size={16} />
                   </button>
@@ -117,7 +117,7 @@ export default function HistoryPage() {
                       logDose({ reminderId: r.id, medicineName: r.medicineName, dose: r.dose, scheduledTime: r.time, action: "skipped" });
                       toast({ title: t("history.skipped"), description: `${r.medicineName} ${t("history.marked_as")} ${t("history.skipped")}` });
                     }}
-                    className="rounded-lg bg-destructive/10 p-2 text-destructive hover:bg-destructive/20 transition-colors"
+                    className="rounded-lg bg-destructive/10 p-2 text-destructive hover:bg-destructive/20 transition-colors shadow-sm"
                   >
                     <X size={16} />
                   </button>
@@ -126,7 +126,7 @@ export default function HistoryPage() {
                       logDose({ reminderId: r.id, medicineName: r.medicineName, dose: r.dose, scheduledTime: r.time, action: "snoozed" });
                       toast({ title: t("history.snoozed"), description: `${r.medicineName} ${t("history.snoozed")}` });
                     }}
-                    className="rounded-lg bg-warning/15 p-2 text-warning hover:bg-warning/25 transition-colors"
+                    className="rounded-lg bg-warning/10 p-2 text-warning hover:bg-warning/20 transition-colors shadow-sm"
                   >
                     <Clock size={16} />
                   </button>
@@ -144,32 +144,32 @@ export default function HistoryPage() {
           <p className="text-sm text-muted-foreground">{t("history.no_history")}</p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {days.map((day) => (
             <div key={day}>
-              <h3 className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">{day}</h3>
-              <div className="space-y-2">
+              <h3 className="section-title mb-3">{day}</h3>
+              <div className="space-y-3">
                 {grouped[day].map((log) => (
                   <motion.div
                     key={log.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex items-center justify-between rounded-xl border border-border bg-card p-3"
+                    className="flex items-center justify-between rounded-xl border border-border/50 bg-card p-4 transition-all hover:bg-accent/5"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                       <div
-                        className={`rounded-lg p-1.5 ${
-                          log.action === "taken" ? "bg-success/15 text-success" : log.action === "skipped" ? "bg-destructive/10 text-destructive" : "bg-warning/15 text-warning"
-                        }`}
+                        className={`rounded-lg p-2 ${
+                          log.action === "taken" ? "bg-success/10 text-success" : log.action === "skipped" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
+                        } shadow-sm`}
                       >
                         {log.action === "taken" ? <Check size={14} /> : log.action === "skipped" ? <X size={14} /> : <Clock size={14} />}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-card-foreground">{log.medicineName}</p>
-                        <p className="text-xs text-muted-foreground">{log.dose} • {log.scheduledTime}</p>
+                        <p className="text-sm font-semibold text-card-foreground">{log.medicineName}</p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{log.dose} • {log.scheduledTime}</p>
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       {new Date(log.actionTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </motion.div>

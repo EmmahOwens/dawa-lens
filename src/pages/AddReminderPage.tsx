@@ -53,7 +53,7 @@ export default function AddReminderPage() {
       <motion.h1
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-xl font-bold text-foreground mb-6"
+        className="text-2xl font-bold text-foreground mb-8 tracking-tight"
       >
         {t("reminders.add_title")}
       </motion.h1>
@@ -62,48 +62,48 @@ export default function AddReminderPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="space-y-5"
+        className="premium-card space-y-6"
       >
         <div>
-          <Label htmlFor="medName">{t("reminders.med_name")}</Label>
+          <Label htmlFor="medName" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">{t("reminders.med_name")}</Label>
           <Input
             id="medName"
             value={medicineName}
             onChange={(e) => setMedicineName(e.target.value)}
             placeholder={t("reminders.med_name_placeholder")}
-            className="mt-1.5"
+            className="mt-2 h-11 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-colors"
           />
         </div>
 
         <div>
-          <Label htmlFor="dose">{t("reminders.dose")}</Label>
+          <Label htmlFor="dose" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">{t("reminders.dose")}</Label>
           <Input
             id="dose"
             value={dose}
             onChange={(e) => setDose(e.target.value)}
             placeholder={t("reminders.dose_placeholder")}
-            className="mt-1.5"
+            className="mt-2 h-11 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-colors"
           />
         </div>
 
         <div>
-          <Label htmlFor="time">{t("reminders.time")}</Label>
+          <Label htmlFor="time" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">{t("reminders.time")}</Label>
           <Input
             id="time"
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="mt-1.5"
+            className="mt-2 h-11 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-colors"
           />
         </div>
 
         <div>
-          <Label>{t("reminders.repeat")}</Label>
+          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">{t("reminders.repeat")}</Label>
           <Select value={repeat} onValueChange={(v) => setRepeat(v as any)}>
-            <SelectTrigger className="mt-1.5">
+            <SelectTrigger className="mt-2 h-11 rounded-xl border-border/50 bg-muted/20">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-xl">
               <SelectItem value="once">{t("reminders.once")}</SelectItem>
               <SelectItem value="daily">{t("reminders.daily")}</SelectItem>
               <SelectItem value="weekly">{t("reminders.weekly")}</SelectItem>
@@ -113,18 +113,18 @@ export default function AddReminderPage() {
         </div>
 
         <div>
-          <Label htmlFor="notes">{t("reminders.notes")}</Label>
+          <Label htmlFor="notes" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">{t("reminders.notes")}</Label>
           <Textarea
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t("reminders.notes_placeholder")}
-            className="mt-1.5"
+            className="mt-2 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-colors"
             rows={3}
           />
         </div>
 
-        <Button onClick={handleSave} className="w-full" size="lg">
+        <Button onClick={handleSave} className="w-full h-12 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/10" size="lg">
           <Save size={16} className="mr-2" /> {t("reminders.save_reminder")}
         </Button>
       </motion.div>

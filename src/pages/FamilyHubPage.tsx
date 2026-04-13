@@ -52,32 +52,32 @@ export default function FamilyHubPage() {
       <motion.div 
         initial={{ opacity: 0, y: -10 }} 
         animate={{ opacity: 1, y: 0 }} 
-        className="mb-10"
+        className="mb-8"
       >
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-black tracking-tighter text-foreground">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Family Hub
           </h1>
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-            <Users size={24} />
+          <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
+            <Users size={20} />
           </div>
         </div>
-        <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest opacity-70">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80">
           Manage your circle's health
         </p>
       </motion.div>
 
       {/* Active Profile Selection */}
-      <div className="mb-10 p-6 rounded-[2.5rem] bg-card border-2 border-primary/20 shadow-xl shadow-primary/5 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-           <Heart size={80} className="text-primary" />
+      <div className="mb-10 premium-card border-primary/20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 opacity-5">
+           <Heart size={64} className="text-primary" />
         </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-2">Currently Managing</p>
-        <h2 className="text-2xl font-bold text-foreground mb-4">{currentSelection}</h2>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-primary mb-2">Currently Managing</p>
+        <h2 className="text-2xl font-bold text-foreground mb-4 tracking-tight">{currentSelection}</h2>
         <Button 
           variant="outline" 
           size="sm" 
-          className="rounded-full px-6 border-primary/30 text-primary font-bold uppercase tracking-wider text-[10px] h-9"
+          className="rounded-lg px-6 border-primary/30 text-primary font-bold uppercase tracking-wider text-[10px] h-9 hover:bg-primary/5"
           onClick={() => navigate("/")}
         >
           View Dashboard <ArrowRight size={14} className="ml-2" />
@@ -91,33 +91,30 @@ export default function FamilyHubPage() {
         animate="show"
         className="mt-8"
       >
-        <div className="flex items-center justify-between px-2 mb-4">
-          <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Circle Members</h3>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase opacity-50 tracking-widest bg-muted px-2 py-0.5 rounded">Swipe</span>
+        <div className="flex items-center justify-between px-1 mb-4">
+          <h3 className="section-title mb-0">Circle Members</h3>
+          <span className="text-[9px] font-bold text-muted-foreground uppercase opacity-40 tracking-wider bg-muted/50 px-2 py-0.5 rounded">Swipe</span>
         </div>
         
-        <div className="flex gap-4 overflow-x-auto pb-8 pt-2 px-2 -mx-2 snap-x snap-mandatory drop-shadow-xl" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-          <style>{`
-            div::-webkit-scrollbar { display: none; }
-          `}</style>
-          
+        <div className="flex gap-4 overflow-x-auto pb-6 pt-2 px-1 -mx-1 snap-x snap-mandatory no-scrollbar">
           {/* Main User (Self) */}
           <motion.div 
+            key="self"
             variants={item}
             onClick={() => setSelectedPatientId(null)}
-            className={`min-w-[200px] snap-center p-6 rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col justify-between shrink-0 h-48 active:scale-95 ${
-              selectedPatientId === null ? "border-primary bg-primary/10 shadow-2xl shadow-primary/20" : "border-border bg-card hover:border-primary/30"
+            className={`min-w-[180px] snap-start p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between shrink-0 h-44 group active:scale-[0.98] ${
+              selectedPatientId === null ? "border-primary bg-primary/5 shadow-lg shadow-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-card hover:border-primary/30"
             }`}
           >
             <div className="flex justify-between items-start">
-              <div className={`w-14 h-14 rounded-[1.5rem] flex items-center justify-center ${selectedPatientId === null ? "bg-primary text-primary-foreground shadow-lg" : "bg-muted text-muted-foreground"}`}>
-                <User size={28} />
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${selectedPatientId === null ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}`}>
+                <User size={24} />
               </div>
-              {selectedPatientId === null && <ShieldCheck size={24} className="text-primary" />}
+              {selectedPatientId === null && <ShieldCheck size={20} className="text-primary" />}
             </div>
             <div>
-              <p className="text-xl font-bold text-foreground mb-1 tracking-tight truncate">{userProfile?.name?.split(' ')[0] || "Self"}</p>
-              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">Account Owner</p>
+              <p className="text-lg font-bold text-foreground mb-0.5 tracking-tight truncate">{userProfile?.name?.split(' ')[0] || "Self"}</p>
+              <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Account Owner</p>
             </div>
           </motion.div>
 
@@ -127,19 +124,19 @@ export default function FamilyHubPage() {
               key={patient.id}
               variants={item}
               onClick={() => setSelectedPatientId(patient.id)}
-              className={`min-w-[200px] snap-center p-6 rounded-[2.5rem] border-2 transition-all cursor-pointer flex flex-col justify-between shrink-0 h-48 active:scale-95 ${
-                selectedPatientId === patient.id ? "border-primary bg-primary/10 shadow-2xl shadow-primary/20" : "border-border bg-card hover:border-primary/30"
+              className={`min-w-[180px] snap-start p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between shrink-0 h-44 group active:scale-[0.98] ${
+                selectedPatientId === patient.id ? "border-primary bg-primary/5 shadow-lg shadow-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-card hover:border-primary/30"
               }`}
             >
               <div className="flex justify-between items-start">
-                <div className={`w-14 h-14 rounded-[1.5rem] flex items-center justify-center ${selectedPatientId === patient.id ? "bg-primary text-primary-foreground shadow-lg" : "bg-muted text-muted-foreground"}`}>
-                  <User size={28} />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${selectedPatientId === patient.id ? "bg-primary text-primary-foreground shadow-md" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}`}>
+                  <User size={24} />
                 </div>
-                {selectedPatientId === patient.id && <ShieldCheck size={24} className="text-primary" />}
+                {selectedPatientId === patient.id && <ShieldCheck size={20} className="text-primary" />}
               </div>
               <div>
-                <p className="text-xl font-bold text-foreground mb-1 tracking-tight truncate">{patient.name.split(' ')[0]}</p>
-                <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest line-clamp-1">
+                <p className="text-lg font-bold text-foreground mb-0.5 tracking-tight truncate">{patient.name.split(' ')[0]}</p>
+                <p className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider line-clamp-1">
                   {patient.relation || "Family"} {patient.age ? `• ${patient.age}y` : ""}
                 </p>
               </div>
@@ -152,18 +149,20 @@ export default function FamilyHubPage() {
           <motion.button 
             variants={item}
             onClick={() => setShowAddForm(true)}
-            className="w-full p-5 rounded-[2rem] border-2 border-dashed border-border flex items-center justify-center gap-2 text-muted-foreground hover:border-primary/50 hover:text-primary transition-all"
+            className="w-full p-6 rounded-2xl border border-dashed border-border flex items-center justify-center gap-3 text-muted-foreground hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all group"
           >
-            <Plus size={20} />
-            <span className="text-sm font-bold uppercase tracking-widest">Add Family Member</span>
+            <div className="p-2 rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
+              <Plus size={18} />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-wider">Add Family Member</span>
           </motion.button>
         ) : (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="p-6 rounded-[2.5rem] bg-card border-2 border-primary/30 shadow-xl"
+            className="premium-card border-primary/20"
           >
-            <h3 className="text-lg font-bold mb-4">New Circle Member</h3>
+            <h3 className="text-lg font-bold mb-6 tracking-tight">New Circle Member</h3>
             <form onSubmit={handleAddPatient} className="space-y-4">
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1 block">Full Name</label>
@@ -196,18 +195,18 @@ export default function FamilyHubPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2 pt-4">
                 <Button 
                   type="button" 
                   variant="ghost" 
-                  className="flex-1 rounded-full text-xs uppercase font-black tracking-widest h-11"
+                  className="flex-1 rounded-xl text-xs uppercase font-bold tracking-wider h-11"
                   onClick={() => setShowAddForm(false)}
                 >
                   Cancel
                 </Button>
                 <Button 
                   type="submit" 
-                  className="flex-[2] rounded-full text-xs uppercase font-black tracking-widest h-11 shadow-lg shadow-primary/20"
+                  className="flex-[2] rounded-xl text-xs uppercase font-bold tracking-wider h-11 shadow-lg shadow-primary/10"
                 >
                   Add Member
                 </Button>
@@ -221,11 +220,11 @@ export default function FamilyHubPage() {
       <motion.div 
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
-        className="mt-12 p-8 rounded-[3rem] bg-primary/5 border border-primary/20 text-center"
+        className="mt-12 p-8 rounded-2xl bg-primary/5 border border-primary/10 text-center"
       >
-        <Users size={40} className="text-primary/40 mx-auto mb-4" />
-        <h4 className="text-sm font-bold text-foreground mb-2">Professional Mode</h4>
-        <p className="text-xs text-muted-foreground leading-relaxed px-4">
+        <Users size={32} className="text-primary/30 mx-auto mb-4" />
+        <h4 className="text-sm font-bold text-foreground mb-1">Professional Mode</h4>
+        <p className="text-xs text-muted-foreground leading-relaxed px-4 opacity-80">
           Are you a Community Health Worker? Enable Professional Mode in settings to manage client adherence.
         </p>
       </motion.div>
