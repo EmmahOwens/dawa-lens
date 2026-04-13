@@ -7,7 +7,7 @@ import { useApp } from "@/contexts/AppContext";
 export default function BottomNav() {
   const location = useLocation();
   const { t } = useTranslation();
-  const { medicines } = useApp();
+  const { medicines, isProfessionalMode } = useApp();
 
   const hasSafetyAlert = medicines.some(m => m.isConflict);
 
