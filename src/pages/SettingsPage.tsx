@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe, Users } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe, Users, ArrowRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
@@ -15,11 +15,26 @@ export default function SettingsPage() {
   const { t, i18n } = useTranslation();
 
   const handleStorageModeChange = async (mode: "local" | "cloud") => {
+    if (mode === "cloud" && !isLoggedIn) {
+      toast({ 
+        title: t("settings.login_required", "Login Required"), 
+        description: t("settings.login_cloud_desc", "Please sign in to enable cloud synchronization."),
+        variant: "destructive"
+      });
+      return;
+    }
+
     setStorageMode(mode);
+    
     if (mode === "cloud" && isLoggedIn) {
       toast({ title: t("settings.sync_start"), description: t("settings.sync_desc") });
       await syncLocalToCloud();
       toast({ title: t("settings.sync_complete") });
+    } else {
+      toast({ 
+        title: t("settings.local_mode_active", "Local-Only Mode"), 
+        description: t("settings.local_active_desc", "Data will now be stored only on this device.")
+      });
     }
   };
 
@@ -29,9 +44,15 @@ export default function SettingsPage() {
 
   const calculateAge = (dob: string | null) => {
     if (!dob) return null;
-    const diffMs = Date.now() - new Date(dob).getTime();
-    const ageDt = new Date(diffMs);
-    return Math.abs(ageDt.getUTCFullYear() - 1970);
+    try {
+      const birthDate = new Date(dob);
+      if (isNaN(birthDate.getTime())) return null;
+      const diffMs = Date.now() - birthDate.getTime();
+      const ageDt = new Date(diffMs);
+      return Math.abs(ageDt.getUTCFullYear() - 1970);
+    } catch (e) {
+      return null;
+    }
   };
 
   return (
@@ -54,7 +75,7 @@ export default function SettingsPage() {
           animate={{ opacity: 1 }} 
           className="text-sm text-muted-foreground mb-6"
         >
-          {userProfile.name} • {calculateAge(userProfile.dateOfBirth)} years old
+          {userProfile.name} {calculateAge(userProfile.dateOfBirth) !== null && `• ${t("settings.years_old", { age: calculateAge(userProfile.dateOfBirth) })}`}
         </motion.p>
       )}
 
@@ -83,19 +104,17 @@ export default function SettingsPage() {
         </div>
 
         {/* CHW Mode */}
-        <div className="rounded-xl border-2 border-primary/20 bg-primary/5 p-4 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Users size={60} className="text-primary" />
+        <div className="rounded-[2rem] border-2 border-primary/20 bg-primary/5 p-6 relative overflow-hidden group shadow-lg shadow-primary/5">
+          <div className="absolute top-[-10%] right-[-5%] p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Users size={120} className="text-primary" />
           </div>
-          <h2 className="text-sm font-black text-primary mb-4 flex items-center gap-2 uppercase tracking-tighter">
-            <Users size={16} /> Professional Mode
-          </h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-foreground font-bold">Community Health Worker (CHW)</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed max-w-[200px]">Enable this if you manage medications for multiple clients/patients.</p>
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-black text-primary flex items-center gap-2 uppercase tracking-[0.2em]">
+              <Users size={16} /> {t("settings.professional_hub")}
+            </h2>
             <Switch 
+               id="professional-mode-switch"
+               aria-label={t("settings.chw_label")}
                checked={isProfessionalMode} 
                onCheckedChange={(v) => {
                  setIsProfessionalMode(v);
@@ -106,22 +125,32 @@ export default function SettingsPage() {
                }}
             />
           </div>
-          {isProfessionalMode && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              className="mt-4 pt-4 border-t border-primary/10"
-            >
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigate("/family")}
-                className="w-full bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary font-bold"
+          <div>
+            <p className="text-base text-foreground font-black tracking-tight">{t("settings.chw_label")}</p>
+            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed max-w-[260px]">
+              {t("settings.chw_desc")}
+            </p>
+          </div>
+          
+          <AnimatePresence>
+            {isProfessionalMode && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 24 }}
+                exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                className="pt-4 border-t border-primary/10"
               >
-                Go to Family Hub <ArrowRight size={14} className="ml-2" />
-              </Button>
-            </motion.div>
-          )}
+                <Button 
+                  variant="default" 
+                  size="lg" 
+                  onClick={() => navigate("/family")}
+                  className="w-full bg-primary text-primary-foreground font-black uppercase tracking-widest text-[10px] rounded-2xl h-12 shadow-lg shadow-primary/20"
+                >
+                  {t("settings.manage_patients")} <ArrowRight size={14} className="ml-2" />
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Appearance */}
@@ -134,7 +163,7 @@ export default function SettingsPage() {
               <p className="text-sm text-card-foreground font-medium">{t("settings.dark_mode")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{t("settings.theme_desc")}</p>
             </div>
-            <ThemeToggle />
+            <ThemeToggle id="theme-toggle" />
           </div>
         </div>
 
@@ -149,6 +178,7 @@ export default function SettingsPage() {
               <Button
                 size="sm"
                 variant="outline"
+                aria-label={t("settings.logout")}
                 onClick={() => {
                   logoutUser();
                   toast({ title: t("settings.logout") });
@@ -213,21 +243,31 @@ export default function SettingsPage() {
               <p className="text-sm text-card-foreground font-medium">{t("settings.push_notifs")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{t("settings.push_desc")}</p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                if ("Notification" in window) {
-                  const perm = await Notification.requestPermission();
-                  toast({
-                    title: perm === "granted" ? "Notifications enabled!" : "Notifications blocked",
-                    description: perm === "granted" ? "You'll receive dose reminders" : "Please enable in browser settings",
-                  });
-                }
-              }}
-            >
-              {t("settings.enable")}
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className={`text-[10px] font-black uppercase tracking-widest ${
+                  typeof Notification !== 'undefined' && Notification.permission === 'granted' ? 'text-success' : 'text-muted-foreground'
+                }`}>
+                  {typeof Notification !== 'undefined' ? Notification.permission : 'Not Supported'}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                aria-label={t("settings.enable_notifs", "Enable Notifications")}
+                onClick={async () => {
+                  if ("Notification" in window) {
+                    const perm = await Notification.requestPermission();
+                    toast({
+                      title: perm === "granted" ? "Notifications enabled!" : "Notifications blocked",
+                      description: perm === "granted" ? "You'll receive dose reminders" : "Please enable in browser settings",
+                    });
+                  }
+                }}
+              >
+                {t("settings.enable")}
+              </Button>
+            </div>
           </div>
         </div>
 

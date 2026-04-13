@@ -421,11 +421,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setPatients((p) => [...p, normalize(created) as Patient]);
   };
 
-  const clearAllData = () => {
+  const clearAllData = useCallback(() => {
+    // 1. Wipe State
     setMedicines([]);
     setReminders([]);
     setDoseLogs([]);
-  };
+    setPatients([]);
+    setWellnessLogs([]);
+    setSelectedPatientId(null);
+
+    // 2. Wipe Local Storage (Personal Data)
+    localStorage.removeItem("dawa_local_medicines");
+    localStorage.removeItem("dawa_local_reminders");
+    localStorage.removeItem("dawa_local_doselogs");
+    
+    // 3. Reset Professional Settings if any
+    setIsProfessionalMode(false);
+  }, [setIsProfessionalMode]);
 
   return (
     <AppContext.Provider
