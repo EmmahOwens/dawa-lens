@@ -56,7 +56,7 @@ export default function ReportPage() {
 
   useEffect(() => {
     fetchInsights();
-  }, []);
+  }, [selectedPatientId]);
 
   const handlePrint = () => {
     window.print();

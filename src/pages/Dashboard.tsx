@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useState, useMemo } from "react";
 import AchievementOverlay from "@/components/AchievementOverlay";
 import { DashboardBanner } from "@/components/DashboardBanner";
+import { FeatureSlideshow } from "@/components/FeatureSlideshow";
 import { calculateRefillStatus, RefillStatus } from "@/services/refillService";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
@@ -164,11 +165,18 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-6 rounded-[2rem] bg-warning/5 border border-warning/20">
                <p className="text-[9px] font-black uppercase tracking-widest text-warning mb-1">Refills Needed</p>
-               <h3 className="text-2xl font-bold text-foreground">12</h3>
+               <h3 className="text-2xl font-bold text-foreground">
+                 {medicines.filter(m => calculateRefillStatus(m, reminders)?.isLow).length}
+               </h3>
             </div>
             <div className="p-6 rounded-[2rem] bg-destructive/5 border border-destructive/20">
-               <p className="text-[9px] font-black uppercase tracking-widest text-destructive mb-1">Missed Doses</p>
-               <h3 className="text-2xl font-bold text-foreground">5</h3>
+               <p className="text-[9px] font-black uppercase tracking-widest text-destructive mb-1">Missed Doses (24h)</p>
+               <h3 className="text-2xl font-bold text-foreground">
+                 {doseLogs.filter(log => 
+                   log.action === "skipped" && 
+                   new Date(log.actionTime).getTime() > Date.now() - 24 * 60 * 60 * 1000
+                 ).length}
+               </h3>
             </div>
           </div>
         </motion.div>
@@ -246,29 +254,7 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* Quick Actions Grid */}
-      <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 gap-3 mb-10">
-        {quickActions.map(({ icon: Icon, label, to, color, ringScale }) => (
-          <motion.button
-            key={to}
-            variants={item}
-            whileHover={{ scale: 1.03, y: -3 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => navigate(to)}
-            className={`flex flex-col items-start gap-4 rounded-[2.2rem] p-6 text-left transition-all relative overflow-hidden group ${color}`}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <motion.div 
-               animate={{ scale: [1, ringScale, 1], rotate: [0, -2, 2, 0] }}
-               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-               className="p-3 rounded-2xl bg-white/40 dark:bg-black/10 shadow-inner z-10"
-            >
-               <Icon size={24} />
-            </motion.div>
-            <span className="text-xs font-black uppercase tracking-widest leading-tight z-10">{label}</span>
-          </motion.button>
-        ))}
-      </motion.div>
+      <FeatureSlideshow />
 
       {/* Upcoming reminders */}
       <div className="mb-4">

@@ -4,11 +4,11 @@ import { motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
 
-export function ThemeToggle() {
+export function ThemeToggle({ id }: { id?: string }) {
   const { theme, setTheme } = useTheme()
 
   return (
-    <div className="flex bg-secondary rounded-full p-1 overflow-hidden relative w-fit border border-border">
+    <div id={id} className="flex bg-secondary rounded-full p-1 overflow-hidden relative w-fit border border-border">
       <motion.div
         className="absolute top-1 bottom-1 w-1/3 bg-background rounded-full shadow-sm z-0 pointer-events-none"
         initial={false}
