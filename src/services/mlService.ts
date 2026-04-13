@@ -1,6 +1,6 @@
 import { DrugInformation } from '../types/api';
 
-const ML_API_ENDPOINT = import.meta.env.VITE_ML_API_URL || 'http://localhost:5000/api/predict';
+const ML_API_ENDPOINT = import.meta.env.VITE_ML_API_URL || 'http://localhost:5000/api/v1/predict';
 
 export const fetchFromMLModel = async (query: string): Promise<DrugInformation | null> => {
   try {
