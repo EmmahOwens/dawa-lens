@@ -1,7 +1,8 @@
-import { Home, Camera, Clock, History, Settings, CopyPlus } from "lucide-react";
+import { Home, Camera, Clock, History, Settings, CopyPlus, Users } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
+import { useApp } from "@/contexts/AppContext";
 import {
   Sidebar,
   SidebarContent,
@@ -20,11 +21,14 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
 
+  const { isProfessionalMode } = useApp();
+  
   const items = [
     { title: t("nav.home"), url: "/", icon: Home },
     { title: t("nav.scan"), url: "/scan", icon: Camera },
     { title: t("nav.remind"), url: "/reminders/new", icon: Clock },
     { title: t("nav.history"), url: "/history", icon: History },
+    ...(isProfessionalMode ? [{ title: "Family Hub", url: "/family", icon: Users }] : []),
     { title: t("nav.safety"), url: "/interactions", icon: CopyPlus },
     { title: t("nav.settings"), url: "/settings", icon: Settings },
   ];

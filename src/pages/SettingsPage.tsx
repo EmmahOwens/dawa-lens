@@ -97,9 +97,31 @@ export default function SettingsPage() {
             </div>
             <Switch 
                checked={isProfessionalMode} 
-               onCheckedChange={setIsProfessionalMode}
+               onCheckedChange={(v) => {
+                 setIsProfessionalMode(v);
+                 toast({
+                   title: v ? "Professional Mode Enabled" : "Professional Mode Disabled",
+                   description: v ? "You can now manage multiple patients in the Family Hub." : "Returning to personal mode.",
+                 });
+               }}
             />
           </div>
+          {isProfessionalMode && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="mt-4 pt-4 border-t border-primary/10"
+            >
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate("/family")}
+                className="w-full bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary font-bold"
+              >
+                Go to Family Hub <ArrowRight size={14} className="ml-2" />
+              </Button>
+            </motion.div>
+          )}
         </div>
 
         {/* Appearance */}

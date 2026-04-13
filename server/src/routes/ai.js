@@ -274,28 +274,35 @@ router.post('/meal-check', async (req, res) => {
  * Maintains history and provides contextual follow-up suggestions.
  */
 router.post('/chat', async (req, res) => {
-  const { messages, medicines, userProfile } = req.body;
+  const { messages, medicines, userProfile, doseLogs } = req.body;
 
   if (!GEMINI_API_KEY) {
     return res.status(500).json({ error: 'AI key not set', code: 'API_KEY_MISSING' });
   }
 
   const activeMeds = medicines?.map(m => m.name).join(', ') || 'No active medications';
+  const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, 20)) : 'No recent dose history available';
   
   const systemInstruction = `
     You are "Dawa-GPT", a premium medical AI assistant integrated into the Dawa-Lens app.
     Your primary focus is the health and safety of users in Uganda and East Africa.
     
+    Transparency Notice:
+    - You MUST inform the user that you have access to their medication history (active meds and dose logs) to provide personalized and safe advice.
+    - Mention this naturally in your first response or when relevant.
+    
     Context:
     - User Name: ${userProfile?.name || 'User'}
     - Active Medications: ${activeMeds}
+    - Recent Dose History (last 20 logs): ${recentLogs}
     - Regional Context: Uganda (Ministry of Health / NDA guidelines).
     
     Rules:
     1. Prioritize East African medication names and regional health standards.
     2. Maintain a professional, warm, and helpful tone (the "Dawa-Lens signature").
     3. Never officially alter dosages; always advise consulting a professional for prescription changes.
-    4. Based on the conversation, yield 3 concise "Next Prompt Suggestions" that the user might want to click.
+    4. Use the Dose History to provide context (e.g., if they missed a dose, give advice based on that).
+    5. Based on the conversation, yield 3 concise "Next Prompt Suggestions" that the user might want to click.
     
     Response Format (Strict JSON):
     {

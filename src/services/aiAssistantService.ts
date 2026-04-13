@@ -100,13 +100,15 @@ export const generateDawaGPTResponse = async (
 export const chatWithDawaGPT = async (
   messages: ChatMessage[],
   medicines: Medicine[],
-  userProfile: UserProfile | null
+  userProfile: UserProfile | null,
+  doseLogs: DoseLog[] = []
 ): Promise<ChatMessage> => {
   try {
     const response = await aiApi.chat({
       messages,
       medicines,
-      userProfile
+      userProfile,
+      doseLogs: doseLogs.slice(0, 20) // Send recent history
     });
 
     return {

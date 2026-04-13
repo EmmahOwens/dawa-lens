@@ -1,10 +1,12 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Sparkles, TrendingUp, Calendar, ArrowRight } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 
 export function DashboardBanner() {
+  const navigate = useNavigate();
   const { doseLogs, reminders, userProfile } = useApp();
   const { t } = useTranslation();
 
@@ -78,7 +80,11 @@ export function DashboardBanner() {
           </div>
         </div>
 
-        <button className="self-start md:self-center group/btn flex items-center gap-3 bg-white/80 dark:bg-white/5 border border-white/60 dark:border-white/10 px-6 py-3 rounded-full shadow-lg shadow-black/5 hover:bg-white dark:hover:bg-white/10 transition-all active:scale-95">
+
+        <button 
+          onClick={() => navigate('/report')}
+          className="self-start md:self-center group/btn flex items-center gap-3 bg-white/80 dark:bg-white/5 border border-white/60 dark:border-white/10 px-6 py-3 rounded-full shadow-lg shadow-black/5 hover:bg-white dark:hover:bg-white/10 transition-all active:scale-95"
+        >
           <span className="text-[10px] font-black uppercase tracking-widest text-foreground">Detailed Report</span>
           <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
         </button>
