@@ -5,10 +5,24 @@
 
 import { auth } from "@/lib/firebase";
 
-const BASE_URL = import.meta.env.VITE_API_URL || 
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api/v1' 
-    : 'https://dawa-lens.onrender.com/api/v1');
+const getBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    return envUrl.endsWith('/v1') ? envUrl : `${envUrl}/v1`;
+  }
+  
+  if (typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' || 
+      window.location.hostname === '127.0.0.1' || 
+      window.location.hostname === '::1'
+  )) {
+    return 'http://localhost:5000/api/v1';
+  }
+  
+  return 'https://dawa-lens.onrender.com/api/v1';
+};
+
+const BASE_URL = getBaseUrl();
 
 /** Custom error that carries extra fields from the backend JSON response. */
 class ApiError extends Error {
