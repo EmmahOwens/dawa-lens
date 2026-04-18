@@ -47,5 +47,9 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Dawa Lens needs camera access to quickly scan and identify pill bottles and prescriptions.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Dawa Lens needs access to your photo library so you can pick and upload images of your medication.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Dawa Lens needs permission to save medication images to your photo gallery.</string>
 </dict>
 </plist>
