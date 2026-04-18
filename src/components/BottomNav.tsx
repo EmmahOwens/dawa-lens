@@ -19,8 +19,8 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 w-full md:hidden">
-      <div className="flex items-center justify-between border-t border-border/50 bg-background/85 px-4 pt-2 pb-2 shadow-[0_-8px_32px_rgba(0,0,0,0.06)] backdrop-blur-2xl safe-bottom relative">
+    <nav className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-sm md:hidden px-4 pb-safe-bottom" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="flex items-center justify-between rounded-[2rem] border border-border/50 bg-background/85 px-4 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.12)] backdrop-blur-2xl relative">
         {/* Left Side Items */}
         <div className="flex flex-1 justify-around items-center">
           {navItems.slice(0, 2).map((item) => (
