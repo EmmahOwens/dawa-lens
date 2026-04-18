@@ -16,7 +16,7 @@ const ORIGINAL_ACTIONS: ActionItem[] = [
   { icon: Camera, label: "Quick Scan", to: "/scan", color: "bg-primary text-primary-foreground", ringScale: 1.05, description: "Identify pills instantly with Vision AI" },
   { icon: Users, label: "Family Hub", to: "/family", color: "bg-success text-success-foreground", ringScale: 1, description: "Manage health for your entire circle" },
   { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive text-destructive-foreground", ringScale: 1.1, description: "Track mood, energy and symptoms" },
-  { icon: FileText, label: "Dossier", to: "/report", color: "bg-indigo-600 text-white", ringScale: 1, description: "Generate detailed health reports" },
+  { icon: FileText, label: "Care Report", to: "/report", color: "bg-indigo-600 text-white", ringScale: 1, description: "Generate detailed health reports" },
   { icon: History, label: "History", to: "/history", color: "bg-accent text-accent-foreground", ringScale: 1, description: "Review your medication journey" },
   { icon: Plane, label: "Travel", to: "/travel", color: "bg-warning text-warning-foreground", ringScale: 1.05, description: "Stay safe while traveling abroad" },
 ];
