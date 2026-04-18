@@ -69,6 +69,10 @@ export const localPersistence = {
       all.push(newItem);
       save(LOCAL_LOGS_KEY, all);
       return newItem;
+    },
+    remove: (id: string) => {
+      const all = get<any>(LOCAL_LOGS_KEY).filter((l: any) => l.id !== id);
+      save(LOCAL_LOGS_KEY, all);
     }
   }
 };

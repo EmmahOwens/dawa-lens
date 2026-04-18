@@ -93,6 +93,7 @@ type AppContextType = {
   updateReminder: (id: string, rem: Partial<Reminder>) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
   logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>;
+  deleteDoseLog: (id: string) => Promise<void>;
   addWellnessLog: (log: Omit<WellnessLog, "id" | "timestamp" | "userId">) => Promise<void>;
   
   addPatient: (patient: Omit<Patient, "id" | "createdAt" | "managedBy">) => Promise<void>;
@@ -264,17 +265,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         const [meds, rems, logs, pats, wells] = await Promise.all([
-          medicinesApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
-          remindersApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
-          doseLogsApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
-          patientsApi.getAll(currentUserId).catch(() => []),
-          wellnessApi.getAll(currentUserId, selectedPatientId || undefined).catch(() => []),
+          medicinesApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
+          remindersApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
+          doseLogsApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
+          patientsApi.getAll(currentUserId).catch(err => { console.error(err); return null; }),
+          wellnessApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
         ]);
-        setMedicines(meds.map(normalize));
-        setReminders(rems.map(normalize));
-        setDoseLogs(logs.map(normalize));
-        setPatients(pats.map(normalize));
-        setWellnessLogs(wells.map(normalize));
+        if (meds) setMedicines(meds.map(normalize));
+        if (rems) setReminders(rems.map(normalize));
+        if (logs) setDoseLogs(logs.map(normalize));
+        if (pats) setPatients(pats.map(normalize));
+        if (wells) setWellnessLogs(wells.map(normalize));
       } catch (err) {
         console.error("Failed to load data from backend:", err);
       } finally {
@@ -318,7 +319,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
           setMedicines((p) => p.map((m) => (m.id === newMed.id ? { ...m, rxcui } : m)));
         }
-      });
+      }).catch(err => console.error("Failed to fetch RxCUI:", err));
     }
 
     return newMed;
@@ -373,6 +374,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteDoseLog = async (id: string) => {
+    if (storageMode === "local") {
+      localPersistence.doseLogs.remove(id);
+    } else {
+      await doseLogsApi.remove(id);
+    }
+    setDoseLogs((p) => p.filter((l) => l.id !== id));
+  };
+
   const addWellnessLog = async (log: Omit<WellnessLog, "id" | "timestamp" | "userId">) => {
     if (storageMode === "local") {
        // Simple local save for wellness (optional, mainly cloud focused for AI)
@@ -394,15 +404,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       // 1. Sync Medicines
+      const syncedMedNames = new Set(medicines.map(m => m.name.toLowerCase()));
       for (const med of localMeds) {
-        // Simple conflict check: same name
-        const exists = medicines.some(m => m.name.toLowerCase() === med.name.toLowerCase());
-        if (exists) {
+        // Conflict check: same name in state OR already synced this loop
+        if (syncedMedNames.has(med.name.toLowerCase())) {
           // Mark as conflict but don't stop
           setMedicines(p => p.map(m => m.name.toLowerCase() === med.name.toLowerCase() ? { ...m, isConflict: true } : m));
           continue;
         }
 
+        syncedMedNames.add(med.name.toLowerCase());
         const { id, addedAt, ...data } = med;
         const created = await medicinesApi.create({ ...data, userId: currentUserId });
         setMedicines(p => [...p, normalize(created)]);
@@ -461,7 +472,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         medicines, reminders, doseLogs, patients, wellnessLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId, selectedPatientId, isProfessionalMode,
         addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
-        logDose, addPatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing,
+        logDose, deleteDoseLog, addPatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing,
         isDawaGPTOpen, setIsDawaGPTOpen, isIntelligenceCollapsed, setIsIntelligenceCollapsed
       }}
     >

@@ -129,6 +129,9 @@ export const doseLogsApi = {
 
   create: (data: Record<string, unknown>) =>
     request<any>('/doselogs', { method: 'POST', body: JSON.stringify(data) }),
+
+  remove: (id: string) =>
+    request<void>(`/doselogs/${id}`, { method: 'DELETE' }),
 };
 
 // --- Wellness Journals (Food/Symptoms) ---
