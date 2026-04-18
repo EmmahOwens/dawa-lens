@@ -6,6 +6,8 @@ import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { ARInstructionOverlay, ARInstructionType } from "@/components/ui/ARInstruction";
+import { Capacitor } from '@capacitor/core';
+import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 export type ScanMode = "pill" | "text" | "barcode" | "verify";
 
@@ -134,7 +136,24 @@ export default function ScanPage() {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const image = await CapCamera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Photos
+        });
+        if (image.dataUrl) {
+          navigate("/results", { state: { imageUrl: image.dataUrl, mode: scanMode } });
+        }
+      } catch (err) {
+        console.warn("User cancelled photo picker:", err);
+      }
+      return;
+    }
+
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -142,6 +161,13 @@ export default function ScanPage() {
       navigate("/results", { state: { imageUrl: reader.result as string, mode: scanMode } });
     };
     reader.readAsDataURL(file);
+  };
+
+  const triggerNativeUpload = (e: React.MouseEvent) => {
+    if (Capacitor.isNativePlatform()) {
+      e.preventDefault(); // Stop the <input> from opening the Web file picker
+      handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
+    }
   };
 
   return (
@@ -328,7 +354,7 @@ export default function ScanPage() {
             >
                <SwitchCamera size={22} />
             </button>
-            <label className="flex items-center justify-center w-14 h-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90 cursor-pointer">
+            <label onClick={triggerNativeUpload} className="flex items-center justify-center w-14 h-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90 cursor-pointer">
                <Upload size={22} />
                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
             </label>
