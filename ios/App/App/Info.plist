@@ -45,5 +45,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Dawa Lens needs camera access to quickly scan and identify pill bottles and prescriptions.</string>
 </dict>
 </plist>
