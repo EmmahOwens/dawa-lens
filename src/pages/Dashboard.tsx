@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Users, User, Plane, Heart, FileText } from "lucide-react";
+import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Users, User, Plane, Heart, FileText, Check, X } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState, useMemo } from "react";
+import { toast } from "sonner";
 import AchievementOverlay from "@/components/AchievementOverlay";
 import { DashboardBanner } from "@/components/DashboardBanner";
 import { FeatureSlideshow } from "@/components/FeatureSlideshow";
@@ -14,7 +15,7 @@ const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { reminders, doseLogs, userProfile, medicines, isProfessionalMode, patients, selectedPatientId, setSelectedPatientId } = useApp();
+  const { reminders, doseLogs, userProfile, medicines, isProfessionalMode, patients, selectedPatientId, logDose } = useApp();
   const { t } = useTranslation();
   const [showAchievement, setShowAchievement] = useState(false);
 
@@ -32,12 +33,12 @@ export default function Dashboard() {
   };
 
   const quickActions = [
-    { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary/10 border border-primary/20 text-primary backdrop-blur-xl shadow-lg shadow-primary/5", ringScale: 1.05 },
-    { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success/10 border border-success/20 text-success backdrop-blur-xl shadow-lg shadow-success/5", ringScale: 1 },
-    { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive/10 border border-destructive/20 text-destructive backdrop-blur-xl shadow-lg shadow-destructive/5", ringScale: 1.1 },
-    { icon: FileText, label: "Dossier", to: "/report", color: "bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 backdrop-blur-xl shadow-lg shadow-indigo-500/5", ringScale: 1 },
-    { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent/50 border border-accent/60 text-accent-foreground backdrop-blur-xl shadow-lg shadow-accent/5", ringScale: 1 },
-    { icon: Plane, label: "Travel", to: "/travel", color: "bg-warning/10 border border-warning/20 text-warning backdrop-blur-xl shadow-lg shadow-warning/5", ringScale: 1.05 },
+    { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20", ringScale: 1.05 },
+    { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success/10 border-success/20 text-success hover:bg-success/20", ringScale: 1 },
+    { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20", ringScale: 1.1 },
+    { icon: FileText, label: "Dossier", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/20", ringScale: 1 },
+    { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent border-accent/60 text-accent-foreground hover:bg-accent/80", ringScale: 1 },
+    { icon: Plane, label: "Travel", to: "/travel", color: "bg-warning/10 border-warning/20 text-warning hover:bg-warning/20", ringScale: 1.05 },
   ];
 
   const todayReminders = reminders.filter((r) => r.enabled);
@@ -57,6 +58,21 @@ export default function Dashboard() {
     }
   }, [takenToday, todayReminders.length]);
 
+  const handleAction = async (reminder: any, action: "taken" | "skipped") => {
+    try {
+      await logDose({
+        reminderId: reminder.id,
+        medicineName: reminder.medicineName,
+        dose: reminder.dose,
+        scheduledTime: reminder.time,
+        action,
+      });
+      toast.success(action === "taken" ? "Dose logged!" : "Dose skipped.");
+    } catch (error) {
+      toast.error("Failed to log dose");
+    }
+  };
+
   return (
     <div className="px-4 pt-12 pb-4">
       <AchievementOverlay 
@@ -66,6 +82,8 @@ export default function Dashboard() {
         subtitle="You've taken all your scheduled medications for today. Keep up the great work!"
         emoji="🏆"
       />
+      
+      {/* 1. Greeting */}
       <motion.div 
         variants={container} 
         initial="hidden" 
@@ -109,43 +127,87 @@ export default function Dashboard() {
         )}
       </motion.div>
 
-      <DashboardBanner />
-
-      {/* Refill Alerts */}
-      {refillStatuses.length > 0 && (
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-8 space-y-3"
-        >
-          {refillStatuses.map(status => (
-            <div 
-              key={status.medicineId}
-              className="rounded-2xl border border-warning/30 bg-warning/5 p-4 flex items-center justify-between shadow-sm"
+      {/* 2. Quick Actions Grid */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 grid grid-cols-3 gap-3"
+      >
+        {quickActions.map((action) => (
+          <motion.div key={action.label} whileHover={{ scale: 1.05 }} whileTap={{ scale: action.ringScale || 0.95 }}>
+            <button 
+              onClick={() => navigate(action.to)}
+              className={`w-full flex flex-col items-center justify-center p-3 rounded-2xl border ${action.color} transition-all shadow-[0_4px_12px_rgba(0,0,0,0.02)]`}
             >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center text-warning">
-                  <Package2 size={20} />
-                </div>
-                <div>
-                   <p className="text-sm font-bold text-foreground">{status.medicineName}</p>
-                   <p className="text-[10px] font-semibold text-warning uppercase tracking-wider mt-0.5">
-                     Only {status.daysRemaining} days left
-                   </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => navigate(`/medicine/${encodeURIComponent(status.medicineName)}`)}
-                className="bg-warning text-warning-foreground text-[10px] font-bold px-4 py-2 rounded-lg uppercase tracking-wider shadow-sm active:scale-95 transition-transform"
-              >
-                Refill
-              </button>
-            </div>
-          ))}
-        </motion.div>
-      )}
+              <action.icon size={22} className="mb-2" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-center line-clamp-1">{action.label}</span>
+            </button>
+          </motion.div>
+        ))}
+      </motion.div>
 
-      {/* Stats or Professional Hub */}
+      {/* 3. Actionable Reminders */}
+      <div className="mb-8">
+        <h2 className="section-title flex items-center gap-2">
+          <Bell size={14} />
+          {t("dashboard.upcoming_reminders")}
+        </h2>
+        {todayReminders.length === 0 ? (
+          <div className="premium-card p-10 text-center">
+            <p className="text-sm text-muted-foreground">{t("dashboard.no_reminders")}</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {todayReminders.slice(0, 5).map((r) => {
+              const actionToday = doseLogs.find(l => l.reminderId === r.id && new Date(l.actionTime).toDateString() === new Date().toDateString());
+              
+              if (actionToday) return null; // Hide if already taken or skipped
+
+              return (
+                <motion.div
+                  key={r.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center justify-between rounded-2xl border border-border/50 bg-card p-4 shadow-sm transition-all hover:border-primary/20 hover:bg-accent/5"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                      <Pill size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[15px] font-bold text-foreground leading-tight">{r.medicineName}</p>
+                      <p className="text-xs font-semibold text-muted-foreground mt-0.5">{r.dose} • {r.time}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => handleAction(r, "taken")} 
+                      className="w-10 h-10 rounded-xl bg-success/15 hover:bg-success/25 text-success flex items-center justify-center transition-colors shadow-sm"
+                    >
+                      <Check size={20} strokeWidth={3} />
+                    </button>
+                    <button 
+                      onClick={() => handleAction(r, "skipped")} 
+                      className="w-10 h-10 rounded-xl bg-destructive/10 hover:bg-destructive/20 text-destructive flex items-center justify-center transition-colors shadow-sm"
+                    >
+                      <X size={20} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+            
+            {/* If all displayed are taken/skipped, show a small success message */}
+            {todayReminders.slice(0, 5).every(r => doseLogs.some(l => l.reminderId === r.id && new Date(l.actionTime).toDateString() === new Date().toDateString())) && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 text-center rounded-2xl bg-success/10 border border-success/20 text-success">
+                <p className="text-sm font-bold uppercase tracking-wider">All caught up! 🎉</p>
+              </motion.div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 4. Stats or Professional Hub */}
       {isProfessionalMode && !selectedPatientId ? (
         <motion.div 
            initial={{ opacity: 0, y: 20 }}
@@ -237,46 +299,51 @@ export default function Dashboard() {
         </motion.div>
       )}
 
+      {/* 5. Dashboard Banner */}
+      <DashboardBanner />
+
+      {/* 6. Refill Alerts */}
+      {refillStatuses.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="mb-8 space-y-3"
+        >
+          <h2 className="section-title flex items-center gap-2">
+            <Package2 size={14} />
+            Refill Alerts
+          </h2>
+          {refillStatuses.map(status => (
+            <div 
+              key={status.medicineId}
+              className="glass-card border-warning/30 bg-warning/5 p-4 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center text-warning">
+                  <Package2 size={20} />
+                </div>
+                <div>
+                   <p className="text-sm font-bold text-foreground">{status.medicineName}</p>
+                   <p className="text-[10px] font-semibold text-warning uppercase tracking-wider mt-0.5">
+                     Only {status.daysRemaining} days left
+                   </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => navigate(`/medicine/${encodeURIComponent(status.medicineName)}`)}
+                className="bg-warning text-warning-foreground text-[10px] font-bold px-4 py-2 rounded-lg uppercase tracking-wider shadow-sm active:scale-95 transition-transform"
+              >
+                Refill
+              </button>
+            </div>
+          ))}
+        </motion.div>
+      )}
+
+      {/* 7. Feature Slideshow */}
       <FeatureSlideshow />
 
-      {/* Upcoming reminders */}
-      <div className="mb-6">
-        <h2 className="section-title flex items-center gap-2">
-          <Bell size={14} />
-          {t("dashboard.upcoming_reminders")}
-        </h2>
-        {todayReminders.length === 0 ? (
-          <div className="premium-card p-10 text-center">
-            <p className="text-sm text-muted-foreground">{t("dashboard.no_reminders")}</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {todayReminders.slice(0, 5).map((r) => (
-              <motion.div
-                key={r.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between rounded-2xl border border-border/50 bg-card p-4 group transition-all hover:bg-accent/5 hover:border-primary/20"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary transition-transform group-hover:scale-105">
-                    <Pill size={16} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{r.medicineName}</p>
-                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">{r.dose} • {r.time}</p>
-                  </div>
-                </div>
-                <span className="rounded-full bg-primary/5 px-3 py-1 text-[10px] font-bold text-primary uppercase tracking-wider">
-                  {r.repeatSchedule}
-                </span>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-6 rounded-xl border border-warning/30 bg-warning/10 p-4 font-medium">
+      <div className="mt-6 rounded-xl border border-warning/30 bg-warning/10 p-4 font-medium mb-12">
         <p className="text-xs text-warning leading-relaxed flex items-start gap-2">
           <span className="shrink-0">⚠️</span>
           <span>{t("dashboard.disclaimer")}</span>
