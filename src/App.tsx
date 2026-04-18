@@ -27,6 +27,9 @@ import { preloadOCRModel } from "@/services/visionService";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import OfflineOverlay from "@/components/OfflineOverlay";
 import DawaGPT from "@/components/DawaGPT";
+import { Capacitor } from '@capacitor/core';
+import { Camera } from '@capacitor/camera';
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 const queryClient = new QueryClient();
 
@@ -62,6 +65,22 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 const App = () => {
   useEffect(() => {
     preloadOCRModel(); // Silently preload ~20MB Tesseract worker on startup
+
+    const initNativePermissions = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await Camera.requestPermissions();
+        } catch (e) {
+          console.warn("Camera permission request ignored:", e);
+        }
+        try {
+          await LocalNotifications.requestPermissions();
+        } catch (e) {
+          console.warn("LocalNotifications permission request ignored:", e);
+        }
+      }
+    };
+    initNativePermissions();
 
     const backListener = CapApp.addListener('backButton', () => {
       if (window.location.pathname === '/' || window.location.pathname === '/welcome' || window.location.pathname === '/auth') {
