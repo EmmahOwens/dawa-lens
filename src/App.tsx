@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { App as CapApp } from '@capacitor/app';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider, useApp } from "@/contexts/AppContext";
@@ -61,6 +62,18 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 const App = () => {
   useEffect(() => {
     preloadOCRModel(); // Silently preload ~20MB Tesseract worker on startup
+
+    const backListener = CapApp.addListener('backButton', () => {
+      if (window.location.pathname === '/' || window.location.pathname === '/welcome' || window.location.pathname === '/auth') {
+        CapApp.exitApp();
+      } else {
+        window.history.back();
+      }
+    });
+
+    return () => {
+      backListener.then(l => l.remove());
+    };
   }, []);
 
   return (
