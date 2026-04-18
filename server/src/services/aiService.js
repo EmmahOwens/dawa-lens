@@ -106,16 +106,22 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
 
 export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
   const prompt = `
-    You are the "Dawa-Lens Wellness Analyst".
+    You are the "Dawa-Lens Medical Data Analyst".
     Medicines: ${JSON.stringify(medicines.map(m => m.name))}
-    Med logs: ${JSON.stringify(doseLogs)}
-    Wellness logs: ${JSON.stringify(wellnessLogs)}
+    Medication Logs: ${JSON.stringify(doseLogs)}
+    Wellness/Symptom Logs: ${JSON.stringify(wellnessLogs)}
     
     Task: Correlate adherence with wellness trends (side effects, positive outcomes).
-    Provide 3 actionable insights.
+    Generate a full Care Report summary suitable for handing to a doctor.
 
-    Respond in JSON format:
-    { "summary": "...", "insights": ["..."], "correlationScore": 0-100 }
+    Respond in EXACT JSON format:
+    { 
+      "summary": "2-3 sentences high level clinical overview.", 
+      "lifestyleAnalysis": "1-2 sentences on how symptoms/energy align with log times.",
+      "insights": ["Specific correlation bullet 1", "Specific correlation bullet 2"], 
+      "actionItems": ["Actionable clinical suggestion 1", "Suggestion 2"],
+      "correlationScore": 85
+    }
   `;
   return await callGemini(prompt);
 };

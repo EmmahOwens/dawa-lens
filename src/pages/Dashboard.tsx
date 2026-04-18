@@ -36,7 +36,7 @@ export default function Dashboard() {
     { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary/10 border-primary/20 text-primary hover:bg-primary/20", ringScale: 1.05 },
     { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success/10 border-success/20 text-success hover:bg-success/20", ringScale: 1 },
     { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20", ringScale: 1.1 },
-    { icon: FileText, label: "Dossier", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/20", ringScale: 1 },
+    { icon: FileText, label: "Care Report", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/20", ringScale: 1 },
     { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent border-accent/60 text-accent-foreground hover:bg-accent/80", ringScale: 1 },
     { icon: Plane, label: "Travel", to: "/travel", color: "bg-warning/10 border-warning/20 text-warning hover:bg-warning/20", ringScale: 1.05 },
   ];
