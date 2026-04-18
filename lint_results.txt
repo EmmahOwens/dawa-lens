@@ -1,0 +1,159 @@
+
+> dawa-lens@0.0.0 lint
+> eslint .
+
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx
+  23:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/BottomNav.tsx
+  56:80  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx
+  37:6  warning  React Hook useEffect has missing dependencies: 'messages.length' and 'userProfile?.name'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/FeatureSlideshow.tsx
+  7:9  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/PremiumLoader.tsx
+  8:9  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/badge.tsx
+  29:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/button.tsx
+  47:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/command.tsx
+  24:11  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/form.tsx
+  129:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/navigation-menu.tsx
+  111:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/sidebar.tsx
+  636:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/sonner.tsx
+  27:19  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/textarea.tsx
+  5:18  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/toggle.tsx
+  37:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx
+   52:9   error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  132:35  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  239:19  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  242:30  error    Unexpected any. Specify a different type                                                                                        @typescript-eslint/no-explicit-any
+  286:6   warning  React Hook useEffect has a missing dependency: 'setIsProfessionalMode'. Either include it or remove the dependency array        react-hooks/exhaustive-deps
+  473:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AddReminderPage.tsx
+  102:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AuthPage.tsx
+   79:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  166:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/pages/InteractionsPage.tsx
+  27:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/pages/OnboardingPage.tsx
+   49:19   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  126:100  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ReportPage.tsx
+  16:44  error    Unexpected any. Specify a different type                                                                          @typescript-eslint/no-explicit-any
+  59:6   warning  React Hook useEffect has a missing dependency: 'fetchInsights'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ResultsPage.tsx
+  28:35  error    Unexpected any. Specify a different type                                                                                                               @typescript-eslint/no-explicit-any
+  66:34  error    Unexpected any. Specify a different type                                                                                                               @typescript-eslint/no-explicit-any
+  75:19  error    Unexpected any. Specify a different type                                                                                                               @typescript-eslint/no-explicit-any
+  97:6   warning  React Hook useEffect has missing dependencies: 'patients', 'selectedPatientId', and 'userProfile'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ScanPage.tsx
+   33:57  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+   37:16  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
+  108:6   warning  React Hook useEffect has a missing dependency: 'scanner'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx
+  17:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  88:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx
+  27:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts
+   29:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   32:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   71:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   74:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   80:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   82:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   84:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   93:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   97:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  110:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  114:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  127:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  131:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  138:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  142:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  151:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  157:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  159:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  163:16  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  169:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  171:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  171:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  171:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  172:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  174:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  175:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:66  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  178:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/services/localPersistence.ts
+  21:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  22:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  29:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  30:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  31:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  38:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  44:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  45:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  51:35  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  52:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  53:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  60:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  60:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  65:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  66:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  67:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/src/types/interactions.ts
+  23:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/iammbayo/Documents/Projects/dawa-lens/tailwind.config.ts
+  120:13  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+✖ 96 problems (83 errors, 13 warnings)
+
