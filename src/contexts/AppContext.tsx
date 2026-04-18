@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { getRxCUI } from "../services/interactionChecker";
 import { medicinesApi, remindersApi, doseLogsApi, usersApi, patientsApi, wellnessApi } from "../services/api";
-import { auth } from "../lib/firebase";
+import { auth, db } from "../lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
 
 export type Medicine = {
@@ -159,7 +160,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Sync to cloud if logged in
     if (storageMode === "cloud" && currentUserId) {
       try {
-        await usersApi.upsertProfile({ uid: currentUserId, isProfessional: v });
+        const docRef = doc(db, "users", currentUserId);
+        await setDoc(docRef, { isProfessional: v }, { merge: true });
         setUserProfile(p => p ? { ...p, isProfessional: v } : null);
       } catch (err) {
         console.error("Failed to sync professional mode to cloud:", err);
@@ -236,32 +238,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        // Evaluate profile first — distinguish between a missing profile and a server error
+        // Evaluate profile via Firestore directly
         let prof: any = null;
         try {
-          prof = await usersApi.getProfile(currentUserId);
-        } catch (profileErr: any) {
-          // A 404 means the profile hasn't been created yet → trigger onboarding
-          // A 500 means the server has an issue → don't assume missing profile
-          const isNotFound = profileErr?.statusCode === 404 || profileErr?.message?.includes('not found') || profileErr?.message?.includes('404');
-          if (!isNotFound) {
-            console.error("Backend server error fetching profile — skipping onboarding check:", profileErr);
-            // Don't set needsOnboarding here; leave the app in its current state
-          } else {
-            console.warn("User profile not found — prompting onboarding.");
-            setNeedsOnboarding(true);
+          const docRef = doc(db, "users", currentUserId);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            prof = docSnap.data();
           }
+        } catch (profileErr: any) {
+          console.error("Firestore error fetching profile — skipping onboarding check:", profileErr);
         }
 
         if (prof) {
           if (!prof.dateOfBirth || !prof.gender) {
             setNeedsOnboarding(true);
-            setUserProfile({ ...prof, id: currentUserId });
+            setUserProfile({ ...prof, id: currentUserId } as UserProfile);
           } else {
             setNeedsOnboarding(false);
-            setUserProfile({ ...prof, id: currentUserId });
+            setUserProfile({ ...prof, id: currentUserId } as UserProfile);
             setIsProfessionalMode(prof.isProfessional || false);
           }
+        } else {
+          console.warn("User profile not found — prompting onboarding.");
+          setNeedsOnboarding(true);
         }
 
         const [meds, rems, logs, pats, wells] = await Promise.all([
@@ -288,8 +288,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const completeOnboarding = async (profile: Omit<UserProfile, "id">) => {
     if (!currentUserId) throw new Error("Not logged in");
-    const updated = await usersApi.upsertProfile({ uid: currentUserId, ...profile });
-    setUserProfile({ ...updated, id: currentUserId });
+    const docRef = doc(db, "users", currentUserId);
+    await setDoc(docRef, profile, { merge: true });
+    setUserProfile({ ...profile, id: currentUserId } as UserProfile);
     setNeedsOnboarding(false);
   };
 
