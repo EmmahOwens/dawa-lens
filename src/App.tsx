@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { App as CapApp } from '@capacitor/app';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,7 +30,11 @@ import DawaGPT from "@/components/DawaGPT";
 import { Capacitor } from '@capacitor/core';
 import { Camera } from '@capacitor/camera';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Keyboard } from '@capacitor/keyboard';
 import SplashScreen from "@/components/SplashScreen";
+import PageTransition from "@/components/PageTransition";
+import { AnimatePresence } from "framer-motion";
 
 const queryClient = new QueryClient();
 
@@ -64,10 +68,12 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 }
 
 const App = () => {
+  const location = useLocation();
+
   useEffect(() => {
     preloadOCRModel(); // Silently preload ~20MB Tesseract worker on startup
 
-    const initNativePermissions = async () => {
+    const initNativeFeatures = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
           await Camera.requestPermissions();
@@ -79,9 +85,20 @@ const App = () => {
         } catch (e) {
           console.warn("LocalNotifications permission request ignored:", e);
         }
+        try {
+          await StatusBar.setStyle({ style: Style.Default });
+          await StatusBar.setOverlaysWebView({ overlay: false });
+        } catch (e) {
+          console.warn("StatusBar setup ignored:", e);
+        }
+        try {
+          await Keyboard.setAccessoryBarVisible({ isVisible: false });
+        } catch (e) {
+          console.warn("Keyboard setup ignored:", e);
+        }
       }
     };
-    initNativePermissions();
+    initNativeFeatures();
 
     const backListener = CapApp.addListener('backButton', () => {
       if (window.location.pathname === '/' || window.location.pathname === '/welcome' || window.location.pathname === '/auth') {
@@ -103,42 +120,44 @@ const App = () => {
         <AppProvider>
           <OfflineOverlay />
           <Toaster richColors closeButton position="top-center" />
-          <BrowserRouter>
-            <DawaGPT />
-            <Routes>
+          <DawaGPT />
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
               {/* Full-screen pages — no AppShell */}
-              <Route path="/scan" element={<ProtectedRoute><ScanPage /></ProtectedRoute>} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/welcome" element={<WelcomePage />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
+              <Route path="/scan" element={<ProtectedRoute><PageTransition><ScanPage /></PageTransition></ProtectedRoute>} />
+              <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
+              <Route path="/welcome" element={<PageTransition><WelcomePage /></PageTransition>} />
+              <Route path="/verify-email" element={<PageTransition><VerifyEmailPage /></PageTransition>} />
+              <Route path="/onboarding" element={<OnboardingRoute><PageTransition><OnboardingPage /></PageTransition></OnboardingRoute>} />
               {/* All other pages use AppShell with bottom nav */}
               <Route
                 path="*"
                 element={
                   <ProtectedRoute>
                     <AppShell>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/results" element={<ResultsPage />} />
-                        <Route path="/medicine/:name" element={<MedicineInfoPage />} />
-                        <Route path="/search" element={<MedicineInfoPage />} />
-                        <Route path="/reminders/new" element={<AddReminderPage />} />
-                        <Route path="/history" element={<HistoryPage />} />
-                        <Route path="/interactions" element={<InteractionsPage />} />
-                        <Route path="/family" element={<FamilyHubPage />} />
-                        <Route path="/travel" element={<TravelCompanionPage />} />
-                        <Route path="/wellness" element={<WellnessPage />} />
-                        <Route path="/report" element={<ReportPage />} />
-                        <Route path="/settings" element={<SettingsPage />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
+                      <AnimatePresence mode="wait">
+                        <Routes location={location} key={location.pathname}>
+                          <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
+                          <Route path="/results" element={<PageTransition><ResultsPage /></PageTransition>} />
+                          <Route path="/medicine/:name" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
+                          <Route path="/search" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
+                          <Route path="/reminders/new" element={<PageTransition><AddReminderPage /></PageTransition>} />
+                          <Route path="/history" element={<PageTransition><HistoryPage /></PageTransition>} />
+                          <Route path="/interactions" element={<PageTransition><InteractionsPage /></PageTransition>} />
+                          <Route path="/family" element={<PageTransition><FamilyHubPage /></PageTransition>} />
+                          <Route path="/travel" element={<PageTransition><TravelCompanionPage /></PageTransition>} />
+                          <Route path="/wellness" element={<PageTransition><WellnessPage /></PageTransition>} />
+                          <Route path="/report" element={<PageTransition><ReportPage /></PageTransition>} />
+                          <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
+                          <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+                        </Routes>
+                      </AnimatePresence>
                     </AppShell>
                   </ProtectedRoute>
                 }
               />
             </Routes>
-          </BrowserRouter>
+          </AnimatePresence>
         </AppProvider>
       </TooltipProvider>
     </QueryClientProvider>
