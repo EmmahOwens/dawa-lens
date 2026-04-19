@@ -103,22 +103,48 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: var(--font-sans);
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    user-select: none;
+    -webkit-user-drag: none;
+    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
+  }
+
+  input, textarea, [contenteditable="true"] {
+    user-select: text;
   }
 }
 
 @layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  .safe-top-margin {
+    margin-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-bottom-margin {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   .premium-card {
     @apply rounded-2xl border border-border/50 bg-card p-6 shadow-sm transition-all duration-300;
+  }
+
+  .premium-card:active {
+    @apply scale-[0.98] brightness-95;
   }
 
   .premium-card-hover {
@@ -131,6 +157,19 @@
 
   .section-title {
     @apply text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4;
+  }
+
+  .native-active:active {
+    @apply opacity-70 scale-[0.97] transition-all duration-100;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
