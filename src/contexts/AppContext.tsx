@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { getRxCUI } from "../services/interactionChecker";
 import { medicinesApi, remindersApi, doseLogsApi, usersApi, patientsApi, wellnessApi } from "../services/api";
 import { auth, db } from "../lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
 
@@ -118,6 +118,8 @@ type AppContextType = {
   setIsIntelligenceCollapsed: (v: boolean) => void;
   lastSyncTimestamp: string | null;
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  rememberMe: boolean;
+  setRememberMe: (v: boolean) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -156,6 +158,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isDawaGPTOpen, setIsDawaGPTOpen] = useState(false);
   const [isIntelligenceCollapsed, setIntelligenceCollapsedState] = useState(() => loadLocal("med_intelligence_collapsed", false));
   const [lastSyncTimestamp, setLastSyncTimestamp] = useState<string | null>(() => loadLocal("med_last_sync", null));
+  const [rememberMe, setRememberMeState] = useState(() => loadLocal("med_remember_me", true));
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  // Initialize persistence on load
+  useEffect(() => {
+    const mode = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+    setPersistence(auth, mode).catch(err => console.error("Initial persistence error:", err));
+  }, []);
 
   const setIsProfessionalMode = useCallback(async (v: boolean) => {
     setIsProfessionalModeState(v);
@@ -176,6 +186,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setIsIntelligenceCollapsed = useCallback((v: boolean) => {
     setIntelligenceCollapsedState(v);
     localStorage.setItem("med_intelligence_collapsed", JSON.stringify(v));
+  }, []);
+
+  const setRememberMe = useCallback((v: boolean) => {
+    setRememberMeState(v);
+    localStorage.setItem("med_remember_me", JSON.stringify(v));
+    
+    // Apply persistence to Firebase
+    const mode = v ? browserLocalPersistence : browserSessionPersistence;
+    setPersistence(auth, mode).catch(err => console.error("Failed to set auth persistence:", err));
   }, []);
 
   const updateUserProfile = useCallback(async (updates: Partial<UserProfile>) => {
@@ -199,8 +218,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Persist simple flags to localStorage (no sensitive data, just UI state)
   useEffect(() => { localStorage.setItem("med_storage_mode", JSON.stringify(storageMode)); }, [storageMode]);
-  useEffect(() => { localStorage.setItem("med_loggedin", JSON.stringify(isLoggedIn)); }, [isLoggedIn]);
-  useEffect(() => { localStorage.setItem("med_userId", JSON.stringify(currentUserId)); }, [currentUserId]);
+  
+  useEffect(() => { 
+    if (rememberMe && isLoggedIn) {
+      localStorage.setItem("med_loggedin", JSON.stringify(true)); 
+    } else if (!isLoggedIn) {
+      localStorage.removeItem("med_loggedin");
+    }
+  }, [isLoggedIn, rememberMe]);
+
+  useEffect(() => { 
+    if (rememberMe && currentUserId) {
+      localStorage.setItem("med_userId", JSON.stringify(currentUserId)); 
+    } else if (!currentUserId) {
+      localStorage.removeItem("med_userId");
+    }
+  }, [currentUserId, rememberMe]);
+
   useEffect(() => { localStorage.setItem("med_has_seen_welcome", JSON.stringify(hasSeenWelcome)); }, [hasSeenWelcome]);
   // Note: med_professional_mode handled by setter now
 
@@ -215,6 +249,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsLoggedIn(false);
         setUserProfile(null);
       }
+      setIsAuthLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -241,7 +276,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setWellnessLogs([]);
   }, []);
 
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
+  const isInitializing = isDataLoading || isAuthLoading;
 
   // Fetch all data based on storageMode
   useEffect(() => {
@@ -250,14 +286,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setMedicines(localPersistence.medicines.getAll());
         setReminders(localPersistence.reminders.getAll());
         setDoseLogs(localPersistence.doseLogs.getAll());
-        setIsInitializing(false);
+        setIsDataLoading(false);
         return;
       }
 
-      if (!currentUserId) {
-        setIsInitializing(false);
+      if (!currentUserId && !isAuthLoading) {
+        setIsDataLoading(false);
         return;
       }
+
+      if (!currentUserId) return;
 
       try {
         // Evaluate profile via Firestore directly
@@ -301,12 +339,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         console.error("Failed to load data from backend:", err);
       } finally {
-        setIsInitializing(false);
+        setIsDataLoading(false);
       }
     };
 
-    fetchAll();
-  }, [currentUserId, storageMode, selectedPatientId]);
+    if (!isAuthLoading) {
+      fetchAll();
+    }
+  }, [currentUserId, storageMode, selectedPatientId, isAuthLoading]);
 
   const completeOnboarding = async (profile: Omit<UserProfile, "id">) => {
     if (!currentUserId) throw new Error("Not logged in");
@@ -501,7 +541,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
         logDose, deleteDoseLog, addPatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing,
         isDawaGPTOpen, setIsDawaGPTOpen, isIntelligenceCollapsed, setIsIntelligenceCollapsed,
-        lastSyncTimestamp, updateUserProfile
+        lastSyncTimestamp, updateUserProfile, rememberMe, setRememberMe
       }}
     >
       {children}

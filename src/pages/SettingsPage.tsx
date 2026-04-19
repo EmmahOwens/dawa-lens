@@ -17,7 +17,7 @@ export default function SettingsPage() {
   const { 
     storageMode, setStorageMode, clearAllData, isLoggedIn, logoutUser, 
     userProfile, syncLocalToCloud, isProfessionalMode, setIsProfessionalMode,
-    lastSyncTimestamp, updateUserProfile 
+    lastSyncTimestamp, updateUserProfile, rememberMe, setRememberMe
   } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
@@ -262,7 +262,7 @@ export default function SettingsPage() {
               <div className="p-2 rounded-xl bg-success/10 text-success">
                 <Shield size={18} />
               </div>
-              <h3 className="font-bold text-foreground">{t("settings.storage_privacy")}</h3>
+              <h3 className="font-bold text-foreground">{t("settings.storage_privacy", "Storage & Security")}</h3>
             </div>
             {isLoggedIn && (
                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-[10px] font-black uppercase tracking-widest">
@@ -270,6 +270,31 @@ export default function SettingsPage() {
                   Protected
                </div>
             )}
+          </div>
+
+          {/* Remember Account Toggle */}
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/50 mb-6 group transition-all hover:bg-muted/50">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+                <Lock size={16} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">{t("settings.remember_me", "Remember Account")}</p>
+                <p className="text-[10px] text-muted-foreground leading-tight uppercase font-bold tracking-tighter opacity-70">
+                  Stay logged in across sessions
+                </p>
+              </div>
+            </div>
+            <Switch 
+              checked={rememberMe} 
+              onCheckedChange={(v) => {
+                setRememberMe(v);
+                toast({
+                  title: v ? "Persistence Enabled" : "Persistence Disabled",
+                  description: v ? "You will stay logged in next time." : "You will be logged out when the app closes.",
+                });
+              }}
+            />
           </div>
 
           <div className="space-y-3 mb-6">

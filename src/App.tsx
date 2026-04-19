@@ -30,6 +30,7 @@ import DawaGPT from "@/components/DawaGPT";
 import { Capacitor } from '@capacitor/core';
 import { Camera } from '@capacitor/camera';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import SplashScreen from "@/components/SplashScreen";
 
 const queryClient = new QueryClient();
 
@@ -38,7 +39,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, needsOnboarding, hasSeenWelcome, isInitializing } = useApp();
   
   if (isInitializing) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-background"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+    return <SplashScreen />;
   }
   
   if (!isLoggedIn) {
@@ -56,7 +57,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 // A wrapper to enforce authentication redirect for onboarding
 function OnboardingRoute({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, needsOnboarding, isInitializing } = useApp();
-  if (isInitializing) return <div className="h-screen w-screen flex items-center justify-center bg-background"><div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" /></div>;
+  if (isInitializing) return <SplashScreen />;
   if (!isLoggedIn) return <Navigate to="/auth" replace />;
   if (!needsOnboarding) return <Navigate to="/" replace />;
   return <>{children}</>;
