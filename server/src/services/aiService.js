@@ -96,16 +96,24 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors) => {
 export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }) => {
   const prompt = `
     You are the "Dawa-Lens Global Travel Companion".
-    Travel: ${currentCity || 'Home'} (${homeTimezone}) to ${destination} (${targetTimezone}).
+    Travel: ${currentCity || 'Home'} (${homeTimezone}) to ${destination} (${targetTimezone || 'Unknown'}).
     Medicines: ${JSON.stringify(medicines.map(m => ({ name: m.name, generic: m.genericName, dosage: m.dosage })))}
     
     Task:
     1. Find equivalent brand names in ${destination}.
-    2. Timezone shift advice.
-    3. Customs restrictions.
+    2. Timezone shift advice for dosing.
+    3. Customs restrictions for these specific meds.
+    4. Provide local emergency contact numbers (Ambulance, Police) for ${destination}.
+    5. List general health risks (e.g. Malaria, yellow fever, water safety) for ${destination}.
 
     Respond in JSON format:
-    { "equivalents": [...], "timezoneAdvice": "...", "customsNotes": "..." }
+    { 
+      "equivalents": [...], 
+      "timezoneAdvice": "...", 
+      "customsNotes": "...",
+      "emergencyContacts": [{ "service": "...", "number": "..." }],
+      "healthRisks": ["..."]
+    }
   `;
   return await callGroq(prompt);
 };
