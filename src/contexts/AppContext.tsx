@@ -5,6 +5,9 @@ import { auth, db } from "../lib/firebase";
 import { onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
+import { scheduleReminders } from "../services/reminderService";
+import { LocalNotifications } from "@capacitor/local-notifications";
+import { Capacitor } from "@capacitor/core";
 
 export type Medicine = {
   id: string;           // maps to Firestore doc.id
@@ -253,6 +256,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     return () => unsubscribe();
   }, []);
+
+  // Sync notifications when reminders change
+  useEffect(() => {
+    if (reminders.length > 0) {
+      scheduleReminders(reminders, doseLogs);
+    }
+  }, [reminders, doseLogs]);
 
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
