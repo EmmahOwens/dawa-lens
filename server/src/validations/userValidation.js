@@ -13,5 +13,6 @@ export const upsertUserSchema = z.object({
     dateOfBirth: z.string().nullable().optional(),
     gender: z.string().nullable().optional(),
     isProfessional: z.boolean().optional(),
+    language: z.string().optional(),
   })
 });

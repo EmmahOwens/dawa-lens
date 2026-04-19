@@ -61,6 +61,7 @@ export type UserProfile = {
   dateOfBirth: string | null;
   gender: "male" | "female" | null;
   isProfessional?: boolean; // CHW Mode
+  language?: string;
 };
 
 export type Patient = {
@@ -115,6 +116,8 @@ type AppContextType = {
   setIsDawaGPTOpen: (v: boolean) => void;
   isIntelligenceCollapsed: boolean;
   setIsIntelligenceCollapsed: (v: boolean) => void;
+  lastSyncTimestamp: string | null;
+  updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -152,6 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(() => loadLocal("med_userId", null));
   const [isDawaGPTOpen, setIsDawaGPTOpen] = useState(false);
   const [isIntelligenceCollapsed, setIntelligenceCollapsedState] = useState(() => loadLocal("med_intelligence_collapsed", false));
+  const [lastSyncTimestamp, setLastSyncTimestamp] = useState<string | null>(() => loadLocal("med_last_sync", null));
 
   const setIsProfessionalMode = useCallback(async (v: boolean) => {
     setIsProfessionalModeState(v);
@@ -173,6 +177,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIntelligenceCollapsedState(v);
     localStorage.setItem("med_intelligence_collapsed", JSON.stringify(v));
   }, []);
+
+  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    if (!currentUserId) return;
+    
+    // Optimistic update
+    setUserProfile(p => p ? { ...p, ...updates } : null);
+    
+    if (storageMode === "cloud") {
+      try {
+        const docRef = doc(db, "users", currentUserId);
+        await setDoc(docRef, updates, { merge: true });
+        // Also sync to MongoDB via API if needed, but for now Firestore is primary for profile
+        await usersApi.upsertProfile({ uid: currentUserId, ...updates });
+      } catch (err) {
+        console.error("Failed to update user profile:", err);
+      }
+    }
+  }, [currentUserId, storageMode]);
 
 
   // Persist simple flags to localStorage (no sensitive data, just UI state)
@@ -439,6 +461,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("dawa_local_reminders");
       localStorage.removeItem("dawa_local_doselogs");
 
+      const now = new Date().toISOString();
+      setLastSyncTimestamp(now);
+      localStorage.setItem("med_last_sync", JSON.stringify(now));
+
     } catch (err) {
       console.error("Sync failed:", err);
     }
@@ -474,7 +500,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         medicines, reminders, doseLogs, patients, wellnessLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId, selectedPatientId, isProfessionalMode,
         addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
         logDose, deleteDoseLog, addPatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing,
-        isDawaGPTOpen, setIsDawaGPTOpen, isIntelligenceCollapsed, setIsIntelligenceCollapsed
+        isDawaGPTOpen, setIsDawaGPTOpen, isIntelligenceCollapsed, setIsIntelligenceCollapsed,
+        lastSyncTimestamp, updateUserProfile
       }}
     >
       {children}
