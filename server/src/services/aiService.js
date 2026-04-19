@@ -4,45 +4,51 @@ import AppError from '../utils/AppError.js';
 
 dotenv.config();
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_MODEL = 'llama-3.1-70b-versatile';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 /**
- * Strip markdown code fences that Gemini sometimes wraps JSON responses in.
- * e.g. ```json\n{...}\n``` → {...}
+ * Strip markdown code fences that AI sometimes wraps JSON responses in.
  */
 const sanitizeJson = (text) => {
   return text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
 };
 
-const callGemini = async (prompt, isJson = true) => {
-  if (!GEMINI_API_KEY) {
+const callGroq = async (prompt, isJson = true) => {
+  if (!GROQ_API_KEY) {
     throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
   }
 
   try {
-    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: isJson ? { responseMimeType: 'application/json' } : {}
+    const payload = {
+      model: GROQ_MODEL,
+      messages: [{ role: 'user', content: prompt }]
+    };
+    if (isJson) {
+      payload.response_format = { type: 'json_object' };
+    }
+
+    const response = await axios.post(GROQ_API_URL, payload, {
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
     });
 
-    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = response.data?.choices?.[0]?.message?.content;
     if (!text) {
       throw new AppError('AI returned an empty response.', 502);
     }
 
     return isJson ? JSON.parse(sanitizeJson(text)) : text;
   } catch (err) {
-    // Re-throw AppErrors (operational errors) as-is
     if (err.isOperational) throw err;
-    // Axios network/API errors
     if (err.response) {
       const status = err.response.status;
       const msg = err.response.data?.error?.message || 'AI API request failed';
-      throw new AppError(`Gemini API error (${status}): ${msg}`, 502);
+      throw new AppError(`Groq API error (${status}): ${msg}`, 502);
     }
-    // JSON parse errors
     if (err instanceof SyntaxError) {
       throw new AppError('AI returned malformed data. Please try again.', 502);
     }
@@ -69,7 +75,7 @@ export const getCoachAdvice = async (logs, medicines, userName) => {
     Respond in JSON format:
     { "advice": "text", "patterns": ["list"], "adherenceScore": 0-100 }
   `;
-  return await callGemini(prompt);
+  return await callGroq(prompt);
 };
 
 export const checkHolisticSafety = async (medicines, lifestyleFactors) => {
@@ -84,7 +90,7 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors) => {
     Respond in JSON format:
     { "interactions": [{ "factor": "...", "risk": "...", "explanation": "...", "advice": "..." }] }
   `;
-  return await callGemini(prompt);
+  return await callGroq(prompt);
 };
 
 export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }) => {
@@ -101,7 +107,7 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
     Respond in JSON format:
     { "equivalents": [...], "timezoneAdvice": "...", "customsNotes": "..." }
   `;
-  return await callGemini(prompt);
+  return await callGroq(prompt);
 };
 
 export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
@@ -123,7 +129,7 @@ export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
       "correlationScore": 85
     }
   `;
-  return await callGemini(prompt);
+  return await callGroq(prompt);
 };
 
 export const checkMealSafety = async (medicines, mealDescription) => {
@@ -138,7 +144,7 @@ export const checkMealSafety = async (medicines, mealDescription) => {
     Respond in JSON format:
     { "risk": "...", "verdict": "...", "explanation": "..." }
   `;
-  return await callGemini(prompt);
+  return await callGroq(prompt);
 };
 
 export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs }) => {
@@ -163,28 +169,34 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     { "text": "...", "suggestions": ["..."], "source": "..." }
   `;
 
-  const contents = messages.map(msg => ({
-    role: msg.role === 'user' ? 'user' : 'model',
-    parts: [{ text: msg.text }]
+  const formattedMessages = messages.map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.text
   }));
 
-  const finalContents = [
-    { role: 'user', parts: [{ text: `System Instruction: ${systemInstruction}` }] },
-    { role: 'model', parts: [{ text: "Understood. I am Dawa-GPT. How can I help you today?" }] },
-    ...contents
+  const finalMessages = [
+    { role: 'system', content: systemInstruction },
+    { role: 'assistant', content: 'Understood. I am Dawa-GPT. How can I help you today?' },
+    ...formattedMessages
   ];
 
-  if (!GEMINI_API_KEY) {
+  if (!GROQ_API_KEY) {
     throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
   }
 
   try {
-    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      contents: finalContents,
-      generationConfig: { responseMimeType: 'application/json' }
+    const response = await axios.post(GROQ_API_URL, {
+      model: GROQ_MODEL,
+      messages: finalMessages,
+      response_format: { type: 'json_object' }
+    }, {
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
     });
 
-    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = response.data?.choices?.[0]?.message?.content;
     if (!text) throw new AppError('AI returned an empty response.', 502);
     return JSON.parse(sanitizeJson(text));
   } catch (err) {
@@ -192,7 +204,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     if (err.response) {
       const status = err.response.status;
       const msg = err.response.data?.error?.message || 'AI API request failed';
-      throw new AppError(`Gemini API error (${status}): ${msg}`, 502);
+      throw new AppError(`Groq API error (${status}): ${msg}`, 502);
     }
     if (err instanceof SyntaxError) {
       throw new AppError('AI returned malformed data. Please try again.', 502);
