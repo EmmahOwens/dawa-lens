@@ -3,9 +3,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = 'llama-3.2-11b-vision-preview';
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const getPillIdPrompt = (patientAge) => {
   let ageContext = patientAge ? `specifically for a patient aged ${patientAge}` : "standard adult";
@@ -45,38 +45,34 @@ const PILL_ID_SCHEMA = {
 };
 
 export const identifyPill = async (image, patientAge) => {
-  if (!GROQ_API_KEY) throw new Error('GROQ_API_KEY missing');
+  if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY missing');
 
   const cleanBase64 = image.replace(/^data:image\/\w+;base64,/, '');
   const mimeType = image.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/jpeg';
 
   const requestBody = {
-    model: GROQ_MODEL,
-    messages: [
+    contents: [
       {
-        role: "user",
-        content: [
-          { type: "text", text: getPillIdPrompt(patientAge) + "\n\nFormat your response EXACTLY as JSON matching this schema:\n" + JSON.stringify(PILL_ID_SCHEMA) },
-          { type: "image_url", image_url: { url: `data:${mimeType};base64,${cleanBase64}` } }
+        parts: [
+          { inline_data: { mime_type: mimeType, data: cleanBase64 } },
+          { text: getPillIdPrompt(patientAge) }
         ]
       }
     ],
-    temperature: 0.4
+    generationConfig: {
+      temperature: 0.4,
+      responseMimeType: 'application/json',
+      responseSchema: PILL_ID_SCHEMA
+    }
   };
 
-  const response = await axios.post(GROQ_API_URL, requestBody, { 
-    timeout: 30000,
-    headers: {
-      'Authorization': `Bearer ${GROQ_API_KEY}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  const choice = response.data?.choices?.[0];
+  const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, requestBody, { timeout: 30000 });
+  const candidate = response.data?.candidates?.[0];
 
-  if (!choice) throw new Error('No response from Groq');
+  if (!candidate) throw new Error('No response from Gemini');
+  if (candidate.finishReason === 'SAFETY') throw new Error('Image blocked by safety filters');
 
-  let rawText = choice.message?.content || "";
-  rawText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+  const rawText = candidate.content?.parts?.[0]?.text;
   const parsed = JSON.parse(rawText);
 
   // Normalization
@@ -99,6 +95,6 @@ export const identifyPill = async (image, patientAge) => {
     imprints: parsed.imprints || [],
     labels: parsed.labels || [],
     summary: parsed.summary || '',
-    engine: 'llama-3.2-11b-vision-preview'
+    engine: 'gemini-2.0-flash'
   };
 };
