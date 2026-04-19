@@ -1,16 +1,24 @@
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe, Users, ArrowRight } from "lucide-react";
+import { 
+  ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe, Users, 
+  ArrowRight, User, Mail, Database, Clock, ChevronRight, CheckCircle2 
+} from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { formatDistanceToNow } from "date-fns";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { storageMode, setStorageMode, clearAllData, isLoggedIn, logoutUser, userProfile, syncLocalToCloud, isProfessionalMode, setIsProfessionalMode } = useApp();
+  const { 
+    storageMode, setStorageMode, clearAllData, isLoggedIn, logoutUser, 
+    userProfile, syncLocalToCloud, isProfessionalMode, setIsProfessionalMode,
+    lastSyncTimestamp, updateUserProfile 
+  } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
 
@@ -38,8 +46,12 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLanguageChange = (lang: string) => {
+  const handleLanguageChange = async (lang: string) => {
     i18n.changeLanguage(lang);
+    if (isLoggedIn) {
+      await updateUserProfile({ language: lang });
+    }
+    toast({ title: "Language Updated", description: `App language set to ${lang === 'en' ? 'English' : 'Swahili'}` });
   };
 
   const calculateAge = (dob: string | null) => {
@@ -55,63 +67,113 @@ export default function SettingsPage() {
     }
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="px-4 pt-6 pb-4">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-        <ArrowLeft size={16} /> {t("common.back")}
-      </button>
-
-      <motion.h1
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-2xl font-bold text-foreground mb-1 tracking-tight"
+    <div className="min-h-screen bg-background px-4 pt-6 pb-24">
+      {/* Back Button */}
+      <motion.button 
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        onClick={() => navigate(-1)} 
+        className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-8 hover:text-foreground transition-colors group"
       >
-        {t("settings.title")}
-      </motion.h1>
-      
-      {userProfile && (
-        <motion.p 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
-          className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-8 opacity-80"
-        >
-          {userProfile.name} {calculateAge(userProfile.dateOfBirth) !== null && `• ${t("settings.years_old", { age: calculateAge(userProfile.dateOfBirth) })}`}
-        </motion.p>
-      )}
-
-      <div className="space-y-3">
-        {/* Language */}
-        <div className="premium-card">
-          <h2 className="section-title flex items-center gap-2">
-            <Globe size={14} /> {t("settings.language_preferences")}
-          </h2>
-          <div className="flex gap-2">
-            <Button
-              variant={i18n.language.startsWith('en') ? "default" : "outline"}
-              onClick={() => handleLanguageChange('en')}
-              className="flex-1 rounded-xl h-11 text-xs font-bold uppercase tracking-wider"
-            >
-              {t("settings.english")}
-            </Button>
-            <Button
-              variant={i18n.language.startsWith('sw') ? "default" : "outline"}
-              onClick={() => handleLanguageChange('sw')}
-              className="flex-1 rounded-xl h-11 text-xs font-bold uppercase tracking-wider"
-            >
-              {t("settings.swahili")}
-            </Button>
-          </div>
+        <div className="p-1.5 rounded-full bg-secondary group-hover:bg-secondary/80">
+          <ArrowLeft size={14} />
         </div>
+        {t("common.back")}
+      </motion.button>
 
-        {/* CHW Mode */}
-        <div className="premium-card border-primary/20 bg-primary/5 relative overflow-hidden group">
-          <div className="absolute top-[-10%] right-[-5%] p-4 opacity-0 group-hover:opacity-5 transition-opacity">
-            <Users size={120} className="text-primary" />
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
+      >
+        <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
+          {t("settings.title")}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Manage your account, preferences, and data security.
+        </p>
+      </motion.div>
+      
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="space-y-6"
+      >
+        {/* 1. Profile Section */}
+        <motion.div variants={itemVariants} className="premium-card relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
+          
+          <div className="flex items-center gap-4 mb-6 relative z-10">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <User size={32} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground tracking-tight">
+                {userProfile?.name || "Anonymous User"}
+              </h2>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5 opacity-70">
+                {calculateAge(userProfile?.dateOfBirth || null) !== null 
+                  ? `${calculateAge(userProfile?.dateOfBirth || null)} ${t("settings.years_old", { age: "" }).trim()}`
+                  : "Age not set"}
+              </p>
+            </div>
           </div>
+
+          <div className="space-y-3 pt-4 border-t border-border/50 relative z-10">
+            {isLoggedIn && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Mail size={14} />
+                  <span>Account</span>
+                </div>
+                <span className="font-medium text-foreground opacity-80">Synced with Cloud</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Database size={14} />
+                <span>Storage</span>
+              </div>
+              <span className="font-medium text-foreground opacity-80 uppercase tracking-tighter">
+                {storageMode === "cloud" ? "Cloud Sync" : "Local Device Only"}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* 2. CHW / Professional Hub - Highlighted */}
+        <motion.div 
+          variants={itemVariants} 
+          className={`premium-card border-primary/20 transition-all duration-500 ${isProfessionalMode ? 'bg-primary/5 ring-1 ring-primary/20 shadow-lg shadow-primary/5' : 'bg-card'}`}
+        >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="section-title flex items-center gap-2 text-primary mb-0">
-              <Users size={16} /> {t("settings.professional_hub")}
-            </h2>
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl transition-colors ${isProfessionalMode ? 'bg-primary text-primary-foreground shadow-md' : 'bg-primary/10 text-primary'}`}>
+                <Users size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-foreground">{t("settings.professional_hub")}</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Beta Feature</p>
+              </div>
+            </div>
             <Switch 
                id="professional-mode-switch"
                aria-label={t("settings.chw_label")}
@@ -120,23 +182,23 @@ export default function SettingsPage() {
                  setIsProfessionalMode(v);
                  toast({
                    title: v ? "Professional Mode Enabled" : "Professional Mode Disabled",
-                   description: v ? "You can now manage multiple patients in the Family Hub." : "Returning to personal mode.",
+                   description: v ? "Manage multiple patients in the Client Hub." : "Returning to personal mode.",
                  });
                }}
             />
           </div>
-          <div>
-            <p className="text-sm text-foreground font-bold tracking-tight">{t("settings.chw_label")}</p>
-            <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed max-w-[260px] opacity-80">
-              {t("settings.chw_desc")}
-            </p>
-          </div>
+          
+          <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+            {isProfessionalMode 
+              ? "You are in Professional Mode. This allows you to manage health records and adherence for multiple clients or family members."
+              : t("settings.chw_desc")}
+          </p>
           
           <AnimatePresence>
             {isProfessionalMode && (
               <motion.div 
                 initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                animate={{ opacity: 1, height: "auto", marginTop: 20 }}
+                animate={{ opacity: 1, height: "auto", marginTop: 8 }}
                 exit={{ opacity: 0, height: 0, marginTop: 0 }}
                 className="pt-4 border-t border-primary/10"
               >
@@ -144,144 +206,206 @@ export default function SettingsPage() {
                   variant="default" 
                   size="lg" 
                   onClick={() => navigate("/family")}
-                  className="w-full bg-primary text-primary-foreground font-bold uppercase tracking-wider text-[10px] rounded-xl h-11 shadow-lg shadow-primary/10"
+                  className="w-full bg-primary text-primary-foreground font-bold uppercase tracking-wider text-[11px] rounded-xl h-12 shadow-lg shadow-primary/20 group"
                 >
-                  {t("settings.manage_patients")} <ArrowRight size={14} className="ml-2" />
+                  Manage Patients <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
 
-        {/* Appearance */}
-        <div className="premium-card">
-          <h2 className="section-title flex items-center gap-2">
-            <Moon size={14} /> {t("settings.appearance")}
-          </h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-card-foreground font-semibold">{t("settings.dark_mode")}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5 opacity-80">{t("settings.theme_desc")}</p>
+        {/* 3. Preferences */}
+        <div className="grid grid-cols-1 gap-4">
+          <motion.div variants={itemVariants} className="premium-card">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500">
+                <Globe size={18} />
+              </div>
+              <h3 className="font-bold text-foreground">{t("settings.language_preferences")}</h3>
+            </div>
+            
+            <div className="flex gap-2 p-1 bg-secondary/50 rounded-2xl">
+              <button
+                onClick={() => handleLanguageChange('en')}
+                className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${i18n.language.startsWith('en') ? 'bg-background text-primary shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {t("settings.english")}
+              </button>
+              <button
+                onClick={() => handleLanguageChange('sw')}
+                className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${i18n.language.startsWith('sw') ? 'bg-background text-primary shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                {t("settings.swahili")}
+              </button>
+            </div>
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="premium-card flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500">
+                <Moon size={18} />
+              </div>
+              <div>
+                <h3 className="font-bold text-foreground">{t("settings.appearance")}</h3>
+                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight opacity-70">Theme Mode</p>
+              </div>
             </div>
             <ThemeToggle id="theme-toggle" />
-          </div>
+          </motion.div>
         </div>
 
-        {/* Account */}
-        <div className="premium-card">
-          <h2 className="section-title flex items-center gap-2">
-            <Lock size={14} /> {t("settings.account")}
-          </h2>
+        {/* 4. Security & Cloud */}
+        <motion.div variants={itemVariants} className="premium-card">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-success/10 text-success">
+                <Shield size={18} />
+              </div>
+              <h3 className="font-bold text-foreground">{t("settings.storage_privacy")}</h3>
+            </div>
+            {isLoggedIn && (
+               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-success/10 text-success text-[10px] font-black uppercase tracking-widest">
+                  <CheckCircle2 size={10} />
+                  Protected
+               </div>
+            )}
+          </div>
+
+          <div className="space-y-3 mb-6">
+            <button 
+              onClick={() => handleStorageModeChange("local")}
+              className={`w-full p-4 rounded-2xl border text-left transition-all ${storageMode === "local" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-muted/30 hover:border-border"}`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-bold text-foreground">{t("settings.local_only")}</span>
+                {storageMode === "local" && <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />}
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{t("settings.local_desc")}</p>
+            </button>
+
+            <button 
+              onClick={() => handleStorageModeChange("cloud")}
+              className={`w-full p-4 rounded-2xl border text-left transition-all ${storageMode === "cloud" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-muted/30 hover:border-border"}`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-bold text-foreground">{t("settings.cloud_sync")}</span>
+                {storageMode === "cloud" && <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />}
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{t("settings.cloud_desc")}</p>
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-border/50">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock size={14} />
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                Last Synced: {lastSyncTimestamp ? formatDistanceToNow(new Date(lastSyncTimestamp), { addSuffix: true }) : "Never"}
+              </span>
+            </div>
+            {isLoggedIn && (
+              <button 
+                onClick={() => syncLocalToCloud()}
+                className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
+              >
+                Sync Now
+              </button>
+            )}
+          </div>
+        </motion.div>
+
+        {/* 5. Account Management */}
+        <motion.div variants={itemVariants} className="premium-card">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-xl bg-muted text-muted-foreground">
+              <Lock size={18} />
+            </div>
+            <h3 className="font-bold text-foreground">{t("settings.account")}</h3>
+          </div>
+
           {isLoggedIn ? (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground font-medium">{t("settings.signed_in")}</p>
+            <div className="flex items-center justify-between bg-muted/30 p-4 rounded-2xl border border-border/50">
+              <div>
+                <p className="text-xs font-bold text-foreground">{userProfile?.name?.split(' ')[0] || "User"}</p>
+                <p className="text-[10px] text-muted-foreground">{t("settings.signed_in")}</p>
+              </div>
               <Button
-                size="sm"
                 variant="outline"
-                className="rounded-lg h-9 px-4 text-xs font-bold uppercase tracking-wider"
-                aria-label={t("settings.logout")}
+                size="sm"
+                className="rounded-xl h-10 px-6 text-[11px] font-black uppercase tracking-widest border-border/80 hover:bg-destructive/5 hover:text-destructive transition-colors"
                 onClick={() => {
                   logoutUser();
                   toast({ title: t("settings.logout") });
+                  navigate("/");
                 }}
               >
                 {t("settings.logout")}
               </Button>
             </div>
           ) : (
-            <Button size="sm" className="rounded-lg h-9 px-6 text-xs font-bold uppercase tracking-wider" onClick={() => navigate("/auth")}>
-              {t("settings.login_btn")}
+            <Button 
+              className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-primary/10" 
+              onClick={() => navigate("/auth")}
+            >
+              Sign In to Dawa Lens
             </Button>
           )}
-        </div>
+        </motion.div>
 
-        {/* Privacy & Storage */}
-        <div className="premium-card">
-          <h2 className="section-title flex items-center gap-2">
-            <Shield size={14} /> {t("settings.storage_privacy")}
-          </h2>
+        {/* 6. Notifications */}
+        <motion.div variants={itemVariants} className="premium-card">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+              <Bell size={18} />
+            </div>
+            <h3 className="font-bold text-foreground">{t("settings.notifications")}</h3>
+          </div>
           
-          <div className="space-y-3">
-            <div 
-              onClick={() => handleStorageModeChange("local")}
-              className={`p-4 rounded-xl border transition-all cursor-pointer ${storageMode === "local" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-muted/30 hover:border-border"}`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-sm font-bold text-foreground">{t("settings.local_only")}</p>
-                {storageMode === "local" && <div className="w-2 h-2 rounded-full bg-primary" />}
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed opacity-80">{t("settings.local_desc")}</p>
-            </div>
-
-            <div 
-              onClick={() => handleStorageModeChange("cloud")}
-              className={`p-4 rounded-xl border transition-all cursor-pointer ${storageMode === "cloud" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-muted/30 hover:border-border"}`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-sm font-bold text-foreground">{t("settings.cloud_sync")}</p>
-                {storageMode === "cloud" && <div className="w-2 h-2 rounded-full bg-primary" />}
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed opacity-80">{t("settings.cloud_desc")}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-border/50">
-            <div>
-              <p className="text-xs text-foreground font-bold">{t("settings.encrypted")}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5 opacity-80">{t("settings.encrypted_desc")}</p>
-            </div>
-            <span className="text-[10px] text-success font-bold bg-success/10 rounded-lg px-2 py-1 tracking-wider uppercase">{t("settings.active")}</span>
-          </div>
-        </div>
-
-        {/* Notifications */}
-        <div className="premium-card">
-          <h2 className="section-title flex items-center gap-2">
-            <Bell size={14} /> {t("settings.notifications")}
-          </h2>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-card-foreground font-semibold">{t("settings.push_notifs")}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5 opacity-80">{t("settings.push_desc")}</p>
+            <div className="max-w-[70%]">
+              <p className="text-sm font-bold text-foreground">{t("settings.push_notifs")}</p>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-tight opacity-80">{t("settings.push_desc")}</p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className={`text-[9px] font-bold uppercase tracking-wider ${
-                  typeof Notification !== 'undefined' && Notification.permission === 'granted' ? 'text-success' : 'text-muted-foreground'
-                }`}>
-                  {typeof Notification !== 'undefined' ? Notification.permission : 'Not Supported'}
-                </p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-lg h-9 px-4 text-xs font-bold uppercase tracking-wider"
-                aria-label={t("settings.enable_notifs", "Enable Notifications")}
-                onClick={async () => {
-                  if ("Notification" in window) {
-                    const perm = await Notification.requestPermission();
-                    toast({
-                      title: perm === "granted" ? "Notifications enabled!" : "Notifications blocked",
-                      description: perm === "granted" ? "You'll receive dose reminders" : "Please enable in browser settings",
-                    });
-                  }
-                }}
-              >
-                {t("settings.enable")}
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className={`rounded-xl h-10 px-4 text-[10px] font-black uppercase tracking-widest ${
+                typeof Notification !== 'undefined' && Notification.permission === 'granted' 
+                  ? 'border-success/20 bg-success/5 text-success hover:bg-success/10' 
+                  : 'border-border/80'
+              }`}
+              onClick={async () => {
+                if ("Notification" in window) {
+                  const perm = await Notification.requestPermission();
+                  toast({
+                    title: perm === "granted" ? "Notifications enabled!" : "Notifications blocked",
+                    description: perm === "granted" ? "You'll receive dose reminders" : "Please enable in browser settings",
+                    variant: perm === "granted" ? "default" : "destructive"
+                  });
+                }
+              }}
+            >
+              {typeof Notification !== 'undefined' && Notification.permission === 'granted' ? 'Enabled' : 'Enable'}
+            </Button>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Danger zone */}
-        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6">
-          <h2 className="section-title text-destructive flex items-center gap-2 mb-4">
-            <Trash2 size={14} /> {t("settings.danger_zone")}
-          </h2>
+        {/* 7. Danger Zone */}
+        <motion.div variants={itemVariants} className="p-6 rounded-3xl border border-destructive/10 bg-destructive/5">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-xl bg-destructive/10 text-destructive">
+              <Trash2 size={18} />
+            </div>
+            <h3 className="font-bold text-destructive tracking-tight">{t("settings.danger_zone")}</h3>
+          </div>
+          
+          <p className="text-[11px] text-muted-foreground mb-6 leading-relaxed">
+            Deleting your data is permanent. All medications, logs, and profile information stored on this device will be erased.
+          </p>
+          
           <Button
             variant="destructive"
-            size="sm"
-            className="rounded-lg h-9 w-full sm:w-auto px-6 text-xs font-bold uppercase tracking-wider shadow-lg shadow-destructive/10"
+            className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-destructive/10"
             onClick={() => {
               if (window.confirm(t("settings.confirm_delete"))) {
                 clearAllData();
@@ -291,7 +415,14 @@ export default function SettingsPage() {
           >
             {t("settings.clear_data")}
           </Button>
-        </div>
+        </motion.div>
+      </motion.div>
+
+      {/* App Version Info */}
+      <div className="mt-12 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-30">
+          Dawa Lens v2.4.0 • Secure Health Data
+        </p>
       </div>
     </div>
   );

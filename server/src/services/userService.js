@@ -14,6 +14,7 @@ export const upsertUserProfile = async (uid, data) => {
     dateOfBirth: data.dateOfBirth || null,
     gender: data.gender || null,
     isProfessional: data.isProfessional ?? false,
+    language: data.language || 'en',
     updatedAt: new Date().toISOString()
   };
 
