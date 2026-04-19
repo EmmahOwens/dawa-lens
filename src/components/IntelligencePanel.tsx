@@ -15,11 +15,13 @@ import { DashboardWidget } from "./intelligence/DashboardWidget";
 import { ScanWidget } from "./intelligence/ScanWidget";
 import { WellnessWidget } from "./intelligence/WellnessWidget";
 import { MedDetailsWidget } from "./intelligence/MedDetailsWidget";
+import { useIntelligenceContext } from "@/hooks/useIntelligenceContext";
+import { Maximize2, BrainCircuit } from "lucide-react";
 
 export function IntelligencePanel() {
   const { t } = useTranslation();
   const location = useLocation();
-  const { medicines, userProfile, doseLogs, reminders, isIntelligenceCollapsed, setIsIntelligenceCollapsed, isDawaGPTOpen } = useApp();
+  const { medicines, userProfile, doseLogs, reminders, isIntelligenceCollapsed, setIsIntelligenceCollapsed, isDawaGPTOpen, setIsDawaGPTOpen } = useApp();
   
   const [miniChatInput, setMiniChatInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -38,6 +40,8 @@ export function IntelligencePanel() {
   });
 
   const adherenceRate = reminders.length > 0 ? Math.round((todayLogs.length / reminders.length) * 100) : 0;
+  
+  const { insight, isLoading: isInsightLoading } = useIntelligenceContext();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -139,6 +143,35 @@ export function IntelligencePanel() {
             </div>
           )}
         </section>
+
+        {/* Dynamic Context Engine Insight */}
+        {medicines.length > 0 && (
+          <section className="animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex items-center justify-between mb-4 px-1 mt-8">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">AI Insight</h3>
+              <BrainCircuit size={14} className="text-primary" />
+            </div>
+            <div className="bg-primary/5 border border-primary/20 rounded-[1.5rem] p-5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <BrainCircuit size={40} className="text-primary" />
+              </div>
+              {isInsightLoading ? (
+                <div className="flex flex-col gap-2">
+                  <div className="h-3 w-3/4 bg-primary/10 rounded-full animate-pulse" />
+                  <div className="h-3 w-1/2 bg-primary/10 rounded-full animate-pulse" />
+                </div>
+              ) : insight ? (
+                <p className="text-[11px] leading-relaxed text-foreground/90 font-medium relative z-10 italic">
+                  "{insight}"
+                </p>
+              ) : (
+                <p className="text-[11px] leading-relaxed text-muted-foreground font-medium relative z-10">
+                  Add more logs to get personalized coaching insights.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
       </div>
     );
   };
@@ -209,8 +242,17 @@ export function IntelligencePanel() {
               className="flex flex-col min-h-0 pt-4 border-t border-border/50"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Dawa-GPT Mini</h3>
-                <Sparkles size={12} className="text-primary" />
+                <div className="flex items-center gap-2">
+                  <Sparkles size={12} className="text-primary" />
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Dawa-GPT Mini</h3>
+                </div>
+                <button 
+                  onClick={() => setIsDawaGPTOpen(true)}
+                  className="hidden md:flex items-center gap-1.5 text-[9px] font-bold text-primary hover:text-primary/80 transition-colors uppercase tracking-widest border border-primary/20 bg-primary/5 rounded-full px-2 py-1"
+                >
+                  <Maximize2 size={10} />
+                  <span>Expand</span>
+                </button>
               </div>
               <div className="bg-muted/30 rounded-[2rem] border border-border p-4 flex flex-col h-[320px] relative overflow-hidden group/chat">
                 <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover/chat:opacity-10 transition-opacity">
