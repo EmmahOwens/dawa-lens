@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronRight, 
-  ChevronLeft, 
   Search, 
   ShieldCheck, 
   Zap, 
@@ -11,7 +10,7 @@ import {
   Users, 
   Globe, 
   Rocket,
-  ArrowRight
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
@@ -20,58 +19,58 @@ const ONBOARDING_STEPS = [
   {
     title: "Karibu Dawa Lens",
     subtitle: "Your intelligent companion for medication safety and health clarity.",
-    emoji: "👋",
-    color: "from-indigo-500/20 to-purple-500/20",
-    icon: null
+    icon: Sparkles,
+    color: "rgba(99, 102, 241, 0.4)", // Indigo glow
+    iconColor: "text-indigo-500",
   },
   {
     title: "Snap. Identify. Learn.",
     subtitle: "Identify any pill or medication instantly using our AI vision technology.",
-    emoji: "🔍",
-    color: "from-teal-500/20 to-cyan-500/20",
-    icon: Search
+    icon: Search,
+    color: "rgba(20, 184, 166, 0.4)", // Teal glow
+    iconColor: "text-teal-500",
   },
   {
     title: "Verified Safety Data",
     subtitle: "Get detailed information on side effects, dosages, and verified health data.",
-    emoji: "🛡️",
-    color: "from-blue-500/20 to-indigo-500/20",
-    icon: ShieldCheck
+    icon: ShieldCheck,
+    color: "rgba(59, 130, 246, 0.4)", // Blue glow
+    iconColor: "text-blue-500",
   },
   {
     title: "Interaction Shield",
     subtitle: "We automatically check for dangerous conflicts between your medications.",
-    emoji: "⚡",
-    color: "from-orange-500/20 to-red-500/20",
-    icon: Zap
+    icon: Zap,
+    color: "rgba(239, 68, 68, 0.4)", // Red glow
+    iconColor: "text-red-500",
   },
   {
     title: "Never Miss a Dose",
     subtitle: "Smart, gentle reminders tailored perfectly to your daily routine.",
-    emoji: "⏰",
-    color: "from-rose-500/20 to-pink-500/20",
-    icon: Bell
+    icon: Bell,
+    color: "rgba(236, 72, 153, 0.4)", // Pink glow
+    iconColor: "text-pink-500",
   },
   {
     title: "Care for Your Family",
     subtitle: "Manage medications and health profiles for your entire household.",
-    emoji: "👨‍👩‍👧‍👦",
-    color: "from-violet-500/20 to-purple-500/20",
-    icon: Users
+    icon: Users,
+    color: "rgba(139, 92, 246, 0.4)", // Violet glow
+    iconColor: "text-violet-500",
   },
   {
     title: "Speaks Your Language",
     subtitle: "Clear medical information available in Swahili and other local languages.",
-    emoji: "🌍",
-    color: "from-emerald-500/20 to-teal-500/20",
-    icon: Globe
+    icon: Globe,
+    color: "rgba(16, 185, 129, 0.4)", // Emerald glow
+    iconColor: "text-emerald-500",
   },
   {
     title: "Ready to Begin?",
     subtitle: "Join thousands of users managing their health with smarter medicine tools.",
-    emoji: "🚀",
-    color: "from-purple-600/30 to-indigo-600/30",
-    icon: Rocket
+    icon: Rocket,
+    color: "rgba(124, 58, 237, 0.4)", // Purple glow
+    iconColor: "text-purple-500",
   }
 ];
 
@@ -88,12 +87,6 @@ export default function WelcomePage() {
     }
   };
 
-  const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep(s => s - 1);
-    }
-  };
-
   const handleFinish = () => {
     setHasSeenWelcome(true);
     navigate("/auth");
@@ -103,130 +96,109 @@ export default function WelcomePage() {
   const Icon = step.icon;
 
   return (
-    <div className={`min-h-screen flex flex-col bg-gradient-to-br ${step.color} transition-colors duration-700 ease-in-out overflow-hidden`}>
-      {/* Skip Button */}
-      <div className="absolute top-6 right-6 z-20">
+    <div className="min-h-screen flex flex-col bg-background relative overflow-hidden selection:bg-primary/20">
+      {/* Dynamic Background Glow Orbs */}
+      <motion.div 
+        className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] rounded-full blur-[100px] opacity-50 pointer-events-none"
+        animate={{ backgroundColor: step.color }}
+        transition={{ duration: 1, ease: "easeInOut" }}
+      />
+      <motion.div 
+        className="absolute bottom-[-10%] right-[-10%] w-[70vw] h-[70vw] max-w-[700px] max-h-[700px] rounded-full blur-[120px] opacity-40 pointer-events-none"
+        animate={{ backgroundColor: step.color }}
+        transition={{ duration: 1.5, ease: "easeInOut" }}
+      />
+
+      {/* Header (Skip Button) */}
+      <div className="relative z-20 flex justify-end p-6">
         <Button 
           variant="ghost" 
-          className="text-muted-foreground hover:text-foreground font-medium"
+          className="text-muted-foreground/60 hover:text-foreground font-semibold tracking-wide"
           onClick={handleFinish}
         >
           Skip
         </Button>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 relative">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10 w-full max-w-md mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="w-full max-w-sm text-center flex flex-col items-center"
+            initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
+            transition={{ duration: 0.4, ease: "easeInOut" }}
+            className="w-full flex flex-col items-center"
           >
-            {/* Animated Emoji/Icon Container */}
-            <motion.div
-              initial={{ scale: 0.5, rotate: -10 }}
-              animate={{ 
-                scale: 1, 
-                rotate: 0,
-                y: [0, -10, 0] 
-              }}
-              transition={{ 
-                scale: { type: "spring", bounce: 0.5 },
-                y: { duration: 3, repeat: Infinity, ease: "easeInOut" }
-              }}
-              className="relative mb-12"
+            {/* Frosted Glass Icon Container */}
+            <motion.div 
+              className="relative w-40 h-40 mb-10 rounded-[2.5rem] bg-card/40 border border-border/50 backdrop-blur-2xl shadow-2xl flex items-center justify-center group"
+              initial={{ y: 20 }}
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <div className="w-48 h-48 rounded-2xl bg-white/40 backdrop-blur-xl flex items-center justify-center shadow-2xl border border-white/50 relative overflow-hidden group">
-                <span className="text-8xl select-none filter drop-shadow-lg">
-                  {step.emoji}
-                </span>
-                
-                {/* Secondary floating elements centered around gravity */}
-                <motion.div 
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-0 opacity-10"
-                >
-                  {Icon && <Icon className="absolute top-4 right-4 w-12 h-12" />}
-                </motion.div>
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-[2.5rem] pointer-events-none" />
+              <Icon strokeWidth={1.5} className={`w-20 h-20 ${step.iconColor} drop-shadow-xl`} />
               
-              {/* Decorative rings */}
-              <div className="absolute -inset-4 border-2 border-white/20 rounded-3xl animate-pulse" />
-              <div className="absolute -inset-8 border border-white/10 rounded-[2.5rem] animate-pulse delay-75" />
+              {/* Inner Glow corresponding to step color */}
+              <motion.div 
+                className="absolute inset-0 rounded-[2.5rem] blur-xl -z-10 opacity-40"
+                animate={{ backgroundColor: step.color }}
+              />
             </motion.div>
 
-            {/* Text Content */}
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-4xl font-bold text-foreground mb-4 tracking-tight leading-tight"
-            >
-              {step.title}
-            </motion.h1>
-            
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-lg text-muted-foreground leading-relaxed px-4 font-medium opacity-80"
-            >
-              {step.subtitle}
-            </motion.p>
+            {/* Typography */}
+            <div className="text-center space-y-4 w-full">
+              <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tighter leading-tight drop-shadow-sm">
+                {step.title}
+              </h1>
+              <p className="text-[15px] md:text-base text-muted-foreground/80 font-medium leading-relaxed px-2">
+                {step.subtitle}
+              </p>
+            </div>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Footer Navigation */}
-      <div className="px-6 py-12 flex flex-col items-center gap-8">
-        {/* Step Indicators */}
-        <div className="flex gap-2">
+      {/* Footer (Navigation & Progress) */}
+      <div className="relative z-20 px-6 pb-12 pt-8 w-full max-w-md mx-auto flex flex-col items-center gap-10">
+        
+        {/* Segmented Progress Bar */}
+        <div className="w-full flex gap-1.5 h-1.5 px-4">
           {ONBOARDING_STEPS.map((_, i) => (
-            <motion.div
-              key={i}
-              animate={{
-                width: i === currentStep ? 24 : 8,
-                backgroundColor: i === currentStep ? "hsl(var(--primary))" : "hsl(var(--muted-foreground)/0.3)"
-              }}
-              className="h-2 rounded-full transition-colors duration-300"
-            />
+            <div key={i} className="flex-1 h-full rounded-full bg-muted/40 overflow-hidden relative">
+              <motion.div 
+                className="absolute inset-0 bg-primary origin-left"
+                initial={{ scaleX: 0 }}
+                animate={{ 
+                  scaleX: i < currentStep ? 1 : i === currentStep ? 1 : 0,
+                  opacity: i === currentStep ? [0.5, 1] : 1
+                }}
+                transition={{ 
+                  scaleX: { duration: 0.4, ease: "easeOut" },
+                  opacity: i === currentStep ? { duration: 1, repeat: Infinity, repeatType: "reverse" } : { duration: 0 }
+                }}
+              />
+            </div>
           ))}
         </div>
 
-        {/* Buttons */}
-        <div className="w-full max-w-sm flex items-center gap-4">
-          {currentStep > 0 && (
-            <Button
-              variant="outline"
-              size="lg"
-              className="h-14 w-14 rounded-full p-0 flex-shrink-0 bg-white/20 hover:bg-white/40 border-white/30"
-              onClick={handleBack}
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </Button>
+        {/* Action Button */}
+        <Button
+          onClick={handleNext}
+          className="w-full h-14 rounded-2xl text-[17px] font-bold shadow-xl shadow-primary/20 active:scale-[0.98] transition-all bg-primary/90 hover:bg-primary backdrop-blur-sm group"
+        >
+          {currentStep === ONBOARDING_STEPS.length - 1 ? (
+            <span className="flex items-center justify-center w-full gap-2">
+              Get Started <Rocket className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+            </span>
+          ) : (
+            <span className="flex items-center justify-center w-full gap-2">
+              Continue <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </span>
           )}
-
-          <Button
-            size="lg"
-            className={`h-14 rounded-xl text-lg font-bold flex-1 shadow-lg shadow-primary/20 transition-all active:scale-[0.98] ${currentStep === 0 ? "w-full" : ""}`}
-            onClick={handleNext}
-          >
-            {currentStep === ONBOARDING_STEPS.length - 1 ? (
-              <span className="flex items-center gap-2">
-                Get Started <Rocket className="w-5 h-5" />
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                Next <ChevronRight className="w-5 h-5" />
-              </span>
-            )}
-          </Button>
-        </div>
+        </Button>
       </div>
     </div>
   );
