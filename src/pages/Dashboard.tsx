@@ -9,6 +9,8 @@ import AchievementOverlay from "@/components/AchievementOverlay";
 import { DashboardBanner } from "@/components/DashboardBanner";
 import { FeatureSlideshow } from "@/components/FeatureSlideshow";
 import { calculateRefillStatus, RefillStatus } from "@/services/refillService";
+import { calculateNextDose, NextDoseInfo } from "@/services/reminderService";
+import { Clock as ClockIcon } from "lucide-react";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
@@ -24,6 +26,16 @@ export default function Dashboard() {
       .map(m => calculateRefillStatus(m, reminders))
       .filter((s): s is RefillStatus => s !== null && s.isLow);
   }, [medicines, reminders]);
+
+  const nextDose = useMemo(() => {
+    return calculateNextDose(reminders, doseLogs);
+  }, [reminders, doseLogs]);
+
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000); // update every min
+    return () => clearInterval(timer);
+  }, []);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -126,6 +138,43 @@ export default function Dashboard() {
           </motion.button>
         )}
       </motion.div>
+
+      {/* 1.5. Next Dose Hero Card */}
+      {nextDose && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-6 rounded-[2rem] bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 relative overflow-hidden active:scale-[0.98] transition-transform"
+          onClick={() => navigate("/history")}
+        >
+          <div className="absolute top-[-20%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl" />
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                <ClockIcon size={18} className="text-white" />
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">Next Dose Due</span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-4xl font-black tracking-tight mb-1">
+                  {nextDose.timeUntil}
+                </h2>
+                <p className="text-sm font-semibold opacity-90">
+                  {nextDose.reminder.medicineName} • {nextDose.reminder.time}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 rounded-full backdrop-blur-md border border-white/10">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white">Live</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* 2. Quick Actions Grid */}
       <motion.div 
