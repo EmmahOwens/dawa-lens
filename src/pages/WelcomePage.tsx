@@ -109,8 +109,16 @@ export default function WelcomePage() {
         transition={{ duration: 1.5, ease: "easeInOut" }}
       />
 
-      {/* Header (Skip Button) */}
-      <div className="relative z-20 flex justify-end p-6">
+      {/* Header (Logo & Skip) */}
+      <div className="relative z-20 flex items-center justify-between p-6">
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-2"
+        >
+          <img src="/logo.png" alt="Dawa Lens Logo" className="w-8 h-8 object-contain" />
+          <span className="font-black text-foreground tracking-tighter text-xl">Dawa Lens</span>
+        </motion.div>
         <Button 
           variant="ghost" 
           className="text-muted-foreground/60 hover:text-foreground font-semibold tracking-wide"
