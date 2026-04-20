@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,15 @@ import { useTranslation } from "react-i18next";
 
 export default function AddReminderPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as { medicineName?: string; dose?: string } | null;
+  
   const { addReminder } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
-  const [medicineName, setMedicineName] = useState("");
-  const [dose, setDose] = useState("");
+  const [medicineName, setMedicineName] = useState(state?.medicineName || "");
+  const [dose, setDose] = useState(state?.dose || "");
   const [time, setTime] = useState("08:00");
   const [repeat, setRepeat] = useState<"daily" | "weekly" | "once" | "custom">("daily");
   const [notes, setNotes] = useState("");

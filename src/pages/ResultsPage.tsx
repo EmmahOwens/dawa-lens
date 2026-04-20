@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, ScanBarcode, FileText, Loader2, Pill, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, ScanBarcode, FileText, Loader2, Pill, Sparkles, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useApp } from "@/contexts/AppContext";
@@ -265,16 +265,25 @@ export default function ResultsPage() {
                         {Math.round(r.confidence * 100)}% Match
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button className="rounded-full flex-1 h-12" onClick={() => handleConfirm(r)} disabled={!!confirmed}>
-                        <Check size={18} className="mr-2" /> {t("common.save")}
-                      </Button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <Button className="rounded-full flex-1 h-12" onClick={() => handleConfirm(r)} disabled={!!confirmed}>
+                          <Check size={18} className="mr-2" /> {t("common.save")}
+                        </Button>
+                        <Button 
+                          variant="secondary" 
+                          className="rounded-full flex-1 h-12" 
+                          onClick={() => navigate("/reminders/new", { state: { medicineName: r.name, dose: r.recommendedDosage } })}
+                        >
+                          <Bell size={18} className="mr-2" /> Reminder
+                        </Button>
+                      </div>
                       <Button
                         variant="outline"
-                        className="rounded-full w-12 h-12 p-0"
+                        className="rounded-full w-full h-12"
                         onClick={() => navigate(`/medicine/${encodeURIComponent(r.name)}`)}
                       >
-                         <ArrowLeft size={18} className="rotate-180" />
+                         View Details & Safety <ArrowLeft size={16} className="rotate-180 ml-2" />
                       </Button>
                     </div>
                   </motion.div>
@@ -326,11 +335,18 @@ export default function ResultsPage() {
                 <span className="text-xs font-bold text-success uppercase tracking-wider block mb-1">Drug Identified</span>
                 <h3 className="text-xl font-bold text-foreground mb-4">{resolvedBarcodeDrug}</h3>
                 
-                <div className="flex gap-3 mt-4">
-                   <Button onClick={() => handleConfirm({ name: resolvedBarcodeDrug, genericName: "" })} disabled={!!confirmed}>
+                <div className="flex flex-wrap gap-2 mt-4">
+                   <Button onClick={() => handleConfirm({ name: resolvedBarcodeDrug, genericName: "" })} disabled={!!confirmed} className="flex-1 min-w-[140px]">
                       <Check size={16} className="mr-2" /> Save to Profile
                    </Button>
-                   <Button variant="outline" onClick={() => navigate(`/medicine/${encodeURIComponent(resolvedBarcodeDrug)}`)}>
+                   <Button 
+                     variant="secondary" 
+                     className="flex-1 min-w-[140px]"
+                     onClick={() => navigate("/reminders/new", { state: { medicineName: resolvedBarcodeDrug } })}
+                   >
+                      <Bell size={16} className="mr-2" /> Set Reminder
+                   </Button>
+                   <Button variant="outline" className="w-full" onClick={() => navigate(`/medicine/${encodeURIComponent(resolvedBarcodeDrug)}`)}>
                       View Details
                    </Button>
                 </div>

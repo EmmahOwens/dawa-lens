@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, AlertTriangle, ExternalLink, Pill, ShieldAlert } from "lucide-react";
+import { ArrowLeft, AlertTriangle, ExternalLink, Pill, ShieldAlert, Bell } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -117,8 +117,20 @@ export default function MedicineInfoPage() {
           )}
 
           <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
-            <h2 className="text-lg font-bold text-foreground">{info.name}</h2>
-            {info.genericName && <p className="text-sm text-muted-foreground">{t("medicine_info.generic")}: {info.genericName}</p>}
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">{info.name}</h2>
+                {info.genericName && <p className="text-sm text-muted-foreground">{t("medicine_info.generic")}: {info.genericName}</p>}
+              </div>
+              <Button 
+                size="sm" 
+                variant="secondary"
+                onClick={() => navigate("/reminders/new", { state: { medicineName: info.name } })}
+                className="rounded-xl shadow-sm border border-primary/20"
+              >
+                <Bell size={14} className="mr-1.5" /> Reminder
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
               <ExternalLink size={12} /> {t("medicine_info.source")}: {info.source}
             </p>
