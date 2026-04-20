@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Camera, Clock, History, Settings, ShieldAlert, Users } from "lucide-react";
+import { Home, Camera, Bell, History, Settings, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
@@ -7,14 +7,22 @@ import { useApp } from "@/contexts/AppContext";
 export default function BottomNav() {
   const location = useLocation();
   const { t } = useTranslation();
-  const { medicines, isProfessionalMode } = useApp();
+  const { reminders, doseLogs, isProfessionalMode } = useApp();
 
-  const hasSafetyAlert = medicines.some(m => m.isConflict);
+  // Count reminders that haven't been logged today
+  const pendingReminderCount = reminders.filter((r) => {
+    if (!r.enabled) return false;
+    return !doseLogs.some(
+      (l) =>
+        l.reminderId === r.id &&
+        new Date(l.actionTime).toDateString() === new Date().toDateString()
+    );
+  }).length;
 
   const navItems = [
     { to: "/", icon: Home, label: t("nav.home") },
+    { to: "/reminders", icon: Bell, label: t("nav.reminders", "Reminders"), badge: pendingReminderCount > 0 },
     { to: isProfessionalMode ? "/family" : "/history", icon: isProfessionalMode ? Users : History, label: isProfessionalMode ? "Family" : t("nav.history") },
-    { to: "/interactions", icon: ShieldAlert, label: t("nav.safety"), badge: hasSafetyAlert },
     { to: "/settings", icon: Settings, label: t("nav.settings") },
   ];
 
