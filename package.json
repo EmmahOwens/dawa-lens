@@ -10,7 +10,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "deploy:web": "vite build && firebase deploy --only hosting",
+    "cap:sync": "vite build && npx cap sync"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.1",
