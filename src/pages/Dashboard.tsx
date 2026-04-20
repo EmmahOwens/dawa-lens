@@ -50,7 +50,7 @@ export default function Dashboard() {
     { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20", ringScale: 1.1 },
     { icon: FileText, label: "Care Report", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/20", ringScale: 1 },
     { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent border-accent/60 text-accent-foreground hover:bg-accent/80", ringScale: 1 },
-    { icon: Plane, label: "Travel", to: "/travel", color: "bg-warning/10 border-warning/20 text-warning hover:bg-warning/20", ringScale: 1.05 },
+    { icon: Bell, label: "Add Reminder", to: "/reminders/new", color: "bg-amber-500/10 border-amber-500/20 text-amber-600 hover:bg-amber-500/20", ringScale: 1.1 },
   ];
 
   const todayReminders = reminders.filter((r) => r.enabled);

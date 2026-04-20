@@ -69,6 +69,16 @@ export const calculateNextDose = (reminders: Reminder[], doseLogs: DoseLog[]): N
   };
 };
 
+const stringToHash = (str: string): number => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+};
+
 export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog[]) => {
   if (!Capacitor.isNativePlatform()) return;
 
@@ -110,7 +120,7 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
         notifications.push({
           title: `Time for ${r.medicineName}`,
           body: `Dose: ${r.dose}. Remember to take your medicine!`,
-          id: Math.abs(parseInt(r.id.substring(0, 8), 16) + i), // Unique ID per day
+          id: stringToHash(r.id + i), // Unique ID per day
           schedule: { at: scheduleDate },
           smallIcon: "res://pill",
           actionTypeId: "OPEN_APP",
