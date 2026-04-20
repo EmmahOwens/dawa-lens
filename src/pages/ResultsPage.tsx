@@ -1,15 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, ScanBarcode, FileText, Loader2, Pill, Sparkles, Bell } from "lucide-react";
+import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, FileText, Loader2, Pill, Sparkles, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useApp } from "@/contexts/AppContext";
-import { extractTextFromImage } from "@/services/visionService";
-import { resolveBarcodeToDrugName } from "@/services/barcodeResolver";
 import { identifyPill, PillMatch } from "@/services/pillIdService";
-import { verifyScratchCode, VerificationResult } from "@/services/fakeMedService";
-import { ShieldCheck, ShieldAlert, ShieldQuestion, CalendarClock, Flag } from "lucide-react";
+import { ShieldCheck, ShieldAlert, ShieldQuestion, CalendarClock, Flag, Bell as BellIcon } from "lucide-react";
 import PremiumLoader from "@/components/PremiumLoader";
 
 type MatchResult = {
@@ -28,18 +25,14 @@ export default function ResultsPage() {
   const state = location.state as any;
   const imageUrl = state?.imageUrl;
   const mode = state?.mode || "pill";
-  const barcode = state?.barcode;
 
   const [confirmed, setConfirmed] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   
-  // OCR & Barcode State
+  // OCR & Analysis State
   const [loading, setLoading] = useState(true);
-  const [extractedText, setExtractedText] = useState("");
-  const [resolvedBarcodeDrug, setResolvedBarcodeDrug] = useState<string | null>(null);
   const [aiMatches, setAiMatches] = useState<MatchResult[]>([]);
   const [aiSummary, setAiSummary] = useState<string>("");
-  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [animationComplete, setAnimationComplete] = useState(false);
   const [scanError, setScanError] = useState<{message: string; code?: string; fixUrl?: string} | null>(null);
 
@@ -65,12 +58,6 @@ export default function ResultsPage() {
             setAiMatches(res.matches);
             setAiSummary((res as any).summary || "");
           }
-        } else if (mode === "barcode" && barcode) {
-          const drugName = await resolveBarcodeToDrugName(barcode);
-          setResolvedBarcodeDrug(drugName);
-        } else if (mode === "verify" && imageUrl) {
-          const res = await verifyScratchCode("1234567890"); 
-          setVerificationResult(res);
         }
       } catch (e: any) {
         console.error(e);
@@ -84,8 +71,6 @@ export default function ResultsPage() {
         };
         if (code && code in errorMessages) {
           setScanError({ message: errorMessages[code], code, fixUrl: e?.fixUrl });
-        } else if (mode === "text") {
-          setExtractedText("Failed to extract text. Please try again.");
         } else {
           setScanError({ message: e?.message || 'An unknown error occurred during scan processing.', code });
         }
@@ -94,7 +79,7 @@ export default function ResultsPage() {
       setLoading(false);
     }
     process();
-  }, [mode, imageUrl, barcode]);
+  }, [mode, imageUrl]);
 
   const highConfidence = aiMatches.filter((r) => r.confidence >= 0.7);
   const lowConfidence = aiMatches.filter((r) => r.confidence < 0.7);
@@ -120,7 +105,6 @@ export default function ResultsPage() {
 
       <h1 className="text-3xl font-black text-foreground mb-6 tracking-tighter flex items-center gap-3">
         {mode === "text" && <FileText size={28} className="text-primary" />}
-        {mode === "barcode" && <ScanBarcode size={28} className="text-primary" />}
         {mode === "pill" && <Pill size={28} className="text-primary" />}
         {t("scan.recognition_results", "Recognition Results")}
       </h1>
@@ -129,7 +113,7 @@ export default function ResultsPage() {
         <PremiumLoader onComplete={() => setAnimationComplete(true)} />
       )}
 
-      {imageUrl && mode !== "barcode" && (
+      {imageUrl && (
         <div className="mb-8 rounded-[2.5rem] overflow-hidden border-4 border-card shadow-2xl bg-black/5 flex items-center justify-center relative aspect-square max-h-[400px] mx-auto">
           <img src={imageUrl} alt="Captured scan" className="w-full h-full object-cover" />
           {(!animationComplete || loading) && (
@@ -321,142 +305,7 @@ export default function ResultsPage() {
       )}
 
 
-      {/* --- BARCODE MODE --- */}
-      {mode === "barcode" && !loading && animationComplete && (
-        <div className="space-y-4">
-          <div className="p-6 rounded-xl border border-border bg-card text-center flex flex-col items-center">
-             <ScanBarcode size={48} className="text-muted-foreground/30 mb-4" />
-             <h3 className="font-semibold text-lg">{barcode}</h3>
-             <p className="text-xs text-muted-foreground mt-1 tracking-wider uppercase">Scanned Code</p>
-          </div>
-
-          {resolvedBarcodeDrug ? (
-             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-5 rounded-xl border border-success/30 bg-success/5 pt-4">
-                <span className="text-xs font-bold text-success uppercase tracking-wider block mb-1">Drug Identified</span>
-                <h3 className="text-xl font-bold text-foreground mb-4">{resolvedBarcodeDrug}</h3>
-                
-                <div className="flex flex-wrap gap-2 mt-4">
-                   <Button onClick={() => handleConfirm({ name: resolvedBarcodeDrug, genericName: "" })} disabled={!!confirmed} className="flex-1 min-w-[140px]">
-                      <Check size={16} className="mr-2" /> Save to Profile
-                   </Button>
-                   <Button 
-                     variant="secondary" 
-                     className="flex-1 min-w-[140px]"
-                     onClick={() => navigate("/reminders/new", { state: { medicineName: resolvedBarcodeDrug } })}
-                   >
-                      <Bell size={16} className="mr-2" /> Set Reminder
-                   </Button>
-                   <Button variant="outline" className="w-full" onClick={() => navigate(`/medicine/${encodeURIComponent(resolvedBarcodeDrug)}`)}>
-                      View Details
-                   </Button>
-                </div>
-             </motion.div>
-          ) : (
-             <div className="p-4 rounded-xl border border-warning/30 bg-warning/5">
-                <div className="flex items-start gap-2 text-warning">
-                   <AlertTriangle size={18} className="shrink-0 mt-0.5" />
-                   <div>
-                     <p className="font-semibold text-sm">Unknown Barcode</p>
-                     <p className="text-xs opacity-90 mt-1">
-                       We couldn't immediately resolve this barcode to a registered FDA drug. 
-                     </p>
-                     <Button className="mt-3" size="sm" variant="outline" onClick={() => navigate('/search')}>
-                        Search Manually
-                     </Button>
-                   </div>
-                </div>
-             </div>
-          )}
-        </div>
-      )}
-
-      {/* --- VERIFICATION MODE --- */}
-      {mode === "verify" && !loading && animationComplete && verificationResult && (
-        <div className="space-y-8">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={`p-8 rounded-[3rem] border-4 flex flex-col items-center text-center shadow-2xl relative overflow-hidden ${
-              verificationResult.status === "authentic" ? "border-success/40 bg-success/5" :
-              verificationResult.status === "fake" ? "border-destructive/40 bg-destructive/5" :
-              "border-warning/40 bg-warning/5"
-            }`}
-          >
-            <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-xl ${
-              verificationResult.status === "authentic" ? "bg-success text-success-foreground" :
-              verificationResult.status === "fake" ? "bg-destructive text-destructive-foreground animate-pulse" :
-              "bg-warning text-warning-foreground"
-            }`}>
-              {verificationResult.status === "authentic" && <ShieldCheck size={48} />}
-              {verificationResult.status === "fake" && <ShieldAlert size={48} />}
-              {verificationResult.status === "expired" && <CalendarClock size={48} />}
-              {verificationResult.status === "unknown" && <ShieldQuestion size={48} />}
-            </div>
-
-            <h2 className="text-3xl font-black mb-2 uppercase tracking-tighter leading-none">
-              {verificationResult.status === "authentic" ? "Authentic" : 
-               verificationResult.status === "fake" ? "Counterfeit!" :
-               "Failed"}
-            </h2>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60 mb-4">Verification Result</p>
-            
-            <p className="text-sm font-medium text-foreground/80 leading-relaxed mb-8 px-6 bg-white/50 dark:bg-black/20 p-4 rounded-2xl">
-              {verificationResult.message}
-            </p>
-
-            {verificationResult.drugName && (
-              <div className="w-full bg-background rounded-[2rem] p-6 border border-border/50 text-left mb-8 shadow-inner">
-                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-                  <div>
-                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Medicine</p>
-                    <p className="text-sm font-bold truncate">{verificationResult.drugName}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Producer</p>
-                    <p className="text-sm font-bold truncate">{verificationResult.manufacturer || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Batch #</p>
-                    <p className="text-sm font-bold font-mono">{verificationResult.batchNumber || "Unknown"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Expiry</p>
-                    <p className="text-sm font-bold text-destructive">{verificationResult.expiryDate || "Unknown"}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-3 w-full">
-              {verificationResult.status === "authentic" && (
-                <Button onClick={() => handleConfirm({ name: verificationResult.drugName })} className="w-full h-14 rounded-full text-base font-bold shadow-lg">
-                  <Check size={20} className="mr-2" /> {t("common.save")}
-                </Button>
-              )}
-              {verificationResult.status === "fake" && (
-                <Button variant="destructive" className="w-full h-14 rounded-full text-base font-bold shadow-lg">
-                  <Flag size={20} className="mr-2" /> {t("results.report_fake", "Report to Authorities")}
-                </Button>
-              )}
-              <Button variant="outline" onClick={() => navigate(-1)} className="w-full h-14 rounded-full text-base font-bold">
-                Scan Another
-              </Button>
-            </div>
-          </motion.div>
-
-          <div className="p-6 rounded-[2rem] border bg-card/50 backdrop-blur-sm relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-4 opacity-5">
-                <ShieldCheck size={64} />
-             </div>
-             <h4 className="text-xs font-black uppercase tracking-widest text-primary mb-3">Verification Security</h4>
-             <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-               Dawa Lens verifies unique 12-digit scratch codes against the **African Regional Anti-Counterfeit Registry**. 
-               Always check the holographic seal on the outer packaging.
-             </p>
-          </div>
-        </div>
-      )}
-
+      <div className="h-12" />
     </div>
   );
 }
