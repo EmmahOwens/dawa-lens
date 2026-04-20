@@ -14,7 +14,8 @@ const errorMiddleware = (err, req, res, next) => {
     if (err.isOperational) {
       res.status(err.statusCode).json({
         status: err.status,
-        message: err.message
+        message: err.message,
+        ...(err.code && { code: err.code }),
       });
     } else {
       // Programming or other unknown error: don't leak error details
