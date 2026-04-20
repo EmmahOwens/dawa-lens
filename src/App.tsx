@@ -11,6 +11,7 @@ import ScanPage from "@/pages/ScanPage";
 import ResultsPage from "@/pages/ResultsPage";
 import MedicineInfoPage from "@/pages/MedicineInfoPage";
 import AddReminderPage from "@/pages/AddReminderPage";
+import RemindersPage from "@/pages/RemindersPage";
 import HistoryPage from "@/pages/HistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
@@ -141,6 +142,7 @@ const App = () => {
                           <Route path="/results" element={<PageTransition><ResultsPage /></PageTransition>} />
                           <Route path="/medicine/:name" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
                           <Route path="/search" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
+                          <Route path="/reminders" element={<PageTransition><RemindersPage /></PageTransition>} />
                           <Route path="/reminders/new" element={<PageTransition><AddReminderPage /></PageTransition>} />
                           <Route path="/history" element={<PageTransition><HistoryPage /></PageTransition>} />
                           <Route path="/interactions" element={<PageTransition><InteractionsPage /></PageTransition>} />

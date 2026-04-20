@@ -50,7 +50,7 @@ export default function Dashboard() {
     { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive/10 border-destructive/20 text-destructive hover:bg-destructive/20", ringScale: 1.1 },
     { icon: FileText, label: "Care Report", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/20", ringScale: 1 },
     { icon: History, label: t("dashboard.quick_history"), to: "/history", color: "bg-accent border-accent/60 text-accent-foreground hover:bg-accent/80", ringScale: 1 },
-    { icon: Bell, label: "Add Reminder", to: "/reminders/new", color: "bg-amber-500/10 border-amber-500/20 text-amber-600 hover:bg-amber-500/20", ringScale: 1.1 },
+    { icon: Bell, label: "Reminders", to: "/reminders", color: "bg-amber-500/10 border-amber-500/20 text-amber-600 hover:bg-amber-500/20", ringScale: 1.1 },
   ];
 
   const todayReminders = reminders.filter((r) => r.enabled);
@@ -145,7 +145,7 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8 p-6 rounded-[2rem] bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 relative overflow-hidden active:scale-[0.98] transition-transform"
-          onClick={() => navigate("/history")}
+          onClick={() => navigate("/reminders")}  
         >
           <div className="absolute top-[-20%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl" />
           <div className="relative z-10">
