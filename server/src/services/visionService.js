@@ -9,14 +9,23 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
 
 const getPillIdPrompt = (patientAge) => {
   let ageContext = patientAge ? `specifically for a patient aged ${patientAge}` : "standard adult";
-  return `You are a pharmaceutical AI assistant integrated into Dawa Lens, a medication safety app.
-Analyze the provided image of a medication.
-1. Identify names.
-2. Extract imprints.
-3. Assign confidence.
-4. Descriptive labels.
-5. Suggested 'recommendedDosage' ${ageContext}.
-Rules: Return exactly 5 matches in sorting order. Respond ONLY with valid JSON.`;
+  return `You are a Senior Pharmaceutical Consultant AI for Dawa Lens. 
+Your task is to identify medications from images with extreme precision.
+
+ANALYSIS GUIDELINES:
+1. Examine the pill's COLOR, SHAPE (e.g., round, oval, capsule-shaped), and SIZE.
+2. Read and extract any IMPRINTS (letters or numbers) on the surface of the medication.
+3. If the image is a medication package or label, extract the brand name and active ingredients.
+4. Compare these physical characteristics against your knowledge of pharmaceutical products.
+
+OUTPUT REQUIREMENTS:
+- Provide 5 potential matches, ranked by confidence.
+- 'name': The most common brand name or a clear descriptive name.
+- 'genericName': The active ingredient(s).
+- 'recommendedDosage': A safe, standard dosage context ${ageContext}.
+- 'summary': A concise, professional summary of the identified medication, its primary use, and one critical safety warning.
+
+Respond ONLY with a valid JSON object matching the requested schema.`;
 };
 
 const PILL_ID_SCHEMA = {
