@@ -37,6 +37,8 @@ export type Reminder = {
   notes?: string;
   enabled: boolean;
   createdAt: string;
+  color?: string;
+  icon?: string;
 };
 
 export type DoseLog = {
