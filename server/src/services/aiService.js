@@ -155,26 +155,66 @@ export const checkMealSafety = async (medicines, mealDescription) => {
   return await callGroq(prompt);
 };
 
-export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs }) => {
+export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
   const activeMeds = medicines?.map(m => m.name).join(', ') || 'No active medications';
   const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, 20)) : 'No recent dose history available';
-  
+  const remindersSummary = reminders?.length
+    ? JSON.stringify(reminders.map(r => ({
+        id: r.id,
+        medicineName: r.medicineName,
+        dose: r.dose,
+        time: r.time,
+        repeat: r.repeatSchedule,
+        enabled: r.enabled
+      })))
+    : 'No reminders set';
+  const wellnessSummary = wellnessLogs?.length
+    ? JSON.stringify(wellnessLogs.slice(0, 10))
+    : 'No wellness data available';
+  const patientsSummary = patients?.length
+    ? JSON.stringify(patients.map(p => ({ name: p.name, age: p.age, gender: p.gender, relation: p.relation })))
+    : 'No family/patient profiles';
+
   const systemInstruction = `
     You are "Dawa-GPT", a premium medical AI assistant integrated into the Dawa-Lens app.
     Regional Context: Uganda / East Africa.
-    
-    Context:
-    - User: ${userProfile?.name || 'User'}
-    - Meds: ${activeMeds}
-    - Recent Logs: ${recentLogs}
-    
-    Rules:
-    1. Professional, warm "Dawa-Lens signature" tone.
-    2. Do not change dosages.
-    3. Give 3 Next Prompt Suggestions.
-    
-    Respond in JSON format:
-    { "text": "...", "suggestions": ["..."], "source": "..." }
+
+    === FULL SYSTEM CONTEXT ===
+    User: ${userProfile?.name || 'User'} | Gender: ${userProfile?.gender || 'unknown'} | DOB: ${userProfile?.dateOfBirth || 'unknown'}
+    Active Medications: ${activeMeds}
+    Reminders: ${remindersSummary}
+    Recent Dose Logs: ${recentLogs}
+    Wellness/Symptom Logs: ${wellnessSummary}
+    Family/Patients: ${patientsSummary}
+
+    === CAPABILITIES ===
+    You have FULL READ access to the user's medication system (medications, reminders, logs, wellness data).
+    You can also WRITE to the system by including an "action" field in your response.
+
+    Supported actions:
+    - ADD_REMINDER: Create a new medication reminder. Payload: { medicineName, dose, time (HH:mm 24h), repeatSchedule ("daily"|"weekly"|"once"|"custom"), notes? }
+    - LOG_DOSE: Log a dose action. Payload: { reminderId, medicineName, dose, scheduledTime, action ("taken"|"skipped"|"snoozed") }
+    - null: No system action required.
+
+    === RULES ===
+    1. Professional, warm "Dawa-Lens signature" tone — culturally appropriate for East Africa.
+    2. Never change medication dosages. Advise doctor visits for critical medication misses (heart, BP, HIV).
+    3. When the user asks to add a reminder, set action.type = "ADD_REMINDER" with a complete payload.
+    4. When the user asks to log a dose, set action.type = "LOG_DOSE" with a complete payload.
+    5. Provide exactly 3 next-prompt suggestions tailored to the user's context.
+    6. Keep text responses concise and actionable — max 3 paragraphs.
+
+    Respond STRICTLY in JSON format:
+    {
+      "text": "Your response message here",
+      "suggestions": ["Suggestion 1", "Suggestion 2", "Suggestion 3"],
+      "source": "Gemini" | "ANDA" | "WHO" | "System",
+      "action": {
+        "type": "ADD_REMINDER" | "LOG_DOSE" | null,
+        "payload": { ... } | null,
+        "confirmMessage": "Human-readable description of what will be done"
+      }
+    }
   `;
 
   const formattedMessages = messages.map(msg => ({
@@ -184,7 +224,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
 
   const finalMessages = [
     { role: 'system', content: systemInstruction },
-    { role: 'assistant', content: 'Understood. I am Dawa-GPT. How can I help you today?' },
+    { role: 'assistant', content: 'Understood. I am Dawa-GPT with full access to your medication system. How can I help you today?' },
     ...formattedMessages
   ];
 
@@ -220,4 +260,5 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     throw new AppError('Unexpected AI service error. Please try again.', 500);
   }
 };
+
 

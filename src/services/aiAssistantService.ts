@@ -1,12 +1,18 @@
 /**
  * Dawa-GPT Service
- * A simulated RAG-style assistant that answers medication questions.
+ * Conversational medical assistant with full system read/write access.
  * Focused on regional (East African) context and user safety.
  */
 
-import { Medicine, UserProfile, DoseLog } from "../contexts/AppContext";
+import { Medicine, Reminder, UserProfile, DoseLog, WellnessLog, Patient } from "../contexts/AppContext";
 import { checkConditionSafety } from "./conditionInteractionService";
 import { aiApi } from "./api";
+
+export interface AIAction {
+  type: "ADD_REMINDER" | "LOG_DOSE" | null;
+  payload: Record<string, any> | null;
+  confirmMessage?: string;
+}
 
 export interface ChatMessage {
   id: string;
@@ -16,6 +22,7 @@ export interface ChatMessage {
   patterns?: string[];
   score?: number;
   suggestions?: string[];
+  action?: AIAction;
 }
 
 const FAQ_RESPONSE_MAP: Record<string, string> = {
@@ -37,8 +44,8 @@ export const generateDawaGPTResponse = async (
   // 1. Check for specific safety issues (local rule-based check)
   if (activeMedicine && userProfile) {
     const safetyChecks = checkConditionSafety(
-      activeMedicine.name, 
-      activeMedicine.genericName, 
+      activeMedicine.name,
+      activeMedicine.genericName,
       userProfile.gender === "female" ? ["Pregnancy"] : [] // Placeholder logic
     );
 
@@ -59,7 +66,7 @@ export const generateDawaGPTResponse = async (
   if (isCoachingRequest && doseLogs.length > 0) {
     try {
       const res = await aiApi.getCoachAdvice({
-        logs: doseLogs.slice(0, 50), // Send recent history
+        logs: doseLogs.slice(0, 50),
         medicines: allMedicines,
         userName: userProfile?.name
       });
@@ -97,18 +104,28 @@ export const generateDawaGPTResponse = async (
   };
 };
 
+/**
+ * Primary conversational path — uses backend Groq LLM with full system context.
+ * Returns an optional `action` field that callers should dispatch to AppContext.
+ */
 export const chatWithDawaGPT = async (
   messages: ChatMessage[],
   medicines: Medicine[],
   userProfile: UserProfile | null,
-  doseLogs: DoseLog[] = []
+  doseLogs: DoseLog[] = [],
+  reminders: Reminder[] = [],
+  wellnessLogs: WellnessLog[] = [],
+  patients: Patient[] = []
 ): Promise<ChatMessage> => {
   try {
     const response = await aiApi.chat({
       messages,
       medicines,
       userProfile,
-      doseLogs: doseLogs.slice(0, 20) // Send recent history
+      doseLogs: doseLogs.slice(0, 20),
+      reminders,
+      wellnessLogs: wellnessLogs.slice(0, 10),
+      patients,
     });
 
     return {
@@ -116,7 +133,9 @@ export const chatWithDawaGPT = async (
       role: "assistant",
       text: response.text,
       source: response.source || "Gemini",
-      suggestions: response.suggestions
+      suggestions: response.suggestions,
+      // Include the action from the AI if present and meaningful
+      action: response.action?.type ? response.action : undefined,
     };
   } catch (err) {
     console.error("DawaGPT Chat Error:", err);

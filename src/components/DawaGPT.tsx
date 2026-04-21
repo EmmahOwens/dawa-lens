@@ -1,20 +1,35 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, Send, Bot, Sparkles, AlertCircle } from "lucide-react";
+import { MessageSquare, X, Send, Bot, Sparkles, AlertCircle, BellPlus, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
-import { ChatMessage, chatWithDawaGPT } from "@/services/aiAssistantService";
+import { useToast } from "@/hooks/use-toast";
+import { ChatMessage, AIAction, chatWithDawaGPT } from "@/services/aiAssistantService";
 
 export default function DawaGPT() {
   const { t } = useTranslation();
   const location = useLocation();
-  const { userProfile, medicines, doseLogs, isDawaGPTOpen: isOpen, setIsDawaGPTOpen: setIsOpen } = useApp();
+  const {
+    userProfile,
+    medicines,
+    doseLogs,
+    reminders,
+    wellnessLogs,
+    patients,
+    addReminder,
+    logDose,
+    isDawaGPTOpen: isOpen,
+    setIsDawaGPTOpen: setIsOpen,
+  } = useApp();
+  const { toast } = useToast();
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  
+  const [pendingAction, setPendingAction] = useState<AIAction | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeMed = medicines.length > 0 ? medicines[medicines.length - 1] : null;
 
@@ -26,27 +41,100 @@ export default function DawaGPT() {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      // Welcome message
       setMessages([{
         id: "welcome",
         role: "assistant",
-        text: `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT. Ask me anything about your medications or health context.`,
-        source: "System"
+        text: `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT. I have full access to your ${reminders.length} reminder(s), ${medicines.length} medication(s), and dose history. Ask me anything — or say "Add a reminder for [medicine]" to set one up!`,
+        source: "System",
+        suggestions: ["What are my reminders?", "Add a reminder for Paracetamol 500mg at 8am", "Show my dose history"],
       }]);
     }
   }, [isOpen]);
 
+  /**
+   * Dispatches an AI-requested action against the real AppContext functions.
+   */
+  const dispatchAIAction = async (action: AIAction) => {
+    if (!action.type || !action.payload) return;
+
+    try {
+      if (action.type === "ADD_REMINDER") {
+        const { medicineName, dose, time, repeatSchedule, notes } = action.payload;
+        await addReminder({
+          medicineName,
+          dose,
+          time,
+          repeatSchedule: repeatSchedule || "daily",
+          notes,
+          enabled: true,
+        });
+        toast({
+          title: "✅ Reminder added by Dawa-GPT",
+          description: `${medicineName} @ ${time}`,
+        });
+        // Confirm to the user in chat
+        setMessages(prev => [...prev, {
+          id: `action-confirm-${Date.now()}`,
+          role: "assistant",
+          text: `Done! I've added a reminder for **${medicineName}** (${dose}) at ${time}. You'll find it in your Reminders list.`,
+          source: "System",
+        }]);
+      } else if (action.type === "LOG_DOSE") {
+        const { reminderId, medicineName, dose, scheduledTime, action: doseAction } = action.payload;
+        await logDose({
+          reminderId: reminderId || "",
+          medicineName,
+          dose,
+          scheduledTime: scheduledTime || new Date().toISOString(),
+          action: doseAction || "taken",
+        });
+        toast({
+          title: `✅ Dose logged as ${doseAction || "taken"}`,
+          description: medicineName,
+        });
+        setMessages(prev => [...prev, {
+          id: `action-confirm-${Date.now()}`,
+          role: "assistant",
+          text: `Got it! I've logged **${medicineName}** as ${doseAction || "taken"} in your Medication Log.`,
+          source: "System",
+        }]);
+      }
+    } catch (err) {
+      console.error("DawaGPT action dispatch failed:", err);
+      toast({
+        variant: "destructive",
+        title: "Action failed",
+        description: "Dawa-GPT couldn't complete that action. Please try manually.",
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
   const handleSend = async (text: string) => {
     if (!text.trim() || isTyping) return;
-    
+
     const userMsg: ChatMessage = { id: Date.now().toString(), role: "user", text };
     setMessages(prev => [...prev, userMsg]);
     setInputValue("");
     setIsTyping(true);
 
     try {
-      const response = await chatWithDawaGPT([...messages, userMsg], medicines, userProfile, doseLogs);
+      const response = await chatWithDawaGPT(
+        [...messages, userMsg],
+        medicines,
+        userProfile,
+        doseLogs,
+        reminders,
+        wellnessLogs,
+        patients
+      );
       setMessages(prev => [...prev, response]);
+
+      // If the AI returned an action, dispatch it automatically
+      if (response.action?.type) {
+        await dispatchAIAction(response.action);
+      }
     } catch (e) {
       setMessages(prev => [...prev, {
         id: "error",
@@ -58,14 +146,22 @@ export default function DawaGPT() {
       setIsTyping(false);
     }
   };
-  
-    // Hide DawaGPT completely during auth and onboarding flows
-    const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email"];
-    if (hiddenPaths.includes(location.pathname)) return null;
-  
-    return (
-      <>
-      {/* Floating Toggle Button (Hidden on Desktop) */}
+
+  // Hide DawaGPT completely during auth and onboarding flows
+  const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email"];
+  if (hiddenPaths.includes(location.pathname)) return null;
+
+  const lastMsg = messages[messages.length - 1];
+  const defaultSuggestions = [
+    "What are my reminders?",
+    "Add a reminder for Paracetamol 500mg at 8am daily",
+    "Log Paracetamol as taken",
+  ];
+  const activeSuggestions = lastMsg?.suggestions ?? defaultSuggestions;
+
+  return (
+    <>
+      {/* Floating Toggle Button */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -93,8 +189,8 @@ export default function DawaGPT() {
                   </div>
                   <div>
                     <h3 className="font-bold flex items-center gap-2 text-lg">
-                       Dawa-GPT 
-                       <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter font-black">Powered by ANDA</span>
+                      Dawa-GPT
+                      <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter font-black">Full System Access</span>
                     </h3>
                     <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider opacity-70">East African Medical Assistant</p>
                   </div>
@@ -104,13 +200,23 @@ export default function DawaGPT() {
                 </button>
               </div>
 
-              {/* Warnings/Context */}
-              {activeMed && (
-                <div className="bg-primary/5 px-4 py-2 flex items-center gap-2 border-b border-primary/10">
-                  <span className="text-[10px] font-bold text-primary shrink-0 uppercase tracking-widest">Active Context:</span>
-                  <span className="text-[11px] font-semibold truncate text-muted-foreground">{activeMed.name}</span>
-                </div>
-              )}
+              {/* System Context Bar */}
+              <div className="bg-primary/5 px-4 py-2 flex items-center gap-3 border-b border-primary/10 overflow-x-auto no-scrollbar">
+                <span className="text-[9px] font-black text-primary shrink-0 uppercase tracking-widest">Context:</span>
+                <span className="text-[10px] font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
+                  <BellPlus size={10} className="text-primary" /> {reminders.length} reminders
+                </span>
+                <span className="text-[10px] text-muted-foreground/40">·</span>
+                <span className="text-[10px] font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
+                  <ClipboardCheck size={10} className="text-primary" /> {doseLogs.length} dose logs
+                </span>
+                {activeMed && (
+                  <>
+                    <span className="text-[10px] text-muted-foreground/40">·</span>
+                    <span className="text-[10px] font-semibold text-muted-foreground truncate">{activeMed.name}</span>
+                  </>
+                )}
+              </div>
 
               {/* Chat Messages */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-gradient-to-b from-background to-muted/10">
@@ -122,15 +228,15 @@ export default function DawaGPT() {
                     className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div className={`max-w-[85%] md:max-w-[75%] rounded-3xl p-4 md:p-5 shadow-sm ${
-                      m.role === "user" 
-                        ? "bg-primary text-primary-foreground rounded-tr-sm" 
+                      m.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-tr-sm"
                         : "bg-background text-card-foreground rounded-tl-sm border border-border/60 shadow-sm"
                     }`}>
-                      <p className="text-[15px] leading-relaxed">{m.text}</p>
+                      <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.text}</p>
                       {m.source && m.role === "assistant" && (
                         <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
-                           <span className="text-[10px] uppercase font-black text-muted-foreground tracking-widest opacity-60">Source: {m.source}</span>
-                           <Sparkles size={12} className="text-primary/50" />
+                          <span className="text-[10px] uppercase font-black text-muted-foreground tracking-widest opacity-60">Source: {m.source}</span>
+                          <Sparkles size={12} className="text-primary/50" />
                         </div>
                       )}
                     </div>
@@ -149,25 +255,17 @@ export default function DawaGPT() {
 
               {/* Footer / Input */}
               <div className="p-4 md:p-6 bg-background/80 backdrop-blur-xl border-t border-border/50">
-                {/* dynamic suggestions */}
+                {/* Dynamic suggestions */}
                 <div className="flex gap-2 mb-4 overflow-x-auto pb-2 no-scrollbar">
-                  {messages.length > 0 && messages[messages.length - 1].suggestions ? (
-                    messages[messages.length - 1].suggestions?.map((s, i) => (
-                      <button 
-                        key={i} 
-                        onClick={() => handleSend(s)} 
-                        className="shrink-0 text-[12px] font-bold border border-primary/20 bg-primary/5 text-primary rounded-full px-4 py-2 hover:bg-primary/10 transition-colors active:scale-95"
-                      >
-                        {s}
-                      </button>
-                    ))
-                  ) : (
-                    <>
-                      <button onClick={() => handleSend("Is this safe for me?")} className="shrink-0 text-[12px] font-bold border border-border bg-background rounded-full px-4 py-2 hover:bg-muted transition-colors active:scale-95">Is this safe for me?</button>
-                      <button onClick={() => handleSend("Can I take this with milk?")} className="shrink-0 text-[12px] font-bold border border-border bg-background rounded-full px-4 py-2 hover:bg-muted transition-colors active:scale-95">With milk?</button>
-                      <button onClick={() => handleSend("What are the side effects?")} className="shrink-0 text-[12px] font-bold border border-border bg-background rounded-full px-4 py-2 hover:bg-muted transition-colors active:scale-95">Side effects?</button>
-                    </>
-                  )}
+                  {activeSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSend(s)}
+                      className="shrink-0 text-[12px] font-bold border border-primary/20 bg-primary/5 text-primary rounded-full px-4 py-2 hover:bg-primary/10 transition-colors active:scale-95"
+                    >
+                      {s}
+                    </button>
+                  ))}
                 </div>
 
                 <div className="flex gap-3 items-end">
@@ -181,23 +279,23 @@ export default function DawaGPT() {
                           handleSend(inputValue);
                         }
                       }}
-                      placeholder="Ask Dawa-GPT anything..."
+                      placeholder="Ask Dawa-GPT anything... or say 'Add a reminder for...'"
                       className="bg-transparent border-none text-[15px] resize-none outline-none py-2 min-h-[44px] max-h-[120px]"
                       rows={1}
                     />
                   </div>
-                  <Button 
-                    onClick={() => handleSend(inputValue)} 
+                  <Button
+                    onClick={() => handleSend(inputValue)}
                     disabled={isTyping || !inputValue.trim()}
                     className="rounded-full h-[52px] w-[52px] shrink-0 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
                   >
                     <Send size={20} className="ml-1" />
                   </Button>
                 </div>
-                
+
                 <div className="mt-3 flex items-start gap-2 p-2 bg-warning/5 rounded-lg border border-warning/20">
-                   <AlertCircle size={12} className="text-warning shrink-0 mt-0.5" />
-                   <p className="text-[9px] text-warning/80 leading-tight">AI can make mistakes. Always check with a healthcare professional before making medical decisions.</p>
+                  <AlertCircle size={12} className="text-warning shrink-0 mt-0.5" />
+                  <p className="text-[9px] text-warning/80 leading-tight">AI can make mistakes. Always verify with a healthcare professional before acting on medical advice.</p>
                 </div>
               </div>
             </motion.div>
