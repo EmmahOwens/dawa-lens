@@ -3,7 +3,7 @@ import { getRxCUI } from "../services/interactionChecker";
 import { medicinesApi, remindersApi, doseLogsApi, usersApi, patientsApi, wellnessApi } from "../services/api";
 import { auth, db } from "../lib/firebase";
 import { onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
 import { scheduleReminders } from "../services/reminderService";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -415,15 +415,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReminders((p) => [...p, newReminder]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      const created = await remindersApi.create({ ...rem, userId: currentUserId, patientId: selectedPatientId });
-      newReminder = normalize(created) as Reminder;
+
+      // Use Firestore directly for unique ID and persistence
+      const remData = {
+        ...rem,
+        userId: currentUserId,
+        patientId: selectedPatientId || null,
+        createdAt: new Date().toISOString()
+      };
+
+      const docRef = await addDoc(collection(db, "reminders"), remData);
+      newReminder = { ...remData, id: docRef.id } as Reminder;
+
+      // Also sync to MongoDB via API (fire and forget)
+      remindersApi.create({ ...remData, _id: docRef.id }).catch(err => console.error("API Sync failed:", err));
+
       setReminders((p) => [...p, newReminder]);
+    }
   };
 
   const updateReminder = async (id: string, updates: Partial<Reminder>) => {
     if (storageMode === "local") {
       localPersistence.reminders.update(id, updates);
     } else {
+      // Update Firestore
+      const docRef = doc(db, "reminders", id);
+      await updateDoc(docRef, updates);
+
+      // Update API
       await remindersApi.update(id, updates);
     }
     setReminders((p) => p.map((r) => (r.id === id ? { ...r, ...updates } : r)));
@@ -433,6 +452,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (storageMode === "local") {
       localPersistence.reminders.remove(id);
     } else {
+      // Delete from Firestore
+      const docRef = doc(db, "reminders", id);
+      await deleteDoc(docRef);
+
+      // Delete from API
       await remindersApi.remove(id);
     }
     setReminders((p) => p.filter((r) => r.id !== id));
