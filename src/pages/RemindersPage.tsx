@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, Plus, Trash2, ToggleLeft, ToggleRight, Clock,
-  Pill, AlarmCheck, AlarmClockOff, Pencil,
+  Pill, AlarmCheck, AlarmClockOff, Pencil, Syringe, Droplets, Tablets
 } from "lucide-react";
 import { useApp, Reminder } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,22 @@ function repeatLabel(schedule: Reminder["repeatSchedule"]): string {
     default: return schedule;
   }
 }
+
+const colorMap: Record<string, { value: string; border: string; text: string }> = {
+  blue: { value: "bg-blue-500", border: "border-blue-500/20", text: "text-blue-500" },
+  green: { value: "bg-emerald-500", border: "border-emerald-500/20", text: "text-emerald-500" },
+  purple: { value: "bg-violet-500", border: "border-violet-500/20", text: "text-violet-500" },
+  rose: { value: "bg-rose-500", border: "border-rose-500/20", text: "text-rose-500" },
+  amber: { value: "bg-amber-500", border: "border-amber-500/20", text: "text-amber-500" },
+  slate: { value: "bg-slate-600", border: "border-slate-600/20", text: "text-slate-600" },
+};
+
+const iconMap: Record<string, any> = {
+  pill: Pill,
+  tablet: Tablets,
+  liquid: Droplets,
+  syringe: Syringe,
+};
 
 export default function RemindersPage() {
   const navigate = useNavigate();
@@ -177,11 +193,16 @@ export default function RemindersPage() {
                 >
                   {/* Icon */}
                   <div
-                    className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ${
-                      reminder.enabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                    className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${
+                      reminder.enabled 
+                        ? `${colorMap[reminder.color || "blue"]?.value || "bg-primary"} bg-opacity-10 ${colorMap[reminder.color || "blue"]?.text || "text-primary"}` 
+                        : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    <Pill size={20} />
+                    {(() => {
+                      const IconComp = iconMap[reminder.icon || "pill"] || Pill;
+                      return <IconComp size={20} />;
+                    })()}
                   </div>
 
                   {/* Info */}
@@ -239,7 +260,18 @@ export default function RemindersPage() {
                     <div className="flex gap-1.5">
                       {/* Edit */}
                       <button
-                        onClick={() => navigate("/reminders/new", { state: { editId: reminder.id, medicineName: reminder.medicineName, dose: reminder.dose, time: reminder.time, repeat: reminder.repeatSchedule, notes: reminder.notes } })}
+                        onClick={() => navigate("/reminders/new", { 
+                          state: { 
+                            editId: reminder.id, 
+                            medicineName: reminder.medicineName, 
+                            dose: reminder.dose, 
+                            time: reminder.time, 
+                            repeat: reminder.repeatSchedule, 
+                            notes: reminder.notes,
+                            color: reminder.color,
+                            icon: reminder.icon
+                          } 
+                        })}
                         className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                         title="Edit reminder"
                       >

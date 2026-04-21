@@ -1,8 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, X, Clock, Download, Upload, Trash2, Filter } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, Download, Upload, Trash2, Search, TrendingUp, Calendar } from "lucide-react";
 import { useApp, DoseLog } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo } from "react";
@@ -27,7 +28,27 @@ export default function HistoryPage() {
   const { t } = useTranslation();
 
   const [statusFilter, setStatusFilter] = useState<"All" | "taken" | "skipped" | "snoozed">("All");
+  const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(30);
+
+  // Adherence Stats
+  const stats = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // Set to start of day for accurate comparison
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const last7Days = doseLogs.filter(l => {
+      const logDate = new Date(l.actionTime);
+      return logDate >= sevenDaysAgo;
+    });
+
+    const taken = last7Days.filter(l => l.action === "taken").length;
+    const total = last7Days.length;
+    const rate = total > 0 ? Math.round((taken / total) * 100) : 0;
+
+    return { taken, total, rate };
+  }, [doseLogs]);
 
   // Group and sort
   const filteredLogs = useMemo(() => {
@@ -35,9 +56,13 @@ export default function HistoryPage() {
     if (statusFilter !== "All") {
       filtered = filtered.filter(l => l.action === statusFilter);
     }
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter(l => l.medicineName.toLowerCase().includes(q));
+    }
     // Sort descending by actionTime
     return filtered.sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime());
-  }, [doseLogs, statusFilter]);
+  }, [doseLogs, statusFilter, searchTerm]);
 
   const visibleLogs = filteredLogs.slice(0, visibleCount);
 
@@ -64,9 +89,16 @@ export default function HistoryPage() {
   };
 
   const exportCSV = () => {
+    const escape = (val: string) => `"${(val || "").toString().replace(/"/g, '""')}"`;
     const header = "Date,Medicine,Dose,Scheduled Time,Action\n";
     const rows = doseLogs
-      .map((l) => `${new Date(l.actionTime).toLocaleDateString()},${l.medicineName},${l.dose},${l.scheduledTime},${l.action}`)
+      .map((l) => [
+        new Date(l.actionTime).toLocaleDateString(),
+        escape(l.medicineName),
+        escape(l.dose),
+        escape(l.scheduledTime),
+        escape(l.action)
+      ].join(","))
       .join("\n");
     const blob = new Blob([header + rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -88,7 +120,10 @@ export default function HistoryPage() {
         const lines = text.split("\n").slice(1);
         let count = 0;
         lines.forEach((line) => {
-          const parts = line.split(",");
+          if (!line.trim()) return;
+          // Robust regex to split CSV by comma while respecting quotes
+          const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/^"|"$/g, '').replace(/""/g, '"'));
+          
           if (parts.length >= 4) {
             const medicine = parts[1]?.trim();
             const dose = parts[2]?.trim();
@@ -116,7 +151,7 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="px-4 pt-12 pb-24">
+    <div className="px-4 pt-12 pb-24 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft size={16} /> {t("common.back")}
@@ -134,22 +169,85 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground mb-4">{t("history.title")}</h1>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-foreground tracking-tight mb-2">{t("history.title")}</h1>
+        <p className="text-muted-foreground">Keep track of your adherence and health records.</p>
+      </div>
+
+      {/* Adherence Dashboard */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="premium-card bg-gradient-to-br from-primary/10 via-background to-background border-primary/20 mb-8 overflow-hidden relative"
+      >
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+          <TrendingUp size={120} />
+        </div>
         
-        {/* Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
-          <div className="flex items-center gap-1 text-muted-foreground mr-2">
-            <Filter size={14} />
+        <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
+          <div className="relative w-24 h-24 flex items-center justify-center">
+            <svg className="w-full h-full transform -rotate-90">
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                stroke="currentColor"
+                strokeWidth="8"
+                fill="transparent"
+                className="text-muted/20"
+              />
+              <circle
+                cx="48"
+                cy="48"
+                r="40"
+                stroke="currentColor"
+                strokeWidth="8"
+                fill="transparent"
+                strokeDasharray={251.2}
+                strokeDashoffset={251.2 - (251.2 * stats.rate) / 100}
+                className="text-primary transition-all duration-1000 ease-out"
+              />
+            </svg>
+            <span className="absolute text-xl font-black">{stats.rate}%</span>
           </div>
+          
+          <div className="flex-1 text-center sm:text-left">
+            <h2 className="text-lg font-bold text-foreground mb-1">7-Day Adherence</h2>
+            <p className="text-sm text-muted-foreground mb-3">You've taken {stats.taken} of your last {stats.total} scheduled doses.</p>
+            <div className="flex gap-2 justify-center sm:justify-start">
+              <Badge variant="secondary" className="rounded-lg py-1 px-3 bg-success/10 text-success border-success/20">
+                <Check size={12} className="mr-1" /> Good Progress
+              </Badge>
+              <Badge variant="secondary" className="rounded-lg py-1 px-3 bg-primary/10 text-primary border-primary/20">
+                <Calendar size={12} className="mr-1" /> Weekly Report
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Search & Filters */}
+      <div className="space-y-4 mb-8">
+        <div className="relative">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search medicine logs..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full h-12 pl-12 pr-4 rounded-2xl border border-border/50 bg-muted/20 focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
           {(["All", "taken", "skipped", "snoozed"] as const).map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
+              className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all border ${
                 statusFilter === status 
-                  ? "bg-primary text-primary-foreground shadow-md" 
-                  : "bg-accent/50 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/25" 
+                  : "bg-card border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
               }`}
             >
               {status}
@@ -160,72 +258,94 @@ export default function HistoryPage() {
 
       {/* History Timeline */}
       {days.length === 0 ? (
-        <div className="text-center py-16 bg-accent/20 rounded-3xl border border-border/50 shadow-sm mt-4">
-          <Clock size={48} className="text-muted-foreground/30 mx-auto mb-4" />
-          <p className="text-sm font-medium text-muted-foreground">{t("history.no_history")}</p>
-          {statusFilter !== "All" && (
-            <Button variant="link" onClick={() => setStatusFilter("All")} className="mt-2 text-primary">
-              Clear Filters
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-20 bg-accent/20 rounded-[32px] border border-dashed border-border/50"
+        >
+          <div className="w-20 h-20 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-4">
+            <Clock size={32} className="text-muted-foreground/30" />
+          </div>
+          <p className="text-base font-bold text-foreground mb-1">{t("history.no_history")}</p>
+          <p className="text-sm text-muted-foreground max-w-[240px] mx-auto">No records found matching your filters.</p>
+          {searchTerm || statusFilter !== "All" ? (
+            <Button variant="link" onClick={() => {setSearchTerm(""); setStatusFilter("All");}} className="mt-4 text-primary font-bold uppercase tracking-wider text-xs">
+              Reset All Filters
             </Button>
-          )}
-        </div>
+          ) : null}
+        </motion.div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-12 relative before:absolute before:left-5 before:top-4 before:bottom-0 before:w-px before:bg-gradient-to-b before:from-border before:via-border before:to-transparent">
           <AnimatePresence mode="popLayout">
             {days.map((day) => (
               <motion.div 
                 layout 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                exit={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
                 key={day}
-                className="relative"
+                className="relative pl-12"
               >
-                <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl py-2 mb-3 -mx-4 px-4 border-b border-border/20">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{day}</h3>
+                <div className="absolute left-0 top-0 w-10 h-10 rounded-full bg-background border-2 border-primary flex items-center justify-center z-10 shadow-sm">
+                  <Calendar size={16} className="text-primary" />
                 </div>
                 
-                <div className="space-y-3">
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-6 bg-background inline-block pr-4 py-1">
+                  {day}
+                </h3>
+                
+                <div className="space-y-4">
                   {grouped[day].map((log) => (
                     <motion.div
                       layout
                       key={log.id}
-                      initial={{ opacity: 0, x: -10 }}
+                      initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="group flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl border border-border/50 bg-card p-4 transition-all hover:shadow-md hover:border-primary/20"
+                      className="group relative rounded-2xl border border-border/50 bg-card p-5 transition-all hover:shadow-xl hover:border-primary/20 hover:-translate-y-1"
                     >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full ${
-                            log.action === "taken" 
-                              ? "bg-success/15 text-success" 
-                              : log.action === "skipped" 
-                                ? "bg-destructive/15 text-destructive" 
-                                : "bg-warning/15 text-warning"
-                          }`}
-                        >
-                          {log.action === "taken" ? <Check size={18} strokeWidth={2.5} /> : log.action === "skipped" ? <X size={18} strokeWidth={2.5} /> : <Clock size={18} strokeWidth={2.5} />}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div
+                            className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-2xl shadow-sm transition-transform group-hover:scale-110 ${
+                              log.action === "taken" 
+                                ? "bg-success/10 text-success" 
+                                : log.action === "skipped" 
+                                  ? "bg-destructive/10 text-destructive" 
+                                  : "bg-warning/10 text-warning"
+                            }`}
+                          >
+                            {log.action === "taken" ? <Check size={22} strokeWidth={3} /> : log.action === "skipped" ? <X size={22} strokeWidth={3} /> : <Clock size={22} strokeWidth={3} />}
+                          </div>
+                          <div>
+                            <p className="text-[17px] font-bold text-foreground leading-tight mb-1">{log.medicineName}</p>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={`text-[10px] uppercase font-black tracking-widest px-2 py-0 border-none ${
+                                log.action === "taken" ? "bg-success/10 text-success" : log.action === "skipped" ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
+                              }`}>
+                                {log.action}
+                              </Badge>
+                              <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
+                                SCH: {log.scheduledTime || "N/A"}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[15px] font-bold text-foreground leading-tight">{log.medicineName}</p>
-                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">
-                            {log.action.toUpperCase()} • SCH: {log.scheduledTime || "N/A"}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between sm:justify-end gap-4 mt-3 sm:mt-0 pt-3 sm:pt-0 border-t border-border/50 sm:border-0">
-                        <span className="text-[11px] font-bold bg-accent px-3 py-1 rounded-lg text-muted-foreground uppercase tracking-wider">
-                          LOGGED: {new Date(log.actionTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
                         
-                        <button 
-                          onClick={() => handleDelete(log.id)}
-                          className="p-2 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100 focus:opacity-100"
-                          title="Undo / Delete Record"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex items-center justify-between sm:justify-end gap-3 mt-4 sm:mt-0 pt-4 sm:pt-0 border-t border-border/50 sm:border-0">
+                          <div className="text-right">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">Logged at</p>
+                            <p className="text-sm font-bold text-foreground">
+                              {new Date(log.actionTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                          
+                          <button 
+                            onClick={() => handleDelete(log.id)}
+                            className="p-2.5 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                            title="Undo / Delete Record"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -235,11 +355,11 @@ export default function HistoryPage() {
           </AnimatePresence>
 
           {filteredLogs.length > visibleCount && (
-            <motion.div layout className="pt-4 text-center">
+            <motion.div layout className="pt-8 text-center pl-12">
               <Button 
                 variant="outline" 
                 onClick={() => setVisibleCount(c => c + 30)}
-                className="rounded-xl w-full sm:w-auto"
+                className="rounded-2xl w-full sm:w-auto h-12 font-bold uppercase tracking-widest text-xs border-primary/20 text-primary hover:bg-primary/5"
               >
                 Load Older Records
               </Button>

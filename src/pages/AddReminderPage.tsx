@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 interface LocationState {
   // Pre-fill from scan/results
@@ -20,7 +22,25 @@ interface LocationState {
   time?: string;
   repeat?: "daily" | "weekly" | "once" | "custom";
   notes?: string;
+  color?: string;
+  icon?: string;
 }
+
+const COLORS = [
+  { name: "blue", value: "bg-blue-500", border: "border-blue-500/20", text: "text-blue-500" },
+  { name: "green", value: "bg-emerald-500", border: "border-emerald-500/20", text: "text-emerald-500" },
+  { name: "purple", value: "bg-violet-500", border: "border-violet-500/20", text: "text-violet-500" },
+  { name: "rose", value: "bg-rose-500", border: "border-rose-500/20", text: "text-rose-500" },
+  { name: "amber", value: "bg-amber-500", border: "border-amber-500/20", text: "text-amber-500" },
+  { name: "slate", value: "bg-slate-600", border: "border-slate-600/20", text: "text-slate-600" },
+];
+
+const ICONS = [
+  { name: "pill", icon: Pill },
+  { name: "tablet", icon: Tablets },
+  { name: "liquid", icon: Droplets },
+  { name: "syringe", icon: Syringe },
+];
 
 export default function AddReminderPage() {
   const navigate = useNavigate();
@@ -40,6 +60,8 @@ export default function AddReminderPage() {
     state?.repeat || "daily"
   );
   const [notes, setNotes] = useState(state?.notes || "");
+  const [color, setColor] = useState(state?.color || "blue");
+  const [icon, setIcon] = useState(state?.icon || "pill");
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
@@ -61,6 +83,8 @@ export default function AddReminderPage() {
           time,
           repeatSchedule: repeat,
           notes: notes.trim() || undefined,
+          color,
+          icon,
         });
         toast({
           title: "Reminder updated",
@@ -74,6 +98,8 @@ export default function AddReminderPage() {
           repeatSchedule: repeat,
           notes: notes.trim() || undefined,
           enabled: true,
+          color,
+          icon,
         });
         toast({
           title: t("reminders.created"),
@@ -92,126 +118,253 @@ export default function AddReminderPage() {
   };
 
   return (
-    <div className="px-4 pt-6 pb-24">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-sm text-muted-foreground mb-6 hover:text-foreground transition-colors"
-      >
-        <ArrowLeft size={16} /> {t("common.back")}
-      </button>
-
-      <motion.h1
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-2xl font-bold text-foreground mb-8 tracking-tight"
-      >
-        {isEditing
-          ? t("reminders.edit_title", "Edit Reminder")
-          : t("reminders.add_title")}
-      </motion.h1>
+    <div className="px-4 pt-6 pb-24 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft size={16} /> {t("common.back")}
+        </button>
+        
+        <Badge variant="outline" className="rounded-lg bg-primary/5 text-primary border-primary/20">
+          <Info size={12} className="mr-1" /> Premium Experience
+        </Badge>
+      </div>
 
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="premium-card space-y-6"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8"
       >
-        <div>
-          <Label
-            htmlFor="medName"
-            className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1"
-          >
-            {t("reminders.med_name")}
-          </Label>
-          <Input
-            id="medName"
-            value={medicineName}
-            onChange={(e) => setMedicineName(e.target.value)}
-            placeholder={t("reminders.med_name_placeholder")}
-            className="mt-2 h-11 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-colors"
-          />
-        </div>
+        <h1 className="text-3xl font-bold text-foreground tracking-tight">
+          {isEditing
+            ? t("reminders.edit_title", "Edit Reminder")
+            : t("reminders.add_title")}
+        </h1>
+        <p className="text-muted-foreground mt-1">Configure your medication schedule with precision.</p>
+      </motion.div>
 
-        <div>
-          <Label
-            htmlFor="dose"
-            className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1"
-          >
-            {t("reminders.dose")}
-          </Label>
-          <Input
-            id="dose"
-            value={dose}
-            onChange={(e) => setDose(e.target.value)}
-            placeholder={t("reminders.dose_placeholder")}
-            className="mt-2 h-11 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-colors"
-          />
+      {/* Live Preview */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.1 }}
+        className="mb-8"
+      >
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 ml-1">Live Preview</p>
+        <div className={`relative flex items-center gap-4 p-4 rounded-2xl border bg-card shadow-lg transition-all duration-500 ${COLORS.find(c => c.name === color)?.border || 'border-border/50'}`}>
+          <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-500 ${COLORS.find(c => c.name === color)?.value || 'bg-primary'} bg-opacity-10 ${COLORS.find(c => c.name === color)?.text || 'text-primary'}`}>
+            {(() => {
+              const IconComp = ICONS.find(i => i.name === icon)?.icon || Pill;
+              return <IconComp size={24} />;
+            })()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-lg font-bold text-foreground leading-tight truncate">
+              {medicineName || "Medicine Name"}
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs font-semibold text-muted-foreground">{dose || "Dose"}</span>
+              <span className="text-muted-foreground/30">•</span>
+              <span className="text-xs font-semibold text-muted-foreground">{time}</span>
+            </div>
+          </div>
+          <div className="flex-shrink-0">
+            <div className={`w-3 h-3 rounded-full ${COLORS.find(c => c.name === color)?.value || 'bg-primary'} animate-pulse`} />
+          </div>
         </div>
+      </motion.div>
 
-        <div>
-          <Label
-            htmlFor="time"
-            className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1"
-          >
-            {t("reminders.time")}
-          </Label>
-          <Input
-            id="time"
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="mt-2 h-11 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-colors"
-          />
-        </div>
+      <div className="space-y-8">
+        {/* Medication Info Section */}
+        <motion.section
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="premium-card space-y-6"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-1 h-4 bg-primary rounded-full" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Medication Details</h2>
+          </div>
 
-        <div>
-          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
-            {t("reminders.repeat")}
-          </Label>
-          <Select value={repeat} onValueChange={(v) => setRepeat(v as any)}>
-            <SelectTrigger className="mt-2 h-11 rounded-xl border-border/50 bg-muted/20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="once">{t("reminders.once")}</SelectItem>
-              <SelectItem value="daily">{t("reminders.daily")}</SelectItem>
-              <SelectItem value="weekly">{t("reminders.weekly")}</SelectItem>
-              <SelectItem value="custom">{t("reminders.custom")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="medName" className="text-xs font-bold text-muted-foreground ml-1">
+                {t("reminders.med_name")}
+              </Label>
+              <Input
+                id="medName"
+                value={medicineName}
+                onChange={(e) => setMedicineName(e.target.value)}
+                placeholder={t("reminders.med_name_placeholder")}
+                className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
+              />
+            </div>
 
-        <div>
-          <Label
-            htmlFor="notes"
-            className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1"
-          >
-            {t("reminders.notes")}
-          </Label>
+            <div className="space-y-2">
+              <Label htmlFor="dose" className="text-xs font-bold text-muted-foreground ml-1">
+                {t("reminders.dose")}
+              </Label>
+              <div className="space-y-3">
+                <Input
+                  id="dose"
+                  value={dose}
+                  onChange={(e) => setDose(e.target.value)}
+                  placeholder={t("reminders.dose_placeholder")}
+                  className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {["1 Pill", "2 Pills", "5ml", "10ml", "1 Puff"].map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setDose(d)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                        dose === d ? "bg-primary text-primary-foreground shadow-md" : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-2">
+            {/* Color Picker */}
+            <div className="space-y-3">
+              <Label className="text-xs font-bold text-muted-foreground ml-1">Reminder Color</Label>
+              <div className="flex gap-3">
+                {COLORS.map((c) => (
+                  <button
+                    key={c.name}
+                    onClick={() => setColor(c.name)}
+                    className={`w-8 h-8 rounded-full ${c.value} transition-all relative ${
+                      color === c.name ? "ring-2 ring-primary ring-offset-2 scale-110 shadow-lg" : "opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    {color === c.name && <Check size={14} className="text-white absolute inset-0 m-auto" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Icon Picker */}
+            <div className="space-y-3">
+              <Label className="text-xs font-bold text-muted-foreground ml-1">Medication Icon</Label>
+              <div className="flex gap-3">
+                {ICONS.map((i) => {
+                  const IconComp = i.icon;
+                  return (
+                    <button
+                      key={i.name}
+                      onClick={() => setIcon(i.name)}
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                        icon === i.name ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-muted text-muted-foreground hover:bg-muted-foreground/10"
+                      }`}
+                    >
+                      <IconComp size={18} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Schedule Section */}
+        <motion.section
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="premium-card space-y-6"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-1 h-4 bg-primary rounded-full" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Schedule & Timing</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="time" className="text-xs font-bold text-muted-foreground ml-1">
+                {t("reminders.time")}
+              </Label>
+              <Input
+                id="time"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all font-medium text-lg"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-muted-foreground ml-1">
+                {t("reminders.repeat")}
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {(["once", "daily", "weekly", "custom"] as const).map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setRepeat(r)}
+                    className={`flex-1 min-w-[80px] px-3 py-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                      repeat === r 
+                        ? "bg-primary/10 border-primary/30 text-primary shadow-sm" 
+                        : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    {t(`reminders.${r}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.section>
+
+        {/* Notes Section */}
+        <motion.section
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          className="premium-card space-y-4"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-1 h-4 bg-primary rounded-full" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">{t("reminders.notes")}</h2>
+          </div>
           <Textarea
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t("reminders.notes_placeholder")}
-            className="mt-2 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-colors"
-            rows={3}
+            className="min-h-[100px] rounded-2xl border-border/50 bg-muted/20 focus:bg-background transition-all resize-none p-4"
           />
-        </div>
+        </motion.section>
 
-        <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="w-full h-12 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/10"
-          size="lg"
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border/50 z-50 flex justify-center md:relative md:bg-transparent md:border-0 md:p-0"
         >
-          <Save size={16} className="mr-2" />
-          {isSaving
-            ? "Saving…"
-            : isEditing
-            ? t("reminders.save_reminder", "Update Reminder")
-            : t("reminders.save_reminder")}
-        </Button>
-      </motion.div>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="w-full max-w-lg h-14 rounded-2xl text-sm font-bold uppercase tracking-widest shadow-xl shadow-primary/20 group relative overflow-hidden"
+            size="lg"
+          >
+            <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-12" />
+            <Save size={18} className="mr-2" />
+            {isSaving
+              ? "Saving Schedule..."
+              : isEditing
+              ? t("reminders.save_reminder", "Update Reminder")
+              : t("reminders.save_reminder")}
+          </Button>
+        </motion.div>
+      </div>
     </div>
   );
 }
