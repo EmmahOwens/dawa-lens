@@ -1,26 +1,33 @@
 import { useState, useEffect } from "react";
+import { Network } from "@capacitor/network";
 import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function OfflineOverlay() {
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
+    // Check initial status
+    const checkInitialStatus = async () => {
+      const status = await Network.getStatus();
+      setIsOffline(!status.connected);
+    };
+    checkInitialStatus();
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+    // Listen for changes
+    const listener = Network.addListener("networkStatusChange", (status) => {
+      setIsOffline(!status.connected);
+    });
 
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      listener.then(l => l.remove());
     };
   }, []);
 
-  const handleRetry = () => {
-    if (navigator.onLine) {
+  const handleRetry = async () => {
+    const status = await Network.getStatus();
+    if (status.connected) {
       setIsOffline(false);
     }
   };
