@@ -418,34 +418,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const created = await remindersApi.create({ ...rem, userId: currentUserId, patientId: selectedPatientId });
       newReminder = normalize(created) as Reminder;
       setReminders((p) => [...p, newReminder]);
-    }
-
-    // Auto-log an initial "taken" entry so the Medication Log reflects the addition immediately.
-    // We do this fire-and-forget so a log failure never blocks the reminder from being saved.
-    try {
-      const initialLog: Omit<DoseLog, "id" | "actionTime"> = {
-        reminderId: newReminder.id,
-        medicineName: newReminder.medicineName,
-        dose: newReminder.dose,
-        scheduledTime: newReminder.time,
-        action: "taken",
-      };
-
-      if (storageMode === "local") {
-        const createdLog = localPersistence.doseLogs.create(initialLog);
-        setDoseLogs((p) => [...p, createdLog]);
-      } else if (currentUserId) {
-        const createdLog = await doseLogsApi.create({
-          ...initialLog,
-          userId: currentUserId,
-          patientId: selectedPatientId,
-        });
-        setDoseLogs((p) => [...p, normalize(createdLog) as DoseLog]);
-      }
-    } catch (logErr) {
-      // Non-critical — the reminder was saved successfully; just warn in console.
-      console.warn("addReminder: failed to auto-log initial dose entry:", logErr);
-    }
   };
 
   const updateReminder = async (id: string, updates: Partial<Reminder>) => {
