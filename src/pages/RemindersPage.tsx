@@ -109,12 +109,12 @@ export default function RemindersPage() {
   };
 
   return (
-    <div className="px-4 pt-12 pb-28">
+    <div className="px-4 pt-8 pb-28">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
+        className="flex items-center justify-between mb-6"
       >
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
@@ -140,17 +140,17 @@ export default function RemindersPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="grid grid-cols-3 gap-3 mb-8"
+        className="grid grid-cols-3 gap-3 mb-6"
       >
-        <div className="p-4 rounded-2xl bg-primary/8 border border-primary/15 text-center">
+        <div className="p-3 rounded-2xl bg-primary/8 border border-primary/15 text-center">
           <p className="text-2xl font-bold text-primary">{reminders.length}</p>
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Total</p>
         </div>
-        <div className="p-4 rounded-2xl bg-success/8 border border-success/15 text-center">
+        <div className="p-3 rounded-2xl bg-success/8 border border-success/15 text-center">
           <p className="text-2xl font-bold text-success">{enabledCount}</p>
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Active</p>
         </div>
-        <div className="p-4 rounded-2xl bg-accent border border-border/50 text-center">
+        <div className="p-3 rounded-2xl bg-accent border border-border/50 text-center">
           <p className="text-2xl font-bold text-foreground">{takenToday}</p>
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Taken Today</p>
         </div>

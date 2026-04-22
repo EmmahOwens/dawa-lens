@@ -151,8 +151,8 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="px-4 pt-12 pb-24 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="px-4 pt-8 pb-24 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft size={16} /> {t("common.back")}
         </button>
@@ -169,7 +169,7 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-4xl font-bold text-foreground tracking-tight mb-2">{t("history.title")}</h1>
         <p className="text-muted-foreground">Keep track of your adherence and health records.</p>
       </div>
@@ -178,7 +178,7 @@ export default function HistoryPage() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="premium-card bg-gradient-to-br from-primary/10 via-background to-background border-primary/20 mb-8 overflow-hidden relative"
+        className="premium-card bg-gradient-to-br from-primary/10 via-background to-background border-primary/20 mb-6 overflow-hidden relative"
       >
         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
           <TrendingUp size={120} />
@@ -227,7 +227,7 @@ export default function HistoryPage() {
       </motion.div>
 
       {/* Search & Filters */}
-      <div className="space-y-4 mb-8">
+      <div className="space-y-4 mb-6">
         <div className="relative">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -300,7 +300,7 @@ export default function HistoryPage() {
                       key={log.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="group relative rounded-2xl border border-border/50 bg-card p-5 transition-all hover:shadow-xl hover:border-primary/20 hover:-translate-y-1"
+                      className="group relative rounded-2xl border border-border/50 bg-card p-4 transition-all hover:shadow-xl hover:border-primary/20 hover:-translate-y-1"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
@@ -355,7 +355,7 @@ export default function HistoryPage() {
           </AnimatePresence>
 
           {filteredLogs.length > visibleCount && (
-            <motion.div layout className="pt-8 text-center pl-12">
+            <motion.div layout className="pt-6 text-center pl-12">
               <Button 
                 variant="outline" 
                 onClick={() => setVisibleCount(c => c + 30)}

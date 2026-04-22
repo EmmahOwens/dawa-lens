@@ -83,13 +83,13 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 pt-6 pb-24">
+    <div className="min-h-screen bg-background px-4 pt-4 pb-24">
       {/* Back Button */}
       <motion.button 
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         onClick={() => navigate(-1)} 
-        className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-8 hover:text-foreground transition-colors group"
+        className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-6 hover:text-foreground transition-colors group"
       >
         <div className="p-1.5 rounded-full bg-secondary group-hover:bg-secondary/80">
           <ArrowLeft size={14} />
@@ -101,7 +101,7 @@ export default function SettingsPage() {
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6"
       >
         <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
           {t("settings.title")}
@@ -115,7 +115,7 @@ export default function SettingsPage() {
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="space-y-6"
+        className="space-y-4"
       >
         {/* 1. Profile Section */}
         <motion.div variants={itemVariants} className="premium-card relative overflow-hidden">
