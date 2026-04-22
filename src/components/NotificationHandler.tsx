@@ -71,6 +71,11 @@ export const NotificationHandler = () => {
             }
           } else if (actionId === 'SNOOZE') {
             const snoozeTime = addMinutes(new Date(), 15);
+            // Remove the specific notification so it doesn't linger
+            if (notification.id) {
+              await LocalNotifications.cancel({ notifications: [{ id: notification.id }] });
+            }
+
             await LocalNotifications.schedule({
               notifications: [
                 {
