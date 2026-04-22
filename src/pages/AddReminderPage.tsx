@@ -18,11 +18,13 @@ import { Capacitor } from "@capacitor/core";
 interface LocationState {
   // Pre-fill from scan/results
   medicineName?: string;
+  medicineId?: string;
   dose?: string;
   // Edit mode
   editId?: string;
   time?: string;
   repeat?: "daily" | "weekly" | "once" | "custom";
+  repeatDays?: number[];
   notes?: string;
   color?: string;
   icon?: string;
@@ -55,14 +57,14 @@ export default function AddReminderPage() {
 
   const isEditing = !!state?.editId;
 
-  const [medicineId, setMedicineId] = useState<string | undefined>(undefined);
+  const [medicineId, setMedicineId] = useState<string | undefined>(state?.medicineId);
   const [medicineName, setMedicineName] = useState(state?.medicineName || "");
   const [dose, setDose] = useState(state?.dose || "");
   const [time, setTime] = useState(state?.time || "08:00");
   const [repeat, setRepeat] = useState<"daily" | "weekly" | "once" | "custom">(
     state?.repeat || "daily"
   );
-  const [repeatDays, setRepeatDays] = useState<number[]>([]);
+  const [repeatDays, setRepeatDays] = useState<number[]>(state?.repeatDays || []);
   const [notes, setNotes] = useState(state?.notes || "");
   const [color, setColor] = useState(state?.color || "blue");
   const [icon, setIcon] = useState(state?.icon || "pill");
