@@ -1,7 +1,7 @@
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { Reminder, DoseLog } from "@/contexts/AppContext";
-import { addDays, isAfter, isBefore, startOfDay, endOfDay, setHours, setMinutes, setSeconds, setMilliseconds, getDay } from "date-fns";
+import { addDays, isAfter, isBefore, startOfDay, endOfDay, setHours, setMinutes, setSeconds, setMilliseconds, getDay, addMinutes } from "date-fns";
 
 export interface NextDoseInfo {
   reminder: Reminder;
@@ -98,6 +98,41 @@ export const calculateNextDose = (reminders: Reminder[], doseLogs: DoseLog[]): N
   };
 };
 
+export const registerNotificationActions = async () => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    // registerActionTypes defines the UI buttons for the notifications
+    
+    await LocalNotifications.registerActionTypes({
+      types: [
+        {
+          id: 'MEDICINE_REMINDER',
+          actions: [
+            {
+              id: 'TAKE',
+              title: 'Mark as Taken',
+              foreground: true
+            },
+            {
+              id: 'SKIP',
+              title: 'Skip Dose',
+              foreground: true
+            },
+            {
+              id: 'SNOOZE',
+              title: 'Snooze (15m)',
+              foreground: true
+            }
+          ]
+        }
+      ]
+    });
+  } catch (err) {
+    console.error("Failed to register notification actions:", err);
+  }
+};
+
 const stringToHash = (str: string): number => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -176,10 +211,12 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
             id: stringToHash(r.id + scheduleDate.toDateString()), // More unique ID
             schedule: { at: scheduleDate },
             smallIcon: "res://pill",
-            actionTypeId: "OPEN_APP",
+            actionTypeId: "MEDICINE_REMINDER",
             extra: {
               reminderId: r.id,
-              medicineName: r.medicineName
+              medicineName: r.medicineName,
+              dose: r.dose,
+              scheduledTime: scheduleDate.toISOString()
             }
           });
           

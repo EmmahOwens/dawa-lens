@@ -550,13 +550,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const updated = [...doseLogs, newLog];
       setDoseLogs(updated);
       localStorage.setItem(CLOUD_CACHE_LOGS_KEY, JSON.stringify(updated));
+    }
 
-      // If it's a "once" reminder, auto-delete it after logging
-      const reminder = reminders.find(r => r.id === log.reminderId);
-      if (reminder && reminder.repeatSchedule === "once" && (log.action === "taken" || log.action === "skipped")) {
-        console.log(`Auto-deleting one-time reminder: ${reminder.medicineName}`);
-        await deleteReminder(reminder.id);
-      }
+    // If it's a "once" reminder, auto-delete it after logging (Works for both Local and Cloud)
+    const reminder = reminders.find(r => r.id === log.reminderId);
+    if (reminder && reminder.repeatSchedule === "once" && (log.action === "taken" || log.action === "skipped")) {
+      console.log(`Auto-deleting one-time reminder: ${reminder.medicineName}`);
+      await deleteReminder(reminder.id);
     }
   };
 

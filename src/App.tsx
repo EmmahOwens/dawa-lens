@@ -36,6 +36,7 @@ import { Keyboard } from '@capacitor/keyboard';
 import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
+import { NotificationHandler } from "@/components/NotificationHandler";
 
 const queryClient = new QueryClient();
 
@@ -119,6 +120,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AppProvider>
+          <NotificationHandler />
           <OfflineOverlay />
           <Toaster richColors closeButton position="top-center" />
           <DawaGPT />
