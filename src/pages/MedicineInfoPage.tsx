@@ -65,18 +65,18 @@ export default function MedicineInfoPage() {
     : [];
 
   return (
-    <div className="px-4 pt-6 pb-4">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+    <div className="px-4 pt-4 pb-4">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
         <ArrowLeft size={16} /> {t("common.back")}
       </button>
 
-      <h1 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+      <h1 className="text-xl font-bold text-foreground mb-3 flex items-center gap-2">
         <Pill size={20} className="text-primary" />
         {t("medicine_info.title")}
       </h1>
 
       {/* Search bar */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-4">
         <Input
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
@@ -100,7 +100,7 @@ export default function MedicineInfoPage() {
       )}
 
       {info && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           
           {interactions.length > 0 && (
             <div className="space-y-2 mb-2">
@@ -116,7 +116,7 @@ export default function MedicineInfoPage() {
             </div>
           )}
 
-          <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
+          <div className="rounded-xl bg-primary/10 border border-primary/20 p-3">
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-bold text-foreground">{info.name}</h2>
@@ -137,13 +137,13 @@ export default function MedicineInfoPage() {
           </div>
 
           {sections.map((s) => (
-            <div key={s.title} className="rounded-xl border border-border bg-card p-4">
+            <div key={s.title} className="rounded-xl border border-border bg-card p-3">
               <h3 className="text-sm font-semibold text-foreground mb-2">{s.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{s.content}</p>
             </div>
           ))}
 
-          <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 font-medium">
+          <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 font-medium">
             <div className="flex items-start gap-2 text-warning">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               <p className="text-xs leading-relaxed">

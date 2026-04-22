@@ -86,7 +86,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="px-4 pt-12 pb-4">
+    <div className="px-4 pt-8 pb-4">
       <AchievementOverlay 
         open={showAchievement}
         onClose={() => setShowAchievement(false)}
@@ -100,7 +100,7 @@ export default function Dashboard() {
         variants={container} 
         initial="hidden" 
         animate="show" 
-        className="mb-8 flex items-start justify-between"
+        className="mb-5 flex items-start justify-between"
       >
         <div>
           <motion.h1 
@@ -144,7 +144,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 p-6 rounded-[2rem] bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 relative overflow-hidden active:scale-[0.98] transition-transform"
+          className="mb-6 p-5 rounded-[2rem] bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/20 relative overflow-hidden active:scale-[0.98] transition-transform"
           onClick={() => navigate("/reminders")}  
         >
           <div className="absolute top-[-20%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl" />
@@ -180,7 +180,7 @@ export default function Dashboard() {
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8 grid grid-cols-3 gap-3"
+        className="mb-6 grid grid-cols-3 gap-2"
       >
         {quickActions.map((action) => (
           <motion.div key={action.label} whileHover={{ scale: 1.05 }} whileTap={{ scale: action.ringScale || 0.95 }}>
@@ -196,7 +196,7 @@ export default function Dashboard() {
       </motion.div>
 
       {/* 3. Actionable Reminders */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h2 className="section-title flex items-center gap-2">
           <Bell size={14} />
           {t("dashboard.upcoming_reminders")}
@@ -261,7 +261,7 @@ export default function Dashboard() {
         <motion.div 
            initial={{ opacity: 0, y: 20 }}
            animate={{ opacity: 1, y: 0 }}
-           className="mb-8 space-y-4"
+           className="mb-6 space-y-4"
         >
           <div className="premium-card flex items-center justify-between">
             <div>
@@ -295,7 +295,7 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mb-8 premium-card relative overflow-hidden group flex items-center justify-between"
+          className="mb-6 premium-card relative overflow-hidden group flex items-center justify-between"
         >
           <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
           
