@@ -8,9 +8,13 @@ import { localPersistence } from "../services/localPersistence";
 import { scheduleReminders } from "../services/reminderService";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
+import { toast } from "../hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const CLOUD_CACHE_REMS_KEY = "dawa_cloud_cache_reminders";
+const CLOUD_CACHE_MEDS_KEY = "dawa_cloud_cache_medicines";
+const CLOUD_CACHE_LOGS_KEY = "dawa_cloud_cache_doselogs";
 
 export type Medicine = {
   id: string;           // maps to Firestore doc.id
@@ -149,6 +153,7 @@ function normalize<T extends { _id?: string; id?: string }>(doc: T): T & { id: s
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
@@ -339,9 +344,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // Load from cache first for instant retrieval
         const cachedRems = loadLocal<Reminder[]>(CLOUD_CACHE_REMS_KEY, []);
-        if (cachedRems.length > 0 && reminders.length === 0) {
-          setReminders(cachedRems);
-        }
+        const cachedMeds = loadLocal<Medicine[]>(CLOUD_CACHE_MEDS_KEY, []);
+        const cachedLogs = loadLocal<DoseLog[]>(CLOUD_CACHE_LOGS_KEY, []);
+        
+        if (cachedRems.length > 0 && reminders.length === 0) setReminders(cachedRems);
+        if (cachedMeds.length > 0 && medicines.length === 0) setMedicines(cachedMeds);
+        if (cachedLogs.length > 0 && doseLogs.length === 0) setDoseLogs(cachedLogs);
 
         const [meds, rems, logs, pats, wells] = await Promise.all([
           medicinesApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
@@ -350,14 +358,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
           patientsApi.getAll(currentUserId).catch(err => { console.error(err); return null; }),
           wellnessApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
         ]);
-        if (meds) setMedicines(meds.map(normalize));
+        
+        if (meds) {
+          const normalizedMeds = meds.map(normalize);
+          setMedicines(normalizedMeds);
+          localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(normalizedMeds));
+        }
         if (rems) {
           const normalizedRems = rems.map(normalize);
           setReminders(normalizedRems);
-          // Update cache
           localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(normalizedRems));
         }
-        if (logs) setDoseLogs(logs.map(normalize));
+        if (logs) {
+          const normalizedLogs = logs.map(normalize);
+          setDoseLogs(normalizedLogs);
+          localStorage.setItem(CLOUD_CACHE_LOGS_KEY, JSON.stringify(normalizedLogs));
+        }
         if (pats) setPatients(pats.map(normalize));
         if (wells) setWellnessLogs(wells.map(normalize));
       } catch (err) {
@@ -393,18 +409,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       newMed = normalize(created) as Medicine;
     }
     
-    setMedicines((p) => [...p, newMed]);
+    const updated = [...medicines, newMed];
+    setMedicines(updated);
+    if (storageMode === "cloud") {
+      localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(updated));
+    }
 
     // Fetch RxCUI in background
     if (!newMed.rxcui) {
       getRxCUI(newMed.name).then(async (rxcui) => {
         if (rxcui) {
           if (storageMode === "local") {
-             localPersistence.medicines.update(newMed.id, { rxcui });
+            localPersistence.medicines.update(newMed.id, { rxcui });
           } else {
-             await medicinesApi.update(newMed.id, { rxcui });
+            await medicinesApi.update(newMed.id, { rxcui });
           }
-          setMedicines((p) => p.map((m) => (m.id === newMed.id ? { ...m, rxcui } : m)));
+          
+          setMedicines((p) => {
+            const next = p.map((m) => (m.id === newMed.id ? { ...m, rxcui } : m));
+            if (storageMode === "cloud") {
+              localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(next));
+            }
+            return next;
+          });
         }
       }).catch(err => console.error("Failed to fetch RxCUI:", err));
     }
@@ -416,9 +443,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (storageMode === "local") {
       localPersistence.medicines.update(id, updates);
     } else {
+      const docRef = doc(db, "medicines", id);
+      await updateDoc(docRef, updates);
       await medicinesApi.update(id, updates);
     }
-    setMedicines((p) => p.map((m) => (m.id === id ? { ...m, ...updates } : m)));
+    
+    const updated = medicines.map((m) => (m.id === id ? { ...m, ...updates } : m));
+    setMedicines(updated);
+    if (storageMode === "cloud") {
+      localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(updated));
+    }
+  };
+
+  const deleteMedicine = async (id: string) => {
+    if (storageMode === "local") {
+      localPersistence.medicines.remove(id);
+    } else {
+      const docRef = doc(db, "medicines", id);
+      await deleteDoc(docRef);
+      await medicinesApi.remove(id);
+    }
+    
+    const updated = medicines.filter((m) => m.id !== id);
+    setMedicines(updated);
+    if (storageMode === "cloud") {
+      localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(updated));
+    }
   };
 
   const addReminder = async (rem: Omit<Reminder, "id" | "createdAt">) => {
@@ -495,7 +545,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       if (!currentUserId) throw new Error("Not logged in");
       const created = await doseLogsApi.create({ ...log, userId: currentUserId, patientId: selectedPatientId });
-      setDoseLogs((p) => [...p, normalize(created) as DoseLog]);
+      const newLog = normalize(created) as DoseLog;
+      
+      const updated = [...doseLogs, newLog];
+      setDoseLogs(updated);
+      localStorage.setItem(CLOUD_CACHE_LOGS_KEY, JSON.stringify(updated));
 
       // If it's a "once" reminder, auto-delete it after logging
       const reminder = reminders.find(r => r.id === log.reminderId);
@@ -512,7 +566,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       await doseLogsApi.remove(id);
     }
-    setDoseLogs((p) => p.filter((l) => l.id !== id));
+    const updated = doseLogs.filter((l) => l.id !== id);
+    setDoseLogs(updated);
+    if (storageMode === "cloud") {
+      localStorage.setItem(CLOUD_CACHE_LOGS_KEY, JSON.stringify(updated));
+    }
   };
 
   const addWellnessLog = async (log: Omit<WellnessLog, "id" | "timestamp" | "userId">) => {
@@ -566,9 +624,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       // Clear local storage after successful sync
-      localStorage.removeItem("dawa_local_medicines");
+      localStorage.removeItem(LOCAL_MEDS_KEY);
       localStorage.removeItem("dawa_local_reminders");
       localStorage.removeItem("dawa_local_doselogs");
+
+      // Update cloud cache with merged results
+      localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(medicines));
+      localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(reminders));
+      localStorage.setItem(CLOUD_CACHE_LOGS_KEY, JSON.stringify(doseLogs));
+
+      toast({
+        title: t("settings.sync_complete"),
+        description: "Your local data is now backed up to your cloud profile.",
+      });
 
       const now = new Date().toISOString();
       setLastSyncTimestamp(now);
