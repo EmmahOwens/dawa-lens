@@ -55,7 +55,7 @@ export type DoseLog = {
   dose: string;
   scheduledTime: string;
   actionTime: string;
-  action: "taken" | "skipped" | "snoozed";
+  action: "taken" | "skipped" | "snoozed" | "missed";
 };
 
 export type WellnessLog = {
@@ -269,8 +269,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Sync notifications when reminders change
   useEffect(() => {
-    scheduleReminders(reminders, doseLogs);
-  }, [reminders, doseLogs]);
+    scheduleReminders(reminders, doseLogs, medicines);
+  }, [reminders, doseLogs, medicines]);
 
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
@@ -539,21 +539,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
+    let newLog: DoseLog;
     if (storageMode === "local") {
-      const created = localPersistence.doseLogs.create(log);
-      setDoseLogs((p) => [...p, created]);
+      newLog = localPersistence.doseLogs.create(log);
+      setDoseLogs((p) => [...p, newLog]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
       const created = await doseLogsApi.create({ ...log, userId: currentUserId, patientId: selectedPatientId });
-      const newLog = normalize(created) as DoseLog;
+      newLog = normalize(created) as DoseLog;
       
       const updated = [...doseLogs, newLog];
       setDoseLogs(updated);
       localStorage.setItem(CLOUD_CACHE_LOGS_KEY, JSON.stringify(updated));
     }
 
-    // If it's a "once" reminder, auto-delete it after logging (Works for both Local and Cloud)
+    // 1. Update Medicine Inventory if taken
     const reminder = reminders.find(r => r.id === log.reminderId);
+    if (reminder && reminder.medicineId && log.action === "taken") {
+      const medicine = medicines.find(m => m.id === reminder.medicineId);
+      if (medicine && medicine.currentQuantity !== undefined && medicine.dosagePerDose) {
+        const newQuantity = Math.max(0, medicine.currentQuantity - medicine.dosagePerDose);
+        await updateMedicine(medicine.id, { currentQuantity: newQuantity });
+
+        // Optional: Trigger refill toast if low
+        if (newQuantity <= (medicine.dosagePerDose * 5)) {
+          toast({
+            title: t("reminders.low_stock_warning"),
+            description: `${medicine.name}: ${newQuantity} ${medicine.unit || 'units'} remaining.`,
+            variant: "destructive"
+          });
+        }
+      }
+    }
+
+    // 2. If it's a "once" reminder, auto-delete it after logging
     if (reminder && reminder.repeatSchedule === "once" && (log.action === "taken" || log.action === "skipped")) {
       console.log(`Auto-deleting one-time reminder: ${reminder.medicineName}`);
       await deleteReminder(reminder.id);

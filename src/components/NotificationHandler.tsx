@@ -38,6 +38,7 @@ export const NotificationHandler = () => {
 
           if (actionId === 'TAKE') {
             try {
+              // Log the dose and let AppContext handle inventory & history
               await logDose({
                 reminderId,
                 medicineName,
@@ -45,6 +46,12 @@ export const NotificationHandler = () => {
                 scheduledTime: scheduledTime || new Date().toISOString(),
                 action: 'taken'
               });
+
+              // Remove the specific notification so it doesn't linger
+              if (notification.id) {
+                await LocalNotifications.cancel({ notifications: [{ id: notification.id }] });
+              }
+
               toast.success(`Logged: ${medicineName} taken.`);
             } catch (err) {
               console.error('Failed to log dose from notification:', err);

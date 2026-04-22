@@ -5,6 +5,7 @@ import { App as CapApp } from '@capacitor/app';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider, useApp } from "@/contexts/AppContext";
+import { scheduleReminders, checkMissedDoses } from "@/services/reminderService";
 import AppShell from "@/components/AppShell";
 import Dashboard from "@/pages/Dashboard";
 import ScanPage from "@/pages/ScanPage";
@@ -69,6 +70,32 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const AppContent = () => {
+  const { reminders, doseLogs, medicines, logDose } = useApp();
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    // Run once on mount
+    checkMissedDoses(reminders, doseLogs, logDose);
+
+    // Refresh reminders and check missed doses when app comes to foreground
+    const handler = CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        console.log('App became active, refreshing reminders and checking missed doses...');
+        scheduleReminders(reminders, doseLogs, medicines);
+        checkMissedDoses(reminders, doseLogs, logDose);
+      }
+    });
+
+    return () => {
+      handler.then(h => h.remove());
+    };
+  }, [reminders, doseLogs, medicines, logDose]);
+
+  return null;
+};
+
 const App = () => {
   const location = useLocation();
 
@@ -120,6 +147,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AppProvider>
+          <AppContent />
           <NotificationHandler />
           <OfflineOverlay />
           <Toaster richColors closeButton position="top-center" />
