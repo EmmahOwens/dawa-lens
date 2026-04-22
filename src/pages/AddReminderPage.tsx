@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { LocalNotifications } from "@capacitor/local-notifications";
+import { Capacitor } from "@capacitor/core";
 
 interface LocationState {
   // Pre-fill from scan/results
@@ -80,6 +82,22 @@ export default function AddReminderPage() {
         variant: "destructive",
       });
       return;
+    }
+
+    // Check notification permissions on native
+    if (Capacitor.isNativePlatform()) {
+      const perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== 'granted') {
+        const req = await LocalNotifications.requestPermissions();
+        if (req.display !== 'granted') {
+          toast({
+            title: "Notifications Disabled",
+            description: "Please enable notifications in system settings to receive reminders.",
+            variant: "destructive",
+          });
+          // We still let them save, but they are warned.
+        }
+      }
     }
 
     setIsSaving(true);
