@@ -1,25 +1,64 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to read and write their own profile
+    
+    // --- Helper Functions ---
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the user owns the document (either existing or being created)
+    function isDataOwner() {
+      return isAuthenticated() && (
+        (request.resource != null && request.resource.data.userId == request.auth.uid) ||
+        (resource != null && resource.data.userId == request.auth.uid)
+      );
+    }
+
+    // Check if the user is the manager of the patient
+    function isPatientManager() {
+      return isAuthenticated() && (
+        (request.resource != null && request.resource.data.managedBy == request.auth.uid) ||
+        (resource != null && resource.data.managedBy == request.auth.uid)
+      );
+    }
+
+    // --- Collections ---
+
+    // User profiles
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId);
     }
 
-    // Allow users to manage their own reminders
+    // Medication inventory
+    match /medicines/{medicineId} {
+      allow read, write: if isDataOwner();
+    }
+
+    // Medication reminders/schedules
     match /reminders/{reminderId} {
-      allow read, write, delete: if request.auth != null && (
-        request.resource.data.userId == request.auth.uid ||
-        resource.data.userId == request.auth.uid
-      );
+      allow read, write: if isDataOwner();
     }
 
-    // Allow users to manage their own dose logs
+    // History of doses taken/skipped
     match /doseLogs/{logId} {
-      allow read, write: if request.auth != null && (
-        request.resource.data.userId == request.auth.uid ||
-        resource.data.userId == request.auth.uid
-      );
+      allow read, write: if isDataOwner();
+    }
+
+    // Wellness journals (Food, Symptoms, Mood)
+    match /wellnessLogs/{logId} {
+      allow read, write: if isDataOwner();
+    }
+
+    // Family members or professional clients
+    match /patients/{patientId} {
+      allow read, write: if isPatientManager();
     }
   }
 }
+
