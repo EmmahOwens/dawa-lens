@@ -1,7 +1,70 @@
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { Reminder, DoseLog } from "@/contexts/AppContext";
-import { addDays, isAfter, isBefore, startOfDay, endOfDay, setHours, setMinutes, setSeconds, setMilliseconds, getDay, addMinutes } from "date-fns";
+import { addDays, isAfter, isBefore, startOfDay, endOfDay, setHours, setMinutes, setSeconds, setMilliseconds, getDay, addMinutes, subHours, parseISO } from "date-fns";
+
+// ... (existing exports)
+
+/**
+ * Checks for missed doses in the last 24 hours.
+ * A dose is "missed" if it was scheduled more than 2 hours ago and no log exists.
+ */
+export const checkMissedDoses = async (
+  reminders: Reminder[],
+  doseLogs: DoseLog[],
+  logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>
+) => {
+  const now = new Date();
+  const twoHoursAgo = subHours(now, 2);
+  const twentyFourHoursAgo = subHours(now, 24);
+
+  const activeReminders = reminders.filter(r => r.enabled);
+
+  for (const r of activeReminders) {
+    const [hours, minutes] = r.time.split(":").map(Number);
+
+    // Check today and yesterday
+    for (let i = -1; i <= 0; i++) {
+      let scheduledDate = addDays(startOfDay(now), i);
+      scheduledDate = setHours(scheduledDate, hours);
+      scheduledDate = setMinutes(scheduledDate, minutes);
+
+      // Rule 1: Must be within the last 24 hours but at least 2 hours old
+      if (isAfter(scheduledDate, twentyFourHoursAgo) && isBefore(scheduledDate, twoHoursAgo)) {
+
+        // Rule 2: Check if a log already exists for this reminder at this specific scheduled time
+        const logExists = doseLogs.some(log =>
+          log.reminderId === r.id &&
+          log.scheduledTime === scheduledDate.toISOString()
+        );
+
+        if (!logExists) {
+          console.log(`Marking missed dose for ${r.medicineName} scheduled at ${scheduledDate.toISOString()}`);
+          await logDose({
+            reminderId: r.id,
+            medicineName: r.medicineName,
+            dose: r.dose,
+            scheduledTime: scheduledDate.toISOString(),
+            action: 'missed'
+          });
+
+          // Notify the user about the missed dose
+          if (Capacitor.isNativePlatform()) {
+            await LocalNotifications.schedule({
+              notifications: [{
+                title: `Missed Dose: ${r.medicineName}`,
+                body: `You missed your ${r.dose} dose scheduled for ${r.time}. Please stay on track!`,
+                id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
+                smallIcon: "res://pill",
+                extra: { type: 'missed_alert' }
+              }]
+            });
+          }
+        }
+      }
+    }
+  }
+};
 
 export interface NextDoseInfo {
   reminder: Reminder;
@@ -143,7 +206,7 @@ const stringToHash = (str: string): number => {
   return Math.abs(hash);
 };
 
-export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog[]) => {
+export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog[], medicines?: Medicine[]) => {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
@@ -164,9 +227,12 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
 
     activeReminders.forEach(r => {
       const [hours, minutes] = r.time.split(":").map(Number);
-      
-      // Schedule for the next 7 days based on repeat pattern
-      for (let i = 0; i < 7; i++) {
+      const medicine = medicines?.find(m => m.id === r.medicineId);
+      let currentStock = medicine?.currentQuantity || 999;
+      const doseAmount = medicine?.dosagePerDose || 1;
+
+      // Schedule for the next 14 days or until stock runs out
+      for (let i = 0; i < 14; i++) {
         let scheduleDate = addDays(startOfDay(now), i);
         scheduleDate = setHours(scheduleDate, hours);
         scheduleDate = setMinutes(scheduleDate, minutes);
@@ -181,15 +247,25 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
         );
         if (wasTakenToday) continue;
 
+        // Stop scheduling if we are out of stock
+        if (medicine && currentStock < doseAmount) {
+          // Schedule a single refill reminder instead of regular dose
+          notifications.push({
+            title: `Refill Needed: ${r.medicineName}`,
+            body: `You are out of stock. Please refill to continue reminders.`,
+            id: stringToHash(r.id + "refill"),
+            schedule: { at: scheduleDate },
+            smallIcon: "res://pill",
+            extra: { type: "refill", medicineId: r.medicineId }
+          });
+          break;
+        }
+
         // Check frequency
         let shouldSchedule = false;
         if (r.repeatSchedule === "daily" || r.repeatSchedule === "custom" || !r.repeatSchedule) {
           shouldSchedule = true;
         } else if (r.repeatSchedule === "once") {
-          // For 'once', we schedule it only for the first valid future candidate found in the 7-day window
-          // But since we are in a loop of 7 days, we only want the absolute first one.
-          // To simplify: if it's the first time we're here and it's in the future, it's the 'once' event.
-          // However, we need to ensure we don't schedule it 7 times.
           const firstValid = getNextOccurrence(r, now, doseLogs);
           if (firstValid && firstValid.toDateString() === scheduleDate.toDateString()) {
             shouldSchedule = true;
@@ -199,7 +275,6 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
           if (r.repeatDays && r.repeatDays.length > 0) {
             shouldSchedule = r.repeatDays.includes(dayOfWeek);
           } else {
-            // Default to same day of week it was created
             shouldSchedule = dayOfWeek === getDay(new Date(r.createdAt));
           }
         }
@@ -208,7 +283,7 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
           notifications.push({
             title: `Time for ${r.medicineName}`,
             body: `Dose: ${r.dose}. Remember to take your medicine!`,
-            id: stringToHash(r.id + scheduleDate.toDateString()), // More unique ID
+            id: stringToHash(r.id + scheduleDate.toDateString()),
             schedule: { at: scheduleDate },
             smallIcon: "res://pill",
             actionTypeId: "MEDICINE_REMINDER",
@@ -220,7 +295,7 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
             }
           });
           
-          // If it's a 'once' reminder, we stop after scheduling the first occurrence
+          if (medicine) currentStock -= doseAmount;
           if (r.repeatSchedule === "once") break;
         }
       }
