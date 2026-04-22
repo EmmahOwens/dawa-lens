@@ -261,9 +261,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Sync notifications when reminders change
   useEffect(() => {
-    if (reminders.length > 0) {
-      scheduleReminders(reminders, doseLogs);
-    }
+    scheduleReminders(reminders, doseLogs);
   }, [reminders, doseLogs]);
 
   const loginUser = useCallback((userId: string, email: string) => {
