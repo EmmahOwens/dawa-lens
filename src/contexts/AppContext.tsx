@@ -572,8 +572,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 2. If it's a "once" reminder, auto-delete it after logging
-    if (reminder && reminder.repeatSchedule === "once" && (log.action === "taken" || log.action === "skipped")) {
+    // 2. If it's a "once" reminder, auto-delete it after logging (taken, skipped, or missed)
+    if (reminder && reminder.repeatSchedule === "once" && (log.action === "taken" || log.action === "skipped" || log.action === "missed")) {
       console.log(`Auto-deleting one-time reminder: ${reminder.medicineName}`);
       await deleteReminder(reminder.id);
     }

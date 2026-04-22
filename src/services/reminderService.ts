@@ -1,6 +1,6 @@
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
-import { Reminder, DoseLog } from "@/contexts/AppContext";
+import { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
 import { addDays, isAfter, isBefore, startOfDay, endOfDay, setHours, setMinutes, setSeconds, setMilliseconds, getDay, addMinutes, subHours, parseISO } from "date-fns";
 
 // ... (existing exports)
@@ -84,10 +84,16 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
   for (let i = 0; i < 30; i++) {
     const candidate = addDays(checkDate, i);
 
-    // 1. Skip if candidate is in the past
+    // 1. Check schedule-specific logic for 'once' first
+    // If it's a one-time reminder, it shouldn't roll over to future days if missed
+    if (reminder.repeatSchedule === "once") {
+      return isBefore(candidate, fromDate) ? null : candidate;
+    }
+
+    // 2. Skip if candidate is in the past
     if (isBefore(candidate, fromDate)) continue;
 
-    // 2. Check if already taken for this specific day (if candidate is today)
+    // 3. Check if already taken for this specific day (if candidate is today)
     const wasTakenOnCandidateDay = doseLogs.some(log =>
       log.reminderId === reminder.id &&
       isAfter(new Date(log.actionTime), startOfDay(candidate)) &&
@@ -95,12 +101,7 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
     );
     if (wasTakenOnCandidateDay) continue;
 
-    // 3. Check schedule-specific logic
-    if (reminder.repeatSchedule === "once") {
-      // If we found a candidate (now or future), return it
-      return candidate;
-    }
-
+    // 4. Other schedules
     if (reminder.repeatSchedule === "daily") {
       return candidate;
     }
