@@ -9,6 +9,9 @@ import { scheduleReminders } from "../services/reminderService";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 
+const LOCAL_MEDS_KEY = "dawa_local_medicines";
+const CLOUD_CACHE_REMS_KEY = "dawa_cloud_cache_reminders";
+
 export type Medicine = {
   id: string;           // maps to Firestore doc.id
   name: string;
@@ -334,6 +337,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setNeedsOnboarding(true);
         }
 
+        // Load from cache first for instant retrieval
+        const cachedRems = loadLocal<Reminder[]>(CLOUD_CACHE_REMS_KEY, []);
+        if (cachedRems.length > 0 && reminders.length === 0) {
+          setReminders(cachedRems);
+        }
+
         const [meds, rems, logs, pats, wells] = await Promise.all([
           medicinesApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
           remindersApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
@@ -342,7 +351,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           wellnessApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
         ]);
         if (meds) setMedicines(meds.map(normalize));
-        if (rems) setReminders(rems.map(normalize));
+        if (rems) {
+          const normalizedRems = rems.map(normalize);
+          setReminders(normalizedRems);
+          // Update cache
+          localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(normalizedRems));
+        }
         if (logs) setDoseLogs(logs.map(normalize));
         if (pats) setPatients(pats.map(normalize));
         if (wells) setWellnessLogs(wells.map(normalize));
@@ -430,7 +444,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Also sync to MongoDB via API (fire and forget)
       remindersApi.create({ ...remData, _id: docRef.id }).catch(err => console.error("API Sync failed:", err));
 
-      setReminders((p) => [...p, newReminder]);
+      const updated = [...reminders, newReminder];
+      setReminders(updated);
+      localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(updated));
     }
   };
 
@@ -445,7 +461,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Update API
       await remindersApi.update(id, updates);
     }
-    setReminders((p) => p.map((r) => (r.id === id ? { ...r, ...updates } : r)));
+    
+    const updated = reminders.map((r) => (r.id === id ? { ...r, ...updates } : r));
+    setReminders(updated);
+    if (storageMode === "cloud") {
+      localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(updated));
+    }
   };
 
   const deleteReminder = async (id: string) => {
@@ -459,7 +480,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Delete from API
       await remindersApi.remove(id);
     }
-    setReminders((p) => p.filter((r) => r.id !== id));
+    
+    const updated = reminders.filter((r) => r.id !== id);
+    setReminders(updated);
+    if (storageMode === "cloud") {
+      localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(updated));
+    }
   };
 
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
@@ -470,6 +496,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!currentUserId) throw new Error("Not logged in");
       const created = await doseLogsApi.create({ ...log, userId: currentUserId, patientId: selectedPatientId });
       setDoseLogs((p) => [...p, normalize(created) as DoseLog]);
+
+      // If it's a "once" reminder, auto-delete it after logging
+      const reminder = reminders.find(r => r.id === log.reminderId);
+      if (reminder && reminder.repeatSchedule === "once" && (log.action === "taken" || log.action === "skipped")) {
+        console.log(`Auto-deleting one-time reminder: ${reminder.medicineName}`);
+        await deleteReminder(reminder.id);
+      }
     }
   };
 
