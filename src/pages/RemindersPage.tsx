@@ -23,13 +23,24 @@ import {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
-function repeatLabel(schedule: Reminder["repeatSchedule"]): string {
-  switch (schedule) {
+function repeatLabel(reminder: Reminder): string {
+  const { repeatSchedule, repeatDays } = reminder;
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  
+  switch (repeatSchedule) {
     case "daily": return "Every day";
-    case "weekly": return "Every week";
+    case "weekly": 
+      if (repeatDays && repeatDays.length > 0) {
+        return `Weekly: ${repeatDays.map(d => days[d]).join(", ")}`;
+      }
+      return "Every week";
     case "once": return "One time";
-    case "custom": return "Custom";
-    default: return schedule;
+    case "custom": 
+      if (repeatDays && repeatDays.length > 0) {
+        return `Custom: ${repeatDays.map(d => days[d]).join(", ")}`;
+      }
+      return "Custom";
+    default: return repeatSchedule;
   }
 }
 
@@ -51,7 +62,7 @@ const iconMap: Record<string, any> = {
 
 export default function RemindersPage() {
   const navigate = useNavigate();
-  const { reminders, updateReminder, deleteReminder, doseLogs } = useApp();
+  const { reminders, updateReminder, deleteReminder, doseLogs, isInitializing } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -146,7 +157,13 @@ export default function RemindersPage() {
       </motion.div>
 
       {/* Reminder List */}
-      {sorted.length === 0 ? (
+      {isInitializing ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-24 w-full rounded-2xl bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      ) : sorted.length === 0 ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -218,7 +235,7 @@ export default function RemindersPage() {
                       <span className="text-[11px] font-semibold text-muted-foreground">{reminder.dose}</span>
                       <span className="text-[11px] text-muted-foreground/40">·</span>
                       <span className="text-[11px] font-semibold text-muted-foreground capitalize">
-                        {repeatLabel(reminder.repeatSchedule)}
+                        {repeatLabel(reminder)}
                       </span>
                     </div>
 

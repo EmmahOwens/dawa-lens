@@ -47,22 +47,30 @@ export default function AddReminderPage() {
   const location = useLocation();
   const state = location.state as LocationState | null;
 
-  const { addReminder, updateReminder } = useApp();
+  const { addReminder, updateReminder, medicines } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
   const isEditing = !!state?.editId;
 
+  const [medicineId, setMedicineId] = useState<string | undefined>(undefined);
   const [medicineName, setMedicineName] = useState(state?.medicineName || "");
   const [dose, setDose] = useState(state?.dose || "");
   const [time, setTime] = useState(state?.time || "08:00");
   const [repeat, setRepeat] = useState<"daily" | "weekly" | "once" | "custom">(
     state?.repeat || "daily"
   );
+  const [repeatDays, setRepeatDays] = useState<number[]>([]);
   const [notes, setNotes] = useState(state?.notes || "");
   const [color, setColor] = useState(state?.color || "blue");
   const [icon, setIcon] = useState(state?.icon || "pill");
   const [isSaving, setIsSaving] = useState(false);
+
+  const toggleDay = (day: number) => {
+    setRepeatDays(prev => 
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort()
+    );
+  };
 
   const handleSave = async () => {
     if (!medicineName.trim() || !dose.trim()) {
@@ -78,10 +86,12 @@ export default function AddReminderPage() {
     try {
       if (isEditing && state?.editId) {
         await updateReminder(state.editId, {
+          medicineId,
           medicineName: medicineName.trim(),
           dose: dose.trim(),
           time,
           repeatSchedule: repeat,
+          repeatDays: repeat === "weekly" || repeat === "custom" ? repeatDays : undefined,
           notes: notes.trim() || undefined,
           color,
           icon,
@@ -92,10 +102,12 @@ export default function AddReminderPage() {
         });
       } else {
         await addReminder({
+          medicineId,
           medicineName: medicineName.trim(),
           dose: dose.trim(),
           time,
           repeatSchedule: repeat,
+          repeatDays: repeat === "weekly" || repeat === "custom" ? repeatDays : undefined,
           notes: notes.trim() || undefined,
           enabled: true,
           color,
@@ -190,6 +202,37 @@ export default function AddReminderPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-muted-foreground ml-1">
+                Link to Inventory (Optional)
+              </Label>
+              <Select
+                value={medicineId || "none"}
+                onValueChange={(val) => {
+                  if (val === "none") {
+                    setMedicineId(undefined);
+                  } else {
+                    const med = medicines.find(m => m.id === val);
+                    if (med) {
+                      setMedicineId(med.id);
+                      setMedicineName(med.name);
+                      setDose(med.dosage);
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger className="h-12 rounded-xl border-border/50 bg-muted/20">
+                  <SelectValue placeholder="Select from your medicines" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Manual Entry</SelectItem>
+                  {medicines.map(m => (
+                    <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="medName" className="text-xs font-bold text-muted-foreground ml-1">
                 {t("reminders.med_name")}
@@ -320,6 +363,31 @@ export default function AddReminderPage() {
                 ))}
               </div>
             </div>
+
+            {(repeat === "weekly" || repeat === "custom") && (
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="col-span-full space-y-3 pt-2"
+              >
+                <Label className="text-xs font-bold text-muted-foreground ml-1">Select Days</Label>
+                <div className="flex justify-between gap-2">
+                  {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+                    <button
+                      key={`${day}-${i}`}
+                      onClick={() => toggleDay(i)}
+                      className={`w-10 h-10 rounded-full text-xs font-bold transition-all border ${
+                        repeatDays.includes(i)
+                          ? "bg-primary border-primary text-primary-foreground shadow-md scale-110"
+                          : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
           </div>
         </motion.section>
 

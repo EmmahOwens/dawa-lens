@@ -34,7 +34,8 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
 
     // 3. Check schedule-specific logic
     if (reminder.repeatSchedule === "once") {
-      return i === 0 ? candidate : null;
+      // If we found a candidate (now or future), return it
+      return candidate;
     }
 
     if (reminder.repeatSchedule === "daily") {
@@ -149,8 +150,15 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
         let shouldSchedule = false;
         if (r.repeatSchedule === "daily" || r.repeatSchedule === "custom" || !r.repeatSchedule) {
           shouldSchedule = true;
-        } else if (r.repeatSchedule === "once" && i === 0) {
-          shouldSchedule = true;
+        } else if (r.repeatSchedule === "once") {
+          // For 'once', we schedule it only for the first valid future candidate found in the 7-day window
+          // But since we are in a loop of 7 days, we only want the absolute first one.
+          // To simplify: if it's the first time we're here and it's in the future, it's the 'once' event.
+          // However, we need to ensure we don't schedule it 7 times.
+          const firstValid = getNextOccurrence(r, now, doseLogs);
+          if (firstValid && firstValid.toDateString() === scheduleDate.toDateString()) {
+            shouldSchedule = true;
+          }
         } else if (r.repeatSchedule === "weekly") {
           const dayOfWeek = getDay(scheduleDate);
           if (r.repeatDays && r.repeatDays.length > 0) {
@@ -174,6 +182,9 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
               medicineName: r.medicineName
             }
           });
+          
+          // If it's a 'once' reminder, we stop after scheduling the first occurrence
+          if (r.repeatSchedule === "once") break;
         }
       }
     });
@@ -185,3 +196,4 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
     console.error("Failed to schedule notifications:", err);
   }
 };
+
