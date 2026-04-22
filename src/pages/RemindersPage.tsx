@@ -280,10 +280,12 @@ export default function RemindersPage() {
                         onClick={() => navigate("/reminders/new", { 
                           state: { 
                             editId: reminder.id, 
-                            medicineName: reminder.medicineName, 
+                            medicineId: reminder.medicineId,
+                            medicineName: reminder.medicineName,
                             dose: reminder.dose, 
                             time: reminder.time, 
                             repeat: reminder.repeatSchedule, 
+                            repeatDays: reminder.repeatDays,
                             notes: reminder.notes,
                             color: reminder.color,
                             icon: reminder.icon
