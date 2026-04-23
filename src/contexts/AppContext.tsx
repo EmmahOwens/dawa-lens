@@ -31,6 +31,8 @@ export type Medicine = {
   addedAt: string;
   updatedAt?: string;
   isConflict?: boolean;
+  color?: string;
+  icon?: string;
 };
 
 export type Reminder = {

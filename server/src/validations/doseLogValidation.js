@@ -4,10 +4,12 @@ export const createDoseLogSchema = z.object({
   body: z.object({
     userId: z.string({ required_error: 'userId is required' }),
     medicineName: z.string({ required_error: 'Medicine name is required' }),
-    status: z.enum(['taken', 'skipped', 'missed'], { required_error: 'Status is required' }),
+    action: z.enum(['taken', 'skipped', 'missed', 'snoozed'], { required_error: 'Action is required' }),
     actionTime: z.string().optional(),
     dose: z.string().optional(),
-    patientId: z.string().optional(),
+    patientId: z.string().nullable().optional(),
+    reminderId: z.string().optional(),
+    scheduledTime: z.string().optional(),
   })
 });
 

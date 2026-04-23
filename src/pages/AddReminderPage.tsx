@@ -55,7 +55,7 @@ export default function AddReminderPage() {
   const location = useLocation();
   const state = location.state as LocationState | null;
 
-  const { addReminder, updateReminder, medicines } = useApp();
+  const { addReminder, updateReminder, addMedicine, medicines } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -128,9 +128,27 @@ export default function AddReminderPage() {
   const executeSave = async () => {
     setIsSaving(true);
     try {
+      let finalMedId = medicineId;
+
+      // If it's a new medicine (Manual Entry), add it to the cabinet first
+      if (!finalMedId && medicineName.trim()) {
+        try {
+          const newMed = await addMedicine({
+            name: medicineName.trim(),
+            dosage: dose.trim(),
+            icon: icon,
+            color: color,
+          });
+          finalMedId = newMed.id;
+        } catch (e) {
+          console.warn("Could not auto-add medicine to cabinet:", e);
+          // Continue anyway, reminder will just be unlinked
+        }
+      }
+
       if (isEditing && state?.editId) {
         await updateReminder(state.editId, {
-          medicineId,
+          medicineId: finalMedId,
           medicineName: medicineName.trim(),
           dose: dose.trim(),
           time,
@@ -146,7 +164,7 @@ export default function AddReminderPage() {
         });
       } else {
         await addReminder({
-          medicineId,
+          medicineId: finalMedId,
           medicineName: medicineName.trim(),
           dose: dose.trim(),
           time,
@@ -459,7 +477,7 @@ export default function AddReminderPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border/50 z-50 flex justify-center md:relative md:bg-transparent md:border-0 md:p-0"
+          className="fixed bottom-20 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border/50 z-40 flex justify-center md:relative md:bottom-0 md:bg-transparent md:border-0 md:p-0"
         >
           <Button
             onClick={handleSave}
