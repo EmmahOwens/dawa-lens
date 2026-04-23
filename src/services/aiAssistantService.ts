@@ -201,10 +201,22 @@ export const chatWithDawaGPTStream = async (
             
             if (content.includes("###METADATA###")) {
               const parts = content.split("###METADATA###");
-              fullText += parts[0];
-              onChunk(fullText);
-              isMetadata = true;
-              metadataJson += parts[1];
+              if (!isMetadata) {
+                // Starting metadata
+                fullText += parts[0];
+                onChunk(fullText);
+                isMetadata = true;
+                metadataJson += parts[1] || "";
+              } else {
+                // Ending metadata
+                metadataJson += parts[0] || "";
+                isMetadata = false;
+                // If there's text after the closing tag, add it to fullText
+                if (parts[1]) {
+                  fullText += parts[1];
+                  onChunk(fullText);
+                }
+              }
             } else if (isMetadata) {
               metadataJson += content;
             } else {
