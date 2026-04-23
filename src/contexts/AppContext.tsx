@@ -485,6 +485,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Use Firestore directly for unique ID and persistence
       const remData = {
         ...rem,
+        medicineId: rem.medicineId || null,
         userId: currentUserId,
         patientId: selectedPatientId || null,
         createdAt: new Date().toISOString()
