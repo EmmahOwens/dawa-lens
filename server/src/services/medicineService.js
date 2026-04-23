@@ -19,11 +19,18 @@ export const getAllMedicines = async (userId, patientId) => {
 };
 
 export const createMedicine = async (data) => {
-  data.createdAt = new Date().toISOString();
-  data.updatedAt = data.createdAt;
+  const { _id, ...rest } = data;
+  rest.createdAt = rest.createdAt || rest.addedAt || new Date().toISOString();
+  rest.updatedAt = rest.updatedAt || rest.createdAt;
   
-  const docRef = await medicinesCol.add(data);
-  return { id: docRef.id, _id: docRef.id, ...data };
+  if (_id) {
+    // If ID is provided, use it (prevents duplicates from frontend double-write)
+    await medicinesCol.doc(_id).set(rest, { merge: true });
+    return { id: _id, _id, ...rest };
+  } else {
+    const docRef = await medicinesCol.add(rest);
+    return { id: docRef.id, _id: docRef.id, ...rest };
+  }
 };
 
 export const updateMedicine = async (id, data) => {
