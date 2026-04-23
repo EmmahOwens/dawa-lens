@@ -154,6 +154,17 @@ function normalize<T extends { _id?: string; id?: string }>(doc: T): T & { id: s
   return { ...rest, id };
 }
 
+/** Remove undefined fields so Firestore doesn't throw an error. */
+function sanitizeFirestoreData(data: any) {
+  const sanitized = { ...data };
+  Object.keys(sanitized).forEach(key => {
+    if (sanitized[key] === undefined) {
+      delete sanitized[key];
+    }
+  });
+  return sanitized;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -407,8 +418,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       newMed = localPersistence.medicines.create(med);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      const created = await medicinesApi.create({ ...med, userId: currentUserId, patientId: selectedPatientId });
-      newMed = normalize(created) as Medicine;
+      
+      const medData = sanitizeFirestoreData({
+        ...med,
+        userId: currentUserId,
+        patientId: selectedPatientId || null,
+        addedAt: new Date().toISOString()
+      });
+
+      // Use Firestore for ID and persistence
+      const docRef = await addDoc(collection(db, "medicines"), medData);
+      newMed = { ...medData, id: docRef.id } as Medicine;
+
+      // Also sync to MongoDB via API (fire and forget)
+      medicinesApi.create({ ...medData, _id: docRef.id }).catch(err => console.error("API Sync failed:", err));
     }
     
     const updated = [...medicines, newMed];
@@ -446,8 +469,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localPersistence.medicines.update(id, updates);
     } else {
       const docRef = doc(db, "medicines", id);
-      await updateDoc(docRef, updates);
-      await medicinesApi.update(id, updates);
+      const sanitizedUpdates = sanitizeFirestoreData(updates);
+      await updateDoc(docRef, sanitizedUpdates);
+      await medicinesApi.update(id, sanitizedUpdates);
     }
     
     const updated = medicines.map((m) => (m.id === id ? { ...m, ...updates } : m));
@@ -483,13 +507,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!currentUserId) throw new Error("Not logged in");
 
       // Use Firestore directly for unique ID and persistence
-      const remData = {
+      const remData = sanitizeFirestoreData({
         ...rem,
         medicineId: rem.medicineId || null,
         userId: currentUserId,
         patientId: selectedPatientId || null,
         createdAt: new Date().toISOString()
-      };
+      });
 
       const docRef = await addDoc(collection(db, "reminders"), remData);
       newReminder = { ...remData, id: docRef.id } as Reminder;
@@ -509,10 +533,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       // Update Firestore
       const docRef = doc(db, "reminders", id);
-      await updateDoc(docRef, updates);
+      const sanitizedUpdates = sanitizeFirestoreData(updates);
+      await updateDoc(docRef, sanitizedUpdates);
 
       // Update API
-      await remindersApi.update(id, updates);
+      await remindersApi.update(id, sanitizedUpdates);
     }
     
     const updated = reminders.map((r) => (r.id === id ? { ...r, ...updates } : r));
