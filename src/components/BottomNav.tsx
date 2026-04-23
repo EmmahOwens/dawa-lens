@@ -3,6 +3,8 @@ import { Home, Camera, Bell, History, Settings, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
+import { NativeService } from "@/services/nativeService";
+import { ImpactStyle } from "@capacitor/haptics";
 
 export default function BottomNav() {
   const location = useLocation();
@@ -39,6 +41,7 @@ export default function BottomNav() {
         {/* Central Scan Button */}
         <NavLink
           to="/scan"
+          onClick={() => NativeService.haptics.impact(ImpactStyle.Medium)}
           className="relative flex h-14 w-14 items-center justify-center -mt-6"
         >
           <motion.div
@@ -65,6 +68,7 @@ function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: a
   return (
     <NavLink
       to={to}
+      onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
       className="relative flex flex-col items-center justify-center w-12 h-12 group"
     >
       <div className="relative flex flex-col items-center">

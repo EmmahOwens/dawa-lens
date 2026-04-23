@@ -8,16 +8,26 @@ const config: CapacitorConfig = {
   appName: 'dawa-lens',
   webDir: 'dist',
   server: {
-    // Live production URL
-    url: 'https://dawalens.web.app',
-    
-    // Custom offline fallback page that hides the default browser error.
-    errorPath: 'offline.html',
-    
-    // Security and scheme settings
     androidScheme: 'https',
     iosScheme: 'https',
     cleartext: false,
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      launchAutoHide: false,
+      backgroundColor: "#ffffff",
+      androidSplashResourceName: "splash",
+      androidScaleType: "CENTER_CROP",
+      showSpinner: false,
+      androidSpinnerStyle: "large",
+      iosSpinnerStyle: "small",
+      spinnerColor: "#3b82f6",
+      splashFullScreen: true,
+      splashImmersive: true,
+      layoutName: "launch_screen",
+      useDialog: false,
+    },
   },
 };
 
