@@ -10,7 +10,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { checkConditionSafety } from "@/services/conditionInteractionService";
 import { Button } from "./ui/button";
-import { ChatMessage, chatWithDawaGPT } from "@/services/aiAssistantService";
+import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
 import { DashboardWidget } from "./intelligence/DashboardWidget";
 import { ScanWidget } from "./intelligence/ScanWidget";
 import { WellnessWidget } from "./intelligence/WellnessWidget";
@@ -21,7 +21,11 @@ import { Maximize2, BrainCircuit } from "lucide-react";
 export function IntelligencePanel() {
   const { t } = useTranslation();
   const location = useLocation();
-  const { medicines, userProfile, doseLogs, reminders, isIntelligenceCollapsed, setIsIntelligenceCollapsed, isDawaGPTOpen, setIsDawaGPTOpen } = useApp();
+  const { 
+    medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
+    isIntelligenceCollapsed, setIsIntelligenceCollapsed, 
+    isDawaGPTOpen, setIsDawaGPTOpen 
+  } = useApp();
   
   const [miniChatInput, setMiniChatInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -58,22 +62,47 @@ export function IntelligencePanel() {
        text 
     };
     
-    setMessages(prev => [...prev, userMsg]);
+    const botId = (Date.now() + 1).toString();
+    const initialBotMsg: ChatMessage = {
+      id: botId,
+      role: "assistant",
+      text: "",
+      source: "Gemini"
+    };
+
+    setMessages(prev => [...prev, userMsg, initialBotMsg]);
     setMiniChatInput("");
     setIsTyping(true);
 
     try {
-      const response = await chatWithDawaGPT([...messages, userMsg], medicines, userProfile, doseLogs);
-      setMessages(prev => [...prev, response]);
+      const response = await chatWithDawaGPTStream(
+        [...messages, userMsg], 
+        medicines, 
+        userProfile, 
+        doseLogs, 
+        reminders, 
+        wellnessLogs, 
+        patients, 
+        (streamedText) => {
+          setMessages(prev => prev.map(msg => 
+            msg.id === botId ? { ...msg, text: streamedText } : msg
+          ));
+        }
+      );
+      
+      // Final update with metadata (suggestions, actions)
+      setMessages(prev => prev.map(msg => 
+        msg.id === botId ? response : msg
+      ));
     } catch (err) {
       console.error("Mini Chat Error:", err);
-      const errorMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        text: "I'm having trouble connecting to my medical intelligence core on Render. Please ensure the backend is active.",
-        source: "System"
-      };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages(prev => prev.map(msg => 
+        msg.id === botId ? {
+          ...msg,
+          text: "I'm having trouble connecting to my medical intelligence core. Please ensure the backend is active.",
+          source: "System"
+        } : msg
+      ));
     } finally {
       setIsTyping(false);
     }
@@ -92,31 +121,32 @@ export function IntelligencePanel() {
       <div className="space-y-8">
         <section>
           <div className="flex items-center justify-between mb-4 px-1">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t("Intelligence.snapshot")}</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{t("Intelligence.snapshot")}</h3>
             <Activity size={14} className="text-primary" />
           </div>
           <motion.div 
             whileHover={{ y: -5 }}
-            className="bg-card rounded-[2rem] p-6 border border-border shadow-sm relative overflow-hidden"
+            className="bg-background/40 backdrop-blur-sm rounded-[2rem] p-6 border border-border/50 shadow-sm relative overflow-hidden group"
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <div className="relative w-16 h-16 flex items-center justify-center">
                 <svg className="w-full h-full -rotate-90">
-                  <circle cx="32" cy="32" r="28" fill="transparent" stroke="currentColor" strokeWidth="6" className="text-muted/30" />
+                  <circle cx="32" cy="32" r="28" fill="transparent" stroke="currentColor" strokeWidth="6" className="text-muted/10" />
                   <motion.circle 
                     cx="32" cy="32" r="28" fill="transparent" stroke="currentColor" strokeWidth="6" 
                     strokeDasharray={2 * Math.PI * 28}
                     initial={{ strokeDashoffset: 2 * Math.PI * 28 }}
                     animate={{ strokeDashoffset: 2 * Math.PI * 28 * (1 - adherenceRate / 100) }}
                     transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="text-primary" 
+                    className="text-primary shadow-[0_0_15px_rgba(59,130,246,0.4)]" 
+                    strokeLinecap="round"
                   />
                 </svg>
-                <span className="absolute text-[10px] font-black">{adherenceRate}%</span>
+                <span className="absolute text-[12px] font-black">{adherenceRate}%</span>
               </div>
               <div>
-                <p className="text-xs font-black text-foreground uppercase tracking-tight">{t("Intelligence.adherence")}</p>
-                <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60 mt-0.5">{todayLogs.length} / {reminders.length} {t("Intelligence.doses_taken")}</p>
+                <p className="text-[11px] font-black text-foreground uppercase tracking-tight">{t("Intelligence.adherence")}</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 mt-1">{todayLogs.length} / {reminders.length} {t("Intelligence.doses_taken")}</p>
               </div>
             </div>
           </motion.div>
@@ -124,23 +154,32 @@ export function IntelligencePanel() {
 
         <section>
           <div className="flex items-center justify-between mb-4 px-1">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{t("Intelligence.watchdog")}</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{t("Intelligence.watchdog")}</h3>
             <ShieldAlert size={14} className={safetyWarnings.length > 0 ? "text-destructive" : "text-success"} />
           </div>
           {safetyWarnings.length > 0 ? (
             <div className="space-y-3">
               {safetyWarnings.map((warning, i) => (
-                <div key={i} className="bg-destructive/5 border border-destructive/20 rounded-[1.5rem] p-4 flex gap-3 italic">
-                  <ShieldAlert size={14} className="text-destructive shrink-0" />
-                  <p className="text-[10px] leading-relaxed text-destructive/90 font-medium">{warning.warning}</p>
-                </div>
+                <motion.div 
+                  key={i} 
+                  whileHover={{ scale: 1.02 }}
+                  className="bg-destructive/5 backdrop-blur-sm border border-destructive/20 rounded-[1.5rem] p-5 flex gap-4 italic shadow-sm"
+                >
+                  <ShieldAlert size={16} className="text-destructive shrink-0" />
+                  <p className="text-[11px] leading-relaxed text-destructive/90 font-medium">{warning.warning}</p>
+                </motion.div>
               ))}
             </div>
           ) : (
-            <div className="bg-success/5 border border-success/20 rounded-[1.5rem] p-4 flex items-center gap-3">
-              <CheckCircle2 size={14} className="text-success shrink-0" />
+            <motion.div 
+              whileHover={{ scale: 1.02 }}
+              className="bg-success/5 backdrop-blur-sm border border-success/20 rounded-[1.5rem] p-5 flex items-center gap-4 shadow-sm"
+            >
+              <div className="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+                 <CheckCircle2 size={16} className="text-success" />
+              </div>
               <p className="text-[10px] text-success/90 font-black uppercase tracking-widest">{t("Intelligence.no_interactions")}</p>
-            </div>
+            </motion.div>
           )}
         </section>
 
@@ -148,15 +187,15 @@ export function IntelligencePanel() {
         {medicines.length > 0 && (
           <section className="animate-in fade-in slide-in-from-bottom-2">
             <div className="flex items-center justify-between mb-4 px-1 mt-8">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">AI Insight</h3>
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">AI Insight</h3>
               <BrainCircuit size={14} className="text-primary" />
             </div>
-            <div className="bg-primary/5 border border-primary/20 rounded-[1.5rem] p-5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <div className="bg-primary/5 backdrop-blur-sm border border-primary/20 rounded-[1.5rem] p-6 relative overflow-hidden group shadow-sm">
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
                 <BrainCircuit size={40} className="text-primary" />
               </div>
               {isInsightLoading ? (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3">
                   <div className="h-3 w-3/4 bg-primary/10 rounded-full animate-pulse" />
                   <div className="h-3 w-1/2 bg-primary/10 rounded-full animate-pulse" />
                 </div>
@@ -202,7 +241,7 @@ export function IntelligencePanel() {
   }
 
   return (
-    <aside className="w-[340px] border-l border-border bg-sidebar-background flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-right-4">
+    <aside className="w-[340px] border-l border-border/40 bg-background/60 backdrop-blur-xl flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-right-4 shadow-[-10px_0_30px_rgba(0,0,0,0.03)]">
       
       {/* Header with Collapse Button */}
       <div className="p-6 pb-2 flex items-center justify-between">
@@ -254,7 +293,7 @@ export function IntelligencePanel() {
                   <span>Expand</span>
                 </button>
               </div>
-              <div className="bg-muted/30 rounded-[2rem] border border-border p-4 flex flex-col h-[320px] relative overflow-hidden group/chat">
+              <div className="bg-muted/10 backdrop-blur-md rounded-[2.5rem] border border-border/30 p-5 flex flex-col h-[350px] relative overflow-hidden group/chat shadow-inner transition-all duration-300 hover:shadow-primary/5">
                 <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover/chat:opacity-10 transition-opacity">
                   <SparklesIcon size={80} />
                 </div>
@@ -325,8 +364,8 @@ export function IntelligencePanel() {
                       value={miniChatInput}
                       onChange={(e) => setMiniChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSendMessage(miniChatInput)}
-                      placeholder="Ask GPT..." 
-                      className="flex-1 bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 text-[11px] border-none outline-none ring-1 ring-border focus:ring-primary/40 transition-all font-medium"
+                      placeholder="How can I help you today?" 
+                      className="flex-1 bg-background/80 backdrop-blur-sm rounded-full px-5 py-2.5 text-[11px] border-none outline-none ring-1 ring-border/50 focus:ring-primary/30 transition-all font-medium placeholder:text-muted-foreground/50 shadow-sm"
                     />
                     <Button 
                       size="icon" 

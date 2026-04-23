@@ -80,4 +80,24 @@ router.post('/chat', protect, async (req, res, next) => {
   }
 });
 
+/**
+ * Streaming Conversational AI Assistant
+ */
+router.post('/chat/stream', protect, async (req, res, next) => {
+  try {
+    const stream = await aiService.streamChatWithDawaGPT(req.body);
+    
+    // Set headers for SSE (Server-Sent Events) or raw stream
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    // Pipe the axios stream to the response
+    stream.pipe(res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+
 export default router;

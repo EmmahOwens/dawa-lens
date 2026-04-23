@@ -156,6 +156,68 @@ export const checkMealSafety = async (medicines, mealDescription) => {
 };
 
 export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
+  const { finalMessages, systemInstruction } = prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients });
+
+  if (!GROQ_API_KEY) {
+    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
+  }
+
+  try {
+    const response = await axios.post(GROQ_API_URL, {
+      model: GROQ_MODEL,
+      messages: finalMessages,
+      response_format: { type: 'json_object' }
+    }, {
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const text = response.data?.choices?.[0]?.message?.content;
+    if (!text) throw new AppError('AI returned an empty response.', 502);
+    return JSON.parse(sanitizeJson(text));
+  } catch (err) {
+    handleAiError(err);
+  }
+};
+
+/**
+ * Streaming version of Dawa-GPT.
+ * Returns the raw axios stream from Groq.
+ */
+export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
+  const { finalMessages } = prepareDawaGPTContext({ 
+    messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, 
+    isStreaming: true 
+  });
+
+  if (!GROQ_API_KEY) {
+    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
+  }
+
+  try {
+    const response = await axios.post(GROQ_API_URL, {
+      model: GROQ_MODEL,
+      messages: finalMessages,
+      stream: true
+    }, {
+      headers: {
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      responseType: 'stream'
+    });
+
+    return response.data;
+  } catch (err) {
+    handleAiError(err);
+  }
+};
+
+// --- Helpers ---
+
+function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false }) {
   const activeMeds = medicines?.map(m => m.name).join(', ') || 'No active medications';
   const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, 20)) : 'No recent dose history available';
   const remindersSummary = reminders?.length
@@ -204,6 +266,15 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     5. Provide exactly 3 next-prompt suggestions tailored to the user's context.
     6. Keep text responses concise and actionable — max 3 paragraphs.
 
+    ${isStreaming ? `
+    === STREAMING FORMAT ===
+    Since this is a stream, respond in plain text.
+    At the very end of your response, after your message, add exactly one separator "###METADATA###" followed by a JSON object containing your suggestions, source, and action.
+    Example:
+    "Hello! I can help with that. [rest of message]
+    ###METADATA###
+    {\"suggestions\": [\"...\"], \"source\": \"Gemini\", \"action\": null}"
+    ` : `
     Respond STRICTLY in JSON format:
     {
       "text": "Your response message here",
@@ -215,6 +286,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
         "confirmMessage": "Human-readable description of what will be done"
       }
     }
+    `}
   `;
 
   const formattedMessages = messages.map(msg => ({
@@ -228,37 +300,21 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     ...formattedMessages
   ];
 
-  if (!GROQ_API_KEY) {
-    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
-  }
+  return { finalMessages, systemInstruction };
+}
 
-  try {
-    const response = await axios.post(GROQ_API_URL, {
-      model: GROQ_MODEL,
-      messages: finalMessages,
-      response_format: { type: 'json_object' }
-    }, {
-      headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const text = response.data?.choices?.[0]?.message?.content;
-    if (!text) throw new AppError('AI returned an empty response.', 502);
-    return JSON.parse(sanitizeJson(text));
-  } catch (err) {
-    if (err.isOperational) throw err;
-    if (err.response) {
-      const status = err.response.status;
-      const msg = err.response.data?.error?.message || 'AI API request failed';
-      throw new AppError(`Groq API error (${status}): ${msg}`, 502);
-    }
-    if (err instanceof SyntaxError) {
-      throw new AppError('AI returned malformed data. Please try again.', 502);
-    }
-    throw new AppError('Unexpected AI service error. Please try again.', 500);
+function handleAiError(err) {
+  if (err.isOperational) throw err;
+  if (err.response) {
+    const status = err.response.status;
+    const msg = err.response.data?.error?.message || 'AI API request failed';
+    throw new AppError(`Groq API error (${status}): ${msg}`, 502);
   }
-};
+  if (err instanceof SyntaxError) {
+    throw new AppError('AI returned malformed data. Please try again.', 502);
+  }
+  throw new AppError('Unexpected AI service error. Please try again.', 500);
+}
+
 
 

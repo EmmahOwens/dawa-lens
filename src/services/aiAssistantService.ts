@@ -108,6 +108,10 @@ export const generateDawaGPTResponse = async (
  * Primary conversational path — uses backend Groq LLM with full system context.
  * Returns an optional `action` field that callers should dispatch to AppContext.
  */
+/**
+ * Primary conversational path — uses backend Groq LLM with full system context.
+ * Returns an optional `action` field that callers should dispatch to AppContext.
+ */
 export const chatWithDawaGPT = async (
   messages: ChatMessage[],
   medicines: Medicine[],
@@ -147,3 +151,98 @@ export const chatWithDawaGPT = async (
     };
   }
 };
+
+/**
+ * Streaming version of chat — provides real-time text updates.
+ */
+export const chatWithDawaGPTStream = async (
+  messages: ChatMessage[],
+  medicines: Medicine[],
+  userProfile: UserProfile | null,
+  doseLogs: DoseLog[] = [],
+  reminders: Reminder[] = [],
+  wellnessLogs: WellnessLog[] = [],
+  patients: Patient[] = [],
+  onChunk: (text: string) => void
+): Promise<ChatMessage> => {
+  try {
+    const stream = await aiApi.chatStream({
+      messages,
+      medicines,
+      userProfile,
+      doseLogs: doseLogs.slice(0, 20),
+      reminders,
+      wellnessLogs: wellnessLogs.slice(0, 10),
+      patients,
+    });
+
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let fullText = "";
+    let isMetadata = false;
+    let metadataJson = "";
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === 'data: [DONE]') continue;
+        if (trimmed.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(trimmed.slice(6));
+            const content = data.choices[0]?.delta?.content || "";
+            
+            if (content.includes("###METADATA###")) {
+              const parts = content.split("###METADATA###");
+              fullText += parts[0];
+              onChunk(fullText);
+              isMetadata = true;
+              metadataJson += parts[1];
+            } else if (isMetadata) {
+              metadataJson += content;
+            } else {
+              fullText += content;
+              onChunk(fullText);
+            }
+          } catch (e) {
+            // Ignore parse errors for incomplete JSON chunks
+          }
+        }
+      }
+    }
+
+    let metadata = { suggestions: [], source: "Gemini", action: undefined };
+    if (metadataJson) {
+      try {
+        metadata = JSON.parse(metadataJson);
+      } catch (e) {
+        console.warn("Failed to parse metadata JSON", e);
+      }
+    }
+
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: fullText.trim(),
+      source: metadata.source as any,
+      suggestions: metadata.suggestions,
+      action: (metadata as any).action?.type ? (metadata as any).action : undefined,
+    };
+  } catch (err) {
+    console.error("DawaGPT Streaming Error:", err);
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "Connection lost during medical core sync. Please try again.",
+      source: "System"
+    };
+  }
+};
+
