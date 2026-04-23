@@ -9,7 +9,7 @@ import { checkConditionSafety } from "./conditionInteractionService";
 import { aiApi } from "./api";
 
 export interface AIAction {
-  type: "ADD_REMINDER" | "LOG_DOSE" | null;
+  type: "ADD_REMINDER" | "LOG_DOSE" | "ADD_MEDICINE" | "UPDATE_REMINDER" | "REMOVE_REMINDER" | null;
   payload: Record<string, any> | null;
   confirmMessage?: string;
 }

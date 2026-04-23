@@ -10,6 +10,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { checkConditionSafety } from "@/services/conditionInteractionService";
 import { Button } from "./ui/button";
+import { toast } from "@/hooks/use-toast";
 import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
 import { DashboardWidget } from "./intelligence/DashboardWidget";
 import { ScanWidget } from "./intelligence/ScanWidget";
@@ -23,6 +24,7 @@ export function IntelligencePanel() {
   const location = useLocation();
   const { 
     medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
+    addMedicine, addReminder, updateReminder, deleteReminder, logDose,
     isIntelligenceCollapsed, setIsIntelligenceCollapsed, 
     isDawaGPTOpen, setIsDawaGPTOpen 
   } = useApp();
@@ -94,6 +96,11 @@ export function IntelligencePanel() {
       setMessages(prev => prev.map(msg => 
         msg.id === botId ? response : msg
       ));
+
+      // Handle System Actions triggered by AI
+      if (response.action) {
+        await handleAiAction(response.action);
+      }
     } catch (err) {
       console.error("Mini Chat Error:", err);
       setMessages(prev => prev.map(msg => 
@@ -105,6 +112,62 @@ export function IntelligencePanel() {
       ));
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  const handleAiAction = async (action: any) => {
+    const { type, payload, confirmMessage } = action;
+    try {
+      switch (type) {
+        case "ADD_MEDICINE":
+          await addMedicine(payload);
+          toast({
+            title: "Medicine Added",
+            description: confirmMessage || `${payload.name} added to your cabinet.`,
+          });
+          break;
+        case "ADD_REMINDER":
+          await addReminder(payload);
+          toast({
+            title: "Reminder Added",
+            description: confirmMessage || `Scheduled ${payload.medicineName} for ${payload.time}.`,
+          });
+          break;
+        case "UPDATE_REMINDER":
+          await updateReminder(payload.id, payload);
+          toast({
+            title: "Reminder Updated",
+            description: confirmMessage || "Changes applied successfully.",
+          });
+          break;
+        case "REMOVE_REMINDER":
+          await deleteReminder(payload.id);
+          toast({
+            title: "Reminder Removed",
+            description: confirmMessage || "The reminder has been deleted.",
+          });
+          break;
+        case "LOG_DOSE":
+          await logDose({
+            reminderId: payload.reminderId,
+            medicineName: payload.medicineName,
+            dose: payload.dose,
+            scheduledTime: payload.scheduledTime || new Date().toISOString(),
+            action: payload.action || "taken"
+          });
+          toast({
+            title: "Medication Logged",
+            description: confirmMessage || `Marked ${payload.medicineName} as ${payload.action || 'taken'}.`,
+          });
+          break;
+      }
+    } catch (err) {
+      console.error("AI Action Execution Failed:", err);
+      toast({
+        title: "Action Failed",
+        description: "I couldn't complete the system update. Please try manually.",
+        variant: "destructive"
+      });
     }
   };
 

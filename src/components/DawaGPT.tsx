@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
-import { ChatMessage, AIAction, chatWithDawaGPT } from "@/services/aiAssistantService";
+import { ChatMessage, AIAction, chatWithDawaGPTStream } from "@/services/aiAssistantService";
 
 export default function DawaGPT() {
   const { t } = useTranslation();
@@ -14,11 +14,14 @@ export default function DawaGPT() {
   const {
     userProfile,
     medicines,
-    doseLogs,
     reminders,
+    doseLogs,
     wellnessLogs,
     patients,
+    addMedicine,
     addReminder,
+    updateReminder,
+    deleteReminder,
     logDose,
     isDawaGPTOpen: isOpen,
     setIsDawaGPTOpen: setIsOpen,
@@ -28,7 +31,6 @@ export default function DawaGPT() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [pendingAction, setPendingAction] = useState<AIAction | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeMed = medicines.length > 0 ? medicines[medicines.length - 1] : null;
@@ -58,46 +60,42 @@ export default function DawaGPT() {
     if (!action.type || !action.payload) return;
 
     try {
-      if (action.type === "ADD_REMINDER") {
-        const { medicineName, dose, time, repeatSchedule, notes } = action.payload;
-        await addReminder({
-          medicineName,
-          dose,
-          time,
-          repeatSchedule: repeatSchedule || "daily",
-          notes,
-          enabled: true,
+      if (action.type === "ADD_MEDICINE") {
+        await addMedicine(action.payload as any);
+        toast({
+          title: "✅ Medicine added by Dawa-GPT",
+          description: `${action.payload.name} added to your cabinet.`,
         });
+      } else if (action.type === "ADD_REMINDER") {
+        await addReminder(action.payload as any);
         toast({
           title: "✅ Reminder added by Dawa-GPT",
-          description: `${medicineName} @ ${time}`,
+          description: `${action.payload.medicineName} @ ${action.payload.time}`,
         });
-        // Confirm to the user in chat
-        setMessages(prev => [...prev, {
-          id: `action-confirm-${Date.now()}`,
-          role: "assistant",
-          text: `Done! I've added a reminder for **${medicineName}** (${dose}) at ${time}. You'll find it in your Reminders list.`,
-          source: "System",
-        }]);
+      } else if (action.type === "UPDATE_REMINDER") {
+        await updateReminder(action.payload.id, action.payload as any);
+        toast({
+          title: "✅ Reminder updated by Dawa-GPT",
+          description: "Changes applied successfully.",
+        });
+      } else if (action.type === "REMOVE_REMINDER") {
+        await deleteReminder(action.payload.id);
+        toast({
+          title: "✅ Reminder removed by Dawa-GPT",
+          description: "The reminder has been deleted.",
+        });
       } else if (action.type === "LOG_DOSE") {
-        const { reminderId, medicineName, dose, scheduledTime, action: doseAction } = action.payload;
         await logDose({
-          reminderId: reminderId || "",
-          medicineName,
-          dose,
-          scheduledTime: scheduledTime || new Date().toISOString(),
-          action: doseAction || "taken",
+          reminderId: action.payload.reminderId || "",
+          medicineName: action.payload.medicineName,
+          dose: action.payload.dose,
+          scheduledTime: action.payload.scheduledTime || new Date().toISOString(),
+          action: action.payload.action || "taken",
         });
         toast({
-          title: `✅ Dose logged as ${doseAction || "taken"}`,
-          description: medicineName,
+          title: `✅ Dose logged as ${action.payload.action || "taken"}`,
+          description: action.payload.medicineName,
         });
-        setMessages(prev => [...prev, {
-          id: `action-confirm-${Date.now()}`,
-          role: "assistant",
-          text: `Got it! I've logged **${medicineName}** as ${doseAction || "taken"} in your Medication Log.`,
-          source: "System",
-        }]);
       }
     } catch (err) {
       console.error("DawaGPT action dispatch failed:", err);
@@ -106,8 +104,6 @@ export default function DawaGPT() {
         title: "Action failed",
         description: "Dawa-GPT couldn't complete that action. Please try manually.",
       });
-    } finally {
-      setPendingAction(null);
     }
   };
 
@@ -115,33 +111,44 @@ export default function DawaGPT() {
     if (!text.trim() || isTyping) return;
 
     const userMsg: ChatMessage = { id: Date.now().toString(), role: "user", text };
-    setMessages(prev => [...prev, userMsg]);
+    const botId = (Date.now() + 1).toString();
+    const initialBotMsg: ChatMessage = { id: botId, role: "assistant", text: "", source: "Gemini" };
+    
+    setMessages(prev => [...prev, userMsg, initialBotMsg]);
     setInputValue("");
     setIsTyping(true);
 
     try {
-      const response = await chatWithDawaGPT(
+      const response = await chatWithDawaGPTStream(
         [...messages, userMsg],
         medicines,
         userProfile,
         doseLogs,
         reminders,
         wellnessLogs,
-        patients
+        patients,
+        (streamedText) => {
+          setMessages(prev => prev.map(msg => 
+            msg.id === botId ? { ...msg, text: streamedText } : msg
+          ));
+        }
       );
-      setMessages(prev => [...prev, response]);
+      
+      setMessages(prev => prev.map(msg => 
+        msg.id === botId ? response : msg
+      ));
 
-      // If the AI returned an action, dispatch it automatically
-      if (response.action?.type) {
+      if (response.action) {
         await dispatchAIAction(response.action);
       }
     } catch (e) {
-      setMessages(prev => [...prev, {
-        id: "error",
-        role: "assistant",
-        text: "Sorry, I'm having trouble connecting to my medical intelligence core right now.",
-        source: "System"
-      }]);
+      setMessages(prev => prev.map(msg => 
+        msg.id === botId ? {
+          ...msg,
+          text: "Sorry, I'm having trouble connecting to my medical intelligence core right now.",
+          source: "System"
+        } : msg
+      ));
     } finally {
       setIsTyping(false);
     }
