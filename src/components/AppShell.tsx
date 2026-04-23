@@ -13,8 +13,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-background overflow-hidden flex flex-col">
-        <main className="flex-1 overflow-y-auto no-scrollbar safe-top px-3 safe-bottom mb-20">
+      <div className="h-screen bg-background overflow-hidden flex flex-col overscroll-none">
+        {/* Transparent safe-top spacer for edge-to-edge */}
+        <div className="h-[env(safe-area-inset-top,20px)] bg-background/80 backdrop-blur-md sticky top-0 z-40 w-full" />
+        
+        <main className="flex-1 overflow-y-auto no-scrollbar px-3 safe-bottom pb-24 scroll-smooth">
           {children}
         </main>
         <BottomNav />

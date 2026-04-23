@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { ARInstructionOverlay, ARInstructionType } from "@/components/ui/ARInstruction";
 import { Capacitor } from '@capacitor/core';
 import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import PermissionRequest from "@/components/PermissionRequest";
 
 export type ScanMode = "pill" | "text";
 
@@ -25,6 +26,8 @@ export default function ScanPage() {
   const [showAR, setShowAR] = useState(false);
   const [detectedInstructions, setDetectedInstructions] = useState<ARInstructionType[]>([]);
   const [flashlightOn, setFlashlightOn] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [permissionChecked, setPermissionChecked] = useState(false);
 
   const toggleFlashlight = useCallback(async () => {
     try {
@@ -64,12 +67,51 @@ export default function ScanPage() {
   }, [facingMode]);
 
   useEffect(() => {
-    startCamera();
+    const checkPermission = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const status = await CapCamera.checkPermissions();
+          if (status.camera !== 'granted') {
+            setShowPermissionModal(true);
+          } else {
+            startCamera();
+          }
+        } catch (e) {
+          console.warn("Permission check failed:", e);
+          startCamera(); // Fallback to browser prompt
+        }
+      } else {
+        startCamera();
+      }
+      setPermissionChecked(true);
+    };
+    checkPermission();
     
     return () => {
       streamRef.current?.getTracks().forEach((tk) => tk.stop());
     };
   }, [startCamera]);
+
+  const handleRequestPermission = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const status = await CapCamera.requestPermissions();
+        if (status.camera === 'granted') {
+          setShowPermissionModal(false);
+          startCamera();
+        } else {
+          navigate("/"); // Go back if denied
+        }
+      } catch (e) {
+        console.error("Permission request failed:", e);
+        setShowPermissionModal(false);
+        startCamera();
+      }
+    } else {
+      setShowPermissionModal(false);
+      startCamera();
+    }
+  };
 
   const capture = () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -291,6 +333,16 @@ export default function ScanPage() {
           {t("scan.capture_hint")}
         </p>
       </div>
+
+      <PermissionRequest
+        isOpen={showPermissionModal}
+        onClose={() => navigate("/")}
+        onConfirm={handleRequestPermission}
+        title="Camera Access"
+        description="We need your camera to scan medicine labels and identify pills for interaction safety."
+        icon={Camera}
+        permissionName="Camera"
+      />
     </div>
   );
 }

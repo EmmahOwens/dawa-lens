@@ -14,6 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
+import { Bell } from "lucide-react";
+import PermissionRequest from "@/components/PermissionRequest";
+import { NativeService } from "@/services/nativeService";
+import { ImpactStyle } from "@capacitor/haptics";
 
 interface LocationState {
   // Pre-fill from scan/results
@@ -69,6 +73,7 @@ export default function AddReminderPage() {
   const [color, setColor] = useState(state?.color || "blue");
   const [icon, setIcon] = useState(state?.icon || "pill");
   const [isSaving, setIsSaving] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   const toggleDay = (day: number) => {
     setRepeatDays(prev => 
@@ -90,18 +95,37 @@ export default function AddReminderPage() {
     if (Capacitor.isNativePlatform()) {
       const perm = await LocalNotifications.checkPermissions();
       if (perm.display !== 'granted') {
-        const req = await LocalNotifications.requestPermissions();
-        if (req.display !== 'granted') {
-          toast({
-            title: "Notifications Disabled",
-            description: "Please enable notifications in system settings to receive reminders.",
-            variant: "destructive",
-          });
-          // We still let them save, but they are warned.
-        }
+        setShowPermissionModal(true);
+        return; // Stop and show modal
       }
     }
 
+    await executeSave();
+  };
+
+  const handleRequestPermission = async () => {
+    NativeService.haptics.impact(ImpactStyle.Heavy);
+    try {
+      const req = await LocalNotifications.requestPermissions();
+      setShowPermissionModal(false);
+      if (req.display === 'granted') {
+        await executeSave();
+      } else {
+        toast({
+          title: "Notifications Disabled",
+          description: "We'll save the reminder, but you won't get notifications until enabled in settings.",
+          variant: "destructive",
+        });
+        await executeSave();
+      }
+    } catch (e) {
+      console.error("Permission request failed:", e);
+      setShowPermissionModal(false);
+      await executeSave();
+    }
+  };
+
+  const executeSave = async () => {
     setIsSaving(true);
     try {
       if (isEditing && state?.editId) {
@@ -453,6 +477,16 @@ export default function AddReminderPage() {
           </Button>
         </motion.div>
       </div>
+
+      <PermissionRequest
+        isOpen={showPermissionModal}
+        onClose={() => setShowPermissionModal(false)}
+        onConfirm={handleRequestPermission}
+        title="Stay Notified"
+        description="We need notification access to remind you exactly when to take your medication."
+        icon={Bell}
+        permissionName="Notifications"
+      />
     </div>
   );
 }

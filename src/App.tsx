@@ -1,30 +1,13 @@
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { App as CapApp } from '@capacitor/app';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import { scheduleReminders, checkMissedDoses } from "@/services/reminderService";
 import AppShell from "@/components/AppShell";
-import Dashboard from "@/pages/Dashboard";
-import ScanPage from "@/pages/ScanPage";
-import ResultsPage from "@/pages/ResultsPage";
-import MedicineInfoPage from "@/pages/MedicineInfoPage";
-import AddReminderPage from "@/pages/AddReminderPage";
-import RemindersPage from "@/pages/RemindersPage";
-import HistoryPage from "@/pages/HistoryPage";
-import SettingsPage from "@/pages/SettingsPage";
-import AuthPage from "@/pages/AuthPage";
-import NotFound from "@/pages/NotFound";
-import InteractionsPage from "@/pages/InteractionsPage";
-import VerifyEmailPage from "@/pages/VerifyEmailPage";
-import OnboardingPage from "@/pages/OnboardingPage";
-import WelcomePage from "@/pages/WelcomePage";
-import FamilyHubPage from "@/pages/FamilyHubPage";
-import TravelCompanionPage from "@/pages/TravelCompanionPage";
-import WellnessPage from "@/pages/WellnessPage";
-import ReportPage from "@/pages/ReportPage";
 import { preloadOCRModel } from "@/services/visionService";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import OfflineOverlay from "@/components/OfflineOverlay";
@@ -34,10 +17,31 @@ import { Camera } from '@capacitor/camera';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Keyboard } from '@capacitor/keyboard';
+import { SplashScreen as CapSplashScreen } from '@capacitor/splash-screen';
 import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
 import { NotificationHandler } from "@/components/NotificationHandler";
+
+// Lazy load pages for better performance
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const ScanPage = lazy(() => import("@/pages/ScanPage"));
+const ResultsPage = lazy(() => import("@/pages/ResultsPage"));
+const MedicineInfoPage = lazy(() => import("@/pages/MedicineInfoPage"));
+const AddReminderPage = lazy(() => import("@/pages/AddReminderPage"));
+const RemindersPage = lazy(() => import("@/pages/RemindersPage"));
+const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
+const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
+const AuthPage = lazy(() => import("@/pages/AuthPage"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const InteractionsPage = lazy(() => import("@/pages/InteractionsPage"));
+const VerifyEmailPage = lazy(() => import("@/pages/VerifyEmailPage"));
+const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
+const WelcomePage = lazy(() => import("@/pages/WelcomePage"));
+const FamilyHubPage = lazy(() => import("@/pages/FamilyHubPage"));
+const TravelCompanionPage = lazy(() => import("@/pages/TravelCompanionPage"));
+const WellnessPage = lazy(() => import("@/pages/WellnessPage"));
+const ReportPage = lazy(() => import("@/pages/ReportPage"));
 
 const queryClient = new QueryClient();
 
@@ -71,7 +75,14 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 }
 
 const AppContent = () => {
-  const { reminders, doseLogs, medicines, logDose } = useApp();
+  const { reminders, doseLogs, medicines, logDose, isInitializing } = useApp();
+
+  useEffect(() => {
+    if (!isInitializing && Capacitor.isNativePlatform()) {
+      // Hide native splash screen once the app is ready
+      CapSplashScreen.hide().catch(err => console.warn("Splash hide failed:", err));
+    }
+  }, [isInitializing]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -105,18 +116,12 @@ const App = () => {
     const initNativeFeatures = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
-          await Camera.requestPermissions();
-        } catch (e) {
-          console.warn("Camera permission request ignored:", e);
-        }
-        try {
-          await LocalNotifications.requestPermissions();
-        } catch (e) {
-          console.warn("LocalNotifications permission request ignored:", e);
-        }
-        try {
           await StatusBar.setStyle({ style: Style.Default });
-          await StatusBar.setOverlaysWebView({ overlay: false });
+          await StatusBar.setOverlaysWebView({ overlay: true });
+          // Ensure it's transparent for edge-to-edge
+          if (Capacitor.getPlatform() === 'android') {
+            await StatusBar.setBackgroundColor({ color: '#00000000' });
+          }
         } catch (e) {
           console.warn("StatusBar setup ignored:", e);
         }
@@ -152,14 +157,15 @@ const App = () => {
           <OfflineOverlay />
           <Toaster richColors closeButton position="top-center" />
           <DawaGPT />
-          <AnimatePresence mode="wait">
-            <Routes location={location} key={location.pathname}>
+          <Suspense fallback={<SplashScreen />}>
+            <Routes location={location}>
               {/* Full-screen pages — no AppShell */}
               <Route path="/scan" element={<ProtectedRoute><PageTransition><ScanPage /></PageTransition></ProtectedRoute>} />
               <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
               <Route path="/welcome" element={<PageTransition><WelcomePage /></PageTransition>} />
               <Route path="/verify-email" element={<PageTransition><VerifyEmailPage /></PageTransition>} />
               <Route path="/onboarding" element={<OnboardingRoute><PageTransition><OnboardingPage /></PageTransition></OnboardingRoute>} />
+              
               {/* All other pages use AppShell with bottom nav */}
               <Route
                 path="*"
@@ -167,29 +173,31 @@ const App = () => {
                   <ProtectedRoute>
                     <AppShell>
                       <AnimatePresence mode="wait">
-                        <Routes location={location} key={location.pathname}>
-                          <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
-                          <Route path="/results" element={<PageTransition><ResultsPage /></PageTransition>} />
-                          <Route path="/medicine/:name" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
-                          <Route path="/search" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
-                          <Route path="/reminders" element={<PageTransition><RemindersPage /></PageTransition>} />
-                          <Route path="/reminders/new" element={<PageTransition><AddReminderPage /></PageTransition>} />
-                          <Route path="/history" element={<PageTransition><HistoryPage /></PageTransition>} />
-                          <Route path="/interactions" element={<PageTransition><InteractionsPage /></PageTransition>} />
-                          <Route path="/family" element={<PageTransition><FamilyHubPage /></PageTransition>} />
-                          <Route path="/travel" element={<PageTransition><TravelCompanionPage /></PageTransition>} />
-                          <Route path="/wellness" element={<PageTransition><WellnessPage /></PageTransition>} />
-                          <Route path="/report" element={<PageTransition><ReportPage /></PageTransition>} />
-                          <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
-                          <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
-                        </Routes>
+                        <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+                          <Routes location={location} key={location.pathname}>
+                            <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
+                            <Route path="/results" element={<PageTransition><ResultsPage /></PageTransition>} />
+                            <Route path="/medicine/:name" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
+                            <Route path="/search" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
+                            <Route path="/reminders" element={<PageTransition><RemindersPage /></PageTransition>} />
+                            <Route path="/reminders/new" element={<PageTransition><AddReminderPage /></PageTransition>} />
+                            <Route path="/history" element={<PageTransition><HistoryPage /></PageTransition>} />
+                            <Route path="/interactions" element={<PageTransition><InteractionsPage /></PageTransition>} />
+                            <Route path="/family" element={<PageTransition><FamilyHubPage /></PageTransition>} />
+                            <Route path="/travel" element={<PageTransition><TravelCompanionPage /></PageTransition>} />
+                            <Route path="/wellness" element={<PageTransition><WellnessPage /></PageTransition>} />
+                            <Route path="/report" element={<PageTransition><ReportPage /></PageTransition>} />
+                            <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
+                            <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+                          </Routes>
+                        </Suspense>
                       </AnimatePresence>
                     </AppShell>
                   </ProtectedRoute>
                 }
               />
             </Routes>
-          </AnimatePresence>
+          </Suspense>
         </AppProvider>
       </TooltipProvider>
     </QueryClientProvider>
