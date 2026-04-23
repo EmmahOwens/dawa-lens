@@ -42,7 +42,6 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     'Content-Type': 'application/json',
   };
 
-  // Add Firebase ID Token if user is logged in
   const user = auth.currentUser;
   if (user) {
     const token = await user.getIdToken();
@@ -63,7 +62,36 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function streamRequest(path: string, options?: RequestInit): Promise<ReadableStream> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
 
+  const user = auth.currentUser;
+  if (user) {
+    const token = await user.getIdToken();
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      ...headers,
+      ...options?.headers as Record<string, string>,
+    },
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: 'Network error' }));
+    throw new ApiError(data, res.status);
+  }
+
+  if (!res.body) {
+    throw new Error('Response body is empty');
+  }
+
+  return res.body;
+}
 
 // --- Users ---
 export const usersApi = {
@@ -187,4 +215,15 @@ export const aiApi = {
     patients?: any[];
   }) =>
     request<any>('/ai/chat', { method: 'POST', body: JSON.stringify(data) }),
+
+  chatStream: (data: {
+    messages: any[];
+    medicines: any[];
+    userProfile: any;
+    doseLogs: any[];
+    reminders?: any[];
+    wellnessLogs?: any[];
+    patients?: any[];
+  }) =>
+    streamRequest('/ai/chat/stream', { method: 'POST', body: JSON.stringify(data) }),
 };
