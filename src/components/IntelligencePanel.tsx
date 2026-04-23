@@ -50,6 +50,18 @@ export function IntelligencePanel() {
   const { insight, isLoading: isInsightLoading } = useIntelligenceContext();
 
   useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([{
+        id: "welcome",
+        role: "assistant",
+        text: `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT. I have full access to your ${reminders.length} reminder(s) and medication history. Ask me anything about your health or say "Add a reminder for [medicine]" to get started!`,
+        source: "System",
+        suggestions: ["What are my reminders?", "Log my meds", "Show my dose history"]
+      }]);
+    }
+  }, [userProfile?.name, reminders.length]);
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
@@ -127,14 +139,26 @@ export function IntelligencePanel() {
           });
           break;
         case "ADD_REMINDER":
-          await addReminder(payload);
+          await addReminder({
+            medicineName: payload.medicineName,
+            dose: payload.dose,
+            time: payload.time,
+            repeatSchedule: payload.repeatSchedule || "daily",
+            notes: payload.notes || "",
+            enabled: true,
+            color: payload.color || "blue",
+            icon: payload.icon || "pill"
+          });
           toast({
             title: "Reminder Added",
             description: confirmMessage || `Scheduled ${payload.medicineName} for ${payload.time}.`,
           });
           break;
         case "UPDATE_REMINDER":
-          await updateReminder(payload.id, payload);
+          await updateReminder(payload.id, {
+            ...payload,
+            enabled: payload.enabled !== undefined ? payload.enabled : true
+          } as any);
           toast({
             title: "Reminder Updated",
             description: confirmMessage || "Changes applied successfully.",
@@ -149,7 +173,7 @@ export function IntelligencePanel() {
           break;
         case "LOG_DOSE":
           await logDose({
-            reminderId: payload.reminderId,
+            reminderId: payload.reminderId || "",
             medicineName: payload.medicineName,
             dose: payload.dose,
             scheduledTime: payload.scheduledTime || new Date().toISOString(),

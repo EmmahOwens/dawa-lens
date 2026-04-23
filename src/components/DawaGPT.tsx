@@ -67,13 +67,25 @@ export default function DawaGPT() {
           description: `${action.payload.name} added to your cabinet.`,
         });
       } else if (action.type === "ADD_REMINDER") {
-        await addReminder(action.payload as any);
+        await addReminder({
+          medicineName: action.payload.medicineName,
+          dose: action.payload.dose,
+          time: action.payload.time,
+          repeatSchedule: action.payload.repeatSchedule || "daily",
+          notes: action.payload.notes || "",
+          enabled: true,
+          color: action.payload.color || "blue",
+          icon: action.payload.icon || "pill"
+        });
         toast({
           title: "✅ Reminder added by Dawa-GPT",
           description: `${action.payload.medicineName} @ ${action.payload.time}`,
         });
       } else if (action.type === "UPDATE_REMINDER") {
-        await updateReminder(action.payload.id, action.payload as any);
+        await updateReminder(action.payload.id, {
+          ...action.payload,
+          enabled: action.payload.enabled !== undefined ? action.payload.enabled : true
+        } as any);
         toast({
           title: "✅ Reminder updated by Dawa-GPT",
           description: "Changes applied successfully.",
