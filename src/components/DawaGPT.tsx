@@ -46,9 +46,8 @@ export default function DawaGPT() {
       setMessages([{
         id: "welcome",
         role: "assistant",
-        text: `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT. I have full access to your ${reminders.length} reminder(s), ${medicines.length} medication(s), and dose history. Ask me anything — or say "Add a reminder for [medicine]" to set one up!`,
+        text: `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT. I have full access to your ${reminders.length} reminder(s) and medication history. Ask me anything about your health or say "Add a reminder for [medicine]" to get started!`,
         source: "System",
-        suggestions: ["What are my reminders?", "Add a reminder for Paracetamol 500mg at 8am", "Show my dose history"],
       }]);
     }
   }, [isOpen]);
@@ -251,19 +250,6 @@ export default function DawaGPT() {
 
               {/* Footer / Input */}
               <div className="p-4 md:p-6 bg-background/80 backdrop-blur-xl border-t border-border/50">
-                {/* Dynamic suggestions */}
-                <div className="flex gap-2 mb-4 overflow-x-auto pb-2 no-scrollbar">
-                  {activeSuggestions.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSend(s)}
-                      className="shrink-0 text-[12px] font-bold border border-primary/20 bg-primary/5 text-primary rounded-full px-4 py-2 hover:bg-primary/10 transition-colors active:scale-95"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-
                 <div className="flex gap-3 items-end">
                   <div className="flex-1 bg-muted/40 border border-border/50 rounded-[1.5rem] px-5 py-2 flex flex-col focus-within:ring-2 focus-within:ring-primary/30 focus-within:bg-background transition-all">
                     <textarea
@@ -289,10 +275,7 @@ export default function DawaGPT() {
                   </Button>
                 </div>
 
-                <div className="mt-3 flex items-start gap-2 p-2 bg-warning/5 rounded-lg border border-warning/20">
-                  <AlertCircle size={12} className="text-warning shrink-0 mt-0.5" />
-                  <p className="text-[9px] text-warning/80 leading-tight">AI can make mistakes. Always verify with a healthcare professional before acting on medical advice.</p>
-                </div>
+
               </div>
             </motion.div>
           </div>
