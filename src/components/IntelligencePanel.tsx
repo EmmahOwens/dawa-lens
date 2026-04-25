@@ -417,9 +417,7 @@ export function IntelligencePanel() {
                               : "bg-background border border-border/50 rounded-tl-none"
                           }`}>
                             <p className="leading-relaxed">{m.text}</p>
-                            {m.source && m.role === "assistant" && (
-                              <span className="text-[8px] opacity-40 uppercase font-black block mt-1 tracking-widest">{m.source}</span>
-                            )}
+
                           </div>
                         </motion.div>
                       ))
@@ -482,10 +480,7 @@ export function IntelligencePanel() {
 
       </div>
       
-      {/* Footer Branding */}
-      <div className="p-4 border-t border-border/50 text-center bg-muted/10">
-         <p className="text-[8px] font-black text-muted-foreground uppercase tracking-[0.3em] opacity-40">Medical Intelligence Core v2.4</p>
-      </div>
+
     </aside>
   );
 }

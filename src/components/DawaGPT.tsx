@@ -209,7 +209,6 @@ export default function DawaGPT() {
                   <div>
                     <h3 className="font-bold flex items-center gap-2 text-lg">
                       Dawa-GPT
-                      <span className="text-[10px] bg-primary/15 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter font-black">Full System Access</span>
                     </h3>
                     <p className="text-[11px] text-muted-foreground uppercase font-bold tracking-wider opacity-70">East African Medical Assistant</p>
                   </div>
@@ -219,23 +218,6 @@ export default function DawaGPT() {
                 </button>
               </div>
 
-              {/* System Context Bar */}
-              <div className="bg-primary/5 px-4 py-2 flex items-center gap-3 border-b border-primary/10 overflow-x-auto no-scrollbar">
-                <span className="text-[9px] font-black text-primary shrink-0 uppercase tracking-widest">Context:</span>
-                <span className="text-[10px] font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
-                  <BellPlus size={10} className="text-primary" /> {reminders.length} reminders
-                </span>
-                <span className="text-[10px] text-muted-foreground/40">·</span>
-                <span className="text-[10px] font-semibold text-muted-foreground shrink-0 flex items-center gap-1">
-                  <ClipboardCheck size={10} className="text-primary" /> {doseLogs.length} dose logs
-                </span>
-                {activeMed && (
-                  <>
-                    <span className="text-[10px] text-muted-foreground/40">·</span>
-                    <span className="text-[10px] font-semibold text-muted-foreground truncate">{activeMed.name}</span>
-                  </>
-                )}
-              </div>
 
               {/* Chat Messages */}
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth bg-gradient-to-b from-background to-muted/10">
@@ -252,12 +234,7 @@ export default function DawaGPT() {
                         : "bg-background text-card-foreground rounded-tl-sm border border-border/60 shadow-sm"
                     }`}>
                       <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.text}</p>
-                      {m.source && m.role === "assistant" && (
-                        <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
-                          <span className="text-[10px] uppercase font-black text-muted-foreground tracking-widest opacity-60">Source: {m.source}</span>
-                          <Sparkles size={12} className="text-primary/50" />
-                        </div>
-                      )}
+
                     </div>
                   </motion.div>
                 ))}
