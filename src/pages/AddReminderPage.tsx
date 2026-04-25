@@ -84,20 +84,21 @@ export default function AddReminderPage() {
     );
   };
 
+  const distributeTimes = (startTime: string, freq: number) => {
+    const [h, m] = startTime.split(":").map(Number);
+    const intervalHours = 24 / freq;
+    const newTimes = [];
+    for (let i = 0; i < freq; i++) {
+      const totalMinutes = Math.round((h * 60 + m + i * intervalHours * 60)) % (24 * 60);
+      const newH = Math.floor(totalMinutes / 60);
+      const newM = Math.floor(totalMinutes % 60);
+      newTimes.push(`${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`);
+    }
+    return newTimes;
+  };
+
   const handleFrequencyChange = (freq: number) => {
-    setTimes(prev => {
-      const newTimes = [...prev];
-      if (freq > prev.length) {
-        // Add default times (e.g. spread out)
-        for (let i = prev.length; i < freq; i++) {
-          newTimes.push("12:00");
-        }
-      } else {
-        // Remove extra
-        return newTimes.slice(0, freq);
-      }
-      return newTimes;
-    });
+    setTimes(distributeTimes(times[0] || "08:00", freq));
   };
 
   const handleSave = async () => {
@@ -422,9 +423,15 @@ export default function AddReminderPage() {
                     type="time"
                     value={t}
                     onChange={(e) => {
-                      const newTimes = [...times];
-                      newTimes[idx] = e.target.value;
-                      setTimes(newTimes);
+                      const newTime = e.target.value;
+                      if (idx === 0 && repeat === "custom") {
+                        // Re-distribute based on new start time
+                        setTimes(distributeTimes(newTime, times.length));
+                      } else {
+                        const newTimes = [...times];
+                        newTimes[idx] = newTime;
+                        setTimes(newTimes);
+                      }
                     }}
                     className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all font-medium text-lg"
                   />
