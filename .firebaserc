@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "medicine-d3ba2"
+  },
+  "targets": {
+    "medicine-d3ba2": {
+      "hosting": {
+        "app": [
+          "dawalens"
+        ]
+      }
+    }
   }
 }
