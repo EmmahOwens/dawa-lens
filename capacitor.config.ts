@@ -1,8 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// Configuration for the Capacitor native shell.
-// This is set to use Capgo Live Updates (OTA) to ensure web changes 
-// reflect immediately in the app without requiring App Store updates.
 const config: CapacitorConfig = {
   appId: 'com.dawainnovation.lens',
   appName: 'dawa-lens',
@@ -10,24 +7,25 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     iosScheme: 'https',
-    cleartext: false,
+    cleartext: false
   },
   plugins: {
     CapacitorUpdater: {
       autoUpdate: true,
-      statsUrl: "https://capgo.app/api/stats/",
+      statsUrl: "https://api.capgo.app/stats/",
+      appId: "com.dawainnovation.lens"
     },
     SplashScreen: {
       launchShowDuration: 0,
       launchAutoHide: false,
-      backgroundColor: "#ffffff",
-      androidScaleType: "CENTER",
+      backgroundColor: '#ffffff',
+      androidScaleType: 'CENTER',
       showSpinner: false,
       splashFullScreen: true,
       splashImmersive: true,
-      useDialog: false,
-    },
-  },
+      useDialog: false
+    }
+  }
 };
 
 export default config;
