@@ -29,8 +29,8 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-4 left-0 right-0 z-50 mx-auto max-w-sm md:hidden px-4 pb-safe-bottom gpu-accel" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <div className="flex items-center justify-between rounded-full bg-white/80 dark:bg-[#1C1C1E]/80 backdrop-blur-[24px] backdrop-saturate-[180%] border border-white/50 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.12)] px-4 py-3 relative">
+    <nav className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-sm md:hidden px-4 pb-safe-bottom gpu-accel" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="flex items-center justify-between rounded-[2rem] border border-border/20 bg-background/20 px-4 py-2.5 shadow-[0_8px_16px_rgba(0,0,0,0.2)] backdrop-blur-[20px] backdrop-saturate-[1.2] relative">
         {/* Left Side Items */}
         <div className="flex flex-1 justify-around items-center">
           {navItems.slice(0, 2).map((item) => (
@@ -42,14 +42,14 @@ export default function BottomNav() {
         <NavLink
           to="/scan"
           onClick={() => NativeService.haptics.impact(ImpactStyle.Medium)}
-          className="relative flex h-14 w-14 items-center justify-center -mt-8"
+          className="relative flex h-14 w-14 items-center justify-center -mt-6"
         >
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="absolute h-full w-full rounded-full bg-[#3b82f6] shadow-[0_4px_14px_rgba(59,130,246,0.4)] flex items-center justify-center text-white border-[3px] border-white dark:border-[#1C1C1E] gpu-accel"
+            className="absolute h-full w-full rounded-full bg-primary shadow-[0_4px_14px_rgba(0,122,255,0.4)] flex items-center justify-center text-primary-foreground border-2 border-background gpu-accel"
           >
-            <Camera size={26} strokeWidth={2.5} />
+            <Camera size={24} strokeWidth={2.5} />
           </motion.div>
         </NavLink>
 
@@ -71,24 +71,33 @@ function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: a
       onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
       className="relative flex flex-col items-center justify-center w-12 h-12 group"
     >
-      <div className="relative flex flex-col items-center gap-1">
+      <div className="relative flex flex-col items-center">
         <Icon
-          size={22}
-          className={`relative z-10 transition-colors duration-300 ${active ? "text-[#3b82f6] dark:text-[#60a5fa]" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100"}`}
-          strokeWidth={active ? 2.5 : 2.2}
+          size={24}
+          className={`relative z-10 transition-colors duration-300 ${active ? "text-primary dark:text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
+          strokeWidth={active ? 2.5 : 2}
         />
         
         {badge && (
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-white dark:border-[#1C1C1E] z-20"
+            className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive border-2 border-background z-20"
           />
         )}
 
-        <span className={`text-[10px] font-medium transition-colors duration-300 ${active ? "text-[#3b82f6] dark:text-[#60a5fa]" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100"}`}>
-          {label}
-        </span>
+        {/* macOS Dock style dot indicator */}
+        <AnimatePresence>
+          {active && (
+            <motion.div
+              layoutId="nav-indicator"
+              className="absolute -bottom-3 w-1 h-1 rounded-full bg-primary dark:bg-foreground"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0 }}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </NavLink>
   );
