@@ -112,10 +112,12 @@
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
     user-select: none;
     -webkit-user-drag: none;
+    -webkit-overflow-scrolling: touch;
     overflow-x: hidden;
     width: 100%;
     height: 100%;
-    overscroll-behavior: none; /* Prevent web-like bounce on body */
+    overscroll-behavior-y: none; /* Prevent web-like rubber-banding */
+    touch-action: manipulation; /* Eliminate 300ms click delay */
   }
 
   input, textarea, [contenteditable="true"] {
@@ -171,6 +173,22 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .gpu-accel {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000;
+  }
+
+  .content-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 100px;
+  }
+
+  .tap-feedback {
+    @apply active:scale-95 active:opacity-80 transition-all duration-100 ease-out;
   }
 }
 

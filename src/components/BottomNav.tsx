@@ -29,7 +29,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-sm md:hidden px-4 pb-safe-bottom" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-sm md:hidden px-4 pb-safe-bottom gpu-accel" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="flex items-center justify-between rounded-[2rem] border border-border/20 bg-background/20 px-4 py-2.5 shadow-[0_8px_16px_rgba(0,0,0,0.2)] backdrop-blur-[20px] backdrop-saturate-[1.2] relative">
         {/* Left Side Items */}
         <div className="flex flex-1 justify-around items-center">
@@ -47,7 +47,7 @@ export default function BottomNav() {
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="absolute h-full w-full rounded-full bg-primary shadow-[0_4px_14px_rgba(0,122,255,0.4)] flex items-center justify-center text-primary-foreground border-2 border-background"
+            className="absolute h-full w-full rounded-full bg-primary shadow-[0_4px_14px_rgba(0,122,255,0.4)] flex items-center justify-center text-primary-foreground border-2 border-background gpu-accel"
           >
             <Camera size={24} strokeWidth={2.5} />
           </motion.div>

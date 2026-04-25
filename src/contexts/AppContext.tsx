@@ -10,6 +10,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
 import { useTranslation } from "react-i18next";
+import { storage } from "../lib/storage";
 
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const CLOUD_CACHE_REMS_KEY = "dawa_cloud_cache_reminders";
@@ -148,6 +149,45 @@ function loadLocal<T>(key: string, fallback: T): T {
   }
 }
 
+/**
+ * Migrates data from localStorage to IndexedDB.
+ * Returns true if migration was performed.
+ */
+async function migrateLocalStorage() {
+  const keys = [
+    "med_professional_mode",
+    "med_has_seen_welcome",
+    "med_storage_mode",
+    "med_loggedin",
+    "med_userId",
+    "med_intelligence_collapsed",
+    "med_last_sync",
+    "med_remember_me",
+    "dawa_cloud_cache_reminders",
+    "dawa_cloud_cache_medicines",
+    "dawa_cloud_cache_doselogs",
+    "dawa_local_medicines",
+    "dawa_local_reminders",
+    "dawa_local_doselogs"
+  ];
+
+  let migrated = false;
+  for (const key of keys) {
+    const value = localStorage.getItem(key);
+    if (value !== null) {
+      try {
+        await storage.setItem(key, JSON.parse(value));
+        // We keep localStorage for now as a fallback, 
+        // but mark that we've migrated.
+        migrated = true;
+      } catch (e) {
+        console.error(`Migration failed for ${key}:`, e);
+      }
+    }
+  }
+  return migrated;
+}
+
 /** Normalize a MongoDB doc's _id → id for the frontend. */
 function normalize<T extends { _id?: string; id?: string }>(doc: T): T & { id: string } {
   const id = doc._id || doc.id || "";
@@ -196,6 +236,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setIsProfessionalMode = useCallback(async (v: boolean) => {
     setIsProfessionalModeState(v);
+    storage.setItem("med_professional_mode", v);
     localStorage.setItem("med_professional_mode", JSON.stringify(v));
     
     // Sync to cloud if logged in
@@ -212,11 +253,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   const setIsIntelligenceCollapsed = useCallback((v: boolean) => {
     setIntelligenceCollapsedState(v);
+    storage.setItem("med_intelligence_collapsed", v);
     localStorage.setItem("med_intelligence_collapsed", JSON.stringify(v));
   }, []);
 
   const setRememberMe = useCallback((v: boolean) => {
     setRememberMeState(v);
+    storage.setItem("med_remember_me", v);
     localStorage.setItem("med_remember_me", JSON.stringify(v));
     
     // Apply persistence to Firebase
@@ -244,25 +287,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   // Persist simple flags to localStorage (no sensitive data, just UI state)
-  useEffect(() => { localStorage.setItem("med_storage_mode", JSON.stringify(storageMode)); }, [storageMode]);
+  useEffect(() => { storage.setItem("med_storage_mode", storageMode); }, [storageMode]);
   
   useEffect(() => { 
     if (rememberMe && isLoggedIn) {
-      localStorage.setItem("med_loggedin", JSON.stringify(true)); 
+      storage.setItem("med_loggedin", true);
     } else if (!isLoggedIn) {
-      localStorage.removeItem("med_loggedin");
+      storage.removeItem("med_loggedin");
     }
   }, [isLoggedIn, rememberMe]);
 
   useEffect(() => { 
     if (rememberMe && currentUserId) {
-      localStorage.setItem("med_userId", JSON.stringify(currentUserId)); 
+      storage.setItem("med_userId", currentUserId);
     } else if (!currentUserId) {
-      localStorage.removeItem("med_userId");
+      storage.removeItem("med_userId");
     }
   }, [currentUserId, rememberMe]);
 
-  useEffect(() => { localStorage.setItem("med_has_seen_welcome", JSON.stringify(hasSeenWelcome)); }, [hasSeenWelcome]);
+  useEffect(() => { storage.setItem("med_has_seen_welcome", hasSeenWelcome); }, [hasSeenWelcome]);
   // Note: med_professional_mode handled by setter now
 
 
@@ -314,10 +357,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Fetch all data based on storageMode
   useEffect(() => {
     const fetchAll = async () => {
+      // Step 0: Migrate from localStorage if needed (first run after update)
+      const wasMigrated = await migrateLocalStorage();
+      
+      // Step 1: Load essential settings from async storage
+      if (wasMigrated || true) {
+        const [profMode, welcome, sMode, loggedIn, uId, intelCol, sync, remember] = await Promise.all([
+          storage.getItem("med_professional_mode", false),
+          storage.getItem("med_has_seen_welcome", false),
+          storage.getItem("med_storage_mode", "cloud" as const),
+          storage.getItem("med_loggedin", false),
+          storage.getItem("med_userId", null as string | null),
+          storage.getItem("med_intelligence_collapsed", false),
+          storage.getItem("med_last_sync", null as string | null),
+          storage.getItem("med_remember_me", true),
+        ]);
+
+        setIsProfessionalModeState(profMode);
+        setHasSeenWelcome(welcome);
+        setStorageMode(sMode);
+        setIsLoggedIn(loggedIn);
+        setCurrentUserId(uId);
+        setIntelligenceCollapsedState(intelCol);
+        setLastSyncTimestamp(sync);
+        setRememberMeState(remember);
+      }
+
       if (storageMode === "local") {
-        setMedicines(localPersistence.medicines.getAll());
-        setReminders(localPersistence.reminders.getAll());
-        setDoseLogs(localPersistence.doseLogs.getAll());
+        const [pMeds, pRems, pLogs] = await Promise.all([
+          localPersistence.medicines.getAll(),
+          localPersistence.reminders.getAll(),
+          localPersistence.doseLogs.getAll(),
+        ]);
+        setMedicines(pMeds);
+        setReminders(pRems);
+        setDoseLogs(pLogs);
         setIsDataLoading(false);
         return;
       }
@@ -356,10 +430,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setNeedsOnboarding(true);
         }
 
-        // Load from cache first for instant retrieval
-        const cachedRems = loadLocal<Reminder[]>(CLOUD_CACHE_REMS_KEY, []);
-        const cachedMeds = loadLocal<Medicine[]>(CLOUD_CACHE_MEDS_KEY, []);
-        const cachedLogs = loadLocal<DoseLog[]>(CLOUD_CACHE_LOGS_KEY, []);
+        // Load from cache first for instant retrieval (Async from IndexedDB)
+        const [cachedRems, cachedMeds, cachedLogs] = await Promise.all([
+          storage.getItem<Reminder[]>(CLOUD_CACHE_REMS_KEY, []),
+          storage.getItem<Medicine[]>(CLOUD_CACHE_MEDS_KEY, []),
+          storage.getItem<DoseLog[]>(CLOUD_CACHE_LOGS_KEY, []),
+        ]);
         
         if (cachedRems.length > 0 && reminders.length === 0) setReminders(cachedRems);
         if (cachedMeds.length > 0 && medicines.length === 0) setMedicines(cachedMeds);
@@ -376,17 +452,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (meds) {
           const normalizedMeds = meds.map(normalize);
           setMedicines(normalizedMeds);
-          localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(normalizedMeds));
+          storage.setItem(CLOUD_CACHE_MEDS_KEY, normalizedMeds);
         }
         if (rems) {
           const normalizedRems = rems.map(normalize);
           setReminders(normalizedRems);
-          localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(normalizedRems));
+          storage.setItem(CLOUD_CACHE_REMS_KEY, normalizedRems);
         }
         if (logs) {
           const normalizedLogs = logs.map(normalize);
           setDoseLogs(normalizedLogs);
-          localStorage.setItem(CLOUD_CACHE_LOGS_KEY, JSON.stringify(normalizedLogs));
+          storage.setItem(CLOUD_CACHE_LOGS_KEY, normalizedLogs);
         }
         if (pats) setPatients(pats.map(normalize));
         if (wells) setWellnessLogs(wells.map(normalize));
@@ -416,7 +492,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let newMed: Medicine;
     
     if (storageMode === "local") {
-      newMed = localPersistence.medicines.create(med);
+      newMed = await localPersistence.medicines.create(med);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
       
@@ -446,7 +522,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       getRxCUI(newMed.name).then(async (rxcui) => {
         if (rxcui) {
           if (storageMode === "local") {
-            localPersistence.medicines.update(newMed.id, { rxcui });
+            await localPersistence.medicines.update(newMed.id, { rxcui });
           } else {
             await medicinesApi.update(newMed.id, { rxcui });
           }
@@ -467,7 +543,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateMedicine = async (id: string, updates: Partial<Medicine>) => {
     if (storageMode === "local") {
-      localPersistence.medicines.update(id, updates);
+      await localPersistence.medicines.update(id, updates);
     } else {
       const docRef = doc(db, "medicines", id);
       const sanitizedUpdates = sanitizeFirestoreData(updates);
@@ -484,7 +560,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteMedicine = async (id: string) => {
     if (storageMode === "local") {
-      localPersistence.medicines.remove(id);
+      await localPersistence.medicines.remove(id);
     } else {
       const docRef = doc(db, "medicines", id);
       await deleteDoc(docRef);
@@ -502,7 +578,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let newReminder: Reminder;
 
     if (storageMode === "local") {
-      newReminder = localPersistence.reminders.create(rem);
+      newReminder = await localPersistence.reminders.create(rem);
       setReminders((p) => [...p, newReminder]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
@@ -530,7 +606,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const updateReminder = async (id: string, updates: Partial<Reminder>) => {
     if (storageMode === "local") {
-      localPersistence.reminders.update(id, updates);
+      await localPersistence.reminders.update(id, updates);
     } else {
       // Update Firestore
       const docRef = doc(db, "reminders", id);
@@ -550,7 +626,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteReminder = async (id: string) => {
     if (storageMode === "local") {
-      localPersistence.reminders.remove(id);
+      await localPersistence.reminders.remove(id);
     } else {
       // Delete from Firestore
       const docRef = doc(db, "reminders", id);
@@ -570,7 +646,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
     let newLog: DoseLog;
     if (storageMode === "local") {
-      newLog = localPersistence.doseLogs.create(log);
+      newLog = await localPersistence.doseLogs.create(log);
       setDoseLogs((p) => [...p, newLog]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
@@ -610,7 +686,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteDoseLog = async (id: string) => {
     if (storageMode === "local") {
-      localPersistence.doseLogs.remove(id);
+      await localPersistence.doseLogs.remove(id);
     } else {
       await doseLogsApi.remove(id);
     }
@@ -634,9 +710,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const syncLocalToCloud = useCallback(async () => {
     if (!currentUserId || storageMode === "local") return;
 
-    const localMeds = localPersistence.medicines.getAll();
-    const localRems = localPersistence.reminders.getAll();
-    const localLogs = localPersistence.doseLogs.getAll();
+    const [localMeds, localRems, localLogs] = await Promise.all([
+      localPersistence.medicines.getAll(),
+      localPersistence.reminders.getAll(),
+      localPersistence.doseLogs.getAll(),
+    ]);
 
     if (localMeds.length === 0 && localRems.length === 0 && localLogs.length === 0) return;
 
