@@ -18,16 +18,17 @@ import { WellnessWidget } from "./intelligence/WellnessWidget";
 import { MedDetailsWidget } from "./intelligence/MedDetailsWidget";
 import { useIntelligenceContext } from "@/hooks/useIntelligenceContext";
 import { Maximize2, BrainCircuit } from "lucide-react";
+import { useAIActions } from "@/hooks/useAIActions";
 
 export function IntelligencePanel() {
   const { t } = useTranslation();
   const location = useLocation();
   const { 
     medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
-    addMedicine, addReminder, updateReminder, deleteReminder, logDose,
     isIntelligenceCollapsed, setIsIntelligenceCollapsed, 
     isDawaGPTOpen, setIsDawaGPTOpen 
   } = useApp();
+  const { dispatchAIAction } = useAIActions();
   
   const [miniChatInput, setMiniChatInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -108,9 +109,8 @@ export function IntelligencePanel() {
         msg.id === botId ? response : msg
       ));
 
-      // Handle System Actions triggered by AI
       if (response.action) {
-        await handleAiAction(response.action);
+        await dispatchAIAction(response.action);
       }
     } catch (err) {
       console.error("Mini Chat Error:", err);
@@ -126,73 +126,6 @@ export function IntelligencePanel() {
     }
   };
 
-  const handleAiAction = async (action: any) => {
-    const { type, payload, confirmMessage } = action;
-    try {
-      switch (type) {
-        case "ADD_MEDICINE":
-          await addMedicine(payload);
-          toast({
-            title: "Medicine Added",
-            description: confirmMessage || `${payload.name} added to your cabinet.`,
-          });
-          break;
-        case "ADD_REMINDER":
-          await addReminder({
-            medicineName: payload.medicineName,
-            dose: payload.dose,
-            time: payload.time,
-            repeatSchedule: payload.repeatSchedule || "daily",
-            notes: payload.notes || "",
-            enabled: true,
-            color: payload.color || "blue",
-            icon: payload.icon || "pill"
-          });
-          toast({
-            title: "Reminder Added",
-            description: confirmMessage || `Scheduled ${payload.medicineName} for ${payload.time}.`,
-          });
-          break;
-        case "UPDATE_REMINDER":
-          await updateReminder(payload.id, {
-            ...payload,
-            enabled: payload.enabled !== undefined ? payload.enabled : true
-          } as any);
-          toast({
-            title: "Reminder Updated",
-            description: confirmMessage || "Changes applied successfully.",
-          });
-          break;
-        case "REMOVE_REMINDER":
-          await deleteReminder(payload.id);
-          toast({
-            title: "Reminder Removed",
-            description: confirmMessage || "The reminder has been deleted.",
-          });
-          break;
-        case "LOG_DOSE":
-          await logDose({
-            reminderId: payload.reminderId || "",
-            medicineName: payload.medicineName,
-            dose: payload.dose,
-            scheduledTime: payload.scheduledTime || new Date().toISOString(),
-            action: payload.action || "taken"
-          });
-          toast({
-            title: "Medication Logged",
-            description: confirmMessage || `Marked ${payload.medicineName} as ${payload.action || 'taken'}.`,
-          });
-          break;
-      }
-    } catch (err) {
-      console.error("AI Action Execution Failed:", err);
-      toast({
-        title: "Action Failed",
-        description: "I couldn't complete the system update. Please try manually.",
-        variant: "destructive"
-      });
-    }
-  };
 
   // Route-based widget selection
   const renderContextualWidget = () => {
@@ -394,12 +327,13 @@ export function IntelligencePanel() {
 
                 {/* Suggestions */}
                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-3 pb-1 z-10">
-                  {(messages[messages.length - 1]?.suggestions || [
-                    "Check schedule",
-                    "Add reminder",
-                    "Log dose",
-                    "Side effects"
-                  ]).map((suggestion, i) => (
+                    {(messages[messages.length - 1]?.suggestions || [
+                      "Check schedule",
+                      "Add reminder",
+                      "Log dose",
+                      "Headache log",
+                      "Add patient"
+                    ]).map((suggestion, i) => (
                     <motion.button
                       key={i}
                       whileHover={{ scale: 1.02, backgroundColor: "rgba(var(--primary), 0.05)" }}

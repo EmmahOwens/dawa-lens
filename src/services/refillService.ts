@@ -29,6 +29,13 @@ export function calculateRefillStatus(
   for (const rem of medReminders) {
     if (rem.repeatSchedule === "daily") {
       dailyDoseTotal += dosagePerDose;
+    } else if (rem.repeatSchedule === "custom") {
+      const timesPerDay = rem.time.split(",").length;
+      if (rem.repeatDays && rem.repeatDays.length > 0) {
+        dailyDoseTotal += (dosagePerDose * timesPerDay * rem.repeatDays.length) / 7;
+      } else {
+        dailyDoseTotal += (dosagePerDose * timesPerDay);
+      }
     } else if (rem.repeatSchedule === "weekly" && rem.repeatDays) {
       // Average daily dose for weekly schedule
       dailyDoseTotal += (dosagePerDose * rem.repeatDays.length) / 7;

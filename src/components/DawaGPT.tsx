@@ -7,6 +7,7 @@ import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { ChatMessage, AIAction, chatWithDawaGPTStream } from "@/services/aiAssistantService";
+import { useAIActions } from "@/hooks/useAIActions";
 
 export default function DawaGPT() {
   const { t } = useTranslation();
@@ -27,6 +28,7 @@ export default function DawaGPT() {
     setIsDawaGPTOpen: setIsOpen,
   } = useApp();
   const { toast } = useToast();
+  const { dispatchAIAction } = useAIActions();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -52,71 +54,6 @@ export default function DawaGPT() {
     }
   }, [isOpen]);
 
-  /**
-   * Dispatches an AI-requested action against the real AppContext functions.
-   */
-  const dispatchAIAction = async (action: AIAction) => {
-    if (!action.type || !action.payload) return;
-
-    try {
-      if (action.type === "ADD_MEDICINE") {
-        await addMedicine(action.payload as any);
-        toast({
-          title: "✅ Medicine added by Dawa-GPT",
-          description: `${action.payload.name} added to your cabinet.`,
-        });
-      } else if (action.type === "ADD_REMINDER") {
-        await addReminder({
-          medicineName: action.payload.medicineName,
-          dose: action.payload.dose,
-          time: action.payload.time,
-          repeatSchedule: action.payload.repeatSchedule || "daily",
-          notes: action.payload.notes || "",
-          enabled: true,
-          color: action.payload.color || "blue",
-          icon: action.payload.icon || "pill"
-        });
-        toast({
-          title: "✅ Reminder added by Dawa-GPT",
-          description: `${action.payload.medicineName} @ ${action.payload.time}`,
-        });
-      } else if (action.type === "UPDATE_REMINDER") {
-        await updateReminder(action.payload.id, {
-          ...action.payload,
-          enabled: action.payload.enabled !== undefined ? action.payload.enabled : true
-        } as any);
-        toast({
-          title: "✅ Reminder updated by Dawa-GPT",
-          description: "Changes applied successfully.",
-        });
-      } else if (action.type === "REMOVE_REMINDER") {
-        await deleteReminder(action.payload.id);
-        toast({
-          title: "✅ Reminder removed by Dawa-GPT",
-          description: "The reminder has been deleted.",
-        });
-      } else if (action.type === "LOG_DOSE") {
-        await logDose({
-          reminderId: action.payload.reminderId || "",
-          medicineName: action.payload.medicineName,
-          dose: action.payload.dose,
-          scheduledTime: action.payload.scheduledTime || new Date().toISOString(),
-          action: action.payload.action || "taken",
-        });
-        toast({
-          title: `✅ Dose logged as ${action.payload.action || "taken"}`,
-          description: action.payload.medicineName,
-        });
-      }
-    } catch (err) {
-      console.error("DawaGPT action dispatch failed:", err);
-      toast({
-        variant: "destructive",
-        title: "Action failed",
-        description: "Dawa-GPT couldn't complete that action. Please try manually.",
-      });
-    }
-  };
 
   const handleSend = async (text: string) => {
     if (!text.trim() || isTyping) return;
@@ -174,6 +111,8 @@ export default function DawaGPT() {
     "What are my reminders?",
     "Add a reminder for Paracetamol 500mg at 8am daily",
     "Log Paracetamol as taken",
+    "I have a slight headache",
+    "Add my mother Mary to the app"
   ];
   const activeSuggestions = lastMsg?.suggestions ?? defaultSuggestions;
 
