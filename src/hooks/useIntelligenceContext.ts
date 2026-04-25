@@ -5,40 +5,49 @@ import { useApp } from "@/contexts/AppContext";
 export function useIntelligenceContext() {
   const { medicines, doseLogs, userProfile } = useApp();
   const [insight, setInsight] = useState<string | null>(null);
+  const [nutritionalTip, setNutritionalTip] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    async function fetchInsight() {
+    async function fetchInsights() {
       if (medicines.length === 0) {
         setInsight(null);
+        setNutritionalTip(null);
         return;
       }
       
       setIsLoading(true);
       try {
-        // We use getCoachAdvice or a chat completion to get a quick summary insight
-        const res = await aiApi.getCoachAdvice({
-          logs: doseLogs.slice(0, 10),
-          medicines,
-          userName: userProfile?.name
-        });
+        // Fetch coach advice and nutritional guidance in parallel
+        const [coachRes, nutritionRes] = await Promise.all([
+          aiApi.getCoachAdvice({
+            logs: doseLogs.slice(0, 10),
+            medicines,
+            userName: userProfile?.name
+          }),
+          aiApi.getNutritionalGuidance({ medicines })
+        ]);
         
-        if (res && res.advice) {
-          // Extract a short snippet or just use the advice directly
-          setInsight(res.advice);
+        if (coachRes && coachRes.advice) {
+          setInsight(coachRes.advice);
+        }
+
+        if (nutritionRes && nutritionRes.warnings?.length > 0) {
+          setNutritionalTip(`Safety Warning: ${nutritionRes.warnings[0].explanation}`);
+        } else if (nutritionRes && nutritionRes.recommendations?.length > 0) {
+          setNutritionalTip(`Meal Tip: ${nutritionRes.recommendations[0].food} - ${nutritionRes.recommendations[0].benefit}`);
         }
       } catch (err) {
         console.error("Failed to fetch intelligence context:", err);
         setInsight(null);
+        setNutritionalTip(null);
       } finally {
         setIsLoading(false);
       }
     }
 
-    // Only run if we have some data and a reasonable amount of time has passed 
-    // or just run it when medicines change.
     const debounceTimeout = setTimeout(() => {
-      fetchInsight();
+      fetchInsights();
     }, 1500);
 
     return () => clearTimeout(debounceTimeout);
@@ -46,6 +55,7 @@ export function useIntelligenceContext() {
 
   return {
     insight,
+    nutritionalTip,
     isLoading
   };
 }

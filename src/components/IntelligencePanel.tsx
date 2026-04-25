@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Send, ChevronRight, ChevronLeft, LayoutDashboard, Scan, Heart, 
   History, Settings, Info, Loader2, Sparkles as SparklesIcon,
-  Activity, ShieldAlert, CheckCircle2, Clock, Sparkles
+  Activity, ShieldAlert, CheckCircle2, Clock, Sparkles, Utensils
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
@@ -47,7 +47,7 @@ export function IntelligencePanel() {
 
   const adherenceRate = reminders.length > 0 ? Math.round((todayLogs.length / reminders.length) * 100) : 0;
   
-  const { insight, isLoading: isInsightLoading } = useIntelligenceContext();
+  const { insight, nutritionalTip, isLoading: isInsightLoading } = useIntelligenceContext();
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -287,9 +287,21 @@ export function IntelligencePanel() {
                   <div className="h-3 w-1/2 bg-primary/10 rounded-full animate-pulse" />
                 </div>
               ) : insight ? (
-                <p className="text-[11px] leading-relaxed text-foreground/90 font-medium relative z-10 italic">
-                  "{insight}"
-                </p>
+                <div className="space-y-3 relative z-10">
+                  <p className="text-[11px] leading-relaxed text-foreground/90 font-medium italic">
+                    "{insight}"
+                  </p>
+                  {nutritionalTip && (
+                    <div className="pt-3 border-t border-primary/10 flex items-start gap-2">
+                      <div className="p-1 rounded bg-warning/10 text-warning shrink-0">
+                        <Utensils size={10} />
+                      </div>
+                      <p className="text-[10px] leading-relaxed text-muted-foreground font-semibold">
+                        {nutritionalTip}
+                      </p>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <p className="text-[11px] leading-relaxed text-muted-foreground font-medium relative z-10">
                   Add more logs to get personalized coaching insights.

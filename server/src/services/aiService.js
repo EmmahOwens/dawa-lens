@@ -155,6 +155,31 @@ export const checkMealSafety = async (medicines, mealDescription) => {
   return await callGroq(prompt);
 };
 
+export const getNutritionalGuidance = async (medicines) => {
+  const prompt = `
+    You are the "Dawa-Lens Nutritional Guard".
+    Active Medications: ${JSON.stringify(medicines.map(m => ({ name: m.name, generic: m.genericName })))}
+
+    Task:
+    1. Provide 2-3 specific "Food Recommendations" that aid absorption or mitigate side effects for these medications.
+    2. Identify "Critical Safety Warnings" regarding foods/drinks to avoid (e.g., Grapefruit, Alcohol, Dairy, Caffeine).
+    3. Include "Timing Advice" (e.g., "Take 2 hours after dairy").
+    4. Focus on East African regional foods (Matooke, G-nuts, Avocado, Posho, etc.) where appropriate.
+
+    Respond in EXACT JSON format:
+    {
+      "recommendations": [
+        { "food": "string", "reason": "string", "benefit": "string" }
+      ],
+      "warnings": [
+        { "factor": "string", "severity": "High" | "Medium", "explanation": "string" }
+      ],
+      "timingAdvice": "string"
+    }
+  `;
+  return await callGroq(prompt);
+};
+
 export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
   const { finalMessages, systemInstruction } = prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients });
 
@@ -260,6 +285,12 @@ function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, rem
     - REMOVE_REMINDER: { type: "REMOVE_REMINDER", payload: { id } }
     - LOG_DOSE: { type: "LOG_DOSE", payload: { reminderId, medicineName, dose, scheduledTime, action ("taken"|"skipped") } }
     - null: No system action required.
+
+    === NUTRITIONAL GUIDELINES ===
+    1. When asked about food, check for interactions with the user's active medications.
+    2. Proactively suggest regional East African foods (Matooke, Avocado, G-nuts, Posho) that help with absorption or reduce side effects.
+    3. Always warn about high-risk interactions (e.g. Grapefruit with Statins, Dairy with certain Antibiotics).
+    4. If the user asks "Can I eat this with my meds?", provide a detailed clinical reason but in a warm tone.
 
     === RULES ===
     1. Professional, warm "Dawa-Lens signature" tone — culturally appropriate for Uganda/East Africa.

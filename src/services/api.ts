@@ -205,6 +205,9 @@ export const aiApi = {
   checkMealSafety: (data: { medicines: any[]; mealDescription: string }) =>
     request<any>('/ai/meal-check', { method: 'POST', body: JSON.stringify(data) }),
 
+  getNutritionalGuidance: (data: { medicines: any[] }) =>
+    request<any>('/ai/nutritional-guidance', { method: 'POST', body: JSON.stringify(data) }),
+
   chat: (data: {
     messages: any[];
     medicines: any[];
