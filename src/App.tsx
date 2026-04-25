@@ -119,9 +119,10 @@ const App = () => {
         try {
           // Notify the updater that the app is ready
           // This prevents auto-rollback to the previous version
-          await CapacitorUpdater.notifyAppReady();
+          const result = await CapacitorUpdater.notifyAppReady();
+          console.log("Capgo: App ready notification successful", result);
         } catch (e) {
-          console.warn("Updater notification failed:", e);
+          console.error("Capgo: App ready notification failed:", e);
         }
 
         try {
