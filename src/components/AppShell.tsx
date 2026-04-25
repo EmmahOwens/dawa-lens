@@ -15,7 +15,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return (
       <div className="h-screen bg-background overflow-hidden flex flex-col overscroll-none">
         {/* Transparent safe-top spacer for edge-to-edge */}
-        <div className="h-[env(safe-area-inset-top,20px)] bg-background/70 backdrop-blur-[20px] backdrop-saturate-[180%] sticky top-0 z-40 w-full gpu-accel" />
+        <div className="h-[env(safe-area-inset-top,20px)] bg-background/50 backdrop-blur-2xl backdrop-saturate-[1.8] border-b border-white/10 sticky top-0 z-40 w-full gpu-accel" />
         
         <main className="flex-1 overflow-y-auto no-scrollbar px-3 safe-bottom pb-24 scroll-smooth">
           {children}
@@ -32,7 +32,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-16 flex items-center justify-between border-b border-white/10 px-8 bg-background/70 backdrop-blur-[20px] backdrop-saturate-[180%] sticky top-0 z-30 shadow-sm gpu-accel">
+          <header className="h-16 flex items-center justify-between border-b border-white/10 px-8 bg-background/50 backdrop-blur-2xl backdrop-saturate-[1.8] sticky top-0 z-30 shadow-sm gpu-accel">
             <div className="flex items-center gap-6">
               <SidebarTrigger className="hover:bg-primary/10 hover:text-primary transition-colors" />
               <div className="h-6 w-px bg-border/60" />
