@@ -105,6 +105,7 @@ type AppContextType = {
   
   addMedicine: (med: Omit<Medicine, "id" | "addedAt">) => Promise<Medicine>;
   updateMedicine: (id: string, updates: Partial<Medicine>) => Promise<void>;
+  deleteMedicine: (id: string) => Promise<void>;
   addReminder: (rem: Omit<Reminder, "id" | "createdAt">) => Promise<void>;
   updateReminder: (id: string, rem: Partial<Reminder>) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
@@ -722,7 +723,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider
       value={{
         medicines, reminders, doseLogs, patients, wellnessLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId, selectedPatientId, isProfessionalMode,
-        addMedicine, updateMedicine, addReminder, updateReminder, deleteReminder,
+        addMedicine, updateMedicine, deleteMedicine, addReminder, updateReminder, deleteReminder,
         logDose, deleteDoseLog, addPatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing,
         isDawaGPTOpen, setIsDawaGPTOpen, isIntelligenceCollapsed, setIsIntelligenceCollapsed,
         lastSyncTimestamp, updateUserProfile, rememberMe, setRememberMe

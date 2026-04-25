@@ -280,10 +280,13 @@ function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, rem
     
     Supported actions:
     - ADD_MEDICINE: { type: "ADD_MEDICINE", payload: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose? } }
+    - UPDATE_MEDICINE: { type: "UPDATE_MEDICINE", payload: { id, name?, dosage?, notes? } }
     - ADD_REMINDER: { type: "ADD_REMINDER", payload: { medicineName, dose, time (HH:mm), repeatSchedule ("daily"|"weekly"|"once"|"custom"), notes? } }
-    - UPDATE_REMINDER: { type: "UPDATE_REMINDER", payload: { id, enabled, time, dose } }
+    - UPDATE_REMINDER: { type: "UPDATE_REMINDER", payload: { id, enabled?, time?, dose? } }
     - REMOVE_REMINDER: { type: "REMOVE_REMINDER", payload: { id } }
     - LOG_DOSE: { type: "LOG_DOSE", payload: { reminderId, medicineName, dose, scheduledTime, action ("taken"|"skipped") } }
+    - LOG_WELLNESS: { type: "LOG_WELLNESS", payload: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? } } }
+    - ADD_PATIENT: { type: "ADD_PATIENT", payload: { name, age?, gender?, relation? } }
     - null: No system action required.
 
     === NUTRITIONAL GUIDELINES ===
@@ -299,8 +302,10 @@ function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, rem
     4. When asked to "Add a reminder for [Med] at [Time]", you MUST trigger ADD_REMINDER.
     5. When asked to "Stop my [Med] reminder", you MUST trigger REMOVE_REMINDER or UPDATE_REMINDER (enabled: false).
     6. When asked to "Log that I took my [Med]", you MUST trigger LOG_DOSE. Find the corresponding reminderId from the provided context.
-    7. Provide exactly 3 next-prompt suggestions.
-    8. Keep text responses concise and actionable.
+    7. When asked to "Log that I have a headache" or "I ate Matooke", you MUST trigger LOG_WELLNESS.
+    8. When asked to "Add my mother Mary to the app", you MUST trigger ADD_PATIENT.
+    9. Provide exactly 3 next-prompt suggestions.
+    10. Keep text responses concise and actionable.
 
     ${isStreaming ? `
     === STREAMING FORMAT ===

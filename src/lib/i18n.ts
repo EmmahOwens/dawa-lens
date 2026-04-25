@@ -106,8 +106,7 @@ const en = {
       save_reminder: "Save Reminder",
       once: "Once",
       daily: "Daily",
-      weekly: "Weekly",
-      custom: "Custom",
+      custom: "Frequency",
       missing_fields: "Missing fields",
       missing_fields_desc: "Please fill in medicine name and dose.",
       created: "Reminder created!"
@@ -268,8 +267,7 @@ const sw = {
       save_reminder: "Hifadhi Kikumbusho",
       once: "Mara moja",
       daily: "Kila siku",
-      weekly: "Kila wiki",
-      custom: "Maalum",
+      custom: "Masafa",
       missing_fields: "Sehemu ambazo hazikujazwa",
       missing_fields_desc: "Tafadhali jaza jina la dawa na dozi.",
       created: "Kikumbusho kimeundwa!"

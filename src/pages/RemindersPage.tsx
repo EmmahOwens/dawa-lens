@@ -29,17 +29,14 @@ function repeatLabel(reminder: Reminder): string {
   
   switch (repeatSchedule) {
     case "daily": return "Every day";
-    case "weekly": 
-      if (repeatDays && repeatDays.length > 0) {
-        return `Weekly: ${repeatDays.map(d => days[d]).join(", ")}`;
-      }
-      return "Every week";
     case "once": return "One time";
     case "custom": 
+      const timesCount = reminder.time.split(",").length;
+      let label = timesCount > 1 ? `${timesCount} times a day` : "Custom";
       if (repeatDays && repeatDays.length > 0) {
-        return `Custom: ${repeatDays.map(d => days[d]).join(", ")}`;
+        label += ` (${repeatDays.map(d => days[d]).join(", ")})`;
       }
-      return "Custom";
+      return label;
     default: return repeatSchedule;
   }
 }
@@ -229,7 +226,7 @@ export default function RemindersPage() {
                     </p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
-                        <Clock size={11} /> {reminder.time}
+                        <Clock size={11} /> {reminder.time.split(",").join(", ")}
                       </span>
                       <span className="text-[11px] text-muted-foreground/40">·</span>
                       <span className="text-[11px] font-semibold text-muted-foreground">{reminder.dose}</span>

@@ -26,9 +26,10 @@ interface LocationState {
   dose?: string;
   // Edit mode
   editId?: string;
-  time?: string;
-  repeat?: "daily" | "weekly" | "once" | "custom";
+  time?: string; // Comma-separated for frequency
+  repeat?: "daily" | "once" | "custom";
   repeatDays?: number[];
+  frequency?: number;
   notes?: string;
   color?: string;
   icon?: string;
@@ -64,8 +65,10 @@ export default function AddReminderPage() {
   const [medicineId, setMedicineId] = useState<string | undefined>(state?.medicineId);
   const [medicineName, setMedicineName] = useState(state?.medicineName || "");
   const [dose, setDose] = useState(state?.dose || "");
-  const [time, setTime] = useState(state?.time || "08:00");
-  const [repeat, setRepeat] = useState<"daily" | "weekly" | "once" | "custom">(
+  const [times, setTimes] = useState<string[]>(
+    state?.time ? state.time.split(",") : ["08:00"]
+  );
+  const [repeat, setRepeat] = useState<"daily" | "once" | "custom">(
     state?.repeat || "daily"
   );
   const [repeatDays, setRepeatDays] = useState<number[]>(state?.repeatDays || []);
@@ -79,6 +82,22 @@ export default function AddReminderPage() {
     setRepeatDays(prev => 
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort()
     );
+  };
+
+  const handleFrequencyChange = (freq: number) => {
+    setTimes(prev => {
+      const newTimes = [...prev];
+      if (freq > prev.length) {
+        // Add default times (e.g. spread out)
+        for (let i = prev.length; i < freq; i++) {
+          newTimes.push("12:00");
+        }
+      } else {
+        // Remove extra
+        return newTimes.slice(0, freq);
+      }
+      return newTimes;
+    });
   };
 
   const handleSave = async () => {
@@ -151,25 +170,25 @@ export default function AddReminderPage() {
           medicineId: finalMedId,
           medicineName: medicineName.trim(),
           dose: dose.trim(),
-          time,
+          time: times.join(","),
           repeatSchedule: repeat,
-          repeatDays: repeat === "weekly" || repeat === "custom" ? repeatDays : undefined,
+          repeatDays: repeat === "custom" ? repeatDays : undefined,
           notes: notes.trim() || undefined,
           color,
           icon,
         });
         toast({
           title: "Reminder updated",
-          description: `${medicineName} @ ${time}`,
+          description: `${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`,
         });
       } else {
         await addReminder({
           medicineId: finalMedId,
           medicineName: medicineName.trim(),
           dose: dose.trim(),
-          time,
+          time: times.join(","),
           repeatSchedule: repeat,
-          repeatDays: repeat === "weekly" || repeat === "custom" ? repeatDays : undefined,
+          repeatDays: repeat === "custom" ? repeatDays : undefined,
           notes: notes.trim() || undefined,
           enabled: true,
           color,
@@ -177,7 +196,7 @@ export default function AddReminderPage() {
         });
         toast({
           title: t("reminders.created"),
-          description: `${medicineName} @ ${time}`,
+          description: `${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`,
         });
       }
       navigate("/reminders");
@@ -241,7 +260,7 @@ export default function AddReminderPage() {
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs font-semibold text-muted-foreground">{dose || "Dose"}</span>
               <span className="text-muted-foreground/30">•</span>
-              <span className="text-xs font-semibold text-muted-foreground">{time}</span>
+              <span className="text-xs font-semibold text-muted-foreground">{times.join(", ")}</span>
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -394,15 +413,23 @@ export default function AddReminderPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="time" className="text-xs font-bold text-muted-foreground ml-1">
-                {t("reminders.time")}
+                {repeat === "custom" ? "Scheduled Times" : t("reminders.time")}
               </Label>
-              <Input
-                id="time"
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all font-medium text-lg"
-              />
+              <div className="space-y-3">
+                {times.map((t, idx) => (
+                  <Input
+                    key={idx}
+                    type="time"
+                    value={t}
+                    onChange={(e) => {
+                      const newTimes = [...times];
+                      newTimes[idx] = e.target.value;
+                      setTimes(newTimes);
+                    }}
+                    className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all font-medium text-lg"
+                  />
+                ))}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -410,10 +437,15 @@ export default function AddReminderPage() {
                 {t("reminders.repeat")}
               </Label>
               <div className="flex flex-wrap gap-2">
-                {(["once", "daily", "weekly", "custom"] as const).map((r) => (
+                {(["once", "daily", "custom"] as const).map((r) => (
                   <button
                     key={r}
-                    onClick={() => setRepeat(r)}
+                    onClick={() => {
+                      setRepeat(r);
+                      if (r !== "custom" && times.length > 1) {
+                        setTimes([times[0]]);
+                      }
+                    }}
                     className={`flex-1 min-w-[80px] px-3 py-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
                       repeat === r 
                         ? "bg-primary/10 border-primary/30 text-primary shadow-sm" 
@@ -426,27 +458,51 @@ export default function AddReminderPage() {
               </div>
             </div>
 
-            {(repeat === "weekly" || repeat === "custom") && (
+            {repeat === "custom" && (
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                className="col-span-full space-y-3 pt-2"
+                className="col-span-full space-y-4 pt-2"
               >
-                <Label className="text-xs font-bold text-muted-foreground ml-1">Select Days</Label>
-                <div className="flex justify-between gap-2">
-                  {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
-                    <button
-                      key={`${day}-${i}`}
-                      onClick={() => toggleDay(i)}
-                      className={`w-10 h-10 rounded-full text-xs font-bold transition-all border ${
-                        repeatDays.includes(i)
-                          ? "bg-primary border-primary text-primary-foreground shadow-md scale-110"
-                          : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
-                      }`}
-                    >
-                      {day}
-                    </button>
-                  ))}
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-muted-foreground ml-1">Frequency (Times per day)</Label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5, 6].map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => handleFrequencyChange(f)}
+                        className={`flex-1 h-10 rounded-xl text-xs font-bold transition-all border ${
+                          times.length === f
+                            ? "bg-primary border-primary text-primary-foreground shadow-md"
+                            : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
+                        }`}
+                      >
+                        {f}x
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground ml-1 italic">
+                    Example: 2 pills taken 3 times a day
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-muted-foreground ml-1">Repeat on Days</Label>
+                  <div className="flex justify-between gap-2">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+                      <button
+                        key={`${day}-${i}`}
+                        onClick={() => toggleDay(i)}
+                        className={`w-10 h-10 rounded-full text-xs font-bold transition-all border ${
+                          repeatDays.includes(i)
+                            ? "bg-primary border-primary text-primary-foreground shadow-md scale-110"
+                            : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}
