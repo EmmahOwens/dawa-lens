@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { App as CapApp } from '@capacitor/app';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider, useApp } from "@/contexts/AppContext";
@@ -91,9 +92,9 @@ const AppContent = () => {
     checkMissedDoses(reminders, doseLogs, logDose);
 
     // Refresh reminders and check missed doses when app comes to foreground
-    const handler = CapApp.addListener('appStateChange', ({ isActive }) => {
+    const handler = CapApp.addListener('appStateChange', async ({ isActive }) => {
       if (isActive) {
-        console.log('App became active, refreshing reminders and checking missed doses...');
+        console.log('App became active, refreshing reminders and checking for updates...');
         scheduleReminders(reminders, doseLogs, medicines);
         checkMissedDoses(reminders, doseLogs, logDose);
       }
@@ -115,6 +116,14 @@ const App = () => {
 
     const initNativeFeatures = async () => {
       if (Capacitor.isNativePlatform()) {
+        try {
+          // Notify the updater that the app is ready
+          // This prevents auto-rollback to the previous version
+          await CapacitorUpdater.notifyAppReady();
+        } catch (e) {
+          console.warn("Updater notification failed:", e);
+        }
+
         try {
           await StatusBar.setStyle({ style: Style.Default });
           await StatusBar.setOverlaysWebView({ overlay: true });
