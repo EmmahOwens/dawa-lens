@@ -4,6 +4,7 @@
  */
 
 import { auth } from "@/lib/firebase";
+import { Capacitor } from "@capacitor/core";
 
 const getBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;
@@ -11,11 +12,11 @@ const getBaseUrl = () => {
     return envUrl.endsWith('/v1') ? envUrl : `${envUrl}/v1`;
   }
   
-  if (typeof window !== 'undefined' && (
-      window.location.hostname === 'localhost' || 
-      window.location.hostname === '127.0.0.1' || 
-      window.location.hostname === '::1'
-  )) {
+  if (typeof window !== 'undefined' && 
+      !Capacitor.isNativePlatform() &&
+      (window.location.hostname === 'localhost' || 
+       window.location.hostname === '127.0.0.1' || 
+       window.location.hostname === '::1')) {
     return 'http://localhost:5000/api/v1';
   }
   
