@@ -56,7 +56,6 @@ export function IntelligencePanel() {
         role: "assistant",
         text: `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT. I have full access to your ${reminders.length} reminder(s) and medication history. Ask me anything about your health or say "Add a reminder for [medicine]" to get started!`,
         source: "System",
-        suggestions: ["What are my reminders?", "Log my meds", "Show my dose history"]
       }]);
     }
   }, [userProfile?.name, reminders.length]);
@@ -270,46 +269,7 @@ export function IntelligencePanel() {
           )}
         </section>
 
-        {/* Dynamic Context Engine Insight */}
-        {medicines.length > 0 && (
-          <section className="animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex items-center justify-between mb-4 px-1 mt-8">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">AI Insight</h3>
-              <BrainCircuit size={14} className="text-primary" />
-            </div>
-            <div className="bg-primary/5 backdrop-blur-sm border border-primary/20 rounded-[1.5rem] p-6 relative overflow-hidden group shadow-sm">
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                <BrainCircuit size={40} className="text-primary" />
-              </div>
-              {isInsightLoading ? (
-                <div className="flex flex-col gap-3">
-                  <div className="h-3 w-3/4 bg-primary/10 rounded-full animate-pulse" />
-                  <div className="h-3 w-1/2 bg-primary/10 rounded-full animate-pulse" />
-                </div>
-              ) : insight ? (
-                <div className="space-y-3 relative z-10">
-                  <p className="text-[11px] leading-relaxed text-foreground/90 font-medium italic">
-                    "{insight}"
-                  </p>
-                  {nutritionalTip && (
-                    <div className="pt-3 border-t border-primary/10 flex items-start gap-2">
-                      <div className="p-1 rounded bg-warning/10 text-warning shrink-0">
-                        <Utensils size={10} />
-                      </div>
-                      <p className="text-[10px] leading-relaxed text-muted-foreground font-semibold">
-                        {nutritionalTip}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[11px] leading-relaxed text-muted-foreground font-medium relative z-10">
-                  Add more logs to get personalized coaching insights.
-                </p>
-              )}
-            </div>
-          </section>
-        )}
+
       </div>
     );
   };
@@ -433,26 +393,7 @@ export function IntelligencePanel() {
                     )}
                 </div>
 
-                {/* Suggestion Chips */}
-                <AnimatePresence>
-                  {messages.length > 0 && messages[messages.length-1].suggestions && !isTyping && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mb-2"
-                    >
-                      {messages[messages.length-1].suggestions?.map((s, i) => (
-                        <button
-                          key={i}
-                          onClick={() => handleSendMessage(s)}
-                          className="shrink-0 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-full px-3 py-1 text-[9px] font-bold text-primary transition-all active:scale-95"
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+
 
                 {/* Input Area */}
                 <div className="flex gap-2 z-10">

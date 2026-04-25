@@ -132,10 +132,13 @@ export const chatWithDawaGPT = async (
       patients,
     });
 
+    const rawText = response.text || "";
+    const cleanText = rawText.split("###METADATA###")[0].trim();
+
     return {
       id: Date.now().toString(),
       role: "assistant",
-      text: response.text,
+      text: cleanText,
       source: response.source || "Gemini",
       suggestions: response.suggestions,
       // Include the action from the AI if present and meaningful
@@ -183,6 +186,7 @@ export const chatWithDawaGPTStream = async (
     let metadataJson = "";
     let buffer = "";
 
+    let allText = "";
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -198,33 +202,26 @@ export const chatWithDawaGPTStream = async (
           try {
             const data = JSON.parse(trimmed.slice(6));
             const content = data.choices[0]?.delta?.content || "";
+            allText += content;
+
+            // Extract text outside of ###METADATA### tags
+            let cleanText = "";
+            let tempMetadata = "";
+            const parts = allText.split("###METADATA###");
             
-            if (content.includes("###METADATA###")) {
-              const parts = content.split("###METADATA###");
-              if (!isMetadata) {
-                // Starting metadata
-                fullText += parts[0];
-                onChunk(fullText);
-                isMetadata = true;
-                metadataJson += parts[1] || "";
+            for (let i = 0; i < parts.length; i++) {
+              if (i % 2 === 0) {
+                cleanText += parts[i];
               } else {
-                // Ending metadata
-                metadataJson += parts[0] || "";
-                isMetadata = false;
-                // If there's text after the closing tag, add it to fullText
-                if (parts[1]) {
-                  fullText += parts[1];
-                  onChunk(fullText);
-                }
+                tempMetadata = parts[i];
               }
-            } else if (isMetadata) {
-              metadataJson += content;
-            } else {
-              fullText += content;
-              onChunk(fullText);
             }
+            
+            fullText = cleanText;
+            metadataJson = tempMetadata;
+            onChunk(fullText);
           } catch (e) {
-            // Ignore parse errors for incomplete JSON chunks
+            // Ignore parse errors
           }
         }
       }
