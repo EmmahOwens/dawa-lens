@@ -69,6 +69,19 @@ router.post('/meal-check', protect, async (req, res, next) => {
 });
 
 /**
+ * Proactive Nutritional Guidance
+ */
+router.post('/nutritional-guidance', protect, async (req, res, next) => {
+  try {
+    const { medicines } = req.body;
+    const guidance = await aiService.getNutritionalGuidance(medicines);
+    res.json(guidance);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * Conversational AI Assistant (Dawa-GPT)
  */
 router.post('/chat', protect, async (req, res, next) => {

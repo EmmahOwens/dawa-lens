@@ -19,6 +19,8 @@ export default function WellnessPage() {
   const [loading, setLoading] = useState(false);
   const [insight, setInsight] = useState<any>(null);
   const [insightLoading, setInsightLoading] = useState(false);
+  const [guidance, setGuidance] = useState<any>(null);
+  const [guidanceLoading, setGuidanceLoading] = useState(false);
   
   const fetchWellnessInsight = async () => {
     if (wellnessLogs.length === 0) return;
@@ -40,6 +42,23 @@ export default function WellnessPage() {
   useEffect(() => {
     fetchWellnessInsight();
   }, [wellnessLogs.length]); // Re-fetch when logs change
+
+  const fetchNutritionalGuidance = async () => {
+    if (medicines.length === 0) return;
+    setGuidanceLoading(true);
+    try {
+      const res = await aiApi.getNutritionalGuidance({ medicines });
+      setGuidance(res);
+    } catch (err) {
+      console.error("Failed to fetch nutritional guidance:", err);
+    } finally {
+      setGuidanceLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNutritionalGuidance();
+  }, [medicines.length]);
   
   // Journal State
   const [mood, setMood] = useState(3); // 1-5
@@ -323,6 +342,76 @@ export default function WellnessPage() {
                   Record Meal
                 </Button>
               </div>
+
+              {/* AI Nutritional Guard */}
+              <AnimatePresence>
+                {(guidance || guidanceLoading) && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-8 pt-6 border-t border-border/50"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-warning flex items-center gap-2">
+                        <ShieldCheck size={14} /> AI Nutritional Guard
+                      </h4>
+                      {guidanceLoading && <Loader2 size={12} className="animate-spin text-warning/50" />}
+                    </div>
+
+                    {guidance && (
+                      <div className="space-y-4">
+                        {/* Recommendations */}
+                        <div className="grid grid-cols-1 gap-2">
+                          {guidance.recommendations?.map((rec: any, idx: number) => (
+                            <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-success/5 border border-success/10 transition-all hover:bg-success/10">
+                              <div className="mt-1 p-1 rounded-lg bg-success/20 text-success">
+                                <Utensils size={10} />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-[11px] font-bold text-foreground mb-0.5">{rec.food}</p>
+                                <p className="text-[10px] text-muted-foreground leading-tight">{rec.benefit}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Warnings */}
+                        {guidance.warnings?.length > 0 && (
+                          <div className="space-y-2">
+                            {guidance.warnings.map((warn: any, idx: number) => (
+                              <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-destructive/5 border border-destructive/10">
+                                <div className="mt-1 p-1 rounded-lg bg-destructive/20 text-destructive">
+                                  <AlertTriangle size={10} />
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-0.5">
+                                    <p className="text-[10px] font-black uppercase text-destructive tracking-widest">{warn.factor}</p>
+                                    <span className="px-1.5 py-0.5 rounded-full bg-destructive/10 text-[8px] font-black uppercase tracking-tighter text-destructive">
+                                      {warn.severity} RISK
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground leading-tight">{warn.explanation}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Timing Advice */}
+                        {guidance.timingAdvice && (
+                          <div className="p-3 rounded-xl bg-muted/30 border border-border/50 flex items-center gap-3">
+                            <Coffee size={14} className="text-muted-foreground/60" />
+                            <p className="text-[10px] font-semibold text-muted-foreground italic">
+                              "{guidance.timingAdvice}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* AI Meal Verdict */}
               <AnimatePresence>
