@@ -4,9 +4,6 @@ import App from "./App.tsx";
 import "./index.css";
 import "./lib/i18n";
 import { initTheme } from "./hooks/useTheme";
-import { CapacitorUpdater } from '@capgo/capacitor-updater';
-
-CapacitorUpdater.notifyAppReady();
 
 // Apply persisted theme before React renders to prevent flash
 initTheme();
