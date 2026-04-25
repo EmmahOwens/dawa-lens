@@ -233,7 +233,7 @@ export function IntelligencePanel() {
   }
 
   return (
-    <aside className="w-[340px] border-l border-border/40 bg-background/60 backdrop-blur-xl flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-right-4 shadow-[-10px_0_30px_rgba(0,0,0,0.03)]">
+    <aside className="w-[340px] border-l border-white/10 bg-background/50 backdrop-blur-2xl backdrop-saturate-[1.8] flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-right-4 shadow-[-10px_0_30px_rgba(0,0,0,0.03)]">
       
       {/* Header with Collapse Button */}
       <div className="p-6 pb-2 flex items-center justify-between">

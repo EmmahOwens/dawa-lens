@@ -39,7 +39,7 @@ export function AppSidebar() {
     location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border/50 bg-background/50 backdrop-blur-2xl transition-all duration-300">
+    <Sidebar collapsible="icon" className="border-r border-white/10 bg-background/50 backdrop-blur-2xl backdrop-saturate-[1.8] transition-all duration-300">
       {/* Brand Header */}
       <div className="flex flex-col gap-6 px-4 py-8">
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} transition-all duration-300`}>
