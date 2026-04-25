@@ -3,7 +3,7 @@
     "rules": "firestore.rules"
   },
   "hosting": {
-    "target": "app",
+    "site": "dawalens",
     "public": "dist",
     "ignore": [
       "firebase.json",
