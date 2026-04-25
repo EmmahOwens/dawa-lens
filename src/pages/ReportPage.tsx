@@ -41,11 +41,20 @@ export default function ReportPage() {
       const total = dayLogs.length;
       const adherence = total > 0 ? (taken / total) * 100 : 100;
 
-      const dayWellness = wellnessLogs.find(l => l.type === "symptom" && isSameDay(new Date(l.timestamp), date));
-      const energy = dayWellness?.data?.energy || 0;
-      const mood = dayWellness?.data?.mood || 0;
+      // Average wellness logs if multiple exist for the day
+      const dayWellnessLogs = wellnessLogs.filter(l => l.type === "symptom" && isSameDay(new Date(l.timestamp), date));
+      
+      let energy: number | null = null;
+      let mood: number | null = null;
 
-      return { name: dayStr, adherence, energy: energy * 20, mood: mood * 20 };
+      if (dayWellnessLogs.length > 0) {
+        const sumEnergy = dayWellnessLogs.reduce((acc, l) => acc + (l.data?.energy || 0), 0);
+        const sumMood = dayWellnessLogs.reduce((acc, l) => acc + (l.data?.mood || 0), 0);
+        energy = (sumEnergy / dayWellnessLogs.length) * 20;
+        mood = (sumMood / dayWellnessLogs.length) * 20;
+      }
+
+      return { name: dayStr, adherence, energy, mood };
     });
   }, [doseLogs, wellnessLogs]);
 
@@ -184,7 +193,14 @@ export default function ReportPage() {
             <h3 className="section-title flex items-center gap-2">
               <TrendingUp size={14} className="text-primary" /> Vitality Trends
             </h3>
-            <div className="h-[260px] w-full mt-4">
+            <div className="h-[260px] w-full mt-4 relative">
+              {chartData.every(d => d.energy === null && d.adherence === 100) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-accent/5 z-10 rounded-2xl border border-dashed border-border/50">
+                  <Activity size={32} className="text-muted-foreground/30 mb-3" />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">No activity data yet</p>
+                  <p className="text-[8px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-tighter">Log your wellness in the Wellness Hub</p>
+                </div>
+              )}
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
@@ -201,7 +217,7 @@ export default function ReportPage() {
                     tick={{ fontSize: 9, fontWeight: 700, fill: "hsl(var(--muted-foreground))" }} 
                     dy={10}
                   />
-                  <YAxis hide />
+                  <YAxis hide domain={[0, 100]} />
                   <Tooltip 
                     contentStyle={{ borderRadius: '1rem', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 40px rgba(0,0,0,0.08)', background: 'hsl(var(--card))' }}
                     itemStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}
@@ -224,6 +240,17 @@ export default function ReportPage() {
                     fill="transparent"
                     name="Energy Level"
                     strokeDasharray="4 4"
+                    connectNulls
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="mood" 
+                    stroke="#6366f1" 
+                    strokeWidth={3}
+                    fill="transparent"
+                    name="Mood Level"
+                    strokeDasharray="2 2"
+                    connectNulls
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -236,6 +263,10 @@ export default function ReportPage() {
               <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
                 <div className="w-2.5 h-2.5 rounded-full bg-success" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">Energy</span>
+              </div>
+              <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
+                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">Mood</span>
               </div>
             </div>
           </motion.div>
