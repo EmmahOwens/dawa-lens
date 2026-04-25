@@ -537,25 +537,29 @@ export default function AddReminderPage() {
         </motion.section>
 
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="fixed bottom-0 left-0 right-0 px-4 pt-4 pb-[calc(90px+env(safe-area-inset-bottom))] bg-background/50 backdrop-blur-2xl backdrop-saturate-[1.8] border-t border-white/10 z-40 flex justify-center md:static md:pb-0 md:pt-0 md:px-0 md:bg-transparent md:border-0 md:backdrop-filter-none"
+          transition={{ delay: 0.5, type: "spring", damping: 25, stiffness: 200 }}
+          className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-0 right-0 px-6 z-40 flex justify-center pointer-events-none md:static md:bottom-auto md:px-0 md:pointer-events-auto"
         >
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="w-full max-w-lg h-14 rounded-2xl text-sm font-bold uppercase tracking-widest shadow-xl shadow-primary/20 group relative overflow-hidden"
-            size="lg"
-          >
-            <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-12" />
-            <Save size={18} className="mr-2" />
-            {isSaving
-              ? "Saving Schedule..."
-              : isEditing
-              ? t("reminders.save_reminder", "Update Reminder")
-              : t("reminders.save_reminder")}
-          </Button>
+          <div className="w-full max-w-lg pointer-events-auto">
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="w-full h-14 rounded-2xl text-sm font-bold uppercase tracking-widest shadow-[0_20px_50px_rgba(0,122,255,0.3)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] group relative overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
+              size="lg"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/90 to-primary translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out opacity-20" />
+              <Save size={18} className="mr-2 relative z-10" />
+              <span className="relative z-10">
+                {isSaving
+                  ? "Saving Schedule..."
+                  : isEditing
+                  ? t("reminders.save_reminder", "Update Reminder")
+                  : t("reminders.save_reminder")}
+              </span>
+            </Button>
+          </div>
         </motion.div>
       </div>
 
