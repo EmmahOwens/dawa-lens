@@ -36,7 +36,8 @@ const PageTransition = ({ children }: PageTransitionProps) => {
       exit="exit"
       variants={variants}
       transition={transition}
-      className="w-full h-full"
+      className="w-full h-full will-change-transform will-change-opacity"
+      style={{ transform: "translateZ(0)" }}
     >
       {children}
     </motion.div>
