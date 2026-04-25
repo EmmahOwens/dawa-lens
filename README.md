@@ -300,4 +300,3 @@ When contributing:
 
 - **Live Web App**: https://dawalens.web.app
 - **Vercel Staging**: https://dawalens256.vercel.app
-- **Backend API**: https://api.dawalens.com (production)
