@@ -37,6 +37,7 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MEDICINE_D3BA2 }}
           channelId: live
           projectId: medicine-d3ba2
+          target: app
 
       # Deploy to Vercel (Ensures synchronized updates)
       - name: Deploy to Vercel
