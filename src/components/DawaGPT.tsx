@@ -250,6 +250,22 @@ export default function DawaGPT() {
 
               {/* Footer / Input */}
               <div className="p-4 md:p-6 bg-background/80 backdrop-blur-xl border-t border-border/50">
+                {/* Prompt Suggestions */}
+                <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-1">
+                  {activeSuggestions.map((suggestion, i) => (
+                    <motion.button
+                      key={i}
+                      whileHover={{ scale: 1.02, backgroundColor: "rgba(var(--primary), 0.1)" }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleSend(suggestion)}
+                      className="whitespace-nowrap px-4 py-2 rounded-full bg-muted/50 border border-border/50 text-[13px] font-medium text-muted-foreground hover:text-primary hover:border-primary/30 transition-all flex items-center gap-2 shrink-0"
+                    >
+                      <Sparkles size={12} className="text-primary/70" />
+                      {suggestion}
+                    </motion.button>
+                  ))}
+                </div>
+
                 <div className="flex gap-3 items-end">
                   <div className="flex-1 bg-muted/40 border border-border/50 rounded-[1.5rem] px-5 py-2 flex flex-col focus-within:ring-2 focus-within:ring-primary/30 focus-within:bg-background transition-all">
                     <textarea
@@ -274,8 +290,6 @@ export default function DawaGPT() {
                     <Send size={20} className="ml-1" />
                   </Button>
                 </div>
-
-
               </div>
             </motion.div>
           </div>

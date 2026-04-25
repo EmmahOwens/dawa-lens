@@ -377,7 +377,6 @@ export function IntelligencePanel() {
                               : "bg-background border border-border/50 rounded-tl-none"
                           }`}>
                             <p className="leading-relaxed">{m.text}</p>
-
                           </div>
                         </motion.div>
                       ))
@@ -393,7 +392,26 @@ export function IntelligencePanel() {
                     )}
                 </div>
 
-
+                {/* Suggestions */}
+                <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-3 pb-1 z-10">
+                  {(messages[messages.length - 1]?.suggestions || [
+                    "Check schedule",
+                    "Add reminder",
+                    "Log dose",
+                    "Side effects"
+                  ]).map((suggestion, i) => (
+                    <motion.button
+                      key={i}
+                      whileHover={{ scale: 1.02, backgroundColor: "rgba(var(--primary), 0.05)" }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleSendMessage(suggestion)}
+                      className="whitespace-nowrap px-3 py-1.5 rounded-full bg-background/50 border border-border/30 text-[9px] font-bold text-muted-foreground hover:text-primary hover:border-primary/30 transition-all flex items-center gap-1.5 shrink-0 uppercase tracking-tighter"
+                    >
+                      <Sparkles size={8} className="text-primary/70" />
+                      {suggestion}
+                    </motion.button>
+                  ))}
+                </div>
 
                 {/* Input Area */}
                 <div className="flex gap-2 z-10">
