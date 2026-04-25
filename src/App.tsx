@@ -125,6 +125,19 @@ const App = () => {
           console.error("Capgo: App ready notification failed:", e);
         }
 
+        CapacitorUpdater.addListener('updateAvailable', (info: any) => {
+          console.log('Capgo update available!', info);
+        });
+
+        CapacitorUpdater.addListener('downloadComplete', async (info: any) => {
+          console.log('Capgo download complete! Applying update...', info);
+          try {
+            await CapacitorUpdater.set({ id: info.version || info.id });
+          } catch (err) {
+            console.error('Failed to apply Capgo update:', err);
+          }
+        });
+
         try {
           await StatusBar.setStyle({ style: Style.Default });
           await StatusBar.setOverlaysWebView({ overlay: true });
