@@ -376,8 +376,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsProfessionalModeState(profMode);
         setHasSeenWelcome(welcome);
         setStorageMode(sMode);
-        setIsLoggedIn(loggedIn);
-        setCurrentUserId(uId);
         setIntelligenceCollapsedState(intelCol);
         setLastSyncTimestamp(sync);
         setRememberMeState(remember);
