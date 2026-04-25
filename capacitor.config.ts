@@ -11,9 +11,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     CapacitorUpdater: {
-      autoUpdate: true,
-      statsUrl: "https://api.capgo.app/stats/",
-      appId: "com.dawainnovation.lens"
+      autoUpdate: true
     },
     SplashScreen: {
       launchShowDuration: 0,
