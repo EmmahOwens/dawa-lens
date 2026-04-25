@@ -77,22 +77,72 @@ export interface NextDoseInfo {
 }
 
 const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog[]): Date | null => {
-  const times = reminder.time.split(",");
+  const times = reminder.time.split(",").map(t => t.trim());
   const occurrences: Date[] = [];
+  const now = new Date();
 
-  times.forEach(timeStr => {
-    const [hours, minutes] = timeStr.trim().split(":").map(Number);
+  // Find the most recent 'taken' log for this reminder to see if we need to shift
+  // We only care about logs from the last 24 hours to handle shifting within a cycle
+  const lastLog = [...doseLogs]
+    .filter(l => l.reminderId === reminder.id && l.action === "taken")
+    .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+
+  times.forEach((timeStr, index) => {
+    const [hours, minutes] = timeStr.split(":").map(Number);
     let checkDate = new Date(fromDate);
     checkDate = setHours(checkDate, hours);
     checkDate = setMinutes(checkDate, minutes);
     checkDate = setSeconds(checkDate, 0);
     checkDate = setMilliseconds(checkDate, 0);
 
-    // Check up to 30 days in the future to find the next valid occurrence for THIS time
+    // Check up to 30 days in the future
     for (let i = 0; i < 30; i++) {
-      const candidate = addDays(checkDate, i);
+      let candidate = addDays(checkDate, i);
 
-      // 1. Check schedule-specific logic for 'once' first
+      // --- Dynamic Shifting Logic ---
+      if (lastLog && reminder.repeatSchedule === "custom" && times.length > 1) {
+        const lastActionTime = new Date(lastLog.actionTime);
+        const lastScheduledTime = new Date(lastLog.scheduledTime);
+        
+        // If the last log was for a time in the CURRENT day's cycle and it's fairly recent (last 18 hours)
+        if (isAfter(lastActionTime, subHours(now, 18))) {
+          // Find which 'time slot' the last log was for
+          const lastSchedTimeStr = `${lastScheduledTime.getHours().toString().padStart(2, "0")}:${lastScheduledTime.getMinutes().toString().padStart(2, "0")}`;
+          const lastSlotIndex = times.indexOf(lastSchedTimeStr);
+
+          if (lastSlotIndex !== -1) {
+            // Calculate how much to shift based on the interval between the last slot and this slot
+            // Interval in minutes = (thisSlotTime - lastSlotTime)
+            const getMinutes = (s: string) => {
+              const [h, m] = s.split(":").map(Number);
+              return h * 60 + m;
+            };
+            
+            let intervalMins = getMinutes(times[index]) - getMinutes(times[lastSlotIndex]);
+            if (intervalMins <= 0) intervalMins += 24 * 60; // Wrap around day
+
+            // If this candidate is the 'next' slot in the sequence after the one taken
+            // Or a subsequent one in the same day
+            const dayOfLastLog = startOfDay(lastActionTime);
+            const dayOfCandidate = startOfDay(candidate);
+            
+            if (dayOfCandidate.getTime() === dayOfLastLog.getTime() || 
+               (dayOfCandidate.getTime() > dayOfLastLog.getTime() && lastSlotIndex > index)) {
+               
+               // Shift the candidate: newTime = lastActionTime + interval
+               const shiftedCandidate = addMinutes(lastActionTime, intervalMins);
+               
+               // Only apply shift if it's for today's remaining doses or the immediate next one
+               // This prevents a late dose today from shifting all doses forever
+               if (isBefore(shiftedCandidate, addDays(lastActionTime, 1))) {
+                 candidate = shiftedCandidate;
+               }
+            }
+          }
+        }
+      }
+
+      // 1. Check schedule-specific logic for 'once'
       if (reminder.repeatSchedule === "once") {
         if (!isBefore(candidate, fromDate)) {
           occurrences.push(candidate);
@@ -105,6 +155,8 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
       if (isBefore(candidate, fromDate)) continue;
 
       // 3. Check if already taken for this specific scheduled time
+      // Note: We check against the ORIGINAL scheduled time if it's shifted, 
+      // but the log already has the scheduledTime stored.
       const wasTakenOnCandidateTime = doseLogs.some(log =>
         log.reminderId === reminder.id &&
         log.scheduledTime === candidate.toISOString()
@@ -113,7 +165,6 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
 
       // 4. Other schedules
       if (reminder.repeatSchedule === "daily" || reminder.repeatSchedule === "custom" || !reminder.repeatSchedule) {
-        // If it's custom and we have specific days, check them
         if (reminder.repeatSchedule === "custom" && reminder.repeatDays && reminder.repeatDays.length > 0) {
           if (reminder.repeatDays.includes(getDay(candidate))) {
             occurrences.push(candidate);
@@ -247,87 +298,49 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
     const now = new Date();
 
     activeReminders.forEach(r => {
-      const times = r.time.split(",");
       const medicine = medicines?.find(m => m.id === r.medicineId);
       let currentStock = medicine?.currentQuantity || 999;
       const doseAmount = medicine?.dosagePerDose || 1;
+      
+      let nextFrom = now;
+      // Schedule next 30 occurrences or up to 14 days
+      for (let i = 0; i < 30; i++) {
+        const next = getNextOccurrence(r, nextFrom, doseLogs);
+        if (!next || isAfter(next, addDays(now, 14))) break;
 
-      times.forEach(timeStr => {
-        const [hours, minutes] = timeStr.trim().split(":").map(Number);
-        
-        // Schedule for the next 14 days or until stock runs out
-        for (let i = 0; i < 14; i++) {
-          let scheduleDate = addDays(startOfDay(now), i);
-          scheduleDate = setHours(scheduleDate, hours);
-          scheduleDate = setMinutes(scheduleDate, minutes);
-
-          if (isBefore(scheduleDate, now)) continue;
-
-          // Skip if already taken for THIS specific scheduled time
-          const wasTaken = doseLogs.some(log =>
-            log.reminderId === r.id &&
-            log.scheduledTime === scheduleDate.toISOString()
-          );
-          if (wasTaken) continue;
-
-          // Stop scheduling if we are out of stock
-          if (medicine && currentStock < doseAmount) {
-            notifications.push({
-              title: `Refill Needed: ${r.medicineName}`,
-              body: `You are out of stock. Please refill to continue reminders.`,
-              id: stringToHash(r.id + "refill"),
-              schedule: { at: scheduleDate },
-              smallIcon: "res://pill",
-              extra: { type: "refill", medicineId: r.medicineId }
-            });
-            break;
-          }
-
-          // Check frequency
-          let shouldSchedule = false;
-          if (r.repeatSchedule === "daily" || !r.repeatSchedule) {
-            shouldSchedule = true;
-          } else if (r.repeatSchedule === "custom") {
-            if (r.repeatDays && r.repeatDays.length > 0) {
-              shouldSchedule = r.repeatDays.includes(getDay(scheduleDate));
-            } else {
-              shouldSchedule = true;
-            }
-          } else if (r.repeatSchedule === "once") {
-            const firstValid = getNextOccurrence(r, now, doseLogs);
-            if (firstValid && firstValid.toDateString() === scheduleDate.toDateString() && firstValid.getTime() === scheduleDate.getTime()) {
-              shouldSchedule = true;
-            }
-          } else if (r.repeatSchedule === "weekly") {
-            const dayOfWeek = getDay(scheduleDate);
-            if (r.repeatDays && r.repeatDays.length > 0) {
-              shouldSchedule = r.repeatDays.includes(dayOfWeek);
-            } else {
-              shouldSchedule = dayOfWeek === getDay(new Date(r.createdAt));
-            }
-          }
-
-          if (shouldSchedule) {
-            notifications.push({
-              title: `Time for ${r.medicineName}`,
-              body: `Dose: ${r.dose}. Remember to take your medicine!`,
-              id: stringToHash(r.id + scheduleDate.toISOString()),
-              schedule: { at: scheduleDate },
-              smallIcon: "res://pill",
-              actionTypeId: "MEDICINE_REMINDER",
-              extra: {
-                reminderId: r.id,
-                medicineName: r.medicineName,
-                dose: r.dose,
-                scheduledTime: scheduleDate.toISOString()
-              }
-            });
-            
-            if (medicine) currentStock -= doseAmount;
-            if (r.repeatSchedule === "once") break;
-          }
+        // Stop scheduling if we are out of stock
+        if (medicine && currentStock < doseAmount) {
+          notifications.push({
+            title: `Refill Needed: ${r.medicineName}`,
+            body: `You are out of stock. Please refill to continue reminders.`,
+            id: stringToHash(r.id + "refill"),
+            schedule: { at: next },
+            smallIcon: "res://pill",
+            extra: { type: "refill", medicineId: r.medicineId }
+          });
+          break;
         }
-      });
+
+        notifications.push({
+          title: `Time for ${r.medicineName}`,
+          body: `Dose: ${r.dose}. Remember to take your medicine!`,
+          id: stringToHash(r.id + next.toISOString()),
+          schedule: { at: next },
+          smallIcon: "res://pill",
+          actionTypeId: "MEDICINE_REMINDER",
+          extra: {
+            reminderId: r.id,
+            medicineName: r.medicineName,
+            dose: r.dose,
+            scheduledTime: next.toISOString()
+          }
+        });
+        
+        if (medicine) currentStock -= doseAmount;
+        if (r.repeatSchedule === "once") break;
+        
+        nextFrom = addMinutes(next, 1);
+      }
     });
 
     if (notifications.length > 0) {
