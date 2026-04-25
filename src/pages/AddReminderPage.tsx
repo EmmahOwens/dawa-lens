@@ -540,7 +540,8 @@ export default function AddReminderPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="fixed bottom-20 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border/50 z-40 flex justify-center md:relative md:bottom-0 md:bg-transparent md:border-0 md:p-0"
+          className="fixed left-0 right-0 p-4 bg-background/95 backdrop-blur-xl border-t border-border/50 z-40 flex justify-center md:relative md:bottom-0 md:bg-transparent md:border-0 md:p-0"
+          style={{ bottom: 'calc(88px + env(safe-area-inset-bottom, 20px))' }}
         >
           <Button
             onClick={handleSave}
