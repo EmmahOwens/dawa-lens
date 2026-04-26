@@ -540,7 +540,7 @@ export default function AddReminderPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, type: "spring", damping: 25, stiffness: 200 }}
-          className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-0 right-0 px-6 z-40 flex justify-center pointer-events-none md:static md:bottom-auto md:px-0 md:pointer-events-auto"
+          className="fixed bottom-[calc(100px+env(safe-area-inset-bottom))] left-0 right-0 px-6 z-40 flex justify-center pointer-events-none md:static md:bottom-auto md:px-0 md:pointer-events-auto"
         >
           <div className="w-full max-w-lg pointer-events-auto">
             <Button
