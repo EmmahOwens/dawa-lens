@@ -2,7 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe, Users, 
-  ArrowRight, User, Mail, Database, Clock, ChevronRight, CheckCircle2 
+  ArrowRight, User, Mail, Database, Clock, ChevronRight, CheckCircle2,
+  RefreshCw, Info
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { formatDistanceToNow } from "date-fns";
+import { CapacitorUpdater } from "@capgo/capacitor-updater";
+import { Capacitor } from "@capacitor/core";
+import pkg from "../../package.json";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -21,6 +25,43 @@ export default function SettingsPage() {
   } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+
+  const checkUpdates = async () => {
+    if (!Capacitor.isNativePlatform()) {
+      toast({
+        title: "Web Version",
+        description: "Live updates are only available on Android and iOS devices."
+      });
+      return;
+    }
+
+    try {
+      setIsCheckingUpdates(true);
+      const result = await CapacitorUpdater.isUpdateAvailable();
+      if (result.update) {
+        toast({
+          title: "Update Found",
+          description: `Version ${result.version || 'New'} is available for download.`,
+        });
+      } else {
+        toast({
+          title: "Up to Date",
+          description: "You're running the latest version of Dawa Lens.",
+        });
+      }
+    } catch (err) {
+      console.error("Update check failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to check for updates. Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  };
 
   const handleStorageModeChange = async (mode: "local" | "cloud") => {
     if (mode === "cloud" && !isLoggedIn) {
@@ -411,6 +452,51 @@ export default function SettingsPage() {
               }}
             >
               {typeof Notification !== 'undefined' && Notification.permission === 'granted' ? 'Enabled' : 'Enable'}
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* 6.1 Live Updates (Capgo) */}
+        <motion.div variants={itemVariants} className="premium-card relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
+
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <RefreshCw size={18} />
+              </div>
+              <div>
+                <h3 className="font-bold text-foreground">Live Updates</h3>
+                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter opacity-70">Over-the-Air (OTA)</p>
+              </div>
+            </div>
+            <div className="px-3 py-1 rounded-full bg-primary/5 border border-primary/10 text-[10px] font-black uppercase tracking-widest text-primary">
+              v{pkg.version}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
+              <div className="flex items-center gap-3 mb-2">
+                <Info size={14} className="text-primary" />
+                <p className="text-xs font-bold">Zero-Infrastructure Delivery</p>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Receive instant app improvements without full store updates. Dawa Lens uses Capgo technology for secure, transparent, and serverless feature delivery.
+              </p>
+            </div>
+
+            <Button
+              className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-primary/10 transition-all hover:shadow-primary/20"
+              onClick={checkUpdates}
+              disabled={isCheckingUpdates}
+            >
+              {isCheckingUpdates ? (
+                <RefreshCw size={14} className="mr-2 animate-spin" />
+              ) : (
+                <RefreshCw size={14} className="mr-2" />
+              )}
+              {isCheckingUpdates ? "Checking..." : "Check for Updates"}
             </Button>
           </div>
         </motion.div>

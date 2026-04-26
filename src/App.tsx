@@ -24,6 +24,8 @@ import PageTransition from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
 import { NotificationHandler } from "@/components/NotificationHandler";
 
+import { UpdateManager } from "@/components/intelligence/UpdateManager";
+
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const ScanPage = lazy(() => import("@/pages/ScanPage"));
@@ -125,19 +127,6 @@ const App = () => {
           console.error("Capgo: App ready notification failed:", e);
         }
 
-        CapacitorUpdater.addListener('updateAvailable', (info: any) => {
-          console.log('Capgo update available!', info);
-        });
-
-        CapacitorUpdater.addListener('downloadComplete', async (info: any) => {
-          console.log('Capgo download complete! Applying update...', info);
-          try {
-            await CapacitorUpdater.set({ id: info.version || info.id });
-          } catch (err) {
-            console.error('Failed to apply Capgo update:', err);
-          }
-        });
-
         try {
           await StatusBar.setStyle({ style: Style.Default });
           await StatusBar.setOverlaysWebView({ overlay: true });
@@ -175,6 +164,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AppProvider>
+          <UpdateManager />
           <AppContent />
           <NotificationHandler />
           <OfflineOverlay />
