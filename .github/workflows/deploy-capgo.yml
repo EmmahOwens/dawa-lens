@@ -25,4 +25,4 @@ jobs:
         run: npm run build
 
       - name: Deploy to Capgo
-        run: npx capgo upload -v ${{ github.sha }} -t ${{ secrets.CAPGO_TOKEN }} -c production
+        run: npx @capgo/cli@latest upload -v ${{ github.sha }} --apikey ${{ secrets.CAPGO_TOKEN }} --channel production
