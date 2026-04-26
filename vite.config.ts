@@ -24,7 +24,16 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            return 'vendor'; // Separates node_modules into a 'vendor' chunk
+            if (id.includes('@capacitor') || id.includes('@capgo')) {
+              return 'capacitor-core';
+            }
+            if (id.includes('firebase')) {
+              return 'firebase-bundle';
+            }
+            if (id.includes('lucide-react') || id.includes('@radix-ui')) {
+              return 'ui-kit';
+            }
+            return 'vendor';
           }
         }
       }

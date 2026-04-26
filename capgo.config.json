@@ -1,0 +1,11 @@
+{
+  "appId": "com.dawainnovation.lens",
+  "appName": "dawa-lens",
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": true,
+      "stats": true,
+      "resetWhenUpdateFailed": true
+    }
+  }
+}
