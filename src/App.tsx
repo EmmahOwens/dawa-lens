@@ -23,6 +23,7 @@ import PageTransition from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
 import { NotificationHandler } from "@/components/NotificationHandler";
 import StoreUpdateModal from "@/components/StoreUpdateModal";
+import pkg from "../package.json";
 
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -112,7 +113,7 @@ const App = () => {
   const location = useLocation();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateData, setUpdateData] = useState({ newVersion: "", downloadUrl: "" });
-  const CURRENT_VERSION = "1.0.6";
+  const CURRENT_VERSION = pkg.version;
 
   useEffect(() => {
     preloadOCRModel(); // Silently preload ~20MB Tesseract worker on startup
