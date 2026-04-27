@@ -30,6 +30,7 @@ export default function SettingsPage() {
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [updateData, setUpdateData] = useState({ newVersion: "", downloadUrl: "" });
+  const [lastCheckTime, setLastCheckTime] = useState<string | null>(null);
 
   const checkUpdates = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -71,6 +72,7 @@ export default function SettingsPage() {
       });
     } finally {
       setIsCheckingUpdates(false);
+      setLastCheckTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }
   };
 
@@ -498,17 +500,31 @@ export default function SettingsPage() {
             </div>
 
             <Button
-              className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-primary/10 transition-all hover:shadow-primary/20"
+              className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-primary/10 transition-all hover:shadow-primary/20 relative overflow-hidden group"
               onClick={checkUpdates}
               disabled={isCheckingUpdates}
             >
+              {isCheckingUpdates && (
+                <motion.div 
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "100%" }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12"
+                />
+              )}
               {isCheckingUpdates ? (
                 <RefreshCw size={14} className="mr-2 animate-spin" />
               ) : (
-                <RefreshCw size={14} className="mr-2" />
+                <RefreshCw size={14} className="mr-2 group-hover:rotate-180 transition-transform duration-500" />
               )}
               {isCheckingUpdates ? "Checking..." : "Check for Updates"}
             </Button>
+
+            {lastCheckTime && (
+              <p className="text-[9px] text-center text-muted-foreground uppercase font-bold tracking-widest opacity-50">
+                Last checked today at {lastCheckTime}
+              </p>
+            )}
           </div>
         </motion.div>
 
@@ -550,10 +566,9 @@ export default function SettingsPage() {
         />
       )}
 
-      {/* App Version Info */}
       <div className="mt-12 text-center">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-30">
-          Dawa Lens v2.4.0 • Secure Health Data
+          Dawa Lens v{pkg.version} • Secure Health Data
         </p>
       </div>
     </div>
