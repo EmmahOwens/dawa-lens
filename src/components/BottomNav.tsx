@@ -29,11 +29,8 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden gpu-accel bg-white/85 dark:bg-gray-900/85 backdrop-blur-[20px] backdrop-saturate-[1.8] border-t border-gray-200/50 dark:border-gray-800/50 shadow-[0_-4px_24px_rgba(0,0,0,0.05)]">
-      <div 
-        className="flex items-center justify-between px-6 py-2 relative mx-auto max-w-md"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
+    <nav className="fixed bottom-4 left-0 right-0 z-50 mx-auto max-w-[22rem] md:hidden px-4 gpu-accel" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="flex items-center justify-between rounded-[2rem] bg-white/85 dark:bg-gray-900/85 backdrop-blur-[20px] backdrop-saturate-[1.8] border border-gray-200/50 dark:border-gray-800/50 shadow-[0_8px_32px_rgba(0,0,0,0.1)] px-4 py-2.5 relative">
         {/* Left Side Items */}
         <div className="flex flex-1 justify-around items-center">
           {navItems.slice(0, 2).map((item) => (
