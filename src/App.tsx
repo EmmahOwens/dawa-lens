@@ -23,7 +23,6 @@ import PageTransition from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
 import { NotificationHandler } from "@/components/NotificationHandler";
 import StoreUpdateModal from "@/components/StoreUpdateModal";
-import { UpdateManager } from "@/components/intelligence/UpdateManager";
 
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -186,7 +185,6 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AppProvider>
-          <UpdateManager />
           <AppContent />
           <NotificationHandler />
           <OfflineOverlay />
