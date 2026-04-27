@@ -238,7 +238,7 @@ export function IntelligencePanel() {
       {/* Header with Collapse Button */}
       <div className="p-6 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-           <Sparkles size={16} className="text-primary animate-pulse" />
+           <img src="/dawa-gpt.png" alt="Intelligence" className="w-5 h-5 rounded-md shadow-sm" />
            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-foreground">Intelligence</h2>
         </div>
         <button 
@@ -274,7 +274,7 @@ export function IntelligencePanel() {
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={12} className="text-primary" />
+                  <img src="/dawa-gpt.png" alt="Dawa GPT Mini" className="w-4 h-4 rounded-sm" />
                   <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Dawa-GPT Mini</h3>
                 </div>
                 <button 
@@ -286,8 +286,8 @@ export function IntelligencePanel() {
                 </button>
               </div>
               <div className="bg-muted/10 backdrop-blur-md rounded-[2.5rem] border border-border/30 p-5 flex flex-col h-[350px] relative overflow-hidden group/chat shadow-inner transition-all duration-300 hover:shadow-primary/5">
-                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover/chat:opacity-10 transition-opacity">
-                  <SparklesIcon size={80} />
+                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover/chat:opacity-10 transition-opacity grayscale">
+                  <img src="/dawa-gpt.png" alt="" className="w-20 h-20" />
                 </div>
                 
                 {/* Message Stream */}
