@@ -31,7 +31,6 @@
     "@capacitor/share": "^7.0.0",
     "@capacitor/splash-screen": "^7.0.0",
     "@capacitor/status-bar": "^7.0.0",
-    "@capgo/capacitor-updater": "^7.43.3",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",

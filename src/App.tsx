@@ -1,9 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { App as CapApp } from '@capacitor/app';
-import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider, useApp } from "@/contexts/AppContext";
@@ -23,7 +22,7 @@ import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
 import { NotificationHandler } from "@/components/NotificationHandler";
-
+import StoreUpdateModal from "@/components/StoreUpdateModal";
 import { UpdateManager } from "@/components/intelligence/UpdateManager";
 
 // Lazy load pages for better performance
@@ -112,20 +111,43 @@ const AppContent = () => {
 
 const App = () => {
   const location = useLocation();
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateData, setUpdateData] = useState({ newVersion: "", downloadUrl: "" });
+  const CURRENT_VERSION = "1.0.6";
 
   useEffect(() => {
     preloadOCRModel(); // Silently preload ~20MB Tesseract worker on startup
 
     const initNativeFeatures = async () => {
       if (Capacitor.isNativePlatform()) {
-        try {
-          // Notify the updater that the app is ready
-          // This prevents auto-rollback to the previous version
-          const result = await CapacitorUpdater.notifyAppReady();
-          console.log("Capgo: App ready notification successful", result);
-        } catch (e) {
-          console.error("Capgo: App ready notification failed:", e);
-        }
+        // Check for manual APK updates (Orion Store Architecture)
+        const checkForUpdate = async () => {
+          try {
+            // Replace this URL with where you actually host your version.json
+            // Example format of version.json: 
+            // { "latestVersion": "1.0.7", "downloadUrl": "https://example.com/app-release.apk" }
+            const REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/iammbayo/dawa-lens/main/public/version.json";
+            
+            const response = await fetch(REMOTE_CONFIG_URL, { cache: 'no-store' });
+            if (!response.ok) return;
+
+            const data = await response.json();
+            
+            // Basic semantic version string comparison
+            if (data.latestVersion && data.latestVersion > CURRENT_VERSION) {
+              setTimeout(() => {
+                setUpdateData({ 
+                  newVersion: data.latestVersion, 
+                  downloadUrl: data.downloadUrl 
+                });
+                setShowUpdateModal(true);
+              }, 3000);
+            }
+          } catch (error) {
+            console.error("Failed to check for updates:", error);
+          }
+        };
+        checkForUpdate();
 
         try {
           await StatusBar.setStyle({ style: Style.Default });
@@ -170,6 +192,14 @@ const App = () => {
           <OfflineOverlay />
           <Toaster richColors closeButton position="top-center" />
           <DawaGPT />
+          {showUpdateModal && (
+            <StoreUpdateModal
+              currentVersion={CURRENT_VERSION}
+              newVersion={updateData.newVersion}
+              downloadUrl={updateData.downloadUrl}
+              onClose={() => setShowUpdateModal(false)}
+            />
+          )}
           <Suspense fallback={<SplashScreen />}>
             <Routes location={location}>
               {/* Full-screen pages — no AppShell */}
