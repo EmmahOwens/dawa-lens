@@ -123,9 +123,9 @@ export default function DawaGPT() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-4 z-40 bg-primary text-primary-foreground p-4 rounded-full shadow-lg border-2 border-background flex items-center justify-center md:hidden"
+        className="fixed bottom-24 right-4 z-40 bg-primary/20 backdrop-blur-md text-primary-foreground p-0 rounded-2xl shadow-xl border border-white/20 flex items-center justify-center md:hidden overflow-hidden w-14 h-14"
       >
-        <Sparkles size={24} />
+        <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-full h-full object-cover" />
       </motion.button>
 
       <AnimatePresence>
@@ -141,8 +141,8 @@ export default function DawaGPT() {
               {/* Header */}
               <div className="p-5 border-b border-border/50 bg-muted/20 backdrop-blur-md flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary/20 to-primary/5 flex items-center justify-center text-primary shadow-inner border border-primary/10">
-                    <Bot size={28} />
+                  <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-inner border border-primary/10">
+                    <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-full h-full object-cover" />
                   </div>
                   <div>
                     <h3 className="font-bold flex items-center gap-2 text-lg">
