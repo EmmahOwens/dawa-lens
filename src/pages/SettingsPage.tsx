@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -39,25 +40,25 @@ export default function SettingsPage() {
 
     try {
       setIsCheckingUpdates(true);
-      const result = await CapacitorUpdater.isUpdateAvailable();
-      if (result.update) {
-        toast({
-          title: "Update Found",
-          description: `Version ${result.version || 'New'} is available for download.`,
-        });
-      } else {
+      const latest = await CapacitorUpdater.getLatest();
+      toast({
+        title: "Update Found",
+        description: `Version ${latest.version || 'New'} is available for download.`,
+      });
+    } catch (err: any) {
+      if (err?.message === 'No new version available') {
         toast({
           title: "Up to Date",
           description: "You're running the latest version of Dawa Lens.",
         });
+      } else {
+        console.error("Update check failed:", err);
+        toast({
+          title: "Error",
+          description: "Failed to check for updates. Please try again later.",
+          variant: "destructive"
+        });
       }
-    } catch (err) {
-      console.error("Update check failed:", err);
-      toast({
-        title: "Error",
-        description: "Failed to check for updates. Please try again later.",
-        variant: "destructive"
-      });
     } finally {
       setIsCheckingUpdates(false);
     }
