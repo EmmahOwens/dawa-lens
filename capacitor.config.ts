@@ -10,10 +10,6 @@ const config: CapacitorConfig = {
     cleartext: false
   },
   plugins: {
-    CapacitorUpdater: {
-      autoUpdate: true,
-      showSplash: false
-    },
     SplashScreen: {
       launchShowDuration: 0,
       launchAutoHide: true,

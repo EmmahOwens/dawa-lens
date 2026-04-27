@@ -13,9 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { formatDistanceToNow } from "date-fns";
-import { CapacitorUpdater } from "@capgo/capacitor-updater";
 import { Capacitor } from "@capacitor/core";
 import pkg from "../../package.json";
+import StoreUpdateModal from "@/components/StoreUpdateModal";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -28,6 +28,8 @@ export default function SettingsPage() {
   const { t, i18n } = useTranslation();
 
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateData, setUpdateData] = useState({ newVersion: "", downloadUrl: "" });
 
   const checkUpdates = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -40,25 +42,33 @@ export default function SettingsPage() {
 
     try {
       setIsCheckingUpdates(true);
-      const latest = await CapacitorUpdater.getLatest();
-      toast({
-        title: "Update Found",
-        description: `Version ${latest.version || 'New'} is available for download.`,
-      });
-    } catch (err: any) {
-      if (err?.message === 'No new version available') {
+      
+      const REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/iammbayo/dawa-lens/main/public/version.json";
+      const response = await fetch(REMOTE_CONFIG_URL, { cache: 'no-store' });
+      
+      if (!response.ok) throw new Error("Failed to fetch version info");
+      
+      const data = await response.json();
+      
+      if (data.latestVersion && data.latestVersion > pkg.version) {
+        setUpdateData({ 
+          newVersion: data.latestVersion, 
+          downloadUrl: data.downloadUrl 
+        });
+        setShowUpdateModal(true);
+      } else {
         toast({
           title: "Up to Date",
           description: "You're running the latest version of Dawa Lens.",
         });
-      } else {
-        console.error("Update check failed:", err);
-        toast({
-          title: "Error",
-          description: "Failed to check for updates. Please try again later.",
-          variant: "destructive"
-        });
       }
+    } catch (err: any) {
+      console.error("Update check failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to check for updates. Please try again later.",
+        variant: "destructive"
+      });
     } finally {
       setIsCheckingUpdates(false);
     }
@@ -457,7 +467,7 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        {/* 6.1 Live Updates (Capgo) */}
+        {/* 6.1 App Updates */}
         <motion.div variants={itemVariants} className="premium-card relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
 
@@ -467,8 +477,8 @@ export default function SettingsPage() {
                 <RefreshCw size={18} />
               </div>
               <div>
-                <h3 className="font-bold text-foreground">Live Updates</h3>
-                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter opacity-70">Over-the-Air (OTA)</p>
+                <h3 className="font-bold text-foreground">App Updates</h3>
+                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter opacity-70">Manual Verification</p>
               </div>
             </div>
             <div className="px-3 py-1 rounded-full bg-primary/5 border border-primary/10 text-[10px] font-black uppercase tracking-widest text-primary">
@@ -480,10 +490,10 @@ export default function SettingsPage() {
             <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
               <div className="flex items-center gap-3 mb-2">
                 <Info size={14} className="text-primary" />
-                <p className="text-xs font-bold">Zero-Infrastructure Delivery</p>
+                <p className="text-xs font-bold">New Features & Fixes</p>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Receive instant app improvements without full store updates. Dawa Lens uses Capgo technology for secure, transparent, and serverless feature delivery.
+                Manually verify if a newer version of Dawa Lens is available for download. You will be prompted to download the latest secure APK.
               </p>
             </div>
 
@@ -529,6 +539,16 @@ export default function SettingsPage() {
           </Button>
         </motion.div>
       </motion.div>
+
+      {/* Render Update Modal if needed */}
+      {showUpdateModal && (
+        <StoreUpdateModal
+          currentVersion={pkg.version}
+          newVersion={updateData.newVersion}
+          downloadUrl={updateData.downloadUrl}
+          onClose={() => setShowUpdateModal(false)}
+        />
+      )}
 
       {/* App Version Info */}
       <div className="mt-12 text-center">
