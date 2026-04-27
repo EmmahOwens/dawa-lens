@@ -274,20 +274,23 @@ export function IntelligencePanel() {
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <img src="/dawa-gpt.png" alt="Dawa GPT Mini" className="w-4 h-4 rounded-sm" />
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Dawa-GPT Mini</h3>
+                  <div className="relative">
+                    <img src="/dawa-gpt.png" alt="Dawa GPT Mini" className="w-5 h-5 rounded-md shadow-sm border border-primary/20" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-success rounded-full border border-background animate-pulse" />
+                  </div>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] bg-clip-text text-transparent bg-gradient-to-r from-muted-foreground to-muted-foreground/60">Dawa-GPT Mini</h3>
                 </div>
                 <button 
                   onClick={() => setIsDawaGPTOpen(true)}
-                  className="hidden md:flex items-center gap-1.5 text-[9px] font-bold text-primary hover:text-primary/80 transition-colors uppercase tracking-widest border border-primary/20 bg-primary/5 rounded-full px-2 py-1"
+                  className="hidden md:flex items-center gap-1.5 text-[9px] font-black text-primary hover:bg-primary/10 transition-all uppercase tracking-widest border border-primary/30 bg-primary/5 rounded-full px-3 py-1.5 active:scale-95 group"
                 >
-                  <Maximize2 size={10} />
-                  <span>Expand</span>
+                  <Maximize2 size={10} className="group-hover:scale-110 transition-transform" />
+                  <span>Full Chat</span>
                 </button>
               </div>
-              <div className="bg-muted/10 backdrop-blur-md rounded-[2.5rem] border border-border/30 p-5 flex flex-col h-[350px] relative overflow-hidden group/chat shadow-inner transition-all duration-300 hover:shadow-primary/5">
-                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover/chat:opacity-10 transition-opacity grayscale">
-                  <img src="/dawa-gpt.png" alt="" className="w-20 h-20" />
+              <div className="bg-background/40 backdrop-blur-xl rounded-[2.5rem] border border-border/40 p-5 flex flex-col h-[380px] relative overflow-hidden group/chat shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)] transition-all duration-300 hover:shadow-primary/5 hover:border-primary/20">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none group-hover/chat:opacity-[0.07] transition-opacity grayscale group-hover/chat:grayscale-0 group-hover/chat:scale-110 duration-700">
+                  <img src="/dawa-gpt.png" alt="" className="w-24 h-24" />
                 </div>
                 
                 {/* Message Stream */}
@@ -300,26 +303,26 @@ export function IntelligencePanel() {
                       messages.map((m) => (
                         <motion.div
                           key={m.id}
-                          initial={{ opacity: 0, x: m.role === "user" ? 10 : -10 }}
-                          animate={{ opacity: 1, x: 0 }}
+                          initial={{ opacity: 0, x: m.role === "user" ? 10 : -10, scale: 0.95 }}
+                          animate={{ opacity: 1, x: 0, scale: 1 }}
                           className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                         >
-                          <div className={`max-w-[90%] rounded-2xl px-3 py-2 text-[11px] shadow-sm ${
+                          <div className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-[11px] font-medium shadow-sm leading-relaxed ${
                             m.role === "user" 
-                              ? "bg-primary text-primary-foreground rounded-tr-none" 
-                              : "bg-background border border-border/50 rounded-tl-none"
+                              ? "bg-primary text-primary-foreground rounded-tr-none shadow-primary/10" 
+                              : "bg-card border border-border/40 rounded-tl-none shadow-black/5"
                           }`}>
-                            <p className="leading-relaxed">{m.text}</p>
+                            <p>{m.text}</p>
                           </div>
                         </motion.div>
                       ))
                     )}
                     {isTyping && (
                       <div className="flex justify-start">
-                        <div className="bg-background border border-border/50 p-2 rounded-2xl rounded-tl-none flex items-center gap-1">
-                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1 h-1 bg-primary rounded-full" />
-                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1 h-1 bg-primary rounded-full" />
-                          <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1 h-1 bg-primary rounded-full" />
+                        <div className="bg-card border border-border/40 px-3 py-2 rounded-2xl rounded-tl-none flex items-center gap-1.5 shadow-sm">
+                          <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1 h-1 bg-primary rounded-full" />
+                          <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1 h-1 bg-primary rounded-full" />
+                          <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1 h-1 bg-primary rounded-full" />
                         </div>
                       </div>
                     )}
@@ -336,34 +339,34 @@ export function IntelligencePanel() {
                     ]).map((suggestion, i) => (
                     <motion.button
                       key={i}
-                      whileHover={{ scale: 1.02, backgroundColor: "rgba(var(--primary), 0.05)" }}
+                      whileHover={{ y: -1, scale: 1.02, backgroundColor: "rgba(var(--primary), 0.08)" }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleSendMessage(suggestion)}
-                      className="whitespace-nowrap px-3 py-1.5 rounded-full bg-background/50 border border-border/30 text-[9px] font-bold text-muted-foreground hover:text-primary hover:border-primary/30 transition-all flex items-center gap-1.5 shrink-0 uppercase tracking-tighter"
+                      className="whitespace-nowrap px-3.5 py-2 rounded-xl bg-card border border-border/40 text-[9px] font-black text-muted-foreground hover:text-primary hover:border-primary/40 transition-all flex items-center gap-2 shrink-0 uppercase tracking-tight shadow-sm"
                     >
-                      <Sparkles size={8} className="text-primary/70" />
+                      <Sparkles size={8} className="text-primary/80" />
                       {suggestion}
                     </motion.button>
                   ))}
                 </div>
 
                 {/* Input Area */}
-                <div className="flex gap-2 z-10">
+                 <div className="flex gap-2 z-10 pt-1">
                     <input 
                       type="text" 
                       value={miniChatInput}
                       onChange={(e) => setMiniChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSendMessage(miniChatInput)}
-                      placeholder="How can I help you today?" 
-                      className="flex-1 bg-background/80 backdrop-blur-sm rounded-full px-5 py-2.5 text-[11px] border-none outline-none ring-1 ring-border/50 focus:ring-primary/30 transition-all font-medium placeholder:text-muted-foreground/50 shadow-sm"
+                      placeholder="How can I help you?" 
+                      className="flex-1 bg-background/60 backdrop-blur-md rounded-2xl px-5 py-3 text-[11px] border-none outline-none ring-1 ring-border/40 focus:ring-2 focus:ring-primary/30 transition-all font-bold placeholder:text-muted-foreground/40 shadow-sm"
                     />
                     <Button 
                       size="icon" 
                       disabled={isTyping || !miniChatInput.trim()}
                       onClick={() => handleSendMessage(miniChatInput)}
-                      className="rounded-full w-8 h-8 shrink-0 bg-primary shadow-lg shadow-primary/20 active:scale-90 transition-transform"
+                      className="rounded-2xl w-10 h-10 shrink-0 bg-primary shadow-lg shadow-primary/20 active:scale-90 transition-all"
                     >
-                      {isTyping ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
+                      {isTyping ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
                     </Button>
                 </div>
               </div>
