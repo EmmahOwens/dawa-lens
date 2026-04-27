@@ -1,0 +1,53 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on tags like v1.0.8
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Web App
+        run: npm run build
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build Android APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Prepare APK for Release
+        run: |
+          # Rename the APK to match the expected format in version.json
+          # Extracts version from tag (e.g., v1.0.8 -> 1.0.8)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk dawa-lens-$VERSION.apk
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dawa-lens-*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
