@@ -56,7 +56,7 @@ export default function AddReminderPage() {
   const location = useLocation();
   const state = location.state as LocationState | null;
 
-  const { addReminder, updateReminder, addMedicine, medicines } = useApp();
+  const { addReminder, updateReminder, addMedicine, medicines, reminders } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -299,6 +299,15 @@ export default function AddReminderPage() {
                       setMedicineId(med.id);
                       setMedicineName(med.name);
                       setDose(med.dosage);
+
+                      // Check if a reminder already exists for this medicine
+                      const existingRem = reminders.find(r => r.medicineId === med.id);
+                      if (existingRem && !isEditing) {
+                        toast({
+                          title: "Existing reminder found",
+                          description: `You already have a reminder for ${med.name}. If you save this, you'll have two.`,
+                        });
+                      }
                     }
                   }
                 }}
