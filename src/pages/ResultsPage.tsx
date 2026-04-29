@@ -20,7 +20,7 @@ export default function ResultsPage() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const { addMedicine, userProfile, patients, selectedPatientId } = useApp();
+  const { addMedicine, userProfile, patients, selectedPatientId, reminders } = useApp();
   
   const state = location.state as any;
   const imageUrl = state?.imageUrl;
@@ -257,9 +257,30 @@ export default function ResultsPage() {
                         <Button 
                           variant="secondary" 
                           className="rounded-full flex-1 h-12" 
-                          onClick={() => navigate("/reminders/new", { state: { medicineName: r.name, dose: r.recommendedDosage } })}
+                          onClick={() => {
+                            const existing = reminders.find(rem => rem.medicineName.toLowerCase() === r.name.toLowerCase());
+                            if (existing) {
+                              navigate("/reminders/new", { 
+                                state: { 
+                                  editId: existing.id, 
+                                  medicineId: existing.medicineId,
+                                  medicineName: existing.medicineName,
+                                  dose: existing.dose, 
+                                  time: existing.time, 
+                                  repeat: existing.repeatSchedule, 
+                                  repeatDays: existing.repeatDays,
+                                  notes: existing.notes,
+                                  color: existing.color,
+                                  icon: existing.icon
+                                } 
+                              });
+                            } else {
+                              navigate("/reminders/new", { state: { medicineName: r.name, dose: r.recommendedDosage || "1 Tablet" } });
+                            }
+                          }}
                         >
-                          <Bell size={18} className="mr-2" /> Reminder
+                          <Bell size={18} className="mr-2" /> 
+                          {reminders.some(rem => rem.medicineName.toLowerCase() === r.name.toLowerCase()) ? "Edit Reminder" : "Reminder"}
                         </Button>
                       </div>
                       <Button

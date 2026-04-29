@@ -21,7 +21,7 @@ export default function MedicineInfoPage() {
   const { t } = useTranslation();
   
   const { data: info, isLoading: searching, isError, error } = useDrugData(activeQuery);
-  const { medicines } = useApp();
+  const { medicines, reminders } = useApp();
   const [interactions, setInteractions] = useState<ParsedInteraction[]>([]);
 
   useEffect(() => {
@@ -125,10 +125,31 @@ export default function MedicineInfoPage() {
               <Button 
                 size="sm" 
                 variant="secondary"
-                onClick={() => navigate("/reminders/new", { state: { medicineName: info.name } })}
+                onClick={() => {
+                  const existing = reminders.find(rem => rem.medicineName.toLowerCase() === info.name.toLowerCase());
+                  if (existing) {
+                    navigate("/reminders/new", { 
+                      state: { 
+                        editId: existing.id, 
+                        medicineId: existing.medicineId,
+                        medicineName: existing.medicineName,
+                        dose: existing.dose, 
+                        time: existing.time, 
+                        repeat: existing.repeatSchedule, 
+                        repeatDays: existing.repeatDays,
+                        notes: existing.notes,
+                        color: existing.color,
+                        icon: existing.icon
+                      } 
+                    });
+                  } else {
+                    navigate("/reminders/new", { state: { medicineName: info.name } });
+                  }
+                }}
                 className="rounded-xl shadow-sm border border-primary/20"
               >
-                <Bell size={14} className="mr-1.5" /> Reminder
+                <Bell size={14} className="mr-1.5" /> 
+                {reminders.some(rem => rem.medicineName.toLowerCase() === info.name.toLowerCase()) ? "Edit Reminder" : "Reminder"}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">

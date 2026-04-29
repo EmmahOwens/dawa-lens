@@ -6,7 +6,7 @@ export function useAIActions() {
   const { 
     addMedicine, updateMedicine, deleteMedicine, deleteReminder, 
     addReminder, updateReminder, logDose, 
-    addWellnessLog, addPatient 
+    addWellnessLog, addPatient, reminders
   } = useApp();
   const { toast } = useToast();
 
@@ -45,6 +45,7 @@ export function useAIActions() {
             dose: action.payload.dose,
             time: action.payload.time,
             repeatSchedule: action.payload.repeatSchedule || "daily",
+            repeatDays: action.payload.repeatDays || undefined,
             notes: action.payload.notes || "",
             enabled: true,
             color: action.payload.color || "blue",
@@ -56,16 +57,31 @@ export function useAIActions() {
           });
           break;
 
-        case "UPDATE_REMINDER":
-          await updateReminder(action.payload.id, {
+        case "UPDATE_REMINDER": {
+          let targetId = action.payload.id;
+          
+          // If ID is missing, try to find by name (case insensitive)
+          if (!targetId && action.payload.medicineName) {
+            const match = reminders.find(r => 
+              r.medicineName.toLowerCase() === action.payload.medicineName.toLowerCase()
+            );
+            if (match) targetId = match.id;
+          }
+
+          if (!targetId) {
+            throw new Error(`Could not find reminder for ${action.payload.medicineName || "specified medicine"}`);
+          }
+
+          await updateReminder(targetId, {
             ...action.payload,
             enabled: action.payload.enabled !== undefined ? action.payload.enabled : true
           } as any);
           toast({
             title: "✅ Reminder updated",
-            description: action.confirmMessage || "Changes applied successfully.",
+            description: action.confirmMessage || `Changes applied to ${action.payload.medicineName || "your reminder"}.`,
           });
           break;
+        }
 
         case "REMOVE_REMINDER":
           await deleteReminder(action.payload.id);

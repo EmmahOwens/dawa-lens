@@ -8,6 +8,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { ChatMessage, AIAction, chatWithDawaGPTStream } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
+import MessageRenderer from "@/components/MessageRenderer";
 
 export default function DawaGPT() {
   const { t } = useTranslation();
@@ -201,7 +202,14 @@ export default function DawaGPT() {
                         ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-[2rem] rounded-tr-sm shadow-primary/20"
                         : "bg-card text-card-foreground rounded-[2rem] rounded-tl-sm border border-border/50 shadow-black/5"
                     }`}>
-                      <p className="text-[15px] leading-[1.6] font-medium whitespace-pre-wrap">{m.text}</p>
+                      {m.role === "assistant" ? (
+                        <MessageRenderer
+                          text={m.text}
+                          onNavigate={() => setIsOpen(false)}
+                        />
+                      ) : (
+                        <p className="text-[15px] leading-[1.6] font-medium whitespace-pre-wrap">{m.text}</p>
+                      )}
                       
                       {m.role === "assistant" && (
                         <div className="absolute -left-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity">
