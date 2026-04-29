@@ -512,7 +512,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updated = [...medicines, newMed];
     setMedicines(updated);
     if (storageMode === "cloud") {
-      localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(updated));
+      storage.setItem(CLOUD_CACHE_MEDS_KEY, updated);
     }
 
     // Fetch RxCUI in background
@@ -552,7 +552,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updated = medicines.map((m) => (m.id === id ? { ...m, ...updates } : m));
     setMedicines(updated);
     if (storageMode === "cloud") {
-      localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(updated));
+      storage.setItem(CLOUD_CACHE_MEDS_KEY, updated);
     }
   };
 
@@ -568,7 +568,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updated = medicines.filter((m) => m.id !== id);
     setMedicines(updated);
     if (storageMode === "cloud") {
-      localStorage.setItem(CLOUD_CACHE_MEDS_KEY, JSON.stringify(updated));
+      storage.setItem(CLOUD_CACHE_MEDS_KEY, updated);
     }
   };
 
@@ -598,7 +598,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const updated = [...reminders, newReminder];
       setReminders(updated);
-      localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(updated));
+      storage.setItem(CLOUD_CACHE_REMS_KEY, updated);
     }
   };
 
@@ -618,7 +618,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updated = reminders.map((r) => (r.id === id ? { ...r, ...updates } : r));
     setReminders(updated);
     if (storageMode === "cloud") {
-      localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(updated));
+      storage.setItem(CLOUD_CACHE_REMS_KEY, updated);
     }
   };
 
@@ -637,7 +637,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updated = reminders.filter((r) => r.id !== id);
     setReminders(updated);
     if (storageMode === "cloud") {
-      localStorage.setItem(CLOUD_CACHE_REMS_KEY, JSON.stringify(updated));
+      storage.setItem(CLOUD_CACHE_REMS_KEY, updated);
     }
   };
 
@@ -653,7 +653,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       const updated = [...doseLogs, newLog];
       setDoseLogs(updated);
-      localStorage.setItem(CLOUD_CACHE_LOGS_KEY, JSON.stringify(updated));
+      storage.setItem(CLOUD_CACHE_LOGS_KEY, updated);
     }
 
     // 1. Update Medicine Inventory if taken
@@ -691,7 +691,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updated = doseLogs.filter((l) => l.id !== id);
     setDoseLogs(updated);
     if (storageMode === "cloud") {
-      localStorage.setItem(CLOUD_CACHE_LOGS_KEY, JSON.stringify(updated));
+      storage.setItem(CLOUD_CACHE_LOGS_KEY, updated);
     }
   };
 
