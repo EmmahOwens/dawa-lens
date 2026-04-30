@@ -1,6 +1,7 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
 import AppError from '../utils/AppError.js';
+import { retrieveMedicalKnowledge } from './vectorService.js';
 
 dotenv.config();
 
@@ -13,6 +14,25 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
  */
 const sanitizeJson = (text) => {
   return text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+};
+
+const EMERGENCY_KEYWORDS = [
+  'poison', 'suicide', 'kill myself', 'allergic reaction', 'chest pain', 
+  'difficulty breathing', 'can\'t breathe', 'stroke', 'seizure', 'unconscious',
+  'overdose', 'bleeding heavily', 'anaphylaxis'
+];
+
+const detectEmergency = (text) => {
+  if (!text) return false;
+  const lowerText = text.toLowerCase();
+  return EMERGENCY_KEYWORDS.some(kw => lowerText.includes(kw));
+};
+
+const EMERGENCY_RESPONSE = {
+  text: "🚨 **EMERGENCY ALERT**: I've detected a potentially life-threatening situation in your message. \n\n**PLEASE STOP AND SEEK IMMEDIATE HELP:**\n- **Call Emergency Services (911/999/112)** immediately.\n- Contact your nearest hospital or clinic.\n- If this is an overdose or allergic reaction, inform the medical team exactly what was taken.\n\nI am an AI, not a doctor. Please do not wait for my response.",
+  suggestions: ["Call Emergency", "Nearest Hospital", "I'm okay now"],
+  source: "System Safety",
+  action: null
 };
 
 const callGroq = async (prompt, isJson = true) => {
@@ -69,8 +89,9 @@ export const getCoachAdvice = async (logs, medicines, userName) => {
     2. Provide supportive, non-judgmental advice.
     3. If adherence is high, give praise.
     4. Mention specific medications with more misses.
-    5. Tone: Warm and culturally appropriate for East Africa.
-    6. Warning: Do not change dosages. Advise doctor visit if heart/BP meds are skipped.
+    5. Proactive suggestions: If a user consistently misses a dose at a certain time, suggest moving it by 30-60 minutes if safe, or suggest a specific ritual (e.g., "take with your morning tea").
+    6. Tone: Warm and culturally appropriate for East Africa.
+    7. Warning: Do not change dosages. Advise doctor visit if heart/BP meds are skipped.
 
     Respond in JSON format:
     { "advice": "text", "patterns": ["list"], "adherenceScore": 0-100 }
@@ -181,7 +202,12 @@ export const getNutritionalGuidance = async (medicines) => {
 };
 
 export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
-  const { finalMessages, systemInstruction } = prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients });
+  const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
+  if (detectEmergency(lastUserMsg)) {
+    return EMERGENCY_RESPONSE;
+  }
+
+  const { finalMessages, systemInstruction } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients });
 
   if (!GROQ_API_KEY) {
     throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
@@ -212,7 +238,30 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
  * Returns the raw axios stream from Groq.
  */
 export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
-  const { finalMessages } = prepareDawaGPTContext({ 
+  const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
+  if (detectEmergency(lastUserMsg)) {
+    // For streaming, we'll return a pseudo-stream or a special flag.
+    // However, the easiest way for now is to throw a specific error or return a non-streaming response
+    // But since the caller expects a stream, we'll return a simple ReadableStream that emits the emergency response.
+    return new ReadableStream({
+      start(controller) {
+        const data = JSON.stringify({
+          choices: [{ delta: { content: EMERGENCY_RESPONSE.text } }]
+        });
+        const metadata = JSON.stringify({
+          suggestions: EMERGENCY_RESPONSE.suggestions,
+          source: EMERGENCY_RESPONSE.source,
+          action: null
+        });
+        controller.enqueue(new TextEncoder().encode(`data: ${data}\n`));
+        controller.enqueue(new TextEncoder().encode(`data: ###METADATA###${metadata}###METADATA###\n`));
+        controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
+        controller.close();
+      }
+    });
+  }
+
+  const { finalMessages } = await prepareDawaGPTContext({ 
     messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, 
     isStreaming: true 
   });
@@ -242,7 +291,13 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
 
 // --- Helpers ---
 
-function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false }) {
+async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false }) {
+  const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || "";
+  const knowledgeSnippets = await retrieveMedicalKnowledge(lastUserMsg);
+  const knowledgeContext = knowledgeSnippets.length > 0 
+    ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n`
+    : "";
+
   const activeMeds = medicines?.map(m => m.name).join(', ') || 'No active medications';
   const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, 20)) : 'No recent dose history available';
   const remindersSummary = reminders?.length
@@ -273,6 +328,8 @@ function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, rem
     Recent Dose Logs: ${recentLogs}
     Wellness/Symptom Logs: ${wellnessSummary}
     Family/Patients: ${patientsSummary}
+
+    ${knowledgeContext}
 
     === CAPABILITIES ===
     You have FULL READ and WRITE access to the user's medication system.
@@ -308,6 +365,7 @@ function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, rem
     10. Provide exactly 3 next-prompt suggestions.
     11. Keep text responses concise and actionable.
     12. FREQUENCY LOGIC — When the user says "X times a day" or "every Y hours", calculate evenly-spaced times starting at a sensible hour (e.g. 3x/day starting 08:00 → "08:00,14:00,20:00"; 2x/day → "08:00,20:00"; 4x/day → "08:00,14:00,18:00,22:00") and pass them as a comma-separated string in the "time" field. For "every Y hours" anchored to a specific start time, compute each subsequent dose by adding Y hours. Always set repeatSchedule to "custom" when multiple times are used, OR "daily" for a single daily time. Use repeatDays only when the user specifies particular days of the week (e.g. "Mon, Wed, Fri").
+    13. PROACTIVE COACHING — Analyze "Recent Dose Logs" for patterns (e.g. consistently missing the same dose time). If you see a negative pattern, gently bring it up and suggest a solution (e.g. "I noticed you've been missing your 8PM dose. Should we move it to 9PM or set a louder alarm?"). Always maintain a supportive, non-judgmental tone.
 
     === IN-APP NAVIGATION ===
     You can embed clickable navigation links in your text responses using this exact syntax: [Label](/route)
