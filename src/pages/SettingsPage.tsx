@@ -32,6 +32,24 @@ export default function SettingsPage() {
   const [updateData, setUpdateData] = useState({ newVersion: "", downloadUrl: "" });
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null);
 
+  /**
+   * Compares two semver strings (e.g. "1.0.11" vs "1.0.9").
+   * Returns true if `remote` is strictly greater than `local`.
+   */
+  const isNewerVersion = (remote: string, local: string): boolean => {
+    const parse = (v: string) => v.split('.').map((n) => parseInt(n, 10));
+    const r = parse(remote);
+    const l = parse(local);
+    const len = Math.max(r.length, l.length);
+    for (let i = 0; i < len; i++) {
+      const rv = r[i] ?? 0;
+      const lv = l[i] ?? 0;
+      if (rv > lv) return true;
+      if (rv < lv) return false;
+    }
+    return false;
+  };
+
   const checkUpdates = async () => {
     if (!Capacitor.isNativePlatform()) {
       toast({
@@ -43,36 +61,41 @@ export default function SettingsPage() {
 
     try {
       setIsCheckingUpdates(true);
-      
-      const REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/iammbayo/dawa-lens/main/public/version.json";
+
+      // Fetch version manifest from the correct GitHub repo
+      const REMOTE_CONFIG_URL =
+        "https://raw.githubusercontent.com/EmmahOwens/dawa-lens/main/public/version.json";
       const response = await fetch(REMOTE_CONFIG_URL, { cache: 'no-store' });
-      
-      if (!response.ok) throw new Error("Failed to fetch version info");
-      
+
+      if (!response.ok)
+        throw new Error(`Failed to fetch version info (HTTP ${response.status})`);
+
       const data = await response.json();
-      
-      if (data.latestVersion && data.latestVersion > pkg.version) {
-        setUpdateData({ 
-          newVersion: data.latestVersion, 
-          downloadUrl: data.downloadUrl 
+
+      if (data.latestVersion && isNewerVersion(data.latestVersion, pkg.version)) {
+        setUpdateData({
+          newVersion: data.latestVersion,
+          downloadUrl: data.downloadUrl,
         });
         setShowUpdateModal(true);
       } else {
         toast({
-          title: "Up to Date",
-          description: "You're running the latest version of Dawa Lens.",
+          title: "Up to Date ✓",
+          description: `You're running the latest version (v${pkg.version}) of Dawa Lens.`,
         });
       }
     } catch (err: any) {
       console.error("Update check failed:", err);
       toast({
-        title: "Error",
-        description: "Failed to check for updates. Please try again later.",
-        variant: "destructive"
+        title: "Update Check Failed",
+        description: "Could not reach the update server. Please check your connection and try again.",
+        variant: "destructive",
       });
     } finally {
       setIsCheckingUpdates(false);
-      setLastCheckTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setLastCheckTime(
+        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      );
     }
   };
 
@@ -556,15 +579,17 @@ export default function SettingsPage() {
         </motion.div>
       </motion.div>
 
-      {/* Render Update Modal if needed */}
-      {showUpdateModal && (
-        <StoreUpdateModal
-          currentVersion={pkg.version}
-          newVersion={updateData.newVersion}
-          downloadUrl={updateData.downloadUrl}
-          onClose={() => setShowUpdateModal(false)}
-        />
-      )}
+      {/* Render Update Modal with animation */}
+      <AnimatePresence>
+        {showUpdateModal && (
+          <StoreUpdateModal
+            currentVersion={pkg.version}
+            newVersion={updateData.newVersion}
+            downloadUrl={updateData.downloadUrl}
+            onClose={() => setShowUpdateModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="mt-12 text-center">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-30">
