@@ -87,9 +87,11 @@ const AppContent = () => {
   }, [isInitializing]);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    // Do NOT run until data is fully loaded — prevents false "missed" entries
+    // when reminders/doseLogs are still empty on initial mount.
+    if (!Capacitor.isNativePlatform() || isInitializing) return;
 
-    // Run once on mount
+    // Run once when data is ready
     checkMissedDoses(reminders, doseLogs, logDose);
 
     // Refresh reminders and check missed doses when app comes to foreground
@@ -104,7 +106,7 @@ const AppContent = () => {
     return () => {
       handler.then(h => h.remove());
     };
-  }, [reminders, doseLogs, medicines, logDose]);
+  }, [reminders, doseLogs, medicines, logDose, isInitializing]);
 
   return null;
 };
