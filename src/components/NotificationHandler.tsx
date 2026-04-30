@@ -71,18 +71,28 @@ export const NotificationHandler = () => {
             }
           } else if (actionId === 'SNOOZE') {
             const snoozeTime = addMinutes(new Date(), 15);
-            // Remove the specific notification so it doesn't linger
+            // Remove the original notification
             if (notification.id) {
               await LocalNotifications.cancel({ notifications: [{ id: notification.id }] });
             }
+
+            // Use a deterministic ID: hash of reminderId + snooze timestamp
+            // Avoids ID collisions when a user snoozes multiple reminders.
+            const snoozeId = Math.abs(
+              (reminderId + snoozeTime.getTime().toString())
+                .split('')
+                .reduce((acc, c) => ((acc << 5) - acc + c.charCodeAt(0)) | 0, 0)
+            );
 
             await LocalNotifications.schedule({
               notifications: [
                 {
                   title: `Snoozed: ${medicineName}`,
                   body: `Time to take your ${dose} of ${medicineName}`,
-                  id: Math.floor(Math.random() * 1000000),
-                  schedule: { at: snoozeTime },
+                  id: snoozeId,
+                  // allowWhileIdle so the snooze fires even in Doze/offline mode
+                  schedule: { at: snoozeTime, allowWhileIdle: true },
+                  sound: 'default',
                   actionTypeId: 'MEDICINE_REMINDER',
                   extra: notification.extra
                 }

@@ -14,6 +14,9 @@ export const checkMissedDoses = async (
   doseLogs: DoseLog[],
   logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>
 ) => {
+  // Guard: do nothing if there's no data yet (avoids false-positives on mount)
+  if (reminders.length === 0) return;
+
   const now = new Date();
   const twoHoursAgo = subHours(now, 2);
   const twentyFourHoursAgo = subHours(now, 24);
@@ -21,6 +24,10 @@ export const checkMissedDoses = async (
   const activeReminders = reminders.filter(r => r.enabled);
 
   for (const r of activeReminders) {
+    // Parse when this reminder was created so we never mark a dose
+    // as missed before the reminder even existed.
+    const reminderCreatedAt = r.createdAt ? parseISO(r.createdAt) : now;
+
     const times = r.time.split(",");
     
     for (const timeStr of times) {
@@ -31,38 +38,47 @@ export const checkMissedDoses = async (
         let scheduledDate = addDays(startOfDay(now), i);
         scheduledDate = setHours(scheduledDate, hours);
         scheduledDate = setMinutes(scheduledDate, minutes);
+        scheduledDate = setSeconds(scheduledDate, 0);
+        scheduledDate = setMilliseconds(scheduledDate, 0);
 
         // Rule 1: Must be within the last 24 hours but at least 2 hours old
-        if (isAfter(scheduledDate, twentyFourHoursAgo) && isBefore(scheduledDate, twoHoursAgo)) {
+        if (!isAfter(scheduledDate, twentyFourHoursAgo) || !isBefore(scheduledDate, twoHoursAgo)) {
+          continue;
+        }
 
-          // Rule 2: Check if a log already exists for this reminder at this specific scheduled time
-          const logExists = doseLogs.some(log =>
-            log.reminderId === r.id &&
-            log.scheduledTime === scheduledDate.toISOString()
-          );
+        // Rule 2: The scheduled slot must be AFTER the reminder was created.
+        // This prevents a reminder added at 11am from marking its 8am slot as missed.
+        if (!isAfter(scheduledDate, reminderCreatedAt)) {
+          continue;
+        }
 
-          if (!logExists) {
-            console.log(`Marking missed dose for ${r.medicineName} scheduled at ${scheduledDate.toISOString()}`);
-            await logDose({
-              reminderId: r.id,
-              medicineName: r.medicineName,
-              dose: r.dose,
-              scheduledTime: scheduledDate.toISOString(),
-              action: 'missed'
+        // Rule 3: Check if a log already exists for this reminder at this specific scheduled time
+        const logExists = doseLogs.some(log =>
+          log.reminderId === r.id &&
+          log.scheduledTime === scheduledDate.toISOString()
+        );
+
+        if (!logExists) {
+          console.log(`Marking missed dose for ${r.medicineName} scheduled at ${scheduledDate.toISOString()}`);
+          await logDose({
+            reminderId: r.id,
+            medicineName: r.medicineName,
+            dose: r.dose,
+            scheduledTime: scheduledDate.toISOString(),
+            action: 'missed'
+          });
+
+          // Notify the user about the missed dose
+          if (Capacitor.isNativePlatform()) {
+            await LocalNotifications.schedule({
+              notifications: [{
+                title: `Missed Dose: ${r.medicineName}`,
+                body: `You missed your ${r.dose} dose scheduled for ${timeStr.trim()}. Please stay on track!`,
+                id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
+                smallIcon: "res://pill",
+                extra: { type: 'missed_alert' }
+              }]
             });
-
-            // Notify the user about the missed dose
-            if (Capacitor.isNativePlatform()) {
-              await LocalNotifications.schedule({
-                notifications: [{
-                  title: `Missed Dose: ${r.medicineName}`,
-                  body: `You missed your ${r.dose} dose scheduled for ${timeStr.trim()}. Please stay on track!`,
-                  id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
-                  smallIcon: "res://pill",
-                  extra: { type: 'missed_alert' }
-                }]
-              });
-            }
           }
         }
       }
@@ -303,10 +319,11 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
       const doseAmount = medicine?.dosagePerDose || 1;
       
       let nextFrom = now;
-      // Schedule next 30 occurrences or up to 14 days
-      for (let i = 0; i < 30; i++) {
+      // Schedule next 60 occurrences or up to 30 days — larger window means
+      // fewer reschedule cycles needed if the user is offline for a long period.
+      for (let i = 0; i < 60; i++) {
         const next = getNextOccurrence(r, nextFrom, doseLogs);
-        if (!next || isAfter(next, addDays(now, 14))) break;
+        if (!next || isAfter(next, addDays(now, 30))) break;
 
         // Stop scheduling if we are out of stock
         if (medicine && currentStock < doseAmount) {
@@ -325,8 +342,11 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
           title: `Time for ${r.medicineName}`,
           body: `Dose: ${r.dose}. Remember to take your medicine!`,
           id: stringToHash(r.id + next.toISOString()),
-          schedule: { at: next },
+          // allowWhileIdle: fires even when Android is in Doze/battery-saver mode.
+          // This is the key flag that makes notifications work fully offline.
+          schedule: { at: next, allowWhileIdle: true },
           smallIcon: "res://pill",
+          sound: "default",
           actionTypeId: "MEDICINE_REMINDER",
           extra: {
             reminderId: r.id,
