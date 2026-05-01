@@ -116,8 +116,10 @@ const App = () => {
 
     const initNativeFeatures = async () => {
       if (Capacitor.isNativePlatform()) {
-        // Hide native splash screen immediately to show high-quality React splash
-        CapSplashScreen.hide().catch(err => console.warn("Splash hide failed:", err));
+        // Hide native splash screen with a tiny delay to ensure native bridge stability
+        setTimeout(() => {
+          CapSplashScreen.hide().catch(err => console.warn("Splash hide failed:", err));
+        }, 100);
 
         // Check for manual APK updates (Orion Store Architecture)
         const checkForUpdate = async () => {
