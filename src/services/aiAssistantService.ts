@@ -10,7 +10,7 @@ import { aiApi } from "./api";
 
 export interface AIAction {
   type: "ADD_REMINDER" | "LOG_DOSE" | "ADD_MEDICINE" | "UPDATE_REMINDER" | "REMOVE_REMINDER" | "LOG_WELLNESS" | "ADD_PATIENT" | "UPDATE_MEDICINE" | "REMOVE_MEDICINE" | null;
-  payload: Record<string, any> | null;
+  payload: Record<string, unknown> | null;
   confirmMessage?: string;
 }
 
@@ -139,14 +139,14 @@ export const chatWithDawaGPT = async (
       id: Date.now().toString(),
       role: "assistant",
       text: cleanText,
-      source: response.source || "Gemini",
+      source: (response.source as ChatMessage['source']) || "Gemini",
       suggestions: response.suggestions,
       // Include the action from the AI if present and meaningful
       action: response.action?.type ? response.action : undefined,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("DawaGPT Chat Error:", err);
-    const errorMessage = err.message || "I'm having trouble connecting to my medical intelligence core. Please check your connection and try again.";
+    const errorMessage = err instanceof Error ? err.message : "I'm having trouble connecting to my medical intelligence core. Please check your connection and try again.";
     return {
       id: Date.now().toString(),
       role: "assistant",
@@ -183,7 +183,6 @@ export const chatWithDawaGPTStream = async (
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let fullText = "";
-    let isMetadata = false;
     let metadataJson = "";
     let buffer = "";
 
@@ -228,7 +227,13 @@ export const chatWithDawaGPTStream = async (
       }
     }
 
-    let metadata = { suggestions: [], source: "Gemini", action: undefined };
+    interface StreamMetadata {
+      suggestions: string[];
+      source: ChatMessage['source'];
+      action?: AIAction;
+    }
+
+    let metadata: StreamMetadata = { suggestions: [], source: "Gemini", action: undefined };
     if (metadataJson) {
       try {
         metadata = JSON.parse(metadataJson);
@@ -241,13 +246,13 @@ export const chatWithDawaGPTStream = async (
       id: Date.now().toString(),
       role: "assistant",
       text: fullText.trim(),
-      source: metadata.source as any,
+      source: metadata.source,
       suggestions: metadata.suggestions,
-      action: (metadata as any).action?.type ? (metadata as any).action : undefined,
+      action: metadata.action?.type ? metadata.action : undefined,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("DawaGPT Streaming Error:", err);
-    const errorMessage = err.message || "Connection lost during medical core sync. Please try again.";
+    const errorMessage = err instanceof Error ? err.message : "Connection lost during medical core sync. Please try again.";
     return {
       id: Date.now().toString(),
       role: "assistant",
