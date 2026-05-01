@@ -146,35 +146,12 @@ const SplashScreen: React.FC = () => {
             style={{
               width: 148,
               height: 148,
-              borderRadius: '34px',
-              background: 'linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(240,247,255,0.92) 100%)',
-              boxShadow: `
-                0 0 0 1px rgba(255,255,255,0.9),
-                0 4px 6px -2px rgba(0,0,0,0.05),
-                0 20px 50px -10px rgba(0,120,255,0.18),
-                0 40px 80px -20px rgba(0,0,0,0.12),
-                inset 0 1px 0 rgba(255,255,255,1)
-              `,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               position: 'relative',
-              overflow: 'hidden',
             }}
           >
-            {/* Glossy top-left highlight */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '50%',
-                borderRadius: '34px 34px 60% 60%',
-                background: 'linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 100%)',
-                pointerEvents: 'none',
-              }}
-            />
 
             <img
               src="/logo.png"
