@@ -16,6 +16,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Capacitor } from "@capacitor/core";
 import pkg from "../../package.json";
 import StoreUpdateModal from "@/components/StoreUpdateModal";
+import { isNewerVersion, fetchLatestRelease } from "@/lib/update";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -32,23 +33,6 @@ export default function SettingsPage() {
   const [updateData, setUpdateData] = useState({ newVersion: "", downloadUrl: "" });
   const [lastCheckTime, setLastCheckTime] = useState<string | null>(null);
 
-  /**
-   * Compares two semver strings (e.g. "1.0.11" vs "1.0.9").
-   * Returns true if `remote` is strictly greater than `local`.
-   */
-  const isNewerVersion = (remote: string, local: string): boolean => {
-    const parse = (v: string) => v.split('.').map((n) => parseInt(n, 10));
-    const r = parse(remote);
-    const l = parse(local);
-    const len = Math.max(r.length, l.length);
-    for (let i = 0; i < len; i++) {
-      const rv = r[i] ?? 0;
-      const lv = l[i] ?? 0;
-      if (rv > lv) return true;
-      if (rv < lv) return false;
-    }
-    return false;
-  };
 
   const checkUpdates = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -62,20 +46,18 @@ export default function SettingsPage() {
     try {
       setIsCheckingUpdates(true);
 
-      // Fetch version manifest from the correct GitHub repo
-      const REMOTE_CONFIG_URL =
-        "https://raw.githubusercontent.com/EmmahOwens/dawa-lens/main/public/version.json";
-      const response = await fetch(REMOTE_CONFIG_URL, { cache: 'no-store' });
+      const updateInfo = await fetchLatestRelease();
 
-      if (!response.ok)
-        throw new Error(`Failed to fetch version info (HTTP ${response.status})`);
+      if (!updateInfo) {
+        throw new Error("Could not reach GitHub or no releases found.");
+      }
 
-      const data = await response.json();
+      const { latestVersion, downloadUrl } = updateInfo;
 
-      if (data.latestVersion && isNewerVersion(data.latestVersion, pkg.version)) {
+      if (isNewerVersion(latestVersion, pkg.version)) {
         setUpdateData({
-          newVersion: data.latestVersion,
-          downloadUrl: data.downloadUrl,
+          newVersion: latestVersion,
+          downloadUrl: downloadUrl,
         });
         setShowUpdateModal(true);
       } else {
@@ -88,7 +70,7 @@ export default function SettingsPage() {
       console.error("Update check failed:", err);
       toast({
         title: "Update Check Failed",
-        description: "Could not reach the update server. Please check your connection and try again.",
+        description: err.message || "Could not reach GitHub. Please check your connection and try again.",
         variant: "destructive",
       });
     } finally {
