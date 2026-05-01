@@ -79,12 +79,6 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 const AppContent = () => {
   const { reminders, doseLogs, medicines, logDose, isInitializing } = useApp();
 
-  useEffect(() => {
-    if (!isInitializing && Capacitor.isNativePlatform()) {
-      // Hide native splash screen once the app is ready
-      CapSplashScreen.hide().catch(err => console.warn("Splash hide failed:", err));
-    }
-  }, [isInitializing]);
 
   useEffect(() => {
     // Do NOT run until data is fully loaded — prevents false "missed" entries
@@ -122,6 +116,9 @@ const App = () => {
 
     const initNativeFeatures = async () => {
       if (Capacitor.isNativePlatform()) {
+        // Hide native splash screen immediately to show high-quality React splash
+        CapSplashScreen.hide().catch(err => console.warn("Splash hide failed:", err));
+
         // Check for manual APK updates (Orion Store Architecture)
         const checkForUpdate = async () => {
           try {
