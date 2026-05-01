@@ -65,7 +65,7 @@ export type WellnessLog = {
   id: string;
   type: "food" | "symptom";
   timestamp: string;
-  data: any; // e.g., { meal: "...", risk: "..." } or { mood: 4, symptoms: [] }
+  data: Record<string, unknown>; // e.g., { meal: "...", risk: "..." } or { mood: 4, symptoms: [] }
   userId: string;
   patientId?: string | null;
 };
@@ -191,12 +191,12 @@ async function migrateLocalStorage() {
 /** Normalize a MongoDB doc's _id → id for the frontend. */
 function normalize<T extends { _id?: string; id?: string }>(doc: T): T & { id: string } {
   const id = doc._id || doc.id || "";
-  const { _id, ...rest } = doc as any;
-  return { ...rest, id };
+  const { _id: _, ...rest } = doc as Record<string, unknown>;
+  return { ...rest, id } as T & { id: string };
 }
 
 /** Remove undefined fields so Firestore doesn't throw an error. */
-function sanitizeFirestoreData(data: any) {
+function sanitizeFirestoreData(data: Record<string, unknown>) {
   const sanitized = { ...data };
   Object.keys(sanitized).forEach(key => {
     if (sanitized[key] === undefined) {
@@ -403,25 +403,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       try {
         // Evaluate profile via Firestore directly
-        let prof: any = null;
+        let prof: Record<string, unknown> | null = null;
         try {
           const docRef = doc(db, "users", currentUserId);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            prof = docSnap.data();
+            prof = docSnap.data() as Record<string, unknown>;
           }
-        } catch (profileErr: any) {
+        } catch (profileErr: unknown) {
           console.error("Firestore error fetching profile — skipping onboarding check:", profileErr);
         }
 
         if (prof) {
           if (!prof.dateOfBirth || !prof.gender) {
             setNeedsOnboarding(true);
-            setUserProfile({ ...prof, id: currentUserId } as UserProfile);
+            setUserProfile({ ...prof, id: currentUserId } as unknown as UserProfile);
           } else {
             setNeedsOnboarding(false);
-            setUserProfile({ ...prof, id: currentUserId } as UserProfile);
-            setIsProfessionalMode(prof.isProfessional || false);
+            setUserProfile({ ...prof, id: currentUserId } as unknown as UserProfile);
+            setIsProfessionalMode((prof.isProfessional as boolean) || false);
           }
         } else {
           console.warn("User profile not found — prompting onboarding.");
