@@ -25,7 +25,4 @@ dist-ssr
 .env
 server/.env
 .capgo.json
-<<<<<<< HEAD
 .env.production
-=======
->>>>>>> 9e817f05ae9c4425ec792dc2edecc08cfd2d8ac4
