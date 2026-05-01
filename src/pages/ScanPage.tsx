@@ -33,11 +33,17 @@ export default function ScanPage() {
     try {
       const track = streamRef.current?.getVideoTracks()[0];
       if (track) {
-        const capabilities = track.getCapabilities() as any;
+        interface ExtendedMediaTrackCapabilities extends MediaTrackCapabilities {
+          torch?: boolean;
+        }
+        const capabilities = track.getCapabilities() as ExtendedMediaTrackCapabilities;
         if (capabilities.torch) {
+        interface ExtendedMediaTrackConstraints extends MediaTrackConstraints {
+          advanced?: Array<MediaTrackConstraintSet & { torch?: boolean }>;
+        }
           await track.applyConstraints({
             advanced: [{ torch: !flashlightOn }]
-          } as any);
+          } as ExtendedMediaTrackConstraints);
           setFlashlightOn(!flashlightOn);
         }
       }

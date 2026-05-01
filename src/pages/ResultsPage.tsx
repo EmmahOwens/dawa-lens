@@ -22,7 +22,7 @@ export default function ResultsPage() {
   const navigate = useNavigate();
   const { addMedicine, userProfile, patients, selectedPatientId, reminders } = useApp();
   
-  const state = location.state as any;
+  const state = location.state as { imageUrl?: string; mode?: string } | null;
   const imageUrl = state?.imageUrl;
   const mode = state?.mode || "pill";
 
@@ -41,7 +41,7 @@ export default function ResultsPage() {
       setLoading(true);
       setScanError(null);
       try {
-        let ageString = undefined;
+        let ageString: string | undefined = undefined;
         if (selectedPatientId) {
           const patient = patients.find(p => p.id === selectedPatientId);
           if (patient && patient.age) ageString = patient.age.toString();
@@ -56,12 +56,13 @@ export default function ResultsPage() {
           const res = await identifyPill(imageUrl, ageString);
           if (res.success) {
             setAiMatches(res.matches);
-            setAiSummary((res as any).summary || "");
+            setAiSummary((res as { summary?: string }).summary || "");
           }
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e);
-        const code = e?.code as string | undefined;
+        const err = e as { code?: string; message?: string; fixUrl?: string };
+        const code = err.code;
         const errorMessages: Record<string, string> = {
           API_KEY_MISSING: 'Gemini API key is not configured. Add GEMINI_API_KEY to server/.env.',
           INVALID_API_KEY: 'The Gemini API key is invalid or expired. Check server/.env.',
@@ -70,16 +71,16 @@ export default function ResultsPage() {
           SAFETY_BLOCKED: 'The image was blocked by safety filters. Please try a clearer photo.',
         };
         if (code && code in errorMessages) {
-          setScanError({ message: errorMessages[code], code, fixUrl: e?.fixUrl });
+          setScanError({ message: errorMessages[code], code, fixUrl: err.fixUrl });
         } else {
-          setScanError({ message: e?.message || 'An unknown error occurred during scan processing.', code });
+          setScanError({ message: err.message || 'An unknown error occurred during scan processing.', code });
         }
       }
       // AI processing is done, but we wait for the animation to finish
       setLoading(false);
     }
     process();
-  }, [mode, imageUrl]);
+  }, [mode, imageUrl, patients, selectedPatientId, userProfile]);
 
   const highConfidence = aiMatches.filter((r) => r.confidence >= 0.7);
   const lowConfidence = aiMatches.filter((r) => r.confidence < 0.7);
