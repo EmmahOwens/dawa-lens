@@ -144,12 +144,13 @@ export const chatWithDawaGPT = async (
       // Include the action from the AI if present and meaningful
       action: response.action?.type ? response.action : undefined,
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error("DawaGPT Chat Error:", err);
+    const errorMessage = err.message || "I'm having trouble connecting to my medical intelligence core. Please check your connection and try again.";
     return {
       id: Date.now().toString(),
       role: "assistant",
-      text: "I'm having trouble connecting to my medical intelligence core. Please check your connection and try again.",
+      text: errorMessage,
       source: "System"
     };
   }
@@ -244,12 +245,13 @@ export const chatWithDawaGPTStream = async (
       suggestions: metadata.suggestions,
       action: (metadata as any).action?.type ? (metadata as any).action : undefined,
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error("DawaGPT Streaming Error:", err);
+    const errorMessage = err.message || "Connection lost during medical core sync. Please try again.";
     return {
       id: Date.now().toString(),
       role: "assistant",
-      text: "Connection lost during medical core sync. Please try again.",
+      text: errorMessage,
       source: "System"
     };
   }

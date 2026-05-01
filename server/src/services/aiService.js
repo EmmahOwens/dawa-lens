@@ -9,6 +9,10 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
 /**
  * Strip markdown code fences that AI sometimes wraps JSON responses in.
  */
@@ -35,9 +39,43 @@ const EMERGENCY_RESPONSE = {
   action: null
 };
 
+/**
+ * Fallback chat with Gemini (Standard JSON response)
+ */
+const callGeminiChat = async (finalMessages) => {
+  if (!GEMINI_API_KEY) {
+    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
+  }
+
+  // Transform OpenAI/Groq messages format to Gemini format
+  const contents = finalMessages
+    .filter(m => m.role !== 'system') // System instruction is already in our context
+    .map(m => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.content }]
+    }));
+
+  try {
+    const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      contents,
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+
+    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new AppError('Gemini returned an empty response.', 502);
+    
+    const parsed = JSON.parse(sanitizeJson(text));
+    parsed.source = "Gemini (Fallback)";
+    return parsed;
+  } catch (err) {
+    console.error("Gemini Fallback Error:", err.message);
+    throw new AppError('Both AI engines are currently unavailable. Please try again.', 503);
+  }
+};
+
 const callGroq = async (prompt, isJson = true) => {
   if (!GROQ_API_KEY) {
-    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
+    return await callGeminiChat([{ role: 'user', content: prompt }]);
   }
 
   try {
@@ -63,16 +101,8 @@ const callGroq = async (prompt, isJson = true) => {
 
     return isJson ? JSON.parse(sanitizeJson(text)) : text;
   } catch (err) {
-    if (err.isOperational) throw err;
-    if (err.response) {
-      const status = err.response.status;
-      const msg = err.response.data?.error?.message || 'AI API request failed';
-      throw new AppError(`Groq API error (${status}): ${msg}`, 502);
-    }
-    if (err instanceof SyntaxError) {
-      throw new AppError('AI returned malformed data. Please try again.', 502);
-    }
-    throw new AppError('Unexpected AI service error. Please try again.', 500);
+    console.warn("Groq failed, trying Gemini fallback...", err.message);
+    return await callGeminiChat([{ role: 'user', content: prompt }]);
   }
 };
 
@@ -92,7 +122,7 @@ export const getCoachAdvice = async (logs, medicines, userName) => {
     5. Proactive suggestions: If a user consistently misses a dose at a certain time, suggest moving it by 30-60 minutes if safe, or suggest a specific ritual (e.g., "take with your morning tea").
     6. Tone: Warm and culturally appropriate for East Africa.
     7. Warning: Do not change dosages. Advise doctor visit if heart/BP meds are skipped.
-
+ 
     Respond in JSON format:
     { "advice": "text", "patterns": ["list"], "adherenceScore": 0-100 }
   `;
@@ -207,10 +237,10 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     return EMERGENCY_RESPONSE;
   }
 
-  const { finalMessages, systemInstruction } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients });
+  const { finalMessages } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients });
 
   if (!GROQ_API_KEY) {
-    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
+    return await callGeminiChat(finalMessages);
   }
 
   try {
@@ -229,7 +259,8 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     if (!text) throw new AppError('AI returned an empty response.', 502);
     return JSON.parse(sanitizeJson(text));
   } catch (err) {
-    handleAiError(err);
+    console.warn("Groq Chat failed, falling back to Gemini...", err.message);
+    return await callGeminiChat(finalMessages);
   }
 };
 
@@ -240,9 +271,6 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
 export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
   const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
   if (detectEmergency(lastUserMsg)) {
-    // For streaming, we'll return a pseudo-stream or a special flag.
-    // However, the easiest way for now is to throw a specific error or return a non-streaming response
-    // But since the caller expects a stream, we'll return a simple ReadableStream that emits the emergency response.
     return new ReadableStream({
       start(controller) {
         const data = JSON.stringify({
@@ -267,7 +295,18 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   });
 
   if (!GROQ_API_KEY) {
-    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
+    // Fallback to non-streaming Gemini chat if Groq is missing
+    const geminiResp = await callGeminiChat(finalMessages);
+    return new ReadableStream({
+      start(controller) {
+        const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text } }] });
+        const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
+        controller.enqueue(new TextEncoder().encode(`data: ${data}\n`));
+        controller.enqueue(new TextEncoder().encode(`data: ###METADATA###${metadata}###METADATA###\n`));
+        controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
+        controller.close();
+      }
+    });
   }
 
   try {
@@ -285,7 +324,18 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
 
     return response.data;
   } catch (err) {
-    handleAiError(err);
+    console.warn("Groq Stream failed, falling back to Gemini...", err.message);
+    const geminiResp = await callGeminiChat(finalMessages);
+    return new ReadableStream({
+      start(controller) {
+        const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text } }] });
+        const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
+        controller.enqueue(new TextEncoder().encode(`data: ${data}\n`));
+        controller.enqueue(new TextEncoder().encode(`data: ###METADATA###${metadata}###METADATA###\n`));
+        controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
+        controller.close();
+      }
+    });
   }
 };
 
