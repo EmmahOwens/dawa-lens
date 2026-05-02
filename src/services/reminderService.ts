@@ -76,6 +76,8 @@ export const checkMissedDoses = async (
                 body: `You missed your ${r.dose} dose scheduled for ${timeStr.trim()}. Please stay on track!`,
                 id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
                 smallIcon: "res://pill",
+                channelId: 'dawa_reminders',
+                sound: Capacitor.getPlatform() === 'ios' ? 'default' : undefined,
                 extra: { type: 'missed_alert' }
               }]
             });
@@ -253,6 +255,17 @@ export const registerNotificationActions = async () => {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
+    if (Capacitor.getPlatform() === 'android') {
+      await LocalNotifications.createChannel({
+        id: 'dawa_reminders',
+        name: 'Medicine Reminders',
+        description: 'Notifications for medicine reminders',
+        importance: 5, // High importance
+        visibility: 1, // Public
+        vibration: true,
+      });
+    }
+
     // registerActionTypes defines the UI buttons for the notifications
     
     await LocalNotifications.registerActionTypes({
@@ -331,8 +344,10 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
             title: `Refill Needed: ${r.medicineName}`,
             body: `You are out of stock. Please refill to continue reminders.`,
             id: stringToHash(r.id + "refill"),
-            schedule: { at: next },
+            schedule: { at: next, allowWhileIdle: true },
             smallIcon: "res://pill",
+            channelId: 'dawa_reminders',
+            sound: Capacitor.getPlatform() === 'ios' ? 'default' : undefined,
             extra: { type: "refill", medicineId: r.medicineId }
           });
           break;
@@ -346,7 +361,8 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
           // This is the key flag that makes notifications work fully offline.
           schedule: { at: next, allowWhileIdle: true },
           smallIcon: "res://pill",
-          sound: "default",
+          channelId: 'dawa_reminders',
+          sound: Capacitor.getPlatform() === 'ios' ? 'default' : undefined,
           actionTypeId: "MEDICINE_REMINDER",
           extra: {
             reminderId: r.id,
