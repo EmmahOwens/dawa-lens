@@ -24,7 +24,10 @@ import { AnimatePresence } from "framer-motion";
 import { NotificationHandler } from "@/components/NotificationHandler";
 import StoreUpdateModal from "@/components/StoreUpdateModal";
 import pkg from "../package.json";
+<<<<<<< HEAD
 import { isNewerVersion, fetchLatestRelease } from "@/lib/update";
+=======
+>>>>>>> 3fc7d208d8060979d2d2f48715257ed33c7aa6a2
 
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -125,6 +128,7 @@ const App = () => {
         // Check for manual APK updates (Orion Store Architecture)
         const checkForUpdate = async () => {
           try {
+<<<<<<< HEAD
             const updateInfo = await fetchLatestRelease();
             if (!updateInfo) return;
 
@@ -135,6 +139,24 @@ const App = () => {
                 setUpdateData({ 
                   newVersion: latestVersion, 
                   downloadUrl: downloadUrl 
+=======
+            // Replace this URL with where you actually host your version.json
+            // Example format of version.json: 
+            // { "latestVersion": "1.0.7", "downloadUrl": "https://example.com/app-release.apk" }
+            const REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/iammbayo/dawa-lens/main/public/version.json";
+            
+            const response = await fetch(REMOTE_CONFIG_URL, { cache: 'no-store' });
+            if (!response.ok) return;
+
+            const data = await response.json();
+            
+            // Basic semantic version string comparison
+            if (data.latestVersion && data.latestVersion > CURRENT_VERSION) {
+              setTimeout(() => {
+                setUpdateData({ 
+                  newVersion: data.latestVersion, 
+                  downloadUrl: data.downloadUrl 
+>>>>>>> 3fc7d208d8060979d2d2f48715257ed33c7aa6a2
                 });
                 setShowUpdateModal(true);
               }, 3000);
