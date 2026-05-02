@@ -36,13 +36,6 @@ export default function SettingsPage() {
 
 
   const checkUpdates = async () => {
-    if (!Capacitor.isNativePlatform()) {
-      toast({
-        title: "Web Version",
-        description: "Live updates are only available on Android and iOS devices."
-      });
-      return;
-    }
 
     try {
       setIsCheckingUpdates(true);

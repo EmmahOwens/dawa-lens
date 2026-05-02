@@ -115,35 +115,34 @@ const App = () => {
   useEffect(() => {
     preloadOCRModel(); // Silently preload ~20MB Tesseract worker on startup
 
+    const checkForUpdate = async () => {
+      try {
+        const updateInfo = await fetchLatestRelease();
+        if (!updateInfo) return;
+
+        const { latestVersion, downloadUrl } = updateInfo;
+        
+        if (isNewerVersion(latestVersion, CURRENT_VERSION)) {
+          setTimeout(() => {
+            setUpdateData({ 
+              newVersion: latestVersion, 
+              downloadUrl: downloadUrl 
+            });
+            setShowUpdateModal(true);
+          }, 3000);
+        }
+      } catch (error) {
+        console.error("Failed to check for updates:", error);
+      }
+    };
+    checkForUpdate();
+
     const initNativeFeatures = async () => {
       if (Capacitor.isNativePlatform()) {
         // Hide native splash screen with a tiny delay to ensure native bridge stability
         setTimeout(() => {
           CapSplashScreen.hide().catch(err => console.warn("Splash hide failed:", err));
         }, 100);
-
-        // Check for manual APK updates (Orion Store Architecture)
-        const checkForUpdate = async () => {
-          try {
-            const updateInfo = await fetchLatestRelease();
-            if (!updateInfo) return;
-
-            const { latestVersion, downloadUrl } = updateInfo;
-            
-            if (isNewerVersion(latestVersion, CURRENT_VERSION)) {
-              setTimeout(() => {
-                setUpdateData({ 
-                  newVersion: latestVersion, 
-                  downloadUrl: downloadUrl 
-                });
-                setShowUpdateModal(true);
-              }, 3000);
-            }
-          } catch (error) {
-            console.error("Failed to check for updates:", error);
-          }
-        };
-        checkForUpdate();
 
         try {
           await StatusBar.setStyle({ style: Style.Default });
