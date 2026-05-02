@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, User, UserSquare2, Loader2, ArrowRight } from "lucide-react";
+import { Calendar as CalendarIcon, User, UserSquare2, Loader2, ArrowRight } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -54,7 +58,10 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="px-4 pt-12 pb-4 min-h-screen flex flex-col bg-background">
+    <div className="px-4 pt-12 pb-4 min-h-screen flex flex-col bg-background relative overflow-hidden">
+      {/* Background ambient light */}
+      <div className="absolute top-0 left-0 w-full h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -translate-y-1/2" />
+      
       <AnimatePresence>
         {showSuccess && (
           <SuccessState 
@@ -66,83 +73,116 @@ export default function OnboardingPage() {
       <AnimatePresence mode="wait">
         <motion.div
           key="onboarding"
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex-1 flex flex-col max-w-sm mx-auto w-full mt-10"
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="flex-1 flex flex-col max-w-md mx-auto w-full mt-10 relative z-10"
         >
-          <div className="text-center mb-8">
-            <div className="mb-4">
-              <img src="/logo.png" alt="Dawa Lens Logo" className="w-20 h-20 mx-auto object-contain" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">Complete Your Profile</h1>
-            <p className="text-sm text-muted-foreground mt-2">
-              We just need a few details to personalize your Dawa Lens experience and calculate interactions accurately.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <Label htmlFor="name">Full Name</Label>
-              <div className="relative mt-1.5 border border-border rounded-md shadow-sm focus-within:ring-1 focus-within:ring-ring focus-within:border-ring">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User size={16} className="text-muted-foreground" />
-                </div>
-                <Input 
-                  id="name" 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="John Doe" 
-                  className="pl-10 w-full border-none shadow-none focus-visible:ring-0 rounded-md" 
-                  disabled={loading} 
-                />
+          <div className="bg-card/40 backdrop-blur-xl border border-border/60 shadow-2xl rounded-[2rem] p-8 pb-10">
+            <div className="text-center mb-8">
+              <div className="mb-6 relative">
+                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
+                <img src="/logo.png" alt="Dawa Lens Logo" className="w-24 h-24 mx-auto object-contain relative z-10 drop-shadow-lg" />
               </div>
-            </div>
-
-            <div>
-              <Label htmlFor="dob">Date of Birth</Label>
-              <div className="relative mt-1.5 border border-border rounded-md shadow-sm focus-within:ring-1 focus-within:ring-ring focus-within:border-ring overflow-hidden">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10 bg-background/0">
-                  <Calendar size={16} className="text-muted-foreground" />
-                </div>
-                <Input 
-                  id="dob" 
-                  type="date" 
-                  value={dateOfBirth} 
-                  max={new Date().toISOString().split("T")[0]} // Prevents future dates
-                  onChange={(e) => setDateOfBirth(e.target.value)}
-                  className="pl-10 w-full bg-background border-none shadow-none focus-visible:ring-0 pt-0 pb-0 min-h-10 text-foreground" 
-                  disabled={loading} 
-                />
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-1">
-                Used to automatically calculate your age for dosage safety checks.
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Complete Your Profile
+              </h1>
+              <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                We just need a few details to personalize your experience and accurately check for drug interactions.
               </p>
             </div>
 
-            <div>
-              <Label htmlFor="gender">Gender</Label>
-              <div className="mt-1.5">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium text-foreground/90">Full Name</Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <User size={18} className="text-muted-foreground/70" />
+                  </div>
+                  <Input 
+                    id="name" 
+                    type="text" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe" 
+                    className="pl-11 h-12 bg-background/60 border-border/50 focus-visible:ring-primary/30 focus-visible:border-primary transition-all duration-200 rounded-xl" 
+                    disabled={loading} 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dob" className="text-sm font-medium text-foreground/90">Date of Birth</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full h-12 pl-3.5 text-left font-normal bg-background/60 border-border/50 hover:bg-background/80 hover:text-foreground focus:ring-2 focus:ring-primary/30 transition-all duration-200 rounded-xl",
+                        !dateOfBirth && "text-muted-foreground",
+                        loading && "opacity-50 cursor-not-allowed"
+                      )}
+                      disabled={loading}
+                    >
+                      <CalendarIcon className="mr-3 h-[18px] w-[18px] text-muted-foreground/70" />
+                      {dateOfBirth ? (
+                        format(new Date(dateOfBirth), "MMMM d, yyyy")
+                      ) : (
+                        <span>Select your date of birth</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 border-border/50 shadow-xl rounded-xl" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dateOfBirth ? new Date(dateOfBirth) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const offset = date.getTimezoneOffset();
+                          const localDate = new Date(date.getTime() - (offset*60*1000));
+                          setDateOfBirth(localDate.toISOString().split('T')[0]);
+                        } else {
+                          setDateOfBirth("");
+                        }
+                      }}
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
+                      initialFocus
+                      captionLayout="dropdown-buttons"
+                      fromYear={1900}
+                      toYear={new Date().getFullYear()}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <p className="text-xs text-muted-foreground mt-1.5 flex items-center">
+                  <span className="inline-block w-1 h-1 rounded-full bg-primary/50 mr-2"></span>
+                  Used to calculate your age for dosage safety checks.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="gender" className="text-sm font-medium text-foreground/90">Gender</Label>
                 <Select disabled={loading} value={gender} onValueChange={(val) => setGender(val as any)}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="h-12 bg-background/60 border-border/50 focus:ring-primary/30 transition-all duration-200 w-full rounded-xl">
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="male">Male</SelectItem>
+                  <SelectContent className="rounded-xl border-border/50 shadow-xl">
+                    <SelectItem value="female" className="rounded-lg cursor-pointer">Female</SelectItem>
+                    <SelectItem value="male" className="rounded-lg cursor-pointer">Male</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <Button type="submit" className="w-full mt-6" size="lg" disabled={loading}>
-              {loading ? (
-                <><Loader2 size={16} className="mr-2 animate-spin" /> Saving...</>
-              ) : (
-                <>Continue to Dashboard <ArrowRight size={16} className="ml-2" /></>
-              )}
-            </Button>
-          </form>
+              <Button type="submit" className="w-full mt-8 h-12 rounded-xl shadow-lg shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95" disabled={loading}>
+                {loading ? (
+                  <><Loader2 size={18} className="mr-2 animate-spin" /> Preparing...</>
+                ) : (
+                  <><span className="text-base font-semibold">Continue to Dashboard</span> <ArrowRight size={18} className="ml-2" /></>
+                )}
+              </Button>
+            </form>
+          </div>
         </motion.div>
       </AnimatePresence>
     </div>
