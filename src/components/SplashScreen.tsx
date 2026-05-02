@@ -6,8 +6,7 @@ const SplashScreen: React.FC = () => {
   const [showTagline, setShowTagline] = useState(false);
 
   useEffect(() => {
-    // Delay tagline for cinematic stagger
-    const taglineTimer = setTimeout(() => setShowTagline(true), 700);
+    const taglineTimer = setTimeout(() => setShowTagline(true), 600);
 
     // Smooth progress easing
     const progressTimer = setInterval(() => {
@@ -16,7 +15,6 @@ const SplashScreen: React.FC = () => {
           clearInterval(progressTimer);
           return 100;
         }
-        // Ease-out curve: fast at start, slows near end
         const increment = Math.max(0.5, (100 - p) * 0.08);
         return Math.min(p + increment, 100);
       });
@@ -29,208 +27,141 @@ const SplashScreen: React.FC = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[9999] overflow-hidden bg-white dark:bg-black flex flex-col items-center justify-center">
-
-      {/* ── Layer 1: Full-screen radial gradient backdrop ── */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse 70% 60% at 50% 40%,
-              hsl(211 100% 96%) 0%,
-              hsl(0 0% 100%) 100%
-            )
-          `,
-        }}
-      />
-      <div
-        className="absolute inset-0 pointer-events-none dark:block hidden"
-        style={{
-          background: `
-            radial-gradient(ellipse 70% 60% at 50% 40%,
-              hsl(211 100% 8%) 0%,
-              hsl(0 0% 0%) 100%
-            )
-          `,
-        }}
-      />
-
-      {/* ── Layer 2: Floating ambient orbs (Apple-style soft glow) ── */}
+    <div className="fixed inset-0 z-[9999] overflow-hidden bg-[#0a0f18] flex flex-col items-center justify-center">
+      
+      {/* ── Layer 1: Fluid Colorful Mesh Background ── */}
       <motion.div
-        className="absolute pointer-events-none"
+        className="absolute inset-0 pointer-events-none opacity-80"
         animate={{
-          scale: [1, 1.12, 1],
-          opacity: [0.18, 0.28, 0.18],
+          scale: [1, 1.1, 1],
+          rotate: [0, 5, -5, 0],
         }}
-        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
         style={{
-          width: '65vw',
-          height: '65vw',
-          maxWidth: 480,
-          maxHeight: 480,
-          top: '10%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, hsl(211 100% 60% / 0.6), transparent 70%)',
+          background: `
+            radial-gradient(circle at 10% 20%, rgba(67, 56, 202, 0.6), transparent 45%),
+            radial-gradient(circle at 90% 10%, rgba(219, 39, 119, 0.5), transparent 40%),
+            radial-gradient(circle at 30% 80%, rgba(14, 165, 233, 0.6), transparent 50%),
+            radial-gradient(circle at 80% 85%, rgba(124, 58, 237, 0.5), transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(45, 212, 191, 0.4), transparent 60%)
+          `,
           filter: 'blur(60px)',
+          transformOrigin: 'center center'
         }}
       />
+      
       <motion.div
-        className="absolute pointer-events-none"
+        className="absolute w-[150vw] h-[150vh] -top-[25vh] -left-[25vw] pointer-events-none opacity-40 mix-blend-screen"
         animate={{
-          scale: [1, 1.08, 1],
-          opacity: [0.10, 0.18, 0.10],
+          rotate: [0, 360],
         }}
-        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
+        transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
         style={{
-          width: '50vw',
-          height: '50vw',
-          maxWidth: 360,
-          maxHeight: 360,
-          bottom: '20%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, hsl(170 80% 50% / 0.5), transparent 70%)',
-          filter: 'blur(70px)',
+          background: 'conic-gradient(from 0deg at 50% 50%, rgba(56, 189, 248, 0.4) 0deg, rgba(232, 121, 249, 0.4) 120deg, rgba(52, 211, 153, 0.4) 240deg, rgba(56, 189, 248, 0.4) 360deg)',
+          filter: 'blur(90px)',
         }}
       />
 
-      {/* ── Main Content ── */}
-      <div className="relative z-10 flex flex-col items-center w-full px-8">
-
-        {/* ── Logo Section ── */}
+      {/* ── Layer 2: Main Content (Liquid Glass Pill) ── */}
+      <div className="relative z-10 flex flex-col items-center w-full px-6">
+        
         <motion.div
-          initial={{ opacity: 0, scale: 0.75, y: 20 }}
+          initial={{ opacity: 0, scale: 0.85, y: 30 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
-          className="relative flex items-center justify-center mb-10"
-          style={{ width: 160, height: 160 }}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+          className="relative flex flex-col items-center justify-center p-12 overflow-hidden rounded-[50px] sm:rounded-[60px]"
+          style={{
+            // Liquid Glass effect
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)',
+            backdropFilter: 'blur(30px)',
+            WebkitBackdropFilter: 'blur(30px)',
+            // Highlighting the edges to simulate glass thickness
+            borderTop: '1px solid rgba(255, 255, 255, 0.4)',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.1)',
+            width: '100%',
+            maxWidth: '340px'
+          }}
         >
-          {/* Outer pulsing ring — Apple Focus Ring */}
-          <motion.div
-            className="absolute rounded-full"
-            animate={{
-              scale: [1, 1.18, 1],
-              opacity: [0.25, 0, 0.25],
-            }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              width: 168,
-              height: 168,
-              border: '1.5px solid hsl(211 100% 50% / 0.6)',
-              borderRadius: '50%',
-            }}
-          />
-          {/* Secondary pulse ring */}
-          <motion.div
-            className="absolute rounded-full"
-            animate={{
-              scale: [1, 1.3, 1],
-              opacity: [0.15, 0, 0.15],
-            }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
-            style={{
-              width: 168,
-              height: 168,
-              border: '1px solid hsl(211 100% 50% / 0.3)',
-              borderRadius: '50%',
-            }}
-          />
+          {/* Glass glare overlay */}
+          <div className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-white/10 to-transparent pointer-events-none rounded-t-[50px] sm:rounded-t-[60px]" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none opacity-50" />
 
-          {/* Icon container — iOS app icon style */}
+          {/* Logo */}
           <motion.div
-            animate={{ scale: [1, 1.025, 1] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              width: 148,
-              height: 148,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}
+            animate={{ y: [-5, 5, -5] }}
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+            className="relative z-10 flex items-center justify-center"
           >
-
+            <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-110" />
             <img
               src="/logo.png"
-              alt="Dawa Lens"
+              alt="Dawa Lens Logo"
               style={{
                 width: 110,
                 height: 110,
                 objectFit: 'contain',
-                filter: 'drop-shadow(0 4px 16px rgba(0,100,255,0.15)) drop-shadow(0 2px 8px rgba(0,0,0,0.08))',
-                zIndex: 1,
+                filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.25))',
               }}
+              className="relative z-10"
             />
           </motion.div>
-        </motion.div>
 
-        {/* ── App Name ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col items-center"
-        >
+          {/* App Name */}
           <h1
+            className="mt-8 relative z-10 text-center tracking-tight"
             style={{
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
-              fontSize: 'clamp(2rem, 8vw, 2.75rem)',
-              fontWeight: 700,
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
-              color: 'hsl(220 20% 10%)',
-              margin: 0,
+              fontSize: '2.5rem',
+              fontWeight: 800,
+              color: '#ffffff',
+              textShadow: '0 4px 12px rgba(0,0,0,0.3)',
             }}
-            className="dark:!text-white"
           >
             Dawa Lens
           </h1>
-        </motion.div>
+          
+          <AnimatePresence>
+            {showTagline && (
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+                className="mt-2 text-white/80 text-xs font-semibold tracking-[0.25em] uppercase relative z-10 text-center"
+                style={{
+                  textShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                }}
+              >
+                Health Intelligence
+              </motion.p>
+            )}
+          </AnimatePresence>
 
-        {/* ── Tagline ── */}
-        <AnimatePresence>
-          {showTagline && (
-            <motion.p
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-              style={{
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif',
-                fontSize: 'clamp(0.65rem, 2.5vw, 0.75rem)',
-                fontWeight: 500,
-                letterSpacing: '0.3em',
-                textTransform: 'uppercase',
-                color: 'hsl(211 40% 55%)',
-                marginTop: '0.75rem',
-              }}
-              className="dark:!text-blue-400/70"
-            >
-              Health Intelligence
-            </motion.p>
-          )}
-        </AnimatePresence>
+        </motion.div>
 
         {/* ── Loading Indicator ── */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.9, duration: 0.8 }}
-          style={{ marginTop: '3.5rem', width: '100%', maxWidth: 200 }}
+          transition={{ delay: 0.8, duration: 1 }}
+          style={{ marginTop: '3.5rem', width: '100%', maxWidth: 220 }}
+          className="relative z-10"
         >
-          {/* Track */}
+          {/* Track (Glass style) */}
           <div
             style={{
-              height: 2.5,
+              height: 4,
               borderRadius: 9999,
-              background: 'hsl(211 30% 88%)',
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               overflow: 'hidden',
               position: 'relative',
+              boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.1)',
             }}
-            className="dark:!bg-white/10"
           >
             {/* Fill */}
             <motion.div
@@ -243,64 +174,43 @@ const SplashScreen: React.FC = () => {
                 left: 0,
                 height: '100%',
                 borderRadius: 9999,
-                background: 'linear-gradient(90deg, hsl(211 100% 55%), hsl(190 100% 50%))',
-                boxShadow: '0 0 8px hsl(211 100% 60% / 0.5)',
+                background: 'linear-gradient(90deg, rgba(255,255,255,0.6), #ffffff)',
+                boxShadow: '0 0 10px rgba(255,255,255,0.6)',
               }}
             />
           </div>
         </motion.div>
       </div>
 
-      {/* ── Footer — Subtle branding ── */}
+      {/* ── Footer ── */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.4, duration: 1 }}
+        transition={{ delay: 1.2, duration: 1 }}
+        className="absolute z-10 flex items-center justify-center gap-3"
         style={{
-          position: 'absolute',
-          bottom: 'max(env(safe-area-inset-bottom, 20px), 28px)',
+          bottom: 'max(env(safe-area-inset-bottom, 24px), 36px)',
           left: 0,
           right: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
         }}
       >
-        {/* Small dot separator */}
-        <div
-          style={{
-            width: 3,
-            height: 3,
-            borderRadius: '50%',
-            background: 'hsl(211 40% 70%)',
-            opacity: 0.5,
-          }}
-        />
+        <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.4)' }} />
         <p
           style={{
             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
-            fontSize: '0.6rem',
-            fontWeight: 600,
-            letterSpacing: '0.22em',
+            fontSize: '0.65rem',
+            fontWeight: 700,
+            letterSpacing: '0.25em',
             textTransform: 'uppercase',
-            color: 'hsl(211 20% 60%)',
-            opacity: 0.55,
+            color: 'rgba(255,255,255,0.6)',
+            textShadow: '0 2px 4px rgba(0,0,0,0.5)'
           }}
-          className="dark:!text-white/30"
         >
           Dawa Innovation
         </p>
-        <div
-          style={{
-            width: 3,
-            height: 3,
-            borderRadius: '50%',
-            background: 'hsl(211 40% 70%)',
-            opacity: 0.5,
-          }}
-        />
+        <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.4)' }} />
       </motion.div>
+
     </div>
   );
 };

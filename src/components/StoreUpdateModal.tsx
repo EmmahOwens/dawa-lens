@@ -1,6 +1,7 @@
 import React from 'react';
 import { Rocket, ArrowRight, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Browser } from '@capacitor/browser';
 
 interface StoreUpdateModalProps {
   currentVersion: string;
@@ -57,15 +58,13 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
             </p>
 
             <div className="w-full space-y-3">
-                <a 
-                    href={downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <button 
+                    onClick={async () => await Browser.open({ url: downloadUrl })}
                     className="w-full py-4 rounded-2xl bg-primary text-primary-foreground font-bold text-lg shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group"
                 >
                     <Download className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
                     <span>Download v{newVersion}</span>
-                </a>
+                </button>
                 
                 <button 
                     onClick={onClose}
