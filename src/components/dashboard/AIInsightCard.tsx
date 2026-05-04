@@ -1,12 +1,15 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Sparkles, ArrowRight } from "lucide-react";
+import { useApp } from "@/contexts/AppContext";
 
 interface AIInsightCardProps {
   adherencePercent: number;
 }
 
 export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
+  const { setIsDawaGPTOpen } = useApp();
+
   const getInsight = () => {
     if (adherencePercent === 100) return "Your perfect consistency this week is improving your long-term recovery odds. Keep it up!";
     if (adherencePercent > 80) return "You're doing great! Small tip: Setting a backup alarm for your evening dose might help hit that 100%.";
@@ -33,7 +36,10 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
           "{getInsight()}"
         </p>
         
-        <button className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl transition-colors border border-white/10">
+        <button 
+          onClick={() => setIsDawaGPTOpen(true)}
+          className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl transition-colors border border-white/10"
+        >
           Ask DawaGPT <ArrowRight size={12} />
         </button>
       </div>

@@ -23,7 +23,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { isProfessionalMode, userProfile } = useApp();
+  const { isProfessionalMode, userProfile, logoutUser } = useApp();
   
   const items = [
     { title: t("nav.home"), url: "/", icon: Home },
@@ -149,7 +149,10 @@ export function AppSidebar() {
                 <ShieldCheck size={14} />
                 <span>Verified</span>
               </div>
-              <button className="text-muted-foreground hover:text-destructive transition-colors">
+              <button 
+                onClick={logoutUser}
+                className="text-muted-foreground hover:text-destructive transition-colors"
+              >
                 <LogOut size={16} />
               </button>
             </div>

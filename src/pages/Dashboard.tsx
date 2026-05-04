@@ -276,18 +276,27 @@ export default function Dashboard() {
             </motion.button>
           ))}
 
-          {/* Row 3: Reminders and History (2x1 each) */}
-          {quickActions.slice(4, 6).map((action) => (
+          {/* Row 3: Reminders (2x1) and History, Reports (1x1 each) */}
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate(quickActions[4].to)}
+            className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${quickActions[4].color}`}
+          >
+            <div className="p-2 bg-white/10 rounded-xl">
+               <Bell size={20} />
+            </div>
+            <span className="font-bold text-sm tracking-tight">{quickActions[4].label}</span>
+          </motion.button>
+
+          {quickActions.slice(5, 7).map((action) => (
             <motion.button
               key={action.label}
               whileTap={{ scale: 0.98 }}
               onClick={() => navigate(action.to)}
-              className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${action.color}`}
+              className={`col-span-1 row-span-1 rounded-[1.25rem] border ${action.color} flex flex-col items-center justify-center gap-1.5`}
             >
-              <div className="p-2 bg-white/10 rounded-xl">
-                 <action.icon size={20} />
-              </div>
-              <span className="font-bold text-sm tracking-tight">{action.label}</span>
+              <action.icon size={20} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">{action.label}</span>
             </motion.button>
           ))}
         </div>

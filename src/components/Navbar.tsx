@@ -1,12 +1,14 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface NavbarProps {
   className?: string;
 }
 
 export function Navbar({ className }: NavbarProps) {
+  const navigate = useNavigate();
   return (
     <header
       className={cn(
@@ -28,7 +30,10 @@ export function Navbar({ className }: NavbarProps) {
       </div>
 
       <div className="flex items-center gap-6">
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/50 border border-border/50 text-muted-foreground hover:bg-muted transition-colors cursor-pointer w-64">
+        <div 
+          onClick={() => navigate('/reminders')}
+          className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-muted/50 border border-border/50 text-muted-foreground hover:bg-muted transition-colors cursor-pointer w-64"
+        >
           <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
           <span className="text-xs">Search medicines or logs...</span>
           <span className="ml-auto text-[10px] font-mono bg-background px-1.5 py-0.5 rounded border border-border shadow-sm">⌘K</span>
