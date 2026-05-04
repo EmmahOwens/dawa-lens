@@ -115,6 +115,8 @@ type AppContextType = {
   addWellnessLog: (log: Omit<WellnessLog, "id" | "timestamp" | "userId">) => Promise<void>;
   
   addPatient: (patient: Omit<Patient, "id" | "createdAt" | "managedBy">) => Promise<void>;
+  updatePatient: (id: string, updates: Partial<Patient>) => Promise<void>;
+  deletePatient: (id: string) => Promise<void>;
   setSelectedPatientId: (id: string | null) => void;
   setIsProfessionalMode: (v: boolean) => void;
 
@@ -777,6 +779,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setPatients((p) => [...p, normalize(created) as Patient]);
   };
 
+  const updatePatient = async (id: string, updates: Partial<Patient>) => {
+    if (!currentUserId) throw new Error("Not logged in");
+    const updated = await patientsApi.update(id, updates);
+    setPatients((p) => p.map((item) => (item.id === id ? normalize(updated) as Patient : item)));
+  };
+
+  const deletePatient = async (id: string) => {
+    if (!currentUserId) throw new Error("Not logged in");
+    await patientsApi.remove(id);
+    setPatients((p) => p.filter((item) => item.id !== id));
+    if (selectedPatientId === id) setSelectedPatientId(null);
+  };
+
   const clearAllData = useCallback(() => {
     // 1. Wipe State
     setMedicines([]);
@@ -800,7 +815,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       value={{
         medicines, reminders, doseLogs, patients, wellnessLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId, selectedPatientId, isProfessionalMode,
         addMedicine, updateMedicine, deleteMedicine, addReminder, updateReminder, deleteReminder,
-        logDose, deleteDoseLog, addPatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing,
+        logDose, deleteDoseLog, addPatient, updatePatient, deletePatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing,
         isDawaGPTOpen, setIsDawaGPTOpen, isIntelligenceCollapsed, setIsIntelligenceCollapsed,
         lastSyncTimestamp, updateUserProfile, rememberMe, setRememberMe
       }}
