@@ -17,7 +17,6 @@ import { Camera } from '@capacitor/camera';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Keyboard } from '@capacitor/keyboard';
-import { SplashScreen as CapSplashScreen } from '@capacitor/splash-screen';
 import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
 import { AnimatePresence } from "framer-motion";
@@ -139,11 +138,6 @@ const App = () => {
 
     const initNativeFeatures = async () => {
       if (Capacitor.isNativePlatform()) {
-        // Hide native splash screen with a tiny delay to ensure native bridge stability
-        setTimeout(() => {
-          CapSplashScreen.hide().catch(err => console.warn("Splash hide failed:", err));
-        }, 100);
-
         try {
           await StatusBar.setStyle({ style: Style.Default });
           await StatusBar.setOverlaysWebView({ overlay: true });

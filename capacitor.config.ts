@@ -9,18 +9,6 @@ const config: CapacitorConfig = {
     iosScheme: 'https',
     cleartext: false
   },
-  plugins: {
-    SplashScreen: {
-      launchShowDuration: 2000,
-      launchAutoHide: true,
-      backgroundColor: '#ffffff',
-      androidScaleType: 'CENTER',
-      showSpinner: false,
-      splashFullScreen: true,
-      splashImmersive: true,
-      useDialog: false
-    }
-  }
 };
 
 export default config;
