@@ -63,9 +63,10 @@ export default function Dashboard() {
     { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary text-primary-foreground", description: "AI Recognition" },
     { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success/10 border-success/20 text-success" },
     { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive/10 border-destructive/20 text-destructive" },
-    { icon: FileText, label: "Reports", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" },
+    { icon: Plane, label: "Travel", to: "/travel", color: "bg-blue-500/10 border-blue-500/20 text-blue-600" },
     { icon: Bell, label: "Reminders", to: "/reminders", color: "bg-amber-500/10 border-amber-500/20 text-amber-600" },
     { icon: History, label: "History", to: "/history", color: "bg-accent border-accent/60 text-accent-foreground" },
+    { icon: FileText, label: "Reports", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" },
   ];
 
   const todayReminders = reminders.filter((r) => r.enabled);
@@ -276,7 +277,7 @@ export default function Dashboard() {
           ))}
 
           {/* Row 3: Reminders and History (2x1 each) */}
-          {quickActions.slice(4).map((action) => (
+          {quickActions.slice(4, 6).map((action) => (
             <motion.button
               key={action.label}
               whileTap={{ scale: 0.98 }}
