@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
-import { useApp, Patient } from "@/contexts/AppContext";
+import { useState, useMemo, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useApp, Patient, Medicine, Reminder } from "@/contexts/AppContext";
 import { 
   Plus, 
   Users, 
@@ -16,10 +16,15 @@ import {
   Activity,
   Baby,
   UserRound,
-  UserPlus
+  UserPlus,
+  Pill,
+  Bell,
+  History as HistoryIcon,
+  ChevronRight,
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -46,6 +51,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
@@ -60,9 +66,13 @@ export default function FamilyHubPage() {
     selectedPatientId, 
     userProfile, 
     isProfessionalMode,
+    medicines,
+    reminders,
+    doseLogs
   } = useApp();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -75,6 +85,15 @@ export default function FamilyHubPage() {
     age: "",
     gender: "other" as "male" | "female" | "other"
   });
+
+  // Handle "openAdd" state from dashboard navigation
+  useEffect(() => {
+    if (location.state && (location.state as any).openAdd) {
+      handleOpenAdd();
+      // Clear state so it doesn't reopen on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleOpenAdd = () => {
     setEditingPatient(null);
@@ -135,17 +154,39 @@ export default function FamilyHubPage() {
     }
   };
 
-  const currentSelectionName = selectedPatientId 
-    ? patients.find(p => p.id === selectedPatientId)?.name 
-    : userProfile?.name || "Self";
+  const currentSelection = selectedPatientId 
+    ? patients.find(p => p.id === selectedPatientId)
+    : { name: userProfile?.name || "Self", id: null, relation: "Primary User" };
 
-  // Calculate some basic stats
-  const stats = useMemo(() => {
-    return {
-      totalMembers: patients.length + 1,
-      professionalContext: isProfessionalMode
+  const memberStats = useMemo(() => {
+    const getStats = (id: string | null) => {
+      const medCount = medicines.filter(m => {
+        const pId = (m as any).patientId;
+        return id === null ? !pId : pId === id;
+      }).length;
+      
+      const remCount = reminders.filter(r => {
+        const pId = (r as any).patientId;
+        return id === null ? !pId : pId === id;
+      }).length;
+
+      return { meds: medCount, reminders: remCount };
     };
-  }, [patients.length, isProfessionalMode]);
+
+    const statsMap: Record<string, { meds: number; reminders: number }> = {};
+    statsMap["self"] = getStats(null);
+    patients.forEach(p => {
+      statsMap[p.id] = getStats(p.id);
+    });
+
+    return statsMap;
+  }, [medicines, reminders, patients]);
+
+  const activeStats = selectedPatientId ? memberStats[selectedPatientId] : memberStats["self"];
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
+  };
 
   return (
     <div className="px-4 pt-12 pb-24 min-h-screen bg-background">
@@ -161,7 +202,7 @@ export default function FamilyHubPage() {
               {isProfessionalMode ? "Client Hub" : "Family Hub"}
             </h1>
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">
-              {stats.totalMembers} Profiles Managed
+              {patients.length + 1} Profiles Managed
             </p>
           </div>
           <button 
@@ -173,138 +214,211 @@ export default function FamilyHubPage() {
         </div>
       </motion.div>
 
-      {/* Active Selection Hero */}
+      {/* Active Member Detail Panel */}
       <motion.div 
+        layout
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mb-10 p-8 rounded-[2.5rem] bg-gradient-to-br from-primary to-primary/80 text-primary-foreground relative overflow-hidden shadow-2xl shadow-primary/20 group"
+        className="mb-10 p-6 rounded-[2.5rem] bg-card border-2 border-primary/20 shadow-2xl shadow-primary/5 relative overflow-hidden group"
       >
-        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-           {isProfessionalMode ? <Users size={120} /> : <Heart size={120} />}
-        </div>
+        <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500" />
+        
         <div className="relative z-10">
-          <p className="text-[10px] font-black uppercase tracking-widest text-primary-foreground/60 mb-2">Active Context</p>
-          <h2 className="text-3xl font-black mb-6 tracking-tight">{currentSelectionName}</h2>
-          <Button 
-            variant="secondary" 
-            size="sm" 
-            className="rounded-2xl px-6 bg-white text-primary font-black uppercase tracking-widest text-[10px] h-12 shadow-xl"
-            onClick={() => navigate("/")}
-          >
-            Go to Dashboard <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
-          </Button>
-        </div>
-      </motion.div>
-
-      {/* Members Grid */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="section-title mb-0">{isProfessionalMode ? "Client Directory" : "Circle Members"}</h3>
-        </div>
-
-        <motion.div 
-          variants={container}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-1 gap-4"
-        >
-          {/* Main User Card */}
-          <motion.div 
-            variants={item}
-            onClick={() => setSelectedPatientId(null)}
-            className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer relative group ${
-              selectedPatientId === null 
-                ? "border-primary bg-primary/5 shadow-xl shadow-primary/5" 
-                : "border-border/40 bg-card hover:border-primary/30"
-            }`}
-          >
-            <div className="flex items-center gap-5">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-                selectedPatientId === null ? "bg-primary text-primary-foreground shadow-lg" : "bg-secondary text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-              }`}>
-                <UserRound size={28} />
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                {selectedPatientId ? (
+                   patients.find(p => p.id === selectedPatientId)?.age && (patients.find(p => p.id === selectedPatientId)?.age || 0) < 12 ? <Baby size={32} /> : <UserRound size={32} />
+                ) : (
+                   <UserRound size={32} />
+                )}
               </div>
-              <div className="flex-1">
-                <p className="text-lg font-black text-foreground tracking-tight leading-tight">
-                  {userProfile?.name || "Primary User"}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest opacity-60">
-                    {isProfessionalMode ? "My Profile" : "Account Owner"}
-                  </span>
-                  {selectedPatientId === null && (
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-[8px] font-black uppercase tracking-tighter">
-                      <CheckCircle2 size={10} /> Active
-                    </div>
-                  )}
-                </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Managing Profile</p>
+                <h2 className="text-2xl font-black tracking-tight text-foreground">{currentSelection.name}</h2>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  {(currentSelection as any).relation || (isProfessionalMode ? "Client" : "Family")}
+                </span>
               </div>
             </div>
-          </motion.div>
-
-          {/* Patient Cards */}
-          {patients.map((patient) => (
-            <motion.div 
-              key={patient.id}
-              variants={item}
-              className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer relative group ${
-                selectedPatientId === patient.id 
-                  ? "border-primary bg-primary/5 shadow-xl shadow-primary/5" 
-                  : "border-border/40 bg-card hover:border-primary/30"
-              }`}
-              onClick={() => setSelectedPatientId(patient.id)}
-            >
-              <div className="flex items-center gap-5">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-                  selectedPatientId === patient.id ? "bg-primary text-primary-foreground shadow-lg" : "bg-secondary text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
-                }`}>
-                  {patient.age && patient.age < 12 ? <Baby size={28} /> : <UserRound size={28} />}
-                </div>
-                <div className="flex-1">
-                  <p className="text-lg font-black text-foreground tracking-tight leading-tight">
-                    {patient.name}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest opacity-60">
-                      {patient.relation || (isProfessionalMode ? "Client" : "Family")} {patient.age ? `• ${patient.age}y` : ""}
-                    </span>
-                    {selectedPatientId === patient.id && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-[8px] font-black uppercase tracking-tighter">
-                        <CheckCircle2 size={10} /> Active
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            {selectedPatientId && (
+               <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <button className="p-2 rounded-xl hover:bg-secondary transition-colors text-muted-foreground">
                       <MoreVertical size={20} />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="rounded-2xl p-2 min-w-[140px] shadow-2xl border-border/40">
+                  <DropdownMenuContent align="end" className="rounded-2xl p-2 min-w-[160px] shadow-2xl border-border/40">
                     <DropdownMenuItem 
                       className="rounded-xl p-3 focus:bg-primary/5 focus:text-primary cursor-pointer gap-3 font-bold text-xs"
-                      onClick={() => handleOpenEdit(patient)}
+                      onClick={() => handleOpenEdit(patients.find(p => p.id === selectedPatientId)!)}
                     >
                       <Edit2 size={16} /> Edit Profile
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       className="rounded-xl p-3 focus:bg-destructive/5 focus:text-destructive text-destructive cursor-pointer gap-3 font-bold text-xs"
-                      onClick={() => setPatientToDelete(patient)}
+                      onClick={() => setPatientToDelete(patients.find(p => p.id === selectedPatientId)!)}
                     >
                       <Trash2 size={16} /> Delete Profile
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+            )}
+          </div>
+
+          {/* Quick Health Summary */}
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40">
+              <div className="flex items-center gap-2 mb-2">
+                <Pill size={14} className="text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Medicines</span>
+              </div>
+              <p className="text-2xl font-black text-foreground">{activeStats.meds}</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40">
+              <div className="flex items-center gap-2 mb-2">
+                <Bell size={14} className="text-amber-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Reminders</span>
+              </div>
+              <p className="text-2xl font-black text-foreground">{activeStats.reminders}</p>
+            </div>
+          </div>
+
+          {/* Member Actions */}
+          <div className="grid grid-cols-2 gap-3">
+            <Button 
+              onClick={() => handleNavigate("/reminders")}
+              className="rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 bg-primary/10 text-primary hover:bg-primary/20 border-none"
+            >
+              <Bell size={14} /> View Reminders
+            </Button>
+            <Button 
+              onClick={() => handleNavigate("/history")}
+              className="rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 bg-secondary text-foreground hover:bg-secondary/80 border-none"
+            >
+              <HistoryIcon size={14} /> Health History
+            </Button>
+            <Button 
+              onClick={() => navigate("/reminders/new", { state: { patientId: selectedPatientId } })}
+              className="col-span-2 rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 shadow-lg shadow-primary/10"
+            >
+              <Plus size={16} /> Add Medication Schedule
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Circle Directory */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="section-title mb-0">{isProfessionalMode ? "Client Directory" : "Circle Members"}</h3>
+        </div>
+
+        {patients.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-10 rounded-[2.5rem] border-2 border-dashed border-border/60 bg-secondary/20 text-center"
+          >
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6">
+              <Sparkles size={28} />
+            </div>
+            <h4 className="text-lg font-black tracking-tight mb-2">Expand Your Circle</h4>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-8 px-4 opacity-70">
+              Manage health schedules for your family, children, or clients in one unified dashboard.
+            </p>
+            <Button 
+              onClick={handleOpenAdd}
+              className="rounded-2xl px-8 h-14 font-black uppercase text-[10px] tracking-widest gap-2 shadow-xl"
+            >
+              <UserPlus size={16} /> Add First Member
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.div 
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 gap-4"
+          >
+            {/* Main User Card */}
+            <motion.div 
+              variants={item}
+              onClick={() => setSelectedPatientId(null)}
+              className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer relative group ${
+                selectedPatientId === null 
+                  ? "border-primary bg-primary/5 shadow-xl shadow-primary/5" 
+                  : "border-border/40 bg-card hover:border-primary/30"
+              }`}
+            >
+              <div className="flex items-center gap-5">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
+                  selectedPatientId === null ? "bg-primary text-primary-foreground shadow-lg" : "bg-secondary text-muted-foreground"
+                }`}>
+                  <UserRound size={28} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-lg font-black text-foreground tracking-tight leading-tight">
+                      {userProfile?.name || "Primary User"}
+                    </p>
+                    <Badge variant="outline" className="text-[8px] font-black uppercase tracking-tighter border-muted-foreground/20 text-muted-foreground">
+                      Self
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest opacity-60">
+                      {memberStats["self"].meds} Meds • {memberStats["self"].reminders} Reminders
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight size={18} className={`text-muted-foreground transition-transform ${selectedPatientId === null ? "translate-x-1 text-primary" : "opacity-30"}`} />
               </div>
             </motion.div>
-          ))}
-        </motion.div>
+
+            {/* Patient Cards */}
+            {patients.map((patient) => (
+              <motion.div 
+                key={patient.id}
+                variants={item}
+                className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer relative group ${
+                  selectedPatientId === patient.id 
+                    ? "border-primary bg-primary/5 shadow-xl shadow-primary/5" 
+                    : "border-border/40 bg-card hover:border-primary/30"
+                }`}
+                onClick={() => setSelectedPatientId(patient.id)}
+              >
+                <div className="flex items-center gap-5">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
+                    selectedPatientId === patient.id ? "bg-primary text-primary-foreground shadow-lg" : "bg-secondary text-muted-foreground"
+                  }`}>
+                    {patient.age && patient.age < 12 ? <Baby size={28} /> : <UserRound size={28} />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-lg font-black text-foreground tracking-tight leading-tight">
+                        {patient.name}
+                      </p>
+                      <Badge variant="outline" className="text-[8px] font-black uppercase tracking-tighter border-muted-foreground/20 text-muted-foreground">
+                        {patient.relation || (isProfessionalMode ? "Client" : "Family")}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest opacity-60">
+                        {memberStats[patient.id]?.meds || 0} Meds • {memberStats[patient.id]?.reminders || 0} Reminders
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight size={18} className={`text-muted-foreground transition-transform ${selectedPatientId === patient.id ? "translate-x-1 text-primary" : "opacity-30"}`} />
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </div>
 
       {/* CHW Mode Teaser */}
-      {!isProfessionalMode && (
+      {!isProfessionalMode && patients.length > 0 && (
         <motion.div 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
