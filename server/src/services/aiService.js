@@ -154,7 +154,10 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
     1. Find equivalent brand names in ${destination}.
     2. Timezone shift advice for dosing.
     3. Customs restrictions for these specific meds.
-    4. Provide local emergency contact numbers (Ambulance, Police) for ${destination}.
+    4. Provide ONLY TWO emergency contact numbers for ${destination}:
+       a) Ambulance / Emergency Medical Services number (e.g. 999, 911, 112, or country-specific)
+       b) The NATIONAL DRUG REGULATORY AUTHORITY (e.g. National Drug Authority in Uganda, FDA in USA, MHRA in UK, CDSCO in India) — include their name and public helpline number.
+       Do NOT include Police. Do NOT include generic numbers like 112 for the drug authority.
     5. List general health risks (e.g. Malaria, yellow fever, water safety) for ${destination}.
 
     Respond in JSON format:
@@ -162,12 +165,16 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
       "equivalents": [...], 
       "timezoneAdvice": "...", 
       "customsNotes": "...",
-      "emergencyContacts": [{ "service": "...", "number": "..." }],
+      "emergencyContacts": [
+        { "service": "Ambulance", "number": "...", "type": "ambulance" },
+        { "service": "[Full Authority Name]", "number": "...", "type": "drug_authority" }
+      ],
       "healthRisks": ["..."]
     }
   `;
   return await callGroq(prompt);
 };
+
 
 export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
   const prompt = `

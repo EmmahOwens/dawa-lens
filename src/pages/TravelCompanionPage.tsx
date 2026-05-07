@@ -10,6 +10,8 @@ import { aiApi } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { TravelMap } from "@/components/travel/TravelMap";
+import { lookupDRA } from "@/services/draDatabase";
+import { ShieldCheck, Siren } from "lucide-react";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -290,29 +292,74 @@ export default function TravelCompanionPage() {
               )}
 
               {/* Emergency Contacts */}
-              {advice.emergencyContacts && advice.emergencyContacts.length > 0 && (
-                <motion.div variants={item} className="md:col-span-2 p-8 rounded-[2.5rem] bg-emerald-500/5 border border-emerald-500/10">
-                   <div className="flex items-center gap-4 mb-8">
-                     <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-600 shadow-inner">
-                       <Phone size={24} />
-                     </div>
-                     <div>
-                       <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600">
-                         Emergency Services
-                       </h3>
-                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Save these numbers</p>
-                     </div>
-                   </div>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {advice.emergencyContacts.map((contact: any, i: number) => (
-                        <div key={i} className="p-6 rounded-2xl bg-background/60 border border-border/80 shadow-sm flex flex-col justify-center">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">{contact.service}</p>
-                          <p className="text-2xl font-black text-foreground tracking-tight">{contact.number}</p>
+              {(advice.emergencyContacts?.length > 0 || destination) && (() => {
+                // Pull ambulance from AI response
+                const ambulance = advice.emergencyContacts?.find(
+                  (c: any) => c.type === 'ambulance' || /ambulance|emergency|ems/i.test(c.service)
+                ) || advice.emergencyContacts?.[0];
+
+                // Drug authority: static DB first (most accurate), fall back to AI
+                const staticDRA = lookupDRA(destination);
+                const aiDRA = advice.emergencyContacts?.find(
+                  (c: any) => c.type === 'drug_authority'
+                );
+                const draEntry = staticDRA || (aiDRA ? { authority: aiDRA.service, number: aiDRA.number } : null);
+
+                return (
+                  <motion.div variants={item} className="md:col-span-2 rounded-[2.5rem] overflow-hidden border border-border shadow-sm">
+                    {/* Section header */}
+                    <div className="px-6 pt-6 pb-4 border-b border-border/50 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Phone size={20} className="text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">Important Contacts</h3>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Save before you travel</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border/50">
+                      {/* Ambulance */}
+                      {ambulance && (
+                        <div className="p-6 flex flex-col gap-3 bg-destructive/[0.03]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-destructive/15 flex items-center justify-center">
+                              <Siren size={16} className="text-destructive" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-destructive">Ambulance / EMS</span>
+                          </div>
+                          <p className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">{ambulance.number}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground">{ambulance.service}</p>
                         </div>
-                      ))}
-                   </div>
-                </motion.div>
-              )}
+                      )}
+
+                      {/* Drug Regulatory Authority */}
+                      {draEntry && (
+                        <div className="p-6 flex flex-col gap-3 bg-primary/[0.02]">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center">
+                              <ShieldCheck size={16} className="text-primary" />
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Drug Regulatory Authority</span>
+                          </div>
+                          <p className="text-lg sm:text-xl font-black text-foreground tracking-tight leading-tight break-words">{draEntry.number}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground leading-snug">{draEntry.authority}</p>
+                          {'website' in draEntry && draEntry.website && (
+                            <a
+                              href={draEntry.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] font-black text-primary underline underline-offset-2 hover:opacity-70 transition-opacity truncate"
+                            >
+                              {draEntry.website.replace(/^https?:\/\/www\./, '')}
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })()}
             </div>
           </motion.div>
         ) : (
