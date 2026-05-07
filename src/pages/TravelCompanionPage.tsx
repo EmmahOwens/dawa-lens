@@ -49,7 +49,7 @@ export default function TravelCompanionPage() {
   };
 
   return (
-    <div className="px-4 pt-8 pb-32 max-w-5xl mx-auto w-full">
+    <div className="pt-6 pb-28 w-full min-w-0 max-w-5xl mx-auto">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex items-center justify-between mb-2">
@@ -70,19 +70,19 @@ export default function TravelCompanionPage() {
       </motion.div>
 
       {/* Main Map & Input Card */}
-      <div className="space-y-6 mb-10">
+      <div className="space-y-4 mb-8">
         <TravelMap isAnimating={isAnimating} destination={destination} />
 
-        <div className="glass-card p-6 md:p-8 rounded-[2.5rem] shadow-xl border-primary/10 overflow-hidden relative">
+        <div className="glass-card p-4 md:p-8 rounded-3xl shadow-xl border-primary/10 overflow-hidden relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
           
-          <div className="flex flex-col md:flex-row gap-6 items-end relative z-10">
+          <div className="flex flex-col gap-4 relative z-10">
             <div className="w-full">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-3 block opacity-80">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-2 block opacity-80">
                 Where are you heading?
               </label>
               <div className="relative group">
-                <Globe size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
                 <input 
                   value={destination}
                   onChange={(e) => {
@@ -91,7 +91,7 @@ export default function TravelCompanionPage() {
                   }}
                   onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                   placeholder="Enter country (e.g. Kenya, France...)"
-                  className="w-full h-16 pl-14 pr-6 rounded-2xl bg-background border border-border outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/30 transition-all text-lg font-bold shadow-sm"
+                  className="w-full h-14 pl-12 pr-4 rounded-2xl bg-background border border-border outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/30 transition-all text-base font-bold shadow-sm"
                 />
               </div>
             </div>
@@ -99,7 +99,7 @@ export default function TravelCompanionPage() {
             <Button 
               onClick={handleAnalyze}
               disabled={loading || !destination || medicines.length === 0}
-              className="w-full md:w-auto h-16 px-10 rounded-2xl text-[15px] font-black shadow-lg shadow-primary/20 active:scale-95 transition-all"
+              className="w-full h-14 rounded-2xl text-[15px] font-black shadow-lg shadow-primary/20 active:scale-95 transition-all"
             >
               {loading ? (
                 <Loader2 size={20} className="animate-spin mr-2" />
@@ -153,54 +153,52 @@ export default function TravelCompanionPage() {
             {/* Boarding Pass Header */}
             <motion.div variants={item} className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-blue-500/50 rounded-[2rem] blur opacity-30 group-hover:opacity-50 transition duration-1000" />
-              <div className="relative bg-card rounded-[2rem] overflow-hidden border border-border shadow-2xl flex flex-col md:flex-row">
-                {/* Left Side (Pass) */}
-                <div className="flex-1 p-8 border-r border-dashed border-border/50 relative">
-                  <div className="flex justify-between items-start mb-10">
+              <div className="relative bg-card rounded-[2rem] overflow-hidden border border-border shadow-2xl">
+                {/* Main pass body */}
+                <div className="p-5 sm:p-8">
+                  {/* Passenger / Status row */}
+                  <div className="flex justify-between items-start mb-6">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Passenger</p>
-                      <h4 className="text-2xl font-black">{userProfile?.name || "Member"}</h4>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-0.5">Passenger</p>
+                      <h4 className="text-lg sm:text-2xl font-black">{userProfile?.name || "Member"}</h4>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Status</p>
-                      <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-black uppercase">Verified</span>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-0.5">Status</p>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase">Verified</span>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">From</p>
-                      <h3 className="text-3xl font-black tracking-tighter">HOME</h3>
+
+                  {/* Route row */}
+                  <div className="flex items-center gap-2 sm:gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">From</p>
+                      <h3 className="text-xl sm:text-3xl font-black tracking-tighter truncate">HOME</h3>
                     </div>
-                    <div className="flex flex-col items-center gap-2 px-6">
-                      <div className="w-full h-[1px] bg-border relative">
-                        <Plane size={16} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
+                    <div className="flex flex-col items-center gap-1 px-2 sm:px-6 shrink-0">
+                      <div className="w-16 sm:w-24 h-[1px] bg-border relative">
+                        <Plane size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
                       </div>
-                      <span className="text-[8px] font-bold text-muted-foreground uppercase">Direct Flight</span>
+                      <span className="text-[7px] font-bold text-muted-foreground uppercase whitespace-nowrap">Direct</span>
                     </div>
-                    <div className="flex-1 text-right">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">To</p>
-                      <h3 className="text-3xl font-black tracking-tighter text-primary uppercase">{destination}</h3>
+                    <div className="flex-1 text-right min-w-0">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">To</p>
+                      <h3 className="text-xl sm:text-3xl font-black tracking-tighter text-primary uppercase truncate">{destination}</h3>
                     </div>
                   </div>
                 </div>
-                
-                {/* Right Side (Stub) */}
-                <div className="w-full md:w-64 bg-primary/[0.02] p-8 flex flex-col justify-between border-t md:border-t-0 border-border/50">
+
+                {/* Stub (date + boarding) */}
+                <div className="border-t border-dashed border-border/50 bg-primary/[0.02] px-5 sm:px-8 py-4 flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Date</p>
-                    <p className="text-lg font-black">{new Date().toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' })}</p>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-0.5">Date</p>
+                    <p className="text-sm font-black">{new Date().toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' })}</p>
                   </div>
-                  <div className="mt-6 md:mt-0">
-                    <div className="w-full h-12 bg-muted/30 rounded-lg border border-dashed border-border flex items-center justify-center">
-                       <span className="text-[10px] font-bold text-muted-foreground tracking-[0.5em] uppercase">BOARDING</span>
+                  <div className="flex-1 max-w-[180px]">
+                    <div className="w-full h-10 bg-muted/30 rounded-lg border border-dashed border-border flex items-center justify-center">
+                      <span className="text-[9px] font-bold text-muted-foreground tracking-[0.4em] uppercase">BOARDING</span>
                     </div>
                   </div>
                 </div>
-                
-                {/* Cutout effects */}
-                <div className="hidden md:block absolute top-1/2 -left-3 w-6 h-6 rounded-full bg-background border-r border-border -translate-y-1/2" />
-                <div className="hidden md:block absolute top-1/2 -right-3 w-6 h-6 rounded-full bg-background border-l border-border -translate-y-1/2" />
               </div>
             </motion.div>
 
