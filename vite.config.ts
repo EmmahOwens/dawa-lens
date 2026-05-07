@@ -33,6 +33,9 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('lucide-react') || id.includes('@radix-ui')) {
               return 'ui-kit';
             }
+            if (id.includes('maplibre-gl')) {
+              return 'maplibre';
+            }
             return 'vendor';
           }
         }

@@ -1,5 +1,7 @@
-import React, { useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
+import maplibregl, { Map, Marker, LngLatLike } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plane } from 'lucide-react';
 
 interface TravelMapProps {
@@ -7,275 +9,249 @@ interface TravelMapProps {
   destination: string;
 }
 
-// Simplified but recognisable world continent paths in a 1000×500 viewBox
-const CONTINENTS = [
-  // North America
-  {
-    id: 'na',
-    d: 'M 120 60 L 145 55 L 165 60 L 180 70 L 185 85 L 178 100 L 190 115 L 200 130 L 195 150 L 185 165 L 170 175 L 155 170 L 145 160 L 130 155 L 115 145 L 105 130 L 95 115 L 90 100 L 95 85 L 105 70 Z M 85 80 L 95 75 L 100 85 L 90 90 Z',
-  },
-  // South America
-  {
-    id: 'sa',
-    d: 'M 195 200 L 215 195 L 235 200 L 245 215 L 250 235 L 245 260 L 240 285 L 225 305 L 210 315 L 195 310 L 185 295 L 180 270 L 185 245 L 188 220 Z',
-  },
-  // Europe
-  {
-    id: 'eu',
-    d: 'M 450 55 L 470 50 L 490 55 L 505 65 L 510 80 L 500 90 L 510 100 L 505 115 L 490 118 L 475 112 L 460 115 L 445 108 L 438 95 L 442 80 Z M 430 60 L 445 55 L 450 65 L 435 68 Z',
-  },
+// ── Known geographic coordinates ─────────────────────────────────────────────
+const LOCATION_MAP: Record<string, [number, number]> = {
   // Africa
-  {
-    id: 'af',
-    d: 'M 460 140 L 485 135 L 510 140 L 525 160 L 530 185 L 528 210 L 520 240 L 510 265 L 500 285 L 488 295 L 475 290 L 462 275 L 452 250 L 445 225 L 442 200 L 445 175 L 450 155 Z',
-  },
-  // Asia
-  {
-    id: 'as',
-    d: 'M 520 45 L 560 40 L 610 42 L 660 45 L 710 55 L 745 65 L 760 80 L 750 95 L 730 105 L 710 100 L 690 110 L 670 115 L 650 110 L 630 115 L 610 110 L 590 115 L 575 108 L 555 112 L 540 105 L 525 95 L 515 80 L 518 62 Z M 740 50 L 760 45 L 775 55 L 760 65 L 745 60 Z',
-  },
-  // Australia
-  {
-    id: 'au',
-    d: 'M 720 280 L 750 270 L 785 272 L 810 285 L 820 305 L 815 325 L 800 340 L 775 345 L 750 340 L 730 325 L 718 305 Z',
-  },
-  // Russia / North Asia extension
-  {
-    id: 'ru',
-    d: 'M 520 30 L 570 25 L 630 22 L 680 28 L 720 35 L 740 45 L 710 50 L 660 42 L 610 40 L 560 38 L 520 42 Z',
-  },
-  // Japan / SE Asia islands (simplified)
-  {
-    id: 'sea',
-    d: 'M 750 100 L 765 95 L 775 105 L 765 112 Z M 780 110 L 790 105 L 798 115 L 788 120 Z M 700 135 L 730 130 L 745 140 L 735 155 L 715 158 L 700 148 Z',
-  },
-];
-
-// Named geographic locations with their approximate SVG coordinates (1000×500)
-const LOCATION_MAP: Record<string, { x: number; y: number }> = {
-  // Africa
-  kenya: { x: 530, y: 210 },
-  nigeria: { x: 468, y: 195 },
-  southafrica: { x: 495, y: 280 },
-  egypt: { x: 510, y: 155 },
-  ghana: { x: 455, y: 200 },
-  ethiopia: { x: 535, y: 195 },
-  tanzania: { x: 525, y: 225 },
-  uganda: { x: 522, y: 210 },
+  kenya: [36.82, -1.29], nigeria: [3.38, 6.45], southafrica: [28.04, -26.20],
+  egypt: [31.24, 30.06], ghana: [-0.19, 5.56], ethiopia: [38.74, 9.00],
+  tanzania: [34.89, -6.37], uganda: [32.58, 0.32], cameroon: [11.52, 3.87],
+  senegal: [-14.71, 14.68], morocco: [-7.09, 31.79], algeria: [2.63, 28.03],
   // Europe
-  france: { x: 460, y: 95 },
-  uk: { x: 445, y: 80 },
-  germany: { x: 475, y: 85 },
-  italy: { x: 478, y: 105 },
-  spain: { x: 445, y: 105 },
-  portugal: { x: 435, y: 108 },
-  netherlands: { x: 468, y: 80 },
-  sweden: { x: 478, y: 65 },
-  norway: { x: 470, y: 58 },
-  denmark: { x: 473, y: 70 },
-  poland: { x: 490, y: 82 },
-  ukraine: { x: 505, y: 85 },
-  russia: { x: 560, y: 55 },
-  greece: { x: 492, y: 110 },
+  france: [2.35, 48.86], uk: [-0.13, 51.51], germany: [13.41, 52.52],
+  italy: [12.50, 41.90], spain: [-3.70, 40.42], portugal: [-9.14, 38.72],
+  netherlands: [4.90, 52.37], sweden: [18.07, 59.33], norway: [10.75, 59.91],
+  denmark: [12.57, 55.68], poland: [21.01, 52.23], ukraine: [30.52, 50.45],
+  russia: [37.62, 55.75], greece: [23.73, 37.98], switzerland: [7.45, 46.95],
+  austria: [16.37, 48.21], belgium: [4.35, 50.85],
   // Asia
-  china: { x: 680, y: 95 },
-  india: { x: 620, y: 145 },
-  japan: { x: 757, y: 98 },
-  southkorea: { x: 740, y: 100 },
-  thailand: { x: 690, y: 155 },
-  vietnam: { x: 705, y: 155 },
-  singapore: { x: 710, y: 175 },
-  indonesia: { x: 730, y: 185 },
-  malaysia: { x: 710, y: 170 },
-  pakistan: { x: 600, y: 125 },
-  bangladesh: { x: 645, y: 140 },
-  srilanka: { x: 628, y: 165 },
-  uae: { x: 570, y: 140 },
-  saudiarabia: { x: 553, y: 145 },
-  turkey: { x: 520, y: 108 },
-  iran: { x: 575, y: 125 },
+  china: [116.40, 39.91], india: [77.21, 28.61], japan: [139.69, 35.69],
+  southkorea: [126.98, 37.57], thailand: [100.52, 13.75], vietnam: [105.85, 21.03],
+  singapore: [103.82, 1.35], indonesia: [106.85, -6.21], malaysia: [101.69, 3.14],
+  pakistan: [73.04, 33.72], bangladesh: [90.41, 23.81], srilanka: [80.64, 7.88],
+  uae: [55.30, 25.20], saudiarabia: [46.68, 24.69], turkey: [32.87, 39.93],
+  iran: [51.42, 35.70], iraq: [44.36, 33.34], israel: [35.22, 31.77],
+  jordan: [35.94, 31.96], qatar: [51.53, 25.29],
   // Americas
-  usa: { x: 150, y: 115 },
-  canada: { x: 148, y: 85 },
-  mexico: { x: 155, y: 155 },
-  brazil: { x: 230, y: 255 },
-  argentina: { x: 215, y: 305 },
-  colombia: { x: 200, y: 215 },
-  peru: { x: 195, y: 250 },
-  chile: { x: 205, y: 295 },
+  usa: [-95.71, 37.09], canada: [-75.70, 45.42], mexico: [-99.13, 19.43],
+  brazil: [-47.86, -15.78], argentina: [-58.38, -34.60], colombia: [-74.08, 4.71],
+  peru: [-77.04, -12.05], chile: [-70.67, -33.45], venezuela: [-66.91, 10.48],
+  cuba: [-82.38, 23.11],
   // Oceania
-  australia: { x: 768, y: 308 },
-  newzealand: { x: 825, y: 340 },
+  australia: [149.13, -35.31], newzealand: [174.78, -36.85],
 };
 
-// HOME location (East Africa default)
-const HOME = { x: 522, y: 210 };
+// Default home: Nairobi, Kenya
+const HOME_LNG_LAT: [number, number] = [36.82, -1.29];
 
-function getDestCoords(destination: string): { x: number; y: number } {
+// Free vector tile style – no API key required
+const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+
+/** Interpolate N points along a great-circle arc in LngLat space */
+function buildArcCoordinates(
+  from: [number, number],
+  to: [number, number],
+  steps = 80
+): [number, number][] {
+  const coords: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    // Simple spherical linear interpolation (good enough for a map arc)
+    const lng = from[0] + (to[0] - from[0]) * t;
+    const lat = from[1] + (to[1] - from[1]) * t;
+    // Add a vertical bow: raise mid-point latitude by ~10° to look like a flight arc
+    const arc = Math.sin(Math.PI * t) * 12;
+    coords.push([lng, lat + arc]);
+  }
+  return coords;
+}
+
+function resolveDestination(destination: string): [number, number] | null {
+  if (!destination) return null;
   const key = destination.toLowerCase().replace(/\s+/g, '');
   for (const [k, v] of Object.entries(LOCATION_MAP)) {
     if (key.includes(k) || k.includes(key)) return v;
   }
-  // Deterministic fallback based on string hash, spread across map
-  const hash = destination.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  return {
-    x: 300 + (hash % 500),
-    y: 80 + (hash % 300),
-  };
+  return null;
 }
 
 export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }) => {
-  const destCoords = useMemo(() => getDestCoords(destination || ''), [destination]);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<Map | null>(null);
+  const homeMarkerRef = useRef<Marker | null>(null);
+  const destMarkerRef = useRef<Marker | null>(null);
 
-  // Bezier control point: arc upward for realism
-  const cpX = (HOME.x + destCoords.x) / 2;
-  const cpY = Math.min(HOME.y, destCoords.y) - 80;
-  const flightPath = `M ${HOME.x} ${HOME.y} Q ${cpX} ${cpY} ${destCoords.x} ${destCoords.y}`;
+  const destCoords = useMemo(() => resolveDestination(destination), [destination]);
+
+  // ── Initialise Map ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    const map = new maplibregl.Map({
+      container: mapContainerRef.current,
+      style: MAP_STYLE,
+      center: [20, 10],
+      zoom: 1.5,
+      attributionControl: false,
+      dragRotate: false,
+      touchPitch: false,
+    });
+
+    // Compact attribution
+    map.addControl(
+      new maplibregl.AttributionControl({ compact: true }),
+      'bottom-left'
+    );
+
+    map.on('load', () => {
+      // ── Flight arc source + layer ─────────────────────────────────────────
+      map.addSource('flight-arc', {
+        type: 'geojson',
+        data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
+      });
+
+      map.addLayer({
+        id: 'flight-arc-dashes',
+        type: 'line',
+        source: 'flight-arc',
+        paint: {
+          'line-color': '#007AFF',
+          'line-width': 2,
+          'line-dasharray': [4, 4],
+          'line-opacity': 0.5,
+        },
+      });
+
+      map.addLayer({
+        id: 'flight-arc-solid',
+        type: 'line',
+        source: 'flight-arc',
+        paint: {
+          'line-color': '#007AFF',
+          'line-width': 2.5,
+          'line-opacity': 0.9,
+          // Glow via blur trick
+          'line-blur': 0,
+        },
+      });
+
+      // ── Home pulse marker ───────────────────────────────────────────────────
+      const homeEl = document.createElement('div');
+      homeEl.className = 'travel-map-home-marker';
+      homeEl.innerHTML = `
+        <div style="
+          width:16px; height:16px; border-radius:50%;
+          background:#007AFF; border:3px solid #fff;
+          box-shadow:0 0 0 4px rgba(0,122,255,0.3), 0 2px 8px rgba(0,0,0,0.3);
+          position:relative;
+        ">
+          <span style="
+            position:absolute; inset:-6px; border-radius:50%;
+            border:2px solid rgba(0,122,255,0.4);
+            animation:travel-pulse 2s ease-out infinite;
+          "></span>
+        </div>`;
+
+      homeMarkerRef.current = new maplibregl.Marker({ element: homeEl, anchor: 'center' })
+        .setLngLat(HOME_LNG_LAT)
+        .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML('<strong>📍 Your Location</strong>'))
+        .addTo(map);
+    });
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // ── Update arc + destination marker when destination changes ───────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+
+    // Remove old destination marker
+    if (destMarkerRef.current) {
+      destMarkerRef.current.remove();
+      destMarkerRef.current = null;
+    }
+
+    const arcSource = map.getSource('flight-arc') as maplibregl.GeoJSONSource | undefined;
+
+    if (!destCoords || !isAnimating) {
+      // Clear arc
+      arcSource?.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } });
+      // Fly back to overview
+      if (!destCoords) {
+        map.flyTo({ center: [20, 10], zoom: 1.5, duration: 1500 });
+      }
+      return;
+    }
+
+    // Build arc coordinates
+    const arcCoords = buildArcCoordinates(HOME_LNG_LAT, destCoords);
+    arcSource?.setData({
+      type: 'Feature',
+      properties: {},
+      geometry: { type: 'LineString', coordinates: arcCoords },
+    });
+
+    // Destination marker
+    const destEl = document.createElement('div');
+    destEl.innerHTML = `
+      <div style="
+        width:20px; height:20px; border-radius:50%;
+        background:#FF3B30; border:3px solid #fff;
+        box-shadow:0 0 0 5px rgba(255,59,48,0.25), 0 2px 10px rgba(0,0,0,0.35);
+        animation:travel-dest-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+      "></div>`;
+    destMarkerRef.current = new maplibregl.Marker({ element: destEl, anchor: 'center' })
+      .setLngLat(destCoords)
+      .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML(`<strong>✈️ ${destination}</strong>`))
+      .addTo(map);
+
+    // Fit map to show both endpoints with padding
+    const bounds = new maplibregl.LngLatBounds();
+    bounds.extend(HOME_LNG_LAT);
+    bounds.extend(destCoords);
+    // Also extend to arc peak so it's visible
+    arcCoords.forEach(c => bounds.extend(c as LngLatLike));
+    map.fitBounds(bounds, { padding: { top: 60, bottom: 60, left: 60, right: 60 }, duration: 1800, maxZoom: 5 });
+  }, [destCoords, isAnimating, destination]);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-3xl border border-primary/15 shadow-2xl bg-[#050d1a]"
-         style={{ aspectRatio: '16/7', minHeight: '200px' }}>
+    <div className="relative w-full overflow-hidden rounded-3xl border border-primary/15 shadow-2xl"
+         style={{ aspectRatio: '16/7', minHeight: '220px' }}>
 
-      {/* Starfield dots */}
-      <div className="absolute inset-0 opacity-40"
-           style={{
-             backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)',
-             backgroundSize: '28px 28px',
-           }} />
+      {/* Inject keyframe CSS for marker animations */}
+      <style>{`
+        @keyframes travel-pulse {
+          0%   { transform: scale(1); opacity: 0.8; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        @keyframes travel-dest-pop {
+          from { transform: scale(0); opacity: 0; }
+          to   { transform: scale(1); opacity: 1; }
+        }
+        .maplibregl-map { border-radius: inherit; }
+        .maplibregl-ctrl-attrib { font-size: 9px !important; }
+        .maplibregl-popup-content {
+          border-radius: 12px !important;
+          font-size: 12px !important;
+          font-weight: 700 !important;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.15) !important;
+          padding: 10px 14px !important;
+        }
+      `}</style>
 
-      {/* Radial glow behind destination */}
-      {isAnimating && (
-        <div
-          className="absolute pointer-events-none transition-opacity duration-700"
-          style={{
-            left: `${(destCoords.x / 1000) * 100}%`,
-            top: `${(destCoords.y / 500) * 100}%`,
-            transform: 'translate(-50%, -50%)',
-            width: '200px',
-            height: '200px',
-            background: 'radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 70%)',
-            borderRadius: '50%',
-          }}
-        />
-      )}
-
-      <svg
-        viewBox="0 0 1000 500"
-        className="w-full h-full"
-        preserveAspectRatio="xMidYMid meet"
-      >
-        {/* Graticule (latitude/longitude lines) */}
-        {[100, 200, 300, 400].map(y => (
-          <line key={`lat-${y}`} x1="0" y1={y} x2="1000" y2={y}
-                stroke="rgba(255,255,255,0.04)" strokeWidth="0.8" />
-        ))}
-        {[200, 400, 600, 800].map(x => (
-          <line key={`lon-${x}`} x1={x} y1="0" x2={x} y2="500"
-                stroke="rgba(255,255,255,0.04)" strokeWidth="0.8" />
-        ))}
-
-        {/* Continents */}
-        {CONTINENTS.map(c => (
-          <path
-            key={c.id}
-            d={c.d}
-            fill="hsl(var(--primary) / 0.08)"
-            stroke="hsl(var(--primary) / 0.25)"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-          />
-        ))}
-
-        {/* Home dot (always visible) */}
-        <circle cx={HOME.x} cy={HOME.y} r="5" fill="hsl(var(--primary))" opacity="0.9" />
-        <circle cx={HOME.x} cy={HOME.y} r="10" fill="none" stroke="hsl(var(--primary))" strokeWidth="1.5" opacity="0.4">
-          <animate attributeName="r" values="8;16;8" dur="3s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.5;0;0.5" dur="3s" repeatCount="indefinite" />
-        </circle>
-
-        {/* Flight arc + marker (only when animating) */}
-        <AnimatePresence>
-          {isAnimating && (
-            <>
-              {/* Dashed trail */}
-              <motion.path
-                key="dash"
-                d={flightPath}
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth="1.5"
-                strokeDasharray="6 5"
-                opacity={0.35}
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 2.2, ease: 'easeInOut' }}
-              />
-
-              {/* Solid bright arc */}
-              <motion.path
-                key="arc"
-                d={flightPath}
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth="2"
-                initial={{ pathLength: 0 }}
-                animate={{ pathLength: 1 }}
-                transition={{ duration: 2.2, ease: 'easeInOut' }}
-                style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.8))' }}
-              />
-
-              {/* Moving plane icon along arc */}
-              <motion.g
-                key="plane"
-                initial={{ offsetDistance: '0%', opacity: 0, scale: 0.8 }}
-                animate={{ offsetDistance: '100%', opacity: 1, scale: 1 }}
-                transition={{ duration: 2.2, ease: 'easeInOut' }}
-                style={{
-                  offsetPath: `path("${flightPath}")`,
-                  offsetRotate: 'auto',
-                }}
-              >
-                {/* Plane shape */}
-                <polygon
-                  points="-6,0 6,0 0,-10"
-                  fill="hsl(var(--primary))"
-                  style={{ filter: 'drop-shadow(0 0 4px hsl(var(--primary)))' }}
-                />
-              </motion.g>
-
-              {/* Destination pulse rings */}
-              <motion.circle
-                key="dest-outer"
-                cx={destCoords.x}
-                cy={destCoords.y}
-                r="18"
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth="1"
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
-                transition={{ delay: 2, duration: 1.5, repeat: Infinity }}
-              />
-              <motion.circle
-                key="dest-dot"
-                cx={destCoords.x}
-                cy={destCoords.y}
-                r="7"
-                fill="hsl(var(--primary))"
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 2, duration: 0.4 }}
-                style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary)))' }}
-              />
-            </>
-          )}
-        </AnimatePresence>
-      </svg>
+      {/* MapLibre container */}
+      <div ref={mapContainerRef} className="absolute inset-0" />
 
       {/* Origin label */}
-      <div className="absolute top-3 left-4 flex flex-col">
-        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Origin</span>
-        <span className="text-xs font-black text-white/80 mt-0.5">📍 Current Location</span>
+      <div className="absolute top-3 left-3 z-10 flex flex-col pointer-events-none">
+        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-foreground/50 bg-background/70 backdrop-blur-sm px-2 py-0.5 rounded-full">
+          📍 Current Location
+        </span>
       </div>
 
       {/* Destination label */}
@@ -286,18 +262,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 6 }}
-            className="absolute bottom-3 right-4 flex flex-col items-end"
+            className="absolute bottom-3 right-3 z-10 flex flex-col items-end pointer-events-none"
           >
-            <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Destination</span>
-            <span className="text-sm font-black text-primary mt-0.5"
-                  style={{ textShadow: '0 0 12px hsl(var(--primary) / 0.6)' }}>
+            <span className="text-xs font-black text-white bg-primary px-3 py-1 rounded-full shadow-lg shadow-primary/30">
               ✈️ {destination}
             </span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Distance badge (shows when animating) */}
+      {/* "En Route" badge */}
       <AnimatePresence>
         {isAnimating && (
           <motion.div
@@ -305,8 +279,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ delay: 1.5 }}
-            className="absolute top-3 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/10 backdrop-blur-sm"
+            transition={{ delay: 0.8 }}
+            className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/30 bg-background/80 backdrop-blur-sm shadow-sm"
           >
             <Plane size={10} className="text-primary" />
             <span className="text-[10px] font-black uppercase tracking-wider text-primary">En Route</span>
