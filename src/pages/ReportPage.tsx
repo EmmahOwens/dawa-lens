@@ -48,8 +48,8 @@ export default function ReportPage() {
       let mood: number | null = null;
 
       if (dayWellnessLogs.length > 0) {
-        const sumEnergy = dayWellnessLogs.reduce((acc, l) => acc + (l.data?.energy || 0), 0);
-        const sumMood = dayWellnessLogs.reduce((acc, l) => acc + (l.data?.mood || 0), 0);
+        const sumEnergy = dayWellnessLogs.reduce((acc, l) => acc + (Number(l.data?.energy) || 0), 0);
+        const sumMood = dayWellnessLogs.reduce((acc, l) => acc + (Number(l.data?.mood) || 0), 0);
         energy = (sumEnergy / dayWellnessLogs.length) * 20;
         mood = (sumMood / dayWellnessLogs.length) * 20;
       }
@@ -121,46 +121,46 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="px-4 pt-12 pb-24 print:p-0 print:m-0 print:bg-white print:text-black">
+    <div className="pt-6 pb-28 w-full min-w-0 print:p-0 print:m-0 print:bg-white print:text-black">
       {/* -------------------- WEB VIEW -------------------- */}
       <div className="print:hidden">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               Care Report
             </h1>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1">
-              Official health summary for {patientName}
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1 truncate">
+              Health summary for {patientName}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 shrink-0">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={() => setShowPreview(true)}
-              className="rounded-xl h-11 border-border/50 shadow-sm gap-2"
+              className="rounded-xl h-10 border-border/50 shadow-sm gap-2"
             >
-              <Eye size={16} />
-              Preview
+              <Eye size={15} />
+              <span className="hidden xs:inline">Preview</span>
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
               onClick={handleShare}
-              className="rounded-xl w-11 h-11 border-border/50 shadow-sm"
+              className="rounded-xl w-10 h-10 border-border/50 shadow-sm"
               title="Share Report"
             >
-              <Share2 size={18} />
+              <Share2 size={16} />
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
               onClick={handlePrint}
-              className="rounded-xl w-11 h-11 border-border/50 shadow-sm hidden sm:flex"
+              className="rounded-xl w-10 h-10 border-border/50 shadow-sm hidden sm:flex"
               title="Print Medical Report"
             >
-              <Printer size={18} />
+              <Printer size={16} />
             </Button>
           </div>
         </motion.div>
@@ -352,7 +352,7 @@ export default function ReportPage() {
                </Button>
             </div>
           </DialogHeader>
-          <ScrollArea className="flex-1 bg-white p-6 sm:p-12">
+          <ScrollArea className="flex-1 bg-white">
             <MedicalReportContent 
               patientName={patientName}
               patientGender={patientGender}
