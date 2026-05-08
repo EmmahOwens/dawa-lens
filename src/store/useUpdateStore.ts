@@ -1,4 +1,4 @@
-import create from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface UpdateState {
@@ -15,9 +15,9 @@ interface UpdateState {
   isUpdateAvailable: () => boolean;
 }
 
-export const useUpdateStore = create<UpdateState>(
+export const useUpdateStore = create<UpdateState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       autoUpdate: false,
       wifiOnly: false,
       ignoredUpdates: [],
@@ -31,8 +31,9 @@ export const useUpdateStore = create<UpdateState>(
       setCurrentVersion: (version) => set({ currentVersion: version }),
       setLatestVersion: (version) => set({ latestVersion: version }),
       isUpdateAvailable: () => {
-        const [currentMajor, currentMinor, currentPatch] = this.currentVersion.split('.').map(Number);
-        const [latestMajor, latestMinor, latestPatch] = this.latestVersion.split('.').map(Number);
+        const { currentVersion, latestVersion } = get();
+        const [currentMajor, currentMinor, currentPatch] = currentVersion.split('.').map(Number);
+        const [latestMajor, latestMinor, latestPatch] = latestVersion.split('.').map(Number);
         return (
           latestMajor > currentMajor ||
           (latestMajor === currentMajor && latestMinor > currentMinor) ||
