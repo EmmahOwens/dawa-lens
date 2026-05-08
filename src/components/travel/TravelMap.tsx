@@ -44,7 +44,8 @@ const LOCATION_MAP: Record<string, [number, number]> = {
 const HOME_LNG_LAT: [number, number] = [36.82, -1.29];
 
 // Free vector tile style – no API key required
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+const PRIMARY_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const FALLBACK_STYLE = 'https://demotiles.maplibre.org/style.json';
 
 /** Interpolate N points along a great-circle arc in LngLat space */
 function buildArcCoordinates(
@@ -88,12 +89,27 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
 
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: MAP_STYLE,
+      style: PRIMARY_STYLE,
       center: [20, 10],
       zoom: 1.5,
       attributionControl: false,
       dragRotate: false,
       touchPitch: false,
+      canvasContextAttributes: {
+        failIfMajorPerformanceCaveat: false,
+      },
+    });
+
+    // Error handling
+    map.on('error', (e) => {
+      console.error('MapLibre error:', e);
+      // If primary style fails, try fallback
+      if (e.error?.status === 403 || (typeof e.error === 'string' && e.error.includes('403'))) {
+        console.warn('Primary map style forbidden, switching to fallback...');
+        if (map.getStyle()?.name !== 'MapLibre Demo') {
+          map.setStyle(FALLBACK_STYLE);
+        }
+      }
     });
 
     // Compact attribution
@@ -159,7 +175,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
 
     mapRef.current = map;
 
+    // Handle container resizing
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize();
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
+    // Ensure initial resize after a small delay to handle layout shifts
+    const timer = setTimeout(() => map.resize(), 100);
+
     return () => {
+      clearTimeout(timer);
+      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
