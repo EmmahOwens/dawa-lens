@@ -49,6 +49,10 @@ export type Reminder = {
   createdAt: string;
   color?: string;
   icon?: string;
+  /** null = account owner; string = family member / client patient id */
+  patientId?: string | null;
+  /** Display name of the patient, stored at creation time for easy labelling */
+  patientName?: string | null;
 };
 
 export type DoseLog = {

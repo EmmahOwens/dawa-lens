@@ -299,7 +299,7 @@ export default function FamilyHubPage() {
               <HistoryIcon size={14} /> Health History
             </Button>
             <Button 
-              onClick={() => navigate("/reminders/new", { state: { patientId: selectedPatientId } })}
+              onClick={() => navigate("/reminders/new", { state: { patientId: selectedPatientId, patientName: selectedPatientId ? patients.find(p => p.id === selectedPatientId)?.name : null } })}
               className="col-span-2 rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 shadow-lg shadow-primary/10"
             >
               <Plus size={16} /> Add Medication Schedule

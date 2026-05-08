@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, Plus, Trash2, ToggleLeft, ToggleRight, Clock,
-  Pill, AlarmCheck, AlarmClockOff, Pencil, Syringe, Droplets, Tablets
+  Pill, AlarmCheck, AlarmClockOff, Pencil, Syringe, Droplets, Tablets, UserRound
 } from "lucide-react";
 import { useApp, Reminder } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
@@ -59,22 +59,39 @@ const iconMap: Record<string, any> = {
 
 export default function RemindersPage() {
   const navigate = useNavigate();
-  const { reminders, updateReminder, deleteReminder, doseLogs, isInitializing } = useApp();
+  const { reminders, updateReminder, deleteReminder, doseLogs, isInitializing, selectedPatientId, patients, userProfile } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
+  // Resolve the active profile display name
+  const activeProfile = useMemo(() => {
+    if (selectedPatientId) {
+      const p = patients.find(p => p.id === selectedPatientId);
+      return { name: p?.name || "Family Member", isSelf: false };
+    }
+    return { name: userProfile?.name || "You", isSelf: true };
+  }, [selectedPatientId, patients, userProfile]);
+
+  // Filter reminders by the active patient context
+  const filteredReminders = useMemo(() => {
+    return reminders.filter(r => {
+      const pId = (r as any).patientId;
+      return selectedPatientId === null ? !pId : pId === selectedPatientId;
+    });
+  }, [reminders, selectedPatientId]);
+
   // Sort: enabled first, then by time
   const sorted = useMemo(() => {
-    return [...reminders].sort((a, b) => {
+    return [...filteredReminders].sort((a, b) => {
       if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
       return a.time.localeCompare(b.time);
     });
-  }, [reminders]);
+  }, [filteredReminders]);
 
-  // Today stats
-  const enabledCount = reminders.filter((r) => r.enabled).length;
+  // Today stats for the active profile
+  const enabledCount = filteredReminders.filter((r) => r.enabled).length;
   const takenToday = doseLogs.filter(
     (l) =>
       l.action === "taken" &&
@@ -111,7 +128,7 @@ export default function RemindersPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6"
+        className="flex items-center justify-between mb-4"
       >
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
@@ -124,12 +141,28 @@ export default function RemindersPage() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => navigate("/reminders/new")}
+          onClick={() => navigate("/reminders/new", { state: { patientId: selectedPatientId, patientName: !activeProfile.isSelf ? activeProfile.name : null } })}
           className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/25"
         >
           <Plus size={16} />
           Add
         </motion.button>
+      </motion.div>
+
+      {/* Active Profile Chip */}
+      <motion.div
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.03 }}
+        className="flex items-center gap-2 mb-5 px-4 py-2.5 rounded-2xl bg-secondary/60 border border-border/40 w-fit"
+      >
+        <UserRound size={13} className="text-primary flex-shrink-0" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          Viewing:
+        </span>
+        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
+          {activeProfile.isSelf ? `${activeProfile.name} (You)` : activeProfile.name}
+        </span>
       </motion.div>
 
       {/* Stats Row */}
@@ -140,7 +173,7 @@ export default function RemindersPage() {
         className="grid grid-cols-3 gap-3 mb-6"
       >
         <div className="p-3 rounded-2xl bg-primary/8 border border-primary/15 text-center">
-          <p className="text-2xl font-bold text-primary">{reminders.length}</p>
+          <p className="text-2xl font-bold text-primary">{filteredReminders.length}</p>
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Total</p>
         </div>
         <div className="p-3 rounded-2xl bg-success/8 border border-success/15 text-center">
@@ -221,9 +254,17 @@ export default function RemindersPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-bold text-foreground leading-tight truncate">
-                      {reminder.medicineName}
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-[15px] font-bold text-foreground leading-tight truncate">
+                        {reminder.medicineName}
+                      </p>
+                      {/* For: Name tag — only shown on family member / client reminders */}
+                      {reminder.patientName && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest bg-primary/10 text-primary px-2 py-0.5 rounded-full flex-shrink-0">
+                          <UserRound size={9} /> For: {reminder.patientName}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
                         <Clock size={11} /> {reminder.time.split(",").join(", ")}

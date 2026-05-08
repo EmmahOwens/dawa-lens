@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check } from "lucide-react";
+import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,9 @@ interface LocationState {
   notes?: string;
   color?: string;
   icon?: string;
+  // Family Hub context — whose schedule we're editing
+  patientId?: string | null;
+  patientName?: string | null;
 }
 
 const COLORS = [
@@ -61,6 +64,18 @@ export default function AddReminderPage() {
   const { t } = useTranslation();
 
   const isEditing = !!state?.editId;
+
+  // Patient context passed from Family Hub
+  const contextPatientId = state?.patientId ?? null;
+  const contextPatientName = state?.patientName ?? null;
+
+  // Filter medicine inventory to the active patient scope
+  const scopedMedicines = useMemo(() => {
+    return medicines.filter(m => {
+      const pId = (m as any).patientId;
+      return contextPatientId === null ? !pId : pId === contextPatientId;
+    });
+  }, [medicines, contextPatientId]);
 
   const [medicineId, setMedicineId] = useState<string | undefined>(state?.medicineId);
   const [medicineName, setMedicineName] = useState(state?.medicineName || "");
@@ -177,10 +192,15 @@ export default function AddReminderPage() {
           notes: notes.trim() || undefined,
           color,
           icon,
+          // Preserve patient context on edit
+          patientId: contextPatientId,
+          patientName: contextPatientName,
         });
         toast({
           title: "Reminder updated",
-          description: `${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`,
+          description: contextPatientName
+            ? `For ${contextPatientName}: ${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`
+            : `${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`,
         });
       } else {
         await addReminder({
@@ -194,10 +214,15 @@ export default function AddReminderPage() {
           enabled: true,
           color,
           icon,
+          // Attach patient ownership for family member reminders
+          patientId: contextPatientId,
+          patientName: contextPatientName,
         });
         toast({
           title: t("reminders.created"),
-          description: `${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`,
+          description: contextPatientName
+            ? `For ${contextPatientName}: ${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`
+            : `${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`,
         });
       }
       navigate("/reminders");
@@ -226,6 +251,26 @@ export default function AddReminderPage() {
         </Badge>
       </div>
 
+      {/* Patient Context Banner — shown when scheduling for a family member / client */}
+      {contextPatientName && (
+        <motion.div
+          initial={{ opacity: 0, y: -8, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          className="mb-6 flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-primary/10 border border-primary/25 shadow-sm"
+        >
+          <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
+            <UserRound size={16} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 leading-none mb-0.5">Scheduling for</p>
+            <p className="text-sm font-black text-primary tracking-tight truncate">{contextPatientName}</p>
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-widest text-primary/50 bg-primary/10 px-2 py-1 rounded-lg flex-shrink-0">
+            Family Hub
+          </span>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -236,7 +281,11 @@ export default function AddReminderPage() {
             ? t("reminders.edit_title", "Edit Reminder")
             : t("reminders.add_title")}
         </h1>
-        <p className="text-muted-foreground mt-1">Configure your medication schedule with precision.</p>
+        <p className="text-muted-foreground mt-1">
+          {contextPatientName
+            ? `Setting up a medication schedule for ${contextPatientName}.`
+            : "Configure your medication schedule with precision."}
+        </p>
       </motion.div>
 
       {/* Live Preview */}
@@ -294,7 +343,7 @@ export default function AddReminderPage() {
                   if (val === "none") {
                     setMedicineId(undefined);
                   } else {
-                    const med = medicines.find(m => m.id === val);
+                    const med = scopedMedicines.find(m => m.id === val);
                     if (med) {
                       setMedicineId(med.id);
                       setMedicineName(med.name);
@@ -313,11 +362,11 @@ export default function AddReminderPage() {
                 }}
               >
                 <SelectTrigger className="h-12 rounded-xl border-border/50 bg-muted/20">
-                  <SelectValue placeholder="Select from your medicines" />
+                  <SelectValue placeholder={scopedMedicines.length > 0 ? "Select from inventory" : "No medicines yet — add manually"} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Manual Entry</SelectItem>
-                  {medicines.map(m => (
+                  {scopedMedicines.map(m => (
                     <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                   ))}
                 </SelectContent>
