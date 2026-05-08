@@ -3,6 +3,37 @@ import { Capacitor } from "@capacitor/core";
 import { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
 import { addDays, isAfter, isBefore, startOfDay, endOfDay, setHours, setMinutes, setSeconds, setMilliseconds, getDay, addMinutes, subHours, parseISO } from "date-fns";
 
+/**
+ * Computes how many minutes off today's first taken dose was from its scheduled time.
+ * Returns 0 if no log exists today, deviation < 5 min (noise), or > 240 min (cap).
+ * Only `taken` actions count — snooze/skip do not shift the schedule.
+ */
+export function computeShiftOffset(reminder: Reminder, doseLogs: DoseLog[]): number {
+  const todayStart = startOfDay(new Date());
+  const todayEnd = endOfDay(new Date());
+
+  // Most recent taken log for this reminder today
+  const todayTakenLog = [...doseLogs]
+    .filter(l =>
+      l.reminderId === reminder.id &&
+      l.action === "taken" &&
+      isAfter(new Date(l.actionTime), todayStart) &&
+      isBefore(new Date(l.actionTime), todayEnd)
+    )
+    .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+
+  if (!todayTakenLog) return 0;
+
+  const offsetMinutes = Math.round(
+    (new Date(todayTakenLog.actionTime).getTime() - new Date(todayTakenLog.scheduledTime).getTime()) /
+    (1000 * 60)
+  );
+
+  // Noise filter < 5 min; hard cap > 4 hours
+  if (Math.abs(offsetMinutes) < 5 || Math.abs(offsetMinutes) > 240) return 0;
+  return offsetMinutes;
+}
+
 // ... (existing exports)
 
 /**
@@ -52,10 +83,13 @@ export const checkMissedDoses = async (
           continue;
         }
 
-        // Rule 3: Check if a log already exists for this reminder at this specific scheduled time
+        // Rule 3: Check if a log already exists for this reminder at this specific scheduled time.
+        // Also check the shifted time so we don't double-flag a dose taken at the adjusted slot.
+        const shiftedScheduledDate = addMinutes(scheduledDate, computeShiftOffset(r, doseLogs));
         const logExists = doseLogs.some(log =>
           log.reminderId === r.id &&
-          log.scheduledTime === scheduledDate.toISOString()
+          (log.scheduledTime === scheduledDate.toISOString() ||
+           log.scheduledTime === shiftedScheduledDate.toISOString())
         );
 
         if (!logExists) {
@@ -98,12 +132,43 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
   const times = reminder.time.split(",").map(t => t.trim());
   const occurrences: Date[] = [];
   const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
 
-  // Find the most recent 'taken' log for this reminder to see if we need to shift
-  // We only care about logs from the last 24 hours to handle shifting within a cycle
-  const lastLog = [...doseLogs]
-    .filter(l => l.reminderId === reminder.id && l.action === "taken")
-    .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+  // Compute today's adaptive shift offset (0 if within noise tolerance or outside cap)
+  const offsetMinutes = computeShiftOffset(reminder, doseLogs);
+
+  // Determine which base time slot was most recently taken today (to know what to shift)
+  let takenSlotIndex = -1;
+  if (offsetMinutes !== 0) {
+    const todayTakenLog = [...doseLogs]
+      .filter(l =>
+        l.reminderId === reminder.id &&
+        l.action === "taken" &&
+        isAfter(new Date(l.actionTime), todayStart) &&
+        isBefore(new Date(l.actionTime), todayEnd)
+      )
+      .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+
+    if (todayTakenLog) {
+      const scheduledDate = new Date(todayTakenLog.scheduledTime);
+      const hh = scheduledDate.getHours().toString().padStart(2, "0");
+      const mm = scheduledDate.getMinutes().toString().padStart(2, "0");
+      const scheduledTimeStr = `${hh}:${mm}`;
+      takenSlotIndex = times.indexOf(scheduledTimeStr);
+
+      // Fallback: match to nearest base slot by minute proximity
+      if (takenSlotIndex === -1) {
+        const scheduledMins = scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
+        let minDiff = Infinity;
+        times.forEach((t, i) => {
+          const [h, m] = t.split(":").map(Number);
+          const diff = Math.abs(h * 60 + m - scheduledMins);
+          if (diff < minDiff) { minDiff = diff; takenSlotIndex = i; }
+        });
+      }
+    }
+  }
 
   times.forEach((timeStr, index) => {
     const [hours, minutes] = timeStr.split(":").map(Number);
@@ -113,54 +178,16 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
     checkDate = setSeconds(checkDate, 0);
     checkDate = setMilliseconds(checkDate, 0);
 
-    // Check up to 30 days in the future
     for (let i = 0; i < 30; i++) {
       let candidate = addDays(checkDate, i);
 
-      // --- Dynamic Shifting Logic ---
-      if (lastLog && reminder.repeatSchedule === "custom" && times.length > 1) {
-        const lastActionTime = new Date(lastLog.actionTime);
-        const lastScheduledTime = new Date(lastLog.scheduledTime);
-        
-        // If the last log was for a time in the CURRENT day's cycle and it's fairly recent (last 18 hours)
-        if (isAfter(lastActionTime, subHours(now, 18))) {
-          // Find which 'time slot' the last log was for
-          const lastSchedTimeStr = `${lastScheduledTime.getHours().toString().padStart(2, "0")}:${lastScheduledTime.getMinutes().toString().padStart(2, "0")}`;
-          const lastSlotIndex = times.indexOf(lastSchedTimeStr);
-
-          if (lastSlotIndex !== -1) {
-            // Calculate how much to shift based on the interval between the last slot and this slot
-            // Interval in minutes = (thisSlotTime - lastSlotTime)
-            const getMinutes = (s: string) => {
-              const [h, m] = s.split(":").map(Number);
-              return h * 60 + m;
-            };
-            
-            let intervalMins = getMinutes(times[index]) - getMinutes(times[lastSlotIndex]);
-            if (intervalMins <= 0) intervalMins += 24 * 60; // Wrap around day
-
-            // If this candidate is the 'next' slot in the sequence after the one taken
-            // Or a subsequent one in the same day
-            const dayOfLastLog = startOfDay(lastActionTime);
-            const dayOfCandidate = startOfDay(candidate);
-            
-            if (dayOfCandidate.getTime() === dayOfLastLog.getTime() || 
-               (dayOfCandidate.getTime() > dayOfLastLog.getTime() && lastSlotIndex > index)) {
-               
-               // Shift the candidate: newTime = lastActionTime + interval
-               const shiftedCandidate = addMinutes(lastActionTime, intervalMins);
-               
-               // Only apply shift if it's for today's remaining doses or the immediate next one
-               // This prevents a late dose today from shifting all doses forever
-               if (isBefore(shiftedCandidate, addDays(lastActionTime, 1))) {
-                 candidate = shiftedCandidate;
-               }
-            }
-          }
-        }
+      // Apply today's adaptive shift ONLY to slots that come after the taken slot (today only)
+      const isToday = startOfDay(candidate).getTime() === todayStart.getTime();
+      if (isToday && offsetMinutes !== 0 && takenSlotIndex !== -1 && index > takenSlotIndex) {
+        candidate = addMinutes(candidate, offsetMinutes);
       }
 
-      // 1. Check schedule-specific logic for 'once'
+      // 1. 'once' schedule
       if (reminder.repeatSchedule === "once") {
         if (!isBefore(candidate, fromDate)) {
           occurrences.push(candidate);
@@ -169,22 +196,23 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
         continue;
       }
 
-      // 2. Skip if candidate is in the past
+      // 2. Skip past candidates
       if (isBefore(candidate, fromDate)) continue;
 
-      // 3. Check if already taken for this specific scheduled time
-      // Note: We check against the ORIGINAL scheduled time if it's shifted, 
-      // but the log already has the scheduledTime stored.
-      const wasTakenOnCandidateTime = doseLogs.some(log =>
+      // 3. Check if already taken for this scheduled time
+      const wasTaken = doseLogs.some(log =>
         log.reminderId === reminder.id &&
         log.scheduledTime === candidate.toISOString()
       );
-      if (wasTakenOnCandidateTime) continue;
+      if (wasTaken) continue;
 
-      // 4. Other schedules
+      // 4. Schedule-type filtering
+      // For shifted candidates, check day-of-week against the un-shifted date
+      const refDate = isToday && offsetMinutes !== 0 ? addMinutes(candidate, -offsetMinutes) : candidate;
+
       if (reminder.repeatSchedule === "daily" || reminder.repeatSchedule === "custom" || !reminder.repeatSchedule) {
         if (reminder.repeatSchedule === "custom" && reminder.repeatDays && reminder.repeatDays.length > 0) {
-          if (reminder.repeatDays.includes(getDay(candidate))) {
+          if (reminder.repeatDays.includes(getDay(refDate))) {
             occurrences.push(candidate);
             break;
           }
@@ -196,12 +224,11 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
 
       if (reminder.repeatSchedule === "weekly") {
         if (!reminder.repeatDays || reminder.repeatDays.length === 0) {
-          const createdDay = getDay(new Date(reminder.createdAt));
-          if (getDay(candidate) === createdDay) {
+          if (getDay(refDate) === getDay(new Date(reminder.createdAt))) {
             occurrences.push(candidate);
             break;
           }
-        } else if (reminder.repeatDays.includes(getDay(candidate))) {
+        } else if (reminder.repeatDays.includes(getDay(refDate))) {
           occurrences.push(candidate);
           break;
         }

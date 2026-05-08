@@ -6,6 +6,7 @@ import { onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, b
 import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
 import { scheduleReminders } from "../services/reminderService";
+import { computeShiftOffset } from "../services/reminderService";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
@@ -681,7 +682,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 2. If it's a "once" reminder, auto-delete it after logging (taken, skipped, or missed)
+    // 2. Reschedule notifications immediately so remaining slots fire at the shifted time
+    if (log.action === "taken" && reminder) {
+      const freshLogs = storageMode === "local"
+        ? await localPersistence.doseLogs.getAll()
+        : [...doseLogs, newLog];
+      scheduleReminders(reminders, freshLogs, medicines);
+
+      // 3. Smart Suggest: after 3 consecutive same-direction deviations, suggest updating the time
+      const allTakenLogs = freshLogs
+        .filter(l => l.reminderId === reminder.id && l.action === "taken")
+        .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())
+        .slice(0, 3);
+
+      if (allTakenLogs.length >= 3) {
+        const offsets = allTakenLogs.map(l => Math.round(
+          (new Date(l.actionTime).getTime() - new Date(l.scheduledTime).getTime()) / (1000 * 60)
+        ));
+        const allLate = offsets.every(o => o > 5);
+        const allEarly = offsets.every(o => o < -5);
+
+        if (allLate || allEarly) {
+          const avgOffset = Math.round(offsets.reduce((a, b) => a + b, 0) / offsets.length);
+          const suggestedTimes = reminder.time.split(",").map(t => {
+            const [h, m] = t.trim().split(":").map(Number);
+            const total = ((h * 60 + m + avgOffset) % (24 * 60) + 24 * 60) % (24 * 60);
+            return `${Math.floor(total / 60).toString().padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
+          });
+          const direction = allLate ? "late" : "early";
+          toast({
+            title: "💡 Smart Schedule Suggestion",
+            description: `You've taken ${reminder.medicineName} ~${Math.abs(avgOffset)}m ${direction} 3 times in a row. Consider updating the reminder to ${suggestedTimes.join(", ")} in the Reminders tab.`,
+          });
+        }
+      }
+    }
+
+    // 4. If it's a "once" reminder, auto-delete it after logging
     if (reminder && reminder.repeatSchedule === "once" && (log.action === "taken" || log.action === "skipped" || log.action === "missed")) {
       console.log(`Auto-deleting one-time reminder: ${reminder.medicineName}`);
       await deleteReminder(reminder.id);

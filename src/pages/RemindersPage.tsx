@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, Plus, Trash2, ToggleLeft, ToggleRight, Clock,
-  Pill, AlarmCheck, AlarmClockOff, Pencil, Syringe, Droplets, Tablets, UserRound
+  Pill, AlarmCheck, AlarmClockOff, Pencil, Syringe, Droplets, Tablets, UserRound, RefreshCw
 } from "lucide-react";
 import { useApp, Reminder } from "@/contexts/AppContext";
+import { computeShiftOffset } from "@/services/reminderService";
+import { addMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -39,6 +41,13 @@ function repeatLabel(reminder: Reminder): string {
       return label;
     default: return repeatSchedule;
   }
+}
+
+/** Applies today's shift offset to a base HH:MM string and returns the display string. */
+function shiftTimeStr(baseTime: string, offsetMinutes: number): string {
+  const [h, m] = baseTime.split(":").map(Number);
+  const total = ((h * 60 + m + offsetMinutes) % (24 * 60) + 24 * 60) % (24 * 60);
+  return `${Math.floor(total / 60).toString().padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
 }
 
 const colorMap: Record<string, { value: string; border: string; text: string }> = {
@@ -265,17 +274,68 @@ export default function RemindersPage() {
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
-                        <Clock size={11} /> {reminder.time.split(",").join(", ")}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground/40">·</span>
-                      <span className="text-[11px] font-semibold text-muted-foreground">{reminder.dose}</span>
-                      <span className="text-[11px] text-muted-foreground/40">·</span>
-                      <span className="text-[11px] font-semibold text-muted-foreground capitalize">
-                        {repeatLabel(reminder)}
-                      </span>
-                    </div>
+                    {(() => {
+                      const offsetMinutes = computeShiftOffset(reminder, doseLogs);
+                      const baseTimes = reminder.time.split(",").map(t => t.trim());
+                      // Determine which slots to shift: those after the taken slot index
+                      let takenSlotIndex = -1;
+                      if (offsetMinutes !== 0) {
+                        const todayLog = [...doseLogs]
+                          .filter(l =>
+                            l.reminderId === reminder.id &&
+                            l.action === "taken" &&
+                            new Date(l.actionTime).toDateString() === new Date().toDateString()
+                          )
+                          .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+                        if (todayLog) {
+                          const sd = new Date(todayLog.scheduledTime);
+                          const ts = `${sd.getHours().toString().padStart(2,"0")}:${sd.getMinutes().toString().padStart(2,"0")}`;
+                          takenSlotIndex = baseTimes.indexOf(ts);
+                          if (takenSlotIndex === -1) {
+                            const sm = sd.getHours() * 60 + sd.getMinutes();
+                            let minD = Infinity;
+                            baseTimes.forEach((t, i) => {
+                              const [hh, mm] = t.split(":").map(Number);
+                              const d = Math.abs(hh * 60 + mm - sm);
+                              if (d < minD) { minD = d; takenSlotIndex = i; }
+                            });
+                          }
+                        }
+                      }
+                      const displayTimes = baseTimes.map((t, idx) =>
+                        offsetMinutes !== 0 && idx > takenSlotIndex
+                          ? shiftTimeStr(t, offsetMinutes)
+                          : t
+                      );
+                      const hasShift = offsetMinutes !== 0 && takenSlotIndex !== -1;
+                      return (
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
+                            <Clock size={11} />
+                            {displayTimes.join(", ")}
+                          </span>
+                          {hasShift && (
+                            <span
+                              title={`Schedule shifted ${offsetMinutes > 0 ? "+" : ""}${offsetMinutes}m today`}
+                              className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full ${
+                                offsetMinutes > 0
+                                  ? "bg-amber-500/10 text-amber-500"
+                                  : "bg-blue-500/10 text-blue-500"
+                              }`}
+                            >
+                              <RefreshCw size={8} />
+                              {offsetMinutes > 0 ? "+" : ""}{offsetMinutes}m
+                            </span>
+                          )}
+                          <span className="text-[11px] text-muted-foreground/40">·</span>
+                          <span className="text-[11px] font-semibold text-muted-foreground">{reminder.dose}</span>
+                          <span className="text-[11px] text-muted-foreground/40">·</span>
+                          <span className="text-[11px] font-semibold text-muted-foreground capitalize">
+                            {repeatLabel(reminder)}
+                          </span>
+                        </div>
+                      );
+                    })()}
 
                     {/* Today's action badge */}
                     {actionToday && (
