@@ -264,7 +264,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl border border-primary/15 shadow-2xl"
-         style={{ aspectRatio: '16/7', minHeight: '220px' }}>
+         style={{ height: '280px' }}>
 
       {/* Inject keyframe CSS for marker animations */}
       <style>{`
@@ -287,8 +287,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
         }
       `}</style>
 
-      {/* MapLibre container */}
-      <div ref={mapContainerRef} className="absolute inset-0" />
+      {/* MapLibre container – must have explicit width & height so the WebGL
+          canvas gets real pixel dimensions before MapLibre initialises */}
+      <div ref={mapContainerRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
 
       {/* Origin label */}
       <div className="absolute top-3 left-3 z-10 flex flex-col pointer-events-none">
