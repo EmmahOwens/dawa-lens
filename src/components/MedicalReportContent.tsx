@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, subDays, isSameDay } from "date-fns";
 
 interface MedicalReportContentProps {
   patientName: string;
@@ -8,6 +8,7 @@ interface MedicalReportContentProps {
   doseLogs: any[];
   medicines: any[];
   insights: any;
+  wellnessLogs?: any[];
 }
 
 export const MedicalReportContent = ({
@@ -18,7 +19,36 @@ export const MedicalReportContent = ({
   doseLogs,
   medicines,
   insights,
+  wellnessLogs = [],
 }: MedicalReportContentProps) => {
+  // Compute PROs from wellnessLogs
+  const last7 = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), 6 - i));
+  const symptomLogs = wellnessLogs.filter((l: any) => l.type === "symptom");
+  const logsLast7 = symptomLogs.filter((l: any) => {
+    const d = new Date(l.timestamp);
+    return last7.some(day => isSameDay(d, day));
+  });
+
+  const hasPRO = logsLast7.length > 0;
+  const avgMood = hasPRO
+    ? logsLast7.reduce((acc: number, l: any) => acc + (Number(l.data?.mood) || 0), 0) / logsLast7.length
+    : 0;
+  const avgEnergy = hasPRO
+    ? logsLast7.reduce((acc: number, l: any) => acc + (Number(l.data?.energy) || 0), 0) / logsLast7.length
+    : 0;
+  const symptomCount: Record<string, number> = {};
+  logsLast7.forEach((l: any) => {
+    const syms = l.data?.symptoms as string[] | undefined;
+    if (syms) syms.forEach((s: string) => { symptomCount[s] = (symptomCount[s] || 0) + 1; });
+  });
+  const topSymptoms = Object.entries(symptomCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const daysWithData = last7.filter(day =>
+    symptomLogs.some((l: any) => isSameDay(new Date(l.timestamp), day))
+  ).length;
+  const moodLabel = avgMood >= 3.5 ? "Positive" : avgMood >= 2.5 ? "Neutral" : "Low";
+  const energyLabel = avgEnergy >= 3.5 ? "High" : avgEnergy >= 2.5 ? "Moderate" : "Low";
   return (
     <div className="font-sans text-black bg-white w-full max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
       {/* Report Header */}
@@ -127,6 +157,57 @@ export const MedicalReportContent = ({
           <p className="text-black/60 italic text-sm">No active medications registered.</p>
         )}
       </div>
+
+      {/* Patient Reported Outcomes (PROs) */}
+      {hasPRO && (
+        <div className="mb-10">
+          <h2 className="text-lg sm:text-xl font-black border-b border-gray-300 pb-2 mb-6">
+            Patient Reported Outcomes (PROs)
+          </h2>
+          <p className="text-xs text-gray-500 italic mb-4">
+            Self-reported emotional and physical data captured via the Wellness Hub over the last 7 days.
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">Avg Mood</p>
+              <p className="text-2xl font-black text-black">{avgMood.toFixed(1)}<span className="text-xs text-gray-400">/5</span></p>
+              <p className="text-[10px] font-semibold text-gray-500 mt-0.5">{moodLabel}</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">Avg Energy</p>
+              <p className="text-2xl font-black text-black">{avgEnergy.toFixed(1)}<span className="text-xs text-gray-400">/5</span></p>
+              <p className="text-[10px] font-semibold text-gray-500 mt-0.5">{energyLabel}</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">Days Tracked</p>
+              <p className="text-2xl font-black text-black">{daysWithData}<span className="text-xs text-gray-400">/7</span></p>
+              <p className="text-[10px] font-semibold text-gray-500 mt-0.5">Consistency</p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">Total Entries</p>
+              <p className="text-2xl font-black text-black">{logsLast7.length}</p>
+              <p className="text-[10px] font-semibold text-gray-500 mt-0.5">Check-ins</p>
+            </div>
+          </div>
+
+          {topSymptoms.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-3">Most Reported Symptoms</p>
+              <div className="flex flex-wrap gap-2">
+                {topSymptoms.map(([name, count]) => (
+                  <span
+                    key={name}
+                    className="px-3 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-xs font-bold text-black"
+                  >
+                    {name} <span className="text-gray-400 font-normal">({count}×)</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* AI Clinical Summary */}
       {insights && (

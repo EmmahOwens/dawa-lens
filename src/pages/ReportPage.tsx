@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
-import { FileText, Printer, Download, TrendingUp, Activity, Calendar, Sparkles, Loader2, Info, CheckCircle2, ArrowRight, Share2, Eye, X } from "lucide-react";
+import { FileText, Printer, Download, TrendingUp, Activity, Calendar, Sparkles, Loader2, Info, CheckCircle2, ArrowRight, Share2, Eye, X, Smile, Frown, Minus, Zap, Brain, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
@@ -59,6 +59,43 @@ export default function ReportPage() {
   }, [doseLogs, wellnessLogs]);
 
   const adherenceScore = Math.round(chartData.reduce((acc, d) => acc + d.adherence, 0) / 7) || 0;
+
+  // Emotional Wellness Statistics (last 7 days)
+  const emotionalStats = useMemo(() => {
+    const last7 = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), 6 - i));
+    const symptomLogs = wellnessLogs.filter(l => l.type === "symptom");
+
+    const logsLast7 = symptomLogs.filter(l => {
+      const d = new Date(l.timestamp);
+      return last7.some(day => isSameDay(d, day));
+    });
+
+    const daysWithData = last7.filter(day =>
+      symptomLogs.some(l => isSameDay(new Date(l.timestamp), day))
+    ).length;
+
+    if (logsLast7.length === 0) return null;
+
+    const avgMood = logsLast7.reduce((acc, l) => acc + (Number((l.data as any).mood) || 0), 0) / logsLast7.length;
+    const avgEnergy = logsLast7.reduce((acc, l) => acc + (Number((l.data as any).energy) || 0), 0) / logsLast7.length;
+
+    // Tally symptom frequency
+    const symptomCount: Record<string, number> = {};
+    logsLast7.forEach(l => {
+      const syms = (l.data as any).symptoms as string[] | undefined;
+      if (syms) syms.forEach(s => { symptomCount[s] = (symptomCount[s] || 0) + 1; });
+    });
+    const topSymptoms = Object.entries(symptomCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([name, count]) => ({ name, count }));
+
+    const moodLabel = avgMood >= 3.5 ? "Positive" : avgMood >= 2.5 ? "Neutral" : "Low";
+    const moodColor = avgMood >= 3.5 ? "text-success" : avgMood >= 2.5 ? "text-warning" : "text-destructive";
+    const moodBg = avgMood >= 3.5 ? "bg-success/10" : avgMood >= 2.5 ? "bg-warning/10" : "bg-destructive/10";
+
+    return { avgMood, avgEnergy, topSymptoms, daysWithData, moodLabel, moodColor, moodBg };
+  }, [wellnessLogs]);
 
   const [showPreview, setShowPreview] = useState(false);
   const isNative = Capacitor.isNativePlatform();
@@ -271,6 +308,90 @@ export default function ReportPage() {
             </div>
           </motion.div>
 
+          {/* Emotional Wellness Summary */}
+          {emotionalStats && (
+            <motion.div variants={item} className="premium-card">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="section-title flex items-center gap-2 mb-0">
+                  <Heart size={14} className="text-destructive" /> Emotional Wellness
+                </h3>
+                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${emotionalStats.moodBg} ${emotionalStats.moodColor}`}>
+                  {emotionalStats.moodLabel}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {/* Avg Mood */}
+                <div className="p-4 rounded-2xl bg-success/5 border border-success/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Smile size={14} className="text-success" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-success/70">Avg Mood</p>
+                  </div>
+                  <p className="text-2xl font-black text-foreground">
+                    {emotionalStats.avgMood.toFixed(1)}
+                    <span className="text-xs text-muted-foreground font-bold ml-1">/5</span>
+                  </p>
+                  <div className="mt-2 flex gap-0.5">
+                    {[1,2,3,4,5].map(n => (
+                      <div key={n} className={`flex-1 h-1.5 rounded-full ${n <= Math.round(emotionalStats.avgMood) ? "bg-success" : "bg-muted/40"}`} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Avg Energy */}
+                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap size={14} className="text-primary" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">Avg Energy</p>
+                  </div>
+                  <p className="text-2xl font-black text-foreground">
+                    {emotionalStats.avgEnergy.toFixed(1)}
+                    <span className="text-xs text-muted-foreground font-bold ml-1">/5</span>
+                  </p>
+                  <div className="mt-2 flex gap-0.5">
+                    {[1,2,3,4,5].map(n => (
+                      <div key={n} className={`flex-1 h-1.5 rounded-full ${n <= Math.round(emotionalStats.avgEnergy) ? "bg-primary" : "bg-muted/40"}`} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Wellness consistency */}
+              <div className="flex items-center gap-3 mb-5 p-3 rounded-xl bg-muted/20 border border-border/40">
+                <Brain size={14} className="text-muted-foreground/60 shrink-0" />
+                <p className="text-xs font-semibold text-muted-foreground">
+                  Wellness logged on{" "}
+                  <span className="font-black text-foreground">{emotionalStats.daysWithData}</span> of 7 days this week.
+                  {emotionalStats.daysWithData >= 5
+                    ? " Excellent consistency!"
+                    : emotionalStats.daysWithData >= 3
+                      ? " Keep building the habit."
+                      : " Try to log daily for better insights."}
+                </p>
+              </div>
+
+              {/* Top symptoms */}
+              {emotionalStats.topSymptoms.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3 px-1">
+                    Most Reported Symptoms
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {emotionalStats.topSymptoms.map(({ name, count }) => (
+                      <div
+                        key={name}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent/50 border border-border/40"
+                      >
+                        <span className="text-xs font-bold text-foreground">{name}</span>
+                        <span className="text-[9px] font-black text-muted-foreground bg-muted/60 px-1 rounded">{count}×</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
           {/* AI Clinical Summary */}
           <motion.div variants={item} className="premium-card">
             <div className="flex items-center justify-between mb-6">
@@ -361,6 +482,7 @@ export default function ReportPage() {
               doseLogs={doseLogs}
               medicines={medicines}
               insights={insights}
+              wellnessLogs={wellnessLogs}
             />
           </ScrollArea>
         </DialogContent>
@@ -376,6 +498,7 @@ export default function ReportPage() {
           doseLogs={doseLogs}
           medicines={medicines}
           insights={insights}
+          wellnessLogs={wellnessLogs}
         />
       </div>
     </div>

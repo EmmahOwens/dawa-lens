@@ -6,10 +6,26 @@ import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
 import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, subDays, isSameDay } from "date-fns";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
+
+// 7-day sparkline data derived from wellness logs
+function useEmotionSparkline(wellnessLogs: ReturnType<typeof useApp>["wellnessLogs"]) {
+  return Array.from({ length: 7 }).map((_, i) => {
+    const date = subDays(new Date(), 6 - i);
+    const dayLogs = wellnessLogs.filter(
+      (l) => l.type === "symptom" && isSameDay(new Date(l.timestamp), date)
+    );
+    if (dayLogs.length === 0) return { date, mood: null, energy: null };
+    const avgMood =
+      dayLogs.reduce((acc, l) => acc + (Number((l.data as any).mood) || 0), 0) / dayLogs.length;
+    const avgEnergy =
+      dayLogs.reduce((acc, l) => acc + (Number((l.data as any).energy) || 0), 0) / dayLogs.length;
+    return { date, mood: avgMood, energy: avgEnergy };
+  });
+}
 
 export default function WellnessPage() {
   const { wellnessLogs, addWellnessLog, medicines, doseLogs } = useApp();
@@ -135,6 +151,8 @@ export default function WellnessPage() {
     { val: 4, emoji: "🙂", label: "Good" },
     { val: 5, emoji: "💎", label: "Great" }
   ];
+
+  const sparklineData = useEmotionSparkline(wellnessLogs);
 
   return (
     <div className="px-4 pt-12 pb-24">
@@ -424,7 +442,6 @@ export default function WellnessPage() {
                   >
                     {/* Background Glow */}
                     <div className={`absolute -right-12 -bottom-12 w-32 h-32 blur-3xl opacity-20 ${mealSafety.risk === "Safe" ? "bg-success" : mealSafety.risk === "Medium" ? "bg-warning" : "bg-destructive"}`} />
-Loop
                     <div className="flex items-center gap-4 mb-4">
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${mealSafety.risk === "Safe" ? "bg-success text-success-foreground" : mealSafety.risk === "Medium" ? "bg-warning text-warning-foreground" : "bg-destructive text-destructive-foreground"}`}>
                         {mealSafety.risk === "Safe" ? <ShieldCheck size={24} /> : <AlertTriangle size={24} />}
@@ -456,8 +473,64 @@ Loop
         )}
       </AnimatePresence>
 
+      {/* 7-Day Emotion Sparkline */}
+      {sparklineData.some(d => d.mood !== null) && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-10 premium-card"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="section-title flex items-center gap-2 mb-0">
+              <Activity size={14} className="text-primary" /> 7-Day Emotion Trend
+            </h3>
+            <div className="flex gap-3">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-success" />
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Mood</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-primary" />
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Energy</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-end gap-2 h-20">
+            {sparklineData.map((d, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full flex flex-col items-center gap-0.5" style={{ height: '60px', justifyContent: 'flex-end' }}>
+                  {d.mood !== null && (
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${(d.mood / 5) * 60}px` }}
+                      transition={{ delay: i * 0.06, duration: 0.4 }}
+                      className="w-full rounded-t-lg bg-success/60 min-h-[4px]"
+                    />
+                  )}
+                  {d.energy !== null && (
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${(d.energy / 5) * 60}px` }}
+                      transition={{ delay: i * 0.06 + 0.05, duration: 0.4 }}
+                      className="w-1 rounded-full bg-primary/50 absolute"
+                      style={{ position: 'relative' }}
+                    />
+                  )}
+                  {d.mood === null && (
+                    <div className="w-full h-1 bg-muted/30 rounded" />
+                  )}
+                </div>
+                <span className="text-[8px] font-bold text-muted-foreground/40 uppercase">
+                  {format(d.date, 'EEE')}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       {/* Feed */}
-      <motion.div variants={container} initial="hidden" animate="show" className="mt-12 space-y-6">
+      <motion.div variants={container} initial="hidden" animate="show" className="mt-10 space-y-6">
         <div className="flex items-center justify-between px-1">
           <h3 className="section-title mb-0">Recent Reflections</h3>
           <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-40">Last 10 Entries</span>
@@ -473,35 +546,79 @@ Loop
               <p className="text-[10px] text-muted-foreground/60 mt-1 uppercase tracking-widest">Log your first vibe or meal</p>
             </div>
           ) : (
-            wellnessLogs.slice(0, 10).map((log) => (
-              <motion.div 
-                key={log.id} 
-                variants={item}
-                className="group p-5 rounded-3xl bg-card border border-border/50 flex items-start gap-5 transition-all hover:bg-accent/5 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5"
-              >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:scale-110 ${log.type === "food" ? "bg-warning/10 text-warning" : "bg-success/10 text-success"}`}>
-                   {log.type === "food" ? <Utensils size={20} /> : <Zap size={20} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                   <div className="flex items-center justify-between mb-1.5">
-                     <p className="text-[10px] font-black text-foreground uppercase tracking-widest">
-                       {log.type === "food" ? "Nutritional Log" : "Vitality Check"}
-                     </p>
-                     <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter bg-muted/50 px-1.5 py-0.5 rounded">
-                       {format(new Date(log.timestamp), "MMM d • h:mm a")}
-                     </p>
-                   </div>
-                   <p className="text-xs font-semibold text-muted-foreground leading-relaxed">
-                     {log.type === "food" 
-                       ? log.data.meal 
-                       : (log.data.symptoms && log.data.symptoms.length > 0) 
-                          ? `Feeling ${log.data.symptoms.join(", ")}` 
-                          : `Overall vibe: ${log.data.mood === 5 ? "Incredible" : log.data.mood === 4 ? "Good" : "Steady"}`
-                     }
-                   </p>
-                </div>
-              </motion.div>
-            ))
+            wellnessLogs.slice(0, 10).map((log) => {
+              const logMood = log.type === "symptom" ? Number((log.data as any).mood) : null;
+              const logEnergy = log.type === "symptom" ? Number((log.data as any).energy) : null;
+              const logSymptoms = log.type === "symptom" ? ((log.data as any).symptoms as string[] | undefined) : null;
+              const moodEmoji =
+                logMood === 5 ? "💎" : logMood === 4 ? "🙂" : logMood === 3 ? "😐" : logMood === 2 ? "😕" : logMood === 1 ? "😔" : null;
+
+              return (
+                <motion.div
+                  key={log.id}
+                  variants={item}
+                  className="group p-5 rounded-3xl bg-card border border-border/50 flex items-start gap-4 transition-all hover:bg-accent/5 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5"
+                >
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:scale-110 ${
+                      log.type === "food" ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
+                    }`}
+                  >
+                    {log.type === "food" ? <Utensils size={20} /> : moodEmoji ? (
+                      <span className="text-xl leading-none">{moodEmoji}</span>
+                    ) : <Zap size={20} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-[10px] font-black text-foreground uppercase tracking-widest">
+                        {log.type === "food" ? "Nutritional Log" : "Vitality Check"}
+                      </p>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter bg-muted/50 px-1.5 py-0.5 rounded">
+                        {format(new Date(log.timestamp), "MMM d • h:mm a")}
+                      </p>
+                    </div>
+                    <p className="text-xs font-semibold text-muted-foreground leading-relaxed">
+                      {log.type === "food"
+                        ? String((log.data as any).meal ?? "")
+                        : logSymptoms && logSymptoms.length > 0
+                          ? `Feeling: ${logSymptoms.join(", ")}`
+                          : logMood != null
+                            ? `Mood: ${logMood >= 4 ? "Positive" : logMood <= 2 ? "Low" : "Steady"}`
+                            : "Logged a check-in"}
+                    </p>
+                    {/* Mood + Energy mini indicators */}
+                    {log.type === "symptom" && (logMood != null || logEnergy != null) && (
+                      <div className="flex gap-3 mt-2">
+                        {logMood != null && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Mood</span>
+                            <div className="flex gap-0.5">
+                              {[1,2,3,4,5].map(n => (
+                                <div key={n} className={`w-2 h-2 rounded-sm ${
+                                  n <= logMood ? "bg-success" : "bg-muted/30"
+                                }`} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {logEnergy != null && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Energy</span>
+                            <div className="flex gap-0.5">
+                              {[1,2,3,4,5].map(n => (
+                                <div key={n} className={`w-2 h-2 rounded-sm ${
+                                  n <= logEnergy ? "bg-primary" : "bg-muted/30"
+                                }`} />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })
           )}
         </div>
       </motion.div>
