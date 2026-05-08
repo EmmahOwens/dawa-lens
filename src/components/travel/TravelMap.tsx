@@ -43,9 +43,10 @@ const LOCATION_MAP: Record<string, [number, number]> = {
 // Default home: Nairobi, Kenya
 const HOME_LNG_LAT: [number, number] = [36.82, -1.29];
 
-// Free vector tile style – no API key required
-const PRIMARY_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
-const FALLBACK_STYLE = 'https://demotiles.maplibre.org/style.json';
+// Free vector tile styles – no API key required
+// OpenFreeMap is the most reliable free tile source for MapLibre v5
+const PRIMARY_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+const FALLBACK_STYLE = 'https://tiles.openfreemap.org/styles/bright';
 
 /** Interpolate N points along a great-circle arc in LngLat space */
 function buildArcCoordinates(
@@ -87,110 +88,125 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const map = new maplibregl.Map({
-      container: mapContainerRef.current,
-      style: PRIMARY_STYLE,
-      center: [20, 10],
-      zoom: 1.5,
-      attributionControl: false,
-      dragRotate: false,
-      touchPitch: false,
-      canvasContextAttributes: {
-        failIfMajorPerformanceCaveat: false,
-      },
-    });
+    let fallbackApplied = false;
 
-    // Error handling
-    map.on('error', (e) => {
-      console.error('MapLibre error:', e);
-      // If primary style fails, try fallback
-      if (e.error?.status === 403 || (typeof e.error === 'string' && e.error.includes('403'))) {
-        console.warn('Primary map style forbidden, switching to fallback...');
-        if (map.getStyle()?.name !== 'MapLibre Demo') {
+    const initMap = (style: string) => {
+      if (!mapContainerRef.current) return;
+
+      const map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style,
+        center: [20, 10],
+        zoom: 1.5,
+        attributionControl: false,
+        dragRotate: false,
+        touchPitch: false,
+        canvasContextAttributes: {
+          failIfMajorPerformanceCaveat: false,
+          antialias: true,
+        },
+      });
+
+      // Error handling – swap to fallback style on failure
+      map.on('error', (e) => {
+        console.error('MapLibre error:', e);
+        if (!fallbackApplied) {
+          fallbackApplied = true;
+          console.warn('Primary map style failed, switching to fallback...');
           map.setStyle(FALLBACK_STYLE);
         }
-      }
-    });
-
-    // Compact attribution
-    map.addControl(
-      new maplibregl.AttributionControl({ compact: true }),
-      'bottom-left'
-    );
-
-    map.on('load', () => {
-      // ── Flight arc source + layer ─────────────────────────────────────────
-      map.addSource('flight-arc', {
-        type: 'geojson',
-        data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
       });
 
-      map.addLayer({
-        id: 'flight-arc-dashes',
-        type: 'line',
-        source: 'flight-arc',
-        paint: {
-          'line-color': '#007AFF',
-          'line-width': 2,
-          'line-dasharray': [4, 4],
-          'line-opacity': 0.5,
-        },
+      // Compact attribution
+      map.addControl(
+        new maplibregl.AttributionControl({ compact: true }),
+        'bottom-left'
+      );
+
+      map.on('load', () => {
+        // Force a resize on load to fix blank canvas when the container was
+        // laid out before the map's WebGL canvas had definite dimensions
+        map.resize();
+
+        // ── Flight arc source + layer ─────────────────────────────────────────
+        map.addSource('flight-arc', {
+          type: 'geojson',
+          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
+        });
+
+        map.addLayer({
+          id: 'flight-arc-dashes',
+          type: 'line',
+          source: 'flight-arc',
+          paint: {
+            'line-color': '#007AFF',
+            'line-width': 2,
+            'line-dasharray': [4, 4],
+            'line-opacity': 0.5,
+          },
+        });
+
+        map.addLayer({
+          id: 'flight-arc-solid',
+          type: 'line',
+          source: 'flight-arc',
+          paint: {
+            'line-color': '#007AFF',
+            'line-width': 2.5,
+            'line-opacity': 0.9,
+            'line-blur': 0,
+          },
+        });
+
+        // ── Home pulse marker ───────────────────────────────────────────────────
+        const homeEl = document.createElement('div');
+        homeEl.className = 'travel-map-home-marker';
+        homeEl.innerHTML = `
+          <div style="
+            width:16px; height:16px; border-radius:50%;
+            background:#007AFF; border:3px solid #fff;
+            box-shadow:0 0 0 4px rgba(0,122,255,0.3), 0 2px 8px rgba(0,0,0,0.3);
+            position:relative;
+          ">
+            <span style="
+              position:absolute; inset:-6px; border-radius:50%;
+              border:2px solid rgba(0,122,255,0.4);
+              animation:travel-pulse 2s ease-out infinite;
+            "></span>
+          </div>`;
+
+        homeMarkerRef.current = new maplibregl.Marker({ element: homeEl, anchor: 'center' })
+          .setLngLat(HOME_LNG_LAT)
+          .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML('<strong>📍 Your Location</strong>'))
+          .addTo(map);
       });
 
-      map.addLayer({
-        id: 'flight-arc-solid',
-        type: 'line',
-        source: 'flight-arc',
-        paint: {
-          'line-color': '#007AFF',
-          'line-width': 2.5,
-          'line-opacity': 0.9,
-          // Glow via blur trick
-          'line-blur': 0,
-        },
+      mapRef.current = map;
+
+      // Handle container resizing
+      const resizeObserver = new ResizeObserver(() => {
+        map.resize();
       });
+      resizeObserver.observe(mapContainerRef.current!);
 
-      // ── Home pulse marker ───────────────────────────────────────────────────
-      const homeEl = document.createElement('div');
-      homeEl.className = 'travel-map-home-marker';
-      homeEl.innerHTML = `
-        <div style="
-          width:16px; height:16px; border-radius:50%;
-          background:#007AFF; border:3px solid #fff;
-          box-shadow:0 0 0 4px rgba(0,122,255,0.3), 0 2px 8px rgba(0,0,0,0.3);
-          position:relative;
-        ">
-          <span style="
-            position:absolute; inset:-6px; border-radius:50%;
-            border:2px solid rgba(0,122,255,0.4);
-            animation:travel-pulse 2s ease-out infinite;
-          "></span>
-        </div>`;
+      // Also trigger resize after a short delay to handle layout shifts
+      const timer = setTimeout(() => map.resize(), 300);
 
-      homeMarkerRef.current = new maplibregl.Marker({ element: homeEl, anchor: 'center' })
-        .setLngLat(HOME_LNG_LAT)
-        .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML('<strong>📍 Your Location</strong>'))
-        .addTo(map);
-    });
+      return { map, resizeObserver, timer };
+    };
 
-    mapRef.current = map;
-
-    // Handle container resizing
-    const resizeObserver = new ResizeObserver(() => {
-      map.resize();
-    });
-    resizeObserver.observe(mapContainerRef.current);
-
-    // Ensure initial resize after a small delay to handle layout shifts
-    const timer = setTimeout(() => map.resize(), 100);
+    const result = initMap(PRIMARY_STYLE);
 
     return () => {
-      clearTimeout(timer);
-      resizeObserver.disconnect();
-      map.remove();
+      if (result) {
+        clearTimeout(result.timer);
+        result.resizeObserver.disconnect();
+        result.map.remove();
+      }
       mapRef.current = null;
     };
   }, []);
+
 
   // ── Update arc + destination marker when destination changes ───────────────
   useEffect(() => {
