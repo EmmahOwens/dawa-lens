@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Droplets, Smile, Meh, Frown, Plus } from "lucide-react";
+import { Smile, Meh, Frown } from "lucide-react";
 import { WellnessLog } from "@/contexts/AppContext";
 
 interface HealthWidgetsProps {
@@ -24,18 +24,6 @@ const getMoodLabel = (value: number) => {
 export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
   const today = new Date().toDateString();
 
-  // Water intake for today
-  const waterIntake = useMemo(() => {
-    return wellnessLogs
-      .filter(
-        (l) =>
-          l.type === "food" &&
-          (l.data as any).type === "water" &&
-          new Date(l.timestamp).toDateString() === today
-      )
-      .reduce((acc, l) => acc + ((l.data as any).amount || 0), 0);
-  }, [wellnessLogs, today]);
-
   // Latest mood logged today (from symptom entries)
   const latestMood = useMemo(() => {
     const todaySymptomLogs = wellnessLogs
@@ -49,55 +37,10 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
     return todaySymptomLogs.length > 0 ? Number((todaySymptomLogs[0].data as any).mood) : null;
   }, [wellnessLogs, today]);
 
-  const waterGoal = 2000;
-  const waterProgress = Math.min(100, (waterIntake / waterGoal) * 100);
-
   const activeMoodCfg = latestMood != null ? MOOD_OPTIONS.find((m) => m.value === latestMood) : null;
 
   return (
-    <div className="grid grid-cols-2 gap-4 mb-8">
-      {/* Water Tracker */}
-      <motion.div
-        whileTap={{ scale: 0.98 }}
-        className="bg-card border border-border/50 rounded-[2rem] p-5 shadow-sm"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="p-2 bg-blue-500/10 text-blue-500 rounded-xl">
-            <Droplets size={18} />
-          </div>
-          <button
-            onClick={() => onAddLog("food", { type: "water", amount: 250 })}
-            className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 hover:bg-blue-600 active:scale-90 transition-all"
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-        <div>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">
-            Hydration
-          </p>
-          <div className="flex items-end gap-1 mb-2">
-            <span className="text-xl font-black text-foreground">
-              {(waterIntake / 1000).toFixed(1)}L
-            </span>
-            <span className="text-[10px] font-bold text-muted-foreground mb-1">/ 2.0L</span>
-          </div>
-          <div className="h-1.5 w-full bg-blue-500/10 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${waterProgress}%` }}
-              transition={{ duration: 0.5 }}
-              className="h-full bg-blue-500"
-            />
-          </div>
-          {waterProgress >= 100 && (
-            <p className="text-[9px] font-black text-blue-500 uppercase tracking-widest mt-1.5">
-              Goal reached! 💧
-            </p>
-          )}
-        </div>
-      </motion.div>
-
+    <div className="mb-8">
       {/* Mood Tracker */}
       <div className="bg-card border border-border/50 rounded-[2rem] p-5 shadow-sm flex flex-col">
         <div className="flex items-center justify-between mb-3">
