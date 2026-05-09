@@ -56,10 +56,23 @@ export default function TravelCompanionPage() {
         currentCity: userCountry || "Home",
         homeTimezone,
       });
+
+      // Normalize equivalents to ensure consistent { original, equivalent } shape
+      if (res && Array.isArray((res as any).equivalents)) {
+        (res as any).equivalents = (res as any).equivalents.map((eq: any) => {
+          if (typeof eq === 'string') return { original: eq, equivalent: eq };
+          return {
+            original: eq.original || eq.medicine || eq.name || eq.drug || 'Unknown',
+            equivalent: eq.equivalent || eq.local_name || eq.localEquivalent || eq.brand || eq.alternative || 'Ask local pharmacist',
+          };
+        });
+      }
+
       // Small delay to let animation breathe
       setTimeout(() => {
         setAdvice(res);
         setLoading(false);
+        setIsAnimating(false);
       }, 1500);
     } catch (err) {
       console.error("Travel advice failed", err);

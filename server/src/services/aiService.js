@@ -160,9 +160,11 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
        Do NOT include Police. Do NOT include generic numbers like 112 for the drug authority.
     5. List general health risks (e.g. Malaria, yellow fever, water safety) for ${destination}.
 
-    Respond in JSON format:
+    Respond in EXACT JSON format:
     { 
-      "equivalents": [...], 
+      "equivalents": [
+        { "original": "Original medicine name", "equivalent": "Local equivalent brand name in ${destination}" }
+      ],
       "timezoneAdvice": "...", 
       "customsNotes": "...",
       "emergencyContacts": [
