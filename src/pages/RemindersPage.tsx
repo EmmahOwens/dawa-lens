@@ -218,7 +218,7 @@ export default function RemindersPage() {
             </p>
           </div>
           <Button
-            onClick={() => navigate("/reminders/new")}
+            onClick={() => navigate("/reminders/new", { state: { patientId: selectedPatientId, patientName: !activeProfile.isSelf ? activeProfile.name : null } })}
             className="rounded-2xl mt-2 gap-2"
             size="sm"
           >
@@ -386,7 +386,9 @@ export default function RemindersPage() {
                             repeatDays: reminder.repeatDays,
                             notes: reminder.notes,
                             color: reminder.color,
-                            icon: reminder.icon
+                            icon: reminder.icon,
+                            patientId: reminder.patientId ?? null,
+                            patientName: reminder.patientName ?? null
                           } 
                         })}
                         className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"

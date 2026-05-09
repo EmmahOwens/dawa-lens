@@ -589,11 +589,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!currentUserId) throw new Error("Not logged in");
 
       // Use Firestore directly for unique ID and persistence
+      // Use the explicit patientId from the caller if provided (e.g. from AddReminderPage),
+      // otherwise fall back to the global selectedPatientId context.
+      const effectivePatientId = rem.patientId !== undefined ? rem.patientId : selectedPatientId;
       const remData = sanitizeFirestoreData({
         ...rem,
         medicineId: rem.medicineId || null,
         userId: currentUserId,
-        patientId: selectedPatientId || null,
+        patientId: effectivePatientId || null,
         createdAt: new Date().toISOString()
       });
 
