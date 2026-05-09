@@ -1,11 +1,17 @@
 
 /**
+ * Strips any leading non-numeric characters from a version string.
+ * Handles tags like "v1.0.0", "v.1.0.0", "V.1.0.0", etc.
+ */
+const cleanVersion = (v: string): string => v.replace(/^[^\d]+/, '');
+
+/**
  * Compares two semver strings (e.g. "1.0.11" vs "1.0.9").
  * Returns true if `remote` is strictly greater than `local`.
  */
 export const isNewerVersion = (remote: string, local: string): boolean => {
-  const cleanRemote = remote.startsWith('v') ? remote.substring(1) : remote;
-  const cleanLocal = local.startsWith('v') ? local.substring(1) : local;
+  const cleanRemote = cleanVersion(remote);
+  const cleanLocal = cleanVersion(local);
 
   const parse = (v: string) => v.split('.').map((n) => parseInt(n, 10));
   const r = parse(cleanRemote);
@@ -14,6 +20,7 @@ export const isNewerVersion = (remote: string, local: string): boolean => {
   for (let i = 0; i < len; i++) {
     const rv = r[i] ?? 0;
     const lv = l[i] ?? 0;
+    if (isNaN(rv) || isNaN(lv)) return false; // guard against malformed segments
     if (rv > lv) return true;
     if (rv < lv) return false;
   }
@@ -48,7 +55,7 @@ export const fetchLatestRelease = async (): Promise<UpdateInfo | null> => {
     const downloadUrl = apkAsset ? apkAsset.browser_download_url : data.html_url;
 
     return {
-      latestVersion: latestVersion.startsWith('v') ? latestVersion.substring(1) : latestVersion,
+      latestVersion: cleanVersion(latestVersion),
       downloadUrl
     };
   } catch (error) {
