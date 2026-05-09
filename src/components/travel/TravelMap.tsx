@@ -7,6 +7,8 @@ import { Plane } from 'lucide-react';
 interface TravelMapProps {
   isAnimating: boolean;
   destination: string;
+  userCoords?: [number, number] | null;
+  userCountry?: string | null;
 }
 
 // ── Known geographic coordinates ─────────────────────────────────────────────
@@ -40,8 +42,8 @@ const LOCATION_MAP: Record<string, [number, number]> = {
   australia: [149.13, -35.31], newzealand: [174.78, -36.85],
 };
 
-// Default home: Nairobi, Kenya
-const HOME_LNG_LAT: [number, number] = [36.82, -1.29];
+// Default home: Kampala, Uganda (fallback when GPS is unavailable)
+const DEFAULT_HOME_LNG_LAT: [number, number] = [32.58, 0.35];
 
 // Free vector tile styles – no API key required
 // OpenFreeMap is the most reliable free tile source for MapLibre v5
@@ -76,7 +78,9 @@ function resolveDestination(destination: string): [number, number] | null {
   return null;
 }
 
-export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }) => {
+export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, userCoords, userCountry }) => {
+  // Use real GPS coordinates when available, fall back to default
+  const homeLngLat: [number, number] = userCoords ?? DEFAULT_HOME_LNG_LAT;
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const homeMarkerRef = useRef<Marker | null>(null);
@@ -176,8 +180,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
           </div>`;
 
         homeMarkerRef.current = new maplibregl.Marker({ element: homeEl, anchor: 'center' })
-          .setLngLat(HOME_LNG_LAT)
-          .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML('<strong>📍 Your Location</strong>'))
+          .setLngLat(homeLngLat)
+          .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML(`<strong>📍 ${userCountry || 'Your Location'}</strong>`))
           .addTo(map);
       });
 
@@ -207,6 +211,22 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
     };
   }, []);
 
+  // ── Reposition home marker when user GPS arrives ──────────────────────────
+  useEffect(() => {
+    if (homeMarkerRef.current) {
+      homeMarkerRef.current.setLngLat(homeLngLat);
+      // Update popup text
+      homeMarkerRef.current.setPopup(
+        new maplibregl.Popup({ offset: 20 }).setHTML(`<strong>📍 ${userCountry || 'Your Location'}</strong>`)
+      );
+    }
+    // Re-center map to home if no destination is active
+    const map = mapRef.current;
+    if (map && !destCoords) {
+      map.flyTo({ center: homeLngLat, zoom: 2.5, duration: 1200 });
+    }
+  }, [homeLngLat, userCountry]);
+
 
   // ── Update arc + destination marker when destination changes ───────────────
   useEffect(() => {
@@ -232,7 +252,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
     }
 
     // Build arc coordinates
-    const arcCoords = buildArcCoordinates(HOME_LNG_LAT, destCoords);
+    const arcCoords = buildArcCoordinates(homeLngLat, destCoords);
     arcSource?.setData({
       type: 'Feature',
       properties: {},
@@ -255,12 +275,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination }
 
     // Fit map to show both endpoints with padding
     const bounds = new maplibregl.LngLatBounds();
-    bounds.extend(HOME_LNG_LAT);
+    bounds.extend(homeLngLat);
     bounds.extend(destCoords);
     // Also extend to arc peak so it's visible
     arcCoords.forEach(c => bounds.extend(c as LngLatLike));
     map.fitBounds(bounds, { padding: { top: 60, bottom: 60, left: 60, right: 60 }, duration: 1800, maxZoom: 5 });
-  }, [destCoords, isAnimating, destination]);
+  }, [destCoords, isAnimating, destination, homeLngLat]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl border border-primary/15 shadow-2xl"

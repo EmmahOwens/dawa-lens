@@ -4,7 +4,7 @@ import { useApp } from "@/contexts/AppContext";
 import { 
   Plane, Globe, MapPin, Loader2, Sparkles, AlertCircle, 
   ShieldAlert, Pill, Phone, Activity, Search,
-  ArrowRight, Info, Clock, CheckCircle2
+  ArrowRight, Info, Clock, CheckCircle2, Navigation
 } from "lucide-react";
 import { aiApi } from "@/services/api";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { useTranslation } from "react-i18next";
 import { TravelMap } from "@/components/travel/TravelMap";
 import { lookupDRA } from "@/services/draDatabase";
 import { ShieldCheck, Siren } from "lucide-react";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import PermissionRequest from "@/components/PermissionRequest";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -19,10 +21,26 @@ const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
 export default function TravelCompanionPage() {
   const { medicines, userProfile } = useApp();
   const { t } = useTranslation();
+  const { location: userLocation, status: geoStatus, requestLocation } = useGeolocation();
   const [destination, setDestination] = useState("");
   const [loading, setLoading] = useState(false);
   const [advice, setAdvice] = useState<any>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [showLocationPermission, setShowLocationPermission] = useState(false);
+
+  // Show permission dialog if location was denied
+  useEffect(() => {
+    if (geoStatus === 'denied') {
+      setShowLocationPermission(true);
+    }
+  }, [geoStatus]);
+
+  // Derive display values from geolocation
+  const userCountry = userLocation?.country ?? null;
+  const userCoords: [number, number] | null = userLocation
+    ? [userLocation.longitude, userLocation.latitude]
+    : null;
+  const originLabel = userCountry?.toUpperCase() || (geoStatus === 'requesting' ? '...' : 'HOME');
 
   const handleAnalyze = async () => {
     if (!destination || medicines.length === 0) return;
@@ -35,7 +53,7 @@ export default function TravelCompanionPage() {
       const res = await aiApi.getTravelAdvice({
         medicines,
         destination,
-        currentCity: "Home",
+        currentCity: userCountry || "Home",
         homeTimezone,
       });
       // Small delay to let animation breathe
@@ -73,7 +91,7 @@ export default function TravelCompanionPage() {
 
       {/* Main Map & Input Card */}
       <div className="space-y-4 mb-8">
-        <TravelMap isAnimating={isAnimating} destination={destination} />
+        <TravelMap isAnimating={isAnimating} destination={destination} userCoords={userCoords} userCountry={userCountry} />
 
         <div className="glass-card p-4 md:p-8 rounded-3xl shadow-xl border-primary/10 overflow-hidden relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
@@ -174,7 +192,7 @@ export default function TravelCompanionPage() {
                   <div className="flex items-center gap-2 sm:gap-4">
                     <div className="flex-1 min-w-0">
                       <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">From</p>
-                      <h3 className="text-xl sm:text-3xl font-black tracking-tighter truncate">HOME</h3>
+                      <h3 className="text-xl sm:text-3xl font-black tracking-tighter truncate">{originLabel}</h3>
                     </div>
                     <div className="flex flex-col items-center gap-1 px-2 sm:px-6 shrink-0">
                       <div className="w-16 sm:w-24 h-[1px] bg-border relative">
@@ -381,6 +399,19 @@ export default function TravelCompanionPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Location Permission Modal */}
+      <PermissionRequest
+        isOpen={showLocationPermission}
+        onClose={() => setShowLocationPermission(false)}
+        onConfirm={() => {
+          setShowLocationPermission(false);
+          requestLocation();
+        }}
+        title="Enable Location"
+        description="Allow DawaLens to detect your current country for accurate travel health intelligence and flight-path visualization."
+        icon={Navigation}
+        permissionName="Location"
+      />
     </div>
   );
 }
