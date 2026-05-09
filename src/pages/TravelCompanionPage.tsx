@@ -14,6 +14,7 @@ import { lookupDRA } from "@/services/draDatabase";
 import { ShieldCheck, Siren } from "lucide-react";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import PermissionRequest from "@/components/PermissionRequest";
+import { useToast } from "@/hooks/use-toast";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -21,6 +22,7 @@ const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
 export default function TravelCompanionPage() {
   const { medicines, userProfile } = useApp();
   const { t } = useTranslation();
+  const { toast } = useToast();
   const { location: userLocation, status: geoStatus, requestLocation } = useGeolocation();
   const [destination, setDestination] = useState("");
   const [loading, setLoading] = useState(false);
@@ -74,8 +76,13 @@ export default function TravelCompanionPage() {
         setLoading(false);
         setIsAnimating(false);
       }, 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Travel advice failed", err);
+      toast({
+        title: "Analysis Failed",
+        description: err.message || "Failed to retrieve travel intelligence. Please check your connection and try again.",
+        variant: "destructive",
+      });
       setLoading(false);
       setIsAnimating(false);
     }
