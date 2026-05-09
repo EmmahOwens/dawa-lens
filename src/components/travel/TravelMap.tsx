@@ -408,13 +408,11 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
 
     const arcSource = map.getSource('flight-arc') as maplibregl.GeoJSONSource | undefined;
 
-    if (!destCoords || !isAnimating) {
+    if (!destCoords) {
       // Clear arc
       arcSource?.setData({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } });
       // Fly back to overview
-      if (!destCoords) {
-        map.flyTo({ center: [20, 10], zoom: 1.5, duration: 1500 });
-      }
+      map.flyTo({ center: [20, 10], zoom: 1.5, duration: 1500 });
       return;
     }
 
