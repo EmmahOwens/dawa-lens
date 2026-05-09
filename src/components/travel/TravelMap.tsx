@@ -200,6 +200,7 @@ async function geocodeFallback(destination: string): Promise<[number, number] | 
       format: 'json',
       limit: '1',
       addressdetails: '0',
+      email: 'support@dawa-lens.com',
     });
     const res = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
       headers: { 'Accept': 'application/json' },
