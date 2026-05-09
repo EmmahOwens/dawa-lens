@@ -47,6 +47,9 @@
     <!-- Required for notification vibration -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- APK self-update: required on Android 8+ to trigger package installer -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- Media / storage -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
