@@ -185,12 +185,13 @@ export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
     Medication Logs: ${JSON.stringify(doseLogs)}
     Wellness/Symptom Logs: ${JSON.stringify(wellnessLogs)}
     
-    Task: Correlate adherence with wellness trends (side effects, positive outcomes).
+    Task: Correlate adherence with wellness trends (side effects, positive outcomes) AND identify specific dosage patterns (e.g., frequently missed morning doses, delayed doses).
     Generate a full Care Report summary suitable for handing to a doctor.
 
     Respond in EXACT JSON format:
     { 
       "summary": "2-3 sentences high level clinical overview.", 
+      "dosagePatterns": "1-2 sentences analyzing medication adherence, skipped doses, and timing patterns.",
       "lifestyleAnalysis": "1-2 sentences on how symptoms/energy align with log times.",
       "insights": ["Specific correlation bullet 1", "Specific correlation bullet 2"], 
       "actionItems": ["Actionable clinical suggestion 1", "Suggestion 2"],

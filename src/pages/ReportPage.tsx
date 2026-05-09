@@ -407,9 +407,14 @@ export default function ReportPage() {
                   <p className="text-sm font-semibold text-foreground leading-relaxed">
                     {insights.summary}
                   </p>
+                  {insights.dosagePatterns && (
+                    <p className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10">
+                      <strong className="text-foreground">Dosage Patterns:</strong> {insights.dosagePatterns}
+                    </p>
+                  )}
                   {insights.lifestyleAnalysis && (
                     <p className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10">
-                      {insights.lifestyleAnalysis}
+                      <strong className="text-foreground">Lifestyle & Symptoms:</strong> {insights.lifestyleAnalysis}
                     </p>
                   )}
                 </div>

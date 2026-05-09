@@ -225,6 +225,17 @@ export const MedicalReportContent = ({
             </p>
           </div>
 
+          {insights.dosagePatterns && (
+            <div className="mb-6">
+              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
+                Dosage Patterns
+              </p>
+              <p className="text-sm sm:text-base font-medium leading-relaxed text-gray-800 break-words">
+                {insights.dosagePatterns}
+              </p>
+            </div>
+          )}
+
           {insights.lifestyleAnalysis && (
             <div className="mb-6">
               <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
