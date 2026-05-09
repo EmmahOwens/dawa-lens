@@ -13,7 +13,7 @@ import { calculateNextDose, NextDoseInfo } from "@/services/reminderService";
 import { StatusHero } from "@/components/StatusHero";
 
 // New Dashboard Components
-import { DashboardSearch } from "@/components/dashboard/DashboardSearch";
+
 import { DailyTimeline } from "@/components/dashboard/DailyTimeline";
 import { HealthWidgets } from "@/components/dashboard/HealthWidgets";
 import { FamilyStatusDots } from "@/components/dashboard/FamilyStatusDots";
@@ -154,8 +154,6 @@ export default function Dashboard() {
              </div>
           )}
         </div>
-
-        <DashboardSearch />
         
         {/* Circle of Care (Family Status) */}
         {(isProfessionalMode || patients.length > 0) && (
