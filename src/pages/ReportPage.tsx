@@ -473,9 +473,6 @@ export default function ReportPage() {
                <Button variant="outline" size="sm" onClick={handlePrint} className="h-9 gap-2 rounded-xl hidden sm:flex">
                  <Printer size={14} /> Print
                </Button>
-               <Button variant="ghost" size="icon" onClick={() => setShowPreview(false)} className="rounded-full w-9 h-9">
-                 <X size={18} />
-               </Button>
             </div>
           </DialogHeader>
           <ScrollArea className="flex-1 bg-white">
