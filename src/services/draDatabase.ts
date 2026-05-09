@@ -16,48 +16,48 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
   // ── AFRICA ──────────────────────────────────────────────────────────────────
   uganda: {
     authority: 'National Drug Authority (NDA)',
-    number: '+256 414 255 665',
+    number: '+256 417 788 100',
     website: 'https://www.nda.or.ug',
   },
   kenya: {
     authority: 'Pharmacy & Poisons Board (PPB)',
-    number: '+254 20 2725991',
+    number: '+254 709 770 100',
     website: 'https://www.pharmacyboardkenya.org',
   },
   tanzania: {
     authority: 'Tanzania Medicines & Medical Devices Authority (TMDA)',
-    number: '+255 22 212 0620',
+    number: '+255 22 2450512',
     website: 'https://www.tmda.go.tz',
   },
   rwanda: {
-    authority: 'Rwanda Food & Drugs Authority (FDA)',
-    number: '+250 252 571 730',
-    website: 'https://www.rda.gov.rw',
+    authority: 'Rwanda Food & Drugs Authority (Rwanda FDA)',
+    number: '9707',
+    website: 'https://rwandafda.gov.rw',
   },
   ethiopia: {
     authority: 'Ethiopian Food & Drug Authority (EFDA)',
-    number: '+251 11 552 4322',
+    number: '+251 11 552 4122',
     website: 'https://www.efda.gov.et',
   },
   nigeria: {
     authority: 'National Agency for Food & Drug Administration (NAFDAC)',
-    number: '0800 333 0004',
+    number: '+234 700 1 623322',
     website: 'https://www.nafdac.gov.ng',
   },
   ghana: {
     authority: 'Food & Drugs Authority Ghana (FDA)',
-    number: '+233 302 233200',
-    website: 'https://www.fdaghana.gov.gh',
+    number: '+233 302 235100',
+    website: 'https://fdaghana.gov.gh',
   },
   southafrica: {
     authority: 'South African Health Products Regulatory Authority (SAHPRA)',
-    number: '+27 12 501 0400',
+    number: '+27 12 501 0300',
     website: 'https://www.sahpra.org.za',
   },
   egypt: {
     authority: 'Egyptian Drug Authority (EDA)',
-    number: '16928',
-    website: 'https://www.eda.gov.eg',
+    number: '15301',
+    website: 'https://www.edaegypt.gov.eg',
   },
   morocco: {
     authority: "Direction du Médicament et de la Pharmacie (DMP)",
@@ -152,7 +152,7 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
   },
   italy: {
     authority: 'Agenzia Italiana del Farmaco (AIFA)',
-    number: '+39 06 5978 4400',
+    number: '800 571661',
     website: 'https://www.aifa.gov.it',
   },
   spain: {
@@ -191,9 +191,9 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
     website: 'https://www.lakemedelsverket.se',
   },
   norway: {
-    authority: 'Norwegian Medicines Agency (NOMA)',
+    authority: 'Norwegian Medical Products Agency (DMP/NOMA)',
     number: '+47 22 89 77 00',
-    website: 'https://www.noma.no',
+    website: 'https://www.dmp.no',
   },
   denmark: {
     authority: 'Danish Medicines Agency (DKMA)',
@@ -241,7 +241,7 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
   },
   turkey: {
     authority: 'Turkish Medicines & Medical Devices Agency (TITCK)',
-    number: '+90 312 218 30 00',
+    number: '444 4 680',
     website: 'https://www.titck.gov.tr',
   },
   ireland: {
@@ -252,9 +252,9 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
 
   // ── MIDDLE EAST ───────────────────────────────────────────────────────────
   uae: {
-    authority: 'Dubai Health Authority – Pharmaceutical Division',
-    number: '800 4006',
-    website: 'https://www.dha.gov.ae',
+    authority: 'Ministry of Health & Prevention (MOHAP)',
+    number: '800-111-11',
+    website: 'https://mohap.gov.ae',
   },
   saudiarabia: {
     authority: 'Saudi Food & Drug Authority (SFDA)',
@@ -305,12 +305,12 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
   // ── ASIA ─────────────────────────────────────────────────────────────────
   india: {
     authority: 'Central Drugs Standard Control Organisation (CDSCO)',
-    number: '1800 180 4444',
+    number: '1800 11 1454',
     website: 'https://www.cdsco.gov.in',
   },
   china: {
     authority: 'National Medical Products Administration (NMPA)',
-    number: '12331',
+    number: '12315',
     website: 'https://www.nmpa.gov.cn',
   },
   japan: {
@@ -325,7 +325,7 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
   },
   singapore: {
     authority: 'Health Sciences Authority (HSA)',
-    number: '+65 6866 3538',
+    number: '+65 6866 1111',
     website: 'https://www.hsa.gov.sg',
   },
   malaysia: {
@@ -408,7 +408,7 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
   },
   canada: {
     authority: 'Health Canada – Marketed Health Products Directorate',
-    number: '1-866-234-2345',
+    number: '1-866-225-0709',
     website: 'https://www.canada.ca/en/health-canada.html',
   },
   mexico: {
@@ -419,7 +419,7 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
   brazil: {
     authority: 'National Health Surveillance Agency (ANVISA)',
     number: '0800 642 9782',
-    website: 'https://www.gov.br/anvisa',
+    website: 'https://www.gov.br/anvisa/pt-br',
   },
   argentina: {
     authority: 'Administración Nacional de Medicamentos (ANMAT)',
