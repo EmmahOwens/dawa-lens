@@ -7,6 +7,7 @@ dotenv.config();
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_LIGHT_MODEL = 'llama-3.1-8b-instant';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -21,7 +22,7 @@ const sanitizeJson = (text) => {
 };
 
 const EMERGENCY_KEYWORDS = [
-  'poison', 'suicide', 'kill myself', 'allergic reaction', 'chest pain', 
+  'poison', 'suicide', 'kill myself', 'allergic reaction', 'chest pain',
   'difficulty breathing', 'can\'t breathe', 'stroke', 'seizure', 'unconscious',
   'overdose', 'bleeding heavily', 'anaphylaxis'
 ];
@@ -63,7 +64,7 @@ const callGeminiChat = async (finalMessages) => {
 
     const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) throw new AppError('Gemini returned an empty response.', 502);
-    
+
     const parsed = JSON.parse(sanitizeJson(text));
     parsed.source = "Gemini (Fallback)";
     return parsed;
@@ -73,14 +74,14 @@ const callGeminiChat = async (finalMessages) => {
   }
 };
 
-const callGroq = async (prompt, isJson = true) => {
+const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL) => {
   if (!GROQ_API_KEY) {
     return await callGeminiChat([{ role: 'user', content: prompt }]);
   }
 
   try {
     const payload = {
-      model: GROQ_MODEL,
+      model: modelId,
       messages: [{ role: 'user', content: prompt }]
     };
     if (isJson) {
@@ -126,7 +127,7 @@ export const getCoachAdvice = async (logs, medicines, userName) => {
     Respond in JSON format:
     { "advice": "text", "patterns": ["list"], "adherenceScore": 0-100 }
   `;
-  return await callGroq(prompt);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
 
 export const checkHolisticSafety = async (medicines, lifestyleFactors) => {
@@ -141,7 +142,7 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors) => {
     Respond in JSON format:
     { "interactions": [{ "factor": "...", "risk": "...", "explanation": "...", "advice": "..." }] }
   `;
-  return await callGroq(prompt);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
 
 export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }) => {
@@ -213,7 +214,7 @@ export const checkMealSafety = async (medicines, mealDescription) => {
     Respond in JSON format:
     { "risk": "...", "verdict": "...", "explanation": "..." }
   `;
-  return await callGroq(prompt);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
 
 export const getNutritionalGuidance = async (medicines) => {
@@ -238,7 +239,7 @@ export const getNutritionalGuidance = async (medicines) => {
       "timingAdvice": "string"
     }
   `;
-  return await callGroq(prompt);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
 
 export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
@@ -299,9 +300,9 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     });
   }
 
-  const { finalMessages } = await prepareDawaGPTContext({ 
-    messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, 
-    isStreaming: true 
+  const { finalMessages } = await prepareDawaGPTContext({
+    messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
+    isStreaming: true
   });
 
   if (!GROQ_API_KEY) {
@@ -354,7 +355,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
 async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false }) {
   const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || "";
   const knowledgeSnippets = await retrieveMedicalKnowledge(lastUserMsg);
-  const knowledgeContext = knowledgeSnippets.length > 0 
+  const knowledgeContext = knowledgeSnippets.length > 0
     ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n`
     : "";
 
@@ -362,13 +363,13 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, 20)) : 'No recent dose history available';
   const remindersSummary = reminders?.length
     ? JSON.stringify(reminders.map(r => ({
-        id: r.id,
-        medicineName: r.medicineName,
-        dose: r.dose,
-        time: r.time,
-        repeat: r.repeatSchedule,
-        enabled: r.enabled
-      })))
+      id: r.id,
+      medicineName: r.medicineName,
+      dose: r.dose,
+      time: r.time,
+      repeat: r.repeatSchedule,
+      enabled: r.enabled
+    })))
     : 'No reminders set';
   const wellnessSummary = wellnessLogs?.length
     ? JSON.stringify(wellnessLogs.slice(0, 10))
@@ -530,7 +531,7 @@ export const getEmotionReflection = async (mood, energy, symptoms, medicines = [
     }
   `;
 
-  return await callGroq(prompt);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
 
 function handleAiError(err) {
