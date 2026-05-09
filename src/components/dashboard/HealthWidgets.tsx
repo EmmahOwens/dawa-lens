@@ -1,7 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Smile, Meh, Frown } from "lucide-react";
+import { Smile, Meh, Frown, Loader2 } from "lucide-react";
 import { WellnessLog } from "@/contexts/AppContext";
+import { aiApi } from "@/services/api";
+import { useApp } from "@/contexts/AppContext";
 
 interface HealthWidgetsProps {
   wellnessLogs: WellnessLog[];
@@ -22,7 +24,9 @@ const getMoodLabel = (value: number) => {
 };
 
 export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
+  const { medicines } = useApp();
   const today = new Date().toDateString();
+  const [savingMood, setSavingMood] = useState<number | null>(null);
 
   // Latest mood logged today (from symptom entries)
   const latestMood = useMemo(() => {
@@ -38,6 +42,41 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
   }, [wellnessLogs, today]);
 
   const activeMoodCfg = latestMood != null ? MOOD_OPTIONS.find((m) => m.value === latestMood) : null;
+
+  /**
+   * When the user taps a mood:
+   * 1. Fetch a Groq AI reflection (same service as Wellness Hub)
+   * 2. Save the wellness log with the reflection baked in
+   */
+  const handleMoodTap = async (moodValue: number) => {
+    if (savingMood !== null) return; // prevent double-tap
+    setSavingMood(moodValue);
+
+    try {
+      // Step 1: Get AI reflection from Groq (energy defaults to 3 on quick-tap; no symptoms)
+      let aiReflection: { reflection: string; affirmation: string; tip: string } | null = null;
+      try {
+        aiReflection = await aiApi.getEmotionReflection({
+          mood: moodValue,
+          energy: 3,
+          symptoms: [],
+          medicines,
+        });
+      } catch (err) {
+        console.warn("Groq reflection failed on Dashboard mood tap:", err);
+      }
+
+      // Step 2: Save log with reflection (gracefully falls back if reflection is null)
+      onAddLog("symptom", {
+        mood: moodValue,
+        energy: 3,
+        symptoms: [],
+        ...(aiReflection ? { aiReflection } : {}),
+      });
+    } finally {
+      setSavingMood(null);
+    }
+  };
 
   return (
     <div className="mb-8">
@@ -73,23 +112,37 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
           {MOOD_OPTIONS.map((mood) => {
             const MoodIcon = mood.icon;
             const isActive = latestMood === mood.value;
+            const isLoading = savingMood === mood.value;
+
             return (
               <motion.button
                 key={mood.value}
                 whileTap={{ scale: 0.85 }}
-                onClick={() => onAddLog("symptom", { mood: mood.value, energy: 3 })}
+                onClick={() => handleMoodTap(mood.value)}
+                disabled={savingMood !== null}
                 className={`flex-1 flex items-center justify-center py-2 rounded-xl transition-all duration-200 ${
                   isActive
                     ? `${mood.bg} ${mood.color} shadow-sm scale-110`
                     : "text-muted-foreground/40 hover:text-muted-foreground hover:bg-muted/50"
-                }`}
+                } ${savingMood !== null && !isLoading ? "opacity-40" : ""}`}
                 title={mood.label}
               >
-                <MoodIcon size={16} />
+                {isLoading ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <MoodIcon size={16} />
+                )}
               </motion.button>
             );
           })}
         </div>
+
+        {/* Subtle AI hint while generating */}
+        {savingMood !== null && (
+          <p className="text-[9px] text-muted-foreground/50 font-medium text-center mt-2 tracking-wider animate-pulse">
+            ✨ Generating your reflection…
+          </p>
+        )}
       </div>
     </div>
   );

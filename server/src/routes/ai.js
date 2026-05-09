@@ -82,6 +82,19 @@ router.post('/nutritional-guidance', protect, async (req, res, next) => {
 });
 
 /**
+ * Personalized Emotion Reflection (Wellness Hub – Daily Vibe + Body Scan)
+ */
+router.post('/emotion-reflection', protect, async (req, res, next) => {
+  try {
+    const { mood, energy, symptoms, medicines } = req.body;
+    const reflection = await aiService.getEmotionReflection(mood, energy, symptoms, medicines);
+    res.json(reflection);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * Conversational AI Assistant (Dawa-GPT)
  */
 router.post('/chat', protect, async (req, res, next) => {

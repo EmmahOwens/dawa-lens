@@ -1,67 +1,19 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus, Loader2 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
+import { aiApi } from "@/services/api";
 
 interface AIInsightCardProps {
   adherencePercent: number;
 }
 
-function buildInsight(adherence: number, mood: number | null, energy: number | null): string {
-  const moodLabel =
-    mood == null ? null
-    : mood >= 4 ? "positive"
-    : mood <= 2 ? "low"
-    : "neutral";
-
-  const energyLabel =
-    energy == null ? null
-    : energy >= 4 ? "high"
-    : energy <= 2 ? "low"
-    : "moderate";
-
-  // Perfect adherence + positive mood
-  if (adherence >= 100 && moodLabel === "positive") {
-    return `Perfect dose consistency and a positive mood today — your body is getting exactly what it needs. You're in great shape!`;
-  }
-
-  // Perfect adherence + low mood
-  if (adherence >= 100 && moodLabel === "low") {
-    return `All doses are on track today — that's great commitment even when you're not feeling your best. Your consistency is what keeps treatment effective.`;
-  }
-
-  // High adherence + positive mood
-  if (adherence >= 80 && moodLabel === "positive") {
-    return `You're maintaining strong adherence and feeling good today. Setting a backup reminder for any remaining doses could push you to 100%.`;
-  }
-
-  // Low energy warning
-  if (energyLabel === "low" && adherence < 80) {
-    return `Your energy is running low and some doses were missed. Low energy can make it easy to forget — try pairing your meds with a daily habit like meals or brushing teeth.`;
-  }
-
-  // Good energy, poor adherence
-  if (energyLabel === "high" && adherence < 70) {
-    return `You're feeling energetic today — use that momentum to catch up on your medication routine. Consistent dosing is key for long-term effectiveness.`;
-  }
-
-  // Low mood, any adherence
-  if (moodLabel === "low") {
-    return `We noticed you're feeling low today. Remember that consistent medication is an important part of feeling better over time. Small steps matter.`;
-  }
-
-  // Fallback by adherence
-  if (adherence >= 100) return "Your perfect consistency this week is improving your long-term recovery odds. Keep it up!";
-  if (adherence > 80) return "You're doing great! Small tip: Setting a backup alarm for your evening dose might help hit that 100%.";
-  return "We noticed some missed doses. Consistency is key for medication effectiveness. Need help setting better reminders?";
-}
-
 export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
-  const { wellnessLogs, setIsDawaGPTOpen } = useApp();
+  const { wellnessLogs, medicines, doseLogs, setIsDawaGPTOpen } = useApp();
 
   const today = new Date().toDateString();
 
-  const { mood, energy } = useMemo(() => {
+  const { mood, energy, latestReflection } = useMemo(() => {
     const todayLogs = wellnessLogs
       .filter(
         (l) =>
@@ -70,16 +22,58 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
       )
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    if (todayLogs.length === 0) return { mood: null, energy: null };
+    if (todayLogs.length === 0) return { mood: null, energy: null, latestReflection: null };
 
     const latest = todayLogs[0].data as any;
     return {
       mood: latest.mood != null ? Number(latest.mood) : null,
       energy: latest.energy != null ? Number(latest.energy) : null,
+      // Reuse saved AI reflection from the most recent log if it exists
+      latestReflection: latest.aiReflection ?? null,
     };
   }, [wellnessLogs, today]);
 
-  const insight = buildInsight(adherencePercent, mood, energy);
+  // Live Groq insight state
+  const [groqInsight, setGroqInsight] = useState<string | null>(null);
+  const [insightLoading, setInsightLoading] = useState(false);
+  // Track what data the last fetch was built on to avoid redundant calls
+  const lastFetchKey = useRef<string>("");
+
+  useEffect(() => {
+    const fetchKey = `${adherencePercent}-${mood}-${energy}-${doseLogs.length}`;
+    if (fetchKey === lastFetchKey.current) return;
+    lastFetchKey.current = fetchKey;
+
+    const fetchInsight = async () => {
+      setInsightLoading(true);
+      try {
+        const res = await aiApi.getWellnessInsight({
+          doseLogs: doseLogs.slice(0, 30),
+          wellnessLogs: wellnessLogs.slice(0, 10),
+          medicines,
+        });
+        const data = res as any;
+        // Prefer a short summary; fall back to first insight bullet
+        const text: string =
+          data?.summary ??
+          (Array.isArray(data?.insights) && data.insights.length > 0
+            ? data.insights[0]
+            : null);
+        if (text) setGroqInsight(text);
+      } catch (err) {
+        console.warn("AIInsightCard Groq call failed:", err);
+      } finally {
+        setInsightLoading(false);
+      }
+    };
+
+    fetchInsight();
+  }, [adherencePercent, mood, energy, doseLogs.length]);
+
+  // Displayed insight text — prefer live Groq, then saved reflection summary, then nothing
+  const displayInsight =
+    groqInsight ??
+    (latestReflection?.reflection ?? null);
 
   // Trend indicator based on mood + adherence
   const TrendIcon =
@@ -111,7 +105,11 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
               AI Health Insight
             </span>
           </div>
-          <TrendIcon size={16} className={trendColor} />
+          {insightLoading ? (
+            <Loader2 size={14} className="text-white/60 animate-spin" />
+          ) : (
+            <TrendIcon size={16} className={trendColor} />
+          )}
         </div>
 
         {/* Emotion summary pills (only when data exists) */}
@@ -119,22 +117,35 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
           <div className="flex gap-2 mb-4 flex-wrap">
             {mood != null && (
               <span className="text-[9px] font-black uppercase tracking-widest bg-white/15 border border-white/20 px-2.5 py-1 rounded-full">
-                Mood:{" "}
+                Mood{" "}
                 {mood >= 4 ? "😊 Positive" : mood <= 2 ? "😔 Low" : "😐 Neutral"}
               </span>
             )}
             {energy != null && (
               <span className="text-[9px] font-black uppercase tracking-widest bg-white/15 border border-white/20 px-2.5 py-1 rounded-full">
-                Energy:{" "}
+                Energy{" "}
                 {energy >= 4 ? "⚡ High" : energy <= 2 ? "🪫 Low" : "🔋 Moderate"}
               </span>
             )}
           </div>
         )}
 
-        <p className="text-sm font-medium leading-relaxed mb-5 text-white/95">
-          "{insight}"
-        </p>
+        {/* Insight text */}
+        {insightLoading && !displayInsight ? (
+          <div className="space-y-2 mb-5">
+            <div className="h-3 bg-white/20 rounded-full w-full animate-pulse" />
+            <div className="h-3 bg-white/20 rounded-full w-4/5 animate-pulse" />
+            <div className="h-3 bg-white/15 rounded-full w-3/5 animate-pulse" />
+          </div>
+        ) : displayInsight ? (
+          <p className="text-sm font-medium leading-relaxed mb-5 text-white/95">
+            "{displayInsight}"
+          </p>
+        ) : (
+          <p className="text-sm font-medium leading-relaxed mb-5 text-white/70 italic">
+            Log your mood or take a medication dose to generate a personalized insight.
+          </p>
+        )}
 
         <button
           onClick={() => setIsDawaGPTOpen(true)}

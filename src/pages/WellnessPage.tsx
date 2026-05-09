@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp, WellnessLog } from "@/contexts/AppContext";
-import { Heart, Utensils, Sparkles, Loader2, Thermometer, Smile, Zap, Trash2, CheckCircle2, AlertTriangle, ShieldCheck, Brain, Moon, Wind, Activity, Coffee, CloudRain, Star, Info } from "lucide-react";
+import { Heart, Utensils, Sparkles, Loader2, Smile, Zap, CheckCircle2, AlertTriangle, ShieldCheck, Brain, Activity, Coffee, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
 import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
@@ -33,6 +33,7 @@ export default function WellnessPage() {
 
   const [activeTab, setActiveTab] = useState<"journal" | "food">("journal");
   const [loading, setLoading] = useState(false);
+  const [reflectionLoading, setReflectionLoading] = useState(false);
   const [insight, setInsight] = useState<any>(null);
   const [insightLoading, setInsightLoading] = useState(false);
   const [guidance, setGuidance] = useState<any>(null);
@@ -87,15 +88,47 @@ export default function WellnessPage() {
 
   const handleLogWellness = async () => {
     setLoading(true);
+    setReflectionLoading(true);
     try {
+      // Step 1: Fetch personalized AI reflection from Groq (same API key flow as Dawa-GPT)
+      let aiReflection: { reflection: string; affirmation: string; tip: string } | null = null;
+      try {
+        aiReflection = await aiApi.getEmotionReflection({
+          mood,
+          energy,
+          symptoms,
+          medicines,
+        });
+      } catch (reflectionErr) {
+        console.warn("Groq reflection failed, saving log without AI reflection:", reflectionErr);
+      } finally {
+        setReflectionLoading(false);
+      }
+
+      // Step 2: Save wellness log with AI reflection baked into data (so it persists in Recent Reflections)
       await addWellnessLog({
         type: "symptom",
-        data: { mood, energy, symptoms }
+        data: {
+          mood,
+          energy,
+          symptoms,
+          ...(aiReflection ? { aiReflection } : {}),
+        },
       });
-      toast({ title: "Journal Entry Saved", description: "Your wellness data has been recorded." });
+
+      toast({
+        title: aiReflection ? "Reflection Saved ✨" : "Journal Entry Saved",
+        description: aiReflection
+          ? "Your AI-powered reflection is ready."
+          : "Your wellness data has been recorded.",
+      });
       setSymptoms([]);
+    } catch (err) {
+      console.error("Failed to save wellness log:", err);
+      toast({ title: "Save Failed", description: "Could not save your reflection. Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
+      setReflectionLoading(false);
     }
   };
 
@@ -288,11 +321,16 @@ export default function WellnessPage() {
 
                <Button 
                 onClick={handleLogWellness}
-                disabled={loading}
+                disabled={loading || reflectionLoading}
                 className="w-full mt-8 h-14 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
                >
-                 {loading ? <Loader2 className="animate-spin mr-2" size={16} /> : <CheckCircle2 className="mr-2" size={16} />}
-                 Secure Daily Reflection
+                 {reflectionLoading ? (
+                   <><Loader2 className="animate-spin mr-2" size={16} /> Generating Reflection…</>
+                 ) : loading ? (
+                   <><Loader2 className="animate-spin mr-2" size={16} /> Saving…</>
+                 ) : (
+                   <><CheckCircle2 className="mr-2" size={16} /> Secure Daily Reflection</>
+                 )}
                </Button>
             </div>
           </motion.div>
@@ -553,69 +591,114 @@ export default function WellnessPage() {
               const moodEmoji =
                 logMood === 5 ? "💎" : logMood === 4 ? "🙂" : logMood === 3 ? "😐" : logMood === 2 ? "😕" : logMood === 1 ? "😔" : null;
 
+              const logAiReflection = log.type === "symptom"
+                ? (log.data as any).aiReflection as { reflection: string; affirmation: string; tip: string } | undefined
+                : undefined;
+
               return (
                 <motion.div
                   key={log.id}
                   variants={item}
-                  className="group p-5 rounded-3xl bg-card border border-border/50 flex items-start gap-4 transition-all hover:bg-accent/5 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5"
+                  className="group rounded-3xl bg-card border border-border/50 overflow-hidden transition-all hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5"
                 >
-                  <div
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:scale-110 ${
-                      log.type === "food" ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
-                    }`}
-                  >
-                    {log.type === "food" ? <Utensils size={20} /> : moodEmoji ? (
-                      <span className="text-xl leading-none">{moodEmoji}</span>
-                    ) : <Zap size={20} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-[10px] font-black text-foreground uppercase tracking-widest">
-                        {log.type === "food" ? "Nutritional Log" : "Vitality Check"}
-                      </p>
-                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter bg-muted/50 px-1.5 py-0.5 rounded">
-                        {format(new Date(log.timestamp), "MMM d • h:mm a")}
-                      </p>
+                  {/* Top row */}
+                  <div className="flex items-start gap-4 p-5">
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:scale-110 ${
+                        log.type === "food" ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
+                      }`}
+                    >
+                      {log.type === "food" ? <Utensils size={20} /> : moodEmoji ? (
+                        <span className="text-xl leading-none">{moodEmoji}</span>
+                      ) : <Zap size={20} />}
                     </div>
-                    <p className="text-xs font-semibold text-muted-foreground leading-relaxed">
-                      {log.type === "food"
-                        ? String((log.data as any).meal ?? "")
-                        : logSymptoms && logSymptoms.length > 0
-                          ? `Feeling: ${logSymptoms.join(", ")}`
-                          : logMood != null
-                            ? `Mood: ${logMood >= 4 ? "Positive" : logMood <= 2 ? "Low" : "Steady"}`
-                            : "Logged a check-in"}
-                    </p>
-                    {/* Mood + Energy mini indicators */}
-                    {log.type === "symptom" && (logMood != null || logEnergy != null) && (
-                      <div className="flex gap-3 mt-2">
-                        {logMood != null && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Mood</span>
-                            <div className="flex gap-0.5">
-                              {[1,2,3,4,5].map(n => (
-                                <div key={n} className={`w-2 h-2 rounded-sm ${
-                                  n <= logMood ? "bg-success" : "bg-muted/30"
-                                }`} />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {logEnergy != null && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Energy</span>
-                            <div className="flex gap-0.5">
-                              {[1,2,3,4,5].map(n => (
-                                <div key={n} className={`w-2 h-2 rounded-sm ${
-                                  n <= logEnergy ? "bg-primary" : "bg-muted/30"
-                                }`} />
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <p className="text-[10px] font-black text-foreground uppercase tracking-widest">
+                          {log.type === "food" ? "Nutritional Log" : "Vitality Check"}
+                        </p>
+                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter bg-muted/50 px-1.5 py-0.5 rounded">
+                          {format(new Date(log.timestamp), "MMM d • h:mm a")}
+                        </p>
                       </div>
-                    )}
+                      <p className="text-xs font-semibold text-muted-foreground leading-relaxed">
+                        {log.type === "food"
+                          ? String((log.data as any).meal ?? "")
+                          : logSymptoms && logSymptoms.length > 0
+                            ? `Feeling: ${logSymptoms.join(", ")}`
+                            : logMood != null
+                              ? `Mood: ${logMood >= 4 ? "Positive" : logMood <= 2 ? "Low" : "Steady"}`
+                              : "Logged a check-in"}
+                      </p>
+                      {/* Mood + Energy mini indicators */}
+                      {log.type === "symptom" && (logMood != null || logEnergy != null) && (
+                        <div className="flex gap-3 mt-2">
+                          {logMood != null && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Mood</span>
+                              <div className="flex gap-0.5">
+                                {[1,2,3,4,5].map(n => (
+                                  <div key={n} className={`w-2 h-2 rounded-sm ${
+                                    n <= logMood ? "bg-success" : "bg-muted/30"
+                                  }`} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {logEnergy != null && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Energy</span>
+                              <div className="flex gap-0.5">
+                                {[1,2,3,4,5].map(n => (
+                                  <div key={n} className={`w-2 h-2 rounded-sm ${
+                                    n <= logEnergy ? "bg-primary" : "bg-muted/30"
+                                  }`} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* AI Reflection block — shown only for symptom logs that have one */}
+                  {logAiReflection && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="mx-4 mb-4 rounded-2xl bg-gradient-to-br from-primary/5 via-primary/[0.03] to-transparent border border-primary/15 p-4 space-y-3"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Sparkles size={12} className="text-primary" />
+                        </div>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-primary/70">AI Reflection</span>
+                      </div>
+
+                      {/* Reflection text */}
+                      <p className="text-xs font-medium text-foreground/80 leading-relaxed">
+                        {logAiReflection.reflection}
+                      </p>
+
+                      {/* Affirmation pill */}
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
+                        <span className="text-[10px]">✨</span>
+                        <span className="text-[10px] font-bold text-success italic">{logAiReflection.affirmation}</span>
+                      </div>
+
+                      {/* Tip */}
+                      {logAiReflection.tip && (
+                        <div className="flex items-start gap-2 pt-1 border-t border-primary/10">
+                          <Zap size={11} className="text-warning mt-0.5 shrink-0" />
+                          <p className="text-[10px] font-semibold text-muted-foreground leading-snug">
+                            {logAiReflection.tip}
+                          </p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
                 </motion.div>
               );
             })

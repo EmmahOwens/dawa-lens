@@ -484,6 +484,52 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   return { finalMessages, systemInstruction };
 }
 
+/**
+ * Generate a personalized emotional reflection from a single Daily Vibe + Body Scan check-in.
+ * Called immediately after the user taps "Secure Daily Reflection" in the Wellness Hub.
+ */
+export const getEmotionReflection = async (mood, energy, symptoms, medicines = []) => {
+  const moodLabels = { 1: 'Very Low', 2: 'Low', 3: 'Neutral', 4: 'Good', 5: 'Great' };
+  const moodLabel = moodLabels[mood] || 'Unknown';
+  const energyLabel = moodLabels[energy] || 'Unknown';
+  const symptomList = symptoms && symptoms.length > 0 ? symptoms.join(', ') : 'None reported';
+  const medList = medicines.length > 0
+    ? medicines.map(m => m.name).join(', ')
+    : 'Not specified';
+
+  const prompt = `
+    You are "Dawa-Lens Wellness Companion", a warm and empathetic emotional health assistant.
+    Regional Context: Uganda / East Africa.
+
+    The user just completed their daily wellness check-in:
+    - Current Mood: ${moodLabel} (${mood}/5)
+    - Energy Level: ${energyLabel} (${energy}/5)
+    - Reported Symptoms: ${symptomList}
+    - Active Medications: ${medList}
+
+    Your task:
+    1. Write a warm, personalized 2-3 sentence "reflection" that acknowledges their current state.
+       - If mood or energy is low (1-2), be extra compassionate and validating.
+       - If symptoms are reported, gently acknowledge them and relate to their treatment context.
+       - If mood is high (4-5), celebrate and reinforce positive momentum.
+    2. Write a short, punchy "affirmation" (one sentence, max 12 words) that feels authentic — not generic.
+    3. Write one concrete "tip" (one sentence) — a specific, actionable wellness suggestion for their state.
+       - Prioritize East African context (rest, hydration, walking, regional foods like Matooke or Avocado).
+       - If they have active medications, tie the tip to medication adherence or side effect management.
+
+    Tone: Warm, human, culturally grounded. Never clinical or robotic.
+
+    Respond in EXACT JSON format:
+    {
+      "reflection": "2-3 sentence personalized reflection",
+      "affirmation": "Short encouraging affirmation",
+      "tip": "One actionable wellness tip"
+    }
+  `;
+
+  return await callGroq(prompt);
+};
+
 function handleAiError(err) {
   if (err.isOperational) throw err;
   if (err.response) {

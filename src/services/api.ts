@@ -206,6 +206,9 @@ export const aiApi = {
   getNutritionalGuidance: (data: { medicines: Medicine[] }) =>
     request<unknown>('/ai/nutritional-guidance', { method: 'POST', body: JSON.stringify(data) }),
 
+  getEmotionReflection: (data: { mood: number; energy: number; symptoms: string[]; medicines: Medicine[] }) =>
+    request<{ reflection: string; affirmation: string; tip: string }>('/ai/emotion-reflection', { method: 'POST', body: JSON.stringify(data) }),
+
   chat: (data: {
     messages: unknown[];
     medicines: Medicine[];
