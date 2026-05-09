@@ -114,8 +114,10 @@ export const patientsApi = {
 
 // --- Medicines ---
 export const medicinesApi = {
-  getAll: (userId: string, patientId?: string) => {
-    const url = `/medicines?userId=${userId}${patientId ? `&patientId=${patientId}` : ''}`;
+  // Always fetch all medicines for the user (owner + all family members).
+  // AppContext filters client-side for per-profile views.
+  getAll: (userId: string) => {
+    const url = `/medicines?userId=${userId}`;
     return request<Medicine[]>(url);
   },
 
@@ -131,8 +133,10 @@ export const medicinesApi = {
 
 // --- Reminders ---
 export const remindersApi = {
-  getAll: (userId: string, patientId?: string) => {
-    const url = `/reminders?userId=${userId}${patientId ? `&patientId=${patientId}` : ''}`;
+  // Always fetch all reminders for the user (owner + all family members).
+  // Client-side filtering in AppContext handles per-profile views.
+  getAll: (userId: string) => {
+    const url = `/reminders?userId=${userId}`;
     return request<Reminder[]>(url);
   },
 
@@ -148,8 +152,10 @@ export const remindersApi = {
 
 // --- Dose Logs ---
 export const doseLogsApi = {
-  getAll: (userId: string, patientId?: string) => {
-    const url = `/doselogs?userId=${userId}${patientId ? `&patientId=${patientId}` : ''}`;
+  // Always fetch all dose logs for the user (no patient scoping at API level).
+  // This allows AppContext to load everything once and filter client-side.
+  getAll: (userId: string) => {
+    const url = `/doselogs?userId=${userId}`;
     return request<DoseLog[]>(url);
   },
 

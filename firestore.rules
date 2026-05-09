@@ -1,9 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // --- Helper Functions ---
-    
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -12,7 +12,7 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Check if the user owns the document (either existing or being created)
+    // Check if the authenticated user owns the document by its userId field
     function isDataOwner() {
       return isAuthenticated() && (
         (request.resource != null && request.resource.data.userId == request.auth.uid) ||
@@ -20,7 +20,7 @@ service cloud.firestore {
       );
     }
 
-    // Check if the user is the manager of the patient
+    // Check if the user is the manager of the patient profile
     function isPatientManager() {
       return isAuthenticated() && (
         (request.resource != null && request.resource.data.managedBy == request.auth.uid) ||
@@ -30,35 +30,43 @@ service cloud.firestore {
 
     // --- Collections ---
 
-    // User profiles
+    // User profiles — only the profile owner can read/write
     match /users/{userId} {
       allow read, write: if isOwner(userId);
     }
 
     // Medication inventory
+    // Allow read/write only if the userId field matches the authenticated user
     match /medicines/{medicineId} {
       allow read, write: if isDataOwner();
+      allow delete: if isDataOwner();
     }
 
     // Medication reminders/schedules
+    // Allow read/write only if the userId field matches the authenticated user
     match /reminders/{reminderId} {
       allow read, write: if isDataOwner();
+      allow delete: if isDataOwner();
     }
 
-    // History of doses taken/skipped
+    // Dose logs — history of doses taken/skipped/missed
+    // Allow read/write/delete if the userId field matches the authenticated user
     match /doseLogs/{logId} {
       allow read, write: if isDataOwner();
+      allow delete: if isDataOwner();
     }
 
     // Wellness journals (Food, Symptoms, Mood)
     match /wellnessLogs/{logId} {
       allow read, write: if isDataOwner();
+      allow delete: if isDataOwner();
     }
 
     // Family members or professional clients
+    // Only the managing user can create/read/update/delete patient profiles
     match /patients/{patientId} {
       allow read, write: if isPatientManager();
+      allow delete: if isPatientManager();
     }
   }
 }
-

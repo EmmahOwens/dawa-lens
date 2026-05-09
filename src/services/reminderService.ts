@@ -70,7 +70,8 @@ function getIntervalMinutes(times: string[], fromIndex: number, toIndex: number)
 export const checkMissedDoses = async (
   reminders: Reminder[],
   doseLogs: DoseLog[],
-  logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>
+  logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>,
+  patientId?: string | null  // Optional: scope to a specific patient. null = owner only.
 ) => {
   // Guard: do nothing if there's no data yet (avoids false-positives on mount)
   if (reminders.length === 0) return;
@@ -79,7 +80,16 @@ export const checkMissedDoses = async (
   const twoHoursAgo = subHours(now, 2);
   const twentyFourHoursAgo = subHours(now, 24);
 
-  const activeReminders = reminders.filter(r => r.enabled);
+  // Scope to the requested patient
+  const activeReminders = reminders.filter(r => {
+    if (!r.enabled) return false;
+    if (patientId !== undefined) {
+      // Explicit scope requested: match null (owner) or specific patient ID
+      const rPatientId = (r as any).patientId ?? null;
+      return rPatientId === (patientId ?? null);
+    }
+    return true; // No filter — check all
+  });
 
   for (const r of activeReminders) {
     // Parse when this reminder was created so we never mark a dose
@@ -406,8 +416,12 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
         }
 
         notifications.push({
-          title: `Time for ${r.medicineName}`,
-          body: `Dose: ${r.dose}. Remember to take your medicine!`,
+          title: r.patientName
+            ? `Time for ${r.patientName}'s ${r.medicineName}`
+            : `Time for ${r.medicineName}`,
+          body: r.patientName
+            ? `${r.patientName}'s dose: ${r.dose}. Don't miss it!`
+            : `Dose: ${r.dose}. Remember to take your medicine!`,
           id: stringToHash(r.id + next.toISOString()),
           // allowWhileIdle: fires even when Android is in Doze/battery-saver mode.
           // This is the key flag that makes notifications work fully offline.
@@ -419,6 +433,7 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
           extra: {
             reminderId: r.id,
             medicineName: r.medicineName,
+            patientName: r.patientName || null,
             dose: r.dose,
             scheduledTime: next.toISOString()
           }

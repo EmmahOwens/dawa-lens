@@ -109,7 +109,7 @@ type AppContextType = {
   selectedPatientId: string | null; // null = self
   isProfessionalMode: boolean;
   
-  addMedicine: (med: Omit<Medicine, "id" | "addedAt">) => Promise<Medicine>;
+  addMedicine: (med: Omit<Medicine, "id" | "addedAt">, patientId?: string | null) => Promise<Medicine>;
   updateMedicine: (id: string, updates: Partial<Medicine>) => Promise<void>;
   deleteMedicine: (id: string) => Promise<void>;
   addReminder: (rem: Omit<Reminder, "id" | "createdAt">) => Promise<void>;
@@ -446,13 +446,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (cachedMeds.length > 0 && medicines.length === 0) setMedicines(cachedMeds);
         if (cachedLogs.length > 0 && doseLogs.length === 0) setDoseLogs(cachedLogs);
 
-        const [meds, rems, logs, pats, wells] = await Promise.all([
-          medicinesApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
-          remindersApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
-          doseLogsApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
-          patientsApi.getAll(currentUserId).catch(err => { console.error(err); return null; }),
-          wellnessApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
-        ]);
+    // Fetch all data for the user once — no patient scoping at API level.
+    // All records include patientId field; client-side filtering drives per-profile views.
+    // This avoids re-fetching on profile switch and enables accurate cross-profile stats.
+    const [meds, rems, logs, pats, wells] = await Promise.all([
+      medicinesApi.getAll(currentUserId).catch(err => { console.error(err); return null; }),
+      remindersApi.getAll(currentUserId).catch(err => { console.error(err); return null; }),
+      doseLogsApi.getAll(currentUserId).catch(err => { console.error(err); return null; }),
+      patientsApi.getAll(currentUserId).catch(err => { console.error(err); return null; }),
+      wellnessApi.getAll(currentUserId, selectedPatientId || undefined).catch(err => { console.error(err); return null; }),
+    ]);
         
         if (meds) {
           const normalizedMeds = meds.map(normalize);
@@ -481,7 +484,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!isAuthLoading) {
       fetchAll();
     }
-  }, [currentUserId, storageMode, selectedPatientId, isAuthLoading]);
+  }, [currentUserId, storageMode, isAuthLoading]);
 
   const completeOnboarding = async (profile: Omit<UserProfile, "id">) => {
     if (!currentUserId) throw new Error("Not logged in");
@@ -493,8 +496,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // --- CRUD Operations ---
 
-  const addMedicine = async (med: Omit<Medicine, "id" | "addedAt">): Promise<Medicine> => {
+  const addMedicine = async (med: Omit<Medicine, "id" | "addedAt">, explicitPatientId?: string | null): Promise<Medicine> => {
     let newMed: Medicine;
+    // Use explicit patientId if provided (e.g., from AddReminderPage with family context),
+    // otherwise fall back to the global selectedPatientId.
+    const effectivePatientId = explicitPatientId !== undefined ? explicitPatientId : selectedPatientId;
     
     if (storageMode === "local") {
       newMed = await localPersistence.medicines.create(med);
@@ -504,7 +510,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const medData = sanitizeFirestoreData({
         ...med,
         userId: currentUserId,
-        patientId: selectedPatientId || null,
+        patientId: effectivePatientId || null,
         addedAt: new Date().toISOString()
       });
 
@@ -658,7 +664,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDoseLogs((p) => [...p, newLog]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      const created = await doseLogsApi.create({ ...log, userId: currentUserId, patientId: selectedPatientId });
+      // Derive patientId from the reminder's own patientId field (not selectedPatientId)
+      // so family member dose logs are always scoped correctly regardless of the
+      // currently viewed profile.
+      const reminder = reminders.find(r => r.id === log.reminderId);
+      const effectivePatientId = reminder?.patientId ?? selectedPatientId ?? null;
+      const created = await doseLogsApi.create({ ...log, userId: currentUserId, patientId: effectivePatientId });
       newLog = normalize(created) as DoseLog;
       
       const updated = [...doseLogs, newLog];
@@ -732,7 +743,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (storageMode === "local") {
       await localPersistence.doseLogs.remove(id);
     } else {
-      await doseLogsApi.remove(id);
+      // Delete from Firestore and API
+      const docRef = doc(db, "doseLogs", id);
+      await deleteDoc(docRef);
+      await doseLogsApi.remove(id).catch(err => console.error("API dose log delete failed:", err));
     }
     const updated = doseLogs.filter((l) => l.id !== id);
     setDoseLogs(updated);

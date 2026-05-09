@@ -165,7 +165,9 @@ export default function AddReminderPage() {
     try {
       let finalMedId = medicineId;
 
-      // If it's a new medicine (Manual Entry), add it to the cabinet first
+      // If it's a new medicine (Manual Entry), add it to the cabinet first.
+      // Pass contextPatientId explicitly so the medicine is scoped to the correct
+      // patient even if selectedPatientId doesn't match (e.g., navigated from FamilyHub).
       if (!finalMedId && medicineName.trim()) {
         try {
           const newMed = await addMedicine({
@@ -173,7 +175,7 @@ export default function AddReminderPage() {
             dosage: dose.trim(),
             icon: icon,
             color: color,
-          });
+          }, contextPatientId);
           finalMedId = newMed.id;
         } catch (e) {
           console.warn("Could not auto-add medicine to cabinet:", e);

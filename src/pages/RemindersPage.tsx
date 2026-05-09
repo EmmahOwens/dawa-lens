@@ -99,12 +99,21 @@ export default function RemindersPage() {
     });
   }, [filteredReminders]);
 
-  // Today stats for the active profile
+  // Today stats for the active profile — scoped to filteredReminders only
+  const filteredReminderIds = useMemo(() => new Set(filteredReminders.map(r => r.id)), [filteredReminders]);
   const enabledCount = filteredReminders.filter((r) => r.enabled).length;
+  const todayStr = new Date().toDateString();
   const takenToday = doseLogs.filter(
     (l) =>
+      filteredReminderIds.has(l.reminderId) &&
       l.action === "taken" &&
-      new Date(l.actionTime).toDateString() === new Date().toDateString()
+      new Date(l.actionTime).toDateString() === todayStr
+  ).length;
+  const missedToday = doseLogs.filter(
+    (l) =>
+      filteredReminderIds.has(l.reminderId) &&
+      l.action === "missed" &&
+      new Date(l.actionTime).toDateString() === todayStr
   ).length;
 
   const handleToggle = async (reminder: Reminder) => {
@@ -179,7 +188,7 @@ export default function RemindersPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="grid grid-cols-3 gap-3 mb-6"
+        className="grid grid-cols-4 gap-2 mb-6"
       >
         <div className="p-3 rounded-2xl bg-primary/8 border border-primary/15 text-center">
           <p className="text-2xl font-bold text-primary">{filteredReminders.length}</p>
@@ -191,7 +200,15 @@ export default function RemindersPage() {
         </div>
         <div className="p-3 rounded-2xl bg-accent border border-border/50 text-center">
           <p className="text-2xl font-bold text-foreground">{takenToday}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Taken Today</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Taken</p>
+        </div>
+        <div className={`p-3 rounded-2xl text-center ${
+          missedToday > 0
+            ? "bg-destructive/8 border border-destructive/20"
+            : "bg-accent border border-border/50"
+        }`}>
+          <p className={`text-2xl font-bold ${missedToday > 0 ? "text-destructive" : "text-foreground"}`}>{missedToday}</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Missed</p>
         </div>
       </motion.div>
 

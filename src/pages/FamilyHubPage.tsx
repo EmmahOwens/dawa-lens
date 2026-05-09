@@ -3,15 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useApp, Patient, Medicine, Reminder } from "@/contexts/AppContext";
 import { 
   Plus, 
-  Users, 
-  User, 
-  ArrowRight, 
   Trash2, 
-  Heart, 
-  ShieldCheck, 
   Edit2, 
   MoreVertical, 
-  CheckCircle2, 
   AlertCircle,
   Activity,
   Baby,
@@ -21,7 +15,9 @@ import {
   Bell,
   History as HistoryIcon,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  AlertTriangle,
+  TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -159,28 +155,52 @@ export default function FamilyHubPage() {
     : { name: userProfile?.name || "Self", id: null, relation: "Primary User" };
 
   const memberStats = useMemo(() => {
-    const getStats = (id: string | null) => {
-      const medCount = medicines.filter(m => {
-        const pId = (m as any).patientId;
-        return id === null ? !pId : pId === id;
-      }).length;
-      
-      const remCount = reminders.filter(r => {
-        const pId = (r as any).patientId;
-        return id === null ? !pId : pId === id;
-      }).length;
+    const today = new Date().toDateString();
 
-      return { meds: medCount, reminders: remCount };
+    const getStats = (id: string | null) => {
+      // Fix: treat both null and undefined as "owner" to match Firestore records
+      // where patientId may be stored as null OR simply absent.
+      const scopedMeds = medicines.filter(m => {
+        const pId = (m as any).patientId ?? null;
+        return id === null ? pId === null : pId === id;
+      });
+
+      const scopedRems = reminders.filter(r => {
+        const pId = (r as any).patientId ?? null;
+        return id === null ? pId === null : pId === id;
+      });
+
+      // Compute adherence: taken / (taken + missed) in last 30 days
+      const scopedRemIds = new Set(scopedRems.map(r => r.id));
+      const relevantLogs = doseLogs.filter(l => scopedRemIds.has(l.reminderId));
+      const takenCount = relevantLogs.filter(l => l.action === "taken").length;
+      const missedCount = relevantLogs.filter(l => l.action === "missed").length;
+      const totalLogged = takenCount + missedCount;
+      const adherenceRate = totalLogged > 0 ? Math.round((takenCount / totalLogged) * 100) : null;
+
+      // Missed doses today
+      const missedToday = doseLogs.filter(l =>
+        scopedRemIds.has(l.reminderId) &&
+        l.action === "missed" &&
+        new Date(l.actionTime).toDateString() === today
+      ).length;
+
+      return {
+        meds: scopedMeds.length,
+        reminders: scopedRems.length,
+        adherenceRate,
+        missedToday,
+      };
     };
 
-    const statsMap: Record<string, { meds: number; reminders: number }> = {};
+    const statsMap: Record<string, { meds: number; reminders: number; adherenceRate: number | null; missedToday: number }> = {};
     statsMap["self"] = getStats(null);
     patients.forEach(p => {
       statsMap[p.id] = getStats(p.id);
     });
 
     return statsMap;
-  }, [medicines, reminders, patients]);
+  }, [medicines, reminders, doseLogs, patients]);
 
   const activeStats = selectedPatientId ? memberStats[selectedPatientId] : memberStats["self"];
 
@@ -273,14 +293,38 @@ export default function FamilyHubPage() {
                 <Pill size={14} className="text-primary" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Medicines</span>
               </div>
-              <p className="text-2xl font-black text-foreground">{activeStats.meds}</p>
+              <p className="text-2xl font-black text-foreground">{activeStats?.meds ?? 0}</p>
             </div>
             <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40">
               <div className="flex items-center gap-2 mb-2">
                 <Bell size={14} className="text-amber-500" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Reminders</span>
               </div>
-              <p className="text-2xl font-black text-foreground">{activeStats.reminders}</p>
+              <p className="text-2xl font-black text-foreground">{activeStats?.reminders ?? 0}</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp size={14} className="text-emerald-500" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Adherence</span>
+              </div>
+              <p className={`text-2xl font-black ${
+                activeStats?.adherenceRate === null ? "text-muted-foreground" :
+                activeStats.adherenceRate >= 80 ? "text-emerald-500" :
+                activeStats.adherenceRate >= 50 ? "text-amber-500" : "text-destructive"
+              }`}>
+                {activeStats?.adherenceRate !== null && activeStats?.adherenceRate !== undefined
+                  ? `${activeStats.adherenceRate}%`
+                  : "—"}
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle size={14} className={activeStats?.missedToday ? "text-destructive" : "text-muted-foreground"} />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Missed Today</span>
+              </div>
+              <p className={`text-2xl font-black ${activeStats?.missedToday ? "text-destructive" : "text-foreground"}`}>
+                {activeStats?.missedToday ?? 0}
+              </p>
             </div>
           </div>
 
@@ -367,10 +411,16 @@ export default function FamilyHubPage() {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest opacity-60">
-                      {memberStats["self"].meds} Meds • {memberStats["self"].reminders} Reminders
-                    </span>
-                  </div>
+                     <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest opacity-60">
+                       {memberStats["self"]?.meds ?? 0} Meds • {memberStats["self"]?.reminders ?? 0} Reminders
+                     </span>
+                     {memberStats["self"]?.adherenceRate !== null && memberStats["self"]?.adherenceRate !== undefined && (
+                       <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                         memberStats["self"].adherenceRate >= 80 ? "bg-emerald-500/10 text-emerald-600" :
+                         memberStats["self"].adherenceRate >= 50 ? "bg-amber-500/10 text-amber-600" : "bg-destructive/10 text-destructive"
+                       }`}>{memberStats["self"].adherenceRate}%</span>
+                     )}
+                   </div>
                 </div>
                 <ChevronRight size={18} className={`text-muted-foreground transition-transform ${selectedPatientId === null ? "translate-x-1 text-primary" : "opacity-30"}`} />
               </div>
@@ -405,8 +455,19 @@ export default function FamilyHubPage() {
                     </div>
                     <div className="flex items-center gap-3 mt-1.5">
                       <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest opacity-60">
-                        {memberStats[patient.id]?.meds || 0} Meds • {memberStats[patient.id]?.reminders || 0} Reminders
+                        {memberStats[patient.id]?.meds ?? 0} Meds • {memberStats[patient.id]?.reminders ?? 0} Reminders
                       </span>
+                      {memberStats[patient.id]?.adherenceRate !== null && memberStats[patient.id]?.adherenceRate !== undefined && (
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                          (memberStats[patient.id]?.adherenceRate ?? 0) >= 80 ? "bg-emerald-500/10 text-emerald-600" :
+                          (memberStats[patient.id]?.adherenceRate ?? 0) >= 50 ? "bg-amber-500/10 text-amber-600" : "bg-destructive/10 text-destructive"
+                        }`}>{memberStats[patient.id].adherenceRate}%</span>
+                      )}
+                      {(memberStats[patient.id]?.missedToday ?? 0) > 0 && (
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive flex items-center gap-1">
+                          <AlertTriangle size={8} /> {memberStats[patient.id].missedToday} missed today
+                        </span>
+                      )}
                     </div>
                   </div>
                   <ChevronRight size={18} className={`text-muted-foreground transition-transform ${selectedPatientId === patient.id ? "translate-x-1 text-primary" : "opacity-30"}`} />

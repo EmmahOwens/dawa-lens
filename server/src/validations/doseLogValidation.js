@@ -16,5 +16,7 @@ export const createDoseLogSchema = z.object({
 export const getDoseLogsSchema = z.object({
   query: z.object({
     userId: z.string({ required_error: 'userId query parameter is required' }),
+    // Optional: scope logs to a specific family member / client
+    patientId: z.string().optional(),
   })
 });
