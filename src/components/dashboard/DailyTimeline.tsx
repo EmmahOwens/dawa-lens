@@ -1,7 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Pill, Check, Clock, AlertCircle } from "lucide-react";
+import { Pill, Check, Clock, AlertCircle, RefreshCw } from "lucide-react";
 import { Reminder, DoseLog } from "@/contexts/AppContext";
+import { computeShiftOffset } from "@/services/reminderService";
 
 interface DailyTimelineProps {
   reminders: Reminder[];
@@ -59,9 +60,58 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                   }`}>
                     {isTaken ? <Check size={20} /> : <Pill size={20} />}
                   </div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">
-                    {r.time}
-                  </p>
+                  {(() => {
+                    const offsetMinutes = computeShiftOffset(r, doseLogs);
+                    const baseTimes = r.time.split(",").map(t => t.trim());
+                    // Find taken slot index from today's log
+                    let takenSlotIndex = -1;
+                    if (offsetMinutes !== 0) {
+                      const todayLog = [...doseLogs]
+                        .filter(l =>
+                          l.reminderId === r.id &&
+                          l.action === "taken" &&
+                          new Date(l.actionTime).toDateString() === today
+                        )
+                        .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+                      if (todayLog) {
+                        const sd = new Date(todayLog.scheduledTime);
+                        const ts = `${sd.getHours().toString().padStart(2,"0")}:${sd.getMinutes().toString().padStart(2,"0")}`;
+                        takenSlotIndex = baseTimes.indexOf(ts);
+                        if (takenSlotIndex === -1) {
+                          const sm = sd.getHours() * 60 + sd.getMinutes();
+                          let minD = Infinity;
+                          baseTimes.forEach((t, i) => {
+                            const [hh, mm] = t.split(":").map(Number);
+                            const d = Math.abs(hh * 60 + mm - sm);
+                            if (d < minD) { minD = d; takenSlotIndex = i; }
+                          });
+                        }
+                      }
+                    }
+                    const displayTimes = baseTimes.map((t, idx) => {
+                      if (offsetMinutes === 0 || idx <= takenSlotIndex) return t;
+                      // shifted: base time + offset
+                      const [h, m] = t.split(":").map(Number);
+                      const total = ((h * 60 + m + offsetMinutes) % (24 * 60) + 24 * 60) % (24 * 60);
+                      return `${Math.floor(total / 60).toString().padStart(2,"0")}:${(total % 60).toString().padStart(2,"0")}`;
+                    });
+                    const hasShift = offsetMinutes !== 0 && takenSlotIndex !== -1;
+                    return (
+                      <>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none mb-0.5">
+                          {displayTimes.join(", ")}
+                        </p>
+                        {hasShift && (
+                          <span className={`inline-flex items-center gap-0.5 text-[8px] font-black uppercase tracking-widest px-1 py-0.5 rounded-full mb-1 ${
+                            offsetMinutes > 0 ? "bg-amber-500/10 text-amber-500" : "bg-blue-500/10 text-blue-500"
+                          }`}>
+                            <RefreshCw size={7} />
+                            {offsetMinutes > 0 ? "+" : ""}{offsetMinutes}m
+                          </span>
+                        )}
+                      </>
+                    );
+                  })()}
                   <h3 className="text-sm font-black text-foreground leading-tight line-clamp-1">
                     {r.medicineName}
                   </h3>

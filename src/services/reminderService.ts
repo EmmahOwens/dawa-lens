@@ -4,15 +4,14 @@ import { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
 import { addDays, isAfter, isBefore, startOfDay, endOfDay, setHours, setMinutes, setSeconds, setMilliseconds, getDay, addMinutes, subHours, parseISO } from "date-fns";
 
 /**
- * Computes how many minutes off today's first taken dose was from its scheduled time.
- * Returns 0 if no log exists today, deviation < 5 min (noise), or > 240 min (cap).
+ * Computes how many minutes off today's most recent taken dose was from its scheduled time.
+ * Returns 0 if no log exists today or deviation > 240 min (4-hour cap).
  * Only `taken` actions count — snooze/skip do not shift the schedule.
  */
 export function computeShiftOffset(reminder: Reminder, doseLogs: DoseLog[]): number {
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
 
-  // Most recent taken log for this reminder today
   const todayTakenLog = [...doseLogs]
     .filter(l =>
       l.reminderId === reminder.id &&
@@ -29,9 +28,37 @@ export function computeShiftOffset(reminder: Reminder, doseLogs: DoseLog[]): num
     (1000 * 60)
   );
 
-  // Noise filter < 5 min; hard cap > 4 hours
-  if (Math.abs(offsetMinutes) < 5 || Math.abs(offsetMinutes) > 240) return 0;
+  // Hard cap: ignore deviation > 4 hours (likely an unrelated log from a different day)
+  if (Math.abs(offsetMinutes) > 240) return 0;
   return offsetMinutes;
+}
+
+/**
+ * Returns the most recent taken log for a reminder today, or undefined.
+ */
+function getTodayTakenLog(reminderId: string, doseLogs: DoseLog[]): DoseLog | undefined {
+  const todayStart = startOfDay(new Date());
+  const todayEnd = endOfDay(new Date());
+  return [...doseLogs]
+    .filter(l =>
+      l.reminderId === reminderId &&
+      l.action === "taken" &&
+      isAfter(new Date(l.actionTime), todayStart) &&
+      isBefore(new Date(l.actionTime), todayEnd)
+    )
+    .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+}
+
+/**
+ * Given an ordered list of HH:mm time strings, returns the interval in minutes
+ * between consecutive slots (or between the last and first if only 1 slot, falls back to 24h).
+ */
+function getIntervalMinutes(times: string[], fromIndex: number, toIndex: number): number {
+  const toMins = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  if (times.length <= 1) return 24 * 60;
+  let diff = toMins(times[toIndex]) - toMins(times[fromIndex]);
+  if (diff <= 0) diff += 24 * 60; // wrap around midnight
+  return diff;
 }
 
 // ... (existing exports)
@@ -135,38 +162,28 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
 
-  // Compute today's adaptive shift offset (0 if within noise tolerance or outside cap)
+  // Check if there's a taken dose today — use interval-preservation model
+  const takenLog = getTodayTakenLog(reminder.id, doseLogs);
   const offsetMinutes = computeShiftOffset(reminder, doseLogs);
 
-  // Determine which base time slot was most recently taken today (to know what to shift)
+  // Find which slot index was taken today
   let takenSlotIndex = -1;
-  if (offsetMinutes !== 0) {
-    const todayTakenLog = [...doseLogs]
-      .filter(l =>
-        l.reminderId === reminder.id &&
-        l.action === "taken" &&
-        isAfter(new Date(l.actionTime), todayStart) &&
-        isBefore(new Date(l.actionTime), todayEnd)
-      )
-      .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+  if (takenLog) {
+    const scheduledDate = new Date(takenLog.scheduledTime);
+    const hh = scheduledDate.getHours().toString().padStart(2, "0");
+    const mm = scheduledDate.getMinutes().toString().padStart(2, "0");
+    const scheduledTimeStr = `${hh}:${mm}`;
+    takenSlotIndex = times.indexOf(scheduledTimeStr);
 
-    if (todayTakenLog) {
-      const scheduledDate = new Date(todayTakenLog.scheduledTime);
-      const hh = scheduledDate.getHours().toString().padStart(2, "0");
-      const mm = scheduledDate.getMinutes().toString().padStart(2, "0");
-      const scheduledTimeStr = `${hh}:${mm}`;
-      takenSlotIndex = times.indexOf(scheduledTimeStr);
-
-      // Fallback: match to nearest base slot by minute proximity
-      if (takenSlotIndex === -1) {
-        const scheduledMins = scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
-        let minDiff = Infinity;
-        times.forEach((t, i) => {
-          const [h, m] = t.split(":").map(Number);
-          const diff = Math.abs(h * 60 + m - scheduledMins);
-          if (diff < minDiff) { minDiff = diff; takenSlotIndex = i; }
-        });
-      }
+    // Fallback: match to nearest base slot by minute proximity
+    if (takenSlotIndex === -1) {
+      const scheduledMins = scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
+      let minDiff = Infinity;
+      times.forEach((t, i) => {
+        const [h, m] = t.split(":").map(Number);
+        const diff = Math.abs(h * 60 + m - scheduledMins);
+        if (diff < minDiff) { minDiff = diff; takenSlotIndex = i; }
+      });
     }
   }
 
@@ -180,11 +197,19 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
 
     for (let i = 0; i < 30; i++) {
       let candidate = addDays(checkDate, i);
-
-      // Apply today's adaptive shift ONLY to slots that come after the taken slot (today only)
       const isToday = startOfDay(candidate).getTime() === todayStart.getTime();
-      if (isToday && offsetMinutes !== 0 && takenSlotIndex !== -1 && index > takenSlotIndex) {
-        candidate = addMinutes(candidate, offsetMinutes);
+
+      // --- Interval-preservation model ---
+      // For slots that come AFTER the taken slot today, compute:
+      //   candidate = actualTakeTime + cumulative interval from takenSlot to thisSlot
+      if (isToday && takenLog && takenSlotIndex !== -1 && index > takenSlotIndex) {
+        const actualTakeTime = new Date(takenLog.actionTime);
+        // Sum up intervals from taken slot through to this slot
+        let cumulativeInterval = 0;
+        for (let s = takenSlotIndex; s < index; s++) {
+          cumulativeInterval += getIntervalMinutes(times, s, s + 1);
+        }
+        candidate = addMinutes(actualTakeTime, cumulativeInterval);
       }
 
       // 1. 'once' schedule
@@ -207,7 +232,7 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
       if (wasTaken) continue;
 
       // 4. Schedule-type filtering
-      // For shifted candidates, check day-of-week against the un-shifted date
+      // For shifted candidates, check day-of-week against the original unshifted date
       const refDate = isToday && offsetMinutes !== 0 ? addMinutes(candidate, -offsetMinutes) : candidate;
 
       if (reminder.repeatSchedule === "daily" || reminder.repeatSchedule === "custom" || !reminder.repeatSchedule) {

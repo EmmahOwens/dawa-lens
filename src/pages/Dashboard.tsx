@@ -90,11 +90,18 @@ export default function Dashboard() {
 
   const handleAction = async (reminder: any, action: "taken" | "skipped") => {
     try {
+      // Build the ISO datetime for today's scheduled slot.
+      // reminder.time may be "08:00" or "08:00,14:00" — use the first upcoming slot.
+      const now = new Date();
+      const firstTime = reminder.time.split(",")[0].trim();
+      const [hh, mm] = firstTime.split(":").map(Number);
+      const scheduledDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+
       await logDose({
         reminderId: reminder.id,
         medicineName: reminder.medicineName,
         dose: reminder.dose,
-        scheduledTime: reminder.time,
+        scheduledTime: scheduledDate.toISOString(),
         action,
       });
       toast.success(action === "taken" ? "Dose logged!" : "Dose skipped.");
