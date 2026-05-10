@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*' # Triggers on tags like v1.0.8
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 
 jobs:
   build:
@@ -47,7 +50,7 @@ jobs:
           cp android/app/build/outputs/apk/release/app-release-unsigned.apk dawa-lens-$VERSION.apk
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dawa-lens-*.apk
         env:
