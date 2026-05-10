@@ -48,6 +48,12 @@ jobs:
           name: dist-folder
           path: dist/
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
       - name: Deploy to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -67,6 +73,12 @@ jobs:
         with:
           name: dist-folder
           path: dist/
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v42.3.0
