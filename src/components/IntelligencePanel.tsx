@@ -3,22 +3,26 @@ import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Send, ChevronRight, ChevronLeft, LayoutDashboard, Scan, Heart, 
-  History, Settings, Info, Loader2, Sparkles as SparklesIcon,
-  Activity, ShieldAlert, CheckCircle2, Clock, Sparkles, Utensils
+  History, Settings, Info, Loader2, Sparkles, Bot, Maximize2
 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
-import { checkConditionSafety } from "@/services/conditionInteractionService";
 import { Button } from "./ui/button";
-import { toast } from "@/hooks/use-toast";
 import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
+import { useAIActions } from "@/hooks/useAIActions";
+
+// Widgets
 import { DashboardWidget } from "./intelligence/DashboardWidget";
 import { ScanWidget } from "./intelligence/ScanWidget";
 import { WellnessWidget } from "./intelligence/WellnessWidget";
 import { MedDetailsWidget } from "./intelligence/MedDetailsWidget";
-import { useIntelligenceContext } from "@/hooks/useIntelligenceContext";
-import { Maximize2, BrainCircuit } from "lucide-react";
-import { useAIActions } from "@/hooks/useAIActions";
+import { RemindersWidget } from "./intelligence/RemindersWidget";
+import { HistoryWidget } from "./intelligence/HistoryWidget";
+import { InteractionsWidget } from "./intelligence/InteractionsWidget";
+import { FamilyHubWidget } from "./intelligence/FamilyHubWidget";
+import { TravelWidget } from "./intelligence/TravelWidget";
+import { ReportWidget } from "./intelligence/ReportWidget";
+import { SettingsWidget } from "./intelligence/SettingsWidget";
 
 export function IntelligencePanel() {
   const { t } = useTranslation();
@@ -34,32 +38,17 @@ export function IntelligencePanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  
-  const lastMed = medicines.length > 0 ? medicines[medicines.length - 1] : null;
-  const safetyWarnings = lastMed && userProfile 
-    ? checkConditionSafety(lastMed.name, lastMed.genericName, []) 
-    : [];
-
-  const todayLogs = doseLogs.filter(log => {
-      const logDate = new Date(log.actionTime).toDateString();
-      const today = new Date().toDateString();
-      return logDate === today && log.action === "taken";
-  });
-
-  const adherenceRate = reminders.length > 0 ? Math.round((todayLogs.length / reminders.length) * 100) : 0;
-  
-  const { insight, nutritionalTip, isLoading: isInsightLoading } = useIntelligenceContext();
 
   useEffect(() => {
     if (messages.length === 0) {
       setMessages([{
         id: "welcome",
         role: "assistant",
-        text: `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT. I have full access to your ${reminders.length} reminder(s) and medication history. Ask me anything about your health or say "Add a reminder for [medicine]" to get started!`,
+        text: `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT. Ask me anything about your health or say "Add a reminder" to get started!`,
         source: "System",
       }]);
     }
-  }, [userProfile?.name, reminders.length]);
+  }, [userProfile?.name, messages.length]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -104,7 +93,6 @@ export function IntelligencePanel() {
         }
       );
       
-      // Final update with metadata (suggestions, actions)
       setMessages(prev => prev.map(msg => 
         msg.id === botId ? response : msg
       ));
@@ -126,85 +114,22 @@ export function IntelligencePanel() {
     }
   };
 
-
-  // Route-based widget selection
   const renderContextualWidget = () => {
     const path = location.pathname;
     if (path === "/" || path === "/dashboard") return <DashboardWidget />;
     if (path === "/scan" || path === "/results") return <ScanWidget />;
     if (path === "/wellness") return <WellnessWidget />;
-    if (path.startsWith("/medicine/")) return <MedDetailsWidget />;
+    if (path.startsWith("/medicine/") || path === "/search") return <MedDetailsWidget />;
+    if (path === "/reminders" || path === "/reminders/new") return <RemindersWidget />;
+    if (path === "/history") return <HistoryWidget />;
+    if (path === "/interactions") return <InteractionsWidget />;
+    if (path === "/family") return <FamilyHubWidget />;
+    if (path === "/travel") return <TravelWidget />;
+    if (path === "/report") return <ReportWidget />;
+    if (path === "/settings") return <SettingsWidget />;
     
-    // Default fallback (original content)
-    return (
-      <div className="space-y-8">
-        <section>
-          <div className="flex items-center justify-between mb-4 px-1">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{t("Intelligence.snapshot")}</h3>
-            <Activity size={14} className="text-primary" />
-          </div>
-          <motion.div 
-            whileHover={{ y: -5 }}
-            className="bg-background/40 backdrop-blur-sm rounded-[2rem] p-6 border border-border/50 shadow-sm relative overflow-hidden group"
-          >
-            <div className="flex items-center gap-6">
-              <div className="relative w-16 h-16 flex items-center justify-center">
-                <svg className="w-full h-full -rotate-90">
-                  <circle cx="32" cy="32" r="28" fill="transparent" stroke="currentColor" strokeWidth="6" className="text-muted/10" />
-                  <motion.circle 
-                    cx="32" cy="32" r="28" fill="transparent" stroke="currentColor" strokeWidth="6" 
-                    strokeDasharray={2 * Math.PI * 28}
-                    initial={{ strokeDashoffset: 2 * Math.PI * 28 }}
-                    animate={{ strokeDashoffset: 2 * Math.PI * 28 * (1 - adherenceRate / 100) }}
-                    transition={{ duration: 1.5, ease: "easeOut" }}
-                    className="text-primary shadow-[0_0_15px_rgba(59,130,246,0.4)]" 
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span className="absolute text-[12px] font-black">{adherenceRate}%</span>
-              </div>
-              <div>
-                <p className="text-[11px] font-black text-foreground uppercase tracking-tight">{t("Intelligence.adherence")}</p>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 mt-1">{todayLogs.length} / {reminders.length} {t("Intelligence.doses_taken")}</p>
-              </div>
-            </div>
-          </motion.div>
-        </section>
-
-        <section>
-          <div className="flex items-center justify-between mb-4 px-1">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{t("Intelligence.watchdog")}</h3>
-            <ShieldAlert size={14} className={safetyWarnings.length > 0 ? "text-destructive" : "text-success"} />
-          </div>
-          {safetyWarnings.length > 0 ? (
-            <div className="space-y-3">
-              {safetyWarnings.map((warning, i) => (
-                <motion.div 
-                  key={i} 
-                  whileHover={{ scale: 1.02 }}
-                  className="bg-destructive/5 backdrop-blur-sm border border-destructive/20 rounded-[1.5rem] p-5 flex gap-4 italic shadow-sm"
-                >
-                  <ShieldAlert size={16} className="text-destructive shrink-0" />
-                  <p className="text-[11px] leading-relaxed text-destructive/90 font-medium">{warning.warning}</p>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <motion.div 
-              whileHover={{ scale: 1.02 }}
-              className="bg-success/5 backdrop-blur-sm border border-success/20 rounded-[1.5rem] p-5 flex items-center gap-4 shadow-sm"
-            >
-              <div className="h-8 w-8 rounded-full bg-success/10 flex items-center justify-center shrink-0">
-                 <CheckCircle2 size={16} className="text-success" />
-              </div>
-              <p className="text-[10px] text-success/90 font-black uppercase tracking-widest">{t("Intelligence.no_interactions")}</p>
-            </motion.div>
-          )}
-        </section>
-
-
-      </div>
-    );
+    // Safety fallback
+    return <DashboardWidget />;
   };
 
   const hideGPTMini = location.pathname === "/scan" || location.pathname === "/settings" || isDawaGPTOpen;
@@ -233,17 +158,27 @@ export function IntelligencePanel() {
   }
 
   return (
-    <aside className="w-[340px] border-l border-white/10 bg-background/50 backdrop-blur-2xl backdrop-saturate-[1.8] flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-right-4 shadow-[-10px_0_30px_rgba(0,0,0,0.03)]">
+    <aside className="w-[360px] border-l border-white/10 bg-background/60 backdrop-blur-3xl backdrop-saturate-[2] flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-right-4 shadow-[-20px_0_40px_rgba(0,0,0,0.04)]">
       
       {/* Header with Collapse Button */}
-      <div className="p-6 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-           <img src="/dawa-gpt.png" alt="Intelligence" className="w-5 h-5 rounded-md shadow-sm" />
-           <h2 className="text-xs font-black uppercase tracking-[0.2em] text-foreground">Intelligence</h2>
+      <div className="p-6 pb-4 flex items-center justify-between border-b border-white/5">
+        <div className="flex items-center gap-3">
+           <div className="relative">
+             <div className="w-8 h-8 rounded-lg overflow-hidden shadow-md border border-primary/20 p-0.5 bg-background">
+               <img src="/dawa-gpt.png" alt="Intelligence" className="w-full h-full object-cover rounded-[calc(0.5rem-2px)]" />
+             </div>
+             <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-background rounded-full flex items-center justify-center">
+               <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+             </div>
+           </div>
+           <div>
+             <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground leading-none">Intelligence</h2>
+             <span className="text-[9px] text-primary/80 font-bold uppercase tracking-widest mt-0.5 block">Active</span>
+           </div>
         </div>
         <button 
           onClick={() => setIsIntelligenceCollapsed(true)}
-          className="p-1.5 hover:bg-muted rounded-full text-muted-foreground transition-colors"
+          className="p-1.5 hover:bg-muted/80 rounded-full text-muted-foreground transition-all active:scale-90"
         >
           <ChevronRight size={18} />
         </button>
@@ -267,62 +202,56 @@ export function IntelligencePanel() {
         <AnimatePresence>
           {!hideGPTMini && (
             <motion.section 
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="flex flex-col min-h-0 pt-4 border-t border-border/50"
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex flex-col min-h-0 pt-6 border-t border-border/50 relative"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <img src="/dawa-gpt.png" alt="Dawa GPT Mini" className="w-5 h-5 rounded-md shadow-sm border border-primary/20" />
-                    <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-success rounded-full border border-background animate-pulse" />
+                  <div className="p-1.5 rounded-md bg-primary/10 border border-primary/20">
+                    <Bot size={14} className="text-primary" />
                   </div>
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] bg-clip-text text-transparent bg-gradient-to-r from-muted-foreground to-muted-foreground/60">Dawa-GPT Mini</h3>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/60">Dawa-GPT</h3>
                 </div>
                 <button 
                   onClick={() => setIsDawaGPTOpen(true)}
-                  className="hidden md:flex items-center gap-1.5 text-[9px] font-black text-primary hover:bg-primary/10 transition-all uppercase tracking-widest border border-primary/30 bg-primary/5 rounded-full px-3 py-1.5 active:scale-95 group"
+                  className="flex items-center gap-1.5 text-[9px] font-black text-primary hover:bg-primary/10 transition-all uppercase tracking-widest border border-primary/30 bg-primary/5 rounded-full px-3 py-1.5 active:scale-95 group shadow-sm"
                 >
                   <Maximize2 size={10} className="group-hover:scale-110 transition-transform" />
-                  <span>Full Chat</span>
+                  <span>Expand</span>
                 </button>
               </div>
-              <div className="bg-background/40 backdrop-blur-xl rounded-[2.5rem] border border-border/40 p-5 flex flex-col h-[380px] relative overflow-hidden group/chat shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)] transition-all duration-300 hover:shadow-primary/5 hover:border-primary/20">
-                <div className="absolute top-0 right-0 p-4 opacity-[0.03] pointer-events-none group-hover/chat:opacity-[0.07] transition-opacity grayscale group-hover/chat:grayscale-0 group-hover/chat:scale-110 duration-700">
+              
+              <div className="bg-card/50 backdrop-blur-2xl rounded-[2rem] border border-border/60 p-4 flex flex-col h-[380px] relative overflow-hidden group/chat shadow-lg hover:shadow-xl transition-all duration-500 hover:border-primary/20 ring-1 ring-white/5">
+                <div className="absolute top-0 right-0 p-4 opacity-[0.02] pointer-events-none group-hover/chat:opacity-[0.05] transition-opacity grayscale group-hover/chat:grayscale-0 group-hover/chat:scale-110 duration-700">
                   <img src="/dawa-gpt.png" alt="" className="w-24 h-24" />
                 </div>
                 
                 {/* Message Stream */}
-                <div ref={scrollRef} className="flex-1 overflow-y-auto mb-2 space-y-3 no-scrollbar z-10 scroll-smooth">
-                    {messages.length === 0 ? (
-                      <div className="bg-background/60 backdrop-blur-sm rounded-2xl rounded-tl-none p-3 text-[11px] border border-border/30 shadow-sm leading-relaxed text-muted-foreground italic">
-                        Jambo! I'm Dawa-GPT. Ask me anything about your medications or regional health guidelines.
-                      </div>
-                    ) : (
-                      messages.map((m) => (
-                        <motion.div
-                          key={m.id}
-                          initial={{ opacity: 0, x: m.role === "user" ? 10 : -10, scale: 0.95 }}
-                          animate={{ opacity: 1, x: 0, scale: 1 }}
-                          className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                        >
-                          <div className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-[11px] font-medium shadow-sm leading-relaxed ${
-                            m.role === "user" 
-                              ? "bg-primary text-primary-foreground rounded-tr-none shadow-primary/10" 
-                              : "bg-card border border-border/40 rounded-tl-none shadow-black/5"
-                          }`}>
-                            <p>{m.text}</p>
-                          </div>
-                        </motion.div>
-                      ))
-                    )}
+                <div ref={scrollRef} className="flex-1 overflow-y-auto mb-3 space-y-4 no-scrollbar z-10 scroll-smooth pr-1">
+                    {messages.map((m) => (
+                      <motion.div
+                        key={m.id}
+                        initial={{ opacity: 0, x: m.role === "user" ? 10 : -10, scale: 0.95 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div className={`relative max-w-[90%] px-4 py-3 text-[12px] font-medium shadow-sm leading-relaxed ${
+                          m.role === "user" 
+                            ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-[1.5rem] rounded-tr-sm shadow-primary/20" 
+                            : "bg-background text-foreground border border-border/50 rounded-[1.5rem] rounded-tl-sm shadow-black/5"
+                        }`}>
+                          <p className="whitespace-pre-wrap">{m.text}</p>
+                        </div>
+                      </motion.div>
+                    ))}
                     {isTyping && (
                       <div className="flex justify-start">
-                        <div className="bg-card border border-border/40 px-3 py-2 rounded-2xl rounded-tl-none flex items-center gap-1.5 shadow-sm">
-                          <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1 h-1 bg-primary rounded-full" />
-                          <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1 h-1 bg-primary rounded-full" />
-                          <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1 h-1 bg-primary rounded-full" />
+                        <div className="bg-background border border-border/50 px-4 py-3 rounded-[1.5rem] rounded-tl-sm flex items-center gap-1.5 shadow-sm">
+                          <motion.div animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-1.5 h-1.5 bg-primary/80 rounded-full" />
+                          <motion.div animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.15 }} className="w-1.5 h-1.5 bg-primary/80 rounded-full" />
+                          <motion.div animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.3 }} className="w-1.5 h-1.5 bg-primary/80 rounded-full" />
                         </div>
                       </div>
                     )}
@@ -331,42 +260,40 @@ export function IntelligencePanel() {
                 {/* Suggestions */}
                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-3 pb-1 z-10">
                     {(messages[messages.length - 1]?.suggestions || [
-                      "Check schedule",
                       "Add reminder",
-                      "Log dose",
-                      "Headache log",
-                      "Add patient"
-                    ]).map((suggestion, i) => (
+                      "Check schedule",
+                      "Log dose"
+                    ]).slice(0, 3).map((suggestion, i) => (
                     <motion.button
                       key={i}
                       whileHover={{ y: -1, scale: 1.02, backgroundColor: "rgba(var(--primary), 0.08)" }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleSendMessage(suggestion)}
-                      className="whitespace-nowrap px-3.5 py-2 rounded-xl bg-card border border-border/40 text-[9px] font-black text-muted-foreground hover:text-primary hover:border-primary/40 transition-all flex items-center gap-2 shrink-0 uppercase tracking-tight shadow-sm"
+                      className="whitespace-nowrap px-3.5 py-2 rounded-xl bg-background border border-border/50 text-[10px] font-black text-muted-foreground hover:text-primary hover:border-primary/40 transition-all flex items-center gap-1.5 shrink-0 uppercase tracking-tight shadow-sm"
                     >
-                      <Sparkles size={8} className="text-primary/80" />
+                      <Sparkles size={10} className="text-primary/80" />
                       {suggestion}
                     </motion.button>
                   ))}
                 </div>
 
                 {/* Input Area */}
-                 <div className="flex gap-2 z-10 pt-1">
+                 <div className="flex gap-2 z-10">
                     <input 
                       type="text" 
                       value={miniChatInput}
                       onChange={(e) => setMiniChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSendMessage(miniChatInput)}
-                      placeholder="How can I help you?" 
-                      className="flex-1 bg-background/60 backdrop-blur-md rounded-2xl px-5 py-3 text-[11px] border-none outline-none ring-1 ring-border/40 focus:ring-2 focus:ring-primary/30 transition-all font-bold placeholder:text-muted-foreground/40 shadow-sm"
+                      placeholder="Ask anything..." 
+                      className="flex-1 bg-background/80 backdrop-blur-md rounded-2xl px-4 py-3 text-[12px] border border-border/50 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-medium placeholder:text-muted-foreground/50 shadow-inner"
                     />
                     <Button 
                       size="icon" 
                       disabled={isTyping || !miniChatInput.trim()}
                       onClick={() => handleSendMessage(miniChatInput)}
-                      className="rounded-2xl w-10 h-10 shrink-0 bg-primary shadow-lg shadow-primary/20 active:scale-90 transition-all"
+                      className="rounded-2xl w-[46px] h-[46px] shrink-0 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 active:scale-90 transition-all"
                     >
-                      {isTyping ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                      {isTyping ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="ml-0.5" />}
                     </Button>
                 </div>
               </div>
@@ -375,8 +302,7 @@ export function IntelligencePanel() {
         </AnimatePresence>
 
       </div>
-      
-
     </aside>
   );
 }
+

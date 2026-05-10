@@ -39,14 +39,14 @@ export function AppSidebar() {
     location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-white/10 bg-background/50 backdrop-blur-2xl backdrop-saturate-[1.8] transition-all duration-300">
+    <Sidebar collapsible="icon" className="border-r border-white/5 bg-background/60 backdrop-blur-3xl backdrop-saturate-[2] transition-all duration-300">
       {/* Brand Header */}
-      <div className="flex flex-col gap-6 px-4 py-8">
+      <div className="flex flex-col gap-6 px-4 py-8 border-b border-white/5">
         <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'} transition-all duration-300`}>
           <div className="relative group">
-            <div className="absolute -inset-1 rounded-xl bg-gradient-to-tr from-primary/40 to-primary/10 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative h-10 w-10 flex items-center justify-center rounded-xl bg-primary/10 border border-primary/20 text-primary">
-              <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain" />
+            <div className="absolute -inset-1 rounded-xl bg-gradient-to-tr from-primary/50 to-primary/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="relative h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-b from-primary/20 to-primary/5 border border-primary/30 text-primary shadow-inner">
+              <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain drop-shadow-sm" />
             </div>
           </div>
           {!collapsed && (
@@ -55,10 +55,10 @@ export function AppSidebar() {
               animate={{ opacity: 1, x: 0 }}
               className="flex flex-col"
             >
-              <span className="text-[17px] font-bold leading-none tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+              <span className="text-[17px] font-black leading-none tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
                 Dawa Lens
               </span>
-              <span className="text-[11px] font-medium text-primary uppercase tracking-[0.1em] mt-1">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-[0.15em] mt-1.5 opacity-80">
                 Precision Health
               </span>
             </motion.div>
@@ -66,7 +66,7 @@ export function AppSidebar() {
         </div>
       </div>
 
-      <SidebarContent className="px-3">
+      <SidebarContent className="px-3 pt-4">
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">
@@ -78,9 +78,9 @@ export function AppSidebar() {
                       <NavLink
                         to={item.url}
                         end={item.url === "/"}
-                        className={`relative flex items-center gap-3 rounded-2xl py-3 px-4 transition-all duration-300 group ${
+                        className={`relative flex items-center gap-3 rounded-[1.25rem] py-3 px-4 transition-all duration-300 group ${
                           active 
-                            ? 'text-primary-foreground font-semibold' 
+                            ? 'text-primary-foreground font-bold shadow-md' 
                             : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
                         }`}
                         activeClassName="" // We handle active styling via the container class above
@@ -89,12 +89,12 @@ export function AppSidebar() {
                         {active && (
                           <motion.div
                             layoutId="activeNav"
-                            className="absolute inset-0 bg-primary rounded-2xl shadow-lg shadow-primary/20 z-0"
+                            className="absolute inset-0 bg-gradient-to-r from-primary to-primary/90 rounded-[1.25rem] shadow-lg shadow-primary/25 z-0 border border-primary/20"
                             transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                           />
                         )}
                         
-                        <div className={`relative z-10 flex items-center justify-center ${active ? 'text-primary-foreground' : 'text-primary group-hover:scale-110 transition-transform'}`}>
+                        <div className={`relative z-10 flex items-center justify-center ${active ? 'text-primary-foreground' : 'text-primary/70 group-hover:text-primary group-hover:scale-110 transition-transform'}`}>
                           <item.icon size={20} strokeWidth={active ? 2.5 : 2} />
                         </div>
                         
@@ -104,9 +104,9 @@ export function AppSidebar() {
                             animate={{ opacity: 1 }}
                             className="relative z-10 flex flex-1 items-center justify-between"
                           >
-                            <span className="text-[14px] tracking-tight">{item.title}</span>
+                            <span className="text-[13px] tracking-wide">{item.title}</span>
                             {item.isPro && (
-                              <Badge variant="outline" className={`text-[9px] uppercase tracking-wider h-4 border-primary/30 ${active ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
+                              <Badge variant="outline" className={`text-[8px] uppercase tracking-widest h-4 border-primary/30 px-1.5 ${active ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
                                 Pro
                               </Badge>
                             )}
@@ -123,37 +123,37 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 mt-auto">
-        <div className={`flex flex-col gap-4 rounded-2xl bg-muted/30 p-4 border border-border/50 ${collapsed ? 'items-center px-2' : ''}`}>
+        <div className={`flex flex-col gap-4 rounded-[1.5rem] bg-card/50 p-4 border border-border/40 shadow-sm ${collapsed ? 'items-center px-2' : 'hover:border-primary/20 transition-colors duration-300'}`}>
           <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
+            <Avatar className="h-10 w-10 border-2 border-background shadow-md">
               <AvatarImage src="" alt={userProfile?.name || "User"} />
-              <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-black text-xs">
                 {userProfile?.name?.charAt(0) || "U"}
               </AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-bold truncate leading-tight">
+                <span className="text-[13px] font-black truncate leading-tight text-foreground/90">
                   {userProfile?.name || "Health User"}
                 </span>
-                <span className="text-[11px] text-muted-foreground truncate">
-                  {isProfessionalMode ? "CHW Professional" : "Personal Account"}
+                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider truncate mt-0.5">
+                  {isProfessionalMode ? "CHW Professional" : "Personal"}
                 </span>
               </div>
             )}
           </div>
           
           {!collapsed && (
-            <div className="pt-2 border-t border-border/50 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-primary font-bold text-[11px] uppercase tracking-wider">
-                <ShieldCheck size={14} />
+            <div className="pt-3 mt-1 border-t border-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-success font-black text-[9px] uppercase tracking-widest bg-success/10 px-2 py-1 rounded-full border border-success/20">
+                <ShieldCheck size={12} />
                 <span>Verified</span>
               </div>
               <button 
                 onClick={logoutUser}
-                className="text-muted-foreground hover:text-destructive transition-colors"
+                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all active:scale-95"
               >
-                <LogOut size={16} />
+                <LogOut size={14} />
               </button>
             </div>
           )}
