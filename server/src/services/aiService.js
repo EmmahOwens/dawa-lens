@@ -245,12 +245,11 @@ export const getNutritionalGuidance = async (medicines) => {
 const isComplexTask = (text) => {
   if (!text) return false;
   const lower = text.toLowerCase();
-  if (text.length > 150) return true;
+  if (text.length > 250) return true;
   
   const actionKeywords = [
     'add', 'remind', 'log', 'record', 'update', 'change', 'delete', 'remove', 'stop', 'cancel',
-    'symptom', 'pain', 'feel', 'headache', 'dizzy', 'nausea', 'ate', 'eat', 'meal', 'food',
-    'mother', 'father', 'son', 'daughter', 'scan', 'check', 'why', 'what'
+    'mother', 'father', 'son', 'daughter'
   ];
   return actionKeywords.some(kw => lower.includes(kw));
 };
@@ -261,7 +260,8 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     return EMERGENCY_RESPONSE;
   }
 
-  const { finalMessages } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients });
+  const isComplex = isComplexTask(lastUserMsg);
+  const { finalMessages } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex });
 
   if (!GROQ_API_KEY) {
     return await callGeminiChat(finalMessages);
@@ -314,9 +314,10 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     });
   }
 
+  const isComplex = isComplexTask(lastUserMsg);
   const { finalMessages } = await prepareDawaGPTContext({
     messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
-    isStreaming: true
+    isStreaming: true, isComplex
   });
 
   if (!GROQ_API_KEY) {
@@ -367,15 +368,16 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
 
 // --- Helpers ---
 
-async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false }) {
-  const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || "";
+async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false, isComplex = true }) {
+  const recentMessages = messages.slice(-5);
+  const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || "";
   const knowledgeSnippets = await retrieveMedicalKnowledge(lastUserMsg);
   const knowledgeContext = knowledgeSnippets.length > 0
     ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n`
     : "";
 
   const activeMeds = medicines?.map(m => m.name).join(', ') || 'No active medications';
-  const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, 20)) : 'No recent dose history available';
+  const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, 5)) : 'No recent dose history available';
   const remindersSummary = reminders?.length
     ? JSON.stringify(reminders.map(r => ({
       id: r.id,
@@ -387,7 +389,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     })))
     : 'No reminders set';
   const wellnessSummary = wellnessLogs?.length
-    ? JSON.stringify(wellnessLogs.slice(0, 10))
+    ? JSON.stringify(wellnessLogs.slice(0, 3))
     : 'No wellness data available';
   const patientsSummary = patients?.length
     ? JSON.stringify(patients.map(p => ({ name: p.name, age: p.age, gender: p.gender, relation: p.relation })))
@@ -407,6 +409,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
 
     ${knowledgeContext}
 
+    ${isComplex ? `
     === CAPABILITIES ===
     You have FULL READ and WRITE access to the user's medication system.
     You can perform actions by including an "action" field in your metadata JSON.
@@ -421,12 +424,6 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - LOG_WELLNESS: { type: "LOG_WELLNESS", payload: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? } } }
     - ADD_PATIENT: { type: "ADD_PATIENT", payload: { name, age?, gender?, relation? } }
     - null: No system action required.
-
-    === NUTRITIONAL GUIDELINES ===
-    1. When asked about food, check for interactions with the user's active medications.
-    2. Proactively suggest regional East African foods (Matooke, Avocado, G-nuts, Posho) that help with absorption or reduce side effects.
-    3. Always warn about high-risk interactions (e.g. Grapefruit with Statins, Dairy with certain Antibiotics).
-    4. If the user asks "Can I eat this with my meds?", provide a detailed clinical reason but in a warm tone.
 
     === RULES ===
     1. Professional, warm "Dawa-Lens signature" tone — culturally appropriate for Uganda/East Africa.
@@ -467,6 +464,19 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - Example: "I've added the reminder! You can manage it anytime in [Reminders](/reminders)."
     - Use natural language around the link — don't just dump a bare link.
     - Only include links that are genuinely relevant to the answer. Do not add links for every response.
+    ` : `
+    === CAPABILITIES ===
+    You are in conversational mode. Answer the user's question clearly and warmly.
+    You cannot perform system actions. Always set the "action" field in your metadata to null.
+    Provide exactly 3 next-prompt suggestions.
+    Keep text responses concise and actionable.
+    `}
+
+    === NUTRITIONAL GUIDELINES ===
+    1. When asked about food, check for interactions with the user's active medications.
+    2. Proactively suggest regional East African foods (Matooke, Avocado, G-nuts, Posho) that help with absorption or reduce side effects.
+    3. Always warn about high-risk interactions (e.g. Grapefruit with Statins, Dairy with certain Antibiotics).
+    4. If the user asks "Can I eat this with my meds?", provide a detailed clinical reason but in a warm tone.
 
 
     ${isStreaming ? `
@@ -489,7 +499,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     `}
   `;
 
-  const formattedMessages = messages.map(msg => ({
+  const formattedMessages = recentMessages.map(msg => ({
     role: msg.role === 'user' ? 'user' : 'assistant',
     content: msg.text
   }));
