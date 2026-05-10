@@ -242,6 +242,19 @@ export const getNutritionalGuidance = async (medicines) => {
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
 
+const isComplexTask = (text) => {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  if (text.length > 150) return true;
+  
+  const actionKeywords = [
+    'add', 'remind', 'log', 'record', 'update', 'change', 'delete', 'remove', 'stop', 'cancel',
+    'symptom', 'pain', 'feel', 'headache', 'dizzy', 'nausea', 'ate', 'eat', 'meal', 'food',
+    'mother', 'father', 'son', 'daughter', 'scan', 'check', 'why', 'what'
+  ];
+  return actionKeywords.some(kw => lower.includes(kw));
+};
+
 export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
   const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
   if (detectEmergency(lastUserMsg)) {
@@ -255,8 +268,9 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
   }
 
   try {
+    const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
     const response = await axios.post(GROQ_API_URL, {
-      model: GROQ_MODEL,
+      model: selectedModel,
       messages: finalMessages,
       response_format: { type: 'json_object' }
     }, {
@@ -321,8 +335,9 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   }
 
   try {
+    const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
     const response = await axios.post(GROQ_API_URL, {
-      model: GROQ_MODEL,
+      model: selectedModel,
       messages: finalMessages,
       stream: true
     }, {
