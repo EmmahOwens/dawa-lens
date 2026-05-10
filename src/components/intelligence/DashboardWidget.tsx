@@ -1,28 +1,36 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Clock, TrendingUp, Sparkles, AlertCircle } from "lucide-react";
+import { Clock, TrendingUp, Sparkles, Loader2 } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
-import { useTranslation } from "react-i18next";
+import { useIntelligenceContext } from "@/hooks/useIntelligenceContext";
 
 export function DashboardWidget() {
-  const { t } = useTranslation();
   const { reminders, doseLogs } = useApp();
+  const { insight, isLoading } = useIntelligenceContext();
 
   const nextReminder = reminders
     .filter(r => r.enabled)
     .sort((a, b) => a.time.localeCompare(b.time))[0];
 
-  const today = new Date().toDateString();
-  const takenCount = doseLogs.filter(l => 
-    l.action === "taken" && new Date(l.actionTime).toDateString() === today
-  ).length;
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toDateString();
+  });
+
+  const dailyStatus = last7Days.map(dateStr => {
+    const logsForDay = doseLogs.filter(l => new Date(l.actionTime).toDateString() === dateStr);
+    if (logsForDay.length === 0) return "none";
+    const takenLogs = logsForDay.filter(l => l.action === "taken");
+    return takenLogs.length > 0 ? "success" : "missed";
+  });
 
   return (
     <div className="space-y-8">
       {/* Next Dose Countdown */}
       <section>
         <div className="flex items-center justify-between mb-4 px-1">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{t("Intelligence.next_dose")}</h4>
+          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Next Dose</h4>
           <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
         </div>
         <motion.div 
@@ -42,7 +50,7 @@ export function DashboardWidget() {
                 </div>
               </>
             ) : (
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{t("Intelligence.no_reminders")}</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No Reminders</p>
             )}
           </div>
           <motion.div 
@@ -60,39 +68,52 @@ export function DashboardWidget() {
       {/* Adherence Insight */}
       <section>
         <div className="flex items-center justify-between mb-4 px-1">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{t("Intelligence.adherence_streak")}</h4>
+          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">7-Day Streak</h4>
           <TrendingUp size={14} className="text-success" />
         </div>
         <div className="flex gap-1.5 justify-between">
-          {[...Array(7)].map((_, i) => (
+          {dailyStatus.map((status, i) => (
             <motion.div 
               key={i} 
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: i * 0.05 }}
               className={`h-10 flex-1 rounded-xl border-2 shadow-sm ${
-                i < 5 
+                status === "success"
                   ? "bg-success/10 border-success/30 ring-4 ring-success/5" 
+                  : status === "missed"
+                  ? "bg-destructive/10 border-destructive/30"
                   : "bg-muted/20 border-border/50"
               }`} 
             />
           ))}
         </div>
+        
         <motion.div 
           whileHover={{ y: -2 }}
-          className="mt-6 bg-background/40 backdrop-blur-sm border border-border/50 rounded-[1.5rem] p-5 flex items-start gap-4 shadow-sm"
+          className="mt-6 bg-background/40 backdrop-blur-sm border border-border/50 rounded-[1.5rem] p-5 flex items-start gap-4 shadow-sm min-h-[80px]"
         >
           <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
              <Sparkles size={16} className="text-primary" />
           </div>
-          <div>
-            <p className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
-              "You are <span className="text-primary font-black">20% more likely</span> to maintain your streak when logging early in the morning."
-            </p>
+          <div className="flex-1">
+            {isLoading ? (
+               <div className="flex items-center gap-2 text-muted-foreground">
+                 <Loader2 size={12} className="animate-spin" />
+                 <span className="text-[10px] font-bold uppercase tracking-wider">Analyzing logs...</span>
+               </div>
+            ) : insight ? (
+               <p className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
+                 "{insight}"
+               </p>
+            ) : (
+               <p className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
+                 "Log your doses consistently to build your streak and receive personalized health insights."
+               </p>
+            )}
           </div>
         </motion.div>
       </section>
     </div>
-
   );
 }
