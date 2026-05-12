@@ -13,10 +13,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
@@ -28,7 +28,7 @@ jobs:
         run: npm run build
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -44,13 +44,13 @@ jobs:
 
       - name: Prepare APK for Release
         run: |
-          # Rename the APK to match the expected format in version.json
-          # Extracts version from tag (e.g., v1.0.8 -> 1.0.8)
+          # Rename the APK to match the expected format
+          # Extracts version from tag (e.g., v1.1.8 -> 1.1.8)
           VERSION=${GITHUB_REF#refs/tags/v}
-          cp android/app/build/outputs/apk/release/app-release-unsigned.apk dawa-lens-$VERSION.apk
+          cp android/app/build/outputs/apk/release/dawa-lens-*.apk dawa-lens-$VERSION.apk
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           files: dawa-lens-*.apk
         env:
