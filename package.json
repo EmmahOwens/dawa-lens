@@ -1,7 +1,7 @@
 {
   "name": "dawa-lens",
   "private": true,
-  "version": "1.1.8",
+  "version": "1.1.9",
   "type": "module",
   "engines": {
     "node": ">=24.14.1"
