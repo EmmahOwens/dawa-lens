@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
   build: {
+    chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -30,7 +31,10 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('firebase')) {
               return 'firebase-bundle';
             }
-            if (id.includes('lucide-react') || id.includes('@radix-ui')) {
+            if (id.includes('lucide-react')) {
+              return 'icons';
+            }
+            if (id.includes('@radix-ui')) {
               return 'ui-kit';
             }
             if (id.includes('maplibre-gl')) {
