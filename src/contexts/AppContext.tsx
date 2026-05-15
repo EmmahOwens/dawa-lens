@@ -351,7 +351,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const [isDataLoading, setIsDataLoading] = useState(true);
-  const isInitializing = isDataLoading || isAuthLoading;
+  const [minSplashTimePassed, setMinSplashTimePassed] = useState(false);
+
+  useEffect(() => {
+    // Enforce a minimum display time for the splash screen so the typing animation can finish
+    const timer = setTimeout(() => setMinSplashTimePassed(true), 3500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const isInitializing = isDataLoading || isAuthLoading || !minSplashTimePassed;
 
   // Initialize settings from async storage on mount
   useEffect(() => {
