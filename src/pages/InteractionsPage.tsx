@@ -3,13 +3,13 @@ import { motion } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
 import { checkInteractions } from "@/services/interactionChecker";
 import { ParsedInteraction } from "@/types/interactions";
-import { ShieldAlert, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
+import { ShieldAlert, AlertTriangle, Info, CheckCircle2 } from "@/lib/icons";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
 import PremiumLoader from "@/components/PremiumLoader";
 import { aiApi } from "@/services/api";
-import { Coffee, Wine, GlassWater, Beef, Salad, Sparkles, Loader2 } from "lucide-react";
+import { Coffee, Wine, GlassWater, Beef, Salad, Sparkles, Loader2 } from "@/lib/icons";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };

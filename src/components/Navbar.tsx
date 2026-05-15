@@ -1,5 +1,5 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Heart } from "lucide-react";
+import { Heart } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 

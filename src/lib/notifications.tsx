@@ -5,7 +5,7 @@ import {
   AlertCircle, 
   Info, 
   ShieldAlert 
-} from "lucide-react";
+} from "@/lib/icons";
 import React from "react";
 
 export const notify = {

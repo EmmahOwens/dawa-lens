@@ -14,7 +14,7 @@ import {
   PlusCircle,
   ExternalLink,
   LucideIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 
 /** Maps known internal routes to an icon for the link chip. */
 const ROUTE_ICONS: Record<string, LucideIcon> = {

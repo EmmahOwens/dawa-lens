@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Heart, Activity, Brain, CheckCircle2 } from "lucide-react";
+import { Heart, Activity, Brain, CheckCircle2 } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
 
 export function WellnessWidget() {

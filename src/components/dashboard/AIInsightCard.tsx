@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus, Loader2 } from "lucide-react";
+import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus, Loader2 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
 

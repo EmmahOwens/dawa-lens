@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Users, Activity } from "lucide-react";
+import { Users, Activity } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 
 export function FamilyHubWidget() {

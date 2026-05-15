@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, FileText, Loader2, Pill, Sparkles, Bell } from "lucide-react";
+import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, FileText, Loader2, Pill, Sparkles, Bell } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useApp } from "@/contexts/AppContext";
 import { identifyPill, PillMatch } from "@/services/pillIdService";
-import { ShieldCheck, ShieldAlert, ShieldQuestion, CalendarClock, Flag, Bell as BellIcon } from "lucide-react";
+import { ShieldCheck, ShieldAlert, ShieldQuestion, CalendarClock, Flag, Bell as BellIcon } from "@/lib/icons";
 import PremiumLoader from "@/components/PremiumLoader";
 
 type MatchResult = {

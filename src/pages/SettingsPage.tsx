@@ -5,7 +5,7 @@ import {
   ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe, Users, 
   ArrowRight, User, Mail, Database, Clock, ChevronRight, CheckCircle2,
   RefreshCw, Info
-} from "lucide-react";
+} from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";

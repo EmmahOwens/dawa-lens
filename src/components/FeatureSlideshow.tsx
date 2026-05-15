@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
-import { Camera, Users, Heart, FileText, History, Plane, Sparkles, Lightbulb, ArrowRight } from "lucide-react";
+import { Camera, Users, Heart, FileText, History, Plane, Sparkles, Lightbulb, ArrowRight } from "@/lib/icons";
 
 interface SlideItem {
   id: string;

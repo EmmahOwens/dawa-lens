@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Pill, Check, Clock, AlertCircle, RefreshCw } from "lucide-react";
+import { Pill, Check, Clock, AlertCircle, RefreshCw } from "@/lib/icons";
 import { Reminder, DoseLog } from "@/contexts/AppContext";
 import { computeShiftOffset } from "@/services/reminderService";
 

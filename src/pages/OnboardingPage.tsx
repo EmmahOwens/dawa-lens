@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar as CalendarIcon, User, UserSquare2, Loader2, ArrowRight } from "lucide-react";
+import { Calendar as CalendarIcon, User, UserSquare2, Loader2, ArrowRight } from "@/lib/icons";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

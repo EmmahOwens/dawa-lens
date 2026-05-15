@@ -18,7 +18,7 @@ import {
   Sparkles,
   AlertTriangle,
   TrendingUp
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";

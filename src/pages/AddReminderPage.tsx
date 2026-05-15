@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound } from "lucide-react";
+import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
-import { Bell } from "lucide-react";
+import { Bell } from "@/lib/icons";
 import PermissionRequest from "@/components/PermissionRequest";
 import { NativeService } from "@/services/nativeService";
 import { ImpactStyle } from "@capacitor/haptics";

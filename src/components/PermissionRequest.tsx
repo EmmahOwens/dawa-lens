@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LucideIcon, X } from "lucide-react";
+import { LucideIcon, X } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { NativeService } from "@/services/nativeService";
 import { ImpactStyle } from "@capacitor/haptics";

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Send, ChevronRight, ChevronLeft, LayoutDashboard, Scan, Heart, 
   History, Settings, Info, Loader2, Sparkles, Bot, Maximize2
-} from "lucide-react";
+} from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";

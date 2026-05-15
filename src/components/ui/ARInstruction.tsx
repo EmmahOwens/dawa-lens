@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Droplets, Clock, Utensils, AlertCircle, Info } from "lucide-react";
+import { Droplets, Clock, Utensils, AlertCircle, Info } from "@/lib/icons";
 
 export type ARInstructionType = "water" | "food" | "timed" | "warning";
 

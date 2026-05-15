@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Settings, ShieldCheck } from "lucide-react";
+import { Settings, ShieldCheck } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 
 export function SettingsWidget() {

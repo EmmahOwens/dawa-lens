@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Patient, useApp } from "@/contexts/AppContext";
-import { UserPlus } from "lucide-react";
+import { UserPlus } from "@/lib/icons";
 
 interface FamilyStatusDotsProps {
   patients: Patient[];

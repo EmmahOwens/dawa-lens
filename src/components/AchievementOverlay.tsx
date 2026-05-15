@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Heart, Trophy, CheckCircle2, Sparkles } from "lucide-react";
+import { Star, Heart, Trophy, CheckCircle2, Sparkles } from "@/lib/icons";
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 

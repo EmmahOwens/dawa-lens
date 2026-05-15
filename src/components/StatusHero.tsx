@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Clock, CheckCircle2, ChevronRight } from "lucide-react";
+import { Clock, CheckCircle2, ChevronRight } from "@/lib/icons";
 import { NextDoseInfo } from "@/services/reminderService";
 
 interface StatusHeroProps {

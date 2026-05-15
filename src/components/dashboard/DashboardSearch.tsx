@@ -1,5 +1,5 @@
 import React from "react";
-import { Search } from "lucide-react";
+import { Search } from "@/lib/icons";
 import { motion } from "framer-motion";
 
 export function DashboardSearch() {

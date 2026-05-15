@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Zap, Camera, Terminal, ShieldCheck } from "lucide-react";
+import { Zap, Camera, Terminal, ShieldCheck } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
 
 export function ScanWidget() {

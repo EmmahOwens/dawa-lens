@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, AlertTriangle, ExternalLink, Pill, ShieldAlert, Bell } from "lucide-react";
+import { ArrowLeft, AlertTriangle, ExternalLink, Pill, ShieldAlert, Bell } from "@/lib/icons";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

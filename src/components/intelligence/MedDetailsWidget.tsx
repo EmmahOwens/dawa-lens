@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, Calendar, Package, Sparkles } from "lucide-react";
+import { ShieldAlert, Calendar, Package, Sparkles } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 

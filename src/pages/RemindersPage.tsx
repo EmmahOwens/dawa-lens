@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell, Plus, Trash2, ToggleLeft, ToggleRight, Clock,
   Pill, AlarmCheck, AlarmClockOff, Pencil, Syringe, Droplets, Tablets, UserRound, RefreshCw
-} from "lucide-react";
+} from "@/lib/icons";
 import { useApp, Reminder } from "@/contexts/AppContext";
 import { computeShiftOffset } from "@/services/reminderService";
 import { addMinutes } from "date-fns";

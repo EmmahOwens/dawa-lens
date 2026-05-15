@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, XCircle, ShieldAlert } from "lucide-react";
+import { AlertCircle, XCircle, ShieldAlert } from "@/lib/icons";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface ErrorDialogProps {

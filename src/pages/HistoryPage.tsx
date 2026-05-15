@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, X, Clock, Download, Upload, Trash2, Search, TrendingUp, Calendar } from "lucide-react";
+import { ArrowLeft, Check, X, Clock, Download, Upload, Trash2, Search, TrendingUp, Calendar } from "@/lib/icons";
 import { useApp, DoseLog } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Clock, TrendingUp, Sparkles, Loader2 } from "lucide-react";
+import { Clock, TrendingUp, Sparkles, Loader2 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useIntelligenceContext } from "@/hooks/useIntelligenceContext";
 

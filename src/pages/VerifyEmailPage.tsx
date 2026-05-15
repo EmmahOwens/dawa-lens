@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Loader2, ArrowRight } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, ArrowRight } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 
 export default function VerifyEmailPage() {

@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Plane, MapPin } from "lucide-react";
+import { Plane, MapPin } from "@/lib/icons";
 
 export function TravelWidget() {
   return (

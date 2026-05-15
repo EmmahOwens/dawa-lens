@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, TrendingUp, Calendar, ArrowRight } from "lucide-react";
+import { Sparkles, TrendingUp, Calendar, ArrowRight } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 

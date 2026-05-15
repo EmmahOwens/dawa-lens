@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { ShieldAlert, CheckCircle2, CopyPlus } from "lucide-react";
+import { ShieldAlert, CheckCircle2, CopyPlus } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { checkConditionSafety } from "@/services/conditionInteractionService";

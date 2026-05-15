@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Smile, Meh, Frown, Loader2 } from "lucide-react";
+import { Smile, Meh, Frown, Loader2 } from "@/lib/icons";
 import { WellnessLog } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
 import { useApp } from "@/contexts/AppContext";

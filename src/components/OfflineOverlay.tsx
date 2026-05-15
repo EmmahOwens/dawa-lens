@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Network } from "@capacitor/network";
 import { motion, AnimatePresence } from "framer-motion";
-import { WifiOff, RefreshCw } from "lucide-react";
+import { WifiOff, RefreshCw } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 
 export default function OfflineOverlay() {

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check } from "@/lib/icons";
 
 interface SuccessStateProps {
   title: string;

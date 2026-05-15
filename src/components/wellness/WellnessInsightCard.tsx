@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Sparkles, TrendingUp, TrendingDown, Minus, Info, Brain, Zap, Heart, ArrowRight } from "lucide-react";
+import { Sparkles, TrendingUp, TrendingDown, Minus, Info, Brain, Zap, Heart, ArrowRight } from "@/lib/icons";
 
 interface WellnessInsightCardProps {
   insight: {

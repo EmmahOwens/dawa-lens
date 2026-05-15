@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Camera, Bell, History, Settings, Users } from "lucide-react";
+import { Home, Camera, Bell, History, Settings, Users } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";

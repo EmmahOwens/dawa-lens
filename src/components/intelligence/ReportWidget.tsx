@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { FileText, Sparkles } from "lucide-react";
+import { FileText, Sparkles } from "@/lib/icons";
 
 export function ReportWidget() {
   return (

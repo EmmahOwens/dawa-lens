@@ -5,13 +5,13 @@ import {
   Plane, Globe, MapPin, Loader2, Sparkles, AlertCircle, 
   ShieldAlert, Pill, Phone, Activity, Search,
   ArrowRight, Info, Clock, CheckCircle2, Navigation
-} from "lucide-react";
+} from "@/lib/icons";
 import { aiApi } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { TravelMap } from "@/components/travel/TravelMap";
 import { lookupDRA } from "@/services/draDatabase";
-import { ShieldCheck, Siren } from "lucide-react";
+import { ShieldCheck, Siren } from "@/lib/icons";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import PermissionRequest from "@/components/PermissionRequest";
 import { useToast } from "@/hooks/use-toast";

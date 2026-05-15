@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Brain, Shield, Sparkles, Loader2 } from "lucide-react";
+import { Search, Brain, Shield, Sparkles, Loader2 } from "@/lib/icons";
 import { useState, useEffect } from "react";
 
 interface Step {

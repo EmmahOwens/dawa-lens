@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { History, Activity } from "lucide-react";
+import { History, Activity } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 

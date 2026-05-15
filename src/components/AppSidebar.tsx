@@ -1,4 +1,4 @@
-import { Home, Camera, Clock, History, Settings, CopyPlus, Users, LogOut, Heart, ShieldCheck } from "lucide-react";
+import { Home, Camera, Clock, History, Settings, CopyPlus, Users, LogOut, Heart, ShieldCheck } from "@/lib/icons";
 import { NavLink } from "@/components/NavLink";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";

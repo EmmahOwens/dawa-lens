@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Rocket, ArrowRight, Download, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Rocket, ArrowRight, Download, CheckCircle, AlertTriangle } from "@/lib/icons";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';

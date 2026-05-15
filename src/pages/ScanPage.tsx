@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, X, SwitchCamera, Zap, Upload, Pill, FileText } from "lucide-react";
+import { Camera, X, SwitchCamera, Zap, Upload, Pill, FileText } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { ARInstructionOverlay, ARInstructionType } from "@/components/ui/ARInstruction";
