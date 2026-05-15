@@ -4,7 +4,7 @@
   "description": "Identify medicines, manage schedules, and never miss a dose.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f7fa",
+  "background_color": "#050505",
   "theme_color": "#1a9ca0",
   "orientation": "portrait-primary",
   "icons": [
