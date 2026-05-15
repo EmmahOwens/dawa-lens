@@ -234,12 +234,24 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
       // 2. Skip past candidates
       if (isBefore(candidate, fromDate)) continue;
 
-      // 3. Check if already taken for this scheduled time
-      const wasTaken = doseLogs.some(log =>
+      // 3. Check if already handled (taken, skipped, or missed) for this scheduled time
+      const terminalLog = doseLogs.find(log =>
         log.reminderId === reminder.id &&
-        log.scheduledTime === candidate.toISOString()
+        log.scheduledTime === candidate.toISOString() &&
+        ["taken", "skipped", "missed"].includes(log.action)
       );
-      if (wasTaken) continue;
+      if (terminalLog) continue;
+
+      // 3.5 Check if currently snoozed
+      const snoozedLog = doseLogs.sort((a,b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime()).find(log =>
+        log.reminderId === reminder.id &&
+        log.scheduledTime === candidate.toISOString() &&
+        log.action === "snoozed"
+      );
+      if (snoozedLog && snoozedLog.snoozeUntil) {
+        candidate = new Date(snoozedLog.snoozeUntil);
+        if (isBefore(candidate, fromDate)) continue;
+      }
 
       // 4. Schedule-type filtering
       // For shifted candidates, check day-of-week against the original unshifted date
@@ -390,7 +402,7 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
 
     activeReminders.forEach(r => {
       const medicine = medicines?.find(m => m.id === r.medicineId);
-      let currentStock = medicine?.currentQuantity || 999;
+      let currentStock = medicine?.currentQuantity ?? 999;
       const doseAmount = medicine?.dosagePerDose || 1;
       
       let nextFrom = now;

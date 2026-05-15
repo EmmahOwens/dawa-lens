@@ -86,7 +86,7 @@ export default function RemindersPage() {
   // Filter reminders by the active patient context
   const filteredReminders = useMemo(() => {
     return reminders.filter(r => {
-      const pId = (r as any).patientId;
+      const pId = r.patientId;
       return selectedPatientId === null ? !pId : pId === selectedPatientId;
     });
   }, [reminders, selectedPatientId]);

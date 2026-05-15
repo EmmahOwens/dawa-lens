@@ -40,15 +40,22 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const [showAchievement, setShowAchievement] = useState(false);
 
+  const matchPatient = (pid: string | null | undefined) => (pid || null) === (selectedPatientId || null);
+
+  const scopedMedicines = useMemo(() => medicines.filter(m => matchPatient((m as any).patientId)), [medicines, selectedPatientId]);
+  const scopedReminders = useMemo(() => reminders.filter(r => matchPatient(r.patientId)), [reminders, selectedPatientId]);
+  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, selectedPatientId]);
+  const scopedWellnessLogs = useMemo(() => wellnessLogs.filter(l => matchPatient(l.patientId)), [wellnessLogs, selectedPatientId]);
+
   const refillStatuses = useMemo(() => {
-    return medicines
-      .map(m => calculateRefillStatus(m, reminders))
+    return scopedMedicines
+      .map(m => calculateRefillStatus(m, scopedReminders))
       .filter((s): s is RefillStatus => s !== null && s.isLow);
-  }, [medicines, reminders]);
+  }, [scopedMedicines, scopedReminders]);
 
   const nextDose = useMemo(() => {
-    return calculateNextDose(reminders, doseLogs);
-  }, [reminders, doseLogs]);
+    return calculateNextDose(scopedReminders, scopedDoseLogs);
+  }, [scopedReminders, scopedDoseLogs]);
 
   const greetingInfo = useMemo(() => {
     const hour = new Date().getHours();
@@ -69,15 +76,36 @@ export default function Dashboard() {
     { icon: FileText, label: "Reports", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" },
   ];
 
-  const todayReminders = reminders.filter((r) => r.enabled);
-  const takenToday = doseLogs.filter(
+  const todayReminders = scopedReminders.filter((r) => r.enabled);
+  
+  const expectedDosesToday = useMemo(() => {
+    let count = 0;
+    const todayNum = new Date().getDay();
+    todayReminders.forEach(r => {
+      if (r.repeatSchedule === "custom" && r.repeatDays && r.repeatDays.length > 0) {
+        if (!r.repeatDays.includes(todayNum)) return;
+      }
+      if (r.repeatSchedule === "weekly") {
+        if (r.repeatDays && r.repeatDays.length > 0) {
+          if (!r.repeatDays.includes(todayNum)) return;
+        } else {
+          const createdDay = new Date(r.createdAt).getDay();
+          if (createdDay !== todayNum) return;
+        }
+      }
+      count += r.time.split(",").length;
+    });
+    return count;
+  }, [todayReminders]);
+
+  const takenToday = scopedDoseLogs.filter(
     (l) => l.action === "taken" && new Date(l.actionTime).toDateString() === new Date().toDateString()
   ).length;
   
-  const adherencePercent = todayReminders.length > 0 ? Math.round((takenToday / todayReminders.length) * 100) : 100;
+  const adherencePercent = expectedDosesToday > 0 ? Math.round((takenToday / expectedDosesToday) * 100) : 100;
 
   useEffect(() => {
-    if (todayReminders.length > 0 && takenToday === todayReminders.length) {
+    if (expectedDosesToday > 0 && takenToday >= expectedDosesToday) {
       const today = new Date().toDateString();
       const lastCelebrated = localStorage.getItem("last_celebration_date");
       
@@ -86,7 +114,7 @@ export default function Dashboard() {
         localStorage.setItem("last_celebration_date", today);
       }
     }
-  }, [takenToday, todayReminders.length]);
+  }, [takenToday, expectedDosesToday]);
 
   // scheduledTime is the exact ISO datetime for the specific dose slot being actioned,
   // provided by DailyTimeline so each slot in a multi-dose reminder is tracked individually.
@@ -169,7 +197,7 @@ export default function Dashboard() {
       <StatusHero 
         nextDose={nextDose}
         takenToday={takenToday}
-        totalToday={todayReminders.length}
+        totalToday={expectedDosesToday}
         onNextDoseClick={() => navigate("/reminders")}
         onProgressClick={() => navigate("/history")}
       />
@@ -218,13 +246,13 @@ export default function Dashboard() {
       {/* 5. Daily Timeline (Reminders) */}
       <DailyTimeline 
         reminders={todayReminders}
-        doseLogs={doseLogs}
+        doseLogs={scopedDoseLogs}
         onAction={handleAction}
       />
 
       {/* 6. Health Widgets (Water/Mood) */}
       <HealthWidgets 
-        wellnessLogs={wellnessLogs}
+        wellnessLogs={scopedWellnessLogs}
         onAddLog={(type, data) => addWellnessLog({ type, data, patientId: selectedPatientId })}
       />
 

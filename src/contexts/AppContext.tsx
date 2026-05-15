@@ -3,7 +3,7 @@ import { getRxCUI } from "../services/interactionChecker";
 
 import { auth, db } from "../lib/firebase";
 import { onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "firebase/auth";
-import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, query, where, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, query, where, onSnapshot, getDocs } from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
 import { scheduleReminders } from "../services/reminderService";
 import { computeShiftOffset } from "../services/reminderService";
@@ -35,6 +35,8 @@ export type Medicine = {
   isConflict?: boolean;
   color?: string;
   icon?: string;
+  patientId?: string | null;
+  userId?: string;
 };
 
 export type Reminder = {
@@ -64,6 +66,10 @@ export type DoseLog = {
   scheduledTime: string;
   actionTime: string;
   action: "taken" | "skipped" | "snoozed" | "missed";
+  isSnoozed?: boolean;
+  snoozeUntil?: string;
+  patientId?: string | null;
+  userId?: string;
 };
 
 export type WellnessLog = {
@@ -512,7 +518,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const effectivePatientId = explicitPatientId !== undefined ? explicitPatientId : selectedPatientId;
     
     if (storageMode === "local") {
-      newMed = await localPersistence.medicines.create(med);
+      newMed = await localPersistence.medicines.create({
+        ...med,
+        patientId: effectivePatientId || null,
+        userId: "local"
+      });
       setMedicines((p) => [...p, newMed]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
@@ -621,16 +631,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
     let newLog: DoseLog;
+    const reminder = reminders.find(r => r.id === log.reminderId);
+    const effectivePatientId = reminder?.patientId ?? selectedPatientId ?? null;
+
     if (storageMode === "local") {
-      newLog = await localPersistence.doseLogs.create(log);
+      newLog = await localPersistence.doseLogs.create({
+        ...log,
+        patientId: effectivePatientId,
+        userId: "local"
+      });
       setDoseLogs((p) => [...p, newLog]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
       // Derive patientId from the reminder's own patientId field (not selectedPatientId)
       // so family member dose logs are always scoped correctly regardless of the
       // currently viewed profile.
-      const reminder = reminders.find(r => r.id === log.reminderId);
-      const effectivePatientId = reminder?.patientId ?? selectedPatientId ?? null;
       const logData = sanitizeFirestoreData({
         ...log,
         userId: currentUserId,
@@ -643,7 +658,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     // 1. Update Medicine Inventory if taken
-    const reminder = reminders.find(r => r.id === log.reminderId);
     if (reminder && reminder.medicineId && log.action === "taken") {
       const medicine = medicines.find(m => m.id === reminder.medicineId);
       if (medicine && medicine.currentQuantity !== undefined && medicine.dosagePerDose) {
@@ -813,6 +827,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deletePatient = async (id: string) => {
     if (!currentUserId) throw new Error("Not logged in");
+    
+    // Cascade delete associated items
+    const relatedMeds = medicines.filter(m => m.patientId === id);
+    for (const med of relatedMeds) {
+      await deleteMedicine(med.id);
+    }
+    
+    const relatedRems = reminders.filter(r => r.patientId === id);
+    for (const rem of relatedRems) {
+      await deleteReminder(rem.id);
+    }
+    
+    const relatedLogs = doseLogs.filter(l => l.patientId === id);
+    for (const l of relatedLogs) {
+      await deleteDoseLog(l.id);
+    }
+    
+    // Wellness logs are only managed in cloud via AppContext right now for deletion
+    // But let's delete the firestore docs
+    try {
+      const wQuery = query(collection(db, "wellnessLogs"), where("patientId", "==", id), where("userId", "==", currentUserId));
+      const snapshot = await getDocs(wQuery);
+      snapshot.forEach((docSnap) => {
+        deleteDoc(doc(db, "wellnessLogs", docSnap.id)).catch(console.error);
+      });
+    } catch (e) {
+      console.error("Failed to cascade delete wellness logs:", e);
+    }
+
     const docRef = doc(db, "patients", id);
     await deleteDoc(docRef);
     // onSnapshot listener will auto-update state

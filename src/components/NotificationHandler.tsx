@@ -99,6 +99,21 @@ export const NotificationHandler = () => {
                 }
               ]
             });
+            
+            try {
+              await logDose({
+                reminderId,
+                medicineName,
+                dose,
+                scheduledTime: scheduledTime || new Date().toISOString(),
+                action: 'snoozed',
+                isSnoozed: true,
+                snoozeUntil: snoozeTime.toISOString()
+              });
+            } catch (err) {
+              console.error('Failed to log snooze from notification:', err);
+            }
+            
             toast.info(`Snoozed ${medicineName} for 15 minutes.`);
           } else {
             // Default action (tap on notification body)

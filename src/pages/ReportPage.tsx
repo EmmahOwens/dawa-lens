@@ -30,19 +30,24 @@ export default function ReportPage() {
   const patientAge = patient?.age ? `${patient.age} yrs` : (userProfile?.dateOfBirth ? `${new Date().getFullYear() - new Date(userProfile.dateOfBirth).getFullYear()} yrs` : "N/A");
   const patientGender = patient?.gender || userProfile?.gender || "N/A";
 
+  const matchPatient = (pid: string | null | undefined) => (pid || null) === (selectedPatientId || null);
+  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, selectedPatientId]);
+  const scopedWellnessLogs = useMemo(() => wellnessLogs.filter(l => matchPatient(l.patientId)), [wellnessLogs, selectedPatientId]);
+  const scopedMedicines = useMemo(() => medicines.filter(m => matchPatient((m as any).patientId)), [medicines, selectedPatientId]);
+
   // Prepare Chart Data (Last 7 Days)
   const chartData = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
       const date = subDays(new Date(), 6 - i);
       const dayStr = format(date, "MMM dd");
       
-      const dayLogs = doseLogs.filter(l => isSameDay(new Date(l.actionTime), date));
+      const dayLogs = scopedDoseLogs.filter(l => isSameDay(new Date(l.actionTime), date));
       const taken = dayLogs.filter(l => l.action === "taken").length;
       const total = dayLogs.length;
       const adherence = total > 0 ? (taken / total) * 100 : 100;
 
       // Average wellness logs if multiple exist for the day
-      const dayWellnessLogs = wellnessLogs.filter(l => l.type === "symptom" && isSameDay(new Date(l.timestamp), date));
+      const dayWellnessLogs = scopedWellnessLogs.filter(l => l.type === "symptom" && isSameDay(new Date(l.timestamp), date));
       
       let energy: number | null = null;
       let mood: number | null = null;
@@ -56,14 +61,14 @@ export default function ReportPage() {
 
       return { name: dayStr, adherence, energy, mood };
     });
-  }, [doseLogs, wellnessLogs]);
+  }, [scopedDoseLogs, scopedWellnessLogs]);
 
   const adherenceScore = Math.round(chartData.reduce((acc, d) => acc + d.adherence, 0) / 7) || 0;
 
   // Emotional Wellness Statistics (last 7 days)
   const emotionalStats = useMemo(() => {
     const last7 = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), 6 - i));
-    const symptomLogs = wellnessLogs.filter(l => l.type === "symptom");
+    const symptomLogs = scopedWellnessLogs.filter(l => l.type === "symptom");
 
     const logsLast7 = symptomLogs.filter(l => {
       const d = new Date(l.timestamp);
@@ -95,19 +100,19 @@ export default function ReportPage() {
     const moodBg = avgMood >= 3.5 ? "bg-success/10" : avgMood >= 2.5 ? "bg-warning/10" : "bg-destructive/10";
 
     return { avgMood, avgEnergy, topSymptoms, daysWithData, moodLabel, moodColor, moodBg };
-  }, [wellnessLogs]);
+  }, [scopedWellnessLogs]);
 
   const [showPreview, setShowPreview] = useState(false);
   const isNative = Capacitor.isNativePlatform();
 
   const fetchInsights = async () => {
-    if (doseLogs.length === 0 && medicines.length === 0) return;
+    if (scopedDoseLogs.length === 0 && scopedMedicines.length === 0) return;
     setLoading(true);
     try {
       const res = await aiApi.getWellnessInsight({
-        doseLogs: doseLogs.slice(0, 70), 
-        wellnessLogs: wellnessLogs.slice(0, 50),
-        medicines: medicines.filter(m => !m.isConflict)
+        doseLogs: scopedDoseLogs.slice(0, 70), 
+        wellnessLogs: scopedWellnessLogs.slice(0, 50),
+        medicines: scopedMedicines.filter(m => !m.isConflict)
       });
       setInsights(res);
     } catch (err) {

@@ -23,13 +23,16 @@ function getRelativeDate(dateString: string) {
 
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const { doseLogs, logDose, deleteDoseLog } = useApp();
+  const { doseLogs, logDose, deleteDoseLog, selectedPatientId } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
   const [statusFilter, setStatusFilter] = useState<"All" | "taken" | "skipped" | "snoozed">("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(30);
+
+  const matchPatient = (pid: string | null | undefined) => (pid || null) === (selectedPatientId || null);
+  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, selectedPatientId]);
 
   // Adherence Stats
   const stats = useMemo(() => {
@@ -38,7 +41,7 @@ export default function HistoryPage() {
     // Set to start of day for accurate comparison
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
-    const last7Days = doseLogs.filter(l => {
+    const last7Days = scopedDoseLogs.filter(l => {
       const logDate = new Date(l.actionTime);
       return logDate >= sevenDaysAgo;
     });
@@ -48,11 +51,11 @@ export default function HistoryPage() {
     const rate = total > 0 ? Math.round((taken / total) * 100) : 0;
 
     return { taken, total, rate };
-  }, [doseLogs]);
+  }, [scopedDoseLogs]);
 
   // Group and sort
   const filteredLogs = useMemo(() => {
-    let filtered = doseLogs;
+    let filtered = scopedDoseLogs;
     if (statusFilter !== "All") {
       filtered = filtered.filter(l => l.action === statusFilter);
     }
@@ -62,7 +65,7 @@ export default function HistoryPage() {
     }
     // Sort descending by actionTime
     return filtered.sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime());
-  }, [doseLogs, statusFilter, searchTerm]);
+  }, [scopedDoseLogs, statusFilter, searchTerm]);
 
   const visibleLogs = filteredLogs.slice(0, visibleCount);
 
@@ -91,7 +94,7 @@ export default function HistoryPage() {
   const exportCSV = () => {
     const escape = (val: string) => `"${(val || "").toString().replace(/"/g, '""')}"`;
     const header = "Date,Medicine,Dose,Scheduled Time,Action\n";
-    const rows = doseLogs
+    const rows = scopedDoseLogs
       .map((l) => [
         new Date(l.actionTime).toLocaleDateString(),
         escape(l.medicineName),
