@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
 import { FileText, Printer, Download, TrendingUp, Activity, Calendar, Sparkles, Loader2, Info, CheckCircle2, ArrowRight, Share2, Eye, X, Smile, Frown, Minus, Zap, Brain, Heart } from "@/lib/icons";
@@ -24,6 +24,7 @@ export default function ReportPage() {
   const { doseLogs, wellnessLogs, medicines, userProfile, patients, selectedPatientId } = useApp();
   const [loading, setLoading] = useState(false);
   const [insights, setInsights] = useState<any>(null);
+  const lastFetchKey = useRef<string>("");
 
   const patient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
   const patientName = patient?.name || userProfile?.name || "User";
@@ -123,8 +124,12 @@ export default function ReportPage() {
   };
 
   useEffect(() => {
+    const fetchKey = `${selectedPatientId}-${scopedDoseLogs.length}-${scopedMedicines.length}`;
+    if (fetchKey === lastFetchKey.current) return;
+    lastFetchKey.current = fetchKey;
+    
     fetchInsights();
-  }, [selectedPatientId]);
+  }, [selectedPatientId, scopedDoseLogs.length, scopedMedicines.length]);
 
   const handlePrint = () => {
     window.print();

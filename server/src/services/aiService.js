@@ -64,6 +64,9 @@ const callGeminiChat = async (finalMessages) => {
   try {
     const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       contents,
+      systemInstruction: {
+        parts: [{ text: "You are Dawa-Lens AI. Respond STRICTLY in JSON format as requested by the user." }]
+      },
       generationConfig: { responseMimeType: 'application/json' }
     });
 
@@ -183,22 +186,25 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
 
-
 export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
   const prompt = `
     You are the "Dawa-Lens Medical Data Analyst".
-    Medicines: ${JSON.stringify(medicines.map(m => m.name))}
-    Medication Logs: ${JSON.stringify(doseLogs)}
-    Wellness/Symptom Logs: ${JSON.stringify(wellnessLogs)}
     
-    Task: Correlate adherence with wellness trends (side effects, positive outcomes) AND identify specific dosage patterns (e.g., frequently missed morning doses, delayed doses).
-    Generate a full Care Report summary suitable for handing to a doctor.
+    === DATA FOR ANALYSIS ===
+    Medicines: ${JSON.stringify(medicines.map(m => m.name))}
+    Medication Logs (last 30 days): ${JSON.stringify(doseLogs.slice(0, 30).map(l => ({ med: l.medicineName, time: l.actionTime, status: l.action })))}
+    Wellness/Symptom Logs: ${JSON.stringify(wellnessLogs.slice(0, 20).map(l => ({ time: l.timestamp, type: l.type, data: l.data })))}
+    
+    === TASK ===
+    1. Correlate medication adherence with wellness trends (side effects, energy, mood).
+    2. Identify specific dosage patterns (e.g., missed morning doses, timing delays).
+    3. Generate a high-level clinical summary suitable for a doctor.
 
-    Respond in EXACT JSON format:
+    === RESPONSE FORMAT (STRICT JSON) ===
     { 
       "summary": "2-3 sentences high level clinical overview.", 
-      "dosagePatterns": "1-2 sentences analyzing medication adherence, skipped doses, and timing patterns.",
-      "lifestyleAnalysis": "1-2 sentences on how symptoms/energy align with log times.",
+      "dosagePatterns": "Analysis of adherence, skipped doses, and timing.",
+      "lifestyleAnalysis": "Correlation between symptoms/energy and logs.",
       "insights": ["Specific correlation bullet 1", "Specific correlation bullet 2"], 
       "actionItems": ["Actionable clinical suggestion 1", "Suggestion 2"],
       "correlationScore": 85
