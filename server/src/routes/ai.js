@@ -1,8 +1,17 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import * as aiService from '../services/aiService.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+const heavyAiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // Limit each IP to 15 requests per windowMs
+  message: { error: 'Too many requests to heavy AI features. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 /**
  * AI Behavioral Adherence Coach
@@ -33,7 +42,7 @@ router.post('/holistic-safety', protect, async (req, res, next) => {
 /**
  * Medication Travel Companion
  */
-router.post('/travel', protect, async (req, res, next) => {
+router.post('/travel', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const advice = await aiService.getTravelAdvice(req.body);
     res.json(advice);
@@ -97,7 +106,7 @@ router.post('/emotion-reflection', protect, async (req, res, next) => {
 /**
  * Conversational AI Assistant (Dawa-GPT)
  */
-router.post('/chat', protect, async (req, res, next) => {
+router.post('/chat', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const chat = await aiService.chatWithDawaGPT(req.body);
     res.json(chat);
@@ -109,7 +118,7 @@ router.post('/chat', protect, async (req, res, next) => {
 /**
  * Streaming Conversational AI Assistant
  */
-router.post('/chat/stream', protect, async (req, res, next) => {
+router.post('/chat/stream', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const stream = await aiService.streamChatWithDawaGPT(req.body);
     

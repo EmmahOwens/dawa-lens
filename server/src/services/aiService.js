@@ -199,7 +199,7 @@ export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
       "correlationScore": 85
     }
   `;
-  return await callGroq(prompt);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
 
 export const checkMealSafety = async (medicines, mealDescription) => {
