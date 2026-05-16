@@ -76,6 +76,7 @@ export default function DawaGPT() {
         reminders,
         wellnessLogs,
         patients,
+        useApp().selectedPatientId, // Pass the current profile ID
         (streamedText) => {
           setMessages(prev => prev.map(msg => 
             msg.id === botId ? { ...msg, text: streamedText } : msg

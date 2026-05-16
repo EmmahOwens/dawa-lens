@@ -136,6 +136,7 @@ export const aiApi = {
     reminders?: Reminder[];
     wellnessLogs?: WellnessLog[];
     patients?: Patient[];
+    selectedPatientId?: string | null;
   }) =>
     request<{
       text: string;
@@ -152,6 +153,7 @@ export const aiApi = {
     reminders?: Reminder[];
     wellnessLogs?: WellnessLog[];
     patients?: Patient[];
+    selectedPatientId?: string | null;
   }) =>
     streamRequest('/ai/chat/stream', { method: 'POST', body: JSON.stringify(data) }),
 };

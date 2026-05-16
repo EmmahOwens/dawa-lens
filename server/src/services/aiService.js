@@ -264,12 +264,13 @@ const isComplexTask = (text) => {
   if (text.length > 600) return true;
   
   // Specific command-oriented patterns that require tool-use/action capabilities
+  // Removed strict '^' to allow for natural language like "Please remind me" or "Can you log"
   const actionPatterns = [
-    /^(add|create|set|put|new)\s+(reminder|alarm|med|medicine|dose)/i,
-    /^(log|record|track|save)\s+(that|my|dose|taken|skipped|feeling|wellness|food|meal)/i,
-    /^(update|change|modify|edit|adjust)\s+(reminder|med|dose|schedule|time)/i,
-    /^(delete|remove|stop|cancel|clear)\s+(reminder|med|dose)/i,
-    /^(who\s+is|add\s+my|register)\s+(mother|father|son|daughter|wife|husband|parent|child|patient)/i
+    /(add|create|set|put|new|remind|schedule)\s+(reminder|alarm|med|medicine|dose)/i,
+    /(log|record|track|save)\s+(that|my|dose|taken|skipped|feeling|wellness|food|meal)/i,
+    /(update|change|modify|edit|adjust)\s+(reminder|med|dose|schedule|time)/i,
+    /(delete|remove|stop|cancel|clear)\s+(reminder|med|dose)/i,
+    /(who\s+is|add\s+my|register|new)\s+(mother|father|son|daughter|wife|husband|parent|child|patient|profile)/i
   ];
   
   const hasActionPattern = actionPatterns.some(pattern => pattern.test(lower));
@@ -281,14 +282,14 @@ const isComplexTask = (text) => {
   return hasActionPattern && !isHowToQuery;
 };
 
-export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
+export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }) => {
   const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
   if (detectEmergency(lastUserMsg)) {
     return EMERGENCY_RESPONSE;
   }
 
   const isComplex = isComplexTask(lastUserMsg);
-  const { finalMessages } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex });
+  const { finalMessages } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex, selectedPatientId });
 
   if (!GROQ_API_KEY) {
     return await callGeminiChat(finalMessages);
@@ -316,7 +317,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     if (result.action && result.action.type && isComplex) {
       console.log(`🤖 Agent executing action: ${result.action.type}`);
       try {
-        const actionResult = await executeAiAction(result.action, userProfile.id);
+        const actionResult = await executeAiAction(result.action, userProfile.id, medicines, selectedPatientId);
         
         // Feed the result back to AI for a final human-like confirmation
         const feedbackMessages = [
@@ -357,11 +358,16 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
 /**
  * Execute an AI-requested action against the Firestore database.
  */
-async function executeAiAction(action, userId) {
+async function executeAiAction(action, userId, userMedicines = [], selectedPatientId = null) {
   const { type, payload } = action;
   
   // Ensure userId is attached to payloads
   const data = { ...payload, userId };
+
+  // Default patientId to selectedPatientId (current profile) if missing
+  if (!data.patientId) {
+    data.patientId = selectedPatientId;
+  }
 
   switch (type) {
     case 'ADD_MEDICINE':
@@ -371,8 +377,18 @@ async function executeAiAction(action, userId) {
       return await medicineService.updateMedicine(payload.id, data);
     
     case 'ADD_REMINDER':
-      // If medicineName is provided but no medicineId, we might need to find the med
-      // For now, assume payload has what it needs.
+      // If medicineName is provided but no medicineId, try to resolve it from the inventory
+      if (!data.medicineId && data.medicineName && userMedicines.length > 0) {
+        const match = userMedicines.find(m => 
+          m.name.toLowerCase() === data.medicineName.toLowerCase() ||
+          (m.genericName && m.genericName.toLowerCase() === data.medicineName.toLowerCase())
+        );
+        if (match) {
+          data.medicineId = match.id;
+          data.color = data.color || match.color;
+          data.icon = data.icon || match.icon;
+        }
+      }
       return await reminderService.createReminder(data);
     
     case 'UPDATE_REMINDER':
@@ -399,7 +415,7 @@ async function executeAiAction(action, userId) {
  * Streaming version of Dawa-GPT.
  * Returns the raw axios stream from Groq.
  */
-export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients }) => {
+export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }) => {
   const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
   if (detectEmergency(lastUserMsg)) {
     return new ReadableStream({
@@ -423,7 +439,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   const isComplex = isComplexTask(lastUserMsg);
   const { finalMessages } = await prepareDawaGPTContext({
     messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
-    isStreaming: true, isComplex
+    isStreaming: true, isComplex, selectedPatientId
   });
 
   if (!GROQ_API_KEY) {
@@ -474,7 +490,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
 
 // --- Helpers ---
 
-async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false, isComplex = true }) {
+async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
   const recentMessages = messages.slice(-5);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || "";
   const knowledgeSnippets = await retrieveMedicalKnowledge(lastUserMsg);
@@ -501,7 +517,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     : 'Wellness logs omitted';
     
   const patientsSummary = (isComplex && patients?.length)
-    ? JSON.stringify(patients.map(p => ({ name: p.name, relation: p.relation })))
+    ? JSON.stringify(patients.map(p => ({ id: p.id, name: p.name, relation: p.relation })))
     : (patients?.length ? `${patients.length} family profiles` : 'No family profiles');
 
   const systemInstruction = `
@@ -509,7 +525,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     Regional Context: Uganda / East Africa.
 
     === SYSTEM CONTEXT ===
-    User: ${userProfile?.name || 'User'} | Gender: ${userProfile?.gender || 'unknown'}
+    User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'} | Gender: ${userProfile?.gender || 'unknown'}
+    Active Profile (Target): ${selectedPatientId || 'Self (Account Owner)'}
     Active Medications: ${activeMeds}
     Reminders: ${remindersSummary}
     Recent Dose Logs: ${recentLogs}
@@ -524,13 +541,13 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     Include an "action" field in your metadata JSON to perform operations:
     
     Actions:
-    - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, dosagePerDose? }
+    - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, dosagePerDose?, patientId? }
     - UPDATE_MEDICINE: { id, name?, dosage?, notes? }
-    - ADD_REMINDER: { medicineName, dose, time (HH:mm string), repeatSchedule ("daily"|"weekly"|"once"|"custom"), repeatDays? }
+    - ADD_REMINDER: { medicineName, dose, time (HH:mm string), repeatSchedule ("daily"|"weekly"|"once"|"custom"), repeatDays?, patientId?, medicineId? }
     - UPDATE_REMINDER: { id, enabled?, time?, repeatSchedule?, repeatDays?, dose? }
     - REMOVE_REMINDER: { id }
-    - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action ("taken"|"skipped") }
-    - LOG_WELLNESS: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? } }
+    - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action ("taken"|"skipped"), patientId? }
+    - LOG_WELLNESS: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? }, patientId? }
     - ADD_PATIENT: { name, age?, gender?, relation? }
 
     === ACTION RULES ===
@@ -538,6 +555,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     2. Advise doctor visits for critical misses (Heart, BP, HIV).
     3. Frequency Logic: Calculate evenly-spaced times (e.g. 3x/day -> "08:00,14:00,20:00").
     4. For ADD_REMINDER, if medicine exists, use UPDATE_REMINDER instead.
+    5. IMPORTANT: Always include the "patientId" in the action payload. Use the "Active Profile (Target)" ID provided above unless the user explicitly mentions another person from the Family list.
+    6. If you find a matching medicine in the "Active Medications" list, include its "medicineId" if applicable.
     ` : `
     === CONVERSATIONAL MODE ===
     - Answer clearly and warmly. You cannot perform system actions.

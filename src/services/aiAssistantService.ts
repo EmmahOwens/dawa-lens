@@ -119,7 +119,8 @@ export const chatWithDawaGPT = async (
   doseLogs: DoseLog[] = [],
   reminders: Reminder[] = [],
   wellnessLogs: WellnessLog[] = [],
-  patients: Patient[] = []
+  patients: Patient[] = [],
+  selectedPatientId: string | null = null
 ): Promise<ChatMessage> => {
   try {
     const response = await aiApi.chat({
@@ -130,6 +131,7 @@ export const chatWithDawaGPT = async (
       reminders,
       wellnessLogs: wellnessLogs.slice(0, 10),
       patients,
+      selectedPatientId,
     });
 
     const rawText = response.text || "";
@@ -167,6 +169,7 @@ export const chatWithDawaGPTStream = async (
   reminders: Reminder[] = [],
   wellnessLogs: WellnessLog[] = [],
   patients: Patient[] = [],
+  selectedPatientId: string | null = null,
   onChunk: (text: string) => void
 ): Promise<ChatMessage> => {
   try {
@@ -178,6 +181,7 @@ export const chatWithDawaGPTStream = async (
       reminders,
       wellnessLogs: wellnessLogs.slice(0, 10),
       patients,
+      selectedPatientId,
     });
 
     const reader = stream.getReader();
