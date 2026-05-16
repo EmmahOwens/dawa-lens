@@ -536,7 +536,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const docRef = await addDoc(collection(db, "medicines"), medData);
       newMed = { ...medData, id: docRef.id } as Medicine;
-      // onSnapshot listener will auto-update state
+      // Optimistic update
+      setMedicines((p) => [...p, newMed]);
     }
 
     // Fetch RxCUI in background
@@ -565,7 +566,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const docRef = doc(db, "medicines", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
-      // onSnapshot listener will auto-update state
+      // Optimistic update
+      setMedicines((p) => p.map((m) => (m.id === id ? { ...m, ...updates } : m)));
     }
   };
 
@@ -576,7 +578,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const docRef = doc(db, "medicines", id);
       await deleteDoc(docRef);
-      // onSnapshot listener will auto-update state
+      // Optimistic update
+      setMedicines((p) => p.filter((m) => m.id !== id));
     }
   };
 
@@ -603,7 +606,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const docRef = await addDoc(collection(db, "reminders"), remData);
       newReminder = { ...remData, id: docRef.id } as Reminder;
-      // onSnapshot listener will auto-update state
+      // Optimistic update
+      setReminders((p) => [...p, newReminder]);
     }
   };
 
@@ -614,7 +618,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const docRef = doc(db, "reminders", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
-      // onSnapshot listener will auto-update state
+      // Optimistic update
+      setReminders((p) => p.map((r) => (r.id === id ? { ...r, ...updates } : r)));
     }
   };
 
@@ -625,7 +630,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const docRef = doc(db, "reminders", id);
       await deleteDoc(docRef);
-      // onSnapshot listener will auto-update state
+      // Optimistic update
+      setReminders((p) => p.filter((r) => r.id !== id));
     }
   };
 
@@ -654,15 +660,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       const docRef = await addDoc(collection(db, "doseLogs"), logData);
       newLog = { ...logData, id: docRef.id } as DoseLog;
-      // onSnapshot listener will auto-update state
+      // Optimistic update
+      setDoseLogs((p) => [...p, newLog]);
     }
 
     // 1. Update Medicine Inventory if taken
+    let freshMeds = medicines;
     if (reminder && reminder.medicineId && log.action === "taken") {
       const medicine = medicines.find(m => m.id === reminder.medicineId);
       if (medicine && medicine.currentQuantity !== undefined && medicine.dosagePerDose) {
         const newQuantity = Math.max(0, medicine.currentQuantity - medicine.dosagePerDose);
         await updateMedicine(medicine.id, { currentQuantity: newQuantity });
+        
+        freshMeds = medicines.map(m => m.id === medicine.id ? { ...m, currentQuantity: newQuantity } : m);
 
         // Optional: Trigger refill toast if low
         if (newQuantity <= (medicine.dosagePerDose * 5)) {
@@ -680,7 +690,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const freshLogs = storageMode === "local"
         ? await localPersistence.doseLogs.getAll()
         : [...doseLogs, newLog];
-      scheduleReminders(reminders, freshLogs, medicines);
+      scheduleReminders(reminders, freshLogs, freshMeds);
 
       // 3. Smart Suggest: after 3 consecutive same-direction deviations, suggest updating the time
       const allTakenLogs = freshLogs
