@@ -11,7 +11,7 @@ import {
   Globe, 
   Rocket,
   Sparkles
-} from "@/lib/icons";
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
 
