@@ -18,6 +18,7 @@ import wellnessRouter from './routes/wellness.js';
 import errorMiddleware from './middleware/errorMiddleware.js';
 import { globalLimiter, aiLimiter } from './middleware/rateLimiter.js';
 import AppError from './utils/AppError.js';
+import { initScheduler } from './scheduler.js';
 
 dotenv.config();
 
@@ -88,4 +89,5 @@ app.use(errorMiddleware);
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  initScheduler();
 });

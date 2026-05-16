@@ -1,4 +1,6 @@
 import { db } from '../db.js';
+import * as medicineService from './medicineService.js';
+import { sendPushNotification } from './notificationService.js';
 
 const doseLogsCol = db.collection('doseLogs');
 
@@ -44,7 +46,36 @@ export const createDoseLog = async (data) => {
   }
 
   const docRef = await doseLogsCol.add(data);
-  return { id: docRef.id, _id: docRef.id, ...data };
+  const log = { id: docRef.id, _id: docRef.id, ...data };
+
+  // --- AUTONOMOUS INVENTORY MANAGEMENT ---
+  if (data.action === 'taken' && data.medicineId) {
+    try {
+      const medicine = await medicineService.getMedicineById(data.medicineId);
+      if (medicine && medicine.totalQuantity !== undefined) {
+        const dosagePerDose = medicine.dosagePerDose || 1;
+        const newQuantity = Math.max(0, medicine.totalQuantity - dosagePerDose);
+        
+        await medicineService.updateMedicine(data.medicineId, { totalQuantity: newQuantity });
+        console.log(`📉 Inventory updated for ${medicine.name}: ${medicine.totalQuantity} -> ${newQuantity}`);
+
+        // Check for low stock (threshold: 7 days supply or absolute 5 units)
+        const threshold = (medicine.frequencyPerDay || 1) * 7 || 5;
+        if (newQuantity <= threshold) {
+          console.log(`⚠️ Low stock detected for ${medicine.name} (${newQuantity} remaining)`);
+          await sendPushNotification(data.userId, {
+            title: 'Low Medication Stock',
+            body: `You only have ${newQuantity} left of ${medicine.name}. Remember to get a refill soon!`,
+            data: { type: 'inventory', medicineId: data.medicineId }
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Inventory update failed:", err.message);
+    }
+  }
+
+  return log;
 };
 
 /**

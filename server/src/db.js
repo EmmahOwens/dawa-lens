@@ -1,6 +1,7 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { getMessaging } from 'firebase-admin/messaging';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -36,4 +37,5 @@ try {
 
 export const db = getFirestore(app);
 export const authAdmin = getAuth(app);
+export const messaging = getMessaging(app);
 

@@ -2,6 +2,11 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import AppError from '../utils/AppError.js';
 import { retrieveMedicalKnowledge } from './vectorService.js';
+import * as medicineService from './medicineService.js';
+import * as reminderService from './reminderService.js';
+import * as doseLogService from './doseLogService.js';
+import * as patientService from './patientService.js';
+import * as wellnessService from './wellnessService.js';
 
 dotenv.config();
 
@@ -298,12 +303,91 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
 
     const text = response.data?.choices?.[0]?.message?.content;
     if (!text) throw new AppError('AI returned an empty response.', 502);
-    return JSON.parse(sanitizeJson(text));
+    
+    let result = JSON.parse(sanitizeJson(text));
+
+    // --- AUTONOMOUS AGENT EXECUTION LOOP ---
+    if (result.action && result.action.type && isComplex) {
+      console.log(`🤖 Agent executing action: ${result.action.type}`);
+      try {
+        const actionResult = await executeAiAction(result.action, userProfile.id);
+        
+        // Feed the result back to AI for a final human-like confirmation
+        const feedbackMessages = [
+          ...finalMessages,
+          { role: 'assistant', content: text },
+          { role: 'system', content: `ACTION_RESULT: ${JSON.stringify(actionResult)}. Now confirm this to the user in a warm, human way.` }
+        ];
+
+        const finalResponse = await axios.post(GROQ_API_URL, {
+          model: GROQ_LIGHT_MODEL, // Light model is fine for confirmation
+          messages: feedbackMessages,
+          response_format: { type: 'json_object' }
+        }, {
+          headers: {
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const finalText = finalResponse.data?.choices?.[0]?.message?.content;
+        if (finalText) {
+          result = JSON.parse(sanitizeJson(finalText));
+          result.actionExecuted = true;
+        }
+      } catch (actionErr) {
+        console.error("Agent Action Execution Failed:", actionErr.message);
+        result.text += `\n\n(Note: I tried to perform that action but encountered an error: ${actionErr.message})`;
+      }
+    }
+
+    return result;
   } catch (err) {
     console.warn("Groq Chat failed, falling back to Gemini...", err.message);
     return await callGeminiChat(finalMessages);
   }
 };
+
+/**
+ * Execute an AI-requested action against the Firestore database.
+ */
+async function executeAiAction(action, userId) {
+  const { type, payload } = action;
+  
+  // Ensure userId is attached to payloads
+  const data = { ...payload, userId };
+
+  switch (type) {
+    case 'ADD_MEDICINE':
+      return await medicineService.createMedicine(data);
+    
+    case 'UPDATE_MEDICINE':
+      return await medicineService.updateMedicine(payload.id, data);
+    
+    case 'ADD_REMINDER':
+      // If medicineName is provided but no medicineId, we might need to find the med
+      // For now, assume payload has what it needs.
+      return await reminderService.createReminder(data);
+    
+    case 'UPDATE_REMINDER':
+      return await reminderService.updateReminder(payload.id, data, userId);
+    
+    case 'REMOVE_REMINDER':
+      return await reminderService.deleteReminder(payload.id, userId);
+    
+    case 'LOG_DOSE':
+      return await doseLogService.createDoseLog(data);
+    
+    case 'LOG_WELLNESS':
+      return await wellnessService.createWellnessLog(data);
+    
+    case 'ADD_PATIENT':
+      return await patientService.createPatient(data);
+      
+    default:
+      throw new Error(`Unknown action type: ${type}`);
+  }
+}
 
 /**
  * Streaming version of Dawa-GPT.
