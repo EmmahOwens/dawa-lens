@@ -7,13 +7,13 @@
 ## 🌟 Core Features
 
 ### 🧠 AI-Powered Medication Intelligence
-- **Pill Identification**: Computer vision-powered medication recognition using Tesseract.js OCR and Gemini API integration for high-accuracy pill identification from photos.
-- **Dawa-GPT**: Context-aware conversational AI assistant that understands your active medications, dose history, and wellness patterns.
+- **Pill Identification**: Computer vision-powered medication recognition using Tesseract.js OCR and hybrid AI (Groq/Gemini) for high-accuracy pill identification from photos.
+- **Dawa-GPT**: Context-aware conversational AI assistant powered by Llama 3/4 (Groq) with Gemini fallback, understanding your active medications, dose history, and wellness patterns.
 - **Drug Interaction Detection**: Real-time analysis of potential drug-drug interactions and food-medication interactions.
 - **Medication Search**: Comprehensive medication database lookup with detailed information about dosages, side effects, and usage patterns.
 
 ### 📱 Cross-Platform Native Experience
-- **Unified Codebase**: Single React 18 codebase deployed across Android, iOS, and Web via Capacitor 6.
+- **Unified Codebase**: Single React 18 codebase deployed across Android, iOS, and Web via Capacitor 8.
 - **Native Capabilities**: Full integration with device hardware including camera access, local notifications, haptic feedback, and device storage.
 - **Offline-First Architecture**: Works seamlessly offline with local data synchronization via Firebase Firestore.
 - **Live Updates**: Capgo live update system enables instant app updates without App Store releases.
@@ -62,7 +62,7 @@ dawa-lens/
 - **Build Tool**: Vite 5 with SWC transpilation
 - **UI Components**: Radix UI primitives with Tailwind CSS
 - **Forms**: React Hook Form + Zod validation
-- **State Management**: React Query (TanStack Query) + React Context
+- **State Management**: React Query (TanStack Query) + Zustand + React Context
 - **Animation**: Framer Motion for page transitions
 - **Styling**: Tailwind CSS v3 with custom theme
 - **Charts**: Recharts for health data visualization
@@ -72,17 +72,17 @@ dawa-lens/
 
 ### Backend Stack
 - **Runtime**: Node.js with ES modules
-- **Framework**: Express.js with TypeScript
+- **Framework**: Express.js with ES6
 - **Database**: Firebase Firestore (real-time, NoSQL)
 - **Authentication**: Firebase Authentication with JWT flows
-- **AI/ML**: Google Gemini 2.0 Flash API for vision and text
+- **AI/ML**: Groq (Primary LLM & Vision) + Google Gemini 2.0 Flash (Fallback)
 - **Security**: Helmet.js for security headers, Express Rate Limiter
 - **Logging**: Morgan for HTTP request logging
 - **Validation**: Zod for schema validation
 - **HTTP Client**: Axios for API calls
 
 ### Native Integration
-- **Platform Runtime**: Capacitor 6 for cross-platform bridge
+- **Platform Runtime**: Capacitor 8 for cross-platform bridge
 - **Camera**: Capacitor Camera plugin for pill scanning
 - **Notifications**: Local notifications for medication reminders
 - **Storage**: Capacitor Preferences for persistent app settings
@@ -106,7 +106,7 @@ patients/{patientId}       # Family members and managed patients
 ## 🛠 Development Setup
 
 ### Prerequisites
-- Node.js **v20+**
+- Node.js **v24+**
 - npm or bun package manager
 - Firebase CLI (for local emulation and deployment)
 - Android Studio (for Android development)
@@ -199,6 +199,10 @@ npm run cap:sync  # Sync web assets to native projects
 http://localhost:5173
 http://localhost:3000
 http://localhost:8080
+https://localhost
+http://localhost
+capacitor://localhost
+ionic://localhost
 https://dawalens256.vercel.app
 https://dawalens.web.app
 https://medicine-d3ba2.web.app
