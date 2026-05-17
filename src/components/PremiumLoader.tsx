@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 interface Step {
   id: number;
   label: string;
-  icon: any;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   color: string;
 }
 

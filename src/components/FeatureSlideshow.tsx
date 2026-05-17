@@ -5,7 +5,7 @@ import { Camera, Users, Heart, FileText, History, Plane, Sparkles, Lightbulb, Ar
 
 interface SlideItem {
   id: string;
-  icon: any;
+  icon: React.ComponentType<{ size?: number }>;
   label: string;
   to?: string;
   color: string;
@@ -46,7 +46,7 @@ export function FeatureSlideshow() {
 
   const current = SLIDES[currentIndex];
 
-  const handleDragEnd = (event: any, info: any) => {
+  const handleDragEnd = (_event: unknown, info: { offset: { x: number } }) => {
     if (info.offset.x < -50) nextSlide();
     else if (info.offset.x > 50) prevSlide();
   };

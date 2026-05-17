@@ -25,6 +25,7 @@ export default function DawaGPT() {
     updateReminder,
     deleteReminder,
     logDose,
+    selectedPatientId,
     isDawaGPTOpen: isOpen,
     setIsDawaGPTOpen: setIsOpen,
   } = useApp();
@@ -53,7 +54,7 @@ export default function DawaGPT() {
         source: "System",
       }]);
     }
-  }, [isOpen]);
+  }, [isOpen, messages.length, reminders.length, userProfile?.name]);
 
 
   const handleSend = async (text: string) => {
@@ -76,7 +77,7 @@ export default function DawaGPT() {
         reminders,
         wellnessLogs,
         patients,
-        useApp().selectedPatientId, // Pass the current profile ID
+        selectedPatientId, // Pass the current profile ID
         (streamedText) => {
           setMessages(prev => prev.map(msg => 
             msg.id === botId ? { ...msg, text: streamedText } : msg

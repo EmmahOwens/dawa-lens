@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
 import { FileText, Printer, Download, TrendingUp, Activity, Calendar, Sparkles, Loader2, Info, CheckCircle2, ArrowRight, Share2, Eye, X, Smile, Frown, Minus, Zap, Brain, Heart } from "@/lib/icons";
@@ -31,10 +31,10 @@ export default function ReportPage() {
   const patientAge = patient?.age ? `${patient.age} yrs` : (userProfile?.dateOfBirth ? `${new Date().getFullYear() - new Date(userProfile.dateOfBirth).getFullYear()} yrs` : "N/A");
   const patientGender = patient?.gender || userProfile?.gender || "N/A";
 
-  const matchPatient = (pid: string | null | undefined) => (pid || null) === (selectedPatientId || null);
-  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, selectedPatientId]);
-  const scopedWellnessLogs = useMemo(() => wellnessLogs.filter(l => matchPatient(l.patientId)), [wellnessLogs, selectedPatientId]);
-  const scopedMedicines = useMemo(() => medicines.filter(m => matchPatient((m as any).patientId)), [medicines, selectedPatientId]);
+  const matchPatient = useCallback((pid: string | null | undefined) => (pid || null) === (selectedPatientId || null), [selectedPatientId]);
+  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, matchPatient]);
+  const scopedWellnessLogs = useMemo(() => wellnessLogs.filter(l => matchPatient(l.patientId)), [wellnessLogs, matchPatient]);
+  const scopedMedicines = useMemo(() => medicines.filter(m => matchPatient((m as any).patientId)), [medicines, matchPatient]);
 
   // Prepare Chart Data (Last 7 Days)
   const chartData = useMemo(() => {
@@ -106,7 +106,7 @@ export default function ReportPage() {
   const [showPreview, setShowPreview] = useState(false);
   const isNative = Capacitor.isNativePlatform();
 
-  const fetchInsights = async () => {
+  const fetchInsights = useCallback(async () => {
     if (scopedDoseLogs.length === 0 && scopedMedicines.length === 0) return;
     setLoading(true);
     try {
@@ -121,7 +121,7 @@ export default function ReportPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [scopedDoseLogs, scopedWellnessLogs, scopedMedicines]);
 
   useEffect(() => {
     const fetchKey = `${selectedPatientId}-${scopedDoseLogs.length}-${scopedMedicines.length}`;
@@ -129,7 +129,7 @@ export default function ReportPage() {
     lastFetchKey.current = fetchKey;
     
     fetchInsights();
-  }, [selectedPatientId, scopedDoseLogs.length, scopedMedicines.length]);
+  }, [selectedPatientId, scopedDoseLogs.length, scopedMedicines.length, fetchInsights]);
 
   const handlePrint = () => {
     window.print();

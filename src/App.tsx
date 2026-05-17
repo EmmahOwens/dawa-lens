@@ -168,7 +168,7 @@ const App = () => {
     return () => {
       backListener.then(l => l.remove());
     };
-  }, []);
+  }, [CURRENT_VERSION]);
 
   return (
   <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme" attribute="class">

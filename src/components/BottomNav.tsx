@@ -64,7 +64,7 @@ export default function BottomNav() {
   );
 }
 
-function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: any, label: string, active: boolean, badge?: boolean }) {
+function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>, label: string, active: boolean, badge?: boolean }) {
   return (
     <NavLink
       to={to}

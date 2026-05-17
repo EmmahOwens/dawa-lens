@@ -32,13 +32,14 @@ function repeatLabel(reminder: Reminder): string {
   switch (repeatSchedule) {
     case "daily": return "Every day";
     case "once": return "One time";
-    case "custom": 
+    case "custom": {
       const timesCount = reminder.time.split(",").length;
       let label = timesCount > 1 ? `${timesCount} times a day` : "Custom";
       if (repeatDays && repeatDays.length > 0) {
         label += ` (${repeatDays.map(d => days[d]).join(", ")})`;
       }
       return label;
+    }
     default: return repeatSchedule;
   }
 }
@@ -59,7 +60,7 @@ const colorMap: Record<string, { value: string; border: string; text: string }> 
   slate: { value: "bg-slate-600", border: "border-slate-600/20", text: "text-slate-600" },
 };
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   pill: Pill,
   tablet: Tablets,
   liquid: Droplets,
@@ -274,7 +275,7 @@ export default function RemindersPage() {
                   >
                     {(() => {
                       const IconComp = iconMap[reminder.icon || "pill"] || Pill;
-                      return <IconComp size={20} />;
+                      return <IconComp className="size-5" />;
                     })()}
                   </div>
 

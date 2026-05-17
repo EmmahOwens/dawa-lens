@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 
 // Helper for relative date
 function getRelativeDate(dateString: string) {
@@ -31,8 +31,8 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(30);
 
-  const matchPatient = (pid: string | null | undefined) => (pid || null) === (selectedPatientId || null);
-  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, selectedPatientId]);
+  const matchPatient = useCallback((pid: string | null | undefined) => (pid || null) === (selectedPatientId || null), [selectedPatientId]);
+  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, matchPatient]);
 
   // Adherence Stats
   const stats = useMemo(() => {

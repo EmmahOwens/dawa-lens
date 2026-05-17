@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Users, User, Plane, Heart, FileText, Check, X, Sparkles, Sun, Moon, Cloud, Sunrise } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import AchievementOverlay from "@/components/AchievementOverlay";
 import { DashboardBanner } from "@/components/DashboardBanner";
@@ -40,12 +40,12 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const [showAchievement, setShowAchievement] = useState(false);
 
-  const matchPatient = (pid: string | null | undefined) => (pid || null) === (selectedPatientId || null);
+  const matchPatient = useCallback((pid: string | null | undefined) => (pid || null) === (selectedPatientId || null), [selectedPatientId]);
 
-  const scopedMedicines = useMemo(() => medicines.filter(m => matchPatient((m as any).patientId)), [medicines, selectedPatientId]);
-  const scopedReminders = useMemo(() => reminders.filter(r => matchPatient(r.patientId)), [reminders, selectedPatientId]);
-  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, selectedPatientId]);
-  const scopedWellnessLogs = useMemo(() => wellnessLogs.filter(l => matchPatient(l.patientId)), [wellnessLogs, selectedPatientId]);
+  const scopedMedicines = useMemo(() => medicines.filter(m => matchPatient((m as any).patientId)), [medicines, matchPatient]);
+  const scopedReminders = useMemo(() => reminders.filter(r => matchPatient(r.patientId)), [reminders, matchPatient]);
+  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, matchPatient]);
+  const scopedWellnessLogs = useMemo(() => wellnessLogs.filter(l => matchPatient(l.patientId)), [wellnessLogs, matchPatient]);
 
   const refillStatuses = useMemo(() => {
     return scopedMedicines

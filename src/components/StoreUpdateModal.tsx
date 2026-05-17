@@ -52,10 +52,10 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
 
       // If we get here, the install intent was launched
       setDownloadState('installing');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Update download failed:', err);
       setDownloadState('error');
-      setErrorMessage(err?.message || 'Download failed. Please try again.');
+      setErrorMessage((err as Error)?.message || 'Download failed. Please try again.');
     } finally {
       listenerRef.current?.remove();
       listenerRef.current = null;

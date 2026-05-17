@@ -140,7 +140,7 @@ export default function AuthPage() {
         setStage("awaiting-verification");
         notify.success("Account Created!", "A verification link has been sent to your email.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const error = err as AuthError;
       handleAuthError(error);
     } finally {
@@ -158,8 +158,8 @@ export default function AuthPage() {
       await sendPasswordResetEmail(auth, email);
       notify.success("Reset Email Sent", "Check your inbox for password reset instructions.");
       setStage("form");
-    } catch (err: any) {
-      notify.error("Reset Failed", err.message);
+    } catch (err: unknown) {
+      notify.error("Reset Failed", (err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -208,8 +208,8 @@ export default function AuthPage() {
       setShowSuccess(true);
       loginUser(result.user.uid, result.user.email || "");
       setTimeout(() => navigate("/"), 1500);
-    } catch (err: any) {
-      notify.error("Google Sign In failed", err.message);
+    } catch (err: unknown) {
+      notify.error("Google Sign In failed", (err as Error).message);
     } finally {
       setLoading(false);
     }
