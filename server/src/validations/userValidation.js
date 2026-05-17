@@ -14,5 +14,7 @@ export const upsertUserSchema = z.object({
     gender: z.string().nullable().optional(),
     isProfessional: z.boolean().optional(),
     language: z.string().optional(),
+    timezone: z.string().optional(),
+    currentCity: z.string().optional(),
   })
 });

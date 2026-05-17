@@ -1,4 +1,5 @@
 import { db } from '../db.js';
+import * as autonomousService from './autonomousService.js';
 
 const wellnessCol = db.collection('wellness');
 
@@ -24,7 +25,14 @@ export const createWellnessLog = async (data) => {
   }
   
   const docRef = await wellnessCol.add(data);
-  return { id: docRef.id, _id: docRef.id, ...data };
+  const log = { id: docRef.id, _id: docRef.id, ...data };
+
+  // --- AUTONOMOUS MEAL INTERACTION MONITOR ---
+  if (data.type === 'food' && data.data && data.data.meal) {
+    autonomousService.interceptMealSafety(data.userId, data.patientId, data.data.meal);
+  }
+
+  return log;
 };
 
 export const deleteWellnessLog = async (id) => {

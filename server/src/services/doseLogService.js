@@ -1,6 +1,7 @@
 import { db } from '../db.js';
 import * as medicineService from './medicineService.js';
 import { sendPushNotification } from './notificationService.js';
+import * as autonomousService from './autonomousService.js';
 
 const doseLogsCol = db.collection('doseLogs');
 
@@ -73,6 +74,11 @@ export const createDoseLog = async (data) => {
     } catch (err) {
       console.error("Inventory update failed:", err.message);
     }
+  }
+
+  // --- AUTONOMOUS ADHERENCE INTERVENTION ---
+  if (data.action === 'skipped' || data.action === 'missed') {
+    autonomousService.interceptCriticalAdherence(data.userId, data.patientId, data.medicineId, data.action);
   }
 
   return log;

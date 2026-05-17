@@ -37,6 +37,8 @@ OUTPUT REQUIREMENTS:
 - 'summary': A concise, professional summary of the identified medication, its primary use, and one critical safety warning.
 - 'imprints': Any text/numbers found imprinted on the pill surface (empty array if none).
 - 'labels': Any brand or label text visible on packaging (empty array if none).
+- 'draftSchedule': A suggested daily schedule based on common usage (e.g., ["08:00", "20:00"] for twice daily).
+- 'safetyFlag': A short one-sentence critical warning if this med is high-risk (e.g., "Do not take with alcohol").
 
 Respond ONLY with a valid JSON object in this exact schema:
 {
@@ -45,7 +47,9 @@ Respond ONLY with a valid JSON object in this exact schema:
       "name": "string",
       "genericName": "string",
       "confidence": number,
-      "recommendedDosage": "string"
+      "recommendedDosage": "string",
+      "draftSchedule": ["string"],
+      "safetyFlag": "string"
     }
   ],
   "imprints": ["string"],
@@ -69,8 +73,10 @@ const PILL_ID_SCHEMA = {
           genericName:       { type: 'STRING' },
           confidence:        { type: 'NUMBER' },
           recommendedDosage: { type: 'STRING' },
+          draftSchedule:     { type: 'ARRAY', items: { type: 'STRING' } },
+          safetyFlag:        { type: 'STRING' },
         },
-        required: ['name', 'confidence', 'genericName', 'recommendedDosage'],
+        required: ['name', 'confidence', 'genericName', 'recommendedDosage', 'draftSchedule', 'safetyFlag'],
       },
     },
     imprints: { type: 'ARRAY', items: { type: 'STRING' } },
@@ -107,12 +113,21 @@ const normaliseMatches = (raw) => {
       genericName:       String(m.genericName || ''),
       confidence:        Math.min(1, Math.max(0, Number(m.confidence || 0))),
       recommendedDosage: String(m.recommendedDosage || ''),
+      draftSchedule:     m.draftSchedule || [],
+      safetyFlag:        String(m.safetyFlag || ''),
     }))
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 5);
 
   while (matches.length < 5) {
-    matches.push({ name: 'Inconclusive Match', genericName: '', confidence: 0.0, recommendedDosage: '' });
+    matches.push({ 
+      name: 'Inconclusive Match', 
+      genericName: '', 
+      confidence: 0.0, 
+      recommendedDosage: '',
+      draftSchedule: [],
+      safetyFlag: ''
+    });
   }
   return matches;
 };
