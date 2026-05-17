@@ -255,31 +255,40 @@ export const getNutritionalGuidance = async (medicines) => {
 
 /**
  * Advanced task complexity detection to avoid unnecessary usage of 70B model.
+ * Returns true if the query requires system context (logs, reminders) or tool-use capabilities.
  */
 const isComplexTask = (text) => {
   if (!text) return false;
   const lower = text.toLowerCase().trim();
   
   // High threshold for complexity by length (approx 100-120 words)
-  if (text.length > 600) return true;
+  if (text.length > 500) return true;
   
   // Specific command-oriented patterns that require tool-use/action capabilities
-  // Removed strict '^' to allow for natural language like "Please remind me" or "Can you log"
   const actionPatterns = [
-    /(add|create|set|put|new|remind|schedule)\s+(reminder|alarm|med|medicine|dose)/i,
-    /(log|record|track|save)\s+(that|my|dose|taken|skipped|feeling|wellness|food|meal)/i,
-    /(update|change|modify|edit|adjust)\s+(reminder|med|dose|schedule|time)/i,
-    /(delete|remove|stop|cancel|clear)\s+(reminder|med|dose)/i,
-    /(who\s+is|add\s+my|register|new)\s+(mother|father|son|daughter|wife|husband|parent|child|patient|profile)/i
+    /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear)/i,
+    /(reminder|alarm|med|medicine|dose|taken|skipped|feeling|wellness|food|meal|profile|patient|family|mother|father|son|daughter|wife|husband|parent|child)/i
   ];
   
-  const hasActionPattern = actionPatterns.some(pattern => pattern.test(lower));
+  // Data retrieval patterns
+  const dataPatterns = [
+    /(what|show|list|tell|view|see|check|get|summary|history|status)/i,
+    /(my|current|active|recent|all)/i
+  ];
+
+  // If it matches an action verb OR a data retrieval verb + a noun from our domain
+  const hasActionVerb = /(add|create|set|remind|log|record|track|update|delete|remove|register)/i.test(lower);
+  const hasDomainNoun = /(reminder|med|medicine|dose|log|wellness|family|profile|patient|history)/i.test(lower);
+  const hasDataVerb = /(what|show|list|tell|view|check|get)/i.test(lower);
+
+  const isActionRequest = hasActionVerb && hasDomainNoun;
+  const isDataRequest = hasDataVerb && (hasDomainNoun || /(my|current|active|recent)/i.test(lower));
   
   // Generic informational queries about keywords should NOT trigger 70B
   // e.g. "How do I add a med?" vs "Add a med"
   const isHowToQuery = /^(how\s+do\s+i|can\s+you\s+explain|what\s+is|tell\s+me\s+about)/i.test(lower);
   
-  return hasActionPattern && !isHowToQuery;
+  return (isActionRequest || isDataRequest || text.length > 300) && !isHowToQuery;
 };
 
 export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }) => {
@@ -499,9 +508,10 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     : "";
 
   const activeMeds = medicines?.map(m => m.name).join(', ') || 'No active medications';
-  // Conditionally load detailed summaries based on complexity to save tokens
-  const recentLogs = (isComplex && doseLogs) ? JSON.stringify(doseLogs.slice(0, 3)) : 'History omitted for brevity';
-  const remindersSummary = (isComplex && reminders?.length)
+  
+  // Provide basic summaries even for non-complex tasks so AI has state awareness
+  const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2)) : 'No logs';
+  const remindersSummary = reminders?.length
     ? JSON.stringify(reminders.map(r => ({
       id: r.id,
       medicineName: r.medicineName,
@@ -509,23 +519,23 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
       time: r.time,
       repeat: r.repeatSchedule,
       enabled: r.enabled
-    })))
-    : (reminders?.length ? `${reminders.length} reminders active` : 'No reminders set');
+    })).slice(0, isComplex ? 10 : 3))
+    : 'No reminders set';
     
-  const wellnessSummary = (isComplex && wellnessLogs?.length)
-    ? JSON.stringify(wellnessLogs.slice(0, 2))
-    : 'Wellness logs omitted';
+  const wellnessSummary = wellnessLogs?.length
+    ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1))
+    : 'No wellness logs';
     
-  const patientsSummary = (isComplex && patients?.length)
+  const patientsSummary = patients?.length
     ? JSON.stringify(patients.map(p => ({ id: p.id, name: p.name, relation: p.relation })))
-    : (patients?.length ? `${patients.length} family profiles` : 'No family profiles');
+    : 'No family profiles';
 
   const systemInstruction = `
     You are "Dawa-GPT", a premium medical AI assistant integrated into the Dawa-Lens app.
     Regional Context: Uganda / East Africa.
 
     === SYSTEM CONTEXT ===
-    User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'} | Gender: ${userProfile?.gender || 'unknown'}
+    User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'}
     Active Profile (Target): ${selectedPatientId || 'Self (Account Owner)'}
     Active Medications: ${activeMeds}
     Reminders: ${remindersSummary}
@@ -535,51 +545,36 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
 
     ${knowledgeContext}
 
-    ${isComplex ? `
     === CAPABILITIES & ACTIONS ===
     You have FULL READ and WRITE access to the user's medication system.
-    Include an "action" field in your metadata JSON to perform operations:
+    To perform an operation, include an "action" field in your metadata JSON.
     
     Actions:
     - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, dosagePerDose?, patientId? }
     - UPDATE_MEDICINE: { id, name?, dosage?, notes? }
-    - ADD_REMINDER: { medicineName, dose, time (HH:mm string), repeatSchedule ("daily"|"weekly"|"once"|"custom"), repeatDays?, patientId?, medicineId? }
+    - ADD_REMINDER: { medicineName, dose, time (HH:mm), repeatSchedule ("daily"|"weekly"|"once"|"custom"), repeatDays?, patientId?, medicineId? }
     - UPDATE_REMINDER: { id, enabled?, time?, repeatSchedule?, repeatDays?, dose? }
     - REMOVE_REMINDER: { id }
     - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action ("taken"|"skipped"), patientId? }
     - LOG_WELLNESS: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? }, patientId? }
     - ADD_PATIENT: { name, age?, gender?, relation? }
 
-    === ACTION RULES ===
+    === RULES ===
     1. Professional, warm "Dawa-Lens signature" tone.
     2. Advise doctor visits for critical misses (Heart, BP, HIV).
     3. Frequency Logic: Calculate evenly-spaced times (e.g. 3x/day -> "08:00,14:00,20:00").
     4. For ADD_REMINDER, if medicine exists, use UPDATE_REMINDER instead.
-    5. IMPORTANT: Always include the "patientId" in the action payload. Use the "Active Profile (Target)" ID provided above unless the user explicitly mentions another person from the Family list.
-    6. If you find a matching medicine in the "Active Medications" list, include its "medicineId" if applicable.
-    ` : `
-    === CONVERSATIONAL MODE ===
-    - Answer clearly and warmly. You cannot perform system actions.
-    - Focus on regional wellness tips and medical education.
-    - Keep text responses concise and actionable.
-    `}
-
-    === IN-APP NAVIGATION ===
-    ALWAYS embed clickable chips for relevant pages using: [Label](/route)
-    Routes: [/dashboard, /reminders, /history, /interactions, /family, /wellness, /report, /travel, /scan]
-
-    === NUTRITIONAL GUIDELINES ===
-    1. Proactively suggest regional foods (Matooke, Avocado, G-nuts).
-    2. Warn about high-risk interactions (e.g. Grapefruit, Dairy, Alcohol).
-
+    5. ALWAYS include "patientId" in action payloads. Use the "Active Profile (Target)" ID above unless another person is mentioned.
+    6. Include clickable chips for navigation: [Label](/route) (e.g. [/dashboard, /reminders, /family, /wellness, /scan]).
+    7. Proactively suggest regional foods (Matooke, Avocado, G-nuts).
 
     === RESPONSE FORMAT ===
     ${isStreaming ? `
     Respond in plain text first. Append "###METADATA###" followed by:
-    { "suggestions": ["...", "...", "..."], "source": "Dawa-GPT", "action": null }
+    { "suggestions": ["...", "...", "..."], "source": "Dawa-GPT", "action": { "type": "...", "payload": {...} } | null }
     ` : `
     Respond STRICTLY in JSON format:
-    { "text": "...", "suggestions": ["...", "...", "..."], "source": "Dawa-GPT", "action": null }
+    { "text": "...", "suggestions": ["...", "...", "..."], "source": "Dawa-GPT", "action": { "type": "...", "payload": {...} } | null }
     `}
   `;
 
