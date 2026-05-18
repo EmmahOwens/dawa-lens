@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import { Clock, TrendingUp, Sparkles, Loader2 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useIntelligenceContext } from "@/hooks/useIntelligenceContext";
@@ -103,9 +104,15 @@ export function DashboardWidget() {
                  <span className="text-[10px] font-bold uppercase tracking-wider">Analyzing logs...</span>
                </div>
             ) : insight ? (
-               <p className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
-                 "{insight}"
-               </p>
+               <div className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
+                 <ReactMarkdown
+                   components={{
+                     p: ({ children }) => <p className="mb-2 last:mb-0">"{children}"</p>,
+                   }}
+                 >
+                   {insight}
+                 </ReactMarkdown>
+               </div>
             ) : (
                <p className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
                  "Log your doses consistently to build your streak and receive personalized health insights."

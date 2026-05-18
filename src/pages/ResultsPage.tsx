@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, FileText, Loader2, Pill, Sparkles, Bell } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
@@ -222,7 +223,15 @@ export default function ResultsPage() {
               className="mb-6 px-5 py-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-start gap-3"
             >
               <Sparkles size={16} className="text-primary shrink-0 mt-0.5" />
-              <p className="text-xs text-foreground/80 leading-relaxed font-medium italic">{aiSummary}</p>
+              <div className="text-xs text-foreground/80 leading-relaxed font-medium italic">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  }}
+                >
+                  {aiSummary}
+                </ReactMarkdown>
+              </div>
             </motion.div>
           )}
 

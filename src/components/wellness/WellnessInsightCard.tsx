@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import { Sparkles, TrendingUp, TrendingDown, Minus, Info, Brain, Zap, Heart, ArrowRight } from "@/lib/icons";
 
 interface WellnessInsightCardProps {
@@ -127,9 +128,17 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
           <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 mb-1.5">
             AI Summary
           </p>
-          <p className="text-xs font-semibold text-foreground leading-relaxed">
-            {insight.summary}
-          </p>
+          <div className="text-xs font-semibold text-foreground leading-relaxed">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc ml-4 mb-2 space-y-1">{children}</ul>,
+                li: ({ children }) => <li className="text-[11px]">{children}</li>,
+              }}
+            >
+              {insight.summary}
+            </ReactMarkdown>
+          </div>
         </div>
       )}
 
@@ -138,17 +147,29 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1.5">
           Key Insight
         </p>
-        <p className="text-xs font-semibold text-foreground leading-relaxed">
-          {insight.insight}
-        </p>
+        <div className="text-xs font-semibold text-foreground leading-relaxed">
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+            }}
+          >
+            {insight.insight}
+          </ReactMarkdown>
+        </div>
       </div>
 
       {/* Lifestyle analysis */}
       {insight.lifestyleAnalysis && (
         <div className="p-3 rounded-xl bg-muted/20 border border-border/30 mb-4">
-          <p className="text-[10px] font-semibold text-muted-foreground leading-snug italic">
-            {insight.lifestyleAnalysis}
-          </p>
+          <div className="text-[10px] font-semibold text-muted-foreground leading-snug italic">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+              }}
+            >
+              {insight.lifestyleAnalysis}
+            </ReactMarkdown>
+          </div>
         </div>
       )}
 
@@ -158,9 +179,15 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
           <div className="mt-0.5 p-1.5 rounded-full bg-warning/10 text-warning shrink-0">
             <Zap size={10} />
           </div>
-          <p className="text-[11px] font-semibold text-muted-foreground leading-snug italic">
-            {insight.recommendation}
-          </p>
+          <div className="text-[11px] font-semibold text-muted-foreground leading-snug italic">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+              }}
+            >
+              {insight.recommendation}
+            </ReactMarkdown>
+          </div>
         </div>
       )}
 
@@ -175,7 +202,7 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
               key={i}
               className="w-5 h-5 rounded-full border-2 border-card bg-primary/10 flex items-center justify-center"
             >
-              <Heart size={8} className="text-primary" fill="currentColor" />
+              <Heart size={8} className="text-primary" />
             </div>
           ))}
         </div>

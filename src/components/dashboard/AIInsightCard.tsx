@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus, Loader2 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
@@ -138,9 +139,18 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
             <div className="h-3 bg-white/15 rounded-full w-3/5 animate-pulse" />
           </div>
         ) : displayInsight ? (
-          <p className="text-sm font-medium leading-relaxed mb-5 text-white/95">
-            "{displayInsight}"
-          </p>
+          <div className="text-sm font-medium leading-relaxed mb-5 text-white/95">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">"{children}"</p>,
+                strong: ({ children }) => <strong className="font-black text-white">{children}</strong>,
+                ul: ({ children }) => <ul className="list-disc ml-4 mb-2 space-y-1">{children}</ul>,
+                li: ({ children }) => <li className="text-[11px] leading-tight">{children}</li>,
+              }}
+            >
+              {displayInsight}
+            </ReactMarkdown>
+          </div>
         ) : (
           <p className="text-sm font-medium leading-relaxed mb-5 text-white/70 italic">
             Log your mood or take a medication dose to generate a personalized insight.

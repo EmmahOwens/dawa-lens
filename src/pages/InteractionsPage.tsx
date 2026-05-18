@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import { useApp } from "@/contexts/AppContext";
 import { checkInteractions } from "@/services/interactionChecker";
 import { ParsedInteraction } from "@/types/interactions";
@@ -47,7 +48,7 @@ export default function InteractionsPage() {
       const res = await aiApi.checkHolisticSafety({
         medicines,
         lifestyleFactors
-      });
+      }) as any;
       setHolisticReport(res.interactions || []);
     } catch (err) {
       console.error("Holistic check failed", err);
@@ -259,10 +260,26 @@ export default function InteractionsPage() {
                      {interaction.risk} Risk
                    </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed mb-6 font-medium">{interaction.explanation}</p>
+                <div className="text-xs text-muted-foreground leading-relaxed mb-6 font-medium">
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    }}
+                  >
+                    {interaction.explanation}
+                  </ReactMarkdown>
+                </div>
                 <div className="bg-muted/10 p-4 rounded-xl border border-border/50">
                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1.5">Safety Advice</p>
-                   <p className="text-xs font-semibold text-foreground leading-relaxed">{interaction.advice}</p>
+                   <div className="text-xs font-semibold text-foreground leading-relaxed">
+                     <ReactMarkdown
+                       components={{
+                         p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                       }}
+                     >
+                       {interaction.advice}
+                     </ReactMarkdown>
+                   </div>
                 </div>
               </motion.div>
             ))}

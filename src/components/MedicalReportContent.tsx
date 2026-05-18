@@ -1,4 +1,5 @@
 import { format, subDays, isSameDay } from "date-fns";
+import ReactMarkdown from "react-markdown";
 import { 
   Activity, 
   User, 
@@ -187,39 +188,67 @@ export const MedicalReportContent = ({
         </div>
 
         {medicines.length > 0 ? (
-          <div className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Medication Details</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Schedule</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clinical Notes</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
-                {medicines.map((med) => (
-                  <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-5">
-                      <p className="text-sm font-black text-slate-900">{med.name}</p>
-                      {med.genericName && (
-                        <p className="text-[10px] font-bold text-blue-600/70 italic mt-0.5">{med.genericName}</p>
-                      )}
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2 text-slate-700">
-                        <Clock size={12} className="text-slate-400" />
-                        <span className="text-xs font-bold">{med.dosage}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <p className="text-xs text-slate-500 font-medium leading-relaxed italic">
-                        {med.notes || "As directed by physician"}
-                      </p>
-                    </td>
+          <div className="space-y-4">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Medication Details</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Schedule</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clinical Notes</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {medicines.map((med) => (
+                    <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-5">
+                        <p className="text-sm font-black text-slate-900">{med.name}</p>
+                        {med.genericName && (
+                          <p className="text-[10px] font-bold text-blue-600/70 italic mt-0.5">{med.genericName}</p>
+                        )}
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <Clock size={12} className="text-slate-400" />
+                          <span className="text-xs font-bold">{med.dosage}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-xs text-slate-500 font-medium leading-relaxed italic">
+                          {med.notes || "As directed by physician"}
+                        </p>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {medicines.map((med) => (
+                <div key={med.id} className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <p className="text-base font-black text-slate-900">{med.name}</p>
+                      {med.genericName && (
+                        <p className="text-[10px] font-bold text-blue-600/70 italic">{med.genericName}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-lg border border-slate-100">
+                      <Clock size={10} className="text-slate-400" />
+                      <span className="text-[10px] font-black text-slate-700">{med.dosage}</span>
+                    </div>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100">
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed italic">
+                      {med.notes || "As directed by physician"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="bg-slate-50 rounded-2xl p-6 border-2 border-dashed border-slate-200 text-center">
@@ -239,20 +268,20 @@ export const MedicalReportContent = ({
             <div className="h-[2px] flex-1 bg-slate-100 ml-2"></div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
             {[
               { label: "Avg Mood", value: avgMood.toFixed(1), max: "/5", status: moodLabel, color: "rose" },
               { label: "Avg Energy", value: avgEnergy.toFixed(1), max: "/5", status: energyLabel, color: "amber" },
               { label: "Days Tracked", value: daysWithData, max: "/7", status: "Consistency", color: "blue" },
               { label: "Total Entries", value: logsLast7.length, max: "", status: "Check-ins", color: "slate" },
             ].map((stat, i) => (
-              <div key={i} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{stat.label}</p>
+              <div key={i} className="bg-white p-3 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm text-center">
+                <p className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 sm:mb-2">{stat.label}</p>
                 <div className="flex items-baseline justify-center gap-0.5">
-                  <span className="text-2xl font-black text-slate-900">{stat.value}</span>
-                  <span className="text-xs font-bold text-slate-300">{stat.max}</span>
+                  <span className="text-xl sm:text-2xl font-black text-slate-900">{stat.value}</span>
+                  <span className="text-[10px] sm:text-xs font-bold text-slate-300">{stat.max}</span>
                 </div>
-                <div className={`mt-2 inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-${stat.color}-50 text-${stat.color}-600 border border-${stat.color}-100`}>
+                <div className={`mt-2 inline-block px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-wider bg-${stat.color}-50 text-${stat.color}-600 border border-${stat.color}-100`}>
                   {stat.status}
                 </div>
               </div>
@@ -293,26 +322,46 @@ export const MedicalReportContent = ({
             <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
               <Brain className="absolute -bottom-10 -right-10 opacity-10" size={200} />
               <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-70">Executive Summary</p>
-              <p className="text-lg font-bold leading-relaxed relative z-10">
-                {insights.summary}
-              </p>
+              <div className="text-lg font-bold leading-relaxed relative z-10">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  }}
+                >
+                  {insights.summary}
+                </ReactMarkdown>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {insights.dosagePatterns && (
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Dosage Patterns</p>
-                  <p className="text-sm text-slate-700 font-semibold leading-relaxed">
-                    {insights.dosagePatterns}
-                  </p>
+                  <div className="text-sm text-slate-700 font-semibold leading-relaxed">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc ml-4 mb-2 space-y-1">{children}</ul>,
+                        li: ({ children }) => <li className="text-[12px]">{children}</li>,
+                      }}
+                    >
+                      {insights.dosagePatterns}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               )}
               {insights.lifestyleAnalysis && (
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Lifestyle & Environment</p>
-                  <p className="text-sm text-slate-700 font-semibold leading-relaxed italic">
-                    {insights.lifestyleAnalysis}
-                  </p>
+                  <div className="text-sm text-slate-700 font-semibold leading-relaxed italic">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      }}
+                    >
+                      {insights.lifestyleAnalysis}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               )}
             </div>

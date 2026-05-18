@@ -151,54 +151,85 @@ export default function ReportPage() {
       const element = document.getElementById("medical-report-content-download");
       if (!element) throw new Error("Report content not found");
 
-      // Set options for html2canvas
+      // Wait a bit to ensure everything is rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Set options for html2canvas - reduce scale on mobile to save memory
+      const scale = Capacitor.getPlatform() === 'web' ? 2 : 1.5;
+      
       const canvas = await html2canvas(element, {
-        scale: 2, // Higher scale for better quality
+        scale: scale,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
+        windowWidth: 800, // Fixed width for consistent rendering
       });
 
-      const imgData = canvas.toDataURL("image/png");
+      const imgData = canvas.toDataURL("image/jpeg", 0.95); // Use JPEG for better compression/memory
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
         format: "a4",
       });
 
-      const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      const fileName = `DawaLens-Report-${patientName.replace(/\s+/g, "-")}-${format(new Date(), "yyyyMMdd")}.pdf`;
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = imgWidth / pdfWidth;
+      const imgPdfHeight = imgHeight / ratio;
+
+      let heightLeft = imgPdfHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, imgPdfHeight, undefined, 'FAST');
+      heightLeft -= pdfHeight;
+
+      // Add subsequent pages if content is longer than one page
+      while (heightLeft > 0) {
+        position = heightLeft - imgPdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, imgPdfHeight, undefined, 'FAST');
+        heightLeft -= pdfHeight;
+      }
+      
+      // Sanitize filename: remove characters that might cause issues on some file systems
+      const safePatientName = patientName.replace(/[^a-z0-9]/gi, '-').replace(/-+/g, '-');
+      const fileName = `DawaLens-Report-${safePatientName}-${format(new Date(), "yyyyMMdd")}.pdf`;
 
       if (Capacitor.isNativePlatform()) {
-        // Handle Capacitor download
-        const pdfBase64 = pdf.output("datauristring").split(",")[1];
-        
-        const savedFile = await Filesystem.writeFile({
-          path: fileName,
-          data: pdfBase64,
-          directory: Directory.Cache, // Use Cache directory for temporary storage before sharing
-        });
+        try {
+          // Handle Capacitor download
+          const pdfBase64 = pdf.output("datauristring").split(",")[1];
+          
+          const savedFile = await Filesystem.writeFile({
+            path: fileName,
+            data: pdfBase64,
+            directory: Directory.Cache,
+          });
 
-        await Share.share({
-          title: "Care Report",
-          text: `Medical Report for ${patientName}`,
-          url: savedFile.uri,
-          dialogTitle: "Save or Share Report",
-        });
+          await Share.share({
+            title: "Care Report",
+            text: `Medical Report for ${patientName}`,
+            url: savedFile.uri,
+            dialogTitle: "Save or Share Report",
+          });
+        } catch (fsError) {
+          console.error("FileSystem/Share error:", fsError);
+          // Fallback to basic download if share fails
+          pdf.save(fileName);
+        }
       } else {
         // Handle Web download
         pdf.save(fileName);
       }
       
-      toast.success("Care Report downloaded successfully!", { id: toastId });
+      toast.success("Care Report generated successfully!", { id: toastId });
     } catch (err) {
       console.error("PDF generation failed", err);
-      toast.error("Failed to generate PDF report.", { id: toastId });
+      toast.error("Failed to generate PDF report. Please try again.", { id: toastId });
     } finally {
       setDownloading(false);
     }
@@ -551,26 +582,38 @@ export default function ReportPage() {
       {/* -------------------- PREVIEW DIALOG -------------------- */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 overflow-hidden flex flex-col gap-0 rounded-2xl border-none shadow-2xl">
-          <DialogHeader className="p-4 border-b bg-background flex-row items-center justify-between space-y-0">
-            <DialogTitle className="text-sm font-bold uppercase tracking-widest opacity-70">
-              Formal Care Report Preview
+          <DialogHeader className="p-3 sm:p-4 border-b bg-background flex-row items-center justify-between space-y-0">
+            <DialogTitle className="text-[10px] sm:text-sm font-bold uppercase tracking-widest opacity-70 truncate mr-2">
+              Report Preview
             </DialogTitle>
-            <div className="flex gap-2 pr-8">
+            <div className="flex gap-1.5 sm:gap-2 pr-8">
                <Button 
                  variant="outline" 
                  size="sm" 
                  onClick={handleDownloadPDF} 
                  disabled={downloading}
-                 className="h-9 gap-2 rounded-xl text-primary"
+                 className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl text-primary"
                >
                  {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                 Download
+                 <span className="hidden xs:inline text-[10px] sm:text-xs">Download</span>
                </Button>
-               <Button variant="outline" size="sm" onClick={handleShare} className="h-9 gap-2 rounded-xl">
-                 <Share2 size={14} /> Share
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={handleShare} 
+                 className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl"
+               >
+                 <Share2 size={14} />
+                 <span className="hidden xs:inline text-[10px] sm:text-xs">Share</span>
                </Button>
-               <Button variant="outline" size="sm" onClick={handlePrint} className="h-9 gap-2 rounded-xl hidden sm:flex">
-                 <Printer size={14} /> Print
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={handlePrint} 
+                 className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl hidden sm:flex"
+               >
+                 <Printer size={14} />
+                 <span className="text-[10px] sm:text-xs">Print</span>
                </Button>
             </div>
           </DialogHeader>

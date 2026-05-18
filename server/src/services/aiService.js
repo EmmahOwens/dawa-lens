@@ -149,9 +149,10 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors) => {
 
     Task: Identify interactions with food/lifestyle (Alcohol, Caffeine, Grapefruit, Dairy, etc.).
     Categorize risk: High, Medium, Low.
+    Use Markdown for formatting the explanation and advice if helpful.
 
     Respond in JSON format:
-    { "interactions": [{ "factor": "...", "risk": "...", "explanation": "...", "advice": "..." }] }
+    { "interactions": [{ "factor": "...", "risk": "...", "explanation": "text (Markdown)", "advice": "text (Markdown)" }] }
   `;
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
@@ -171,19 +172,20 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
        b) The NATIONAL DRUG REGULATORY AUTHORITY (e.g. National Drug Authority in Uganda, FDA in USA, MHRA in UK, CDSCO in India) — include their name and public helpline number.
        Do NOT include Police. Do NOT include generic numbers like 112 for the drug authority.
     5. List general health risks (e.g. Malaria, yellow fever, water safety) for ${destination}.
+    6. Use Markdown for formatting the advice, notes, and risks.
 
     Respond in EXACT JSON format:
     { 
       "equivalents": [
         { "original": "Original medicine name", "equivalent": "Local equivalent brand name in ${destination}" }
       ],
-      "timezoneAdvice": "...", 
-      "customsNotes": "...",
+      "timezoneAdvice": "text (Markdown formatted)", 
+      "customsNotes": "text (Markdown formatted)",
       "emergencyContacts": [
         { "service": "Ambulance", "number": "...", "type": "ambulance" },
         { "service": "[Full Authority Name]", "number": "...", "type": "drug_authority" }
       ],
-      "healthRisks": ["..."]
+      "healthRisks": ["text (Markdown formatted)"]
     }
   `;
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
@@ -224,9 +226,10 @@ export const checkMealSafety = async (medicines, mealDescription) => {
 
     Task: Check for interactions (Dairy, Grapefruit, Alcohol, etc.).
     Risk: High, Medium, Safe.
+    Use Markdown for formatting the verdict and explanation.
 
     Respond in JSON format:
-    { "risk": "...", "verdict": "...", "explanation": "..." }
+    { "risk": "...", "verdict": "text (Markdown)", "explanation": "text (Markdown)" }
   `;
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
@@ -241,16 +244,17 @@ export const getNutritionalGuidance = async (medicines) => {
     2. Identify "Critical Safety Warnings" regarding foods/drinks to avoid (e.g., Grapefruit, Alcohol, Dairy, Caffeine).
     3. Include "Timing Advice" (e.g., "Take 2 hours after dairy").
     4. Focus on East African regional foods (Matooke, G-nuts, Avocado, Posho, etc.) where appropriate.
+    5. Use Markdown for formatting reasons, explanations, and advice.
 
     Respond in EXACT JSON format:
     {
       "recommendations": [
-        { "food": "string", "reason": "string", "benefit": "string" }
+        { "food": "string", "reason": "text (Markdown)", "benefit": "string" }
       ],
       "warnings": [
-        { "factor": "string", "severity": "High" | "Medium", "explanation": "string" }
+        { "factor": "string", "severity": "High" | "Medium", "explanation": "text (Markdown)" }
       ],
-      "timingAdvice": "string"
+      "timingAdvice": "text (Markdown)"
     }
   `;
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
