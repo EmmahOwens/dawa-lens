@@ -35,6 +35,10 @@ export const createReminder = async (data) => {
   const { _id, ...rest } = data;
   rest.createdAt = rest.createdAt || new Date().toISOString();
   rest.updatedAt = rest.updatedAt || rest.createdAt;
+  // Ensure reminders are enabled by default
+  if (rest.enabled === undefined) {
+    rest.enabled = true;
+  }
 
   if (_id) {
     // Prevents duplicates from frontend double-write (Firestore + API both called)

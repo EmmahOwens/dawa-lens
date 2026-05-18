@@ -27,10 +27,11 @@ interface LocationState {
   // Edit mode
   editId?: string;
   time?: string; // Comma-separated for frequency
-  repeat?: "daily" | "once" | "custom";
+  repeat?: "daily" | "weekly" | "once" | "custom";
   repeatDays?: number[];
   frequency?: number;
   notes?: string;
+  enabled?: boolean;
   color?: string;
   icon?: string;
   // Family Hub context — whose schedule we're editing
@@ -83,7 +84,7 @@ export default function AddReminderPage() {
   const [times, setTimes] = useState<string[]>(
     state?.time ? state.time.split(",") : ["08:00"]
   );
-  const [repeat, setRepeat] = useState<"daily" | "once" | "custom">(
+  const [repeat, setRepeat] = useState<"daily" | "weekly" | "once" | "custom">(
     state?.repeat || "daily"
   );
   const [repeatDays, setRepeatDays] = useState<number[]>(state?.repeatDays || []);
@@ -190,8 +191,9 @@ export default function AddReminderPage() {
           dose: dose.trim(),
           time: times.join(","),
           repeatSchedule: repeat,
-          repeatDays: repeat === "custom" ? repeatDays : undefined,
+          repeatDays: repeat === "custom" || repeat === "weekly" ? repeatDays : undefined,
           notes: notes.trim() || undefined,
+          enabled: state?.enabled !== undefined ? state.enabled : true,
           color,
           icon,
           // Preserve patient context on edit
@@ -504,12 +506,12 @@ export default function AddReminderPage() {
                 {t("reminders.repeat")}
               </Label>
               <div className="flex flex-wrap gap-2">
-                {(["once", "daily", "custom"] as const).map((r) => (
+                {(["once", "daily", "weekly", "custom"] as const).map((r) => (
                   <button
                     key={r}
                     onClick={() => {
                       setRepeat(r);
-                      if (r !== "custom" && times.length > 1) {
+                      if (r !== "custom" && r !== "weekly" && times.length > 1) {
                         setTimes([times[0]]);
                       }
                     }}
@@ -525,33 +527,35 @@ export default function AddReminderPage() {
               </div>
             </div>
 
-            {repeat === "custom" && (
+            {(repeat === "custom" || repeat === "weekly") && (
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 className="col-span-full space-y-4 pt-2"
               >
-                <div className="space-y-3">
-                  <Label className="text-xs font-bold text-muted-foreground ml-1">Frequency (Times per day)</Label>
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4, 5, 6].map((f) => (
-                      <button
-                        key={f}
-                        onClick={() => handleFrequencyChange(f)}
-                        className={`flex-1 h-10 rounded-xl text-xs font-bold transition-all border ${
-                          times.length === f
-                            ? "bg-primary border-primary text-primary-foreground shadow-md"
-                            : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
-                        }`}
-                      >
-                        {f}x
-                      </button>
-                    ))}
+                {repeat === "custom" && (
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold text-muted-foreground ml-1">Frequency (Times per day)</Label>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5, 6].map((f) => (
+                        <button
+                          key={f}
+                          onClick={() => handleFrequencyChange(f)}
+                          className={`flex-1 h-10 rounded-xl text-xs font-bold transition-all border ${
+                            times.length === f
+                              ? "bg-primary border-primary text-primary-foreground shadow-md"
+                              : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
+                          }`}
+                        >
+                          {f}x
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground ml-1 italic">
+                      Example: 2 pills taken 3 times a day
+                    </p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground ml-1 italic">
-                    Example: 2 pills taken 3 times a day
-                  </p>
-                </div>
+                )}
 
                 <div className="space-y-3">
                   <Label className="text-xs font-bold text-muted-foreground ml-1">Repeat on Days</Label>

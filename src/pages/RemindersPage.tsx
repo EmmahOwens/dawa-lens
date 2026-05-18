@@ -403,6 +403,7 @@ export default function RemindersPage() {
                             repeat: reminder.repeatSchedule, 
                             repeatDays: reminder.repeatDays,
                             notes: reminder.notes,
+                            enabled: reminder.enabled,
                             color: reminder.color,
                             icon: reminder.icon,
                             patientId: reminder.patientId ?? null,
