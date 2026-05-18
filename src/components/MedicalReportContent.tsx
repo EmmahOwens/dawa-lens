@@ -366,6 +366,32 @@ export const MedicalReportContent = ({
               )}
             </div>
 
+            {insights.insights && insights.insights.length > 0 && (
+              <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <ShieldCheck size={14} className="text-emerald-500" /> Observed Patterns
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {insights.insights.map((insight: string, idx: number) => (
+                    <div key={idx} className="flex items-start gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                      <div className="bg-emerald-50 text-emerald-600 w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5">
+                        <ShieldCheck size={10} />
+                      </div>
+                      <div className="text-xs font-bold text-slate-700 leading-relaxed">
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => <span className="m-0">{children}</span>,
+                          }}
+                        >
+                          {insight}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {insights.actionItems && insights.actionItems.length > 0 && (
               <div className="bg-amber-50 rounded-3xl p-8 border border-amber-100">
                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-6 flex items-center gap-2">
@@ -377,9 +403,15 @@ export const MedicalReportContent = ({
                       <div className="bg-amber-600 text-white w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px] font-black mt-0.5">
                         {idx + 1}
                       </div>
-                      <p className="text-sm font-black text-slate-900 leading-tight">
-                        {action}
-                      </p>
+                      <div className="text-sm font-black text-slate-900 leading-tight">
+                        <ReactMarkdown
+                          components={{
+                            p: ({ children }) => <span className="m-0">{children}</span>,
+                          }}
+                        >
+                          {action}
+                        </ReactMarkdown>
+                      </div>
                     </li>
                   ))}
                 </ul>

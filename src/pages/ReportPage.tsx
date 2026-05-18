@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import { useApp } from "@/contexts/AppContext";
 import { FileText, Printer, Download, TrendingUp, Activity, Calendar, Sparkles, Loader2, Info, CheckCircle2, ArrowRight, Share2, Eye, X, Smile, Frown, Minus, Zap, Brain, Heart } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
@@ -524,18 +525,38 @@ export default function ReportPage() {
             {insights ? (
               <div className="space-y-6">
                 <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10 relative">
-                  <p className="text-sm font-semibold text-foreground leading-relaxed">
-                    {insights.summary}
-                  </p>
+                  <div className="text-sm font-semibold text-foreground leading-relaxed prose prose-sm max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      }}
+                    >
+                      {insights.summary}
+                    </ReactMarkdown>
+                  </div>
                   {insights.dosagePatterns && (
-                    <p className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10">
-                      <strong className="text-foreground">Dosage Patterns:</strong> {insights.dosagePatterns}
-                    </p>
+                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm max-w-none">
+                      <strong className="text-foreground">Dosage Patterns:</strong>
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <span className="ml-1">{children}</span>,
+                        }}
+                      >
+                        {insights.dosagePatterns}
+                      </ReactMarkdown>
+                    </div>
                   )}
                   {insights.lifestyleAnalysis && (
-                    <p className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10">
-                      <strong className="text-foreground">Lifestyle & Symptoms:</strong> {insights.lifestyleAnalysis}
-                    </p>
+                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm max-w-none">
+                      <strong className="text-foreground">Lifestyle & Symptoms:</strong>
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <span className="ml-1">{children}</span>,
+                        }}
+                      >
+                        {insights.lifestyleAnalysis}
+                      </ReactMarkdown>
+                    </div>
                   )}
                 </div>
                 
@@ -547,7 +568,15 @@ export default function ReportPage() {
                         <div className="w-5 h-5 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0 mt-0.5">
                           <CheckCircle2 size={12} className="text-indigo-500" />
                         </div>
-                        <p className="text-xs text-foreground leading-relaxed font-medium">{insight}</p>
+                        <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm max-w-none">
+                          <ReactMarkdown
+                            components={{
+                              p: ({ children }) => <p className="m-0">{children}</p>,
+                            }}
+                          >
+                            {insight}
+                          </ReactMarkdown>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -560,7 +589,15 @@ export default function ReportPage() {
                     </h4>
                     {insights.actionItems.map((action: string, idx: number) => (
                       <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl bg-warning/5 border border-warning/20">
-                        <p className="text-xs font-semibold text-warning-foreground leading-snug pr-4">{action}</p>
+                        <div className="text-xs font-semibold text-warning-foreground leading-snug pr-4 prose prose-sm max-w-none">
+                          <ReactMarkdown
+                            components={{
+                              p: ({ children }) => <p className="m-0">{children}</p>,
+                            }}
+                          >
+                            {action}
+                          </ReactMarkdown>
+                        </div>
                         <ArrowRight size={14} className="text-warning shrink-0" />
                       </div>
                     ))}
