@@ -15,6 +15,7 @@ import { ShieldCheck, Siren } from "@/lib/icons";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import PermissionRequest from "@/components/PermissionRequest";
 import { useToast } from "@/hooks/use-toast";
+import MessageRenderer from "@/components/MessageRenderer";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -281,7 +282,7 @@ export default function TravelCompanionPage() {
                      <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 mb-4">
                        Timezone Dosing Strategy
                      </h3>
-                     <p className="text-lg text-foreground/90 leading-relaxed font-bold tracking-tight">{advice.timezoneAdvice}</p>
+                     <MessageRenderer text={advice.timezoneAdvice} className="text-lg text-foreground/90 leading-relaxed font-bold tracking-tight" />
                    </div>
                 </motion.div>
               )}
@@ -299,13 +300,13 @@ export default function TravelCompanionPage() {
                      <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600 mb-4">
                        Customs & Legal Notes
                      </h3>
-                     <p className="text-lg text-foreground/90 leading-relaxed font-bold tracking-tight">{advice.customsNotes}</p>
+                     <MessageRenderer text={advice.customsNotes} className="text-lg text-foreground/90 leading-relaxed font-bold tracking-tight" />
                    </div>
                 </motion.div>
               )}
 
               {/* Health Risks */}
-              {advice.healthRisks && advice.healthRisks.length > 0 && (
+              {advice.healthRisks && (
                 <motion.div variants={item} className="md:col-span-2 p-8 rounded-[2.5rem] bg-destructive/5 border border-destructive/10">
                    <div className="flex items-center gap-4 mb-8">
                      <div className="w-12 h-12 rounded-2xl bg-destructive/20 flex items-center justify-center text-destructive shadow-inner">
@@ -318,13 +319,19 @@ export default function TravelCompanionPage() {
                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Stay Vigilant</p>
                      </div>
                    </div>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {advice.healthRisks.map((risk: string, i: number) => (
-                        <div key={i} className="flex gap-4 p-4 rounded-2xl bg-background/40 border border-border/50">
-                          <AlertCircle size={18} className="text-destructive shrink-0 mt-0.5" />
-                          <p className="text-sm font-bold leading-tight">{risk}</p>
+                   <div className="px-2">
+                      {typeof advice.healthRisks === 'string' ? (
+                        <MessageRenderer text={advice.healthRisks} className="text-foreground/90" />
+                      ) : Array.isArray(advice.healthRisks) ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {advice.healthRisks.map((risk: string, i: number) => (
+                            <div key={i} className="flex gap-4 p-4 rounded-2xl bg-background/40 border border-border/50">
+                              <AlertCircle size={18} className="text-destructive shrink-0 mt-0.5" />
+                              <p className="text-sm font-bold leading-tight">{risk}</p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : null}
                    </div>
                 </motion.div>
               )}

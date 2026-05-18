@@ -182,7 +182,7 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
        a) Ambulance / Emergency Medical Services number (e.g. 999, 911, 112, or country-specific)
        b) The NATIONAL DRUG REGULATORY AUTHORITY (e.g. National Drug Authority in Uganda, FDA in USA, MHRA in UK, CDSCO in India) — include their name and public helpline number.
        Do NOT include Police. Do NOT include generic numbers like 112 for the drug authority.
-    5. List general health risks (e.g. Malaria, yellow fever, water safety) for ${destination}.
+    5. Provide a detailed summary of general health risks (e.g. Malaria, yellow fever, water safety) for ${destination} in a clear markdown format.
     6. Use Markdown for formatting the advice, notes, and risks.
 
     Respond in EXACT JSON format:
@@ -196,7 +196,7 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
         { "service": "Ambulance", "number": "...", "type": "ambulance" },
         { "service": "[Full Authority Name]", "number": "...", "type": "drug_authority" }
       ],
-      "healthRisks": ["text (Markdown formatted)"]
+      "healthRisks": "text (Markdown formatted)"
     }
   `;
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
