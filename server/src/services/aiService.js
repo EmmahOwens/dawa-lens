@@ -556,8 +556,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     Actions:
     - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, dosagePerDose?, patientId? }
     - UPDATE_MEDICINE: { id, name?, dosage?, notes? }
-    - ADD_REMINDER: { medicineName, dose, time (HH:mm), repeatSchedule ("daily"|"weekly"|"once"|"custom"), repeatDays?, patientId?, medicineId? }
-    - UPDATE_REMINDER: { id, enabled?, time?, repeatSchedule?, repeatDays?, dose? }
+    - ADD_REMINDER: { medicineName, dose, time (HH:mm or "HH:mm,HH:mm,..."), repeatSchedule ("daily"|"weekly"|"once"|"custom"), repeatDays?, patientId?, medicineId? }
+    - UPDATE_REMINDER: { id, enabled?, time? (HH:mm or "HH:mm,HH:mm,..."), repeatSchedule?, repeatDays?, dose? }
     - REMOVE_REMINDER: { id }
     - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action ("taken"|"skipped"), patientId? }
     - LOG_WELLNESS: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? }, patientId? }
@@ -566,7 +566,12 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     === RULES ===
     1. Professional, warm "Dawa-Lens signature" tone.
     2. Advise doctor visits for critical misses (Heart, BP, HIV).
-    3. Frequency Logic: Calculate evenly-spaced times (e.g. 3x/day -> "08:00,14:00,20:00").
+    3. Frequency Logic: Calculate evenly-spaced times based on frequency. 
+       Examples:
+       - "Twice a day" -> "08:00,20:00"
+       - "Three times a day" or "8 hourly" -> "08:00,16:00,00:00"
+       - "Four times a day" or "6 hourly" -> "06:00,12:00,18:00,00:00"
+       Always provide times as a comma-separated string in the "time" field.
     4. For ADD_REMINDER, if medicine exists, use UPDATE_REMINDER instead.
     5. ALWAYS include "patientId" in action payloads. Use the "Active Profile (Target)" ID above unless another person is mentioned.
     6. Include clickable chips for navigation: [Label](/route) (e.g. [/dashboard, /reminders, /family, /wellness, /scan]).
