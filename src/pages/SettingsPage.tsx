@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ArrowLeft, Shield, Trash2, Moon, Bell, Lock, Globe, Users, 
-  ArrowRight, User, Mail, Database, Clock, ChevronRight, CheckCircle2,
-  RefreshCw, Info
+  ArrowLeft, Shield, Trash2, Moon, Lock, Globe, Users, 
+  ArrowRight, User, Mail, Database, Clock, CheckCircle2
 } from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -13,10 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { formatDistanceToNow } from "date-fns";
-import { Capacitor } from "@capacitor/core";
 import pkg from "../../package.json";
-import StoreUpdateModal from "@/components/StoreUpdateModal";
-import { isNewerVersion, fetchLatestRelease } from "@/lib/update";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -27,53 +22,6 @@ export default function SettingsPage() {
   } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
-
-  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [updateData, setUpdateData] = useState({ newVersion: "", downloadUrl: "" });
-  const [lastCheckTime, setLastCheckTime] = useState<string | null>(null);
-
-
-
-  const checkUpdates = async () => {
-
-    try {
-      setIsCheckingUpdates(true);
-
-      const updateInfo = await fetchLatestRelease();
-
-      if (!updateInfo) {
-        throw new Error("Could not reach GitHub or no releases found.");
-      }
-
-      const { latestVersion, downloadUrl } = updateInfo;
-
-      if (isNewerVersion(latestVersion, pkg.version)) {
-        setUpdateData({
-          newVersion: latestVersion,
-          downloadUrl: downloadUrl,
-        });
-        setShowUpdateModal(true);
-      } else {
-        toast({
-          title: "Up to Date ✓",
-          description: `You're running the latest version (v${pkg.version}) of Dawa Lens.`,
-        });
-      }
-    } catch (err: any) {
-      console.error("Update check failed:", err);
-      toast({
-        title: "Update Check Failed",
-        description: err.message || "Could not reach GitHub. Please check your connection and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCheckingUpdates(false);
-      setLastCheckTime(
-        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      );
-    }
-  };
 
   const handleStorageModeChange = async (mode: "local" | "cloud") => {
     if (mode === "cloud" && !isLoggedIn) {
@@ -430,103 +378,6 @@ export default function SettingsPage() {
           )}
         </motion.div>
 
-        {/* 6. Notifications */}
-        <motion.div variants={itemVariants} className="premium-card">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
-              <Bell size={18} />
-            </div>
-            <h3 className="font-bold text-foreground">{t("settings.notifications")}</h3>
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div className="max-w-[70%]">
-              <p className="text-sm font-bold text-foreground">{t("settings.push_notifs")}</p>
-              <p className="text-[11px] text-muted-foreground mt-1 leading-tight opacity-80">{t("settings.push_desc")}</p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className={`rounded-xl h-10 px-4 text-[10px] font-black uppercase tracking-widest ${
-                typeof Notification !== 'undefined' && Notification.permission === 'granted' 
-                  ? 'border-success/20 bg-success/5 text-success hover:bg-success/10' 
-                  : 'border-border/80'
-              }`}
-              onClick={async () => {
-                if ("Notification" in window) {
-                  const perm = await Notification.requestPermission();
-                  toast({
-                    title: perm === "granted" ? "Notifications enabled!" : "Notifications blocked",
-                    description: perm === "granted" ? "You'll receive dose reminders" : "Please enable in browser settings",
-                    variant: perm === "granted" ? "default" : "destructive"
-                  });
-                }
-              }}
-            >
-              {typeof Notification !== 'undefined' && Notification.permission === 'granted' ? 'Enabled' : 'Enable'}
-            </Button>
-          </div>
-        </motion.div>
-
-        {/* 6.1 App Updates */}
-        <motion.div variants={itemVariants} className="premium-card relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
-
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                <RefreshCw size={18} />
-              </div>
-              <div>
-                <h3 className="font-bold text-foreground">App Updates</h3>
-                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-tighter opacity-70">Manual Verification</p>
-              </div>
-            </div>
-            <div className="px-3 py-1 rounded-full bg-primary/5 border border-primary/10 text-[10px] font-black uppercase tracking-widest text-primary">
-              v{pkg.version}
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-muted/30 border border-border/50">
-              <div className="flex items-center gap-3 mb-2">
-                <Info size={14} className="text-primary" />
-                <p className="text-xs font-bold">New Features & Fixes</p>
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Manually verify if a newer version of Dawa Lens is available for download. You will be prompted to download the latest secure APK.
-              </p>
-            </div>
-
-            <Button
-              className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-primary/10 transition-all hover:shadow-primary/20 relative overflow-hidden group"
-              onClick={checkUpdates}
-              disabled={isCheckingUpdates}
-            >
-              {isCheckingUpdates && (
-                <motion.div 
-                  initial={{ x: "-100%" }}
-                  animate={{ x: "100%" }}
-                  transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12"
-                />
-              )}
-              {isCheckingUpdates ? (
-                <RefreshCw size={14} className="mr-2 animate-spin" />
-              ) : (
-                <RefreshCw size={14} className="mr-2 group-hover:rotate-180 transition-transform duration-500" />
-              )}
-              {isCheckingUpdates ? "Checking..." : "Check for Updates"}
-            </Button>
-
-            {lastCheckTime && (
-              <p className="text-[9px] text-center text-muted-foreground uppercase font-bold tracking-widest opacity-50">
-                Last checked today at {lastCheckTime}
-              </p>
-            )}
-          </div>
-        </motion.div>
-
         {/* 7. Danger Zone */}
         <motion.div variants={itemVariants} className="p-6 rounded-3xl border border-destructive/10 bg-destructive/5">
           <div className="flex items-center gap-3 mb-6">
@@ -555,17 +406,7 @@ export default function SettingsPage() {
         </motion.div>
       </motion.div>
 
-      {/* Render Update Modal with animation */}
-      <AnimatePresence>
-        {showUpdateModal && (
-          <StoreUpdateModal
-            currentVersion={pkg.version}
-            newVersion={updateData.newVersion}
-            downloadUrl={updateData.downloadUrl}
-            onClose={() => setShowUpdateModal(false)}
-          />
-        )}
-      </AnimatePresence>
+
 
       <div className="mt-12 text-center">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-30">
