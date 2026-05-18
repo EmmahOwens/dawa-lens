@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo, useCallback } from "react";
+import { toDate } from "@/lib/utils";
 
 // Helper for relative date
 function getRelativeDate(dateString: string) {
-  const date = new Date(dateString);
+  const date = toDate(dateString);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -42,7 +43,7 @@ export default function HistoryPage() {
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
     const last7Days = scopedDoseLogs.filter(l => {
-      const logDate = new Date(l.actionTime);
+      const logDate = toDate(l.actionTime);
       return logDate >= sevenDaysAgo;
     });
 
@@ -64,7 +65,7 @@ export default function HistoryPage() {
       filtered = filtered.filter(l => l.medicineName.toLowerCase().includes(q));
     }
     // Sort descending by actionTime
-    return filtered.sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime());
+    return filtered.sort((a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime());
   }, [scopedDoseLogs, statusFilter, searchTerm]);
 
   const visibleLogs = filteredLogs.slice(0, visibleCount);
@@ -96,7 +97,7 @@ export default function HistoryPage() {
     const header = "Date,Medicine,Dose,Scheduled Time,Action\n";
     const rows = scopedDoseLogs
       .map((l) => [
-        new Date(l.actionTime).toLocaleDateString(),
+        toDate(l.actionTime).toLocaleDateString(),
         escape(l.medicineName),
         escape(l.dose),
         escape(l.scheduledTime),

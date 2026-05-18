@@ -2,6 +2,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
 import { addDays, isAfter, isBefore, startOfDay, endOfDay, setHours, setMinutes, setSeconds, setMilliseconds, getDay, addMinutes, subHours, parseISO } from "date-fns";
+import { toDate } from "@/lib/utils";
 
 /**
  * Computes how many minutes off today's most recent taken dose was from its scheduled time.
@@ -16,15 +17,15 @@ export function computeShiftOffset(reminder: Reminder, doseLogs: DoseLog[]): num
     .filter(l =>
       l.reminderId === reminder.id &&
       l.action === "taken" &&
-      isAfter(new Date(l.actionTime), todayStart) &&
-      isBefore(new Date(l.actionTime), todayEnd)
+      isAfter(toDate(l.actionTime), todayStart) &&
+      isBefore(toDate(l.actionTime), todayEnd)
     )
-    .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+    .sort((a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime())[0];
 
   if (!todayTakenLog) return 0;
 
   const offsetMinutes = Math.round(
-    (new Date(todayTakenLog.actionTime).getTime() - new Date(todayTakenLog.scheduledTime).getTime()) /
+    (toDate(todayTakenLog.actionTime).getTime() - toDate(todayTakenLog.scheduledTime).getTime()) /
     (1000 * 60)
   );
 
@@ -43,10 +44,10 @@ function getTodayTakenLog(reminderId: string, doseLogs: DoseLog[]): DoseLog | un
     .filter(l =>
       l.reminderId === reminderId &&
       l.action === "taken" &&
-      isAfter(new Date(l.actionTime), todayStart) &&
-      isBefore(new Date(l.actionTime), todayEnd)
+      isAfter(toDate(l.actionTime), todayStart) &&
+      isBefore(toDate(l.actionTime), todayEnd)
     )
-    .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+    .sort((a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime())[0];
 }
 
 /**
@@ -178,7 +179,7 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
   // Find which slot index was taken today
   let takenSlotIndex = -1;
   if (takenLog) {
-    const scheduledDate = new Date(takenLog.scheduledTime);
+    const scheduledDate = toDate(takenLog.scheduledTime);
     const hh = scheduledDate.getHours().toString().padStart(2, "0");
     const mm = scheduledDate.getMinutes().toString().padStart(2, "0");
     const scheduledTimeStr = `${hh}:${mm}`;
@@ -212,7 +213,7 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
       // For slots that come AFTER the taken slot today, compute:
       //   candidate = actualTakeTime + cumulative interval from takenSlot to thisSlot
       if (isToday && takenLog && takenSlotIndex !== -1 && index > takenSlotIndex) {
-        const actualTakeTime = new Date(takenLog.actionTime);
+        const actualTakeTime = toDate(takenLog.actionTime);
         // Sum up intervals from taken slot through to this slot
         let cumulativeInterval = 0;
         for (let s = takenSlotIndex; s < index; s++) {
@@ -242,7 +243,7 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
       if (terminalLog) continue;
 
       // 3.5 Check if currently snoozed
-      const snoozedLog = doseLogs.sort((a,b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime()).find(log =>
+      const snoozedLog = doseLogs.sort((a,b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime()).find(log =>
         log.reminderId === reminder.id &&
         log.scheduledTime === candidate.toISOString() &&
         log.action === "snoozed"

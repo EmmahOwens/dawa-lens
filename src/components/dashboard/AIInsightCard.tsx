@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus, Loader2 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
+import { toDate } from "@/lib/utils";
 
 interface AIInsightCardProps {
   adherencePercent: number;
@@ -19,9 +20,9 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
       .filter(
         (l) =>
           l.type === "symptom" &&
-          new Date(l.timestamp).toDateString() === today
+          toDate(l.timestamp).toDateString() === today
       )
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      .sort((a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime());
 
     if (todayLogs.length === 0) return { mood: null, energy: null, latestReflection: null };
 

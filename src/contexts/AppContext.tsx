@@ -12,6 +12,7 @@ import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { storage } from "../lib/storage";
+import { toDate } from "../lib/utils";
 
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const CLOUD_CACHE_REMS_KEY = "dawa_cloud_cache_reminders";
@@ -695,12 +696,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // 3. Smart Suggest: after 3 consecutive same-direction deviations, suggest updating the time
       const allTakenLogs = freshLogs
         .filter(l => l.reminderId === reminder.id && l.action === "taken")
-        .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())
+        .sort((a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime())
         .slice(0, 3);
 
       if (allTakenLogs.length >= 3) {
         const offsets = allTakenLogs.map(l => Math.round(
-          (new Date(l.actionTime).getTime() - new Date(l.scheduledTime).getTime()) / (1000 * 60)
+          (toDate(l.actionTime).getTime() - toDate(l.scheduledTime).getTime()) / (1000 * 60)
         ));
         const allLate = offsets.every(o => o > 5);
         const allEarly = offsets.every(o => o < -5);
