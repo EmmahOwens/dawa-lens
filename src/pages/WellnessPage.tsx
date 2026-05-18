@@ -7,6 +7,7 @@ import { aiApi } from "@/services/api";
 import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
 import { useToast } from "@/hooks/use-toast";
 import { format, subDays, isSameDay } from "date-fns";
+import { toDate } from "@/lib/utils";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
@@ -16,7 +17,7 @@ function useEmotionSparkline(wellnessLogs: ReturnType<typeof useApp>["wellnessLo
   return Array.from({ length: 7 }).map((_, i) => {
     const date = subDays(new Date(), 6 - i);
     const dayLogs = wellnessLogs.filter(
-      (l) => l.type === "symptom" && isSameDay(new Date(l.timestamp), date)
+      (l) => l.type === "symptom" && isSameDay(toDate(l.timestamp), date)
     );
     if (dayLogs.length === 0) return { date, mood: null, energy: null };
     const avgMood =
@@ -618,7 +619,7 @@ export default function WellnessPage() {
                           {log.type === "food" ? "Nutritional Log" : "Vitality Check"}
                         </p>
                         <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter bg-muted/50 px-1.5 py-0.5 rounded">
-                          {format(new Date(log.timestamp), "MMM d • h:mm a")}
+                          {format(toDate(log.timestamp), "MMM d • h:mm a")}
                         </p>
                       </div>
                       <p className="text-xs font-semibold text-muted-foreground leading-relaxed">

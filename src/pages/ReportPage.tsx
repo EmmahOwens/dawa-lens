@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { format, subDays, isSameDay } from "date-fns";
+import { toDate } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
 import { Filesystem, Directory } from "@capacitor/filesystem";
@@ -47,13 +48,13 @@ export default function ReportPage() {
       const date = subDays(new Date(), 6 - i);
       const dayStr = format(date, "MMM dd");
       
-      const dayLogs = scopedDoseLogs.filter(l => isSameDay(new Date(l.actionTime), date));
+      const dayLogs = scopedDoseLogs.filter(l => isSameDay(toDate(l.actionTime), date));
       const taken = dayLogs.filter(l => l.action === "taken").length;
       const total = dayLogs.length;
       const adherence = total > 0 ? (taken / total) * 100 : 100;
 
       // Average wellness logs if multiple exist for the day
-      const dayWellnessLogs = scopedWellnessLogs.filter(l => l.type === "symptom" && isSameDay(new Date(l.timestamp), date));
+      const dayWellnessLogs = scopedWellnessLogs.filter(l => l.type === "symptom" && isSameDay(toDate(l.timestamp), date));
       
       let energy: number | null = null;
       let mood: number | null = null;
@@ -77,12 +78,12 @@ export default function ReportPage() {
     const symptomLogs = scopedWellnessLogs.filter(l => l.type === "symptom");
 
     const logsLast7 = symptomLogs.filter(l => {
-      const d = new Date(l.timestamp);
+      const d = toDate(l.timestamp);
       return last7.some(day => isSameDay(d, day));
     });
 
     const daysWithData = last7.filter(day =>
-      symptomLogs.some(l => isSameDay(new Date(l.timestamp), day))
+      symptomLogs.some(l => isSameDay(toDate(l.timestamp), day))
     ).length;
 
     if (logsLast7.length === 0) return null;

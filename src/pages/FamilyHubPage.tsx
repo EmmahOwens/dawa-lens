@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
+import { toDate } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -182,7 +183,7 @@ export default function FamilyHubPage() {
       const missedToday = doseLogs.filter(l =>
         scopedRemIds.has(l.reminderId) &&
         l.action === "missed" &&
-        new Date(l.actionTime).toDateString() === today
+        toDate(l.actionTime).toDateString() === today
       ).length;
 
       return {

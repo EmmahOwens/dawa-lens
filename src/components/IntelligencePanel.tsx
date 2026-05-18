@@ -11,6 +11,8 @@ import { Button } from "./ui/button";
 import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
 import MessageRenderer from "@/components/MessageRenderer";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { AlertCircle } from "@/lib/icons";
 
 // Widgets
 import { DashboardWidget } from "./intelligence/DashboardWidget";
@@ -197,7 +199,16 @@ export function IntelligencePanel() {
             exit={{ opacity: 0, x: -10 }}
             transition={{ duration: 0.3 }}
           >
-            {renderContextualWidget()}
+            <ErrorBoundary 
+              fallback={
+                <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20 text-center">
+                  <AlertCircle size={20} className="text-destructive mx-auto mb-2" />
+                  <p className="text-[10px] font-bold text-destructive uppercase tracking-widest">Widget Error</p>
+                </div>
+              }
+            >
+              {renderContextualWidget()}
+            </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
 

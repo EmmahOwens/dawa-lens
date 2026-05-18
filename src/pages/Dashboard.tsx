@@ -4,6 +4,7 @@ import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Use
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { toDate } from "@/lib/utils";
 import { toast } from "sonner";
 import AchievementOverlay from "@/components/AchievementOverlay";
 import { DashboardBanner } from "@/components/DashboardBanner";

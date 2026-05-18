@@ -19,6 +19,7 @@ import { StatusBar, Style } from '@capacitor/status-bar';
 import { Keyboard } from '@capacitor/keyboard';
 import SplashScreen from "@/components/SplashScreen";
 import PageTransition from "@/components/PageTransition";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { AnimatePresence } from "framer-motion";
 import { NotificationHandler } from "@/components/NotificationHandler";
 import StoreUpdateModal from "@/components/StoreUpdateModal";
@@ -190,45 +191,49 @@ const App = () => {
             />
           )}
           <Suspense fallback={<SplashScreen />}>
-            <Routes location={location}>
-              {/* Full-screen pages — no AppShell */}
-              <Route path="/scan" element={<ProtectedRoute><PageTransition><ScanPage /></PageTransition></ProtectedRoute>} />
-              <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
-              <Route path="/welcome" element={<PageTransition><WelcomePage /></PageTransition>} />
-              <Route path="/verify-email" element={<PageTransition><VerifyEmailPage /></PageTransition>} />
-              <Route path="/onboarding" element={<OnboardingRoute><PageTransition><OnboardingPage /></PageTransition></OnboardingRoute>} />
-              
-              {/* All other pages use AppShell with bottom nav */}
-              <Route
-                path="*"
-                element={
-                  <ProtectedRoute>
-                    <AppShell>
-                      <AnimatePresence mode="wait">
-                        <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
-                          <Routes location={location} key={location.pathname}>
-                            <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
-                            <Route path="/results" element={<PageTransition><ResultsPage /></PageTransition>} />
-                            <Route path="/medicine/:name" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
-                            <Route path="/search" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
-                            <Route path="/reminders" element={<PageTransition><RemindersPage /></PageTransition>} />
-                            <Route path="/reminders/new" element={<PageTransition><AddReminderPage /></PageTransition>} />
-                            <Route path="/history" element={<PageTransition><HistoryPage /></PageTransition>} />
-                            <Route path="/interactions" element={<PageTransition><InteractionsPage /></PageTransition>} />
-                            <Route path="/family" element={<PageTransition><FamilyHubPage /></PageTransition>} />
-                            <Route path="/travel" element={<PageTransition><TravelCompanionPage /></PageTransition>} />
-                            <Route path="/wellness" element={<PageTransition><WellnessPage /></PageTransition>} />
-                            <Route path="/report" element={<PageTransition><ReportPage /></PageTransition>} />
-                            <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
-                            <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
-                          </Routes>
-                        </Suspense>
-                      </AnimatePresence>
-                    </AppShell>
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
+            <ErrorBoundary name="AppRoot">
+              <Routes location={location}>
+                {/* Full-screen pages — no AppShell */}
+                <Route path="/scan" element={<ProtectedRoute><PageTransition><ScanPage /></PageTransition></ProtectedRoute>} />
+                <Route path="/auth" element={<PageTransition><AuthPage /></PageTransition>} />
+                <Route path="/welcome" element={<PageTransition><WelcomePage /></PageTransition>} />
+                <Route path="/verify-email" element={<PageTransition><VerifyEmailPage /></PageTransition>} />
+                <Route path="/onboarding" element={<OnboardingRoute><PageTransition><OnboardingPage /></PageTransition></OnboardingRoute>} />
+                
+                {/* All other pages use AppShell with bottom nav */}
+                <Route
+                  path="*"
+                  element={
+                    <ProtectedRoute>
+                      <AppShell>
+                        <AnimatePresence mode="wait">
+                          <Suspense fallback={<div className="h-screen w-full flex items-center justify-center bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+                            <ErrorBoundary name="ContentArea">
+                              <Routes location={location} key={location.pathname}>
+                                <Route path="/" element={<PageTransition><Dashboard /></PageTransition>} />
+                                <Route path="/results" element={<PageTransition><ResultsPage /></PageTransition>} />
+                                <Route path="/medicine/:name" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
+                                <Route path="/search" element={<PageTransition><MedicineInfoPage /></PageTransition>} />
+                                <Route path="/reminders" element={<PageTransition><RemindersPage /></PageTransition>} />
+                                <Route path="/reminders/new" element={<PageTransition><AddReminderPage /></PageTransition>} />
+                                <Route path="/history" element={<PageTransition><HistoryPage /></PageTransition>} />
+                                <Route path="/interactions" element={<PageTransition><InteractionsPage /></PageTransition>} />
+                                <Route path="/family" element={<PageTransition><FamilyHubPage /></PageTransition>} />
+                                <Route path="/travel" element={<PageTransition><TravelCompanionPage /></PageTransition>} />
+                                <Route path="/wellness" element={<PageTransition><WellnessPage /></PageTransition>} />
+                                <Route path="/report" element={<PageTransition><ReportPage /></PageTransition>} />
+                                <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
+                                <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+                              </Routes>
+                            </ErrorBoundary>
+                          </Suspense>
+                        </AnimatePresence>
+                      </AppShell>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </ErrorBoundary>
           </Suspense>
         </AppProvider>
       </TooltipProvider>
