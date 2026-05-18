@@ -93,7 +93,7 @@ export const NotificationHandler = () => {
                   // allowWhileIdle so the snooze fires even in Doze/offline mode
                   schedule: { at: snoozeTime, allowWhileIdle: true },
                   channelId: 'dawa_reminders',
-                  sound: Capacitor.getPlatform() === 'ios' ? 'default' : undefined,
+                  sound: 'default',
                   actionTypeId: 'MEDICINE_REMINDER',
                   extra: notification.extra
                 }

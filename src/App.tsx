@@ -87,6 +87,7 @@ const AppContent = () => {
 
     // Run once when data is ready
     checkMissedDoses(reminders, doseLogs, logDose);
+    scheduleReminders(reminders, doseLogs, medicines);
 
     // Refresh reminders and check missed doses when app comes to foreground
     const handler = CapApp.addListener('appStateChange', async ({ isActive }) => {

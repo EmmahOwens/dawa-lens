@@ -9,6 +9,11 @@ const config: CapacitorConfig = {
     iosScheme: 'https',
     cleartext: false
   },
+  plugins: {
+    LocalNotifications: {
+      iconColor: "#4e73df",
+    },
+  },
 };
 
 export default config;

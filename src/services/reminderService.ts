@@ -146,9 +146,8 @@ export const checkMissedDoses = async (
                 title: `Missed Dose: ${r.medicineName}`,
                 body: `You missed your ${r.dose} dose scheduled for ${timeStr.trim()}. Please stay on track!`,
                 id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
-                smallIcon: "res://pill",
                 channelId: 'dawa_reminders',
-                sound: Capacitor.getPlatform() === 'ios' ? 'default' : undefined,
+                sound: 'default',
                 extra: { type: 'missed_alert' }
               }]
             });
@@ -337,6 +336,7 @@ export const registerNotificationActions = async () => {
         importance: 5, // High importance
         visibility: 1, // Public
         vibration: true,
+        sound: 'default',
       });
     }
 
@@ -390,6 +390,19 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
       await LocalNotifications.requestPermissions();
     }
 
+    // Ensure the channel exists before scheduling on Android
+    if (Capacitor.getPlatform() === 'android') {
+      await LocalNotifications.createChannel({
+        id: 'dawa_reminders',
+        name: 'Medicine Reminders',
+        description: 'Notifications for medicine reminders',
+        importance: 5,
+        visibility: 1,
+        vibration: true,
+        sound: 'default',
+      });
+    }
+
     // Cancel all pending notifications to refresh the schedule
     const pending = await LocalNotifications.getPending();
     if (pending.notifications.length > 0) {
@@ -419,9 +432,8 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
             body: `You are out of stock. Please refill to continue reminders.`,
             id: stringToHash(r.id + "refill"),
             schedule: { at: next, allowWhileIdle: true },
-            smallIcon: "res://pill",
             channelId: 'dawa_reminders',
-            sound: Capacitor.getPlatform() === 'ios' ? 'default' : undefined,
+            sound: 'default',
             extra: { type: "refill", medicineId: r.medicineId }
           });
           break;
@@ -438,9 +450,8 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
           // allowWhileIdle: fires even when Android is in Doze/battery-saver mode.
           // This is the key flag that makes notifications work fully offline.
           schedule: { at: next, allowWhileIdle: true },
-          smallIcon: "res://pill",
           channelId: 'dawa_reminders',
-          sound: Capacitor.getPlatform() === 'ios' ? 'default' : undefined,
+          sound: 'default',
           actionTypeId: "MEDICINE_REMINDER",
           extra: {
             reminderId: r.id,
@@ -459,7 +470,10 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
     });
 
     if (notifications.length > 0) {
+      console.log(`Scheduling ${notifications.length} notifications...`);
       await LocalNotifications.schedule({ notifications });
+    } else {
+      console.log("No notifications to schedule.");
     }
   } catch (err) {
     console.error("Failed to schedule notifications:", err);
