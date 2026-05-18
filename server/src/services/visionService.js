@@ -4,15 +4,14 @@ import AppError from '../utils/AppError.js';
 
 dotenv.config();
 
-// ── Primary: Groq Llama 4 Scout (free tier, OpenAI-compatible) ──────────────
-const GROQ_API_KEY   = process.env.GROQ_API_KEY;
+// ── API Config ───────────────────────────────────────────────────────────────
+const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
 const GROQ_MODEL     = 'meta-llama/llama-4-scout-17b-16e-instruct';
 const GROQ_API_URL   = 'https://api.groq.com/openai/v1/chat/completions';
 
-// ── Fallback: Gemini 2.0 Flash ───────────────────────────────────────────────
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL   = 'gemini-2.0-flash';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_PRO_MODEL   = 'gemini-1.5-pro';
+const GEMINI_FLASH_MODEL = 'gemini-2.0-flash';
 
 // ── Prompt ───────────────────────────────────────────────────────────────────
 const getPillIdPrompt = (patientAge) => {
@@ -167,7 +166,7 @@ const identifyWithGroq = async (cleanBase64, mimeType, patientAge) => {
   try {
     response = await axios.post(GROQ_API_URL, requestBody, {
       headers: {
-        Authorization: `Bearer ${GROQ_API_KEY}`,
+        Authorization: `Bearer ${GROQ_API_KEY_3}`,
         'Content-Type': 'application/json',
       },
       timeout: 30000,
@@ -230,7 +229,8 @@ const identifyWithGroq = async (cleanBase64, mimeType, patientAge) => {
  * Calls the Gemini vision API with the given base64 image.
  * Returns parsed result or throws an AppError.
  */
-const identifyWithGemini = async (cleanBase64, mimeType, patientAge) => {
+const identifyWithGemini = async (cleanBase64, mimeType, patientAge, modelName = GEMINI_PRO_MODEL) => {
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
   const requestBody = {
     contents: [
       {
@@ -250,7 +250,7 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge) => {
   let response;
   try {
     response = await axios.post(
-      `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
+      `${apiUrl}?key=${GEMINI_API_KEY}`,
       requestBody,
       { timeout: 30000 }
     );
@@ -266,22 +266,33 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge) => {
         throw new AppError('The Gemini API key is invalid or expired. Check server/.env.', 401, 'INVALID_API_KEY');
       }
       if (status === 429) {
-        throw new AppError('Both AI engines are rate-limited. Please wait a moment and try again.', 429, 'RATE_LIMITED');
+        const rateLimitErr = new Error(`Gemini rate limited: ${geminiMsg}`);
+        rateLimitErr.status = 429;
+        rateLimitErr.retriable = true;
+        throw rateLimitErr;
       }
       if (status === 402) {
         throw new AppError('Google Cloud Vision billing is not enabled on this GCP project.', 402, 'BILLING_DISABLED');
       }
-      throw new AppError(`Gemini API error (${status}): ${geminiMsg}`, 502);
+      const genericErr = new Error(`Gemini API error (${status}): ${geminiMsg}`);
+      genericErr.retriable = true;
+      throw genericErr;
     }
     if (err.code === 'ECONNABORTED') {
-      throw new AppError('Scan timed out. Please try again with a clearer image.', 504, 'TIMEOUT');
+      const timeoutErr = new Error('Gemini timed out');
+      timeoutErr.retriable = true;
+      throw timeoutErr;
     }
-    throw new AppError('Could not reach the AI service. Check your internet connection.', 503);
+    const netErr = new Error('Gemini unreachable');
+    netErr.retriable = true;
+    throw netErr;
   }
 
   const candidate = response.data?.candidates?.[0];
   if (!candidate) {
-    throw new AppError('No response received from Gemini. Please try again.', 502);
+    const emptyErr = new Error('No response received from Gemini');
+    emptyErr.retriable = true;
+    throw emptyErr;
   }
   if (candidate.finishReason === 'SAFETY') {
     throw new AppError(
@@ -293,14 +304,18 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge) => {
 
   const rawText = candidate.content?.parts?.[0]?.text;
   if (!rawText) {
-    throw new AppError('Gemini returned an empty response. Please try again.', 502);
+    const emptyErr = new Error('Gemini returned an empty response');
+    emptyErr.retriable = true;
+    throw emptyErr;
   }
 
   let parsed;
   try {
     parsed = JSON.parse(rawText);
   } catch {
-    throw new AppError('AI returned malformed data. Please try again.', 502);
+    const parseErr = new Error('AI returned malformed data');
+    parseErr.retriable = true;
+    throw parseErr;
   }
 
   return {
@@ -309,7 +324,7 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge) => {
     imprints: parsed.imprints || [],
     labels:   parsed.labels   || [],
     summary:  parsed.summary  || '',
-    engine:   GEMINI_MODEL,
+    engine:   modelName,
   };
 };
 
@@ -319,8 +334,9 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge) => {
  * Identifies a pill/medication from a base64-encoded image.
  *
  * Strategy:
- *   1. Try Groq Llama 4 Scout (free, ultra-low latency).
- *   2. If Groq fails with a retriable error, fall back to Gemini 2.0 Flash.
+ *   1. Try Gemini 1.5 Pro as primary model.
+ *   2. If Gemini 1.5 Pro fails, fall back to Llama 4 Scout.
+ *   3. If Llama 4 Scout fails, fall back to Gemini 2.0 Flash.
  *
  * @param {string} image       - Raw base64 image (no data URI prefix).
  * @param {number} [patientAge] - Optional patient age for dosage context.
@@ -331,34 +347,68 @@ export const identifyPill = async (image, patientAge) => {
   const cleanBase64 = image.replace(/^data:image\/\w+;base64,/, '');
   const mimeType    = detectMimeType(cleanBase64);
 
-  // ── 1. Try Groq first ──────────────────────────────────────────────────────
-  if (GROQ_API_KEY) {
-    try {
-      const result = await identifyWithGroq(cleanBase64, mimeType, patientAge);
-      console.log(`[visionService] ✅ Identified via Groq (${GROQ_MODEL})`);
-      return result;
-    } catch (err) {
-      // Only fall back if Groq signals a retriable/transient failure
-      if (err.retriable) {
-        console.warn(`[visionService] ⚠️  Groq failed (${err.message}), falling back to Gemini…`);
-      } else {
-        // Non-retriable Groq error (bad key, safety block, etc.) — surface directly
-        throw err;
-      }
-    }
-  } else {
-    console.warn('[visionService] GROQ_API_KEY not set, skipping Groq.');
-  }
-
-  // ── 2. Fall back to Gemini ─────────────────────────────────────────────────
-  if (!GEMINI_API_KEY) {
+  // Ensure at least one key is present
+  if (!GEMINI_API_KEY && !GROQ_API_KEY_3) {
     throw new AppError(
-      'No AI vision engine is configured. Add GROQ_API_KEY or GEMINI_API_KEY to server/.env.',
+      'No AI vision engine is configured. Add GROQ_API_KEY_3 or GEMINI_API_KEY to server/.env.',
       503,
       'API_KEY_MISSING'
     );
   }
 
-  console.log(`[visionService] 🔄 Using Gemini fallback (${GEMINI_MODEL})`);
-  return identifyWithGemini(cleanBase64, mimeType, patientAge);
+  // ── 1. Try Primary: Gemini 1.5 Pro ──────────────────────────────────────────
+  if (GEMINI_API_KEY) {
+    try {
+      console.log(`[visionService] 🔄 Scanning with Gemini 1.5 Pro (${GEMINI_PRO_MODEL})...`);
+      const result = await identifyWithGemini(cleanBase64, mimeType, patientAge, GEMINI_PRO_MODEL);
+      console.log(`[visionService] ✅ Identified via Gemini 1.5 Pro (${GEMINI_PRO_MODEL})`);
+      return result;
+    } catch (err) {
+      if (err.retriable) {
+        console.warn(`[visionService] ⚠️  Gemini 1.5 Pro failed (${err.message}), falling back to Llama 4 Scout…`);
+      } else {
+        throw err;
+      }
+    }
+  } else {
+    console.warn('[visionService] GEMINI_API_KEY not set, skipping Gemini 1.5 Pro.');
+  }
+
+  // ── 2. Fallback 1: Groq Llama 4 Scout ───────────────────────────────────────
+  if (GROQ_API_KEY_3) {
+    try {
+      console.log(`[visionService] 🔄 Scanning with Fallback 1: Llama 4 Scout (${GROQ_MODEL})...`);
+      const result = await identifyWithGroq(cleanBase64, mimeType, patientAge);
+      console.log(`[visionService] ✅ Identified via Groq Llama 4 Scout (${GROQ_MODEL})`);
+      return result;
+    } catch (err) {
+      if (err.retriable) {
+        console.warn(`[visionService] ⚠️  Llama 4 Scout failed (${err.message}), falling back to Gemini 2.0 Flash…`);
+      } else {
+        throw err;
+      }
+    }
+  } else {
+    console.warn('[visionService] GROQ_API_KEY_3 not set, skipping Llama 4 Scout.');
+  }
+
+  // ── 3. Fallback 2: Gemini 2.0 Flash ─────────────────────────────────────────
+  if (GEMINI_API_KEY) {
+    try {
+      console.log(`[visionService] 🔄 Scanning with Fallback 2: Gemini 2.0 Flash (${GEMINI_FLASH_MODEL})...`);
+      const result = await identifyWithGemini(cleanBase64, mimeType, patientAge, GEMINI_FLASH_MODEL);
+      console.log(`[visionService] ✅ Identified via Gemini 2.0 Flash (${GEMINI_FLASH_MODEL})`);
+      return result;
+    } catch (err) {
+      // Map transient/retriable errors to a final user-friendly response or throw directly if already mapped
+      if (err.isOperational) throw err;
+      if (err.status === 429) {
+        throw new AppError('Both AI engines are rate-limited. Please wait a moment and try again.', 429, 'RATE_LIMITED');
+      }
+      throw new AppError(`Scan failed: ${err.message}`, 502);
+    }
+  } else {
+    // If we reach here, it means we don't have GEMINI_API_KEY for fallback 2, and Groq already failed.
+    throw new AppError('AI vision services failed to identify the medication.', 502);
+  }
 };

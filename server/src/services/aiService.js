@@ -11,6 +11,7 @@ import * as wellnessService from './wellnessService.js';
 dotenv.config();
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_LIGHT_MODEL = 'llama-3.1-8b-instant';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -83,7 +84,8 @@ const callGeminiChat = async (finalMessages) => {
 };
 
 const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL) => {
-  if (!GROQ_API_KEY) {
+  const apiKey = modelId === GROQ_LIGHT_MODEL ? GROQ_API_KEY_2 : GROQ_API_KEY;
+  if (!apiKey) {
     return await callGeminiChat([{ role: 'user', content: prompt }]);
   }
 
@@ -98,7 +100,7 @@ const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL) => {
 
     const response = await axios.post(GROQ_API_URL, payload, {
       headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       }
     });
@@ -300,19 +302,21 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
   const isComplex = isComplexTask(lastUserMsg);
   const { finalMessages } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex, selectedPatientId });
 
-  if (!GROQ_API_KEY) {
+  const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
+  const apiKey = selectedModel === GROQ_LIGHT_MODEL ? GROQ_API_KEY_2 : GROQ_API_KEY;
+
+  if (!apiKey) {
     return await callGeminiChat(finalMessages);
   }
 
   try {
-    const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
     const response = await axios.post(GROQ_API_URL, {
       model: selectedModel,
       messages: finalMessages,
       response_format: { type: 'json_object' }
     }, {
       headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       }
     });
@@ -341,7 +345,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
           response_format: { type: 'json_object' }
         }, {
           headers: {
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
+            'Authorization': `Bearer ${GROQ_API_KEY_2}`,
             'Content-Type': 'application/json'
           }
         });
@@ -451,7 +455,10 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     isStreaming: true, isComplex, selectedPatientId
   });
 
-  if (!GROQ_API_KEY) {
+  const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
+  const apiKey = selectedModel === GROQ_LIGHT_MODEL ? GROQ_API_KEY_2 : GROQ_API_KEY;
+
+  if (!apiKey) {
     // Fallback to non-streaming Gemini chat if Groq is missing
     const geminiResp = await callGeminiChat(finalMessages);
     return new ReadableStream({
@@ -467,14 +474,13 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   }
 
   try {
-    const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
     const response = await axios.post(GROQ_API_URL, {
       model: selectedModel,
       messages: finalMessages,
       stream: true
     }, {
       headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       responseType: 'stream'
