@@ -8,6 +8,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { format, subDays, isSameDay } from "date-fns";
 import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MedicalReportContent } from "@/components/MedicalReportContent";
+import { toast } from "sonner";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
@@ -135,6 +139,71 @@ export default function ReportPage() {
     window.print();
   };
 
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    const toastId = toast.loading("Generating professional PDF report...");
+
+    try {
+      // Find the element to capture (the hidden print template)
+      const element = document.getElementById("medical-report-content-download");
+      if (!element) throw new Error("Report content not found");
+
+      // Set options for html2canvas
+      const canvas = await html2canvas(element, {
+        scale: 2, // Higher scale for better quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      
+      const fileName = `DawaLens-Report-${patientName.replace(/\s+/g, "-")}-${format(new Date(), "yyyyMMdd")}.pdf`;
+
+      if (Capacitor.isNativePlatform()) {
+        // Handle Capacitor download
+        const pdfBase64 = pdf.output("datauristring").split(",")[1];
+        
+        const savedFile = await Filesystem.writeFile({
+          path: fileName,
+          data: pdfBase64,
+          directory: Directory.Cache, // Use Cache directory for temporary storage before sharing
+        });
+
+        await Share.share({
+          title: "Care Report",
+          text: `Medical Report for ${patientName}`,
+          url: savedFile.uri,
+          dialogTitle: "Save or Share Report",
+        });
+      } else {
+        // Handle Web download
+        pdf.save(fileName);
+      }
+      
+      toast.success("Care Report downloaded successfully!", { id: toastId });
+    } catch (err) {
+      console.error("PDF generation failed", err);
+      toast.error("Failed to generate PDF report.", { id: toastId });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const handleShare = async () => {
     if (!insights) return;
     
@@ -190,6 +259,16 @@ export default function ReportPage() {
             >
               <Eye size={15} />
               <span className="hidden xs:inline">Preview</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              className="rounded-xl w-10 h-10 border-border/50 shadow-sm text-primary"
+              title="Download PDF Report"
+            >
+              {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             </Button>
             <Button 
               variant="outline" 
@@ -477,6 +556,16 @@ export default function ReportPage() {
               Formal Care Report Preview
             </DialogTitle>
             <div className="flex gap-2 pr-8">
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={handleDownloadPDF} 
+                 disabled={downloading}
+                 className="h-9 gap-2 rounded-xl text-primary"
+               >
+                 {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                 Download
+               </Button>
                <Button variant="outline" size="sm" onClick={handleShare} className="h-9 gap-2 rounded-xl">
                  <Share2 size={14} /> Share
                </Button>
@@ -500,8 +589,9 @@ export default function ReportPage() {
         </DialogContent>
       </Dialog>
 
-      {/* -------------------- HIDDEN PRINT TEMPLATE -------------------- */}
-      <div className="hidden print:block">
+      {/* -------------------- HIDDEN DOWNLOAD/PRINT TEMPLATE -------------------- */}
+      {/* We use an off-screen container for PDF generation to ensure html2canvas can capture it */}
+      <div className="fixed -left-[9999px] top-0 w-[800px] bg-white" id="medical-report-content-download">
         <MedicalReportContent 
           patientName={patientName}
           patientGender={patientGender}

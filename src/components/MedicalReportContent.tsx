@@ -1,4 +1,18 @@
 import { format, subDays, isSameDay } from "date-fns";
+import { 
+  Activity, 
+  User, 
+  Calendar, 
+  ShieldCheck, 
+  Pill, 
+  Brain, 
+  Heart, 
+  AlertCircle,
+  FileText,
+  Clock,
+  TrendingUp,
+  Stethoscope
+} from "lucide-react";
 
 interface MedicalReportContentProps {
   patientName: string;
@@ -47,106 +61,160 @@ export const MedicalReportContent = ({
   const daysWithData = last7.filter(day =>
     symptomLogs.some((l: any) => isSameDay(new Date(l.timestamp), day))
   ).length;
+
   const moodLabel = avgMood >= 3.5 ? "Positive" : avgMood >= 2.5 ? "Neutral" : "Low";
   const energyLabel = avgEnergy >= 3.5 ? "High" : avgEnergy >= 2.5 ? "Moderate" : "Low";
+
   return (
-    <div className="font-sans text-black bg-white w-full max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+    <div id="medical-report-content" className="font-sans text-slate-900 bg-white w-full max-w-4xl mx-auto px-6 sm:px-12 py-10 sm:py-16">
       {/* Report Header */}
-      <div className="border-b-2 border-black pb-6 mb-8 flex flex-wrap gap-4 items-end justify-between">
-        <div className="min-w-0">
-          <h1 className="text-3xl sm:text-4xl font-black text-black tracking-tight mb-1 break-words">
-            Care Report
-          </h1>
-          <p className="text-xs sm:text-sm font-bold uppercase tracking-widest text-black/50">
-            Dawa Lens Clinical Summary
-          </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-4 border-blue-600 pb-8 mb-10 gap-6">
+        <div className="flex items-center gap-4">
+          <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-200">
+            <Stethoscope className="text-white" size={32} />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-none mb-2">
+              Care Report
+            </h1>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-wider rounded-md border border-blue-100">
+                Clinical Summary
+              </span>
+              <span className="text-xs font-bold text-slate-400">
+                v1.2 • Dawa Lens AI
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-xs sm:text-sm font-semibold mb-1">
-            <strong>Date:</strong> {format(new Date(), "MMMM do, yyyy")}
-          </p>
-          <p className="text-xs sm:text-sm font-semibold">
-            <strong>Report ID:</strong>{" "}
-            DL-{Math.random().toString(36).substr(2, 6).toUpperCase()}
-          </p>
-        </div>
-      </div>
-
-      {/* Patient Demographics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10 p-4 sm:p-6 bg-gray-50 rounded-xl border border-gray-200">
-        <div>
-          <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">
-            Patient Name
-          </p>
-          <p className="text-lg sm:text-xl font-bold text-black break-words">{patientName}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">
-            Demographics
-          </p>
-          <p className="text-base sm:text-lg font-bold text-black capitalize">
-            {patientGender} • {patientAge}
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">
-            Adherence Score
-          </p>
-          <p className="text-base sm:text-lg font-bold text-black">
-            {adherenceScore}% (7-Day Average)
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">
-            Tracking Activity
-          </p>
-          <p className="text-base sm:text-lg font-bold text-black">
-            {doseLogs.length} Doses Logged Total
-          </p>
+        <div className="flex flex-col items-start sm:items-end text-sm">
+          <div className="flex items-center gap-2 text-slate-500 mb-1">
+            <Calendar size={14} />
+            <span className="font-bold">{format(new Date(), "MMMM do, yyyy")}</span>
+          </div>
+          <div className="flex items-center gap-2 text-slate-400">
+            <FileText size={14} />
+            <span className="font-medium">REF: DL-{Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
+          </div>
         </div>
       </div>
 
-      {/* Active Medications */}
-      <div className="mb-10">
-        <h2 className="text-lg sm:text-xl font-black border-b border-gray-300 pb-2 mb-4">
-          Active Medications
-        </h2>
+      {/* Patient Overview Card */}
+      <div className="bg-slate-50 rounded-3xl p-8 mb-10 border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-8 opacity-5">
+          <User size={120} />
+        </div>
+        
+        <div className="space-y-6">
+          <section>
+            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-400 mb-2 flex items-center gap-2">
+              <User size={12} className="text-blue-500" /> Patient Information
+            </p>
+            <h2 className="text-2xl font-black text-slate-900 leading-tight">{patientName}</h2>
+            <p className="text-slate-600 font-semibold mt-1 flex items-center gap-2">
+              <span className="capitalize">{patientGender}</span>
+              <span className="w-1.5 h-1.5 bg-slate-300 rounded-full"></span>
+              <span>{patientAge}</span>
+            </p>
+          </section>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status</p>
+              <div className="flex items-center gap-2 text-emerald-600">
+                <ShieldCheck size={16} />
+                <span className="text-sm font-bold">Active Care</span>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Provider</p>
+              <div className="flex items-center gap-2 text-blue-600">
+                <Activity size={16} />
+                <span className="text-sm font-bold">Dawa Lens</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col justify-center">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-md flex items-center gap-6">
+            <div className="relative flex-shrink-0">
+              <svg className="w-20 h-20 transform -rotate-90">
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="34"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="transparent"
+                  className="text-slate-100"
+                />
+                <circle
+                  cx="40"
+                  cy="40"
+                  r="34"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={2 * Math.PI * 34}
+                  strokeDashoffset={2 * Math.PI * 34 * (1 - adherenceScore / 100)}
+                  strokeLinecap="round"
+                  className="text-blue-600 transition-all duration-1000 ease-out"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-xl font-black text-slate-900">{adherenceScore}%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-black text-slate-900">Adherence Score</p>
+              <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+                {doseLogs.length} total doses logged in the last 7 days.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Active Medications Section */}
+      <section className="mb-12">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-amber-50 p-2 rounded-xl border border-amber-100">
+            <Pill className="text-amber-600" size={20} />
+          </div>
+          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Active Medications</h3>
+          <div className="h-[2px] flex-1 bg-slate-100 ml-2"></div>
+        </div>
+
         {medicines.length > 0 ? (
-          /* Wrap in a horizontally-scrollable div so the table never clips on narrow screens */
-          <div className="w-full overflow-x-auto -mx-0">
-            <table className="min-w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b-2 border-black/80">
-                  <th className="py-3 pr-4 text-xs sm:text-sm font-bold uppercase tracking-wider whitespace-nowrap">
-                    Medication Name
-                  </th>
-                  <th className="py-3 pr-4 text-xs sm:text-sm font-bold uppercase tracking-wider whitespace-nowrap">
-                    Dosage
-                  </th>
-                  <th className="py-3 text-xs sm:text-sm font-bold uppercase tracking-wider whitespace-nowrap">
-                    Instructions
-                  </th>
+          <div className="overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Medication Details</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Schedule</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clinical Notes</th>
                 </tr>
               </thead>
-              <tbody>
-                {medicines.map((med, idx) => (
-                  <tr
-                    key={med.id}
-                    className={`border-b border-gray-200 ${idx % 2 === 0 ? "bg-gray-50/50" : ""}`}
-                  >
-                    <td className="py-3 pr-4 text-sm sm:text-base font-bold text-black align-top">
-                      {med.name}
+              <tbody className="bg-white divide-y divide-slate-100">
+                {medicines.map((med) => (
+                  <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-5">
+                      <p className="text-sm font-black text-slate-900">{med.name}</p>
                       {med.genericName && (
-                        <span className="font-normal text-xs text-gray-500 block italic">
-                          {med.genericName}
-                        </span>
+                        <p className="text-[10px] font-bold text-blue-600/70 italic mt-0.5">{med.genericName}</p>
                       )}
                     </td>
-                    <td className="py-3 pr-4 text-xs sm:text-sm font-semibold align-top whitespace-nowrap">
-                      {med.dosage}
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-2 text-slate-700">
+                        <Clock size={12} className="text-slate-400" />
+                        <span className="text-xs font-bold">{med.dosage}</span>
+                      </div>
                     </td>
-                    <td className="py-3 text-xs sm:text-sm text-gray-700 align-top">
-                      {med.notes || "As directed"}
+                    <td className="px-6 py-5">
+                      <p className="text-xs text-slate-500 font-medium leading-relaxed italic">
+                        {med.notes || "As directed by physician"}
+                      </p>
                     </td>
                   </tr>
                 ))}
@@ -154,141 +222,144 @@ export const MedicalReportContent = ({
             </table>
           </div>
         ) : (
-          <p className="text-black/60 italic text-sm">No active medications registered.</p>
+          <div className="bg-slate-50 rounded-2xl p-6 border-2 border-dashed border-slate-200 text-center">
+            <p className="text-slate-400 font-bold text-sm">No active medications recorded in this period.</p>
+          </div>
         )}
-      </div>
+      </section>
 
-      {/* Patient Reported Outcomes (PROs) */}
+      {/* Wellness Metrics Section */}
       {hasPRO && (
-        <div className="mb-10">
-          <h2 className="text-lg sm:text-xl font-black border-b border-gray-300 pb-2 mb-6">
-            Patient Reported Outcomes (PROs)
-          </h2>
-          <p className="text-xs text-gray-500 italic mb-4">
-            Self-reported emotional and physical data captured via the Wellness Hub over the last 7 days.
-          </p>
+        <section className="mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-rose-50 p-2 rounded-xl border border-rose-100">
+              <Heart className="text-rose-600" size={20} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Patient Reported Outcomes</h3>
+            <div className="h-[2px] flex-1 bg-slate-100 ml-2"></div>
+          </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">Avg Mood</p>
-              <p className="text-2xl font-black text-black">{avgMood.toFixed(1)}<span className="text-xs text-gray-400">/5</span></p>
-              <p className="text-[10px] font-semibold text-gray-500 mt-0.5">{moodLabel}</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">Avg Energy</p>
-              <p className="text-2xl font-black text-black">{avgEnergy.toFixed(1)}<span className="text-xs text-gray-400">/5</span></p>
-              <p className="text-[10px] font-semibold text-gray-500 mt-0.5">{energyLabel}</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">Days Tracked</p>
-              <p className="text-2xl font-black text-black">{daysWithData}<span className="text-xs text-gray-400">/7</span></p>
-              <p className="text-[10px] font-semibold text-gray-500 mt-0.5">Consistency</p>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
-              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1">Total Entries</p>
-              <p className="text-2xl font-black text-black">{logsLast7.length}</p>
-              <p className="text-[10px] font-semibold text-gray-500 mt-0.5">Check-ins</p>
-            </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[
+              { label: "Avg Mood", value: avgMood.toFixed(1), max: "/5", status: moodLabel, color: "rose" },
+              { label: "Avg Energy", value: avgEnergy.toFixed(1), max: "/5", status: energyLabel, color: "amber" },
+              { label: "Days Tracked", value: daysWithData, max: "/7", status: "Consistency", color: "blue" },
+              { label: "Total Entries", value: logsLast7.length, max: "", status: "Check-ins", color: "slate" },
+            ].map((stat, i) => (
+              <div key={i} className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm text-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{stat.label}</p>
+                <div className="flex items-baseline justify-center gap-0.5">
+                  <span className="text-2xl font-black text-slate-900">{stat.value}</span>
+                  <span className="text-xs font-bold text-slate-300">{stat.max}</span>
+                </div>
+                <div className={`mt-2 inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-${stat.color}-50 text-${stat.color}-600 border border-${stat.color}-100`}>
+                  {stat.status}
+                </div>
+              </div>
+            ))}
           </div>
 
           {topSymptoms.length > 0 && (
-            <div>
-              <p className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-3">Most Reported Symptoms</p>
+            <div className="bg-slate-50 rounded-3xl p-6 border border-slate-200">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <TrendingUp size={12} className="text-rose-500" /> Primary Symptom Analysis
+              </p>
               <div className="flex flex-wrap gap-2">
                 {topSymptoms.map(([name, count]) => (
-                  <span
-                    key={name}
-                    className="px-3 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-xs font-bold text-black"
-                  >
-                    {name} <span className="text-gray-400 font-normal">({count}×)</span>
-                  </span>
+                  <div key={name} className="flex items-center gap-2 px-4 py-2 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                    <span className="text-xs font-black text-slate-900">{name}</span>
+                    <span className="h-4 w-[1px] bg-slate-100"></span>
+                    <span className="text-[10px] font-bold text-slate-400">{count} occurrences</span>
+                  </div>
                 ))}
               </div>
             </div>
           )}
-        </div>
+        </section>
       )}
 
-      {/* AI Clinical Summary */}
+      {/* AI Clinical Summary Section */}
       {insights && (
-        <div className="mb-10">
-          <h2 className="text-lg sm:text-xl font-black border-b border-gray-300 pb-2 mb-6">
-            AI Clinical Assessment
-          </h2>
-
-          <div className="mb-6">
-            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-              Overview
-            </p>
-            <p className="text-sm sm:text-base font-medium leading-relaxed bg-blue-50/50 p-4 rounded-lg border border-blue-100 break-words">
-              {insights.summary}
-            </p>
+        <section className="mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100">
+              <Brain className="text-indigo-600" size={20} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">AI Clinical Assessment</h3>
+            <div className="h-[2px] flex-1 bg-slate-100 ml-2"></div>
           </div>
 
-          {insights.dosagePatterns && (
-            <div className="mb-6">
-              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                Dosage Patterns
-              </p>
-              <p className="text-sm sm:text-base font-medium leading-relaxed text-gray-800 break-words">
-                {insights.dosagePatterns}
+          <div className="space-y-6">
+            <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
+              <Brain className="absolute -bottom-10 -right-10 opacity-10" size={200} />
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-70">Executive Summary</p>
+              <p className="text-lg font-bold leading-relaxed relative z-10">
+                {insights.summary}
               </p>
             </div>
-          )}
 
-          {insights.lifestyleAnalysis && (
-            <div className="mb-6">
-              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                Lifestyle &amp; Symptoms
-              </p>
-              <p className="text-sm sm:text-base font-medium leading-relaxed italic text-gray-800 break-words">
-                {insights.lifestyleAnalysis}
-              </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {insights.dosagePatterns && (
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Dosage Patterns</p>
+                  <p className="text-sm text-slate-700 font-semibold leading-relaxed">
+                    {insights.dosagePatterns}
+                  </p>
+                </div>
+              )}
+              {insights.lifestyleAnalysis && (
+                <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Lifestyle & Environment</p>
+                  <p className="text-sm text-slate-700 font-semibold leading-relaxed italic">
+                    {insights.lifestyleAnalysis}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
 
-          {insights.actionItems && insights.actionItems.length > 0 && (
-            <div className="mb-6">
-              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                Suggested Action Items
-              </p>
-              <ul className="list-disc pl-5 space-y-2">
-                {insights.actionItems.map((action: string, idx: number) => (
-                  <li key={idx} className="text-sm sm:text-base font-bold text-black break-words">
-                    {action}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {insights.insights && insights.insights.length > 0 && (
-            <div className="mb-6">
-              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">
-                Observed Patterns
-              </p>
-              <ul className="list-disc pl-5 space-y-2">
-                {insights.insights.map((insight: string, idx: number) => (
-                  <li key={idx} className="text-sm sm:text-base font-medium text-gray-800 break-words">
-                    {insight}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+            {insights.actionItems && insights.actionItems.length > 0 && (
+              <div className="bg-amber-50 rounded-3xl p-8 border border-amber-100">
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <AlertCircle size={14} /> Priority Action Items
+                </p>
+                <ul className="space-y-4">
+                  {insights.actionItems.map((action: string, idx: number) => (
+                    <li key={idx} className="flex items-start gap-4">
+                      <div className="bg-amber-600 text-white w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px] font-black mt-0.5">
+                        {idx + 1}
+                      </div>
+                      <p className="text-sm font-black text-slate-900 leading-tight">
+                        {action}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
-      {/* Footer */}
-      <div className="mt-12 sm:mt-16 pt-6 border-t border-gray-300 text-center">
-        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-          Strictly Confidential
+      {/* Report Footer */}
+      <div className="mt-20 pt-10 border-t-2 border-slate-100 text-center">
+        <div className="flex justify-center mb-6">
+          <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100">
+            <ShieldCheck size={14} className="text-blue-600" />
+            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Encrypted & Confidential</span>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 leading-relaxed max-w-2xl mx-auto font-medium">
+          This report was generated securely by the Dawa Lens AI engine. The insights provided are based on self-reported data and automated analysis. 
+          <span className="text-slate-900 font-bold ml-1">Please consult a registered healthcare professional before making any changes to your prescribed medical regimen.</span>
         </p>
-        <p className="text-xs text-gray-400 leading-relaxed break-words max-w-prose mx-auto">
-          Generated securely by Dawa Lens AI engine. Please consult a registered physician
-          before altering any medical dosages based on these automated insights.
-        </p>
+        <div className="mt-8 flex items-center justify-center gap-8 opacity-30 grayscale">
+          {/* Mock Logos for Professional Look */}
+          <div className="text-[10px] font-black tracking-tighter">DAWA LENS</div>
+          <div className="text-[10px] font-black tracking-tighter">AI DIAGNOSTICS</div>
+          <div className="text-[10px] font-black tracking-tighter">SECURE HEALTH</div>
+        </div>
       </div>
     </div>
   );
 };
+
