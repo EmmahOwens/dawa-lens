@@ -434,16 +434,15 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   if (detectEmergency(lastUserMsg)) {
     return new ReadableStream({
       start(controller) {
-        const data = JSON.stringify({
-          choices: [{ delta: { content: EMERGENCY_RESPONSE.text } }]
-        });
         const metadata = JSON.stringify({
           suggestions: EMERGENCY_RESPONSE.suggestions,
           source: EMERGENCY_RESPONSE.source,
           action: null
         });
+        const data = JSON.stringify({
+          choices: [{ delta: { content: EMERGENCY_RESPONSE.text + "\n" + metadata } }]
+        });
         controller.enqueue(new TextEncoder().encode(`data: ${data}\n`));
-        controller.enqueue(new TextEncoder().encode(`data: ###METADATA###${metadata}###METADATA###\n`));
         controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
         controller.close();
       }
@@ -464,10 +463,9 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     const geminiResp = await callGeminiChat(finalMessages);
     return new ReadableStream({
       start(controller) {
-        const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text } }] });
         const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
+        const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text + "\n" + metadata } }] });
         controller.enqueue(new TextEncoder().encode(`data: ${data}\n`));
-        controller.enqueue(new TextEncoder().encode(`data: ###METADATA###${metadata}###METADATA###\n`));
         controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
         controller.close();
       }
@@ -493,10 +491,9 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     const geminiResp = await callGeminiChat(finalMessages);
     return new ReadableStream({
       start(controller) {
-        const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text } }] });
         const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
+        const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text + "\n" + metadata } }] });
         controller.enqueue(new TextEncoder().encode(`data: ${data}\n`));
-        controller.enqueue(new TextEncoder().encode(`data: ###METADATA###${metadata}###METADATA###\n`));
         controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
         controller.close();
       }
@@ -578,7 +575,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
 
     === RESPONSE FORMAT ===
     ${isStreaming ? `
-    Respond in Markdown-formatted text first. Append "###METADATA###" followed by:
+    Respond in Markdown-formatted text first. Append a JSON block at the very end of your response (no labels or headers) containing:
     { "suggestions": ["...", "...", "..."], "source": "Dawa-GPT", "action": { "type": "...", "payload": {...} } | null }
     ` : `
     Respond STRICTLY in JSON format, with the "text" field containing Markdown-formatted content:

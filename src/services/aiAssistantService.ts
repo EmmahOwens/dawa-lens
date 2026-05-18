@@ -135,7 +135,8 @@ export const chatWithDawaGPT = async (
     });
 
     const rawText = response.text || "";
-    const cleanText = rawText.split("###METADATA###")[0].trim();
+    // Clean up any stray metadata markers if they exist
+    const cleanText = rawText.split(/###METADATA###|---METADATA---/)[0].trim();
 
     return {
       id: Date.now().toString(),
@@ -208,16 +209,23 @@ export const chatWithDawaGPTStream = async (
             const content = data.choices[0]?.delta?.content || "";
             allText += content;
 
-            // Extract text outside of ###METADATA### tags
-            let cleanText = "";
+            // Extract text outside of metadata JSON block
+            let cleanText = allText;
             let tempMetadata = "";
-            const parts = allText.split("###METADATA###");
             
-            for (let i = 0; i < parts.length; i++) {
-              if (i % 2 === 0) {
-                cleanText += parts[i];
-              } else {
-                tempMetadata = parts[i];
+            // Look for a JSON block that looks like metadata (contains suggestions or source)
+            const metadataMatch = allText.match(/\{[\s\S]*?"(?:suggestions|source)":[\s\S]*?\}/);
+            const metadataStart = allText.search(/\{[\s\n]*"(?:suggestions|source)"/);
+            
+            if (metadataStart !== -1) {
+              cleanText = allText.substring(0, metadataStart).trim();
+              tempMetadata = allText.substring(metadataStart);
+            } else {
+              // Safety: If we see a lone '{' at the very end, it might be the start of metadata.
+              // We hide it from the UI until we know for sure.
+              const lastBrace = allText.lastIndexOf('{');
+              if (lastBrace !== -1 && lastBrace > allText.length - 10) {
+                cleanText = allText.substring(0, lastBrace).trim();
               }
             }
             
