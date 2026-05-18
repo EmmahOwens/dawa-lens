@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
 import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
+import MessageRenderer from "@/components/MessageRenderer";
 
 // Widgets
 import { DashboardWidget } from "./intelligence/DashboardWidget";
@@ -30,7 +31,8 @@ export function IntelligencePanel() {
   const { 
     medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
     isIntelligenceCollapsed, setIsIntelligenceCollapsed, 
-    isDawaGPTOpen, setIsDawaGPTOpen 
+    isDawaGPTOpen, setIsDawaGPTOpen,
+    selectedPatientId
   } = useApp();
   const { dispatchAIAction } = useAIActions();
   
@@ -86,6 +88,7 @@ export function IntelligencePanel() {
         reminders, 
         wellnessLogs, 
         patients, 
+        selectedPatientId,
         (streamedText) => {
           setMessages(prev => prev.map(msg => 
             msg.id === botId ? { ...msg, text: streamedText } : msg
@@ -242,7 +245,15 @@ export function IntelligencePanel() {
                             ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-[1.5rem] rounded-tr-sm shadow-primary/20" 
                             : "bg-background text-foreground border border-border/50 rounded-[1.5rem] rounded-tl-sm shadow-black/5"
                         }`}>
-                          <p className="whitespace-pre-wrap">{m.text}</p>
+                          {m.role === "assistant" ? (
+                            <MessageRenderer
+                              text={m.text}
+                              onNavigate={() => {}}
+                              className="text-[12px]"
+                            />
+                          ) : (
+                            <p className="whitespace-pre-wrap">{m.text}</p>
+                          )}
                         </div>
                       </motion.div>
                     ))}

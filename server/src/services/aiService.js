@@ -66,7 +66,7 @@ const callGeminiChat = async (finalMessages) => {
     const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       contents,
       systemInstruction: {
-        parts: [{ text: "You are Dawa-Lens AI. Respond STRICTLY in JSON format as requested by the user." }]
+        parts: [{ text: "You are Dawa-Lens AI. Respond STRICTLY in JSON format as requested by the user. Use Markdown for formatting in text fields." }]
       },
       generationConfig: { responseMimeType: 'application/json' }
     });
@@ -133,9 +133,10 @@ export const getCoachAdvice = async (logs, medicines, userName) => {
     5. Proactive suggestions: If a user consistently misses a dose at a certain time, suggest moving it by 30-60 minutes if safe, or suggest a specific ritual (e.g., "take with your morning tea").
     6. Tone: Warm and culturally appropriate for East Africa.
     7. Warning: Do not change dosages. Advise doctor visit if heart/BP meds are skipped.
+    8. Use Markdown for formatting the advice (bolding, lists) to make it readable.
  
     Respond in JSON format:
-    { "advice": "text", "patterns": ["list"], "adherenceScore": 0-100 }
+    { "advice": "text (Markdown formatted)", "patterns": ["list"], "adherenceScore": 0-100 }
   `;
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
 };
@@ -204,9 +205,9 @@ export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
 
     === RESPONSE FORMAT (STRICT JSON) ===
     { 
-      "summary": "2-3 sentences high level clinical overview.", 
-      "dosagePatterns": "Analysis of adherence, skipped doses, and timing.",
-      "lifestyleAnalysis": "Correlation between symptoms/energy and logs.",
+      "summary": "2-3 sentences high level clinical overview (Markdown formatted).", 
+      "dosagePatterns": "Analysis of adherence, skipped doses, and timing (Markdown formatted).",
+      "lifestyleAnalysis": "Correlation between symptoms/energy and logs (Markdown formatted).",
       "insights": ["Specific correlation bullet 1", "Specific correlation bullet 2"], 
       "actionItems": ["Actionable clinical suggestion 1", "Suggestion 2"],
       "correlationScore": 85
@@ -573,13 +574,14 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     5. ALWAYS include "patientId" in action payloads. Use the "Active Profile (Target)" ID above unless another person is mentioned.
     6. Include clickable chips for navigation: [Label](/route) (e.g. [/dashboard, /reminders, /family, /wellness, /scan]).
     7. Proactively suggest regional foods (Matooke, Avocado, G-nuts).
+    8. Use Markdown for formatting (bold, italics, lists, tables) to make information clear and readable.
 
     === RESPONSE FORMAT ===
     ${isStreaming ? `
-    Respond in plain text first. Append "###METADATA###" followed by:
+    Respond in Markdown-formatted text first. Append "###METADATA###" followed by:
     { "suggestions": ["...", "...", "..."], "source": "Dawa-GPT", "action": { "type": "...", "payload": {...} } | null }
     ` : `
-    Respond STRICTLY in JSON format:
+    Respond STRICTLY in JSON format, with the "text" field containing Markdown-formatted content:
     { "text": "...", "suggestions": ["...", "...", "..."], "source": "Dawa-GPT", "action": { "type": "...", "payload": {...} } | null }
     `}
   `;

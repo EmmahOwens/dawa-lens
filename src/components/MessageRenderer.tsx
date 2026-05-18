@@ -1,4 +1,6 @@
 import React from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Link } from "react-router-dom";
 import {
   Home,
@@ -75,67 +77,55 @@ function ExternalLinkChip({ href, label }: ExternalLinkChipProps) {
  * and renders internal routes as styled React Router chips,
  * and external URLs as anchor chips.
  *
- * Everything else is rendered as a plain text span preserving whitespace.
+ * Uses react-markdown for rich text formatting.
  */
 interface MessageRendererProps {
   text: string;
   /** Called when an internal link chip is clicked (e.g. to close the chat panel). */
   onNavigate?: () => void;
+  className?: string;
 }
 
-export default function MessageRenderer({ text, onNavigate }: MessageRendererProps) {
-  // Regex: [Any text](/path) or [Any text](https://...)
-  const LINK_RE = /\[([^\]]+)\]\((\/[^\s)]*|https?:\/\/[^\s)]*)\)/g;
-
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-  let key = 0;
-
-  while ((match = LINK_RE.exec(text)) !== null) {
-    // Push preceding plain text
-    if (match.index > lastIndex) {
-      const segment = text.slice(lastIndex, match.index);
-      parts.push(
-        <span key={key++} className="whitespace-pre-wrap">
-          {segment}
-        </span>
-      );
-    }
-
-    const label = match[1];
-    const href = match[2];
-
-    if (href.startsWith("/")) {
-      parts.push(
-        <InternalLinkChip key={key++} to={href} label={label} onClick={onNavigate} />
-      );
-    } else {
-      parts.push(<ExternalLinkChip key={key++} href={href} label={label} />);
-    }
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  // Push any remaining text after the last link
-  if (lastIndex < text.length) {
-    parts.push(
-      <span key={key++} className="whitespace-pre-wrap">
-        {text.slice(lastIndex)}
-      </span>
-    );
-  }
-
-  // No links found — render as simple text
-  if (parts.length === 0) {
-    return (
-      <p className="text-[15px] leading-[1.6] font-medium whitespace-pre-wrap">{text}</p>
-    );
-  }
-
+export default function MessageRenderer({ text, onNavigate, className }: MessageRendererProps) {
   return (
-    <p className="text-[15px] leading-[1.6] font-medium">
-      {parts}
-    </p>
+    <div className={`prose prose-sm dark:prose-invert max-w-none leading-[1.6] font-medium ${className || "text-[15px]"}`}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
+          ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>,
+          li: ({ children }) => <li>{children}</li>,
+          strong: ({ children }) => <strong className="font-black text-primary/90">{children}</strong>,
+          a: ({ href, children }) => {
+            if (!href) return <span>{children}</span>;
+            const label = String(children);
+            
+            if (href.startsWith("/")) {
+              return (
+                <InternalLinkChip 
+                  to={href} 
+                  label={label} 
+                  onClick={onNavigate} 
+                />
+              );
+            }
+            return <ExternalLinkChip href={href} label={label} />;
+          },
+          table: ({ children }) => (
+            <div className="overflow-x-auto my-4 rounded-xl border border-border/50">
+              <table className="w-full text-sm text-left border-collapse">
+                {children}
+              </table>
+            </div>
+          ),
+          thead: ({ children }) => <thead className="bg-muted/50">{children}</thead>,
+          th: ({ children }) => <th className="px-4 py-2 border-b border-border/50 font-bold">{children}</th>,
+          td: ({ children }) => <td className="px-4 py-2 border-b border-border/50">{children}</td>,
+        }}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
   );
 }
