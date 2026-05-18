@@ -6,8 +6,20 @@ dotenv.config();
 
 // ── API Config ───────────────────────────────────────────────────────────────
 const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
+const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_MODEL     = 'meta-llama/llama-4-scout-17b-16e-instruct';
 const GROQ_API_URL   = 'https://api.groq.com/openai/v1/chat/completions';
+
+/**
+ * Determines which API key to use based on the model ID.
+ * Features using llama 3.1 8b models MUST use GROQ_API_KEY_2.
+ */
+const getGroqApiKey = (modelId) => {
+  if (modelId && modelId.toLowerCase().includes('llama-3.1-8b')) {
+    return GROQ_API_KEY_2;
+  }
+  return GROQ_API_KEY_3;
+};
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_PRO_MODEL   = 'gemini-1.5-pro';
@@ -166,7 +178,7 @@ const identifyWithGroq = async (cleanBase64, mimeType, patientAge) => {
   try {
     response = await axios.post(GROQ_API_URL, requestBody, {
       headers: {
-        Authorization: `Bearer ${GROQ_API_KEY_3}`,
+        Authorization: `Bearer ${getGroqApiKey(GROQ_MODEL)}`,
         'Content-Type': 'application/json',
       },
       timeout: 30000,

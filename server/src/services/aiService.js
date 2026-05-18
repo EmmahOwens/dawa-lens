@@ -16,6 +16,17 @@ const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_LIGHT_MODEL = 'llama-3.1-8b-instant';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
+/**
+ * Determines which API key to use based on the model ID.
+ * Features using llama 3.1 8b models MUST use GROQ_API_KEY_2.
+ */
+const getGroqApiKey = (modelId) => {
+  if (modelId && modelId.toLowerCase().includes('llama-3.1-8b')) {
+    return GROQ_API_KEY_2;
+  }
+  return GROQ_API_KEY;
+};
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
@@ -84,7 +95,7 @@ const callGeminiChat = async (finalMessages) => {
 };
 
 const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL) => {
-  const apiKey = modelId === GROQ_LIGHT_MODEL ? GROQ_API_KEY_2 : GROQ_API_KEY;
+  const apiKey = getGroqApiKey(modelId);
   if (!apiKey) {
     return await callGeminiChat([{ role: 'user', content: prompt }]);
   }
@@ -308,7 +319,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
   const { finalMessages } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex, selectedPatientId });
 
   const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
-  const apiKey = selectedModel === GROQ_LIGHT_MODEL ? GROQ_API_KEY_2 : GROQ_API_KEY;
+  const apiKey = getGroqApiKey(selectedModel);
 
   if (!apiKey) {
     return await callGeminiChat(finalMessages);
@@ -350,7 +361,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
           response_format: { type: 'json_object' }
         }, {
           headers: {
-            'Authorization': `Bearer ${GROQ_API_KEY_2}`,
+            'Authorization': `Bearer ${getGroqApiKey(GROQ_LIGHT_MODEL)}`,
             'Content-Type': 'application/json'
           }
         });
@@ -460,7 +471,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   });
 
   const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
-  const apiKey = selectedModel === GROQ_LIGHT_MODEL ? GROQ_API_KEY_2 : GROQ_API_KEY;
+  const apiKey = getGroqApiKey(selectedModel);
 
   if (!apiKey) {
     // Fallback to non-streaming Gemini chat if Groq is missing
