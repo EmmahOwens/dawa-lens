@@ -18,6 +18,36 @@ import {
   LucideIcon,
 } from "@/lib/icons";
 
+/** Maps DawaGPT custom/alias routes to actual application page routes. */
+const GPT_ROUTE_MAP: Record<string, string> = {
+  "/dashboard": "/",
+  "/home": "/",
+  "/reminders": "/reminders",
+  "/medications": "/reminders",
+  "/medication-info": "/search",
+  "/search": "/search",
+  "/reminders/new": "/reminders/new",
+  "/new-reminder": "/reminders/new",
+  "/add-reminder": "/reminders/new",
+  "/history": "/history",
+  "/logs": "/history",
+  "/interactions": "/interactions",
+  "/safety": "/interactions",
+  "/family": "/family",
+  "/family-hub": "/family",
+  "/travel": "/travel",
+  "/travel-companion": "/travel",
+  "/wellness": "/wellness",
+  "/wellness-hub": "/wellness",
+  "/report": "/report",
+  "/reports": "/report",
+  "/care-report": "/report",
+  "/settings": "/settings",
+  "/profile": "/settings",
+  "/scan": "/scan",
+  "/scan-medicine": "/scan",
+};
+
 /** Maps known internal routes to an icon for the link chip. */
 const ROUTE_ICONS: Record<string, LucideIcon> = {
   "/": Home,
@@ -97,18 +127,43 @@ export default function MessageRenderer({ text, onNavigate, className }: Message
           ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>,
           li: ({ children }) => <li>{children}</li>,
           strong: ({ children }) => <strong className="font-black text-primary/90">{children}</strong>,
-          a: ({ href, children }) => {
+           a: ({ href, children }) => {
             if (!href) return <span>{children}</span>;
             const label = String(children);
             
             if (href.startsWith("/")) {
-              return (
-                <InternalLinkChip 
-                  to={href} 
-                  label={label} 
-                  onClick={onNavigate} 
-                />
-              );
+              // Resolve the custom route to an actual page route using GPT_ROUTE_MAP
+              const resolvedRoute = GPT_ROUTE_MAP[href] || href;
+              
+              // Whitelist of valid routes existing in the application
+              const validRoutes = [
+                "/",
+                "/reminders",
+                "/reminders/new",
+                "/history",
+                "/interactions",
+                "/family",
+                "/travel",
+                "/wellness",
+                "/report",
+                "/settings",
+                "/scan",
+                "/search",
+                "/results"
+              ];
+              
+              if (validRoutes.includes(resolvedRoute)) {
+                return (
+                  <InternalLinkChip 
+                    to={resolvedRoute} 
+                    label={label} 
+                    onClick={onNavigate} 
+                  />
+                );
+              }
+              
+              // If it's an invalid internal route, render it as plain text to prevent broken links
+              return <span className="font-medium text-foreground">{label}</span>;
             }
             return <ExternalLinkChip href={href} label={label} />;
           },

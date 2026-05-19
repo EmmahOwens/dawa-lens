@@ -589,7 +589,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
        Always provide times as a comma-separated string in the "time" field.
     4. For ADD_REMINDER, if medicine exists, use UPDATE_REMINDER instead.
     5. ALWAYS include "patientId" in action payloads. Use the "Active Profile (Target)" ID above unless another person is mentioned.
-    6. Include clickable chips for navigation: [Label](/route) (e.g. [/dashboard, /reminders, /family, /wellness, /scan]).
+    6. Include clickable chips for navigation using these supported routes: [Dashboard / Home](/ or /dashboard or /home), [Medication Reminders](/reminders or /medications), [Add Reminder](/reminders/new or /new-reminder or /add-reminder), [History/Logs](/history or /logs), [Lifestyle/Interactions](/interactions or /safety), [Family Hub](/family or /family-hub), [Travel Companion](/travel or /travel-companion), [Wellness Hub](/wellness or /wellness-hub), [Care Report](/report or /care-report), [Settings/Profile](/settings or /profile), [Scan Medicine](/scan or /scan-medicine). These custom routes are dynamically translated by the frontend to their corresponding pages.
     7. Proactively suggest regional foods (Matooke, Avocado, G-nuts).
     8. Use Markdown for formatting (bold, italics, lists, tables) to make information clear and readable.
 
