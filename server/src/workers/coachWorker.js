@@ -23,7 +23,7 @@ export const runDailyCoachAnalysis = async () => {
       const medicines = await medicineService.getAllMedicines(userId);
       const doseLogs = await doseLogService.getDoseLogs(userId, null, 20); // Last 20 logs are enough for pattern detection
       
-      const coachAdvice = await aiService.getCoachAdvice(doseLogs, medicines, userData.name);
+      const coachAdvice = await aiService.getCoachAdvice(doseLogs, medicines, userData.name, 'low');
       
       // If AI detects a significant pattern/suggestion
       if (coachAdvice.patterns && coachAdvice.patterns.length > 0) {
@@ -49,9 +49,6 @@ export const runDailyCoachAnalysis = async () => {
         
         console.log(`✅ Coach suggestion generated for user ${userId}`);
       }
-      
-      // Throttle: Wait 2 seconds before next user to avoid AI rate limits
-      await sleep(2000);
     } catch (err) {
       console.error(`❌ Coach analysis failed for user ${userId}:`, err.message);
     }

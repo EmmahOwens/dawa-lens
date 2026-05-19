@@ -27,7 +27,7 @@ export const runWeeklyReports = async () => {
       const wellnessLogs = await wellnessService.getWellnessLogs(userId, null, 50);
       
       // 2. Generate Insight via AI
-      const insight = await aiService.getWellnessInsight(doseLogs, wellnessLogs, medicines);
+      const insight = await aiService.getWellnessInsight(doseLogs, wellnessLogs, medicines, 'low');
       
       // 3. Save to Firestore
       const reportData = {
@@ -47,9 +47,6 @@ export const runWeeklyReports = async () => {
       });
       
       console.log(`✅ Weekly report generated for user ${userId}`);
-      
-      // Throttle: Wait 2 seconds before next user to avoid AI rate limits
-      await sleep(2000);
     } catch (err) {
       console.error(`❌ Failed to generate report for user ${userId}:`, err.message);
     }

@@ -7,6 +7,7 @@ import * as reminderService from './reminderService.js';
 import * as doseLogService from './doseLogService.js';
 import * as patientService from './patientService.js';
 import * as wellnessService from './wellnessService.js';
+import { rateLimitManager } from './rateLimitManager.js';
 
 dotenv.config();
 
@@ -60,7 +61,7 @@ const EMERGENCY_RESPONSE = {
 /**
  * Fallback chat with Gemini (Standard JSON response)
  */
-const callGeminiChat = async (finalMessages) => {
+const callGeminiChat = async (finalMessages, priority = 'high') => {
   if (!GEMINI_API_KEY) {
     throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
   }
@@ -73,7 +74,7 @@ const callGeminiChat = async (finalMessages) => {
       parts: [{ text: m.content }]
     }));
 
-  try {
+  const fn = async () => {
     const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       contents,
       systemInstruction: {
@@ -88,25 +89,34 @@ const callGeminiChat = async (finalMessages) => {
     const parsed = JSON.parse(sanitizeJson(text));
     parsed.source = "Gemini (Fallback)";
     return parsed;
+  };
+
+  try {
+    return await rateLimitManager.enqueue(fn, 'gemini', finalMessages, priority);
   } catch (err) {
     console.error("Gemini Fallback Error:", err.message);
     throw new AppError('Both AI engines are currently unavailable. Please try again.', 503);
   }
 };
 
-const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL) => {
+/**
+ * Standard chat completion call to Groq routed via rate limit queue
+ */
+const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GROQ_MODEL, priority = 'high') => {
   const apiKey = getGroqApiKey(modelId);
   if (!apiKey) {
-    return await callGeminiChat([{ role: 'user', content: prompt }]);
+    return await callGeminiChat(messages, priority);
   }
 
-  try {
+  const modelKey = modelId === GROQ_MODEL ? 'groq-70b' : 'groq-8b';
+
+  const fn = async () => {
     const payload = {
       model: modelId,
-      messages: [{ role: 'user', content: prompt }]
+      messages
     };
-    if (isJson) {
-      payload.response_format = { type: 'json_object' };
+    if (responseFormat) {
+      payload.response_format = responseFormat;
     }
 
     const response = await axios.post(GROQ_API_URL, payload, {
@@ -121,15 +131,28 @@ const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL) => {
       throw new AppError('AI returned an empty response.', 502);
     }
 
-    return isJson ? JSON.parse(sanitizeJson(text)) : text;
+    return responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
+  };
+
+  try {
+    return await rateLimitManager.enqueue(fn, modelKey, messages, priority);
   } catch (err) {
     console.warn("Groq failed, trying Gemini fallback...", err.message);
-    return await callGeminiChat([{ role: 'user', content: prompt }]);
+    return await callGeminiChat(messages, priority);
   }
 };
 
+const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 'high') => {
+  return await callGroqChat(
+    [{ role: 'user', content: prompt }],
+    isJson ? { type: 'json_object' } : null,
+    modelId,
+    priority
+  );
+};
 
-export const getCoachAdvice = async (logs, medicines, userName) => {
+
+export const getCoachAdvice = async (logs, medicines, userName, priority = 'high') => {
   const prompt = `
     You are the "Dawa-Lens Adherence Coach", a supportive health assistant for users in East Africa.
     User Name: ${userName || 'User'}
@@ -149,10 +172,10 @@ export const getCoachAdvice = async (logs, medicines, userName) => {
     Respond in JSON format:
     { "advice": "text (Markdown formatted)", "patterns": ["list"], "adherenceScore": 0-100 }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
 };
 
-export const checkHolisticSafety = async (medicines, lifestyleFactors) => {
+export const checkHolisticSafety = async (medicines, lifestyleFactors, priority = 'high') => {
   const prompt = `
     You are "Dawa-Lens Holistic Safety Engine".
     Medication List: ${JSON.stringify(medicines.map(m => m.name + (m.genericName ? ` (${m.genericName})` : '')))}
@@ -165,10 +188,10 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors) => {
     Respond in JSON format:
     { "interactions": [{ "factor": "...", "risk": "...", "explanation": "text (Markdown)", "advice": "text (Markdown)" }] }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
 };
 
-export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }) => {
+export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }, priority = 'high') => {
   const prompt = `
     You are the "Dawa-Lens Global Travel Companion".
     Travel: ${currentCity || 'Home'} (${homeTimezone}) to ${destination} (${targetTimezone || 'Unknown'}).
@@ -199,10 +222,10 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
       "healthRisks": "text (Markdown formatted)"
     }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
 };
 
-export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
+export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines, priority = 'high') => {
   const prompt = `
     You are the "Dawa-Lens Medical Data Analyst".
     
@@ -226,10 +249,10 @@ export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines) => {
       "correlationScore": 85
     }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
 };
 
-export const checkMealSafety = async (medicines, mealDescription) => {
+export const checkMealSafety = async (medicines, mealDescription, priority = 'high') => {
   const prompt = `
     You are "Dawa-Lens Meal Safety Checker".
     Medicines: ${JSON.stringify(medicines.map(m => m.name + (m.genericName ? ` (${m.genericName})` : '')))}
@@ -242,10 +265,10 @@ export const checkMealSafety = async (medicines, mealDescription) => {
     Respond in JSON format:
     { "risk": "...", "verdict": "text (Markdown)", "explanation": "text (Markdown)" }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
 };
 
-export const getNutritionalGuidance = async (medicines) => {
+export const getNutritionalGuidance = async (medicines, priority = 'high') => {
   const prompt = `
     You are the "Dawa-Lens Nutritional Guard".
     Active Medications: ${JSON.stringify(medicines.map(m => ({ name: m.name, generic: m.genericName })))}
@@ -268,7 +291,7 @@ export const getNutritionalGuidance = async (medicines) => {
       "timingAdvice": "text (Markdown)"
     }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
 };
 
 /**
@@ -309,7 +332,7 @@ const isComplexTask = (text) => {
   return (isActionRequest || isDataRequest || text.length > 300) && !isHowToQuery;
 };
 
-export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }) => {
+export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }, priority = 'high') => {
   const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
   if (detectEmergency(lastUserMsg)) {
     return EMERGENCY_RESPONSE;
@@ -322,25 +345,11 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
   const apiKey = getGroqApiKey(selectedModel);
 
   if (!apiKey) {
-    return await callGeminiChat(finalMessages);
+    return await callGeminiChat(finalMessages, priority);
   }
 
   try {
-    const response = await axios.post(GROQ_API_URL, {
-      model: selectedModel,
-      messages: finalMessages,
-      response_format: { type: 'json_object' }
-    }, {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const text = response.data?.choices?.[0]?.message?.content;
-    if (!text) throw new AppError('AI returned an empty response.', 502);
-    
-    let result = JSON.parse(sanitizeJson(text));
+    let result = await callGroqChat(finalMessages, { type: 'json_object' }, selectedModel, priority);
 
     // --- AUTONOMOUS AGENT EXECUTION LOOP ---
     if (result.action && result.action.type && isComplex) {
@@ -351,26 +360,13 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
         // Feed the result back to AI for a final human-like confirmation
         const feedbackMessages = [
           ...finalMessages,
-          { role: 'assistant', content: text },
+          { role: 'assistant', content: JSON.stringify(result) },
           { role: 'system', content: `ACTION_RESULT: ${JSON.stringify(actionResult)}. Now confirm this to the user in a warm, human way.` }
         ];
 
-        const finalResponse = await axios.post(GROQ_API_URL, {
-          model: GROQ_LIGHT_MODEL, // Light model is fine for confirmation
-          messages: feedbackMessages,
-          response_format: { type: 'json_object' }
-        }, {
-          headers: {
-            'Authorization': `Bearer ${getGroqApiKey(GROQ_LIGHT_MODEL)}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        const finalText = finalResponse.data?.choices?.[0]?.message?.content;
-        if (finalText) {
-          result = JSON.parse(sanitizeJson(finalText));
-          result.actionExecuted = true;
-        }
+        const feedbackResponse = await callGroqChat(feedbackMessages, { type: 'json_object' }, GROQ_LIGHT_MODEL, priority);
+        result = feedbackResponse;
+        result.actionExecuted = true;
       } catch (actionErr) {
         console.error("Agent Action Execution Failed:", actionErr.message);
         result.text += `\n\n(Note: I tried to perform that action but encountered an error: ${actionErr.message})`;
@@ -380,7 +376,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     return result;
   } catch (err) {
     console.warn("Groq Chat failed, falling back to Gemini...", err.message);
-    return await callGeminiChat(finalMessages);
+    return await callGeminiChat(finalMessages, priority);
   }
 };
 
@@ -444,7 +440,7 @@ async function executeAiAction(action, userId, userMedicines = [], selectedPatie
  * Streaming version of Dawa-GPT.
  * Returns the raw axios stream from Groq.
  */
-export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }) => {
+export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }, priority = 'high') => {
   const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
   if (detectEmergency(lastUserMsg)) {
     return new ReadableStream({
@@ -475,7 +471,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
 
   if (!apiKey) {
     // Fallback to non-streaming Gemini chat if Groq is missing
-    const geminiResp = await callGeminiChat(finalMessages);
+    const geminiResp = await callGeminiChat(finalMessages, priority);
     return new ReadableStream({
       start(controller) {
         const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
@@ -488,22 +484,26 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   }
 
   try {
-    const response = await axios.post(GROQ_API_URL, {
-      model: selectedModel,
-      messages: finalMessages,
-      stream: true
-    }, {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      responseType: 'stream'
-    });
+    const fn = async () => {
+      const response = await axios.post(GROQ_API_URL, {
+        model: selectedModel,
+        messages: finalMessages,
+        stream: true
+      }, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        responseType: 'stream'
+      });
+      return response.data;
+    };
 
-    return response.data;
+    const modelKey = selectedModel === GROQ_MODEL ? 'groq-70b' : 'groq-8b';
+    return await rateLimitManager.enqueue(fn, modelKey, finalMessages, priority);
   } catch (err) {
     console.warn("Groq Stream failed, falling back to Gemini...", err.message);
-    const geminiResp = await callGeminiChat(finalMessages);
+    const geminiResp = await callGeminiChat(finalMessages, priority);
     return new ReadableStream({
       start(controller) {
         const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
@@ -621,7 +621,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
  * Generate a personalized emotional reflection from a single Daily Vibe + Body Scan check-in.
  * Called immediately after the user taps "Secure Daily Reflection" in the Wellness Hub.
  */
-export const getEmotionReflection = async (mood, energy, symptoms, medicines = []) => {
+export const getEmotionReflection = async (mood, energy, symptoms, medicines = [], priority = 'high') => {
   const moodLabels = { 1: 'Very Low', 2: 'Low', 3: 'Neutral', 4: 'Good', 5: 'Great' };
   const moodLabel = moodLabels[mood] || 'Unknown';
   const energyLabel = moodLabels[energy] || 'Unknown';
@@ -660,7 +660,7 @@ export const getEmotionReflection = async (mood, energy, symptoms, medicines = [
     }
   `;
 
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
 };
 
 function handleAiError(err) {
