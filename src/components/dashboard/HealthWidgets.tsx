@@ -34,11 +34,11 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
       .filter(
         (l) =>
           l.type === "symptom" &&
-          (l.data as any).mood != null &&
+          l.data?.mood != null &&
           new Date(l.timestamp).toDateString() === today
       )
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    return todaySymptomLogs.length > 0 ? Number((todaySymptomLogs[0].data as any).mood) : null;
+    return todaySymptomLogs.length > 0 ? (todaySymptomLogs[0].data?.mood != null ? Number(todaySymptomLogs[0].data.mood) : null) : null;
   }, [wellnessLogs, today]);
 
   const activeMoodCfg = latestMood != null ? MOOD_OPTIONS.find((m) => m.value === latestMood) : null;

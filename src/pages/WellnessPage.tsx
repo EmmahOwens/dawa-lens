@@ -21,9 +21,9 @@ function useEmotionSparkline(wellnessLogs: ReturnType<typeof useApp>["wellnessLo
     );
     if (dayLogs.length === 0) return { date, mood: null, energy: null };
     const avgMood =
-      dayLogs.reduce((acc, l) => acc + (Number((l.data as any).mood) || 0), 0) / dayLogs.length;
+      dayLogs.reduce((acc, l) => acc + (Number(l.data?.mood) || 0), 0) / dayLogs.length;
     const avgEnergy =
-      dayLogs.reduce((acc, l) => acc + (Number((l.data as any).energy) || 0), 0) / dayLogs.length;
+      dayLogs.reduce((acc, l) => acc + (Number(l.data?.energy) || 0), 0) / dayLogs.length;
     return { date, mood: avgMood, energy: avgEnergy };
   });
 }
@@ -586,14 +586,14 @@ export default function WellnessPage() {
             </div>
           ) : (
             wellnessLogs.slice(0, 10).map((log) => {
-              const logMood = log.type === "symptom" ? Number((log.data as any).mood) : null;
-              const logEnergy = log.type === "symptom" ? Number((log.data as any).energy) : null;
-              const logSymptoms = log.type === "symptom" ? ((log.data as any).symptoms as string[] | undefined) : null;
+              const logMood = log.type === "symptom" ? (log.data?.mood != null ? Number(log.data.mood) : null) : null;
+              const logEnergy = log.type === "symptom" ? (log.data?.energy != null ? Number(log.data.energy) : null) : null;
+              const logSymptoms = log.type === "symptom" ? (log.data?.symptoms as string[] | undefined) : null;
               const moodEmoji =
                 logMood === 5 ? "💎" : logMood === 4 ? "🙂" : logMood === 3 ? "😐" : logMood === 2 ? "😕" : logMood === 1 ? "😔" : null;
 
               const logAiReflection = log.type === "symptom"
-                ? (log.data as any).aiReflection as { reflection: string; affirmation: string; tip: string } | undefined
+                ? (log.data?.aiReflection as { reflection: string; affirmation: string; tip: string } | undefined)
                 : undefined;
 
               return (
@@ -624,7 +624,7 @@ export default function WellnessPage() {
                       </div>
                       <p className="text-xs font-semibold text-muted-foreground leading-relaxed">
                         {log.type === "food"
-                          ? String((log.data as any).meal ?? "")
+                          ? String(log.data?.meal ?? "")
                           : logSymptoms && logSymptoms.length > 0
                             ? `Feeling: ${logSymptoms.join(", ")}`
                             : logMood != null

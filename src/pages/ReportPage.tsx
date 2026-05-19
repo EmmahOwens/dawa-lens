@@ -88,13 +88,13 @@ export default function ReportPage() {
 
     if (logsLast7.length === 0) return null;
 
-    const avgMood = logsLast7.reduce((acc, l) => acc + (Number((l.data as any).mood) || 0), 0) / logsLast7.length;
-    const avgEnergy = logsLast7.reduce((acc, l) => acc + (Number((l.data as any).energy) || 0), 0) / logsLast7.length;
+    const avgMood = logsLast7.reduce((acc, l) => acc + (Number(l.data?.mood) || 0), 0) / logsLast7.length;
+    const avgEnergy = logsLast7.reduce((acc, l) => acc + (Number(l.data?.energy) || 0), 0) / logsLast7.length;
 
     // Tally symptom frequency
     const symptomCount: Record<string, number> = {};
     logsLast7.forEach(l => {
-      const syms = (l.data as any).symptoms as string[] | undefined;
+      const syms = l.data?.symptoms as string[] | undefined;
       if (syms) syms.forEach(s => { symptomCount[s] = (symptomCount[s] || 0) + 1; });
     });
     const topSymptoms = Object.entries(symptomCount)

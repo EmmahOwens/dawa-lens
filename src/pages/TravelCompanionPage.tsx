@@ -245,7 +245,7 @@ export default function TravelCompanionPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Equivalents */}
-              {advice.equivalents && advice.equivalents.length > 0 && (
+              {Array.isArray(advice.equivalents) && advice.equivalents.length > 0 && (
                 <motion.div variants={item} className="md:col-span-2 space-y-4">
                   <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-2 flex items-center gap-2">
                     <Pill size={14} className="text-primary" /> Local Pharmacy Equivalents

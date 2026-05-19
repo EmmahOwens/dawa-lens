@@ -62,7 +62,7 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
 
   if (!insight) return null;
 
-  const cfg = STATUS_CONFIG[insight.status];
+  const cfg = STATUS_CONFIG[insight.status] || STATUS_CONFIG.stable;
   const StatusIcon = cfg.icon;
   const scorePercent = Math.max(0, Math.min(100, insight.score));
 

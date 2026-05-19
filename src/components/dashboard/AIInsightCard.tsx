@@ -28,10 +28,10 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
 
     const latest = todayLogs[0].data as any;
     return {
-      mood: latest.mood != null ? Number(latest.mood) : null,
-      energy: latest.energy != null ? Number(latest.energy) : null,
+      mood: latest?.mood != null ? Number(latest.mood) : null,
+      energy: latest?.energy != null ? Number(latest.energy) : null,
       // Reuse saved AI reflection from the most recent log if it exists
-      latestReflection: latest.aiReflection ?? null,
+      latestReflection: latest?.aiReflection ?? null,
     };
   }, [wellnessLogs, today]);
 

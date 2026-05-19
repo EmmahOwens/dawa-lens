@@ -13,7 +13,7 @@ export async function preloadOCRModel() {
   
   try {
     const worker = await createWorker('eng', 1, {
-      logger: m => process.env.NODE_ENV === 'development' ? console.log('Tesseract: ', m) : null
+      logger: m => import.meta.env.DEV ? console.log('Tesseract: ', m) : null
     });
     tesseractWorker = worker;
     console.log("OCR Model preloaded successfully.");
