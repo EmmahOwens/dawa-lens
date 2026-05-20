@@ -1,6 +1,7 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
 import AppError from '../utils/AppError.js';
+import { rateLimitManager } from './rateLimitManager.js';
 
 dotenv.config();
 
@@ -174,15 +175,19 @@ const identifyWithGroq = async (cleanBase64, mimeType, patientAge) => {
     response_format: { type: 'json_object' },
   };
 
-  let response;
-  try {
-    response = await axios.post(GROQ_API_URL, requestBody, {
+  const fn = async () => {
+    return await axios.post(GROQ_API_URL, requestBody, {
       headers: {
         Authorization: `Bearer ${getGroqApiKey(GROQ_MODEL)}`,
         'Content-Type': 'application/json',
       },
       timeout: 30000,
     });
+  };
+
+  let response;
+  try {
+    response = await rateLimitManager.enqueue(fn, 'groq-scout', requestBody.messages, 'high');
   } catch (err) {
     if (err.response) {
       const status = err.response.status;
@@ -259,13 +264,18 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge, modelName =
     },
   };
 
-  let response;
-  try {
-    response = await axios.post(
+  const fn = async () => {
+    return await axios.post(
       `${apiUrl}?key=${GEMINI_API_KEY}`,
       requestBody,
       { timeout: 30000 }
     );
+  };
+
+  let response;
+  try {
+    const modelKey = modelName === GEMINI_PRO_MODEL ? 'gemini-pro' : 'gemini';
+    response = await rateLimitManager.enqueue(fn, modelKey, requestBody.contents, 'high');
   } catch (err) {
     if (err.response) {
       const status    = err.response.status;

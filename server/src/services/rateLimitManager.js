@@ -20,11 +20,23 @@ class RateLimitManager {
         rpd: 14400,
         tpd: 1000000,
       },
+      'groq-scout': {
+        rpm: 30,
+        tpm: 15000,
+        rpd: 1000,
+        tpd: 500000,
+      },
       'gemini': {
         rpm: 15,
         tpm: 500000,
         rpd: 1500,
         tpd: 5000000,
+      },
+      'gemini-pro': {
+        rpm: 15,
+        tpm: 360000,
+        rpd: 1000,
+        tpd: 3000000,
       }
     };
 
@@ -32,15 +44,18 @@ class RateLimitManager {
     this.counters = {
       'groq-70b': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 },
       'groq-8b': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 },
-      'gemini': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 }
+      'groq-scout': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 },
+      'gemini': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 },
+      'gemini-pro': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 }
     };
 
     // Last reset times
-    this.lastMinuteReset = { 'groq-70b': Date.now(), 'groq-8b': Date.now(), 'gemini': Date.now() };
-    this.lastDayReset = { 'groq-70b': Date.now(), 'groq-8b': Date.now(), 'gemini': Date.now() };
+    const now = Date.now();
+    this.lastMinuteReset = { 'groq-70b': now, 'groq-8b': now, 'groq-scout': now, 'gemini': now, 'gemini-pro': now };
+    this.lastDayReset = { 'groq-70b': now, 'groq-8b': now, 'groq-scout': now, 'gemini': now, 'gemini-pro': now };
 
     // Cooldown periods (timestamps when blocked until due to 429)
-    this.cooldownUntil = { 'groq-70b': 0, 'groq-8b': 0, 'gemini': 0 };
+    this.cooldownUntil = { 'groq-70b': 0, 'groq-8b': 0, 'groq-scout': 0, 'gemini': 0, 'gemini-pro': 0 };
 
     this.isProcessing = false;
   }
@@ -129,18 +144,64 @@ class RateLimitManager {
     this.cooldownUntil[modelKey] = Date.now() + durationMs;
   }
 
-  // Estimate tokens in prompt/messages
+  // Estimate tokens in prompt/messages (handles text and counts/weights base64 image data)
   estimateTokens(messages, defaultMaxTokens = 800) {
     let text = '';
-    if (typeof messages === 'string') {
-      text = messages;
-    } else if (Array.isArray(messages)) {
-      text = messages.map(m => `${m.role || ''} ${m.content || ''}`).join(' ');
+    let imageCount = 0;
+
+    const inspectPart = (part) => {
+      if (typeof part === 'string') {
+        if (part.startsWith('data:image/') && part.includes(';base64,')) {
+          imageCount++;
+          return;
+        }
+        if (part.length > 5000 && /^[A-Za-z0-9+/=]+$/.test(part.substring(0, 100))) {
+          imageCount++;
+          return;
+        }
+        text += part;
+      } else if (part && typeof part === 'object') {
+        if (part.type === 'text') {
+          text += part.text || '';
+        } else if (part.type === 'image_url') {
+          imageCount++;
+        } else if (part.inlineData || part.inline_data) {
+          imageCount++;
+        } else if (part.text) {
+          text += part.text;
+        } else {
+          for (const key in part) {
+            inspectPart(part[key]);
+          }
+        }
+      }
+    };
+
+    if (Array.isArray(messages)) {
+      messages.forEach(m => {
+        if (m.content) {
+          if (Array.isArray(m.content)) {
+            m.content.forEach(inspectPart);
+          } else {
+            inspectPart(m.content);
+          }
+        } else if (m.parts) {
+          if (Array.isArray(m.parts)) {
+            m.parts.forEach(inspectPart);
+          } else {
+            inspectPart(m.parts);
+          }
+        } else {
+          inspectPart(m);
+        }
+      });
     } else {
-      text = JSON.stringify(messages) || '';
+      inspectPart(messages);
     }
+
     const promptTokens = Math.ceil(text.length / 3.7);
-    return promptTokens + defaultMaxTokens;
+    const imageTokens = imageCount * 1000; // Standard image token weight
+    return promptTokens + imageTokens + defaultMaxTokens;
   }
 
   // Enqueue a request
@@ -176,41 +237,43 @@ class RateLimitManager {
     this.isProcessing = true;
 
     try {
-      while (this.highPriorityQueue.length > 0 || this.lowPriorityQueue.length > 0) {
-        let item = null;
-        let isHigh = false;
+      let madeProgress = true;
+      while (madeProgress && (this.highPriorityQueue.length > 0 || this.lowPriorityQueue.length > 0)) {
+        madeProgress = false;
 
-        if (this.highPriorityQueue.length > 0) {
-          item = this.highPriorityQueue[0];
-          isHigh = true;
-        } else if (this.lowPriorityQueue.length > 0) {
-          item = this.lowPriorityQueue[0];
-          isHigh = false;
+        // 1. Scan High Priority Queue
+        for (let i = 0; i < this.highPriorityQueue.length; i++) {
+          const item = this.highPriorityQueue[i];
+          const decision = this.canMakeRequest(item.modelKey, item.estimatedTokens);
+          if (decision.allowed) {
+            this.highPriorityQueue.splice(i, 1);
+            this.reserveBudget(item.modelKey, item.estimatedTokens);
+            this.executeRequest(item);
+            madeProgress = true;
+            break; // Restart loop to prioritize next high-priority item
+          }
         }
 
-        if (!item) break;
+        if (madeProgress) continue;
 
-        const { modelKey, estimatedTokens } = item;
-        const decision = this.canMakeRequest(modelKey, estimatedTokens);
+        // 2. Scan Low Priority Queue
+        for (let i = 0; i < this.lowPriorityQueue.length; i++) {
+          const item = this.lowPriorityQueue[i];
+          const decision = this.canMakeRequest(item.modelKey, item.estimatedTokens);
+          if (decision.allowed) {
+            this.lowPriorityQueue.splice(i, 1);
+            this.reserveBudget(item.modelKey, item.estimatedTokens);
+            this.executeRequest(item);
+            madeProgress = true;
+            break; // Restart loop to check high-priority queue first
+          }
+        }
 
-        if (!decision.allowed) {
-          // Budget not available, sleep briefly and try again
+        // 3. If nothing could be run, sleep briefly to prevent CPU spinning and allow cooldowns to decay
+        if (!madeProgress && (this.highPriorityQueue.length > 0 || this.lowPriorityQueue.length > 0)) {
           await new Promise(resolve => setTimeout(resolve, 200));
-          continue;
+          madeProgress = true; // Set to true to allow another iteration
         }
-
-        // Shift item from queue since we are dispatching it
-        if (isHigh) {
-          this.highPriorityQueue.shift();
-        } else {
-          this.lowPriorityQueue.shift();
-        }
-
-        // Pre-emptively reserve budget
-        this.reserveBudget(modelKey, estimatedTokens);
-
-        // Execute asynchronous request in the background
-        this.executeRequest(item);
       }
     } finally {
       this.isProcessing = false;
@@ -283,7 +346,9 @@ class RateLimitManager {
       cooldowns: {
         'groq-70b': Math.max(0, this.cooldownUntil['groq-70b'] - Date.now()),
         'groq-8b': Math.max(0, this.cooldownUntil['groq-8b'] - Date.now()),
-        'gemini': Math.max(0, this.cooldownUntil['gemini'] - Date.now())
+        'groq-scout': Math.max(0, this.cooldownUntil['groq-scout'] - Date.now()),
+        'gemini': Math.max(0, this.cooldownUntil['gemini'] - Date.now()),
+        'gemini-pro': Math.max(0, this.cooldownUntil['gemini-pro'] - Date.now())
       }
     };
   }

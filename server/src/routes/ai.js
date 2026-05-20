@@ -1,17 +1,9 @@
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import * as aiService from '../services/aiService.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { heavyAiLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
-
-const heavyAiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // Limit each IP to 15 requests per windowMs
-  message: { error: 'Too many requests to heavy AI features. Please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 /**
  * AI Behavioral Adherence Coach
