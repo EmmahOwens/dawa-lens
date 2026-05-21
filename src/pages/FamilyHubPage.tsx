@@ -248,11 +248,10 @@ export default function FamilyHubPage() {
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                {selectedPatientId ? (
-                   patients.find(p => p.id === selectedPatientId)?.age && (patients.find(p => p.id === selectedPatientId)?.age || 0) < 12 ? <Baby size={32} /> : <UserRound size={32} />
-                ) : (
-                   <UserRound size={32} />
-                )}
+                {(() => {
+                  const pat = patients.find(p => p.id === selectedPatientId);
+                  return pat && typeof pat.age === "number" && pat.age < 12 ? <Baby size={32} /> : <UserRound size={32} />;
+                })()}
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Managing Profile</p>
@@ -443,7 +442,7 @@ export default function FamilyHubPage() {
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
                     selectedPatientId === patient.id ? "bg-primary text-primary-foreground shadow-lg" : "bg-secondary text-muted-foreground"
                   }`}>
-                    {patient.age && patient.age < 12 ? <Baby size={28} /> : <UserRound size={28} />}
+                    {typeof patient.age === "number" && patient.age < 12 ? <Baby size={28} /> : <UserRound size={28} />}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">

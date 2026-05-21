@@ -50,7 +50,9 @@ export function useAIActions() {
             notes: payload.notes || "",
             enabled: true,
             color: payload.color || "blue",
-            icon: payload.icon || "pill"
+            icon: payload.icon || "pill",
+            patientId: payload.patientId || undefined,
+            patientName: payload.patientName || undefined
           });
           toast({
             title: "✅ Reminder added",
@@ -99,6 +101,7 @@ export function useAIActions() {
             dose: payload.dose,
             scheduledTime: payload.scheduledTime || new Date().toISOString(),
             action: payload.action || "taken",
+            patientId: payload.patientId || undefined
           });
           toast({
             title: "✅ Dose logged",

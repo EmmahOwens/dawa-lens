@@ -222,7 +222,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(() => loadLocal("med_selected_patient_id", null));
+
+  useEffect(() => {
+    if (selectedPatientId === null) {
+      localStorage.removeItem("med_selected_patient_id");
+    } else {
+      localStorage.setItem("med_selected_patient_id", JSON.stringify(selectedPatientId));
+    }
+  }, [selectedPatientId]);
   const [isProfessionalMode, setIsProfessionalModeState] = useState(() => loadLocal("med_professional_mode", false));
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(() => loadLocal("med_has_seen_welcome", false));
@@ -399,14 +407,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // --- Local mode: one-shot load from IndexedDB ---
     if (storageMode === "local") {
       const loadLocal = async () => {
-        const [pMeds, pRems, pLogs] = await Promise.all([
+        const [pMeds, pRems, pLogs, pPatients] = await Promise.all([
           localPersistence.medicines.getAll(),
           localPersistence.reminders.getAll(),
           localPersistence.doseLogs.getAll(),
+          localPersistence.patients.getAll(),
         ]);
         setMedicines(pMeds);
         setReminders(pRems);
         setDoseLogs(pLogs);
+        setPatients(pPatients);
         setIsDataLoading(false);
       };
       loadLocal();
@@ -639,7 +649,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
     let newLog: DoseLog;
     const reminder = reminders.find(r => r.id === log.reminderId);
-    const effectivePatientId = reminder?.patientId ?? selectedPatientId ?? null;
+    const effectivePatientId = log.patientId ?? reminder?.patientId ?? selectedPatientId ?? null;
 
     if (storageMode === "local") {
       newLog = await localPersistence.doseLogs.create({
@@ -716,7 +726,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const direction = allLate ? "late" : "early";
           toast({
             title: "💡 Smart Schedule Suggestion",
-            description: `You've taken ${reminder.medicineName} ~${Math.abs(avgOffset)}m ${direction} 3 times in a row. Consider updating the reminder to ${suggestedTimes.join(", ")} in the Reminders tab.`,
+            description: reminder.patientName
+              ? `${reminder.patientName} has taken ${reminder.medicineName} ~${Math.abs(avgOffset)}m ${direction} 3 times in a row. Consider updating their reminder to ${suggestedTimes.join(", ")} in the Reminders tab.`
+              : `You've taken ${reminder.medicineName} ~${Math.abs(avgOffset)}m ${direction} 3 times in a row. Consider updating the reminder to ${suggestedTimes.join(", ")} in the Reminders tab.`,
           });
         }
       }
@@ -759,15 +771,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const syncLocalToCloud = useCallback(async () => {
     if (!currentUserId || storageMode === "local") return;
 
-    const [localMeds, localRems, localLogs] = await Promise.all([
+    const [localMeds, localRems, localLogs, localPatients] = await Promise.all([
       localPersistence.medicines.getAll(),
       localPersistence.reminders.getAll(),
       localPersistence.doseLogs.getAll(),
+      localPersistence.patients.getAll(),
     ]);
 
-    if (localMeds.length === 0 && localRems.length === 0 && localLogs.length === 0) return;
+    if (localMeds.length === 0 && localRems.length === 0 && localLogs.length === 0 && localPatients.length === 0) return;
 
     try {
+      // 0. Sync Patients to Firestore and map local IDs to Firestore IDs
+      const patientIdMap: Record<string, string> = {};
+      for (const pat of localPatients) {
+        const { id, createdAt, managedBy, ...data } = pat;
+        const patientData = sanitizeFirestoreData({
+          ...data,
+          managedBy: currentUserId,
+          createdAt: createdAt || new Date().toISOString()
+        });
+        const docRef = await addDoc(collection(db, "patients"), patientData);
+        patientIdMap[id] = docRef.id;
+      }
+
       // 1. Sync Medicines to Firestore
       const syncedMedNames = new Set(medicines.map(m => m.name.toLowerCase()));
       for (const med of localMeds) {
@@ -777,21 +803,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         syncedMedNames.add(med.name.toLowerCase());
         const { id, addedAt, ...data } = med;
-        const medData = sanitizeFirestoreData({ ...data, userId: currentUserId, addedAt: new Date().toISOString() });
+        const mappedPatientId = data.patientId ? (patientIdMap[data.patientId] || data.patientId) : null;
+        const medData = sanitizeFirestoreData({
+          ...data,
+          patientId: mappedPatientId,
+          userId: currentUserId,
+          addedAt: addedAt || new Date().toISOString()
+        });
         await addDoc(collection(db, "medicines"), medData);
       }
 
       // 2. Sync Reminders to Firestore
       for (const rem of localRems) {
         const { id, createdAt, ...data } = rem;
-        const remData = sanitizeFirestoreData({ ...data, userId: currentUserId, createdAt: new Date().toISOString() });
+        const mappedPatientId = data.patientId ? (patientIdMap[data.patientId] || data.patientId) : null;
+        const remData = sanitizeFirestoreData({
+          ...data,
+          patientId: mappedPatientId,
+          userId: currentUserId,
+          createdAt: createdAt || new Date().toISOString()
+        });
         await addDoc(collection(db, "reminders"), remData);
       }
 
       // 3. Sync Logs to Firestore
       for (const log of localLogs) {
         const { id, actionTime, ...data } = log;
-        const logData = sanitizeFirestoreData({ ...data, userId: currentUserId, actionTime: new Date().toISOString() });
+        const mappedPatientId = data.patientId ? (patientIdMap[data.patientId] || data.patientId) : null;
+        const logData = sanitizeFirestoreData({
+          ...data,
+          patientId: mappedPatientId,
+          userId: currentUserId,
+          actionTime: actionTime || new Date().toISOString()
+        });
         await addDoc(collection(db, "doseLogs"), logData);
       }
 
@@ -800,7 +844,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         storage.removeItem("dawa_local_medicines"),
         storage.removeItem("dawa_local_reminders"),
         storage.removeItem("dawa_local_doselogs"),
+        storage.removeItem("dawa_local_patients"),
       ]);
+
+      if (selectedPatientId && patientIdMap[selectedPatientId]) {
+        setSelectedPatientId(patientIdMap[selectedPatientId]);
+      }
 
       // onSnapshot listeners will auto-update state with the newly synced data
 
@@ -816,29 +865,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Sync failed:", err);
     }
-  }, [currentUserId, storageMode, medicines]);
+  }, [currentUserId, storageMode, medicines, reminders, doseLogs, selectedPatientId, t, toast]);
 
   const addPatient = async (patient: Omit<Patient, "id" | "createdAt" | "managedBy">) => {
-    if (!currentUserId) throw new Error("Not logged in");
-    const patientData = sanitizeFirestoreData({
-      ...patient,
-      managedBy: currentUserId,
-      createdAt: new Date().toISOString()
-    });
-    await addDoc(collection(db, "patients"), patientData);
-    // onSnapshot listener will auto-update state
+    if (storageMode === "local") {
+      const newPatient = await localPersistence.patients.create(patient);
+      setPatients((prev) => [...prev, newPatient]);
+    } else {
+      if (!currentUserId) throw new Error("Not logged in");
+      const patientData = sanitizeFirestoreData({
+        ...patient,
+        managedBy: currentUserId,
+        createdAt: new Date().toISOString()
+      });
+      const docRef = await addDoc(collection(db, "patients"), patientData);
+      setPatients((prev) => [...prev, { ...patientData, id: docRef.id } as Patient]);
+    }
   };
 
   const updatePatient = async (id: string, updates: Partial<Patient>) => {
-    if (!currentUserId) throw new Error("Not logged in");
-    const docRef = doc(db, "patients", id);
-    await updateDoc(docRef, sanitizeFirestoreData(updates));
-    // onSnapshot listener will auto-update state
+    if (storageMode === "local") {
+      await localPersistence.patients.update(id, updates);
+      setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+    } else {
+      if (!currentUserId) throw new Error("Not logged in");
+      const docRef = doc(db, "patients", id);
+      await updateDoc(docRef, sanitizeFirestoreData(updates));
+      setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+    }
   };
 
   const deletePatient = async (id: string) => {
-    if (!currentUserId) throw new Error("Not logged in");
-    
     // Cascade delete associated items
     const relatedMeds = medicines.filter(m => m.patientId === id);
     for (const med of relatedMeds) {
@@ -855,21 +912,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await deleteDoseLog(l.id);
     }
     
-    // Wellness logs are only managed in cloud via AppContext right now for deletion
-    // But let's delete the firestore docs
-    try {
-      const wQuery = query(collection(db, "wellnessLogs"), where("patientId", "==", id), where("userId", "==", currentUserId));
-      const snapshot = await getDocs(wQuery);
-      snapshot.forEach((docSnap) => {
-        deleteDoc(doc(db, "wellnessLogs", docSnap.id)).catch(console.error);
-      });
-    } catch (e) {
-      console.error("Failed to cascade delete wellness logs:", e);
+    // Optimistic local update for wellness logs
+    setWellnessLogs((prev) => prev.filter((w) => w.patientId !== id));
+
+    if (storageMode === "local") {
+      await localPersistence.patients.remove(id);
+      setPatients((prev) => prev.filter((p) => p.id !== id));
+    } else {
+      if (!currentUserId) throw new Error("Not logged in");
+      
+      // Delete wellness logs from cloud
+      try {
+        const wQuery = query(collection(db, "wellnessLogs"), where("patientId", "==", id), where("userId", "==", currentUserId));
+        const snapshot = await getDocs(wQuery);
+        snapshot.forEach((docSnap) => {
+          deleteDoc(doc(db, "wellnessLogs", docSnap.id)).catch(console.error);
+        });
+      } catch (e) {
+        console.error("Failed to cascade delete wellness logs:", e);
+      }
+
+      const docRef = doc(db, "patients", id);
+      await deleteDoc(docRef);
+      setPatients((prev) => prev.filter((p) => p.id !== id));
     }
 
-    const docRef = doc(db, "patients", id);
-    await deleteDoc(docRef);
-    // onSnapshot listener will auto-update state
     if (selectedPatientId === id) setSelectedPatientId(null);
   };
 
@@ -886,6 +953,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     storage.removeItem("dawa_local_medicines");
     storage.removeItem("dawa_local_reminders");
     storage.removeItem("dawa_local_doselogs");
+    storage.removeItem("dawa_local_patients");
     
     // 3. Reset Professional Settings if any
     setIsProfessionalMode(false);

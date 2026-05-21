@@ -22,15 +22,35 @@ function getAdherenceStatus(
   const activeReminders = memberReminders.filter((r) => r.enabled);
   if (activeReminders.length === 0) return "grey";
 
-  const today = new Date().toDateString();
+  const todayNum = new Date().getDay();
+  let expectedDosesToday = 0;
+
+  activeReminders.forEach((r) => {
+    if (r.repeatSchedule === "custom" && r.repeatDays && r.repeatDays.length > 0) {
+      if (!r.repeatDays.includes(todayNum)) return;
+    }
+    if (r.repeatSchedule === "weekly") {
+      if (r.repeatDays && r.repeatDays.length > 0) {
+        if (!r.repeatDays.includes(todayNum)) return;
+      } else {
+        const createdDay = new Date(r.createdAt).getDay();
+        if (createdDay !== todayNum) return;
+      }
+    }
+    expectedDosesToday += r.time.split(",").length;
+  });
+
+  if (expectedDosesToday === 0) return "grey";
+
+  const todayStr = new Date().toDateString();
   const takenToday = doseLogs.filter(
     (l) =>
       l.action === "taken" &&
-      new Date(l.actionTime).toDateString() === today &&
+      new Date(l.actionTime).toDateString() === todayStr &&
       activeReminders.some((r) => r.id === l.reminderId)
   ).length;
 
-  if (takenToday >= activeReminders.length) return "green";
+  if (takenToday >= expectedDosesToday) return "green";
   return "warning";
 }
 
