@@ -23,6 +23,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { Keyboard } from "@capacitor/keyboard";
 import SplashScreen from "@/components/SplashScreen";
+import PageLoader from "@/components/PageLoader";
 import PageTransition from "@/components/PageTransition";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { AnimatePresence } from "framer-motion";
@@ -270,13 +271,7 @@ const App = () => {
                       <ProtectedRoute>
                         <AppShell>
                           <AnimatePresence mode="wait">
-                            <Suspense
-                              fallback={
-                                <div className="h-screen w-full flex items-center justify-center bg-background">
-                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                                </div>
-                              }
-                            >
+                            <Suspense fallback={<PageLoader />}>
                               <ErrorBoundary name="ContentArea">
                                 <Routes
                                   location={location}
