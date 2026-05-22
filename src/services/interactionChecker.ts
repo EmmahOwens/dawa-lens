@@ -80,3 +80,19 @@ export async function checkInteractions(rxcuis: string[]): Promise<ParsedInterac
     return [];
   }
 }
+
+/**
+ * Fetches spelling suggestions for a drug name from the RxNorm API.
+ */
+export async function getSpellingSuggestions(term: string): Promise<string[]> {
+  if (!term || term.trim().length < 2) return [];
+  try {
+    const response = await fetch(`${NLM_API_BASE}/spellingsuggestions.json?name=${encodeURIComponent(term)}`);
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.rxnormdata?.suggestionGroup?.suggestionList?.suggestion || [];
+  } catch (error) {
+    console.error("Failed to fetch spelling suggestions for", term, error);
+    return [];
+  }
+}

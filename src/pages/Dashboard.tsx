@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Users, User, Plane, Heart, FileText, Check, X, Sparkles, Sun, Moon, Cloud, Sunrise } from "@/lib/icons";
+import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Users, User, Plane, Heart, FileText, Check, X, Sparkles, Sun, Moon, Cloud, Sunrise, ShieldAlert } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -72,6 +72,7 @@ export default function Dashboard() {
     { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success/10 border-success/20 text-success" },
     { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive/10 border-destructive/20 text-destructive" },
     { icon: Plane, label: "Travel", to: "/travel", color: "bg-blue-500/10 border-blue-500/20 text-blue-600" },
+    { icon: ShieldAlert, label: "Safety Check", to: "/interactions", color: "bg-warning/10 border-warning/20 text-warning-foreground dark:text-warning" },
     { icon: Bell, label: "Reminders", to: "/reminders", color: "bg-amber-500/10 border-amber-500/20 text-amber-600" },
     { icon: History, label: "History", to: "/history", color: "bg-accent border-accent/60 text-accent-foreground" },
     { icon: FileText, label: "Reports", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" },
@@ -263,7 +264,7 @@ export default function Dashboard() {
           <Plus size={14} />
           Tools & Actions
         </h2>
-        <div className="grid grid-cols-4 grid-rows-3 gap-3 h-[320px]">
+        <div className="grid grid-cols-4 grid-rows-4 gap-3 h-[420px]">
           {/* Large Card: Quick Scan */}
           <motion.button
             whileTap={{ scale: 0.98 }}
@@ -305,27 +306,41 @@ export default function Dashboard() {
             </motion.button>
           ))}
 
-          {/* Row 3: Reminders (2x1) and History, Reports (1x1 each) */}
+          {/* Row 3: Safety Check (2x1) and Reminders (2x1) */}
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[4].to)}
             className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${quickActions[4].color}`}
           >
-            <div className="p-2 bg-white/10 rounded-xl">
-               <Bell size={20} />
+            <div className="p-2.5 bg-warning/20 rounded-xl">
+               <ShieldAlert size={20} className="text-warning-foreground dark:text-warning" />
             </div>
             <span className="font-bold text-sm tracking-tight">{quickActions[4].label}</span>
           </motion.button>
 
-          {quickActions.slice(5, 7).map((action) => (
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate(quickActions[5].to)}
+            className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${quickActions[5].color}`}
+          >
+            <div className="p-2.5 bg-white/10 rounded-xl">
+               <Bell size={20} />
+            </div>
+            <span className="font-bold text-sm tracking-tight">{quickActions[5].label}</span>
+          </motion.button>
+
+          {/* Row 4: History (2x1) and Reports (2x1) */}
+          {quickActions.slice(6, 8).map((action) => (
             <motion.button
               key={action.label}
               whileTap={{ scale: 0.98 }}
               onClick={() => navigate(action.to)}
-              className={`col-span-1 row-span-1 rounded-[1.25rem] border ${action.color} flex flex-col items-center justify-center gap-1.5`}
+              className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${action.color}`}
             >
-              <action.icon size={20} />
-              <span className="text-[9px] font-bold uppercase tracking-wider">{action.label}</span>
+              <div className="p-2.5 bg-white/10 rounded-xl">
+                 <action.icon size={20} />
+              </div>
+              <span className="font-bold text-sm tracking-tight">{action.label}</span>
             </motion.button>
           ))}
         </div>
