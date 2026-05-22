@@ -1,60 +1,44 @@
-import { createWorker, Worker } from 'tesseract.js';
-
-let tesseractWorker: Worker | null = null;
-let isInitializing = false;
-
 /**
- * Initializes the Tesseract Web Worker silently in the background
- * This downloads the ~20MB english language model file explicitly.
+ * Vision Service — OCR via a dedicated Web Worker.
+ *
+ * Tesseract.js runs entirely off the main thread inside ocrWorker.ts.
+ * The main thread never imports tesseract.js, keeping the critical
+ * rendering path lean and first paint fast.
  */
-export async function preloadOCRModel() {
-  if (tesseractWorker || isInitializing) return;
-  isInitializing = true;
-  
-  try {
-    const worker = await createWorker('eng', 1, {
-      logger: m => import.meta.env.DEV ? console.log('Tesseract: ', m) : null
-    });
-    tesseractWorker = worker;
-    console.log("OCR Model preloaded successfully.");
-  } catch (error) {
-    console.error("Failed to preload OCR worker:", error);
-  } finally {
-    isInitializing = false;
+import { tellWorker, askWorker } from "@/lib/workerBridge";
+
+// Lazily instantiate the OCR worker. Vite bundles ocrWorker.ts as a
+// separate chunk so it doesn't inflate the main bundle.
+let _ocrWorker: Worker | null = null;
+
+function getOcrWorker(): Worker {
+  if (!_ocrWorker) {
+    _ocrWorker = new Worker(
+      new URL("../workers/ocrWorker.ts", import.meta.url),
+      { type: "module" }
+    );
   }
+  return _ocrWorker;
 }
 
 /**
- * Executes OCR on an image URL (data URIs work perfectly).
- * If the worker isn't loaded yet, it will initialize and wait.
- * @param imageUrl base64 image or object URL
- * @returns extracted text string
+ * Preloads the OCR model inside the worker thread.
+ * Fire-and-forget: the worker initializes Tesseract in the background so
+ * that the first real scan doesn't pay the cold-start penalty.
+ */
+export function preloadOCRModel(): void {
+  tellWorker(getOcrWorker(), "preload");
+}
+
+/**
+ * Extracts text from an image using the off-thread OCR worker.
+ * @param imageUrl base64 data URI or object URL
+ * @returns trimmed recognized text
  */
 export async function extractTextFromImage(imageUrl: string): Promise<string> {
-  // If not yet loaded, try to load it now
-  if (!tesseractWorker && !isInitializing) {
-    await preloadOCRModel();
-  }
-  
-  // If it's currently initializing in the background, we must wait for it to finish.
-  // A simplistic polling loop since isInitializing isn't a promise
-  const waitForInitialization = () => new Promise<void>(resolve => {
-    const check = setInterval(() => {
-      if (!isInitializing) {
-        clearInterval(check);
-        resolve();
-      }
-    }, 100);
-  });
-
-  if (isInitializing) {
-    await waitForInitialization();
-  }
-
-  if (!tesseractWorker) {
-    throw new Error("OCR Worker failed to initialize.");
-  }
-
-  const { data: { text } } = await tesseractWorker.recognize(imageUrl);
-  return text.trim();
+  const result = await askWorker<
+    string,
+    { topic: string; id: string; text: string }
+  >(getOcrWorker(), "recognize", imageUrl);
+  return result.text;
 }

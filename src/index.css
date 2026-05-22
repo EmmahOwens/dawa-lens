@@ -39,8 +39,10 @@
     --ring: 211 100% 50%;
 
     --radius: 1.25rem; /* Slightly more modern and consistent */
-    --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --card-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --card-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
 
     --sidebar-background: 240 9% 96%;
     --sidebar-foreground: 240 3% 12%;
@@ -51,7 +53,9 @@
     --sidebar-border: 240 4% 83%;
     --sidebar-ring: 211 100% 50%;
 
-    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol";
   }
 
   .dark {
@@ -106,10 +110,12 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  html, body {
+  html,
+  body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: var(--font-sans);
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease,
+      border-color 0.3s ease;
     user-select: none;
     -webkit-user-drag: none;
     -webkit-overflow-scrolling: touch;
@@ -120,14 +126,19 @@
     touch-action: manipulation; /* Eliminate 300ms click delay */
   }
 
-  input, textarea, [contenteditable="true"] {
+  input,
+  textarea,
+  [contenteditable="true"] {
     user-select: text;
   }
 }
 
 @layer utilities {
   .safe-top {
-    padding-top: env(safe-area-inset-top, 20px); /* fallback for immersive mode */
+    padding-top: env(
+      safe-area-inset-top,
+      20px
+    ); /* fallback for immersive mode */
   }
 
   .safe-bottom {
@@ -188,6 +199,7 @@
     transform: translateZ(0);
     will-change: transform, opacity;
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     perspective: 1000;
   }
 
@@ -201,3 +213,50 @@
   }
 }
 
+/* ─── GPU-composited page transitions ─────────────────────────────────────────
+   CSS-only animations using only `transform` and `opacity` so every frame is
+   composited on the GPU thread with zero main-thread JavaScript cost.
+   Pattern from lichobile: avoid layout-triggering properties entirely.
+─────────────────────────────────────────────────────────────────────────────── */
+
+/* Android / Web: Material-style vertical fade-up */
+.page-transition-enter {
+  animation: pageSlideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* iOS: horizontal slide matching the native push transition */
+.page-transition-slide {
+  animation: pageSlideFromRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) translateZ(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
+}
+
+@keyframes pageSlideFromRight {
+  from {
+    opacity: 0.9;
+    transform: translateX(100%) translateZ(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateZ(0);
+  }
+}
+
+/* Contain overscroll within scrollable containers (prevents bleed-through) */
+main,
+.overflow-y-auto {
+  overscroll-behavior: contain;
+}
