@@ -125,7 +125,7 @@ class NativeSqlitePlugin : Plugin() {
                         when (cursor.getType(idx)) {
                             android.database.Cursor.FIELD_TYPE_NULL    -> row.put(col, JSONObject.NULL)
                             android.database.Cursor.FIELD_TYPE_INTEGER -> row.put(col, cursor.getLong(idx))
-                            android.database.Cursor.FIELD_TYPE_REAL    -> row.put(col, cursor.getDouble(idx))
+                            android.database.Cursor.FIELD_TYPE_FLOAT   -> row.put(col, cursor.getDouble(idx))
                             else                                        -> row.put(col, cursor.getString(idx))
                         }
                     }

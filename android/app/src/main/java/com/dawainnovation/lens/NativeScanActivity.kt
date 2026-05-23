@@ -99,9 +99,9 @@ class NativeScanActivity : AppCompatActivity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             ).also {
-                gravity = Gravity.TOP or Gravity.END
-                rightMargin = 32
-                topMargin = 80
+                it.gravity = Gravity.TOP or Gravity.END
+                it.rightMargin = 32
+                it.topMargin = 80
             }
         }
         flashBtn.setOnClickListener { toggleFlash() }
@@ -112,8 +112,8 @@ class NativeScanActivity : AppCompatActivity() {
             background = ContextCompat.getDrawable(context, android.R.drawable.btn_default_small)
             val size = 200
             layoutParams = FrameLayout.LayoutParams(size, size).also {
-                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-                bottomMargin = 120
+                it.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                it.bottomMargin = 120
             }
         }
         captureBtn.setOnClickListener { captureImage() }
