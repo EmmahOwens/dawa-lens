@@ -1,9 +1,34 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
 import { getRxCUI } from "../services/interactionChecker";
 
 import { auth, db } from "../lib/firebase";
-import { onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "firebase/auth";
-import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import {
+  onAuthStateChanged,
+  signOut,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+} from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  onSnapshot,
+  getDocs,
+} from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
 import { scheduleReminders } from "../services/reminderService";
 import { computeShiftOffset } from "../services/reminderService";
@@ -20,14 +45,14 @@ const CLOUD_CACHE_MEDS_KEY = "dawa_cloud_cache_medicines";
 const CLOUD_CACHE_LOGS_KEY = "dawa_cloud_cache_doselogs";
 
 export type Medicine = {
-  id: string;           // maps to Firestore doc.id
+  id: string; // maps to Firestore doc.id
   name: string;
   genericName?: string;
-  dosage: string;       // e.g. "500mg"
+  dosage: string; // e.g. "500mg"
   totalQuantity?: number; // Starting amount
   currentQuantity?: number; // What's left
-  dosagePerDose?: number; // e.g. 1 
-  unit?: string;         // "tablets", "ml", etc.
+  dosagePerDose?: number; // e.g. 1
+  unit?: string; // "tablets", "ml", etc.
   imageUrl?: string;
   notes?: string;
   rxcui?: string;
@@ -91,12 +116,31 @@ export type UserProfile = {
   language?: string;
 };
 
+/** Distinguishes a family member from a professional client */
+export type PatientType = "family" | "client";
+
 export type Patient = {
   id: string;
   name: string;
+  /** Raw age (years). Prefer dateOfBirth for accuracy. */
   age?: number;
+  /** ISO date string — used to compute exact age and for clinical reports */
+  dateOfBirth?: string;
   gender?: "male" | "female" | "other";
-  relation?: string; // e.g. "Mother", "Client"
+  /** e.g. "Mother", "Client", "Father" */
+  relation?: string;
+  /** "family" | "client" — drives report template & notification channel */
+  type?: PatientType;
+  /** Chronic conditions fed to AI reports and drug interaction checks */
+  conditions?: string[];
+  /** Drug/food allergies fed to AI reports */
+  allergies?: string[];
+  /** For clinical / CHW mode */
+  bloodType?: string;
+  /** Visual accent color key: "blue"|"rose"|"amber"|"emerald"|"violet"|"slate" */
+  color?: string;
+  /** Caregiver notes */
+  notes?: string;
   managedBy: string;
   createdAt: string;
 };
@@ -115,8 +159,11 @@ type AppContextType = {
   currentUserId: string | null;
   selectedPatientId: string | null; // null = self
   isProfessionalMode: boolean;
-  
-  addMedicine: (med: Omit<Medicine, "id" | "addedAt">, patientId?: string | null) => Promise<Medicine>;
+
+  addMedicine: (
+    med: Omit<Medicine, "id" | "addedAt">,
+    patientId?: string | null
+  ) => Promise<Medicine>;
   updateMedicine: (id: string, updates: Partial<Medicine>) => Promise<void>;
   deleteMedicine: (id: string) => Promise<void>;
   addReminder: (rem: Omit<Reminder, "id" | "createdAt">) => Promise<void>;
@@ -124,9 +171,13 @@ type AppContextType = {
   deleteReminder: (id: string) => Promise<void>;
   logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>;
   deleteDoseLog: (id: string) => Promise<void>;
-  addWellnessLog: (log: Omit<WellnessLog, "id" | "timestamp" | "userId">) => Promise<void>;
-  
-  addPatient: (patient: Omit<Patient, "id" | "createdAt" | "managedBy">) => Promise<void>;
+  addWellnessLog: (
+    log: Omit<WellnessLog, "id" | "timestamp" | "userId">
+  ) => Promise<void>;
+
+  addPatient: (
+    patient: Omit<Patient, "id" | "createdAt" | "managedBy">
+  ) => Promise<void>;
   updatePatient: (id: string, updates: Partial<Patient>) => Promise<void>;
   deletePatient: (id: string) => Promise<void>;
   setSelectedPatientId: (id: string | null) => void;
@@ -182,7 +233,7 @@ async function migrateLocalStorage() {
     "dawa_cloud_cache_doselogs",
     "dawa_local_medicines",
     "dawa_local_reminders",
-    "dawa_local_doselogs"
+    "dawa_local_doselogs",
   ];
 
   let migrated = false;
@@ -191,7 +242,7 @@ async function migrateLocalStorage() {
     if (value !== null) {
       try {
         await storage.setItem(key, JSON.parse(value));
-        // We keep localStorage for now as a fallback, 
+        // We keep localStorage for now as a fallback,
         // but mark that we've migrated.
         migrated = true;
       } catch (e) {
@@ -202,11 +253,10 @@ async function migrateLocalStorage() {
   return migrated;
 }
 
-
 /** Remove undefined fields so Firestore doesn't throw an error. */
 function sanitizeFirestoreData(data: Record<string, unknown>) {
   const sanitized = { ...data };
-  Object.keys(sanitized).forEach(key => {
+  Object.keys(sanitized).forEach((key) => {
     if (sanitized[key] === undefined) {
       delete sanitized[key];
     }
@@ -222,51 +272,79 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(() => loadLocal("med_selected_patient_id", null));
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
+    () => loadLocal("med_selected_patient_id", null)
+  );
 
   useEffect(() => {
     if (selectedPatientId === null) {
       localStorage.removeItem("med_selected_patient_id");
     } else {
-      localStorage.setItem("med_selected_patient_id", JSON.stringify(selectedPatientId));
+      localStorage.setItem(
+        "med_selected_patient_id",
+        JSON.stringify(selectedPatientId)
+      );
     }
   }, [selectedPatientId]);
-  const [isProfessionalMode, setIsProfessionalModeState] = useState(() => loadLocal("med_professional_mode", false));
+  const [isProfessionalMode, setIsProfessionalModeState] = useState(() =>
+    loadLocal("med_professional_mode", false)
+  );
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
-  const [hasSeenWelcome, setHasSeenWelcome] = useState(() => loadLocal("med_has_seen_welcome", false));
-  
-  const [storageMode, setStorageMode] = useState<"local" | "cloud">(() => loadLocal("med_storage_mode", "cloud"));
-  const [isLoggedIn, setIsLoggedIn] = useState(() => loadLocal("med_loggedin", false));
-  const [currentUserId, setCurrentUserId] = useState<string | null>(() => loadLocal("med_userId", null));
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(() =>
+    loadLocal("med_has_seen_welcome", false)
+  );
+
+  const [storageMode, setStorageMode] = useState<"local" | "cloud">(() =>
+    loadLocal("med_storage_mode", "cloud")
+  );
+  const [isLoggedIn, setIsLoggedIn] = useState(() =>
+    loadLocal("med_loggedin", false)
+  );
+  const [currentUserId, setCurrentUserId] = useState<string | null>(() =>
+    loadLocal("med_userId", null)
+  );
   const [isDawaGPTOpen, setIsDawaGPTOpen] = useState(false);
-  const [isIntelligenceCollapsed, setIntelligenceCollapsedState] = useState(() => loadLocal("med_intelligence_collapsed", false));
-  const [lastSyncTimestamp, setLastSyncTimestamp] = useState<string | null>(() => loadLocal("med_last_sync", null));
-  const [rememberMe, setRememberMeState] = useState(() => loadLocal("med_remember_me", true));
+  const [isIntelligenceCollapsed, setIntelligenceCollapsedState] = useState(
+    () => loadLocal("med_intelligence_collapsed", false)
+  );
+  const [lastSyncTimestamp, setLastSyncTimestamp] = useState<string | null>(
+    () => loadLocal("med_last_sync", null)
+  );
+  const [rememberMe, setRememberMeState] = useState(() =>
+    loadLocal("med_remember_me", true)
+  );
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // Initialize persistence on load
   useEffect(() => {
-    const mode = rememberMe ? browserLocalPersistence : browserSessionPersistence;
-    setPersistence(auth, mode).catch(err => console.error("Initial persistence error:", err));
+    const mode = rememberMe
+      ? browserLocalPersistence
+      : browserSessionPersistence;
+    setPersistence(auth, mode).catch((err) =>
+      console.error("Initial persistence error:", err)
+    );
   }, []);
 
-  const setIsProfessionalMode = useCallback(async (v: boolean) => {
-    setIsProfessionalModeState(v);
-    storage.setItem("med_professional_mode", v);
-    localStorage.setItem("med_professional_mode", JSON.stringify(v));
-    
-    // Sync to cloud if logged in
-    if (storageMode === "cloud" && currentUserId) {
-      try {
-        const docRef = doc(db, "users", currentUserId);
-        await setDoc(docRef, { isProfessional: v }, { merge: true });
-        setUserProfile(p => p ? { ...p, isProfessional: v } : null);
-      } catch (err) {
-        console.error("Failed to sync professional mode to cloud:", err);
+  const setIsProfessionalMode = useCallback(
+    async (v: boolean) => {
+      setIsProfessionalModeState(v);
+      storage.setItem("med_professional_mode", v);
+      localStorage.setItem("med_professional_mode", JSON.stringify(v));
+
+      // Sync to cloud if logged in
+      if (storageMode === "cloud" && currentUserId) {
+        try {
+          const docRef = doc(db, "users", currentUserId);
+          await setDoc(docRef, { isProfessional: v }, { merge: true });
+          setUserProfile((p) => (p ? { ...p, isProfessional: v } : null));
+        } catch (err) {
+          console.error("Failed to sync professional mode to cloud:", err);
+        }
       }
-    }
-  }, [currentUserId, storageMode]);
-  
+    },
+    [currentUserId, storageMode]
+  );
+
   const setIsIntelligenceCollapsed = useCallback((v: boolean) => {
     setIntelligenceCollapsedState(v);
     storage.setItem("med_intelligence_collapsed", v);
@@ -277,33 +355,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRememberMeState(v);
     storage.setItem("med_remember_me", v);
     localStorage.setItem("med_remember_me", JSON.stringify(v));
-    
+
     // Apply persistence to Firebase
     const mode = v ? browserLocalPersistence : browserSessionPersistence;
-    setPersistence(auth, mode).catch(err => console.error("Failed to set auth persistence:", err));
+    setPersistence(auth, mode).catch((err) =>
+      console.error("Failed to set auth persistence:", err)
+    );
   }, []);
 
-  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    if (!currentUserId) return;
-    
-    // Optimistic update
-    setUserProfile(p => p ? { ...p, ...updates } : null);
-    
-    if (storageMode === "cloud") {
-      try {
-        const docRef = doc(db, "users", currentUserId);
-        await setDoc(docRef, updates, { merge: true });
-      } catch (err) {
-        console.error("Failed to update user profile:", err);
-      }
-    }
-  }, [currentUserId, storageMode]);
+  const updateUserProfile = useCallback(
+    async (updates: Partial<UserProfile>) => {
+      if (!currentUserId) return;
 
+      // Optimistic update
+      setUserProfile((p) => (p ? { ...p, ...updates } : null));
+
+      if (storageMode === "cloud") {
+        try {
+          const docRef = doc(db, "users", currentUserId);
+          await setDoc(docRef, updates, { merge: true });
+        } catch (err) {
+          console.error("Failed to update user profile:", err);
+        }
+      }
+    },
+    [currentUserId, storageMode]
+  );
 
   // Persist simple flags to localStorage (no sensitive data, just UI state)
-  useEffect(() => { storage.setItem("med_storage_mode", storageMode); }, [storageMode]);
-  
-  useEffect(() => { 
+  useEffect(() => {
+    storage.setItem("med_storage_mode", storageMode);
+  }, [storageMode]);
+
+  useEffect(() => {
     if (rememberMe && isLoggedIn) {
       storage.setItem("med_loggedin", true);
     } else if (!isLoggedIn) {
@@ -311,7 +395,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoggedIn, rememberMe]);
 
-  useEffect(() => { 
+  useEffect(() => {
     if (rememberMe && currentUserId) {
       storage.setItem("med_userId", currentUserId);
     } else if (!currentUserId) {
@@ -319,9 +403,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUserId, rememberMe]);
 
-  useEffect(() => { storage.setItem("med_has_seen_welcome", hasSeenWelcome); }, [hasSeenWelcome]);
+  useEffect(() => {
+    storage.setItem("med_has_seen_welcome", hasSeenWelcome);
+  }, [hasSeenWelcome]);
   // Note: med_professional_mode handled by setter now
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -381,14 +466,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const initSettings = async () => {
       await migrateLocalStorage();
 
-      const [profMode, welcome, sMode, intelCol, sync, remember] = await Promise.all([
-        storage.getItem("med_professional_mode", false),
-        storage.getItem("med_has_seen_welcome", false),
-        storage.getItem("med_storage_mode", "cloud" as const),
-        storage.getItem("med_intelligence_collapsed", false),
-        storage.getItem("med_last_sync", null as string | null),
-        storage.getItem("med_remember_me", true),
-      ]);
+      const [profMode, welcome, sMode, intelCol, sync, remember] =
+        await Promise.all([
+          storage.getItem("med_professional_mode", false),
+          storage.getItem("med_has_seen_welcome", false),
+          storage.getItem("med_storage_mode", "cloud" as const),
+          storage.getItem("med_intelligence_collapsed", false),
+          storage.getItem("med_last_sync", null as string | null),
+          storage.getItem("med_remember_me", true),
+        ]);
 
       setIsProfessionalModeState(profMode);
       setHasSeenWelcome(welcome);
@@ -438,10 +524,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const prof = docSnap.data() as Record<string, unknown>;
           if (!prof.dateOfBirth || !prof.gender) {
             setNeedsOnboarding(true);
-            setUserProfile({ ...prof, id: currentUserId } as unknown as UserProfile);
+            setUserProfile({
+              ...prof,
+              id: currentUserId,
+            } as unknown as UserProfile);
           } else {
             setNeedsOnboarding(false);
-            setUserProfile({ ...prof, id: currentUserId } as unknown as UserProfile);
+            setUserProfile({
+              ...prof,
+              id: currentUserId,
+            } as unknown as UserProfile);
             setIsProfessionalMode((prof.isProfessional as boolean) || false);
           }
         } else {
@@ -468,39 +560,84 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadCache();
 
     // 3. Set up real-time Firestore listeners — these auto-sync across web + Capacitor
-    const medsQuery = query(collection(db, "medicines"), where("userId", "==", currentUserId));
-    const remsQuery = query(collection(db, "reminders"), where("userId", "==", currentUserId));
-    const logsQuery = query(collection(db, "doseLogs"), where("userId", "==", currentUserId));
-    const patsQuery = query(collection(db, "patients"), where("managedBy", "==", currentUserId));
-    const wellQuery = query(collection(db, "wellnessLogs"), where("userId", "==", currentUserId));
+    const medsQuery = query(
+      collection(db, "medicines"),
+      where("userId", "==", currentUserId)
+    );
+    const remsQuery = query(
+      collection(db, "reminders"),
+      where("userId", "==", currentUserId)
+    );
+    const logsQuery = query(
+      collection(db, "doseLogs"),
+      where("userId", "==", currentUserId)
+    );
+    const patsQuery = query(
+      collection(db, "patients"),
+      where("managedBy", "==", currentUserId)
+    );
+    const wellQuery = query(
+      collection(db, "wellnessLogs"),
+      where("userId", "==", currentUserId)
+    );
 
-    const unsubMeds = onSnapshot(medsQuery, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Medicine));
-      setMedicines(data);
-      storage.setItem(CLOUD_CACHE_MEDS_KEY, data);
-    }, (err) => console.error("Medicines listener error:", err));
+    const unsubMeds = onSnapshot(
+      medsQuery,
+      (snap) => {
+        const data = snap.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as Medicine)
+        );
+        setMedicines(data);
+        storage.setItem(CLOUD_CACHE_MEDS_KEY, data);
+      },
+      (err) => console.error("Medicines listener error:", err)
+    );
 
-    const unsubRems = onSnapshot(remsQuery, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Reminder));
-      setReminders(data);
-      storage.setItem(CLOUD_CACHE_REMS_KEY, data);
-    }, (err) => console.error("Reminders listener error:", err));
+    const unsubRems = onSnapshot(
+      remsQuery,
+      (snap) => {
+        const data = snap.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as Reminder)
+        );
+        setReminders(data);
+        storage.setItem(CLOUD_CACHE_REMS_KEY, data);
+      },
+      (err) => console.error("Reminders listener error:", err)
+    );
 
-    const unsubLogs = onSnapshot(logsQuery, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as DoseLog));
-      setDoseLogs(data);
-      storage.setItem(CLOUD_CACHE_LOGS_KEY, data);
-    }, (err) => console.error("DoseLogs listener error:", err));
+    const unsubLogs = onSnapshot(
+      logsQuery,
+      (snap) => {
+        const data = snap.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as DoseLog)
+        );
+        setDoseLogs(data);
+        storage.setItem(CLOUD_CACHE_LOGS_KEY, data);
+      },
+      (err) => console.error("DoseLogs listener error:", err)
+    );
 
-    const unsubPats = onSnapshot(patsQuery, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Patient));
-      setPatients(data);
-    }, (err) => console.error("Patients listener error:", err));
+    const unsubPats = onSnapshot(
+      patsQuery,
+      (snap) => {
+        const data = snap.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as Patient)
+        );
+        setPatients(data);
+      },
+      (err) => console.error("Patients listener error:", err)
+    );
 
-    const unsubWell = onSnapshot(wellQuery, (snap) => {
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as WellnessLog));
-      setWellnessLogs(data);
-    }, (err) => console.error("WellnessLogs listener error:", err));
+    const unsubWell = onSnapshot(
+      wellQuery,
+      (snap) => {
+        const data = snap.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as WellnessLog)
+        );
+        setWellnessLogs(data);
+      },
+      (err) => console.error("WellnessLogs listener error:", err)
+    );
 
     setIsDataLoading(false);
 
@@ -524,25 +661,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // --- CRUD Operations ---
 
-  const addMedicine = async (med: Omit<Medicine, "id" | "addedAt">, explicitPatientId?: string | null): Promise<Medicine> => {
+  const addMedicine = async (
+    med: Omit<Medicine, "id" | "addedAt">,
+    explicitPatientId?: string | null
+  ): Promise<Medicine> => {
     let newMed: Medicine;
-    const effectivePatientId = explicitPatientId !== undefined ? explicitPatientId : selectedPatientId;
-    
+    const effectivePatientId =
+      explicitPatientId !== undefined ? explicitPatientId : selectedPatientId;
+
     if (storageMode === "local") {
       newMed = await localPersistence.medicines.create({
         ...med,
         patientId: effectivePatientId || null,
-        userId: "local"
+        userId: "local",
       });
       setMedicines((p) => [...p, newMed]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      
+
       const medData = sanitizeFirestoreData({
         ...med,
         userId: currentUserId,
         patientId: effectivePatientId || null,
-        addedAt: new Date().toISOString()
+        addedAt: new Date().toISOString(),
       });
 
       const docRef = await addDoc(collection(db, "medicines"), medData);
@@ -553,18 +694,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Fetch RxCUI in background
     if (!newMed.rxcui) {
-      getRxCUI(newMed.name).then(async (rxcui) => {
-        if (rxcui) {
-          if (storageMode === "local") {
-            await localPersistence.medicines.update(newMed.id, { rxcui });
-            setMedicines((p) => p.map((m) => (m.id === newMed.id ? { ...m, rxcui } : m)));
-          } else {
-            const docRef = doc(db, "medicines", newMed.id);
-            await updateDoc(docRef, { rxcui });
-            // onSnapshot listener will auto-update state
+      getRxCUI(newMed.name)
+        .then(async (rxcui) => {
+          if (rxcui) {
+            if (storageMode === "local") {
+              await localPersistence.medicines.update(newMed.id, { rxcui });
+              setMedicines((p) =>
+                p.map((m) => (m.id === newMed.id ? { ...m, rxcui } : m))
+              );
+            } else {
+              const docRef = doc(db, "medicines", newMed.id);
+              await updateDoc(docRef, { rxcui });
+              // onSnapshot listener will auto-update state
+            }
           }
-        }
-      }).catch(err => console.error("Failed to fetch RxCUI:", err));
+        })
+        .catch((err) => console.error("Failed to fetch RxCUI:", err));
     }
 
     return newMed;
@@ -573,12 +718,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateMedicine = async (id: string, updates: Partial<Medicine>) => {
     if (storageMode === "local") {
       await localPersistence.medicines.update(id, updates);
-      setMedicines((p) => p.map((m) => (m.id === id ? { ...m, ...updates } : m)));
+      setMedicines((p) =>
+        p.map((m) => (m.id === id ? { ...m, ...updates } : m))
+      );
     } else {
       const docRef = doc(db, "medicines", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
       // Optimistic update
-      setMedicines((p) => p.map((m) => (m.id === id ? { ...m, ...updates } : m)));
+      setMedicines((p) =>
+        p.map((m) => (m.id === id ? { ...m, ...updates } : m))
+      );
     }
   };
 
@@ -606,13 +755,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Use Firestore directly for unique ID and persistence
       // Use the explicit patientId from the caller if provided (e.g. from AddReminderPage),
       // otherwise fall back to the global selectedPatientId context.
-      const effectivePatientId = rem.patientId !== undefined ? rem.patientId : selectedPatientId;
+      const effectivePatientId =
+        rem.patientId !== undefined ? rem.patientId : selectedPatientId;
       const remData = sanitizeFirestoreData({
         ...rem,
         medicineId: rem.medicineId || null,
         userId: currentUserId,
         patientId: effectivePatientId || null,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
 
       const docRef = await addDoc(collection(db, "reminders"), remData);
@@ -625,12 +775,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateReminder = async (id: string, updates: Partial<Reminder>) => {
     if (storageMode === "local") {
       await localPersistence.reminders.update(id, updates);
-      setReminders((p) => p.map((r) => (r.id === id ? { ...r, ...updates } : r)));
+      setReminders((p) =>
+        p.map((r) => (r.id === id ? { ...r, ...updates } : r))
+      );
     } else {
       const docRef = doc(db, "reminders", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
       // Optimistic update
-      setReminders((p) => p.map((r) => (r.id === id ? { ...r, ...updates } : r)));
+      setReminders((p) =>
+        p.map((r) => (r.id === id ? { ...r, ...updates } : r))
+      );
     }
   };
 
@@ -648,14 +802,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
     let newLog: DoseLog;
-    const reminder = reminders.find(r => r.id === log.reminderId);
-    const effectivePatientId = log.patientId ?? reminder?.patientId ?? selectedPatientId ?? null;
+    const reminder = reminders.find((r) => r.id === log.reminderId);
+    const effectivePatientId =
+      log.patientId ?? reminder?.patientId ?? selectedPatientId ?? null;
 
     if (storageMode === "local") {
       newLog = await localPersistence.doseLogs.create({
         ...log,
         patientId: effectivePatientId,
-        userId: "local"
+        userId: "local",
       });
       setDoseLogs((p) => [...p, newLog]);
     } else {
@@ -667,7 +822,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...log,
         userId: currentUserId,
         patientId: effectivePatientId,
-        actionTime: new Date().toISOString()
+        actionTime: new Date().toISOString(),
       });
       const docRef = await addDoc(collection(db, "doseLogs"), logData);
       newLog = { ...logData, id: docRef.id } as DoseLog;
@@ -678,19 +833,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // 1. Update Medicine Inventory if taken
     let freshMeds = medicines;
     if (reminder && reminder.medicineId && log.action === "taken") {
-      const medicine = medicines.find(m => m.id === reminder.medicineId);
-      if (medicine && medicine.currentQuantity !== undefined && medicine.dosagePerDose) {
-        const newQuantity = Math.max(0, medicine.currentQuantity - medicine.dosagePerDose);
+      const medicine = medicines.find((m) => m.id === reminder.medicineId);
+      if (
+        medicine &&
+        medicine.currentQuantity !== undefined &&
+        medicine.dosagePerDose
+      ) {
+        const newQuantity = Math.max(
+          0,
+          medicine.currentQuantity - medicine.dosagePerDose
+        );
         await updateMedicine(medicine.id, { currentQuantity: newQuantity });
-        
-        freshMeds = medicines.map(m => m.id === medicine.id ? { ...m, currentQuantity: newQuantity } : m);
+
+        freshMeds = medicines.map((m) =>
+          m.id === medicine.id ? { ...m, currentQuantity: newQuantity } : m
+        );
 
         // Optional: Trigger refill toast if low
-        if (newQuantity <= (medicine.dosagePerDose * 5)) {
+        if (newQuantity <= medicine.dosagePerDose * 5) {
           toast({
             title: t("reminders.low_stock_warning"),
-            description: `${medicine.name}: ${newQuantity} ${medicine.unit || 'units'} remaining.`,
-            variant: "destructive"
+            description: `${medicine.name}: ${newQuantity} ${
+              medicine.unit || "units"
+            } remaining.`,
+            variant: "destructive",
           });
         }
       }
@@ -698,44 +864,73 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // 2. Reschedule notifications immediately so remaining slots fire at the shifted time
     if (log.action === "taken" && reminder) {
-      const freshLogs = storageMode === "local"
-        ? await localPersistence.doseLogs.getAll()
-        : [...doseLogs, newLog];
+      const freshLogs =
+        storageMode === "local"
+          ? await localPersistence.doseLogs.getAll()
+          : [...doseLogs, newLog];
       scheduleReminders(reminders, freshLogs, freshMeds);
 
       // 3. Smart Suggest: after 3 consecutive same-direction deviations, suggest updating the time
       const allTakenLogs = freshLogs
-        .filter(l => l.reminderId === reminder.id && l.action === "taken")
-        .sort((a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime())
+        .filter((l) => l.reminderId === reminder.id && l.action === "taken")
+        .sort(
+          (a, b) =>
+            toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime()
+        )
         .slice(0, 3);
 
       if (allTakenLogs.length >= 3) {
-        const offsets = allTakenLogs.map(l => Math.round(
-          (toDate(l.actionTime).getTime() - toDate(l.scheduledTime).getTime()) / (1000 * 60)
-        ));
-        const allLate = offsets.every(o => o > 5);
-        const allEarly = offsets.every(o => o < -5);
+        const offsets = allTakenLogs.map((l) =>
+          Math.round(
+            (toDate(l.actionTime).getTime() -
+              toDate(l.scheduledTime).getTime()) /
+              (1000 * 60)
+          )
+        );
+        const allLate = offsets.every((o) => o > 5);
+        const allEarly = offsets.every((o) => o < -5);
 
         if (allLate || allEarly) {
-          const avgOffset = Math.round(offsets.reduce((a, b) => a + b, 0) / offsets.length);
-          const suggestedTimes = reminder.time.split(",").map(t => {
+          const avgOffset = Math.round(
+            offsets.reduce((a, b) => a + b, 0) / offsets.length
+          );
+          const suggestedTimes = reminder.time.split(",").map((t) => {
             const [h, m] = t.trim().split(":").map(Number);
-            const total = ((h * 60 + m + avgOffset) % (24 * 60) + 24 * 60) % (24 * 60);
-            return `${Math.floor(total / 60).toString().padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
+            const total =
+              (((h * 60 + m + avgOffset) % (24 * 60)) + 24 * 60) % (24 * 60);
+            return `${Math.floor(total / 60)
+              .toString()
+              .padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
           });
           const direction = allLate ? "late" : "early";
           toast({
             title: "💡 Smart Schedule Suggestion",
             description: reminder.patientName
-              ? `${reminder.patientName} has taken ${reminder.medicineName} ~${Math.abs(avgOffset)}m ${direction} 3 times in a row. Consider updating their reminder to ${suggestedTimes.join(", ")} in the Reminders tab.`
-              : `You've taken ${reminder.medicineName} ~${Math.abs(avgOffset)}m ${direction} 3 times in a row. Consider updating the reminder to ${suggestedTimes.join(", ")} in the Reminders tab.`,
+              ? `${reminder.patientName} has taken ${
+                  reminder.medicineName
+                } ~${Math.abs(
+                  avgOffset
+                )}m ${direction} 3 times in a row. Consider updating their reminder to ${suggestedTimes.join(
+                  ", "
+                )} in the Reminders tab.`
+              : `You've taken ${reminder.medicineName} ~${Math.abs(
+                  avgOffset
+                )}m ${direction} 3 times in a row. Consider updating the reminder to ${suggestedTimes.join(
+                  ", "
+                )} in the Reminders tab.`,
           });
         }
       }
     }
 
     // 4. If it's a "once" reminder, auto-delete it after logging
-    if (reminder && reminder.repeatSchedule === "once" && (log.action === "taken" || log.action === "skipped" || log.action === "missed")) {
+    if (
+      reminder &&
+      reminder.repeatSchedule === "once" &&
+      (log.action === "taken" ||
+        log.action === "skipped" ||
+        log.action === "missed")
+    ) {
       console.log(`Auto-deleting one-time reminder: ${reminder.medicineName}`);
       await deleteReminder(reminder.id);
     }
@@ -752,16 +947,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addWellnessLog = async (log: Omit<WellnessLog, "id" | "timestamp" | "userId">) => {
+  const addWellnessLog = async (
+    log: Omit<WellnessLog, "id" | "timestamp" | "userId">
+  ) => {
     if (storageMode === "local") {
-       // Simple local save for wellness (optional, mainly cloud focused for AI)
+      // Simple local save for wellness (optional, mainly cloud focused for AI)
     } else {
       if (!currentUserId) throw new Error("Not logged in");
       const logData = sanitizeFirestoreData({
         ...log,
         userId: currentUserId,
         patientId: selectedPatientId || null,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
       await addDoc(collection(db, "wellnessLogs"), logData);
       // onSnapshot listener will auto-update state
@@ -778,7 +975,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localPersistence.patients.getAll(),
     ]);
 
-    if (localMeds.length === 0 && localRems.length === 0 && localLogs.length === 0 && localPatients.length === 0) return;
+    if (
+      localMeds.length === 0 &&
+      localRems.length === 0 &&
+      localLogs.length === 0 &&
+      localPatients.length === 0
+    )
+      return;
 
     try {
       // 0. Sync Patients to Firestore and map local IDs to Firestore IDs
@@ -788,27 +991,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const patientData = sanitizeFirestoreData({
           ...data,
           managedBy: currentUserId,
-          createdAt: createdAt || new Date().toISOString()
+          createdAt: createdAt || new Date().toISOString(),
         });
         const docRef = await addDoc(collection(db, "patients"), patientData);
         patientIdMap[id] = docRef.id;
       }
 
       // 1. Sync Medicines to Firestore
-      const syncedMedNames = new Set(medicines.map(m => m.name.toLowerCase()));
+      const syncedMedNames = new Set(
+        medicines.map((m) => m.name.toLowerCase())
+      );
       for (const med of localMeds) {
         if (syncedMedNames.has(med.name.toLowerCase())) {
-          setMedicines(p => p.map(m => m.name.toLowerCase() === med.name.toLowerCase() ? { ...m, isConflict: true } : m));
+          setMedicines((p) =>
+            p.map((m) =>
+              m.name.toLowerCase() === med.name.toLowerCase()
+                ? { ...m, isConflict: true }
+                : m
+            )
+          );
           continue;
         }
         syncedMedNames.add(med.name.toLowerCase());
         const { id, addedAt, ...data } = med;
-        const mappedPatientId = data.patientId ? (patientIdMap[data.patientId] || data.patientId) : null;
+        const mappedPatientId = data.patientId
+          ? patientIdMap[data.patientId] || data.patientId
+          : null;
         const medData = sanitizeFirestoreData({
           ...data,
           patientId: mappedPatientId,
           userId: currentUserId,
-          addedAt: addedAt || new Date().toISOString()
+          addedAt: addedAt || new Date().toISOString(),
         });
         await addDoc(collection(db, "medicines"), medData);
       }
@@ -816,12 +1029,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // 2. Sync Reminders to Firestore
       for (const rem of localRems) {
         const { id, createdAt, ...data } = rem;
-        const mappedPatientId = data.patientId ? (patientIdMap[data.patientId] || data.patientId) : null;
+        const mappedPatientId = data.patientId
+          ? patientIdMap[data.patientId] || data.patientId
+          : null;
         const remData = sanitizeFirestoreData({
           ...data,
           patientId: mappedPatientId,
           userId: currentUserId,
-          createdAt: createdAt || new Date().toISOString()
+          createdAt: createdAt || new Date().toISOString(),
         });
         await addDoc(collection(db, "reminders"), remData);
       }
@@ -829,12 +1044,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // 3. Sync Logs to Firestore
       for (const log of localLogs) {
         const { id, actionTime, ...data } = log;
-        const mappedPatientId = data.patientId ? (patientIdMap[data.patientId] || data.patientId) : null;
+        const mappedPatientId = data.patientId
+          ? patientIdMap[data.patientId] || data.patientId
+          : null;
         const logData = sanitizeFirestoreData({
           ...data,
           patientId: mappedPatientId,
           userId: currentUserId,
-          actionTime: actionTime || new Date().toISOString()
+          actionTime: actionTime || new Date().toISOString(),
         });
         await addDoc(collection(db, "doseLogs"), logData);
       }
@@ -861,13 +1078,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const now = new Date().toISOString();
       setLastSyncTimestamp(now);
       storage.setItem("med_last_sync", now);
-
     } catch (err) {
       console.error("Sync failed:", err);
     }
-  }, [currentUserId, storageMode, medicines, reminders, doseLogs, selectedPatientId, t, toast]);
+  }, [
+    currentUserId,
+    storageMode,
+    medicines,
+    reminders,
+    doseLogs,
+    selectedPatientId,
+    t,
+    toast,
+  ]);
 
-  const addPatient = async (patient: Omit<Patient, "id" | "createdAt" | "managedBy">) => {
+  const addPatient = async (
+    patient: Omit<Patient, "id" | "createdAt" | "managedBy">
+  ) => {
     if (storageMode === "local") {
       const newPatient = await localPersistence.patients.create(patient);
       setPatients((prev) => [...prev, newPatient]);
@@ -876,42 +1103,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const patientData = sanitizeFirestoreData({
         ...patient,
         managedBy: currentUserId,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
       const docRef = await addDoc(collection(db, "patients"), patientData);
-      setPatients((prev) => [...prev, { ...patientData, id: docRef.id } as Patient]);
+      setPatients((prev) => [
+        ...prev,
+        { ...patientData, id: docRef.id } as Patient,
+      ]);
     }
   };
 
   const updatePatient = async (id: string, updates: Partial<Patient>) => {
     if (storageMode === "local") {
       await localPersistence.patients.update(id, updates);
-      setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+      setPatients((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+      );
     } else {
       if (!currentUserId) throw new Error("Not logged in");
       const docRef = doc(db, "patients", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
-      setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...updates } : p)));
+      setPatients((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+      );
     }
   };
 
   const deletePatient = async (id: string) => {
     // Cascade delete associated items
-    const relatedMeds = medicines.filter(m => m.patientId === id);
+    const relatedMeds = medicines.filter((m) => m.patientId === id);
     for (const med of relatedMeds) {
       await deleteMedicine(med.id);
     }
-    
-    const relatedRems = reminders.filter(r => r.patientId === id);
+
+    const relatedRems = reminders.filter((r) => r.patientId === id);
     for (const rem of relatedRems) {
       await deleteReminder(rem.id);
     }
-    
-    const relatedLogs = doseLogs.filter(l => l.patientId === id);
+
+    const relatedLogs = doseLogs.filter((l) => l.patientId === id);
     for (const l of relatedLogs) {
       await deleteDoseLog(l.id);
     }
-    
+
     // Optimistic local update for wellness logs
     setWellnessLogs((prev) => prev.filter((w) => w.patientId !== id));
 
@@ -920,10 +1154,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPatients((prev) => prev.filter((p) => p.id !== id));
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      
+
       // Delete wellness logs from cloud
       try {
-        const wQuery = query(collection(db, "wellnessLogs"), where("patientId", "==", id), where("userId", "==", currentUserId));
+        const wQuery = query(
+          collection(db, "wellnessLogs"),
+          where("patientId", "==", id),
+          where("userId", "==", currentUserId)
+        );
         const snapshot = await getDocs(wQuery);
         snapshot.forEach((docSnap) => {
           deleteDoc(doc(db, "wellnessLogs", docSnap.id)).catch(console.error);
@@ -954,7 +1192,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     storage.removeItem("dawa_local_reminders");
     storage.removeItem("dawa_local_doselogs");
     storage.removeItem("dawa_local_patients");
-    
+
     // 3. Reset Professional Settings if any
     setIsProfessionalMode(false);
   }, [setIsProfessionalMode]);
@@ -962,11 +1200,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider
       value={{
-        medicines, reminders, doseLogs, patients, wellnessLogs, userProfile, storageMode, isLoggedIn, needsOnboarding, hasSeenWelcome, currentUserId, selectedPatientId, isProfessionalMode,
-        addMedicine, updateMedicine, deleteMedicine, addReminder, updateReminder, deleteReminder,
-        logDose, deleteDoseLog, addPatient, updatePatient, deletePatient, addWellnessLog, setSelectedPatientId, setIsProfessionalMode, setStorageMode, setIsLoggedIn, setNeedsOnboarding, setHasSeenWelcome, completeOnboarding, loginUser, logoutUser, clearAllData, syncLocalToCloud, isInitializing,
-        isDawaGPTOpen, setIsDawaGPTOpen, isIntelligenceCollapsed, setIsIntelligenceCollapsed,
-        lastSyncTimestamp, updateUserProfile, rememberMe, setRememberMe
+        medicines,
+        reminders,
+        doseLogs,
+        patients,
+        wellnessLogs,
+        userProfile,
+        storageMode,
+        isLoggedIn,
+        needsOnboarding,
+        hasSeenWelcome,
+        currentUserId,
+        selectedPatientId,
+        isProfessionalMode,
+        addMedicine,
+        updateMedicine,
+        deleteMedicine,
+        addReminder,
+        updateReminder,
+        deleteReminder,
+        logDose,
+        deleteDoseLog,
+        addPatient,
+        updatePatient,
+        deletePatient,
+        addWellnessLog,
+        setSelectedPatientId,
+        setIsProfessionalMode,
+        setStorageMode,
+        setIsLoggedIn,
+        setNeedsOnboarding,
+        setHasSeenWelcome,
+        completeOnboarding,
+        loginUser,
+        logoutUser,
+        clearAllData,
+        syncLocalToCloud,
+        isInitializing,
+        isDawaGPTOpen,
+        setIsDawaGPTOpen,
+        isIntelligenceCollapsed,
+        setIsIntelligenceCollapsed,
+        lastSyncTimestamp,
+        updateUserProfile,
+        rememberMe,
+        setRememberMe,
       }}
     >
       {children}

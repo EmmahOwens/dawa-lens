@@ -28,6 +28,18 @@ service cloud.firestore {
       );
     }
 
+    // Verify that the patientId field (if set) references a patient the caller actually manages.
+    // This prevents a malicious actor from writing records under a patient they don't own
+    // even if the userId field is correct.
+    function isValidPatientRef() {
+      let pid = request.resource.data.get('patientId', null);
+      return pid == null ||
+        (
+          exists(/databases/$(database)/documents/patients/$(pid)) &&
+          get(/databases/$(database)/documents/patients/$(pid)).data.managedBy == request.auth.uid
+        );
+    }
+
     // --- Collections ---
 
     // User profiles — only the profile owner can read/write
@@ -38,28 +50,28 @@ service cloud.firestore {
     // Medication inventory
     // Allow read/write only if the userId field matches the authenticated user
     match /medicines/{medicineId} {
-      allow read, write: if isDataOwner();
-      allow delete: if isDataOwner();
+      allow read, delete: if isDataOwner();
+      allow create, update: if isDataOwner() && isValidPatientRef();
     }
 
     // Medication reminders/schedules
     // Allow read/write only if the userId field matches the authenticated user
     match /reminders/{reminderId} {
-      allow read, write: if isDataOwner();
-      allow delete: if isDataOwner();
+      allow read, delete: if isDataOwner();
+      allow create, update: if isDataOwner() && isValidPatientRef();
     }
 
     // Dose logs — history of doses taken/skipped/missed
     // Allow read/write/delete if the userId field matches the authenticated user
     match /doseLogs/{logId} {
-      allow read, write: if isDataOwner();
-      allow delete: if isDataOwner();
+      allow read, delete: if isDataOwner();
+      allow create, update: if isDataOwner() && isValidPatientRef();
     }
 
     // Wellness journals (Food, Symptoms, Mood)
     match /wellnessLogs/{logId} {
-      allow read, write: if isDataOwner();
-      allow delete: if isDataOwner();
+      allow read, delete: if isDataOwner();
+      allow create, update: if isDataOwner() && isValidPatientRef();
     }
 
     // Family members or professional clients

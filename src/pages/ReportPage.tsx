@@ -53,6 +53,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MedicalReportContent } from "@/components/MedicalReportContent";
 import { toast } from "sonner";
+import { usePatientScope } from "@/hooks/usePatientScope";
 import { NativePdf, NativeReportData } from "@/plugins/nativePdf";
 
 const container = {
@@ -62,14 +63,7 @@ const container = {
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 export default function ReportPage() {
-  const {
-    doseLogs,
-    wellnessLogs,
-    medicines,
-    userProfile,
-    patients,
-    selectedPatientId,
-  } = useApp();
+  const { selectedPatientId } = useApp();
   const [loading, setLoading] = useState(false);
 
   interface WellnessInsight {
@@ -82,37 +76,15 @@ export default function ReportPage() {
   const [insights, setInsights] = useState<WellnessInsight | null>(null);
   const lastFetchKey = useRef<string>("");
 
-  const patient = selectedPatientId
-    ? patients.find((p) => p.id === selectedPatientId)
-    : null;
-  const patientName = patient?.name || userProfile?.name || "User";
-  const patientAge = patient?.age
-    ? `${patient.age} yrs`
-    : userProfile?.dateOfBirth
-    ? `${
-        new Date().getFullYear() -
-        new Date(userProfile.dateOfBirth).getFullYear()
-      } yrs`
-    : "N/A";
-  const patientGender = patient?.gender || userProfile?.gender || "N/A";
-
-  const matchPatient = useCallback(
-    (pid: string | null | undefined) =>
-      (pid || null) === (selectedPatientId || null),
-    [selectedPatientId]
-  );
-  const scopedDoseLogs = useMemo(
-    () => doseLogs.filter((l) => matchPatient(l.patientId)),
-    [doseLogs, matchPatient]
-  );
-  const scopedWellnessLogs = useMemo(
-    () => wellnessLogs.filter((l) => matchPatient(l.patientId)),
-    [wellnessLogs, matchPatient]
-  );
-  const scopedMedicines = useMemo(
-    () => medicines.filter((m) => matchPatient(m.patientId)),
-    [medicines, matchPatient]
-  );
+  const {
+    resolvedPatient,
+    scopedDoseLogs,
+    scopedWellnessLogs,
+    scopedMedicines,
+  } = usePatientScope();
+  const patientName = resolvedPatient.name;
+  const patientAge = resolvedPatient.age ? `${resolvedPatient.age} yrs` : "N/A";
+  const patientGender = resolvedPatient.gender ?? "N/A";
 
   // Prepare Chart Data (Last 7 Days)
   const chartData = useMemo(() => {
@@ -231,6 +203,14 @@ export default function ReportPage() {
         doseLogs: scopedDoseLogs.slice(0, 70),
         wellnessLogs: scopedWellnessLogs.slice(0, 50),
         medicines: scopedMedicines.filter((m) => !m.isConflict),
+        patientContext: {
+          name: resolvedPatient.name,
+          age: resolvedPatient.age,
+          gender: resolvedPatient.gender,
+          type: resolvedPatient.type,
+          conditions: resolvedPatient.conditions,
+          allergies: resolvedPatient.allergies,
+        },
       });
       setInsights(res);
     } catch (err) {
@@ -943,7 +923,7 @@ export default function ReportPage() {
               <div className="py-14 text-center opacity-40 bg-accent/20 rounded-2xl border border-dashed border-border/50">
                 <Info size={32} className="mx-auto mb-4 opacity-50" />
                 <p className="text-[10px] font-black uppercase tracking-widest">
-                  {doseLogs.length > 0
+                  {scopedDoseLogs.length > 0
                     ? "Generating Clinical Insights..."
                     : "No Data Available Yet"}
                 </p>
@@ -1005,10 +985,10 @@ export default function ReportPage() {
               patientGender={patientGender}
               patientAge={patientAge}
               adherenceScore={adherenceScore}
-              doseLogs={doseLogs}
-              medicines={medicines}
+              doseLogs={scopedDoseLogs}
+              medicines={scopedMedicines}
               insights={insights}
-              wellnessLogs={wellnessLogs}
+              wellnessLogs={scopedWellnessLogs}
             />
           </ScrollArea>
         </DialogContent>
@@ -1025,10 +1005,10 @@ export default function ReportPage() {
           patientGender={patientGender}
           patientAge={patientAge}
           adherenceScore={adherenceScore}
-          doseLogs={doseLogs}
-          medicines={medicines}
+          doseLogs={scopedDoseLogs}
+          medicines={scopedMedicines}
           insights={insights}
-          wellnessLogs={wellnessLogs}
+          wellnessLogs={scopedWellnessLogs}
         />
       </div>
     </div>

@@ -1,9 +1,32 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Plus, History, Search, Pill, Bell, AlertTriangle, Package2, Users, User, Plane, Heart, FileText, Check, X, Sparkles, Sun, Moon, Cloud, Sunrise, ShieldAlert } from "@/lib/icons";
+import {
+  Camera,
+  Plus,
+  History,
+  Search,
+  Pill,
+  Bell,
+  AlertTriangle,
+  Package2,
+  Users,
+  User,
+  Plane,
+  Heart,
+  FileText,
+  Check,
+  X,
+  Sparkles,
+  Sun,
+  Moon,
+  Cloud,
+  Sunrise,
+  ShieldAlert,
+} from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
+import { usePatientScope } from "@/hooks/usePatientScope";
 import { useTranslation } from "react-i18next";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toDate } from "@/lib/utils";
 import { toast } from "sonner";
 import AchievementOverlay from "@/components/AchievementOverlay";
@@ -20,37 +43,36 @@ import { HealthWidgets } from "@/components/dashboard/HealthWidgets";
 import { FamilyStatusDots } from "@/components/dashboard/FamilyStatusDots";
 import { AIInsightCard } from "@/components/dashboard/AIInsightCard";
 
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+};
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { 
-    reminders, 
-    doseLogs, 
-    userProfile, 
-    medicines, 
-    isProfessionalMode, 
-    patients, 
-    selectedPatientId, 
-    logDose, 
+  const {
+    userProfile,
+    isProfessionalMode,
+    patients,
+    selectedPatientId,
+    logDose,
     setSelectedPatientId,
-    wellnessLogs,
-    addWellnessLog
+    addWellnessLog,
   } = useApp();
   const { t } = useTranslation();
   const [showAchievement, setShowAchievement] = useState(false);
 
-  const matchPatient = useCallback((pid: string | null | undefined) => (pid || null) === (selectedPatientId || null), [selectedPatientId]);
-
-  const scopedMedicines = useMemo(() => medicines.filter(m => matchPatient((m as any).patientId)), [medicines, matchPatient]);
-  const scopedReminders = useMemo(() => reminders.filter(r => matchPatient(r.patientId)), [reminders, matchPatient]);
-  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, matchPatient]);
-  const scopedWellnessLogs = useMemo(() => wellnessLogs.filter(l => matchPatient(l.patientId)), [wellnessLogs, matchPatient]);
+  const {
+    scopedMedicines,
+    scopedReminders,
+    scopedDoseLogs,
+    scopedWellnessLogs,
+  } = usePatientScope();
 
   const refillStatuses = useMemo(() => {
     return scopedMedicines
-      .map(m => calculateRefillStatus(m, scopedReminders))
+      .map((m) => calculateRefillStatus(m, scopedReminders))
       .filter((s): s is RefillStatus => s !== null && s.isLow);
   }, [scopedMedicines, scopedReminders]);
 
@@ -60,31 +82,93 @@ export default function Dashboard() {
 
   const greetingInfo = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour < 5) return { text: "Good late night", icon: Moon, color: "text-indigo-400" };
-    if (hour < 12) return { text: t("dashboard.good_morning", "Good morning"), icon: Sunrise, color: "text-amber-500" };
-    if (hour < 17) return { text: t("dashboard.good_afternoon", "Good afternoon"), icon: Sun, color: "text-orange-500" };
-    if (hour < 21) return { text: t("dashboard.good_evening", "Good evening"), icon: Cloud, color: "text-blue-400" };
+    if (hour < 5)
+      return { text: "Good late night", icon: Moon, color: "text-indigo-400" };
+    if (hour < 12)
+      return {
+        text: t("dashboard.good_morning", "Good morning"),
+        icon: Sunrise,
+        color: "text-amber-500",
+      };
+    if (hour < 17)
+      return {
+        text: t("dashboard.good_afternoon", "Good afternoon"),
+        icon: Sun,
+        color: "text-orange-500",
+      };
+    if (hour < 21)
+      return {
+        text: t("dashboard.good_evening", "Good evening"),
+        icon: Cloud,
+        color: "text-blue-400",
+      };
     return { text: "Good night", icon: Moon, color: "text-indigo-500" };
   }, [t]);
 
   const quickActions = [
-    { icon: Camera, label: t("dashboard.quick_scan"), to: "/scan", color: "bg-primary text-primary-foreground", description: "AI Recognition" },
-    { icon: Users, label: isProfessionalMode ? "Patient Hub" : "Family Hub", to: "/family", color: "bg-success/10 border-success/20 text-success" },
-    { icon: Heart, label: "Wellness", to: "/wellness", color: "bg-destructive/10 border-destructive/20 text-destructive" },
-    { icon: Plane, label: "Travel", to: "/travel", color: "bg-blue-500/10 border-blue-500/20 text-blue-600" },
-    { icon: ShieldAlert, label: "Safety Check", to: "/interactions", color: "bg-warning/10 border-warning/20 text-warning-foreground dark:text-warning" },
-    { icon: Bell, label: "Reminders", to: "/reminders", color: "bg-amber-500/10 border-amber-500/20 text-amber-600" },
-    { icon: History, label: "History", to: "/history", color: "bg-accent border-accent/60 text-accent-foreground" },
-    { icon: FileText, label: "Reports", to: "/report", color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500" },
+    {
+      icon: Camera,
+      label: t("dashboard.quick_scan"),
+      to: "/scan",
+      color: "bg-primary text-primary-foreground",
+      description: "AI Recognition",
+    },
+    {
+      icon: Users,
+      label: isProfessionalMode ? "Patient Hub" : "Family Hub",
+      to: "/family",
+      color: "bg-success/10 border-success/20 text-success",
+    },
+    {
+      icon: Heart,
+      label: "Wellness",
+      to: "/wellness",
+      color: "bg-destructive/10 border-destructive/20 text-destructive",
+    },
+    {
+      icon: Plane,
+      label: "Travel",
+      to: "/travel",
+      color: "bg-blue-500/10 border-blue-500/20 text-blue-600",
+    },
+    {
+      icon: ShieldAlert,
+      label: "Safety Check",
+      to: "/interactions",
+      color:
+        "bg-warning/10 border-warning/20 text-warning-foreground dark:text-warning",
+    },
+    {
+      icon: Bell,
+      label: "Reminders",
+      to: "/reminders",
+      color: "bg-amber-500/10 border-amber-500/20 text-amber-600",
+    },
+    {
+      icon: History,
+      label: "History",
+      to: "/history",
+      color: "bg-accent border-accent/60 text-accent-foreground",
+    },
+    {
+      icon: FileText,
+      label: "Reports",
+      to: "/report",
+      color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-500",
+    },
   ];
 
   const todayReminders = scopedReminders.filter((r) => r.enabled);
-  
+
   const expectedDosesToday = useMemo(() => {
     let count = 0;
     const todayNum = new Date().getDay();
-    todayReminders.forEach(r => {
-      if (r.repeatSchedule === "custom" && r.repeatDays && r.repeatDays.length > 0) {
+    todayReminders.forEach((r) => {
+      if (
+        r.repeatSchedule === "custom" &&
+        r.repeatDays &&
+        r.repeatDays.length > 0
+      ) {
         if (!r.repeatDays.includes(todayNum)) return;
       }
       if (r.repeatSchedule === "weekly") {
@@ -101,16 +185,21 @@ export default function Dashboard() {
   }, [todayReminders]);
 
   const takenToday = scopedDoseLogs.filter(
-    (l) => l.action === "taken" && new Date(l.actionTime).toDateString() === new Date().toDateString()
+    (l) =>
+      l.action === "taken" &&
+      new Date(l.actionTime).toDateString() === new Date().toDateString()
   ).length;
-  
-  const adherencePercent = expectedDosesToday > 0 ? Math.round((takenToday / expectedDosesToday) * 100) : 100;
+
+  const adherencePercent =
+    expectedDosesToday > 0
+      ? Math.round((takenToday / expectedDosesToday) * 100)
+      : 100;
 
   useEffect(() => {
     if (expectedDosesToday > 0 && takenToday >= expectedDosesToday) {
       const today = new Date().toDateString();
       const lastCelebrated = localStorage.getItem("last_celebration_date");
-      
+
       if (lastCelebrated !== today) {
         setShowAchievement(true);
         localStorage.setItem("last_celebration_date", today);
@@ -120,7 +209,11 @@ export default function Dashboard() {
 
   // scheduledTime is the exact ISO datetime for the specific dose slot being actioned,
   // provided by DailyTimeline so each slot in a multi-dose reminder is tracked individually.
-  const handleAction = async (reminder: any, action: "taken" | "skipped", scheduledTime: string) => {
+  const handleAction = async (
+    reminder: any,
+    action: "taken" | "skipped",
+    scheduledTime: string
+  ) => {
     try {
       await logDose({
         reminderId: reminder.id,
@@ -137,19 +230,19 @@ export default function Dashboard() {
 
   return (
     <div className="px-4 pt-8 pb-24">
-      <AchievementOverlay 
+      <AchievementOverlay
         open={showAchievement}
         onClose={() => setShowAchievement(false)}
         title="Perfect Day!"
         subtitle="You've taken all your scheduled medications for today. Keep up the great work!"
         emoji="🏆"
       />
-      
+
       {/* 1. Greeting & Search */}
-      <motion.div 
-        variants={container} 
-        initial="hidden" 
-        animate="show" 
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
         className="mb-6"
       >
         <div className="flex items-center justify-between mb-4">
@@ -160,43 +253,49 @@ export default function Dashboard() {
                 {greetingInfo.text}
               </span>
             </div>
-            <motion.h1 
+            <motion.h1
               variants={item}
               className="text-3xl font-black tracking-tight text-foreground leading-none"
             >
-              Hi, <span className="text-primary">{userProfile?.name?.split(" ")[0] || t("dashboard.greeting_there")}</span>
+              Hi,{" "}
+              <span className="text-primary">
+                {userProfile?.name?.split(" ")[0] ||
+                  t("dashboard.greeting_there")}
+              </span>
             </motion.h1>
           </div>
           {selectedPatientId ? (
-             <motion.button 
-               whileTap={{ scale: 0.9 }}
-               onClick={() => setSelectedPatientId(null)}
-               className="flex flex-col items-center gap-1.5"
-             >
-               <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm">
-                 <User size={20} />
-               </div>
-               <span className="text-[10px] font-bold uppercase text-primary tracking-wider">Switch</span>
-             </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setSelectedPatientId(null)}
+              className="flex flex-col items-center gap-1.5"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shadow-sm">
+                <User size={20} />
+              </div>
+              <span className="text-[10px] font-bold uppercase text-primary tracking-wider">
+                Switch
+              </span>
+            </motion.button>
           ) : (
-             <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center text-accent-foreground font-black border border-border shadow-sm">
-                {userProfile?.name?.charAt(0) || "U"}
-             </div>
+            <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center text-accent-foreground font-black border border-border shadow-sm">
+              {userProfile?.name?.charAt(0) || "U"}
+            </div>
           )}
         </div>
-        
+
         {/* Circle of Care (Family Status) */}
         {(isProfessionalMode || patients.length > 0) && (
-          <FamilyStatusDots 
-            patients={patients} 
-            selectedId={selectedPatientId} 
-            onSelect={setSelectedPatientId} 
+          <FamilyStatusDots
+            patients={patients}
+            selectedId={selectedPatientId}
+            onSelect={setSelectedPatientId}
           />
         )}
       </motion.div>
 
       {/* 2. Combined Hero Section */}
-      <StatusHero 
+      <StatusHero
         nextDose={nextDose}
         takenToday={takenToday}
         totalToday={expectedDosesToday}
@@ -209,7 +308,7 @@ export default function Dashboard() {
 
       {/* 4. Critical Alerts (Conditional) */}
       {refillStatuses.length > 0 && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="mb-8 space-y-3"
@@ -218,8 +317,8 @@ export default function Dashboard() {
             <AlertTriangle size={14} />
             Critical Refills
           </h2>
-          {refillStatuses.map(status => (
-            <div 
+          {refillStatuses.map((status) => (
+            <div
               key={status.medicineId}
               className="glass-card border-warning/30 bg-warning/5 p-4 flex items-center justify-between"
             >
@@ -228,14 +327,20 @@ export default function Dashboard() {
                   <Package2 size={20} />
                 </div>
                 <div>
-                   <p className="text-sm font-bold text-foreground">{status.medicineName}</p>
-                   <p className="text-[10px] font-bold text-warning uppercase tracking-wider">
-                     {status.daysRemaining} days remaining
-                   </p>
+                  <p className="text-sm font-bold text-foreground">
+                    {status.medicineName}
+                  </p>
+                  <p className="text-[10px] font-bold text-warning uppercase tracking-wider">
+                    {status.daysRemaining} days remaining
+                  </p>
                 </div>
               </div>
-              <button 
-                onClick={() => navigate(`/medicine/${encodeURIComponent(status.medicineName)}`)}
+              <button
+                onClick={() =>
+                  navigate(
+                    `/medicine/${encodeURIComponent(status.medicineName)}`
+                  )
+                }
                 className="bg-warning text-warning-foreground text-[10px] font-bold px-4 py-2 rounded-lg uppercase tracking-wider"
               >
                 Refill
@@ -246,16 +351,18 @@ export default function Dashboard() {
       )}
 
       {/* 5. Daily Timeline (Reminders) */}
-      <DailyTimeline 
+      <DailyTimeline
         reminders={todayReminders}
         doseLogs={scopedDoseLogs}
         onAction={handleAction}
       />
 
       {/* 6. Health Widgets (Water/Mood) */}
-      <HealthWidgets 
+      <HealthWidgets
         wellnessLogs={scopedWellnessLogs}
-        onAddLog={(type, data) => addWellnessLog({ type, data, patientId: selectedPatientId })}
+        onAddLog={(type, data) =>
+          addWellnessLog({ type, data, patientId: selectedPatientId })
+        }
       />
 
       {/* 7. Bento Grid Quick Actions */}
@@ -273,11 +380,15 @@ export default function Dashboard() {
           >
             <div className="absolute top-[-10%] right-[-10%] w-32 h-32 bg-white/20 rounded-full blur-2xl" />
             <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-               <Camera size={28} />
+              <Camera size={28} />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider opacity-70 mb-1">{quickActions[0].description}</p>
-              <h3 className="text-xl font-black leading-tight">{quickActions[0].label}</h3>
+              <p className="text-xs font-bold uppercase tracking-wider opacity-70 mb-1">
+                {quickActions[0].description}
+              </p>
+              <h3 className="text-xl font-black leading-tight">
+                {quickActions[0].label}
+              </h3>
             </div>
           </motion.button>
 
@@ -288,9 +399,11 @@ export default function Dashboard() {
             className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${quickActions[1].color}`}
           >
             <div className="p-2.5 bg-success/20 rounded-xl">
-               <Users size={20} />
+              <Users size={20} />
             </div>
-            <span className="font-bold text-sm tracking-tight">{quickActions[1].label}</span>
+            <span className="font-bold text-sm tracking-tight">
+              {quickActions[1].label}
+            </span>
           </motion.button>
 
           {/* Small Cards Row 2 */}
@@ -302,7 +415,9 @@ export default function Dashboard() {
               className={`col-span-1 row-span-1 rounded-[1.25rem] border ${action.color} flex flex-col items-center justify-center gap-1.5`}
             >
               <action.icon size={20} />
-              <span className="text-[9px] font-bold uppercase tracking-wider">{action.label}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider">
+                {action.label}
+              </span>
             </motion.button>
           ))}
 
@@ -313,9 +428,14 @@ export default function Dashboard() {
             className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${quickActions[4].color}`}
           >
             <div className="p-2.5 bg-warning/20 rounded-xl">
-               <ShieldAlert size={20} className="text-warning-foreground dark:text-warning" />
+              <ShieldAlert
+                size={20}
+                className="text-warning-foreground dark:text-warning"
+              />
             </div>
-            <span className="font-bold text-sm tracking-tight">{quickActions[4].label}</span>
+            <span className="font-bold text-sm tracking-tight">
+              {quickActions[4].label}
+            </span>
           </motion.button>
 
           <motion.button
@@ -324,9 +444,11 @@ export default function Dashboard() {
             className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${quickActions[5].color}`}
           >
             <div className="p-2.5 bg-white/10 rounded-xl">
-               <Bell size={20} />
+              <Bell size={20} />
             </div>
-            <span className="font-bold text-sm tracking-tight">{quickActions[5].label}</span>
+            <span className="font-bold text-sm tracking-tight">
+              {quickActions[5].label}
+            </span>
           </motion.button>
 
           {/* Row 4: History (2x1) and Reports (2x1) */}
@@ -338,9 +460,11 @@ export default function Dashboard() {
               className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${action.color}`}
             >
               <div className="p-2.5 bg-white/10 rounded-xl">
-                 <action.icon size={20} />
+                <action.icon size={20} />
               </div>
-              <span className="font-bold text-sm tracking-tight">{action.label}</span>
+              <span className="font-bold text-sm tracking-tight">
+                {action.label}
+              </span>
             </motion.button>
           ))}
         </div>

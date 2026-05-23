@@ -194,14 +194,25 @@ export const checkMissedDoses = async (
             await LocalNotifications.schedule({
               notifications: [
                 {
-                  title: `Missed Dose: ${r.medicineName}`,
-                  body: `You missed your ${
-                    r.dose
-                  } dose scheduled for ${timeStr.trim()}. Please stay on track!`,
+                  title: r.patientName
+                    ? `Missed Dose: ${r.patientName}'s ${r.medicineName}`
+                    : `Missed Dose: ${r.medicineName}`,
+                  body: r.patientName
+                    ? `${r.patientName} missed their ${
+                        r.dose
+                      } dose scheduled at ${timeStr.trim()}. Please follow up.`
+                    : `You missed your ${
+                        r.dose
+                      } dose scheduled for ${timeStr.trim()}. Please stay on track!`,
                   id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
-                  channelId: "dawa_reminders",
+                  channelId: r.patientId
+                    ? `dawa_patient_${r.patientId}`
+                    : "dawa_owner",
                   sound: "default",
-                  extra: { type: "missed_alert" },
+                  extra: {
+                    type: "missed_alert",
+                    patientId: r.patientId ?? null,
+                  },
                 },
               ],
             });
@@ -482,17 +493,43 @@ export const scheduleReminders = async (
       await LocalNotifications.requestPermissions();
     }
 
+    const activeReminders = reminders.filter((r) => r.enabled);
+
     // Ensure the channel exists before scheduling on Android
     if (Capacitor.getPlatform() === "android") {
+      // Always ensure the owner channel exists
       await LocalNotifications.createChannel({
-        id: "dawa_reminders",
-        name: "Medicine Reminders",
-        description: "Notifications for medicine reminders",
+        id: "dawa_owner",
+        name: "My Reminders",
+        description: "Your personal medication reminders",
         importance: 5,
         visibility: 1,
         vibration: true,
         sound: "default",
       });
+
+      // Create one channel per managed patient so the user can control
+      // notification behaviour independently for each person in Android Settings
+      const seenPatientIds = new Set<string>();
+      for (const r of activeReminders) {
+        if (r.patientId && !seenPatientIds.has(r.patientId)) {
+          seenPatientIds.add(r.patientId);
+          const channelName = r.patientName
+            ? `${r.patientName}'s Reminders`
+            : "Family Member Reminders";
+          await LocalNotifications.createChannel({
+            id: `dawa_patient_${r.patientId}`,
+            name: channelName,
+            description: `Medication reminders for ${
+              r.patientName ?? "a family member"
+            }`,
+            importance: 5,
+            visibility: 1,
+            vibration: true,
+            sound: "default",
+          });
+        }
+      }
     }
 
     // Cancel all pending notifications to refresh the schedule
@@ -503,7 +540,6 @@ export const scheduleReminders = async (
 
     const notifications: LocalNotificationSchema[] = [];
     const alarmNotifications: AlarmNotification[] = [];
-    const activeReminders = reminders.filter((r) => r.enabled);
     const now = new Date();
 
     activeReminders.forEach((r) => {
@@ -525,7 +561,9 @@ export const scheduleReminders = async (
             body: `You are out of stock. Please refill to continue reminders.`,
             id: stringToHash(r.id + "refill"),
             schedule: { at: next, allowWhileIdle: true },
-            channelId: "dawa_reminders",
+            channelId: r.patientId
+              ? `dawa_patient_${r.patientId}`
+              : "dawa_owner",
             sound: "default",
             extra: { type: "refill", medicineId: r.medicineId },
           });
@@ -553,7 +591,7 @@ export const scheduleReminders = async (
           // allowWhileIdle: fires even when Android is in Doze/battery-saver mode.
           // This is the key flag that makes notifications work fully offline.
           schedule: { at: next, allowWhileIdle: true },
-          channelId: "dawa_reminders",
+          channelId: r.patientId ? `dawa_patient_${r.patientId}` : "dawa_owner",
           sound: "default",
           actionTypeId: "MEDICINE_REMINDER",
           extra: {

@@ -2,10 +2,24 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Bell, Plus, Trash2, ToggleLeft, ToggleRight, Clock,
-  Pill, AlarmCheck, AlarmClockOff, Pencil, Syringe, Droplets, Tablets, UserRound, RefreshCw
+  Bell,
+  Plus,
+  Trash2,
+  ToggleLeft,
+  ToggleRight,
+  Clock,
+  Pill,
+  AlarmCheck,
+  AlarmClockOff,
+  Pencil,
+  Syringe,
+  Droplets,
+  Tablets,
+  UserRound,
+  RefreshCw,
 } from "@/lib/icons";
 import { useApp, Reminder } from "@/contexts/AppContext";
+import { usePatientScope } from "@/hooks/usePatientScope";
 import { computeShiftOffset } from "@/services/reminderService";
 import { addMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -22,42 +36,78 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
 const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 
 function repeatLabel(reminder: Reminder): string {
   const { repeatSchedule, repeatDays } = reminder;
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  
+
   switch (repeatSchedule) {
-    case "daily": return "Every day";
-    case "once": return "One time";
+    case "daily":
+      return "Every day";
+    case "once":
+      return "One time";
     case "custom": {
       const timesCount = reminder.time.split(",").length;
       let label = timesCount > 1 ? `${timesCount} times a day` : "Custom";
       if (repeatDays && repeatDays.length > 0) {
-        label += ` (${repeatDays.map(d => days[d]).join(", ")})`;
+        label += ` (${repeatDays.map((d) => days[d]).join(", ")})`;
       }
       return label;
     }
-    default: return repeatSchedule;
+    default:
+      return repeatSchedule;
   }
 }
 
 /** Applies today's shift offset to a base HH:MM string and returns the display string. */
 function shiftTimeStr(baseTime: string, offsetMinutes: number): string {
   const [h, m] = baseTime.split(":").map(Number);
-  const total = ((h * 60 + m + offsetMinutes) % (24 * 60) + 24 * 60) % (24 * 60);
-  return `${Math.floor(total / 60).toString().padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
+  const total =
+    (((h * 60 + m + offsetMinutes) % (24 * 60)) + 24 * 60) % (24 * 60);
+  return `${Math.floor(total / 60)
+    .toString()
+    .padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
 }
 
-const colorMap: Record<string, { value: string; border: string; text: string }> = {
-  blue: { value: "bg-blue-500", border: "border-blue-500/20", text: "text-blue-500" },
-  green: { value: "bg-emerald-500", border: "border-emerald-500/20", text: "text-emerald-500" },
-  purple: { value: "bg-violet-500", border: "border-violet-500/20", text: "text-violet-500" },
-  rose: { value: "bg-rose-500", border: "border-rose-500/20", text: "text-rose-500" },
-  amber: { value: "bg-amber-500", border: "border-amber-500/20", text: "text-amber-500" },
-  slate: { value: "bg-slate-600", border: "border-slate-600/20", text: "text-slate-600" },
+const colorMap: Record<
+  string,
+  { value: string; border: string; text: string }
+> = {
+  blue: {
+    value: "bg-blue-500",
+    border: "border-blue-500/20",
+    text: "text-blue-500",
+  },
+  green: {
+    value: "bg-emerald-500",
+    border: "border-emerald-500/20",
+    text: "text-emerald-500",
+  },
+  purple: {
+    value: "bg-violet-500",
+    border: "border-violet-500/20",
+    text: "text-violet-500",
+  },
+  rose: {
+    value: "bg-rose-500",
+    border: "border-rose-500/20",
+    text: "text-rose-500",
+  },
+  amber: {
+    value: "bg-amber-500",
+    border: "border-amber-500/20",
+    text: "text-amber-500",
+  },
+  slate: {
+    value: "bg-slate-600",
+    border: "border-slate-600/20",
+    text: "text-slate-600",
+  },
 };
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -69,48 +119,37 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 export default function RemindersPage() {
   const navigate = useNavigate();
-  const { reminders, updateReminder, deleteReminder, doseLogs, isInitializing, selectedPatientId, patients, userProfile } = useApp();
+  const { updateReminder, deleteReminder, isInitializing } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  // Resolve the active profile display name
-  const activeProfile = useMemo(() => {
-    if (selectedPatientId) {
-      const p = patients.find(p => p.id === selectedPatientId);
-      return { name: p?.name || "Family Member", isSelf: false };
-    }
-    return { name: userProfile?.name || "You", isSelf: true };
-  }, [selectedPatientId, patients, userProfile]);
-
-  // Filter reminders by the active patient context
-  const filteredReminders = useMemo(() => {
-    return reminders.filter(r => {
-      const pId = r.patientId;
-      return selectedPatientId === null ? !pId : pId === selectedPatientId;
-    });
-  }, [reminders, selectedPatientId]);
+  const { resolvedPatient, scopedReminders, scopedDoseLogs } =
+    usePatientScope();
 
   // Sort: enabled first, then by time
   const sorted = useMemo(() => {
-    return [...filteredReminders].sort((a, b) => {
+    return [...scopedReminders].sort((a, b) => {
       if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
       return a.time.localeCompare(b.time);
     });
-  }, [filteredReminders]);
+  }, [scopedReminders]);
 
-  // Today stats for the active profile — scoped to filteredReminders only
-  const filteredReminderIds = useMemo(() => new Set(filteredReminders.map(r => r.id)), [filteredReminders]);
-  const enabledCount = filteredReminders.filter((r) => r.enabled).length;
+  // Today stats for the active profile — scoped to scopedReminders only
+  const filteredReminderIds = useMemo(
+    () => new Set(scopedReminders.map((r) => r.id)),
+    [scopedReminders]
+  );
+  const enabledCount = scopedReminders.filter((r) => r.enabled).length;
   const todayStr = new Date().toDateString();
-  const takenToday = doseLogs.filter(
+  const takenToday = scopedDoseLogs.filter(
     (l) =>
       filteredReminderIds.has(l.reminderId) &&
       l.action === "taken" &&
       new Date(l.actionTime).toDateString() === todayStr
   ).length;
-  const missedToday = doseLogs.filter(
+  const missedToday = scopedDoseLogs.filter(
     (l) =>
       filteredReminderIds.has(l.reminderId) &&
       l.action === "missed" &&
@@ -160,7 +199,16 @@ export default function RemindersPage() {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => navigate("/reminders/new", { state: { patientId: selectedPatientId, patientName: !activeProfile.isSelf ? activeProfile.name : null } })}
+          onClick={() =>
+            navigate("/reminders/new", {
+              state: {
+                patientId: resolvedPatient.id,
+                patientName: !resolvedPatient.isOwner
+                  ? resolvedPatient.name
+                  : null,
+              },
+            })
+          }
           className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/25"
         >
           <Plus size={16} />
@@ -180,7 +228,9 @@ export default function RemindersPage() {
           Viewing:
         </span>
         <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
-          {activeProfile.isSelf ? `${activeProfile.name} (You)` : activeProfile.name}
+          {resolvedPatient.isOwner
+            ? `${resolvedPatient.name} (You)`
+            : resolvedPatient.name}
         </span>
       </motion.div>
 
@@ -192,32 +242,53 @@ export default function RemindersPage() {
         className="grid grid-cols-4 gap-2 mb-6"
       >
         <div className="p-3 rounded-2xl bg-primary/8 border border-primary/15 text-center">
-          <p className="text-2xl font-bold text-primary">{filteredReminders.length}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Total</p>
+          <p className="text-2xl font-bold text-primary">
+            {scopedReminders.length}
+          </p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+            Total
+          </p>
         </div>
         <div className="p-3 rounded-2xl bg-success/8 border border-success/15 text-center">
           <p className="text-2xl font-bold text-success">{enabledCount}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Active</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+            Active
+          </p>
         </div>
         <div className="p-3 rounded-2xl bg-accent border border-border/50 text-center">
           <p className="text-2xl font-bold text-foreground">{takenToday}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Taken</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+            Taken
+          </p>
         </div>
-        <div className={`p-3 rounded-2xl text-center ${
-          missedToday > 0
-            ? "bg-destructive/8 border border-destructive/20"
-            : "bg-accent border border-border/50"
-        }`}>
-          <p className={`text-2xl font-bold ${missedToday > 0 ? "text-destructive" : "text-foreground"}`}>{missedToday}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Missed</p>
+        <div
+          className={`p-3 rounded-2xl text-center ${
+            missedToday > 0
+              ? "bg-destructive/8 border border-destructive/20"
+              : "bg-accent border border-border/50"
+          }`}
+        >
+          <p
+            className={`text-2xl font-bold ${
+              missedToday > 0 ? "text-destructive" : "text-foreground"
+            }`}
+          >
+            {missedToday}
+          </p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+            Missed
+          </p>
         </div>
       </motion.div>
 
       {/* Reminder List */}
       {isInitializing ? (
         <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-24 w-full rounded-2xl bg-muted/40 animate-pulse" />
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-24 w-full rounded-2xl bg-muted/40 animate-pulse"
+            />
           ))}
         </div>
       ) : sorted.length === 0 ? (
@@ -230,13 +301,24 @@ export default function RemindersPage() {
             <Bell size={28} />
           </div>
           <div>
-            <p className="text-base font-bold text-foreground mb-1">No reminders yet</p>
+            <p className="text-base font-bold text-foreground mb-1">
+              No reminders yet
+            </p>
             <p className="text-sm text-muted-foreground max-w-[220px]">
               Add your first medicine reminder to get started.
             </p>
           </div>
           <Button
-            onClick={() => navigate("/reminders/new", { state: { patientId: selectedPatientId, patientName: !activeProfile.isSelf ? activeProfile.name : null } })}
+            onClick={() =>
+              navigate("/reminders/new", {
+                state: {
+                  patientId: resolvedPatient.id,
+                  patientName: !resolvedPatient.isOwner
+                    ? resolvedPatient.name
+                    : null,
+                },
+              })
+            }
             className="rounded-2xl mt-2 gap-2"
             size="sm"
           >
@@ -244,13 +326,19 @@ export default function RemindersPage() {
           </Button>
         </motion.div>
       ) : (
-        <motion.div variants={container} initial="hidden" animate="show" className="space-y-3">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="space-y-3"
+        >
           <AnimatePresence mode="popLayout">
             {sorted.map((reminder) => {
-              const actionToday = doseLogs.find(
+              const actionToday = scopedDoseLogs.find(
                 (l) =>
                   l.reminderId === reminder.id &&
-                  new Date(l.actionTime).toDateString() === new Date().toDateString()
+                  new Date(l.actionTime).toDateString() ===
+                    new Date().toDateString()
               );
 
               return (
@@ -268,8 +356,14 @@ export default function RemindersPage() {
                   {/* Icon */}
                   <div
                     className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-colors ${
-                      reminder.enabled 
-                        ? `${colorMap[reminder.color || "blue"]?.value || "bg-primary"} bg-opacity-10 ${colorMap[reminder.color || "blue"]?.text || "text-primary"}` 
+                      reminder.enabled
+                        ? `${
+                            colorMap[reminder.color || "blue"]?.value ||
+                            "bg-primary"
+                          } bg-opacity-10 ${
+                            colorMap[reminder.color || "blue"]?.text ||
+                            "text-primary"
+                          }`
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
@@ -293,21 +387,38 @@ export default function RemindersPage() {
                       )}
                     </div>
                     {(() => {
-                      const offsetMinutes = computeShiftOffset(reminder, doseLogs);
-                      const baseTimes = reminder.time.split(",").map(t => t.trim());
+                      const offsetMinutes = computeShiftOffset(
+                        reminder,
+                        scopedDoseLogs
+                      );
+                      const baseTimes = reminder.time
+                        .split(",")
+                        .map((t) => t.trim());
                       // Determine which slots to shift: those after the taken slot index
                       let takenSlotIndex = -1;
                       if (offsetMinutes !== 0) {
-                        const todayLog = [...doseLogs]
-                          .filter(l =>
-                            l.reminderId === reminder.id &&
-                            l.action === "taken" &&
-                            new Date(l.actionTime).toDateString() === new Date().toDateString()
+                        const todayLog = [...scopedDoseLogs]
+                          .filter(
+                            (l) =>
+                              l.reminderId === reminder.id &&
+                              l.action === "taken" &&
+                              new Date(l.actionTime).toDateString() ===
+                                new Date().toDateString()
                           )
-                          .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+                          .sort(
+                            (a, b) =>
+                              new Date(b.actionTime).getTime() -
+                              new Date(a.actionTime).getTime()
+                          )[0];
                         if (todayLog) {
                           const sd = new Date(todayLog.scheduledTime);
-                          const ts = `${sd.getHours().toString().padStart(2,"0")}:${sd.getMinutes().toString().padStart(2,"0")}`;
+                          const ts = `${sd
+                            .getHours()
+                            .toString()
+                            .padStart(2, "0")}:${sd
+                            .getMinutes()
+                            .toString()
+                            .padStart(2, "0")}`;
                           takenSlotIndex = baseTimes.indexOf(ts);
                           if (takenSlotIndex === -1) {
                             const sm = sd.getHours() * 60 + sd.getMinutes();
@@ -315,7 +426,10 @@ export default function RemindersPage() {
                             baseTimes.forEach((t, i) => {
                               const [hh, mm] = t.split(":").map(Number);
                               const d = Math.abs(hh * 60 + mm - sm);
-                              if (d < minD) { minD = d; takenSlotIndex = i; }
+                              if (d < minD) {
+                                minD = d;
+                                takenSlotIndex = i;
+                              }
                             });
                           }
                         }
@@ -325,7 +439,8 @@ export default function RemindersPage() {
                           ? shiftTimeStr(t, offsetMinutes)
                           : t
                       );
-                      const hasShift = offsetMinutes !== 0 && takenSlotIndex !== -1;
+                      const hasShift =
+                        offsetMinutes !== 0 && takenSlotIndex !== -1;
                       return (
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
@@ -334,7 +449,9 @@ export default function RemindersPage() {
                           </span>
                           {hasShift && (
                             <span
-                              title={`Schedule shifted ${offsetMinutes > 0 ? "+" : ""}${offsetMinutes}m today`}
+                              title={`Schedule shifted ${
+                                offsetMinutes > 0 ? "+" : ""
+                              }${offsetMinutes}m today`}
                               className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full ${
                                 offsetMinutes > 0
                                   ? "bg-amber-500/10 text-amber-500"
@@ -342,12 +459,19 @@ export default function RemindersPage() {
                               }`}
                             >
                               <RefreshCw size={8} />
-                              {offsetMinutes > 0 ? "+" : ""}{offsetMinutes}m
+                              {offsetMinutes > 0 ? "+" : ""}
+                              {offsetMinutes}m
                             </span>
                           )}
-                          <span className="text-[11px] text-muted-foreground/40">·</span>
-                          <span className="text-[11px] font-semibold text-muted-foreground">{reminder.dose}</span>
-                          <span className="text-[11px] text-muted-foreground/40">·</span>
+                          <span className="text-[11px] text-muted-foreground/40">
+                            ·
+                          </span>
+                          <span className="text-[11px] font-semibold text-muted-foreground">
+                            {reminder.dose}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground/40">
+                            ·
+                          </span>
                           <span className="text-[11px] font-semibold text-muted-foreground capitalize">
                             {repeatLabel(reminder)}
                           </span>
@@ -381,35 +505,44 @@ export default function RemindersPage() {
                     <button
                       onClick={() => handleToggle(reminder)}
                       className="transition-transform active:scale-90"
-                      title={reminder.enabled ? "Pause reminder" : "Activate reminder"}
+                      title={
+                        reminder.enabled
+                          ? "Pause reminder"
+                          : "Activate reminder"
+                      }
                     >
                       {reminder.enabled ? (
                         <ToggleRight size={28} className="text-primary" />
                       ) : (
-                        <ToggleLeft size={28} className="text-muted-foreground" />
+                        <ToggleLeft
+                          size={28}
+                          className="text-muted-foreground"
+                        />
                       )}
                     </button>
 
                     <div className="flex gap-1.5">
                       {/* Edit */}
                       <button
-                        onClick={() => navigate("/reminders/new", { 
-                          state: { 
-                            editId: reminder.id, 
-                            medicineId: reminder.medicineId,
-                            medicineName: reminder.medicineName,
-                            dose: reminder.dose, 
-                            time: reminder.time, 
-                            repeat: reminder.repeatSchedule, 
-                            repeatDays: reminder.repeatDays,
-                            notes: reminder.notes,
-                            enabled: reminder.enabled,
-                            color: reminder.color,
-                            icon: reminder.icon,
-                            patientId: reminder.patientId ?? null,
-                            patientName: reminder.patientName ?? null
-                          } 
-                        })}
+                        onClick={() =>
+                          navigate("/reminders/new", {
+                            state: {
+                              editId: reminder.id,
+                              medicineId: reminder.medicineId,
+                              medicineName: reminder.medicineName,
+                              dose: reminder.dose,
+                              time: reminder.time,
+                              repeat: reminder.repeatSchedule,
+                              repeatDays: reminder.repeatDays,
+                              notes: reminder.notes,
+                              enabled: reminder.enabled,
+                              color: reminder.color,
+                              icon: reminder.icon,
+                              patientId: reminder.patientId ?? null,
+                              patientName: reminder.patientName ?? null,
+                            },
+                          })
+                        }
                         className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                         title="Edit reminder"
                       >
@@ -443,18 +576,23 @@ export default function RemindersPage() {
         >
           <Bell size={16} className="text-primary flex-shrink-0" />
           <p className="text-xs text-muted-foreground">
-            Reminders fire as native notifications when the app is in the background on your device.
+            Reminders fire as native notifications when the app is in the
+            background on your device.
           </p>
         </motion.div>
       )}
 
       {/* Delete confirmation dialog */}
-      <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
+      <AlertDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => !open && setPendingDeleteId(null)}
+      >
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Reminder?</AlertDialogTitle>
             <AlertDialogDescription>
-              This reminder will be permanently removed. Your dose history will not be affected.
+              This reminder will be permanently removed. Your dose history will
+              not be affected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
