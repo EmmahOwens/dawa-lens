@@ -5,12 +5,44 @@ import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
+import com.dawainnovation.lens.NativeOcrPlugin;
+import com.dawainnovation.lens.NativeAlarmPlugin;
+import com.dawainnovation.lens.NativeCameraPlugin;
+import com.dawainnovation.lens.NativeSearchPlugin;
+import com.dawainnovation.lens.NativeSqlitePlugin;
+import com.dawainnovation.lens.NativeBiometricPlugin;
+import com.dawainnovation.lens.NativePdfPlugin;
+import com.dawainnovation.lens.NativeLocationPlugin;
+import com.dawainnovation.lens.MissedDoseWorker;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AppUpdaterPlugin.class);
+        registerPlugin(NativeOcrPlugin.class);
+        registerPlugin(NativeAlarmPlugin.class);
+        registerPlugin(NativeCameraPlugin.class);
+        registerPlugin(NativeSearchPlugin.class);
+        registerPlugin(NativeSqlitePlugin.class);
+        registerPlugin(NativeBiometricPlugin.class);
+        registerPlugin(NativePdfPlugin.class);
+        registerPlugin(NativeLocationPlugin.class);
         super.onCreate(savedInstanceState);
+
+        // Enqueue the missed-dose background checker (15-minute period).
+        // KEEP policy means a running/enqueued instance is not replaced.
+        PeriodicWorkRequest missedDoseWork = new PeriodicWorkRequest.Builder(
+                MissedDoseWorker.class, 15, TimeUnit.MINUTES)
+                .build();
+        WorkManager.getInstance(getApplicationContext())
+                .enqueueUniquePeriodicWork(
+                        "missed_dose_check",
+                        ExistingPeriodicWorkPolicy.KEEP,
+                        missedDoseWork);
 
         WebView webView = getBridge().getWebView();
 

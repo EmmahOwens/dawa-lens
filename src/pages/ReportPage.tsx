@@ -2,10 +2,41 @@ import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { useApp } from "@/contexts/AppContext";
-import { FileText, Printer, Download, TrendingUp, Activity, Calendar, Sparkles, Loader2, Info, CheckCircle2, ArrowRight, Share2, Eye, X, Smile, Frown, Minus, Zap, Brain, Heart } from "@/lib/icons";
+import {
+  FileText,
+  Printer,
+  Download,
+  TrendingUp,
+  Activity,
+  Calendar,
+  Sparkles,
+  Loader2,
+  Info,
+  CheckCircle2,
+  ArrowRight,
+  Share2,
+  Eye,
+  X,
+  Smile,
+  Frown,
+  Minus,
+  Zap,
+  Brain,
+  Heart,
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+} from "recharts";
 import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
@@ -22,46 +53,97 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MedicalReportContent } from "@/components/MedicalReportContent";
 import { toast } from "sonner";
+import { NativePdf, NativeReportData } from "@/plugins/nativePdf";
 
-const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.1 } },
+};
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 export default function ReportPage() {
-  const { doseLogs, wellnessLogs, medicines, userProfile, patients, selectedPatientId } = useApp();
+  const {
+    doseLogs,
+    wellnessLogs,
+    medicines,
+    userProfile,
+    patients,
+    selectedPatientId,
+  } = useApp();
   const [loading, setLoading] = useState(false);
-  const [insights, setInsights] = useState<any>(null);
+
+  interface WellnessInsight {
+    summary?: string;
+    dosagePatterns?: string;
+    lifestyleAnalysis?: string;
+    insights?: string[];
+    actionItems?: string[];
+  }
+  const [insights, setInsights] = useState<WellnessInsight | null>(null);
   const lastFetchKey = useRef<string>("");
 
-  const patient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
+  const patient = selectedPatientId
+    ? patients.find((p) => p.id === selectedPatientId)
+    : null;
   const patientName = patient?.name || userProfile?.name || "User";
-  const patientAge = patient?.age ? `${patient.age} yrs` : (userProfile?.dateOfBirth ? `${new Date().getFullYear() - new Date(userProfile.dateOfBirth).getFullYear()} yrs` : "N/A");
+  const patientAge = patient?.age
+    ? `${patient.age} yrs`
+    : userProfile?.dateOfBirth
+    ? `${
+        new Date().getFullYear() -
+        new Date(userProfile.dateOfBirth).getFullYear()
+      } yrs`
+    : "N/A";
   const patientGender = patient?.gender || userProfile?.gender || "N/A";
 
-  const matchPatient = useCallback((pid: string | null | undefined) => (pid || null) === (selectedPatientId || null), [selectedPatientId]);
-  const scopedDoseLogs = useMemo(() => doseLogs.filter(l => matchPatient(l.patientId)), [doseLogs, matchPatient]);
-  const scopedWellnessLogs = useMemo(() => wellnessLogs.filter(l => matchPatient(l.patientId)), [wellnessLogs, matchPatient]);
-  const scopedMedicines = useMemo(() => medicines.filter(m => matchPatient((m as any).patientId)), [medicines, matchPatient]);
+  const matchPatient = useCallback(
+    (pid: string | null | undefined) =>
+      (pid || null) === (selectedPatientId || null),
+    [selectedPatientId]
+  );
+  const scopedDoseLogs = useMemo(
+    () => doseLogs.filter((l) => matchPatient(l.patientId)),
+    [doseLogs, matchPatient]
+  );
+  const scopedWellnessLogs = useMemo(
+    () => wellnessLogs.filter((l) => matchPatient(l.patientId)),
+    [wellnessLogs, matchPatient]
+  );
+  const scopedMedicines = useMemo(
+    () => medicines.filter((m) => matchPatient(m.patientId)),
+    [medicines, matchPatient]
+  );
 
   // Prepare Chart Data (Last 7 Days)
   const chartData = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
       const date = subDays(new Date(), 6 - i);
       const dayStr = format(date, "MMM dd");
-      
-      const dayLogs = scopedDoseLogs.filter(l => isSameDay(toDate(l.actionTime), date));
-      const taken = dayLogs.filter(l => l.action === "taken").length;
+
+      const dayLogs = scopedDoseLogs.filter((l) =>
+        isSameDay(toDate(l.actionTime), date)
+      );
+      const taken = dayLogs.filter((l) => l.action === "taken").length;
       const total = dayLogs.length;
       const adherence = total > 0 ? (taken / total) * 100 : 100;
 
       // Average wellness logs if multiple exist for the day
-      const dayWellnessLogs = scopedWellnessLogs.filter(l => l.type === "symptom" && isSameDay(toDate(l.timestamp), date));
-      
+      const dayWellnessLogs = scopedWellnessLogs.filter(
+        (l) => l.type === "symptom" && isSameDay(toDate(l.timestamp), date)
+      );
+
       let energy: number | null = null;
       let mood: number | null = null;
 
       if (dayWellnessLogs.length > 0) {
-        const sumEnergy = dayWellnessLogs.reduce((acc, l) => acc + (Number(l.data?.energy) || 0), 0);
-        const sumMood = dayWellnessLogs.reduce((acc, l) => acc + (Number(l.data?.mood) || 0), 0);
+        const sumEnergy = dayWellnessLogs.reduce(
+          (acc, l) => acc + (Number(l.data?.energy) || 0),
+          0
+        );
+        const sumMood = dayWellnessLogs.reduce(
+          (acc, l) => acc + (Number(l.data?.mood) || 0),
+          0
+        );
         energy = (sumEnergy / dayWellnessLogs.length) * 20;
         mood = (sumMood / dayWellnessLogs.length) * 20;
       }
@@ -70,43 +152,72 @@ export default function ReportPage() {
     });
   }, [scopedDoseLogs, scopedWellnessLogs]);
 
-  const adherenceScore = Math.round(chartData.reduce((acc, d) => acc + d.adherence, 0) / 7) || 0;
+  const adherenceScore =
+    Math.round(chartData.reduce((acc, d) => acc + d.adherence, 0) / 7) || 0;
 
   // Emotional Wellness Statistics (last 7 days)
   const emotionalStats = useMemo(() => {
-    const last7 = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), 6 - i));
-    const symptomLogs = scopedWellnessLogs.filter(l => l.type === "symptom");
+    const last7 = Array.from({ length: 7 }).map((_, i) =>
+      subDays(new Date(), 6 - i)
+    );
+    const symptomLogs = scopedWellnessLogs.filter((l) => l.type === "symptom");
 
-    const logsLast7 = symptomLogs.filter(l => {
+    const logsLast7 = symptomLogs.filter((l) => {
       const d = toDate(l.timestamp);
-      return last7.some(day => isSameDay(d, day));
+      return last7.some((day) => isSameDay(d, day));
     });
 
-    const daysWithData = last7.filter(day =>
-      symptomLogs.some(l => isSameDay(toDate(l.timestamp), day))
+    const daysWithData = last7.filter((day) =>
+      symptomLogs.some((l) => isSameDay(toDate(l.timestamp), day))
     ).length;
 
     if (logsLast7.length === 0) return null;
 
-    const avgMood = logsLast7.reduce((acc, l) => acc + (Number(l.data?.mood) || 0), 0) / logsLast7.length;
-    const avgEnergy = logsLast7.reduce((acc, l) => acc + (Number(l.data?.energy) || 0), 0) / logsLast7.length;
+    const avgMood =
+      logsLast7.reduce((acc, l) => acc + (Number(l.data?.mood) || 0), 0) /
+      logsLast7.length;
+    const avgEnergy =
+      logsLast7.reduce((acc, l) => acc + (Number(l.data?.energy) || 0), 0) /
+      logsLast7.length;
 
     // Tally symptom frequency
     const symptomCount: Record<string, number> = {};
-    logsLast7.forEach(l => {
+    logsLast7.forEach((l) => {
       const syms = l.data?.symptoms as string[] | undefined;
-      if (syms) syms.forEach(s => { symptomCount[s] = (symptomCount[s] || 0) + 1; });
+      if (syms)
+        syms.forEach((s) => {
+          symptomCount[s] = (symptomCount[s] || 0) + 1;
+        });
     });
     const topSymptoms = Object.entries(symptomCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 4)
       .map(([name, count]) => ({ name, count }));
 
-    const moodLabel = avgMood >= 3.5 ? "Positive" : avgMood >= 2.5 ? "Neutral" : "Low";
-    const moodColor = avgMood >= 3.5 ? "text-success" : avgMood >= 2.5 ? "text-warning" : "text-destructive";
-    const moodBg = avgMood >= 3.5 ? "bg-success/10" : avgMood >= 2.5 ? "bg-warning/10" : "bg-destructive/10";
+    const moodLabel =
+      avgMood >= 3.5 ? "Positive" : avgMood >= 2.5 ? "Neutral" : "Low";
+    const moodColor =
+      avgMood >= 3.5
+        ? "text-success"
+        : avgMood >= 2.5
+        ? "text-warning"
+        : "text-destructive";
+    const moodBg =
+      avgMood >= 3.5
+        ? "bg-success/10"
+        : avgMood >= 2.5
+        ? "bg-warning/10"
+        : "bg-destructive/10";
 
-    return { avgMood, avgEnergy, topSymptoms, daysWithData, moodLabel, moodColor, moodBg };
+    return {
+      avgMood,
+      avgEnergy,
+      topSymptoms,
+      daysWithData,
+      moodLabel,
+      moodColor,
+      moodBg,
+    };
   }, [scopedWellnessLogs]);
 
   const [showPreview, setShowPreview] = useState(false);
@@ -117,9 +228,9 @@ export default function ReportPage() {
     setLoading(true);
     try {
       const res = await aiApi.getWellnessInsight({
-        doseLogs: scopedDoseLogs.slice(0, 70), 
+        doseLogs: scopedDoseLogs.slice(0, 70),
         wellnessLogs: scopedWellnessLogs.slice(0, 50),
-        medicines: scopedMedicines.filter(m => !m.isConflict)
+        medicines: scopedMedicines.filter((m) => !m.isConflict),
       });
       setInsights(res);
     } catch (err) {
@@ -133,9 +244,14 @@ export default function ReportPage() {
     const fetchKey = `${selectedPatientId}-${scopedDoseLogs.length}-${scopedMedicines.length}`;
     if (fetchKey === lastFetchKey.current) return;
     lastFetchKey.current = fetchKey;
-    
+
     fetchInsights();
-  }, [selectedPatientId, scopedDoseLogs.length, scopedMedicines.length, fetchInsights]);
+  }, [
+    selectedPatientId,
+    scopedDoseLogs.length,
+    scopedMedicines.length,
+    fetchInsights,
+  ]);
 
   const handlePrint = () => {
     window.print();
@@ -148,17 +264,68 @@ export default function ReportPage() {
     setDownloading(true);
     const toastId = toast.loading("Generating professional PDF report...");
 
+    // On native platforms: use the native PDF engine (no DOM snapshot, low memory)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const reportData: NativeReportData = {
+          patientName,
+          patientAge,
+          dateRange: `${format(subDays(new Date(), 6), "MMM d")}–${format(
+            new Date(),
+            "MMM d, yyyy"
+          )}`,
+          adherenceScore,
+          chartData: chartData.map((d) => ({
+            name: d.name,
+            adherence: d.adherence,
+            mood: d.mood ?? null,
+            energy: d.energy ?? null,
+          })),
+          medicines: scopedMedicines.map((m) => ({
+            name: m.name,
+            dosage: m.dosage,
+            daysRemaining: undefined,
+          })),
+          topSymptoms: emotionalStats?.topSymptoms ?? [],
+          averageMood: emotionalStats?.avgMood ?? 0,
+          averageEnergy: emotionalStats?.avgEnergy ?? 0,
+          generatedAt: new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+        };
+
+        const { fileUri } = await NativePdf.generateReport(reportData);
+        await Share.share({
+          title: `Dawa Lens Report - ${patientName}`,
+          url: fileUri,
+        });
+        toast.success("Report generated successfully!", { id: toastId });
+        setDownloading(false);
+        return;
+      } catch (nativePdfErr) {
+        console.warn(
+          "[ReportPage] Native PDF failed, falling back to html2canvas:",
+          nativePdfErr
+        );
+        // Fall through to existing html2canvas path
+      }
+    }
+
     try {
       // Find the element to capture (the hidden print template)
-      const element = document.getElementById("medical-report-content-download");
+      const element = document.getElementById(
+        "medical-report-content-download"
+      );
       if (!element) throw new Error("Report content not found");
 
       // Wait a bit to ensure everything is rendered
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Set options for html2canvas - reduce scale on mobile to save memory
-      const scale = Capacitor.getPlatform() === 'web' ? 2 : 1.5;
-      
+      const scale = Capacitor.getPlatform() === "web" ? 2 : 1.5;
+
       const canvas = await html2canvas(element, {
         scale: scale,
         useCORS: true,
@@ -176,7 +343,7 @@ export default function ReportPage() {
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      
+
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
       const ratio = imgWidth / pdfWidth;
@@ -186,26 +353,49 @@ export default function ReportPage() {
       let position = 0;
 
       // Add first page
-      pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, imgPdfHeight, undefined, 'FAST');
+      pdf.addImage(
+        imgData,
+        "JPEG",
+        0,
+        position,
+        pdfWidth,
+        imgPdfHeight,
+        undefined,
+        "FAST"
+      );
       heightLeft -= pdfHeight;
 
       // Add subsequent pages if content is longer than one page
       while (heightLeft > 0) {
         position = heightLeft - imgPdfHeight;
         pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, imgPdfHeight, undefined, 'FAST');
+        pdf.addImage(
+          imgData,
+          "JPEG",
+          0,
+          position,
+          pdfWidth,
+          imgPdfHeight,
+          undefined,
+          "FAST"
+        );
         heightLeft -= pdfHeight;
       }
-      
+
       // Sanitize filename: remove characters that might cause issues on some file systems
-      const safePatientName = patientName.replace(/[^a-z0-9]/gi, '-').replace(/-+/g, '-');
-      const fileName = `DawaLens-Report-${safePatientName}-${format(new Date(), "yyyyMMdd")}.pdf`;
+      const safePatientName = patientName
+        .replace(/[^a-z0-9]/gi, "-")
+        .replace(/-+/g, "-");
+      const fileName = `DawaLens-Report-${safePatientName}-${format(
+        new Date(),
+        "yyyyMMdd"
+      )}.pdf`;
 
       if (Capacitor.isNativePlatform()) {
         try {
           // Handle Capacitor download
           const pdfBase64 = pdf.output("datauristring").split(",")[1];
-          
+
           const savedFile = await Filesystem.writeFile({
             path: fileName,
             data: pdfBase64,
@@ -227,11 +417,13 @@ export default function ReportPage() {
         // Handle Web download
         pdf.save(fileName);
       }
-      
+
       toast.success("Care Report generated successfully!", { id: toastId });
     } catch (err) {
       console.error("PDF generation failed", err);
-      toast.error("Failed to generate PDF report. Please try again.", { id: toastId });
+      toast.error("Failed to generate PDF report. Please try again.", {
+        id: toastId,
+      });
     } finally {
       setDownloading(false);
     }
@@ -239,19 +431,23 @@ export default function ReportPage() {
 
   const handleShare = async () => {
     if (!insights) return;
-    
-    const shareText = `Medical Report Summary for ${patientName}\n` +
+
+    const shareText =
+      `Medical Report Summary for ${patientName}\n` +
       `Date: ${format(new Date(), "MMMM do, yyyy")}\n` +
       `Adherence Score: ${adherenceScore}%\n\n` +
       `Summary: ${insights.summary}\n\n` +
-      `Action Items:\n${insights.actionItems?.map((item: string) => `- ${item}`).join('\n') || 'None'}`;
+      `Action Items:\n${
+        insights.actionItems?.map((item: string) => `- ${item}`).join("\n") ||
+        "None"
+      }`;
 
     try {
       if (isNative) {
         await Share.share({
           title: `Care Report - ${patientName}`,
           text: shareText,
-          dialogTitle: 'Share Care Report',
+          dialogTitle: "Share Care Report",
         });
       } else {
         if (navigator.share) {
@@ -274,7 +470,11 @@ export default function ReportPage() {
       {/* -------------------- WEB VIEW -------------------- */}
       <div className="print:hidden">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 flex flex-wrap items-start justify-between gap-4"
+        >
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               Care Report
@@ -284,37 +484,41 @@ export default function ReportPage() {
             </p>
           </div>
           <div className="flex gap-2 shrink-0">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowPreview(true)}
               className="rounded-xl h-10 border-border/50 shadow-sm gap-2"
             >
               <Eye size={15} />
               <span className="hidden xs:inline">Preview</span>
             </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
+            <Button
+              variant="outline"
+              size="icon"
               onClick={handleDownloadPDF}
               disabled={downloading}
               className="rounded-xl w-10 h-10 border-border/50 shadow-sm text-primary"
               title="Download PDF Report"
             >
-              {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {downloading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Download size={16} />
+              )}
             </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
+            <Button
+              variant="outline"
+              size="icon"
               onClick={handleShare}
               className="rounded-xl w-10 h-10 border-border/50 shadow-sm"
               title="Share Report"
             >
               <Share2 size={16} />
             </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
+            <Button
+              variant="outline"
+              size="icon"
               onClick={handlePrint}
               className="rounded-xl w-10 h-10 border-border/50 shadow-sm hidden sm:flex"
               title="Print Medical Report"
@@ -324,26 +528,37 @@ export default function ReportPage() {
           </div>
         </motion.div>
 
-        <motion.div 
-          variants={container} 
-          initial="hidden" 
-          animate="show" 
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
           className="space-y-6"
         >
           {/* Adherence Score Card */}
-          <motion.div variants={item} className="p-8 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/10 relative overflow-hidden transition-all hover:scale-[1.01]">
+          <motion.div
+            variants={item}
+            className="p-8 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/10 relative overflow-hidden transition-all hover:scale-[1.01]"
+          >
             <div className="absolute top-0 right-0 p-8 opacity-10">
               <Activity size={96} />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider opacity-80 mb-1">7-Day Adherence Rating</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider opacity-80 mb-1">
+              7-Day Adherence Rating
+            </p>
             <div className="flex items-end gap-3">
-               <h2 className="text-5xl font-bold tracking-tight">
-                 {adherenceScore}%
-               </h2>
-               <p className="text-[10px] font-bold mb-2.5 opacity-90 uppercase tracking-widest text-primary-foreground/70">Overall Score</p>
+              <h2 className="text-5xl font-bold tracking-tight">
+                {adherenceScore}%
+              </h2>
+              <p className="text-[10px] font-bold mb-2.5 opacity-90 uppercase tracking-widest text-primary-foreground/70">
+                Overall Score
+              </p>
             </div>
             <p className="mt-5 text-[12px] font-medium opacity-80 leading-relaxed max-w-[260px]">
-              {adherenceScore >= 90 ? "Excellent tracking consistency. Keep it up!" : adherenceScore >= 70 ? "Good tracking, but some doses were missed." : "Adherence is below average. Consider setting extra reminders."}
+              {adherenceScore >= 90
+                ? "Excellent tracking consistency. Keep it up!"
+                : adherenceScore >= 70
+                ? "Good tracking, but some doses were missed."
+                : "Adherence is below average. Consider setting extra reminders."}
             </p>
           </motion.div>
 
@@ -353,58 +568,105 @@ export default function ReportPage() {
               <TrendingUp size={14} className="text-primary" /> Vitality Trends
             </h3>
             <div className="h-[260px] w-full mt-4 relative">
-              {chartData.every(d => d.energy === null && d.adherence === 100) && (
+              {chartData.every(
+                (d) => d.energy === null && d.adherence === 100
+              ) && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-accent/5 z-10 rounded-2xl border border-dashed border-border/50">
-                  <Activity size={32} className="text-muted-foreground/30 mb-3" />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">No activity data yet</p>
-                  <p className="text-[8px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-tighter">Log your wellness in the Wellness Hub</p>
+                  <Activity
+                    size={32}
+                    className="text-muted-foreground/30 mb-3"
+                  />
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
+                    No activity data yet
+                  </p>
+                  <p className="text-[8px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-tighter">
+                    Log your wellness in the Wellness Hub
+                  </p>
                 </div>
               )}
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
-                    <linearGradient id="colorAdherence" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    <linearGradient
+                      id="colorAdherence"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0.4}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="hsl(var(--primary))"
+                        stopOpacity={0}
+                      />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 9, fontWeight: 700, fill: "hsl(var(--muted-foreground))" }} 
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    stroke="hsl(var(--border))"
+                    opacity={0.5}
+                  />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      fill: "hsl(var(--muted-foreground))",
+                    }}
                     dy={10}
                   />
                   <YAxis hide domain={[0, 100]} />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '1rem', border: '1px solid hsl(var(--border))', boxShadow: '0 10px 40px rgba(0,0,0,0.08)', background: 'hsl(var(--card))' }}
-                    itemStyle={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                    labelStyle={{ fontSize: '11px', fontWeight: 800, color: 'hsl(var(--foreground))', marginBottom: '8px' }}
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "1rem",
+                      border: "1px solid hsl(var(--border))",
+                      boxShadow: "0 10px 40px rgba(0,0,0,0.08)",
+                      background: "hsl(var(--card))",
+                    }}
+                    itemStyle={{
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                    labelStyle={{
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      color: "hsl(var(--foreground))",
+                      marginBottom: "8px",
+                    }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="adherence" 
-                    stroke="hsl(var(--primary))" 
+                  <Area
+                    type="monotone"
+                    dataKey="adherence"
+                    stroke="hsl(var(--primary))"
                     strokeWidth={4}
-                    fillOpacity={1} 
-                    fill="url(#colorAdherence)" 
+                    fillOpacity={1}
+                    fill="url(#colorAdherence)"
                     name="Adherence %"
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="energy" 
-                    stroke="#10b981" 
+                  <Area
+                    type="monotone"
+                    dataKey="energy"
+                    stroke="#10b981"
                     strokeWidth={3}
                     fill="transparent"
                     name="Energy Level"
                     strokeDasharray="4 4"
                     connectNulls
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="mood" 
-                    stroke="#6366f1" 
+                  <Area
+                    type="monotone"
+                    dataKey="mood"
+                    stroke="#6366f1"
                     strokeWidth={3}
                     fill="transparent"
                     name="Mood Level"
@@ -417,15 +679,21 @@ export default function ReportPage() {
             <div className="flex justify-center gap-6 mt-6">
               <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
                 <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">Adherence</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">
+                  Adherence
+                </span>
               </div>
               <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
                 <div className="w-2.5 h-2.5 rounded-full bg-success" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">Energy</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">
+                  Energy
+                </span>
               </div>
               <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
                 <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">Mood</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">
+                  Mood
+                </span>
               </div>
             </div>
           </motion.div>
@@ -435,9 +703,12 @@ export default function ReportPage() {
             <motion.div variants={item} className="premium-card">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="section-title flex items-center gap-2 mb-0">
-                  <Heart size={14} className="text-destructive" /> Emotional Wellness
+                  <Heart size={14} className="text-destructive" /> Emotional
+                  Wellness
                 </h3>
-                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${emotionalStats.moodBg} ${emotionalStats.moodColor}`}>
+                <span
+                  className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${emotionalStats.moodBg} ${emotionalStats.moodColor}`}
+                >
                   {emotionalStats.moodLabel}
                 </span>
               </div>
@@ -447,15 +718,26 @@ export default function ReportPage() {
                 <div className="p-4 rounded-2xl bg-success/5 border border-success/10">
                   <div className="flex items-center gap-2 mb-2">
                     <Smile size={14} className="text-success" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-success/70">Avg Mood</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-success/70">
+                      Avg Mood
+                    </p>
                   </div>
                   <p className="text-2xl font-black text-foreground">
                     {emotionalStats.avgMood.toFixed(1)}
-                    <span className="text-xs text-muted-foreground font-bold ml-1">/5</span>
+                    <span className="text-xs text-muted-foreground font-bold ml-1">
+                      /5
+                    </span>
                   </p>
                   <div className="mt-2 flex gap-0.5">
-                    {[1,2,3,4,5].map(n => (
-                      <div key={n} className={`flex-1 h-1.5 rounded-full ${n <= Math.round(emotionalStats.avgMood) ? "bg-success" : "bg-muted/40"}`} />
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <div
+                        key={n}
+                        className={`flex-1 h-1.5 rounded-full ${
+                          n <= Math.round(emotionalStats.avgMood)
+                            ? "bg-success"
+                            : "bg-muted/40"
+                        }`}
+                      />
                     ))}
                   </div>
                 </div>
@@ -464,15 +746,26 @@ export default function ReportPage() {
                 <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
                   <div className="flex items-center gap-2 mb-2">
                     <Zap size={14} className="text-primary" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">Avg Energy</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">
+                      Avg Energy
+                    </p>
                   </div>
                   <p className="text-2xl font-black text-foreground">
                     {emotionalStats.avgEnergy.toFixed(1)}
-                    <span className="text-xs text-muted-foreground font-bold ml-1">/5</span>
+                    <span className="text-xs text-muted-foreground font-bold ml-1">
+                      /5
+                    </span>
                   </p>
                   <div className="mt-2 flex gap-0.5">
-                    {[1,2,3,4,5].map(n => (
-                      <div key={n} className={`flex-1 h-1.5 rounded-full ${n <= Math.round(emotionalStats.avgEnergy) ? "bg-primary" : "bg-muted/40"}`} />
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <div
+                        key={n}
+                        className={`flex-1 h-1.5 rounded-full ${
+                          n <= Math.round(emotionalStats.avgEnergy)
+                            ? "bg-primary"
+                            : "bg-muted/40"
+                        }`}
+                      />
                     ))}
                   </div>
                 </div>
@@ -480,15 +773,21 @@ export default function ReportPage() {
 
               {/* Wellness consistency */}
               <div className="flex items-center gap-3 mb-5 p-3 rounded-xl bg-muted/20 border border-border/40">
-                <Brain size={14} className="text-muted-foreground/60 shrink-0" />
+                <Brain
+                  size={14}
+                  className="text-muted-foreground/60 shrink-0"
+                />
                 <p className="text-xs font-semibold text-muted-foreground">
                   Wellness logged on{" "}
-                  <span className="font-black text-foreground">{emotionalStats.daysWithData}</span> of 7 days this week.
+                  <span className="font-black text-foreground">
+                    {emotionalStats.daysWithData}
+                  </span>{" "}
+                  of 7 days this week.
                   {emotionalStats.daysWithData >= 5
                     ? " Excellent consistency!"
                     : emotionalStats.daysWithData >= 3
-                      ? " Keep building the habit."
-                      : " Try to log daily for better insights."}
+                    ? " Keep building the habit."
+                    : " Try to log daily for better insights."}
                 </p>
               </div>
 
@@ -504,8 +803,12 @@ export default function ReportPage() {
                         key={name}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent/50 border border-border/40"
                       >
-                        <span className="text-xs font-bold text-foreground">{name}</span>
-                        <span className="text-[9px] font-black text-muted-foreground bg-muted/60 px-1 rounded">{count}×</span>
+                        <span className="text-xs font-bold text-foreground">
+                          {name}
+                        </span>
+                        <span className="text-[9px] font-black text-muted-foreground bg-muted/60 px-1 rounded">
+                          {count}×
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -518,9 +821,15 @@ export default function ReportPage() {
           <motion.div variants={item} className="premium-card">
             <div className="flex items-center justify-between mb-6">
               <h3 className="section-title flex items-center gap-2 mb-0">
-                <Sparkles size={14} className="text-primary" /> AI Clinical Assessment
+                <Sparkles size={14} className="text-primary" /> AI Clinical
+                Assessment
               </h3>
-              {loading && <Loader2 size={14} className="animate-spin text-primary opacity-50" />}
+              {loading && (
+                <Loader2
+                  size={14}
+                  className="animate-spin text-primary opacity-50"
+                />
+              )}
             </div>
 
             {insights ? (
@@ -529,7 +838,9 @@ export default function ReportPage() {
                   <div className="text-sm font-semibold text-foreground leading-relaxed prose prose-sm max-w-none">
                     <ReactMarkdown
                       components={{
-                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        p: ({ children }) => (
+                          <p className="mb-2 last:mb-0">{children}</p>
+                        ),
                       }}
                     >
                       {insights.summary}
@@ -537,10 +848,14 @@ export default function ReportPage() {
                   </div>
                   {insights.dosagePatterns && (
                     <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm max-w-none">
-                      <strong className="text-foreground">Dosage Patterns:</strong>
+                      <strong className="text-foreground">
+                        Dosage Patterns:
+                      </strong>
                       <ReactMarkdown
                         components={{
-                          p: ({ children }) => <span className="ml-1">{children}</span>,
+                          p: ({ children }) => (
+                            <span className="ml-1">{children}</span>
+                          ),
                         }}
                       >
                         {insights.dosagePatterns}
@@ -549,10 +864,14 @@ export default function ReportPage() {
                   )}
                   {insights.lifestyleAnalysis && (
                     <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm max-w-none">
-                      <strong className="text-foreground">Lifestyle & Symptoms:</strong>
+                      <strong className="text-foreground">
+                        Lifestyle & Symptoms:
+                      </strong>
                       <ReactMarkdown
                         components={{
-                          p: ({ children }) => <span className="ml-1">{children}</span>,
+                          p: ({ children }) => (
+                            <span className="ml-1">{children}</span>
+                          ),
                         }}
                       >
                         {insights.lifestyleAnalysis}
@@ -560,19 +879,26 @@ export default function ReportPage() {
                     </div>
                   )}
                 </div>
-                
+
                 {insights.insights && insights.insights.length > 0 && (
                   <div className="space-y-3">
-                    <h4 className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-2 px-1">Observed Patterns</h4>
+                    <h4 className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground mb-2 px-1">
+                      Observed Patterns
+                    </h4>
                     {insights.insights.map((insight: string, idx: number) => (
-                      <div key={idx} className="flex gap-3 items-start p-3.5 rounded-xl bg-accent/30 border border-border/40 hover:bg-accent/50 transition-colors">
+                      <div
+                        key={idx}
+                        className="flex gap-3 items-start p-3.5 rounded-xl bg-accent/30 border border-border/40 hover:bg-accent/50 transition-colors"
+                      >
                         <div className="w-5 h-5 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0 mt-0.5">
                           <CheckCircle2 size={12} className="text-indigo-500" />
                         </div>
                         <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm max-w-none">
                           <ReactMarkdown
                             components={{
-                              p: ({ children }) => <p className="m-0">{children}</p>,
+                              p: ({ children }) => (
+                                <p className="m-0">{children}</p>
+                              ),
                             }}
                           >
                             {insight}
@@ -589,17 +915,25 @@ export default function ReportPage() {
                       <Activity size={12} /> Suggested Action Items
                     </h4>
                     {insights.actionItems.map((action: string, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl bg-warning/5 border border-warning/20">
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3.5 rounded-xl bg-warning/5 border border-warning/20"
+                      >
                         <div className="text-xs font-semibold text-warning-foreground leading-snug pr-4 prose prose-sm max-w-none">
                           <ReactMarkdown
                             components={{
-                              p: ({ children }) => <p className="m-0">{children}</p>,
+                              p: ({ children }) => (
+                                <p className="m-0">{children}</p>
+                              ),
                             }}
                           >
                             {action}
                           </ReactMarkdown>
                         </div>
-                        <ArrowRight size={14} className="text-warning shrink-0" />
+                        <ArrowRight
+                          size={14}
+                          className="text-warning shrink-0"
+                        />
                       </div>
                     ))}
                   </div>
@@ -609,7 +943,9 @@ export default function ReportPage() {
               <div className="py-14 text-center opacity-40 bg-accent/20 rounded-2xl border border-dashed border-border/50">
                 <Info size={32} className="mx-auto mb-4 opacity-50" />
                 <p className="text-[10px] font-black uppercase tracking-widest">
-                  {doseLogs.length > 0 ? "Generating Clinical Insights..." : "No Data Available Yet"}
+                  {doseLogs.length > 0
+                    ? "Generating Clinical Insights..."
+                    : "No Data Available Yet"}
                 </p>
               </div>
             )}
@@ -625,38 +961,46 @@ export default function ReportPage() {
               Report Preview
             </DialogTitle>
             <div className="flex gap-1.5 sm:gap-2 pr-8">
-               <Button 
-                 variant="outline" 
-                 size="sm" 
-                 onClick={handleDownloadPDF} 
-                 disabled={downloading}
-                 className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl text-primary"
-               >
-                 {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                 <span className="hidden xs:inline text-[10px] sm:text-xs">Download</span>
-               </Button>
-               <Button 
-                 variant="outline" 
-                 size="sm" 
-                 onClick={handleShare} 
-                 className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl"
-               >
-                 <Share2 size={14} />
-                 <span className="hidden xs:inline text-[10px] sm:text-xs">Share</span>
-               </Button>
-               <Button 
-                 variant="outline" 
-                 size="sm" 
-                 onClick={handlePrint} 
-                 className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl hidden sm:flex"
-               >
-                 <Printer size={14} />
-                 <span className="text-[10px] sm:text-xs">Print</span>
-               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadPDF}
+                disabled={downloading}
+                className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl text-primary"
+              >
+                {downloading ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Download size={14} />
+                )}
+                <span className="hidden xs:inline text-[10px] sm:text-xs">
+                  Download
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl"
+              >
+                <Share2 size={14} />
+                <span className="hidden xs:inline text-[10px] sm:text-xs">
+                  Share
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+                className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl hidden sm:flex"
+              >
+                <Printer size={14} />
+                <span className="text-[10px] sm:text-xs">Print</span>
+              </Button>
             </div>
           </DialogHeader>
           <ScrollArea className="flex-1 bg-white">
-            <MedicalReportContent 
+            <MedicalReportContent
               patientName={patientName}
               patientGender={patientGender}
               patientAge={patientAge}
@@ -672,8 +1016,11 @@ export default function ReportPage() {
 
       {/* -------------------- HIDDEN DOWNLOAD/PRINT TEMPLATE -------------------- */}
       {/* We use an off-screen container for PDF generation to ensure html2canvas can capture it */}
-      <div className="fixed -left-[9999px] top-0 w-[800px] bg-white" id="medical-report-content-download">
-        <MedicalReportContent 
+      <div
+        className="fixed -left-[9999px] top-0 w-[800px] bg-white"
+        id="medical-report-content-download"
+      >
+        <MedicalReportContent
           patientName={patientName}
           patientGender={patientGender}
           patientAge={patientAge}

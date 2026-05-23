@@ -1,6 +1,12 @@
-import { RxCUIResponse, InteractionListResponse, ParsedInteraction } from '../types/interactions';
+import {
+  RxCUIResponse,
+  InteractionListResponse,
+  ParsedInteraction,
+} from "../types/interactions";
+import { Capacitor } from "@capacitor/core";
+import { NativeSearch } from "@/plugins/nativeSearch";
 
-const NLM_API_BASE = 'https://rxnav.nlm.nih.gov/REST';
+const NLM_API_BASE = "https://rxnav.nlm.nih.gov/REST";
 
 /**
  * Fetches the RxNorm Concept Unique Identifier (RxCUI) for a given drug name.
@@ -8,9 +14,11 @@ const NLM_API_BASE = 'https://rxnav.nlm.nih.gov/REST';
  */
 export async function getRxCUI(drugName: string): Promise<string | null> {
   try {
-    const response = await fetch(`${NLM_API_BASE}/rxcui.json?name=${encodeURIComponent(drugName)}`);
+    const response = await fetch(
+      `${NLM_API_BASE}/rxcui.json?name=${encodeURIComponent(drugName)}`
+    );
     if (!response.ok) return null;
-    
+
     const data: RxCUIResponse = await response.json();
     const ids = data.idGroup?.rxnormId;
     if (ids && ids.length > 0) {
@@ -28,20 +36,24 @@ export async function getRxCUI(drugName: string): Promise<string | null> {
  * Requires at least 2 RxCUIs to check interactions.
  * Returns an array of easily consumable parsed interactions.
  */
-export async function checkInteractions(rxcuis: string[]): Promise<ParsedInteraction[]> {
+export async function checkInteractions(
+  rxcuis: string[]
+): Promise<ParsedInteraction[]> {
   // Filter out invalid/empty strings
-  const validIds = rxcuis.filter(id => id && id.trim() !== "");
-  
+  const validIds = rxcuis.filter((id) => id && id.trim() !== "");
+
   if (validIds.length < 2) {
     return []; // Need at least two drugs for an interaction
   }
 
-  const query = validIds.join('+');
-  
+  const query = validIds.join("+");
+
   try {
-    const response = await fetch(`${NLM_API_BASE}/interaction/list.json?rxcuis=${query}`);
+    const response = await fetch(
+      `${NLM_API_BASE}/interaction/list.json?rxcuis=${query}`
+    );
     if (!response.ok) return [];
-    
+
     const data: InteractionListResponse = await response.json();
     const interactions: ParsedInteraction[] = [];
 
@@ -53,13 +65,13 @@ export async function checkInteractions(rxcuis: string[]): Promise<ParsedInterac
         for (const pair of type.interactionPair) {
           const concept1 = pair.interactionConcept[0]?.minConceptItem;
           const concept2 = pair.interactionConcept[1]?.minConceptItem;
-          
+
           if (concept1 && concept2) {
             interactions.push({
               drug1: concept1.name,
               drug2: concept2.name,
               severity: pair.severity,
-              description: pair.description
+              description: pair.description,
             });
           }
         }
@@ -67,11 +79,14 @@ export async function checkInteractions(rxcuis: string[]): Promise<ParsedInterac
     }
 
     // Deduplicate (NLM API sometimes returns duplicate pairs from different sources like ONCHigh and DrugBank)
-    const unique = interactions.filter((inter, index, self) =>
-      index === self.findIndex((t) => (
-        (t.drug1 === inter.drug1 && t.drug2 === inter.drug2) ||
-        (t.drug1 === inter.drug2 && t.drug2 === inter.drug1)
-      ))
+    const unique = interactions.filter(
+      (inter, index, self) =>
+        index ===
+        self.findIndex(
+          (t) =>
+            (t.drug1 === inter.drug1 && t.drug2 === inter.drug2) ||
+            (t.drug1 === inter.drug2 && t.drug2 === inter.drug1)
+        )
     );
 
     return unique;
@@ -82,12 +97,36 @@ export async function checkInteractions(rxcuis: string[]): Promise<ParsedInterac
 }
 
 /**
- * Fetches spelling suggestions for a drug name from the RxNorm API.
+ * Fetches spelling suggestions for a drug name.
+ * On native platforms, tries the offline Rust index first (instant, no network).
+ * Falls back to the NLM RxNorm spelling suggestions API on web or if native is unavailable.
  */
 export async function getSpellingSuggestions(term: string): Promise<string[]> {
   if (!term || term.trim().length < 2) return [];
+
+  // On native: try the offline Rust index first (instant, no network)
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { available } = await NativeSearch.isAvailable();
+      if (available) {
+        const { results } = await NativeSearch.fuzzySearch({
+          query: term,
+          limit: 8,
+        });
+        if (results.length > 0) return results.map((r) => r.name);
+      }
+    } catch {
+      // Fall through to NLM API
+    }
+  }
+
+  // Web / fallback: NLM spelling suggestions API
   try {
-    const response = await fetch(`${NLM_API_BASE}/spellingsuggestions.json?name=${encodeURIComponent(term)}`);
+    const response = await fetch(
+      `${NLM_API_BASE}/spellingsuggestions.json?name=${encodeURIComponent(
+        term
+      )}`
+    );
     if (!response.ok) return [];
     const data = await response.json();
     return data.rxnormdata?.suggestionGroup?.suggestionList?.suggestion || [];

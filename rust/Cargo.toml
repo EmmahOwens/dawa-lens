@@ -1,0 +1,23 @@
+[package]
+name = "dawa-search"
+version = "0.1.0"
+edition = "2021"
+description = "Offline drug name fuzzy search engine for Dawa Lens"
+
+[lib]
+name = "dawa_search"
+crate-type = ["cdylib", "staticlib"]  # cdylib for Android .so, staticlib for iOS .a
+
+[features]
+default = []
+android = ["jni"]
+ios = []
+
+[dependencies]
+jni = { version = "0.21", optional = true }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

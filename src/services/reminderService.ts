@@ -1,7 +1,25 @@
-import { LocalNotifications } from "@capacitor/local-notifications";
+import {
+  LocalNotifications,
+  LocalNotificationSchema,
+} from "@capacitor/local-notifications";
+import { NativeAlarm, AlarmNotification } from "@/plugins/nativeAlarm";
 import { Capacitor } from "@capacitor/core";
 import { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
-import { addDays, isAfter, isBefore, startOfDay, endOfDay, setHours, setMinutes, setSeconds, setMilliseconds, getDay, addMinutes, subHours, parseISO } from "date-fns";
+import {
+  addDays,
+  isAfter,
+  isBefore,
+  startOfDay,
+  endOfDay,
+  setHours,
+  setMinutes,
+  setSeconds,
+  setMilliseconds,
+  getDay,
+  addMinutes,
+  subHours,
+  parseISO,
+} from "date-fns";
 import { toDate } from "@/lib/utils";
 
 /**
@@ -9,24 +27,31 @@ import { toDate } from "@/lib/utils";
  * Returns 0 if no log exists today or deviation > 240 min (4-hour cap).
  * Only `taken` actions count — snooze/skip do not shift the schedule.
  */
-export function computeShiftOffset(reminder: Reminder, doseLogs: DoseLog[]): number {
+export function computeShiftOffset(
+  reminder: Reminder,
+  doseLogs: DoseLog[]
+): number {
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
 
   const todayTakenLog = [...doseLogs]
-    .filter(l =>
-      l.reminderId === reminder.id &&
-      l.action === "taken" &&
-      isAfter(toDate(l.actionTime), todayStart) &&
-      isBefore(toDate(l.actionTime), todayEnd)
+    .filter(
+      (l) =>
+        l.reminderId === reminder.id &&
+        l.action === "taken" &&
+        isAfter(toDate(l.actionTime), todayStart) &&
+        isBefore(toDate(l.actionTime), todayEnd)
     )
-    .sort((a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime())[0];
+    .sort(
+      (a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime()
+    )[0];
 
   if (!todayTakenLog) return 0;
 
   const offsetMinutes = Math.round(
-    (toDate(todayTakenLog.actionTime).getTime() - toDate(todayTakenLog.scheduledTime).getTime()) /
-    (1000 * 60)
+    (toDate(todayTakenLog.actionTime).getTime() -
+      toDate(todayTakenLog.scheduledTime).getTime()) /
+      (1000 * 60)
   );
 
   // Hard cap: ignore deviation > 4 hours (likely an unrelated log from a different day)
@@ -37,25 +62,38 @@ export function computeShiftOffset(reminder: Reminder, doseLogs: DoseLog[]): num
 /**
  * Returns the most recent taken log for a reminder today, or undefined.
  */
-function getTodayTakenLog(reminderId: string, doseLogs: DoseLog[]): DoseLog | undefined {
+function getTodayTakenLog(
+  reminderId: string,
+  doseLogs: DoseLog[]
+): DoseLog | undefined {
   const todayStart = startOfDay(new Date());
   const todayEnd = endOfDay(new Date());
   return [...doseLogs]
-    .filter(l =>
-      l.reminderId === reminderId &&
-      l.action === "taken" &&
-      isAfter(toDate(l.actionTime), todayStart) &&
-      isBefore(toDate(l.actionTime), todayEnd)
+    .filter(
+      (l) =>
+        l.reminderId === reminderId &&
+        l.action === "taken" &&
+        isAfter(toDate(l.actionTime), todayStart) &&
+        isBefore(toDate(l.actionTime), todayEnd)
     )
-    .sort((a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime())[0];
+    .sort(
+      (a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime()
+    )[0];
 }
 
 /**
  * Given an ordered list of HH:mm time strings, returns the interval in minutes
  * between consecutive slots (or between the last and first if only 1 slot, falls back to 24h).
  */
-function getIntervalMinutes(times: string[], fromIndex: number, toIndex: number): number {
-  const toMins = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+function getIntervalMinutes(
+  times: string[],
+  fromIndex: number,
+  toIndex: number
+): number {
+  const toMins = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
   if (times.length <= 1) return 24 * 60;
   let diff = toMins(times[toIndex]) - toMins(times[fromIndex]);
   if (diff <= 0) diff += 24 * 60; // wrap around midnight
@@ -72,7 +110,7 @@ export const checkMissedDoses = async (
   reminders: Reminder[],
   doseLogs: DoseLog[],
   logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>,
-  patientId?: string | null  // Optional: scope to a specific patient. null = owner only.
+  patientId?: string | null // Optional: scope to a specific patient. null = owner only.
 ) => {
   // Guard: do nothing if there's no data yet (avoids false-positives on mount)
   if (reminders.length === 0) return;
@@ -82,11 +120,11 @@ export const checkMissedDoses = async (
   const twentyFourHoursAgo = subHours(now, 24);
 
   // Scope to the requested patient
-  const activeReminders = reminders.filter(r => {
+  const activeReminders = reminders.filter((r) => {
     if (!r.enabled) return false;
     if (patientId !== undefined) {
       // Explicit scope requested: match null (owner) or specific patient ID
-      const rPatientId = (r as any).patientId ?? null;
+      const rPatientId = r.patientId ?? null;
       return rPatientId === (patientId ?? null);
     }
     return true; // No filter — check all
@@ -98,7 +136,7 @@ export const checkMissedDoses = async (
     const reminderCreatedAt = r.createdAt ? parseISO(r.createdAt) : now;
 
     const times = r.time.split(",");
-    
+
     for (const timeStr of times) {
       const [hours, minutes] = timeStr.trim().split(":").map(Number);
 
@@ -111,7 +149,10 @@ export const checkMissedDoses = async (
         scheduledDate = setMilliseconds(scheduledDate, 0);
 
         // Rule 1: Must be within the last 24 hours but at least 2 hours old
-        if (!isAfter(scheduledDate, twentyFourHoursAgo) || !isBefore(scheduledDate, twoHoursAgo)) {
+        if (
+          !isAfter(scheduledDate, twentyFourHoursAgo) ||
+          !isBefore(scheduledDate, twoHoursAgo)
+        ) {
           continue;
         }
 
@@ -123,34 +164,46 @@ export const checkMissedDoses = async (
 
         // Rule 3: Check if a log already exists for this reminder at this specific scheduled time.
         // Also check the shifted time so we don't double-flag a dose taken at the adjusted slot.
-        const shiftedScheduledDate = addMinutes(scheduledDate, computeShiftOffset(r, doseLogs));
-        const logExists = doseLogs.some(log =>
-          log.reminderId === r.id &&
-          (log.scheduledTime === scheduledDate.toISOString() ||
-           log.scheduledTime === shiftedScheduledDate.toISOString())
+        const shiftedScheduledDate = addMinutes(
+          scheduledDate,
+          computeShiftOffset(r, doseLogs)
+        );
+        const logExists = doseLogs.some(
+          (log) =>
+            log.reminderId === r.id &&
+            (log.scheduledTime === scheduledDate.toISOString() ||
+              log.scheduledTime === shiftedScheduledDate.toISOString())
         );
 
         if (!logExists) {
-          console.log(`Marking missed dose for ${r.medicineName} scheduled at ${scheduledDate.toISOString()}`);
+          console.log(
+            `Marking missed dose for ${
+              r.medicineName
+            } scheduled at ${scheduledDate.toISOString()}`
+          );
           await logDose({
             reminderId: r.id,
             medicineName: r.medicineName,
             dose: r.dose,
             scheduledTime: scheduledDate.toISOString(),
-            action: 'missed'
+            action: "missed",
           });
 
           // Notify the user about the missed dose
           if (Capacitor.isNativePlatform()) {
             await LocalNotifications.schedule({
-              notifications: [{
-                title: `Missed Dose: ${r.medicineName}`,
-                body: `You missed your ${r.dose} dose scheduled for ${timeStr.trim()}. Please stay on track!`,
-                id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
-                channelId: 'dawa_reminders',
-                sound: 'default',
-                extra: { type: 'missed_alert' }
-              }]
+              notifications: [
+                {
+                  title: `Missed Dose: ${r.medicineName}`,
+                  body: `You missed your ${
+                    r.dose
+                  } dose scheduled for ${timeStr.trim()}. Please stay on track!`,
+                  id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
+                  channelId: "dawa_reminders",
+                  sound: "default",
+                  extra: { type: "missed_alert" },
+                },
+              ],
             });
           }
         }
@@ -165,8 +218,12 @@ export interface NextDoseInfo {
   scheduledAt: Date;
 }
 
-const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog[]): Date | null => {
-  const times = reminder.time.split(",").map(t => t.trim());
+const getNextOccurrence = (
+  reminder: Reminder,
+  fromDate: Date,
+  doseLogs: DoseLog[]
+): Date | null => {
+  const times = reminder.time.split(",").map((t) => t.trim());
   const occurrences: Date[] = [];
   const now = new Date();
   const todayStart = startOfDay(now);
@@ -187,12 +244,16 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
 
     // Fallback: match to nearest base slot by minute proximity
     if (takenSlotIndex === -1) {
-      const scheduledMins = scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
+      const scheduledMins =
+        scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
       let minDiff = Infinity;
       times.forEach((t, i) => {
         const [h, m] = t.split(":").map(Number);
         const diff = Math.abs(h * 60 + m - scheduledMins);
-        if (diff < minDiff) { minDiff = diff; takenSlotIndex = i; }
+        if (diff < minDiff) {
+          minDiff = diff;
+          takenSlotIndex = i;
+        }
       });
     }
   }
@@ -212,7 +273,12 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
       // --- Interval-preservation model ---
       // For slots that come AFTER the taken slot today, compute:
       //   candidate = actualTakeTime + cumulative interval from takenSlot to thisSlot
-      if (isToday && takenLog && takenSlotIndex !== -1 && index > takenSlotIndex) {
+      if (
+        isToday &&
+        takenLog &&
+        takenSlotIndex !== -1 &&
+        index > takenSlotIndex
+      ) {
         const actualTakeTime = toDate(takenLog.actionTime);
         // Sum up intervals from taken slot through to this slot
         let cumulativeInterval = 0;
@@ -235,19 +301,26 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
       if (isBefore(candidate, fromDate)) continue;
 
       // 3. Check if already handled (taken, skipped, or missed) for this scheduled time
-      const terminalLog = doseLogs.find(log =>
-        log.reminderId === reminder.id &&
-        log.scheduledTime === candidate.toISOString() &&
-        ["taken", "skipped", "missed"].includes(log.action)
+      const terminalLog = doseLogs.find(
+        (log) =>
+          log.reminderId === reminder.id &&
+          log.scheduledTime === candidate.toISOString() &&
+          ["taken", "skipped", "missed"].includes(log.action)
       );
       if (terminalLog) continue;
 
       // 3.5 Check if currently snoozed
-      const snoozedLog = doseLogs.sort((a,b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime()).find(log =>
-        log.reminderId === reminder.id &&
-        log.scheduledTime === candidate.toISOString() &&
-        log.action === "snoozed"
-      );
+      const snoozedLog = doseLogs
+        .sort(
+          (a, b) =>
+            toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime()
+        )
+        .find(
+          (log) =>
+            log.reminderId === reminder.id &&
+            log.scheduledTime === candidate.toISOString() &&
+            log.action === "snoozed"
+        );
       if (snoozedLog && snoozedLog.snoozeUntil) {
         candidate = new Date(snoozedLog.snoozeUntil);
         if (isBefore(candidate, fromDate)) continue;
@@ -255,10 +328,21 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
 
       // 4. Schedule-type filtering
       // For shifted candidates, check day-of-week against the original unshifted date
-      const refDate = isToday && offsetMinutes !== 0 ? addMinutes(candidate, -offsetMinutes) : candidate;
+      const refDate =
+        isToday && offsetMinutes !== 0
+          ? addMinutes(candidate, -offsetMinutes)
+          : candidate;
 
-      if (reminder.repeatSchedule === "daily" || reminder.repeatSchedule === "custom" || !reminder.repeatSchedule) {
-        if (reminder.repeatSchedule === "custom" && reminder.repeatDays && reminder.repeatDays.length > 0) {
+      if (
+        reminder.repeatSchedule === "daily" ||
+        reminder.repeatSchedule === "custom" ||
+        !reminder.repeatSchedule
+      ) {
+        if (
+          reminder.repeatSchedule === "custom" &&
+          reminder.repeatDays &&
+          reminder.repeatDays.length > 0
+        ) {
           if (reminder.repeatDays.includes(getDay(refDate))) {
             occurrences.push(candidate);
             break;
@@ -288,17 +372,20 @@ const getNextOccurrence = (reminder: Reminder, fromDate: Date, doseLogs: DoseLog
   return occurrences[0];
 };
 
-export const calculateNextDose = (reminders: Reminder[], doseLogs: DoseLog[]): NextDoseInfo | null => {
+export const calculateNextDose = (
+  reminders: Reminder[],
+  doseLogs: DoseLog[]
+): NextDoseInfo | null => {
   if (reminders.length === 0) return null;
 
   const now = new Date();
-  const activeReminders = reminders.filter(r => r.enabled);
-  
+  const activeReminders = reminders.filter((r) => r.enabled);
+
   if (activeReminders.length === 0) return null;
 
   const upcoming: { reminder: Reminder; scheduledAt: Date }[] = [];
 
-  activeReminders.forEach(r => {
+  activeReminders.forEach((r) => {
     const next = getNextOccurrence(r, now, doseLogs);
     if (next) {
       upcoming.push({ reminder: r, scheduledAt: next });
@@ -321,7 +408,7 @@ export const calculateNextDose = (reminders: Reminder[], doseLogs: DoseLog[]): N
   return {
     reminder: next.reminder,
     timeUntil,
-    scheduledAt: next.scheduledAt
+    scheduledAt: next.scheduledAt,
   };
 };
 
@@ -329,43 +416,43 @@ export const registerNotificationActions = async () => {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
-    if (Capacitor.getPlatform() === 'android') {
+    if (Capacitor.getPlatform() === "android") {
       await LocalNotifications.createChannel({
-        id: 'dawa_reminders',
-        name: 'Medicine Reminders',
-        description: 'Notifications for medicine reminders',
+        id: "dawa_reminders",
+        name: "Medicine Reminders",
+        description: "Notifications for medicine reminders",
         importance: 5, // High importance
         visibility: 1, // Public
         vibration: true,
-        sound: 'default',
+        sound: "default",
       });
     }
 
     // registerActionTypes defines the UI buttons for the notifications
-    
+
     await LocalNotifications.registerActionTypes({
       types: [
         {
-          id: 'MEDICINE_REMINDER',
+          id: "MEDICINE_REMINDER",
           actions: [
             {
-              id: 'TAKE',
-              title: 'Mark as Taken',
-              foreground: true
+              id: "TAKE",
+              title: "Mark as Taken",
+              foreground: true,
             },
             {
-              id: 'SKIP',
-              title: 'Skip Dose',
-              foreground: true
+              id: "SKIP",
+              title: "Skip Dose",
+              foreground: true,
             },
             {
-              id: 'SNOOZE',
-              title: 'Snooze (15m)',
-              foreground: true
-            }
-          ]
-        }
-      ]
+              id: "SNOOZE",
+              title: "Snooze (15m)",
+              foreground: true,
+            },
+          ],
+        },
+      ],
     });
   } catch (err) {
     console.error("Failed to register notification actions:", err);
@@ -382,25 +469,29 @@ const stringToHash = (str: string): number => {
   return Math.abs(hash);
 };
 
-export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog[], medicines?: Medicine[]) => {
+export const scheduleReminders = async (
+  reminders: Reminder[],
+  doseLogs: DoseLog[],
+  medicines?: Medicine[]
+) => {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
     const perm = await LocalNotifications.checkPermissions();
-    if (perm.display !== 'granted') {
+    if (perm.display !== "granted") {
       await LocalNotifications.requestPermissions();
     }
 
     // Ensure the channel exists before scheduling on Android
-    if (Capacitor.getPlatform() === 'android') {
+    if (Capacitor.getPlatform() === "android") {
       await LocalNotifications.createChannel({
-        id: 'dawa_reminders',
-        name: 'Medicine Reminders',
-        description: 'Notifications for medicine reminders',
+        id: "dawa_reminders",
+        name: "Medicine Reminders",
+        description: "Notifications for medicine reminders",
         importance: 5,
         visibility: 1,
         vibration: true,
-        sound: 'default',
+        sound: "default",
       });
     }
 
@@ -410,15 +501,16 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
       await LocalNotifications.cancel({ notifications: pending.notifications });
     }
 
-    const notifications: any[] = [];
-    const activeReminders = reminders.filter(r => r.enabled);
+    const notifications: LocalNotificationSchema[] = [];
+    const alarmNotifications: AlarmNotification[] = [];
+    const activeReminders = reminders.filter((r) => r.enabled);
     const now = new Date();
 
-    activeReminders.forEach(r => {
-      const medicine = medicines?.find(m => m.id === r.medicineId);
+    activeReminders.forEach((r) => {
+      const medicine = medicines?.find((m) => m.id === r.medicineId);
       let currentStock = medicine?.currentQuantity ?? 999;
       const doseAmount = medicine?.dosagePerDose || 1;
-      
+
       let nextFrom = now;
       // Schedule next 60 occurrences or up to 30 days — larger window means
       // fewer reschedule cycles needed if the user is offline for a long period.
@@ -433,9 +525,19 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
             body: `You are out of stock. Please refill to continue reminders.`,
             id: stringToHash(r.id + "refill"),
             schedule: { at: next, allowWhileIdle: true },
-            channelId: 'dawa_reminders',
-            sound: 'default',
-            extra: { type: "refill", medicineId: r.medicineId }
+            channelId: "dawa_reminders",
+            sound: "default",
+            extra: { type: "refill", medicineId: r.medicineId },
+          });
+          alarmNotifications.push({
+            id: stringToHash(r.id + "refill"),
+            title: `Refill Needed: ${r.medicineName}`,
+            body: `You are out of stock. Please refill to continue reminders.`,
+            triggerAtMillis: next.getTime(),
+            extra: JSON.stringify({
+              reminderId: r.id,
+              medicineName: r.medicineName,
+            }),
           });
           break;
         }
@@ -451,21 +553,35 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
           // allowWhileIdle: fires even when Android is in Doze/battery-saver mode.
           // This is the key flag that makes notifications work fully offline.
           schedule: { at: next, allowWhileIdle: true },
-          channelId: 'dawa_reminders',
-          sound: 'default',
+          channelId: "dawa_reminders",
+          sound: "default",
           actionTypeId: "MEDICINE_REMINDER",
           extra: {
             reminderId: r.id,
             medicineName: r.medicineName,
             patientName: r.patientName || null,
             dose: r.dose,
-            scheduledTime: next.toISOString()
-          }
+            scheduledTime: next.toISOString(),
+          },
         });
-        
+        alarmNotifications.push({
+          id: stringToHash(r.id + next.toISOString()),
+          title: r.patientName
+            ? `Time for ${r.patientName}'s ${r.medicineName}`
+            : `Time for ${r.medicineName}`,
+          body: r.patientName
+            ? `${r.patientName}'s dose: ${r.dose}. Don't miss it!`
+            : `Dose: ${r.dose}. Remember to take your medicine!`,
+          triggerAtMillis: next.getTime(),
+          extra: JSON.stringify({
+            reminderId: r.id,
+            medicineName: r.medicineName,
+          }),
+        });
+
         if (medicine) currentStock -= doseAmount;
         if (r.repeatSchedule === "once") break;
-        
+
         nextFrom = addMinutes(next, 1);
       }
     });
@@ -473,6 +589,19 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
     if (notifications.length > 0) {
       console.log(`Scheduling ${notifications.length} notifications...`);
       await LocalNotifications.schedule({ notifications });
+      // Mirror schedule to native AlarmManager for post-reboot reliability
+      if (alarmNotifications.length > 0) {
+        try {
+          await NativeAlarm.scheduleAlarms({
+            notifications: alarmNotifications,
+          });
+        } catch (alarmErr) {
+          console.warn(
+            "[reminderService] NativeAlarm fallback failed (non-fatal):",
+            alarmErr
+          );
+        }
+      }
     } else {
       console.log("No notifications to schedule.");
     }
@@ -480,4 +609,3 @@ export const scheduleReminders = async (reminders: Reminder[], doseLogs: DoseLog
     console.error("Failed to schedule notifications:", err);
   }
 };
-
