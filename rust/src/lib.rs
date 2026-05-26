@@ -1,21 +1,114 @@
 mod search;
+mod interaction;
+mod scheduler;
+mod parsing;
+mod crypto;
+mod file_ops;
+mod network;
 
 pub use search::{fuzzy_search, DrugEntry};
 
 /// Returns 1 — confirms the native library loaded and is functional.
 #[no_mangle]
-pub extern "C" fn dawa_search_is_available() -> i32 {
+pub extern "C" fn dawa_core_is_available() -> i32 {
     1
 }
 
-/// Fuzzy-searches the embedded drug index.
-///
-/// Fills `out_buf` with null-terminated UTF-8 text encoded as:
-///   record₁ \x1E record₂ \x1E …
-/// where each record is:
-///   name \x1F score \x1F rxcui
-///
-/// `limit` is clamped to 1–20. Returns the number of results written, or -1 on error.
+// ── JNI bindings (Android only) ──────────────────────────────────────────────
+#[cfg(feature = "android")]
+mod jni_bindings {
+    use jni::JNIEnv;
+    use jni::objects::{JClass, JString, JByteArray};
+    use jni::sys::{jint, jstring, jbyteArray};
+    use crate::search::fuzzy_search;
+    use crate::interaction;
+    use crate::scheduler;
+    use crate::parsing;
+    use crate::crypto;
+
+    /// Called by NativeSearchPlugin.kt: nativeFuzzySearch(query, limit)
+    #[no_mangle]
+    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeFuzzySearch(
+        mut env: JNIEnv,
+        _class: JClass,
+        query: JString,
+        limit: jint,
+    ) -> jstring {
+        let q: String = env.get_string(&query).map(Into::into).unwrap_or_default();
+        let results = fuzzy_search(&q, limit.max(1) as usize);
+        let json = results
+            .iter()
+            .map(|e| {
+                format!(
+                    "{{\"name\":\"{}\",\"score\":{:.4},\"rxcui\":\"{}\"}}",
+                    e.name.replace('"', "\\\""),
+                    e.score,
+                    e.rxcui.as_deref().unwrap_or("")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        let output = format!("[{}]", json);
+        env.new_string(output)
+            .expect("failed to create jstring")
+            .into_raw()
+    }
+
+    #[no_mangle]
+    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeCheckInteractions(
+        mut env: JNIEnv,
+        _class: JClass,
+        rxcuis_json: JString,
+    ) -> jstring {
+        let json_str: String = env.get_string(&rxcuis_json).map(Into::into).unwrap_or_default();
+        let rxcuis: Vec<String> = serde_json::from_str(&json_str).unwrap_or_default();
+
+        let engine = interaction::InteractionEngine::new();
+        let results = engine.check_interactions(&rxcuis);
+
+        let output = serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string());
+        env.new_string(output)
+            .expect("failed to create jstring")
+            .into_raw()
+    }
+
+    #[no_mangle]
+    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeIsAvailable(
+        _env: JNIEnv,
+        _class: JClass,
+    ) -> jint {
+        1
+    }
+
+    #[no_mangle]
+    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeParseLargeJson(
+        mut env: JNIEnv,
+        _class: JClass,
+        json: JString,
+    ) -> jstring {
+        let j: String = env.get_string(&json).map(Into::into).unwrap_or_default();
+        let result = match parsing::parse_large_json(&j) {
+            Ok(v) => v.to_string(),
+            Err(e) => e,
+        };
+        env.new_string(result)
+            .expect("failed to create jstring")
+            .into_raw()
+    }
+
+    #[no_mangle]
+    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeHashData(
+        mut env: JNIEnv,
+        _class: JClass,
+        data: JByteArray,
+    ) -> jbyteArray {
+        let input = env.convert_byte_array(&data).unwrap_or_default();
+        let hashed = crypto::hash_data(&input);
+        env.byte_array_from_slice(&hashed)
+            .expect("failed to create byte array")
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn dawa_search_fuzzy(
     query_ptr: *const u8,
@@ -59,51 +152,4 @@ pub extern "C" fn dawa_search_fuzzy(
         *out_buf.add(to_copy) = 0; // null-terminate
     }
     results.len() as i32
-}
-
-// ── JNI bindings (Android only) ──────────────────────────────────────────────
-#[cfg(feature = "android")]
-mod jni_bindings {
-    use jni::JNIEnv;
-    use jni::objects::{JClass, JString};
-    use jni::sys::{jint, jstring};
-    use crate::search::fuzzy_search;
-
-    /// Called by NativeSearchPlugin.kt: nativeFuzzySearch(query, limit)
-    /// Returns a JSON array string: [{"name":"…","score":0.9876,"rxcui":"…"},…]
-    #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeFuzzySearch(
-        mut env: JNIEnv,
-        _class: JClass,
-        query: JString,
-        limit: jint,
-    ) -> jstring {
-        let q: String = env.get_string(&query).map(Into::into).unwrap_or_default();
-        let results = fuzzy_search(&q, limit.max(1) as usize);
-        let json = results
-            .iter()
-            .map(|e| {
-                format!(
-                    "{{\"name\":\"{}\",\"score\":{:.4},\"rxcui\":\"{}\"}}",
-                    e.name.replace('"', "\\\""),
-                    e.score,
-                    e.rxcui.as_deref().unwrap_or("")
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(",");
-        let output = format!("[{}]", json);
-        env.new_string(output)
-            .expect("failed to create jstring")
-            .into_raw()
-    }
-
-    /// Called by NativeSearchPlugin.kt: nativeIsAvailable()
-    #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeIsAvailable(
-        _env: JNIEnv,
-        _class: JClass,
-    ) -> jint {
-        1
-    }
 }

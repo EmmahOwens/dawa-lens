@@ -29,7 +29,6 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { AnimatePresence } from "framer-motion";
 import { NotificationHandler } from "@/components/NotificationHandler";
 import StoreUpdateModal from "@/components/StoreUpdateModal";
-import BiometricGate from "@/components/BiometricGate";
 import { initLocalPersistence } from "@/services/localPersistence";
 import pkg from "../package.json";
 import { isNewerVersion, fetchLatestRelease } from "@/lib/update";
@@ -275,8 +274,7 @@ const App = () => {
                     path="*"
                     element={
                       <ProtectedRoute>
-                        <BiometricGate>
-                          <AppShell>
+                        <AppShell>
                             <AnimatePresence mode="wait">
                               <Suspense fallback={<PageLoader />}>
                                 <ErrorBoundary name="ContentArea">
@@ -401,7 +399,6 @@ const App = () => {
                               </Suspense>
                             </AnimatePresence>
                           </AppShell>
-                        </BiometricGate>
                       </ProtectedRoute>
                     }
                   />

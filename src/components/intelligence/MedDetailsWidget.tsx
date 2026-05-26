@@ -50,7 +50,7 @@ export function MedDetailsWidget() {
               <p className="text-[10px] font-black uppercase text-success">AI Verification Passed</p>
            </div>
            <p className="text-[11px] leading-relaxed text-success/80 font-medium">
-             No known interactions with your current biometric profile detected for {lastMed?.name || "this medication"}.
+             No known interactions with your current profile detected for {lastMed?.name || "this medication"}.
            </p>
         </div>
       </section>

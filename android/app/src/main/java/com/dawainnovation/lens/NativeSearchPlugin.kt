@@ -31,6 +31,38 @@ class NativeSearchPlugin : Plugin() {
     // They are resolved at runtime from libdawa_search.so loaded above.
     private external fun nativeFuzzySearch(query: String, limit: Int): String
     private external fun nativeIsAvailable(): Int
+    private external fun nativeCheckInteractions(rxcuisJson: String): String
+    private external fun nativeHashData(data: ByteArray): ByteArray
+    private external fun nativeParseLargeJson(json: String): String
+
+    @PluginMethod
+    fun checkInteractions(call: PluginCall) {
+        val rxcuis = call.getArray("rxcuis") ?: run {
+            call.reject("Missing rxcuis")
+            return
+        }
+        if (!libraryLoaded) {
+            call.reject("Library not loaded")
+            return
+        }
+        val result = nativeCheckInteractions(rxcuis.toString())
+        val res = JSObject()
+        res.put("interactions", JSONArray(result))
+        call.resolve(res)
+    }
+
+    @PluginMethod
+    fun parseJson(call: PluginCall) {
+        val json = call.getString("json") ?: "{}"
+        if (!libraryLoaded) {
+            call.reject("Library not loaded")
+            return
+        }
+        val result = nativeParseLargeJson(json)
+        val res = JSObject()
+        res.put("result", result)
+        call.resolve(res)
+    }
 
     @PluginMethod
     fun isAvailable(call: PluginCall) {

@@ -11,7 +11,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Override point for customization after application launch.
 
         // NativeOcrPlugin, NativeAlarmPlugin, NativeCameraPlugin, NativeSqlitePlugin,
-        // NativeBiometricPlugin, NativePdfPlugin, and NativeLocationPlugin are all
+        // NativePdfPlugin, and NativeLocationPlugin are all
         // auto-discovered by Capacitor (CAPBridgedPlugin). No manual registration needed.
 
         // Register background app refresh task for missed-dose checking
