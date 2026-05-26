@@ -106,7 +106,8 @@ export default function DawaGPT() {
   };
 
   // Hide DawaGPT completely during auth and onboarding flows
-  const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email"];
+  // Hide DawaGPT on auth, onboarding AND the full-screen scan camera page
+  const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email", "/scan"];
   if (hiddenPaths.includes(location.pathname)) return null;
 
   const lastMsg = messages[messages.length - 1];

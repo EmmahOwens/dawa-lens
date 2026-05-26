@@ -1,8 +1,10 @@
 package com.dawainnovation.lens
 
+import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -25,6 +27,7 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
@@ -40,6 +43,10 @@ class NativeScanActivity : AppCompatActivity() {
     private var lensFacing = CameraSelector.LENS_FACING_BACK
     private var flashEnabled = false
     private val scanMode by lazy { intent.getStringExtra("SCAN_MODE") ?: "pill" }
+
+    companion object {
+        private const val RC_CAMERA_PERMISSION = 1001
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,7 +127,36 @@ class NativeScanActivity : AppCompatActivity() {
         root.addView(captureBtn)
 
         cameraExecutor = Executors.newSingleThreadExecutor()
-        startCamera()
+        // On Android 6+ the CAMERA permission must be granted at runtime.
+        // CameraX's bindToLifecycle() silently throws SecurityException when
+        // permission is missing — so we must check here before calling startCamera().
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+            startCamera()
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.CAMERA),
+                RC_CAMERA_PERMISSION
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == RC_CAMERA_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startCamera()
+            } else {
+                // User denied camera — return cancelled so ScanPage can react
+                setResult(Activity.RESULT_CANCELED)
+                finish()
+            }
+        }
     }
 
     private fun startCamera() {
