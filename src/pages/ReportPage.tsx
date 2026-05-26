@@ -26,7 +26,7 @@ import {
 } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
-import { VitalityTrends3D } from "@/components/wellness/VitalityTrends3D";
+import { VitalityTrends2D } from "@/components/wellness/VitalityTrends2D";
 import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
@@ -554,7 +554,7 @@ export default function ReportPage() {
                   </p>
                 </div>
               )}
-              <VitalityTrends3D data={chartData} />
+              <VitalityTrends2D data={chartData} />
             </div>
             <div className="flex justify-center gap-6 mt-6">
               <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
