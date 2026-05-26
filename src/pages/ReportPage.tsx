@@ -26,17 +26,7 @@ import {
 } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
+import { VitalityTrends3D } from "@/components/wellness/VitalityTrends3D";
 import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
 import { Capacitor } from "@capacitor/core";
@@ -564,97 +554,7 @@ export default function ReportPage() {
                   </p>
                 </div>
               )}
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient
-                      id="colorAdherence"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="5%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={0.4}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="hsl(var(--border))"
-                    opacity={0.5}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      fill: "hsl(var(--muted-foreground))",
-                    }}
-                    dy={10}
-                  />
-                  <YAxis hide domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "1rem",
-                      border: "1px solid hsl(var(--border))",
-                      boxShadow: "0 10px 40px rgba(0,0,0,0.08)",
-                      background: "hsl(var(--card))",
-                    }}
-                    itemStyle={{
-                      fontSize: "10px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
-                    labelStyle={{
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      color: "hsl(var(--foreground))",
-                      marginBottom: "8px",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="adherence"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={4}
-                    fillOpacity={1}
-                    fill="url(#colorAdherence)"
-                    name="Adherence %"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="energy"
-                    stroke="#10b981"
-                    strokeWidth={3}
-                    fill="transparent"
-                    name="Energy Level"
-                    strokeDasharray="4 4"
-                    connectNulls
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="mood"
-                    stroke="#6366f1"
-                    strokeWidth={3}
-                    fill="transparent"
-                    name="Mood Level"
-                    strokeDasharray="2 2"
-                    connectNulls
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <VitalityTrends3D data={chartData} />
             </div>
             <div className="flex justify-center gap-6 mt-6">
               <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
