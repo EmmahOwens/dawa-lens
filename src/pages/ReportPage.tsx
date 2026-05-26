@@ -556,26 +556,6 @@ export default function ReportPage() {
               )}
               <VitalityTrends2D data={chartData} />
             </div>
-            <div className="flex justify-center gap-6 mt-6">
-              <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
-                <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">
-                  Adherence
-                </span>
-              </div>
-              <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
-                <div className="w-2.5 h-2.5 rounded-full bg-success" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">
-                  Energy
-                </span>
-              </div>
-              <div className="flex items-center gap-2 bg-accent/50 px-3 py-1.5 rounded-full">
-                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground cursor-default">
-                  Mood
-                </span>
-              </div>
-            </div>
           </motion.div>
 
           {/* Emotional Wellness Summary */}
