@@ -17,6 +17,10 @@ const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_LIGHT_MODEL = 'llama-3.1-8b-instant';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
+const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
+const CEREBRAS_MODEL = 'gpt-oss-120b';
+const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
+
 /**
  * Determines which API key to use based on the model ID.
  * Features using llama 3.1 8b models MUST use GROQ_API_KEY_2.
@@ -61,7 +65,7 @@ const EMERGENCY_RESPONSE = {
 /**
  * Fallback chat with Gemini (Standard JSON response)
  */
-const callGeminiChat = async (finalMessages, priority = 'high') => {
+const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 2048) => {
   if (!GEMINI_API_KEY) {
     throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
   }
@@ -80,7 +84,10 @@ const callGeminiChat = async (finalMessages, priority = 'high') => {
       systemInstruction: {
         parts: [{ text: "You are Dawa-Lens AI. Respond STRICTLY in JSON format as requested by the user. Use Markdown for formatting in text fields." }]
       },
-      generationConfig: { responseMimeType: 'application/json' }
+      generationConfig: {
+        responseMimeType: 'application/json',
+        maxOutputTokens: maxTokens
+      }
     });
 
     const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -100,20 +107,70 @@ const callGeminiChat = async (finalMessages, priority = 'high') => {
 };
 
 /**
- * Standard chat completion call to Groq routed via rate limit queue
+ * Standard chat completion call to Cerebras (GPT-OSS-120B)
  */
-const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GROQ_MODEL, priority = 'high') => {
-  const apiKey = getGroqApiKey(modelId);
-  if (!apiKey) {
-    return await callGeminiChat(messages, priority);
+const callCerebrasChat = async (messages, responseFormat = { type: 'json_object' }, modelId = CEREBRAS_MODEL, priority = 'high', maxTokens = 2048) => {
+  if (!CEREBRAS_API_KEY) {
+    console.warn("CEREBRAS_API_KEY not set, falling back to Groq/Gemini...");
+    return await callGroqChat(messages, responseFormat, GROQ_MODEL, priority, maxTokens);
   }
-
-  const modelKey = modelId === GROQ_MODEL ? 'groq-70b' : 'groq-8b';
 
   const fn = async () => {
     const payload = {
       model: modelId,
-      messages
+      messages,
+      max_completion_tokens: maxTokens // Cerebras uses max_completion_tokens for better rate limit estimation
+    };
+    if (responseFormat) {
+      payload.response_format = responseFormat;
+    }
+
+    const response = await axios.post(CEREBRAS_API_URL, payload, {
+      headers: {
+        'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const text = response.data?.choices?.[0]?.message?.content;
+    if (!text) {
+      throw new AppError('Cerebras returned an empty response.', 502);
+    }
+
+    return responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
+  };
+
+  try {
+    return await rateLimitManager.enqueue(fn, 'cerebras-120b', messages, priority);
+  } catch (err) {
+    console.warn("Cerebras failed, trying Groq/Gemini fallback...", err.message);
+    return await callGroqChat(messages, responseFormat, GROQ_MODEL, priority, maxTokens);
+  }
+};
+
+/**
+ * Standard chat completion call to Groq routed via rate limit queue
+ */
+const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GROQ_MODEL, priority = 'high', maxTokens = 2048) => {
+  // If this is the heavy model and we haven't come from callCerebrasChat yet, try Cerebras first
+  if (modelId === GROQ_MODEL && CEREBRAS_API_KEY) {
+     // This prevents infinite loops as callCerebrasChat falls back to callGroqChat
+     // but we only want to entry point to Cerebras here if it's the intended primary path.
+     // However, to keep it simple, we'll let callGroq be the entry and it delegates.
+  }
+
+  const apiKey = getGroqApiKey(modelId);
+  if (!apiKey) {
+    return await callGeminiChat(messages, priority, maxTokens);
+  }
+
+  const modelKey = modelId === GROQ_MODEL ? 'groq-70b' : 'groq-8b'; // Note: groq-70b still used as key if we actually use Groq
+
+  const fn = async () => {
+    const payload = {
+      model: modelId,
+      messages,
+      max_tokens: maxTokens
     };
     if (responseFormat) {
       payload.response_format = responseFormat;
@@ -138,16 +195,24 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
     return await rateLimitManager.enqueue(fn, modelKey, messages, priority);
   } catch (err) {
     console.warn("Groq failed, trying Gemini fallback...", err.message);
-    return await callGeminiChat(messages, priority);
+    return await callGeminiChat(messages, priority, maxTokens);
   }
 };
 
-const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 'high') => {
+const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 'high', maxTokens = 2048) => {
+  const messages = [{ role: 'user', content: prompt }];
+  const responseFormat = isJson ? { type: 'json_object' } : null;
+
+  if (modelId === GROQ_MODEL && CEREBRAS_API_KEY) {
+    return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens);
+  }
+
   return await callGroqChat(
-    [{ role: 'user', content: prompt }],
-    isJson ? { type: 'json_object' } : null,
+    messages,
+    responseFormat,
     modelId,
-    priority
+    priority,
+    maxTokens
   );
 };
 
@@ -344,12 +409,15 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
   const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
   const apiKey = getGroqApiKey(selectedModel);
 
+  // Increase max tokens for conversational chat
+  const chatMaxTokens = 4096;
+
   if (!apiKey) {
-    return await callGeminiChat(finalMessages, priority);
+    return await callGeminiChat(finalMessages, priority, chatMaxTokens);
   }
 
   try {
-    let result = await callGroqChat(finalMessages, { type: 'json_object' }, selectedModel, priority);
+    let result = await callGroqChat(finalMessages, { type: 'json_object' }, selectedModel, priority, chatMaxTokens);
 
     // --- AUTONOMOUS AGENT EXECUTION LOOP ---
     if (result.action && result.action.type && isComplex) {
@@ -364,7 +432,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
           { role: 'system', content: `ACTION_RESULT: ${JSON.stringify(actionResult)}. Now confirm this to the user in a warm, human way.` }
         ];
 
-        const feedbackResponse = await callGroqChat(feedbackMessages, { type: 'json_object' }, GROQ_LIGHT_MODEL, priority);
+        const feedbackResponse = await callGroqChat(feedbackMessages, { type: 'json_object' }, GROQ_LIGHT_MODEL, priority, chatMaxTokens);
         result = feedbackResponse;
         result.actionExecuted = true;
       } catch (actionErr) {
@@ -376,7 +444,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     return result;
   } catch (err) {
     console.warn("Groq Chat failed, falling back to Gemini...", err.message);
-    return await callGeminiChat(finalMessages, priority);
+    return await callGeminiChat(finalMessages, priority, chatMaxTokens);
   }
 };
 
@@ -469,9 +537,12 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   const selectedModel = isComplexTask(lastUserMsg) ? GROQ_MODEL : GROQ_LIGHT_MODEL;
   const apiKey = getGroqApiKey(selectedModel);
 
+  // Increase max tokens for conversational chat
+  const chatMaxTokens = 4096;
+
   if (!apiKey) {
     // Fallback to non-streaming Gemini chat if Groq is missing
-    const geminiResp = await callGeminiChat(finalMessages, priority);
+    const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens);
     return new ReadableStream({
       start(controller) {
         const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
@@ -488,7 +559,8 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
       const response = await axios.post(GROQ_API_URL, {
         model: selectedModel,
         messages: finalMessages,
-        stream: true
+        stream: true,
+        max_tokens: chatMaxTokens
       }, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -503,7 +575,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     return await rateLimitManager.enqueue(fn, modelKey, finalMessages, priority);
   } catch (err) {
     console.warn("Groq Stream failed, falling back to Gemini...", err.message);
-    const geminiResp = await callGeminiChat(finalMessages, priority);
+    const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens);
     return new ReadableStream({
       start(controller) {
         const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });

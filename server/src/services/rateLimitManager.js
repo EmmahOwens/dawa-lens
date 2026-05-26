@@ -8,6 +8,12 @@ class RateLimitManager {
 
     // Model limit configurations (RPM, TPM, RPD, TPD)
     this.configs = {
+      'cerebras-120b': {
+        rpm: 5,
+        tpm: 30000,
+        rpd: 14400,
+        tpd: 1000000,
+      },
       'groq-70b': {
         rpm: 30,
         tpm: 14000,
@@ -42,6 +48,7 @@ class RateLimitManager {
 
     // Budgets / Counters
     this.counters = {
+      'cerebras-120b': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 },
       'groq-70b': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 },
       'groq-8b': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 },
       'groq-scout': { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 },
@@ -51,11 +58,11 @@ class RateLimitManager {
 
     // Last reset times
     const now = Date.now();
-    this.lastMinuteReset = { 'groq-70b': now, 'groq-8b': now, 'groq-scout': now, 'gemini': now, 'gemini-pro': now };
-    this.lastDayReset = { 'groq-70b': now, 'groq-8b': now, 'groq-scout': now, 'gemini': now, 'gemini-pro': now };
+    this.lastMinuteReset = { 'cerebras-120b': now, 'groq-70b': now, 'groq-8b': now, 'groq-scout': now, 'gemini': now, 'gemini-pro': now };
+    this.lastDayReset = { 'cerebras-120b': now, 'groq-70b': now, 'groq-8b': now, 'groq-scout': now, 'gemini': now, 'gemini-pro': now };
 
     // Cooldown periods (timestamps when blocked until due to 429)
-    this.cooldownUntil = { 'groq-70b': 0, 'groq-8b': 0, 'groq-scout': 0, 'gemini': 0, 'gemini-pro': 0 };
+    this.cooldownUntil = { 'cerebras-120b': 0, 'groq-70b': 0, 'groq-8b': 0, 'groq-scout': 0, 'gemini': 0, 'gemini-pro': 0 };
 
     this.isProcessing = false;
   }
@@ -145,7 +152,7 @@ class RateLimitManager {
   }
 
   // Estimate tokens in prompt/messages (handles text and counts/weights base64 image data)
-  estimateTokens(messages, defaultMaxTokens = 800) {
+  estimateTokens(messages, defaultMaxTokens = 2048) {
     let text = '';
     let imageCount = 0;
 
