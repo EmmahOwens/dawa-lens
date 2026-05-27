@@ -278,7 +278,7 @@ class RateLimitManager {
 
         // 3. If nothing could be run, sleep briefly to prevent CPU spinning and allow cooldowns to decay
         if (!madeProgress && (this.highPriorityQueue.length > 0 || this.lowPriorityQueue.length > 0)) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 50));
           madeProgress = true; // Set to true to allow another iteration
         }
       }

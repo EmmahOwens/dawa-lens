@@ -83,7 +83,7 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 2048
     const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       contents,
       systemInstruction: {
-        parts: [{ text: "You are Dawa-Lens AI. Respond STRICTLY in JSON format as requested by the user. Use Markdown for formatting in text fields." }]
+        parts: [{ text: "You are Dawa-Lens AI. Respond STRICTLY in JSON format with 'text', 'suggestions', 'source', and 'action' fields. Use Markdown for formatting in the 'text' field. Agentic capabilities are enabled via the 'action' field." }]
       },
       generationConfig: {
         responseMimeType: 'application/json',
@@ -130,7 +130,7 @@ const callCerebrasChat = async (messages, responseFormat = { type: 'json_object'
         'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 30000 // 30s timeout for LLM
+      timeout: 8000 // Reduced timeout for faster fallback
     });
 
     const text = response.data?.choices?.[0]?.message?.content;
@@ -172,7 +172,7 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      timeout: 30000
+      timeout: 10000
     });
 
     const text = response.data?.choices?.[0]?.message?.content;
@@ -378,8 +378,15 @@ const isComplexTask = (text) => {
   // Generic informational queries about keywords should NOT trigger 70B
   // e.g. "How do I add a med?" vs "Add a med"
   const isHowToQuery = /^(how\s+do\s+i|can\s+you\s+explain|what\s+is|tell\s+me\s+about)/i.test(lower);
-  
-  return (isActionRequest || isDataRequest || text.length > 300) && !isHowToQuery;
+
+  if (isHowToQuery) return false;
+  if (isActionRequest || isDataRequest) return true;
+
+  // Check for medical advice needs (symptoms, dosage questions etc)
+  const isMedicalQuery = /(dose|dosage|effect|safe|interact|symptom|pain|sick|hurt|doctor|health)/i.test(lower);
+  if (isMedicalQuery && text.split(' ').length > 5) return true;
+
+  return false;
 };
 
 export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }, priority = 'high') => {
@@ -399,12 +406,12 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
   try {
     let result;
 
-    // 1. Try Cerebras for complex tasks first
+    // 1. Try Cerebras for complex tasks first (with 5s timeout for fast fallback)
     if (isComplex && CEREBRAS_API_KEY) {
       try {
         result = await callCerebrasChat(finalMessages, { type: 'json_object' }, CEREBRAS_MODEL, priority, chatMaxTokens);
       } catch (cerebrasErr) {
-        console.warn("DawaGPT: Cerebras primary path failed, falling back to Groq...", cerebrasErr.message);
+        console.warn("DawaGPT: Cerebras primary path failed or timed out, falling back to Groq...", cerebrasErr.message);
       }
     }
 
@@ -541,12 +548,12 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     return new Readable({
       read() {
         const metadata = JSON.stringify({
-          suggestions: jsonResp.suggestions,
-          source: jsonResp.source,
-          action: jsonResp.action
+          suggestions: jsonResp.suggestions || [],
+          source: jsonResp.source || "Dawa-GPT",
+          action: jsonResp.action || null
         });
         const data = JSON.stringify({
-          choices: [{ delta: { content: jsonResp.text + "\n" + metadata } }]
+          choices: [{ delta: { content: (jsonResp.text || "") + "\n" + metadata } }]
         });
         this.push(`data: ${data}\n`);
         this.push(`data: [DONE]\n`);
@@ -571,13 +578,16 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
             model: model,
             messages: finalMessages,
             stream: true,
-            ...(isCerebras ? { max_completion_tokens: chatMaxTokens } : { max_tokens: chatMaxTokens })
+            ...(isCerebras ? { max_completion_tokens: chatMaxTokens } : { max_tokens: chatMaxTokens }),
+            // Force JSON format even in stream to keep consistency
+            response_format: { type: 'json_object' }
           }, {
             headers: {
               'Authorization': `Bearer ${key}`,
               'Content-Type': 'application/json'
             },
-            responseType: 'stream'
+            responseType: 'stream',
+            timeout: isCerebras ? 8000 : 15000
           });
           return response.data;
         };
@@ -586,7 +596,6 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
         return await rateLimitManager.enqueue(fn, modelKey, finalMessages, priority);
       } catch (streamErr) {
         console.warn(`DawaGPT Stream: ${isCerebras ? 'Cerebras' : 'Groq'} failed, falling back...`, streamErr.message);
-        // Fallback to non-streaming if stream initiation failed
       }
     }
 
@@ -597,7 +606,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   } catch (err) {
     console.error("DawaGPT Stream: Total failure, returning error stream.", err.message);
     return createFakeStream({
-      text: "Sorry, I'm having trouble connecting to my medical intelligence core right now.",
+      text: "Sorry, I'm having trouble connecting to my medical intelligence core right now. This may be due to a temporary service outage.",
       suggestions: ["Try again", "Go home"],
       source: "System",
       action: null
@@ -683,13 +692,16 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     8. Use Markdown for formatting (bold, italics, lists, tables) to make information clear and readable.
 
     === RESPONSE FORMAT ===
-    ${isStreaming ? `
-    Respond in Markdown-formatted text first. Append a JSON block at the very end of your response (no labels or headers) containing:
-    { "suggestions": ["...", "...", "..."], "source": "Dawa-GPT", "action": { "type": "...", "payload": {...} } | null }
-    ` : `
-    Respond STRICTLY in JSON format, with the "text" field containing Markdown-formatted content:
-    { "text": "...", "suggestions": ["...", "...", "..."], "source": "Dawa-GPT", "action": { "type": "...", "payload": {...} } | null }
-    `}
+    Respond STRICTLY in JSON format, with the "text" field containing Markdown-formatted content.
+    NEVER append text outside the JSON block.
+
+    Structure:
+    {
+      "text": "Your markdown response here",
+      "suggestions": ["suggestion 1", "2", "3"],
+      "source": "Dawa-GPT",
+      "action": { "type": "...", "payload": {...} } | null
+    }
   `;
 
   const formattedMessages = recentMessages.map(msg => ({
