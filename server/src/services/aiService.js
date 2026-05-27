@@ -1,5 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { Readable } from 'stream';
 import AppError from '../utils/AppError.js';
 import { retrieveMedicalKnowledge } from './vectorService.js';
 import * as medicineService from './medicineService.js';
@@ -511,8 +512,8 @@ async function executeAiAction(action, userId, userMedicines = [], selectedPatie
 export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }, priority = 'high') => {
   const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
   if (detectEmergency(lastUserMsg)) {
-    return new ReadableStream({
-      start(controller) {
+    return new Readable({
+      read() {
         const metadata = JSON.stringify({
           suggestions: EMERGENCY_RESPONSE.suggestions,
           source: EMERGENCY_RESPONSE.source,
@@ -521,9 +522,9 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
         const data = JSON.stringify({
           choices: [{ delta: { content: EMERGENCY_RESPONSE.text + "\n" + metadata } }]
         });
-        controller.enqueue(new TextEncoder().encode(`data: ${data}\n`));
-        controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
-        controller.close();
+        this.push(`data: ${data}\n`);
+        this.push(`data: [DONE]\n`);
+        this.push(null);
       }
     });
   }
@@ -543,27 +544,26 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   if (!apiKey) {
     // Fallback to non-streaming Gemini chat if Groq is missing
     const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens);
-    return new ReadableStream({
-      start(controller) {
-        const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
-        const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text + "\n" + metadata } }] });
-        controller.enqueue(new TextEncoder().encode(`data: ${data}\n`));
-        controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
-        controller.close();
-      }
-    });
+    const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
+    const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text + "\n" + metadata } }] });
+    return Readable.from([`data: ${data}\n`, `data: [DONE]\n`]);
   }
 
   try {
     const fn = async () => {
-      const response = await axios.post(GROQ_API_URL, {
-        model: selectedModel,
+      const isCerebras = isComplex && CEREBRAS_API_KEY && selectedModel === GROQ_MODEL;
+      const apiUrl = isCerebras ? CEREBRAS_API_URL : GROQ_API_URL;
+      const key = isCerebras ? CEREBRAS_API_KEY : apiKey;
+      const model = isCerebras ? CEREBRAS_MODEL : selectedModel;
+
+      const response = await axios.post(apiUrl, {
+        model: model,
         messages: finalMessages,
         stream: true,
-        max_tokens: chatMaxTokens
+        ...(isCerebras ? { max_completion_tokens: chatMaxTokens } : { max_tokens: chatMaxTokens })
       }, {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${key}`,
           'Content-Type': 'application/json'
         },
         responseType: 'stream'
@@ -571,20 +571,14 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
       return response.data;
     };
 
-    const modelKey = selectedModel === GROQ_MODEL ? 'groq-70b' : 'groq-8b';
+    const modelKey = selectedModel === GROQ_MODEL ? (CEREBRAS_API_KEY ? 'cerebras-120b' : 'groq-70b') : 'groq-8b';
     return await rateLimitManager.enqueue(fn, modelKey, finalMessages, priority);
   } catch (err) {
-    console.warn("Groq Stream failed, falling back to Gemini...", err.message);
+    console.warn("DawaGPT Stream failed, falling back to Gemini...", err.message);
     const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens);
-    return new ReadableStream({
-      start(controller) {
-        const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
-        const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text + "\n" + metadata } }] });
-        controller.enqueue(new TextEncoder().encode(`data: ${data}\n`));
-        controller.enqueue(new TextEncoder().encode(`data: [DONE]\n`));
-        controller.close();
-      }
-    });
+    const metadata = JSON.stringify({ suggestions: geminiResp.suggestions, source: geminiResp.source, action: geminiResp.action });
+    const data = JSON.stringify({ choices: [{ delta: { content: geminiResp.text + "\n" + metadata } }] });
+    return Readable.from([`data: ${data}\n`, `data: [DONE]\n`]);
   }
 };
 

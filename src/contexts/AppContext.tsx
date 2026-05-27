@@ -455,7 +455,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Enforce a minimum display time for the splash screen so the typing animation can finish
-    const timer = setTimeout(() => setMinSplashTimePassed(true), 3500);
+    const timer = setTimeout(() => setMinSplashTimePassed(true), 800);
     return () => clearTimeout(timer);
   }, []);
 

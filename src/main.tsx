@@ -17,11 +17,10 @@ createRoot(document.getElementById("root")!).render(
 );
 
 // On native platforms, hide the splash screen after React has mounted and
-// the first frame has been committed. The 500ms buffer gives React time to
-// paint meaningful content so users never see a blank flash.
+// the first frame has been committed.
 // capacitor.config.ts sets launchAutoHide: false to give us manual control.
 if (Capacitor.isNativePlatform()) {
-  setTimeout(() => {
-    SplashScreen.hide({ fadeOutDuration: 300 });
-  }, 500);
+  // Hide native splash immediately since we have a web splash screen
+  // that takes over to provide a smooth transition.
+  SplashScreen.hide();
 }

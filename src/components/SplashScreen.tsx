@@ -19,7 +19,7 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 // ─── Brand tokens ────────────────────────────────────────────────────────────
 const TEAL_BRIGHT = "#22c9cc";
 const TEAL = "#1a9ca0";
-const BG = "#030507";
+const BG = "#050505";
 
 // Pre-computed sparkle positions so renders are deterministic
 const SPARKLES = [
@@ -176,10 +176,10 @@ const SplashScreen: React.FC = () => {
   const [showLoader, setShowLoader] = useState(false);
 
   useEffect(() => {
-    const t0 = setTimeout(() => setShowOrbits(true), 300);
-    const t1 = setTimeout(() => setShowText(true), 1700);
-    const t2 = setTimeout(() => setShowLoader(true), 2300);
-    const t3 = setTimeout(() => setShowTagline(true), 2700);
+    const t0 = setTimeout(() => setShowOrbits(true), 100);
+    const t1 = setTimeout(() => setShowText(true), 400);
+    const t2 = setTimeout(() => setShowLoader(true), 600);
+    const t3 = setTimeout(() => setShowTagline(true), 800);
     return () => {
       clearTimeout(t0);
       clearTimeout(t1);
@@ -195,7 +195,7 @@ const SplashScreen: React.FC = () => {
       opacity: 1,
       filter: "blur(0px)",
       y: 0,
-      transition: { duration: 0.55, ease: [0.25, 0.1, 0.25, 1] },
+      transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] },
     },
   };
   const dawaContainerV: Variants = {
@@ -209,7 +209,7 @@ const SplashScreen: React.FC = () => {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: { staggerChildren: 0.07, delayChildren: 0.32 },
+      transition: { staggerChildren: 0.05, delayChildren: 0.15 },
     },
   };
 
@@ -385,12 +385,12 @@ const SplashScreen: React.FC = () => {
 
           {/* Logo */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.35 }}
+            initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{
-              duration: 0.9,
-              delay: 0.4,
-              ease: [0.34, 1.56, 0.64, 1],
+              duration: 0.4,
+              delay: 0.1,
+              ease: "easeOut",
             }}
             style={{
               position: "absolute",
