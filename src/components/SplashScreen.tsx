@@ -21,21 +21,7 @@ const TEAL_BRIGHT = "#22c9cc";
 const TEAL = "#1a9ca0";
 const BG = "#050505";
 
-// Pre-computed sparkle positions so renders are deterministic
-const SPARKLES = [
-  { x: 11, y: 17, delay: 0.0, dur: 3.2 },
-  { x: 83, y: 11, delay: 0.9, dur: 4.1 },
-  { x: 73, y: 79, delay: 1.7, dur: 3.6 },
-  { x: 21, y: 83, delay: 0.4, dur: 5.0 },
-  { x: 47, y: 7, delay: 1.3, dur: 3.0 },
-  { x: 92, y: 47, delay: 0.6, dur: 4.5 },
-  { x: 7, y: 58, delay: 2.3, dur: 3.3 },
-  { x: 63, y: 92, delay: 0.2, dur: 4.0 },
-  { x: 34, y: 34, delay: 1.9, dur: 3.8 },
-  { x: 56, y: 64, delay: 0.8, dur: 4.2 },
-  { x: 19, y: 50, delay: 2.8, dur: 3.5 },
-  { x: 77, y: 36, delay: 1.1, dur: 3.9 },
-];
+const SPARKLES: { x: number; y: number; delay: number; dur: number }[] = [];
 
 // ─── OrbitalDot ──────────────────────────────────────────────────────────────
 // A square container (width = diameter) is centered on the logo and rotates.
@@ -190,12 +176,11 @@ const SplashScreen: React.FC = () => {
 
   // Letter-reveal variants
   const letterV: Variants = {
-    hidden: { opacity: 0, filter: "blur(14px)", y: 6 },
+    hidden: { opacity: 0, y: 6 },
     visible: {
       opacity: 1,
-      filter: "blur(0px)",
       y: 0,
-      transition: { duration: 0.3, ease: [0.25, 0.1, 0.25, 1] },
+      transition: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] },
     },
   };
   const dawaContainerV: Variants = {
@@ -223,9 +208,8 @@ const SplashScreen: React.FC = () => {
     lineHeight: 1,
   };
 
-  // Orbital ring dot angles
+  // Orbital ring dot angle
   const RING1_ANGLES = [0, 120, 240]; // inner  – 3 dots CW
-  const RING2_ANGLES = [0, 72, 144, 216, 288]; // outer  – 5 dots CCW
 
   return (
     <div
@@ -248,15 +232,14 @@ const SplashScreen: React.FC = () => {
         }}
       />
 
-      {/* Slow-breathing secondary glow */}
+      {/* Ambient static glow */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0.55, 0.28, 0.55] }}
+        animate={{ opacity: 0.4 }}
         transition={{
-          duration: 7,
-          repeat: Infinity,
+          duration: 3,
           ease: "easeInOut",
-          delay: 1.2,
+          delay: 0.5,
         }}
         style={{
           position: "absolute",
@@ -266,6 +249,7 @@ const SplashScreen: React.FC = () => {
           background: `radial-gradient(circle, rgba(26,156,160,0.06) 0%, transparent 70%)`,
           filter: "blur(48px)",
           pointerEvents: "none",
+          willChange: "opacity",
         }}
       />
 
@@ -319,35 +303,30 @@ const SplashScreen: React.FC = () => {
             justifyContent: "center",
           }}
         >
-          {/* Sonar rings – start with the logo animation */}
+          {/* Sonar ring – single pulse */}
           <SonarRing delay={1.0} baseSize={90} />
-          <SonarRing delay={2.35} baseSize={90} />
 
-          {/* Faint orbit guide circles */}
-          {showOrbits &&
-            [
-              { r: 58, alpha: 0.15, delay: 0 },
-              { r: 86, alpha: 0.08, delay: 0.18 },
-            ].map(({ r, alpha, delay }) => (
-              <motion.div
-                key={`guide-${r}`}
-                initial={{ opacity: 0, scale: 0.3 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.9, delay, ease: "easeOut" }}
-                style={{
-                  position: "absolute",
-                  width: r * 2,
-                  height: r * 2,
-                  borderRadius: "50%",
-                  border: `1px solid rgba(26,156,160,${alpha})`,
-                  top: "50%",
-                  left: "50%",
-                  x: -r,
-                  y: -r,
-                  pointerEvents: "none",
-                }}
-              />
-            ))}
+          {/* Faint orbit guide circle */}
+          {showOrbits && (
+            <motion.div
+              key="guide-inner"
+              initial={{ opacity: 0, scale: 0.3 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.9, ease: "easeOut" }}
+              style={{
+                position: "absolute",
+                width: 58 * 2,
+                height: 58 * 2,
+                borderRadius: "50%",
+                border: `1px solid rgba(26,156,160,0.15)`,
+                top: "50%",
+                left: "50%",
+                x: -58,
+                y: -58,
+                pointerEvents: "none",
+              }}
+            />
+          )}
 
           {/* Inner ring – 3 dots, clockwise, 7 s */}
           {showOrbits &&
@@ -363,23 +342,6 @@ const SplashScreen: React.FC = () => {
                 opacity={0.88}
                 clockwise
                 delay={i * 0.06}
-              />
-            ))}
-
-          {/* Outer ring – 5 dots, counter-clockwise, 15 s */}
-          {showOrbits &&
-            RING2_ANGLES.map((angle, i) => (
-              <OrbitalDot
-                key={`r2-${i}`}
-                radius={86}
-                startAngle={angle}
-                duration={15}
-                dotSize={2.5}
-                color={TEAL}
-                glowColor="rgba(26,156,160,0.55)"
-                opacity={0.58}
-                clockwise={false}
-                delay={i * 0.12}
               />
             ))}
 
@@ -402,19 +364,12 @@ const SplashScreen: React.FC = () => {
           >
             {/* Pulsing inner halo */}
             <motion.div
-              animate={{ scale: [1, 1.35, 1], opacity: [0.22, 0.52, 0.22] }}
-              transition={{
-                duration: 2.8,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 1,
-              }}
               style={{
                 position: "absolute",
                 width: 92,
                 height: 92,
                 borderRadius: "50%",
-                background: `radial-gradient(circle, rgba(34,201,204,0.3) 0%, transparent 70%)`,
+                background: `radial-gradient(circle, rgba(34,201,204,0.2) 0%, transparent 70%)`,
                 filter: "blur(10px)",
               }}
             />
@@ -430,19 +385,8 @@ const SplashScreen: React.FC = () => {
                 position: "relative",
                 zIndex: 1,
                 display: "block",
-              }}
-              animate={{
-                filter: [
-                  "drop-shadow(0 0 3px  rgba(34,201,204,0.15))",
-                  "drop-shadow(0 0 18px rgba(34,201,204,0.65)) drop-shadow(0 0 36px rgba(34,201,204,0.20))",
-                  "drop-shadow(0 0 6px  rgba(34,201,204,0.25))",
-                ],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 1.2,
+                filter: "drop-shadow(0 0 12px rgba(34,201,204,0.4))",
+                willChange: "transform, opacity",
               }}
             />
           </motion.div>
@@ -469,7 +413,7 @@ const SplashScreen: React.FC = () => {
                   variants={dawaContainerV}
                   initial="hidden"
                   animate="visible"
-                  style={{ display: "flex" }}
+                  style={{ display: "flex", willChange: "transform, opacity" }}
                 >
                   {"Dawa".split("").map((ch, i) => (
                     <motion.span key={i} variants={letterV} style={titleStyle}>
@@ -505,7 +449,7 @@ const SplashScreen: React.FC = () => {
                   variants={lensContainerV}
                   initial="hidden"
                   animate="visible"
-                  style={{ display: "flex" }}
+                  style={{ display: "flex", willChange: "transform, opacity" }}
                 >
                   {"Lens".split("").map((ch, i) => (
                     <motion.span key={i} variants={letterV} style={titleStyle}>
@@ -526,9 +470,9 @@ const SplashScreen: React.FC = () => {
             {showTagline && (
               <motion.p
                 key="tagline"
-                initial={{ opacity: 0, y: 7, filter: "blur(10px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                transition={{ duration: 0.9, ease: "easeOut" }}
+                initial={{ opacity: 0, y: 7 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
                 style={{
                   margin: 0,
                   color: "rgba(255,255,255,0.38)",
@@ -538,6 +482,7 @@ const SplashScreen: React.FC = () => {
                   fontWeight: 400,
                   textAlign: "center",
                   fontFamily: '"Plus Jakarta Sans", -apple-system, sans-serif',
+                  willChange: "transform, opacity",
                 }}
               >
                 Smart Medicine Reminder
