@@ -144,10 +144,10 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <div
         ref={containerRef}
-        className="relative w-full h-[260px] md:h-[285px] select-none"
+        className="relative w-full aspect-[600/250] min-h-[180px] select-none"
       >
         <svg
           width="100%"

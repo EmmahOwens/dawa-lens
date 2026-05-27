@@ -537,7 +537,7 @@ export default function ReportPage() {
             <h3 className="section-title flex items-center gap-2">
               <TrendingUp size={14} className="text-primary" /> Vitality Trends
             </h3>
-            <div className="h-[260px] w-full mt-4 relative">
+            <div className="w-full mt-4 relative">
               {chartData.every(
                 (d) => d.energy === null && d.adherence === 100
               ) && (
