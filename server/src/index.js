@@ -22,6 +22,13 @@ import { initScheduler } from './scheduler.js';
 
 dotenv.config();
 
+// Cerebras API key presence check — logged at startup for visibility in Render logs
+if (process.env.CEREBRAS_API_KEY) {
+  console.log('✅ Cerebras: active');
+} else {
+  console.warn('⚠️  Cerebras: not configured — falling back to Groq');
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 

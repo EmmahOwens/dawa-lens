@@ -91,7 +91,7 @@ export default function DawaGPT() {
       setMessages(prev => prev.map(msg => 
         msg.id === botId ? {
           ...msg,
-          text: "Sorry, I'm having trouble connecting to my medical intelligence core right now.",
+          text: "Connection lost. Please check your internet and try again.",
           source: "System"
         } : msg
       ));

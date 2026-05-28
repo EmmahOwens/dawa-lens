@@ -112,7 +112,7 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 2048
  */
 const callCerebrasChat = async (messages, responseFormat = { type: 'json_object' }, modelId = CEREBRAS_MODEL, priority = 'high', maxTokens = 2048) => {
   if (!CEREBRAS_API_KEY) {
-    throw new AppError('Cerebras API key not configured', 401);
+    throw new AppError('Cerebras API key not configured', 503);
   }
 
   const fn = async () => {
@@ -130,7 +130,7 @@ const callCerebrasChat = async (messages, responseFormat = { type: 'json_object'
         'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 8000 // Reduced timeout for faster fallback
+      timeout: 15000 // Increased timeout to give Cerebras more time before fallback
     });
 
     const text = response.data?.choices?.[0]?.message?.content;
@@ -348,7 +348,7 @@ export const getNutritionalGuidance = async (medicines, priority = 'high') => {
  * Advanced task complexity detection to avoid unnecessary usage of 70B model.
  * Returns true if the query requires system context (logs, reminders) or tool-use capabilities.
  */
-const isComplexTask = (text) => {
+export const isComplexTask = (text) => {
   if (!text) return false;
   const lower = text.toLowerCase().trim();
   
@@ -380,6 +380,17 @@ const isComplexTask = (text) => {
   const isHowToQuery = /^(how\s+do\s+i|can\s+you\s+explain|what\s+is|tell\s+me\s+about)/i.test(lower);
 
   if (isHowToQuery) return false;
+
+  // Delete/remove intent + domain noun (Requirement 5.1)
+  // Uses (?:\w+\s+)*? to allow any number of words between the intent verb and domain noun
+  // e.g. "remove the Metformin alarm" (two words between intent and noun) must match
+  const hasDeleteIntent = /(delete|remove|cancel|stop)\s+(?:\w+\s+)*?(reminder|alarm|med|medicine)/i.test(lower);
+  if (hasDeleteIntent) return true;
+
+  // Show/list reminders intent (Requirement 5.2)
+  const hasShowRemindersIntent = /(show|list|what\s+are|check|view)\s+\w*\s*reminders?/i.test(lower);
+  if (hasShowRemindersIntent) return true;
+
   if (isActionRequest || isDataRequest) return true;
 
   // Check for medical advice needs (symptoms, dosage questions etc)
@@ -566,40 +577,64 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     const isCerebras = isComplex && CEREBRAS_API_KEY;
     const apiKey = getGroqApiKey(selectedModel);
 
-    // 1. Try Streaming Cerebras or Groq
-    if (isCerebras || apiKey) {
+    // 1. Try Streaming Cerebras first (for complex tasks)
+    if (isCerebras) {
+      const cerebrasStart = Date.now();
       try {
         const fn = async () => {
-          const apiUrl = isCerebras ? CEREBRAS_API_URL : GROQ_API_URL;
-          const key = isCerebras ? CEREBRAS_API_KEY : apiKey;
-          const model = isCerebras ? CEREBRAS_MODEL : selectedModel;
-
-          const response = await axios.post(apiUrl, {
-            model: model,
+          const response = await axios.post(CEREBRAS_API_URL, {
+            model: CEREBRAS_MODEL,
             messages: finalMessages,
             stream: true,
-            ...(isCerebras ? { max_completion_tokens: chatMaxTokens } : { max_tokens: chatMaxTokens }),
-            // Force JSON format even in stream to keep consistency
-            response_format: { type: 'json_object' }
+            max_completion_tokens: chatMaxTokens
+            // response_format intentionally omitted for streaming — not supported with stream: true
           }, {
             headers: {
-              'Authorization': `Bearer ${key}`,
+              'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
               'Content-Type': 'application/json'
             },
             responseType: 'stream',
-            timeout: isCerebras ? 8000 : 15000
+            timeout: 20000
           });
           return response.data;
         };
 
-        const modelKey = isCerebras ? 'cerebras-120b' : (selectedModel === GROQ_MODEL ? 'groq-70b' : 'groq-8b');
-        return await rateLimitManager.enqueue(fn, modelKey, finalMessages, priority);
-      } catch (streamErr) {
-        console.warn(`DawaGPT Stream: ${isCerebras ? 'Cerebras' : 'Groq'} failed, falling back...`, streamErr.message);
+        return await rateLimitManager.enqueue(fn, 'cerebras-120b', finalMessages, priority);
+      } catch (cerebrasErr) {
+        const elapsed = Date.now() - cerebrasStart;
+        console.warn(`DawaGPT Stream: Cerebras timed out after ${elapsed}ms, falling back to Groq.`, cerebrasErr.message);
       }
     }
 
-    // 2. Fallback to Gemini (non-streaming, then wrapped in stream)
+    // 2. Try Streaming Groq
+    if (apiKey) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(GROQ_API_URL, {
+            model: selectedModel,
+            messages: finalMessages,
+            stream: true,
+            max_tokens: chatMaxTokens
+            // response_format intentionally omitted for streaming — not supported with stream: true
+          }, {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            responseType: 'stream',
+            timeout: 15000
+          });
+          return response.data;
+        };
+
+        const modelKey = selectedModel === GROQ_MODEL ? 'groq-70b' : 'groq-8b';
+        return await rateLimitManager.enqueue(fn, modelKey, finalMessages, priority);
+      } catch (groqErr) {
+        console.warn('DawaGPT Stream: Groq failed, falling back to Gemini...', groqErr.message);
+      }
+    }
+
+    // 3. Fallback to Gemini (non-streaming, then wrapped in stream)
     const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens);
     return createFakeStream(geminiResp);
 
@@ -671,7 +706,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - UPDATE_MEDICINE: { id, name?, dosage?, notes? }
     - ADD_REMINDER: { medicineName, dose, time (HH:mm or "HH:mm,HH:mm,..."), repeatSchedule ("daily"|"weekly"|"once"|"custom"), repeatDays?, patientId?, medicineId? }
     - UPDATE_REMINDER: { id, enabled?, time? (HH:mm or "HH:mm,HH:mm,..."), repeatSchedule?, repeatDays?, dose? }
-    - REMOVE_REMINDER: { id }
+    - REMOVE_REMINDER: { id, medicineName? } — IMPORTANT: When the reminder list is available in context, you MUST always include the reminder "id" (Firestore document ID) in the payload. The "id" is shown in the Reminders context above. Including "id" ensures reliable deletion.
     - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action ("taken"|"skipped"), patientId? }
     - LOG_WELLNESS: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? }, patientId? }
     - ADD_PATIENT: { name, age?, gender?, relation? }
@@ -691,7 +726,19 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     7. Proactively suggest regional foods (Matooke, Avocado, G-nuts).
     8. Use Markdown for formatting (bold, italics, lists, tables) to make information clear and readable.
 
-    === RESPONSE FORMAT ===
+    ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
+    Write your response as plain Markdown text.
+    At the very end, on a new line, append exactly:
+
+    ###METADATA###
+    {"suggestions":["...","..."],"source":"Dawa-GPT","action":{"type":"...","payload":{...}}}
+
+    Rules:
+    - The ###METADATA### line must be the LAST thing you output.
+    - The JSON must be on a single line immediately after ###METADATA###.
+    - If no action is needed, set "action" to null.
+    - Do NOT wrap your response in a JSON object. Only the metadata block is JSON.
+    - Do NOT include any text after the metadata JSON line.` : `=== RESPONSE FORMAT ===
     Respond STRICTLY in JSON format, with the "text" field containing Markdown-formatted content.
     NEVER append text outside the JSON block.
 
@@ -701,7 +748,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
       "suggestions": ["suggestion 1", "2", "3"],
       "source": "Dawa-GPT",
       "action": { "type": "...", "payload": {...} } | null
-    }
+    }`}
   `;
 
   const formattedMessages = recentMessages.map(msg => ({

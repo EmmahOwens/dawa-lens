@@ -86,13 +86,30 @@ export function useAIActions() {
           break;
         }
 
-        case "REMOVE_REMINDER":
-          await deleteReminder(payload.id);
+        case "REMOVE_REMINDER": {
+          let targetId = payload.id;
+
+          // Fuzzy fallback: if id is absent, search by medicineName (case-insensitive)
+          if (!targetId && payload.medicineName) {
+            const match = reminders.find(r =>
+              r.medicineName.toLowerCase() === payload.medicineName.toLowerCase()
+            );
+            if (match) targetId = match.id;
+          }
+
+          if (!targetId) {
+            throw new Error(
+              `Could not find a reminder for ${payload.medicineName || 'the specified medicine'}`
+            );
+          }
+
+          await deleteReminder(targetId);
           toast({
             title: "✅ Reminder removed",
             description: action.confirmMessage || "The reminder has been deleted.",
           });
           break;
+        }
 
         case "LOG_DOSE":
           await logDose({
@@ -136,12 +153,17 @@ export function useAIActions() {
 
         default:
           console.warn("Unknown AI action type:", action.type);
+          toast({
+            title: "⚠️ Unsupported action",
+            description: "DawaGPT tried an unsupported action. Please try rephrasing your request.",
+            variant: "destructive",
+          });
       }
     } catch (e) {
       console.error("AI Action Dispatch Error:", e);
       toast({
         title: "❌ Action failed",
-        description: (e as Error).message || "I couldn't complete that action. Please try manually.",
+        description: (e as Error).message || "Action failed. Please try again or do it manually.",
         variant: "destructive",
       });
     }

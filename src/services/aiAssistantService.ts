@@ -187,11 +187,9 @@ export const chatWithDawaGPTStream = async (
 
     const reader = stream.getReader();
     const decoder = new TextDecoder();
-    let fullText = "";
-    let metadataJson = "";
     let buffer = "";
-
     let allText = "";
+
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -209,29 +207,12 @@ export const chatWithDawaGPTStream = async (
             const content = data.choices[0]?.delta?.content || "";
             allText += content;
 
-            // Extract text outside of metadata JSON block
-            let cleanText = allText;
-            let tempMetadata = "";
-            
-            // Look for a JSON block that looks like metadata (contains suggestions or source)
-            const metadataMatch = allText.match(/\{[\s\S]*?"(?:suggestions|source)":[\s\S]*?\}/);
-            const metadataStart = allText.search(/\{[\s\n]*"(?:suggestions|source)"/);
-            
-            if (metadataStart !== -1) {
-              cleanText = allText.substring(0, metadataStart).trim();
-              tempMetadata = allText.substring(metadataStart);
-            } else {
-              // Safety: If we see a lone '{' at the very end, it might be the start of metadata.
-              // We hide it from the UI until we know for sure.
-              const lastBrace = allText.lastIndexOf('{');
-              if (lastBrace !== -1 && lastBrace > allText.length - 10) {
-                cleanText = allText.substring(0, lastBrace).trim();
-              }
-            }
-            
-            fullText = cleanText;
-            metadataJson = tempMetadata;
-            onChunk(fullText);
+            // Strip metadata delimiter and JSON from visible text (Requirement 2.3)
+            const delimIdx = allText.indexOf('###METADATA###');
+            const visibleText = delimIdx !== -1
+              ? allText.substring(0, delimIdx)
+              : allText;
+            onChunk(visibleText);
           } catch (e) {
             // Ignore parse errors
           }
@@ -239,25 +220,45 @@ export const chatWithDawaGPTStream = async (
       }
     }
 
+    // Split on the ###METADATA### delimiter to separate display text from metadata (Requirement 2.3)
+    const METADATA_DELIMITER = '###METADATA###';
+    const delimiterIndex = allText.indexOf(METADATA_DELIMITER);
+
+    let displayText: string;
+    let rawMetadata: string;
+
+    if (delimiterIndex !== -1) {
+      displayText = allText.substring(0, delimiterIndex).trim();
+      rawMetadata = allText.substring(delimiterIndex + METADATA_DELIMITER.length).trim();
+    } else {
+      // Delimiter absent — treat entire text as display text, no metadata
+      displayText = allText.trim();
+      rawMetadata = '';
+    }
+
+    const fullText = displayText;
+
     interface StreamMetadata {
       suggestions: string[];
       source: ChatMessage['source'];
       action?: AIAction;
     }
 
+    // Parse metadata safely; on failure or empty string, default gracefully (Requirement 2.4)
     let metadata: StreamMetadata = { suggestions: [], source: "Gemini", action: undefined };
-    if (metadataJson) {
+    if (rawMetadata) {
       try {
-        metadata = JSON.parse(metadataJson);
+        metadata = JSON.parse(rawMetadata);
       } catch (e) {
-        console.warn("Failed to parse metadata JSON", e);
+        console.warn('Failed to parse stream metadata JSON', e);
+        // Graceful degradation: return text with empty metadata
       }
     }
 
     return {
       id: Date.now().toString(),
       role: "assistant",
-      text: fullText.trim(),
+      text: fullText,
       source: metadata.source,
       suggestions: metadata.suggestions,
       action: metadata.action?.type ? metadata.action : undefined,
