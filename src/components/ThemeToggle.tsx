@@ -1,22 +1,32 @@
 import { Moon, Sun, Monitor } from "@/lib/icons"
 import { useTheme } from "next-themes"
-import { motion } from "framer-motion"
-
+import RiveAnimation from "./rive/RiveAnimation";
 import { Button } from "@/components/ui/button"
 
+/**
+ * ThemeToggle.tsx - Rive Optimized
+ * Replaces Framer Motion springs with a Rive state machine for the selection slider.
+ * This ensures the physics calculation happens off the main thread where possible.
+ */
 export function ThemeToggle({ id }: { id?: string }) {
   const { theme, setTheme } = useTheme()
 
+  // Map theme string to Rive state machine input value
+  const themeValue = theme === "light" ? 0 : theme === "dark" ? 1 : 2;
+
   return (
     <div id={id} className="flex bg-secondary rounded-full p-1 overflow-hidden relative w-fit border border-border">
-      <motion.div
-        className="absolute top-1 bottom-1 w-1/3 bg-background rounded-full shadow-sm z-0 pointer-events-none"
-        initial={false}
-        animate={{
-          x: theme === "light" ? "0%" : theme === "dark" ? "100%" : "200%",
-        }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      />
+      {/* Rive-powered background slider */}
+      <div className="absolute inset-1 w-full pointer-events-none z-0">
+        <RiveAnimation
+          src="/assets/rive/theme_slider.riv"
+          stateMachine="ThemeSwitcher"
+          inputs={{
+            "position": themeValue
+          }}
+          autoplay={true}
+        />
+      </div>
       
       <Button
         variant="ghost"

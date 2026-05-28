@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, Send, Bot, Sparkles, AlertCircle, BellPlus, ClipboardCheck } from "@/lib/icons";
+import { X, Send, Bot, Sparkles } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
-import { ChatMessage, AIAction, chatWithDawaGPTStream } from "@/services/aiAssistantService";
+import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
 import MessageRenderer from "@/components/MessageRenderer";
+import RiveAnimation from "./rive/RiveAnimation";
 
 export default function DawaGPT() {
   const { t } = useTranslation();
@@ -20,11 +21,6 @@ export default function DawaGPT() {
     doseLogs,
     wellnessLogs,
     patients,
-    addMedicine,
-    addReminder,
-    updateReminder,
-    deleteReminder,
-    logDose,
     selectedPatientId,
     isDawaGPTOpen: isOpen,
     setIsDawaGPTOpen: setIsOpen,
@@ -37,7 +33,6 @@ export default function DawaGPT() {
   const [isTyping, setIsTyping] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const activeMed = medicines.length > 0 ? medicines[medicines.length - 1] : null;
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -77,7 +72,7 @@ export default function DawaGPT() {
         reminders,
         wellnessLogs,
         patients,
-        selectedPatientId, // Pass the current profile ID
+        selectedPatientId,
         (streamedText) => {
           setMessages(prev => prev.map(msg => 
             msg.id === botId ? { ...msg, text: streamedText } : msg
@@ -105,8 +100,6 @@ export default function DawaGPT() {
     }
   };
 
-  // Hide DawaGPT completely during auth and onboarding flows
-  // Hide DawaGPT on auth, onboarding AND the full-screen scan camera page
   const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email", "/scan"];
   if (hiddenPaths.includes(location.pathname)) return null;
 
@@ -122,25 +115,20 @@ export default function DawaGPT() {
 
   return (
     <>
-      {/* Floating Toggle Button */}
+      {/* Floating Toggle Button - Rive Optimized */}
       <motion.button
         whileHover={{ scale: 1.1, rotate: 5 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 right-4 z-40 p-0 rounded-2xl shadow-[0_8px_32px_rgba(var(--primary),0.3)] flex items-center justify-center md:hidden overflow-hidden w-16 h-16 group"
       >
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.6, 0.3]
-          }}
-          transition={{ 
-            repeat: Infinity, 
-            duration: 2,
-            ease: "easeInOut"
-          }}
-          className="absolute inset-0 bg-primary/40 rounded-2xl blur-xl"
-        />
+        <div className="absolute inset-0">
+          <RiveAnimation
+            src="/assets/rive/dawa_gpt_glow.riv"
+            stateMachine="GlowStateMachine"
+            autoplay={true}
+          />
+        </div>
         <div className="relative w-full h-full bg-primary/20 backdrop-blur-xl border border-white/30 rounded-2xl flex items-center justify-center overflow-hidden">
           <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
         </div>
@@ -165,8 +153,12 @@ export default function DawaGPT() {
                     <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-2xl border-2 border-primary/20 p-0.5 bg-background">
                       <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-full h-full object-cover rounded-[calc(1rem-2px)]" />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-background rounded-full flex items-center justify-center border-2 border-background">
-                      <div className="w-2 h-2 bg-success rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4">
+                      <RiveAnimation
+                        src="/assets/rive/online_indicator.riv"
+                        stateMachine="State Machine 1"
+                        autoplay={true}
+                      />
                     </div>
                   </div>
                   <div>
@@ -177,7 +169,7 @@ export default function DawaGPT() {
                       <span className="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-black uppercase tracking-widest text-primary">v2.0 AI</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.15em] opacity-60 flex items-center gap-1.5">
-                      <Sparkles size={10} className="text-primary animate-pulse" />
+                      <Sparkles size={10} className="text-primary" />
                       East African Medical Assistant
                     </p>
                   </div>
@@ -213,23 +205,17 @@ export default function DawaGPT() {
                       ) : (
                         <p className="text-[15px] leading-[1.6] font-medium whitespace-pre-wrap">{m.text}</p>
                       )}
-                      
-                      {m.role === "assistant" && (
-                        <div className="absolute -left-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <div className="p-1 rounded-lg bg-background border border-border/50 shadow-sm">
-                             <Bot size={12} className="text-primary" />
-                           </div>
-                        </div>
-                      )}
                     </div>
                   </motion.div>
                 ))}
                 {isTyping && (
                   <div className="flex justify-start">
-                    <div className="bg-card border border-border/50 px-5 py-4 rounded-[2rem] rounded-tl-sm flex items-center gap-2 shadow-xl shadow-black/5">
-                      <motion.div animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.4)]" />
-                      <motion.div animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.15 }} className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.4)]" />
-                      <motion.div animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.3 }} className="w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_8px_rgba(var(--primary),0.4)]" />
+                    <div className="bg-card border border-border/50 px-5 py-2 rounded-[2rem] rounded-tl-sm w-24 h-12 shadow-xl shadow-black/5">
+                      <RiveAnimation
+                        src="/assets/rive/typing_indicator.riv"
+                        stateMachine="State Machine 1"
+                        autoplay={true}
+                      />
                     </div>
                   </div>
                 )}
@@ -258,7 +244,7 @@ export default function DawaGPT() {
                 </div>
 
                 <div className="flex gap-4 items-end">
-                  <div className="flex-1 bg-muted/30 backdrop-blur-md border border-border/50 rounded-[2rem] px-6 py-2 flex flex-col focus-within:ring-2 focus-within:ring-primary/40 focus-within:bg-background/80 focus-within:shadow-2xl focus-within:shadow-primary/5 transition-all group">
+                  <div className="flex-1 bg-muted/30 backdrop-blur-md border border-border/50 rounded-[2rem] px-6 py-2 focus-within:ring-2 focus-within:ring-primary/40 focus-within:bg-background/80 focus-within:shadow-2xl focus-within:shadow-primary/5 transition-all group">
                     <textarea
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
@@ -269,7 +255,7 @@ export default function DawaGPT() {
                         }
                       }}
                       placeholder="Type a message..."
-                      className="bg-transparent border-none text-[15px] font-medium resize-none outline-none py-3 min-h-[52px] max-h-[160px] placeholder:text-muted-foreground/50"
+                      className="bg-transparent border-none text-[15px] font-medium resize-none outline-none py-3 min-h-[52px] max-h-[160px] placeholder:text-muted-foreground/50 w-full"
                       rows={1}
                     />
                   </div>

@@ -1,12 +1,10 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Brain, Shield, Sparkles, Loader2 } from "@/lib/icons";
+import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import RiveAnimation from "./rive/RiveAnimation";
 
 interface Step {
   id: number;
   label: string;
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
-  color: string;
 }
 
 interface PremiumLoaderProps {
@@ -14,13 +12,17 @@ interface PremiumLoaderProps {
   durationPerStep?: number;
 }
 
+/**
+ * PremiumLoader.tsx - Rive Optimized
+ * Uses a single Rive state machine to handle transitions between analysis steps.
+ */
 export default function PremiumLoader({ onComplete, durationPerStep = 1200 }: PremiumLoaderProps) {
   const [currentStep, setCurrentStep] = useState(0);
 
   const steps: Step[] = [
-    { id: 0, label: "🛰️ Calibrating Vision Systems...", icon: Search, color: "text-primary" },
-    { id: 1, label: "🧠 Extracting Molecular Markers...", icon: Brain, color: "text-purple-500" },
-    { id: 2, label: "🛡️ Cross-referencing Safety Registries...", icon: Shield, color: "text-success" },
+    { id: 0, label: "🛰️ Calibrating Vision Systems..." },
+    { id: 1, label: "🧠 Extracting Molecular Markers..." },
+    { id: 2, label: "🛡️ Cross-referencing Safety Registries..." },
   ];
 
   useEffect(() => {
@@ -38,39 +40,16 @@ export default function PremiumLoader({ onComplete, durationPerStep = 1200 }: Pr
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/90 backdrop-blur-2xl p-8 text-center overflow-hidden">
-      <div className="relative mb-12">
-        {/* Outer rotating ring */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-          className="w-48 h-48 rounded-full border-2 border-dashed border-primary/30"
+      <div className="relative mb-12 w-64 h-64">
+        {/* Rive handles the rotating rings, icon morphing, and scanning effects */}
+        <RiveAnimation
+          src="/assets/rive/premium_analysis.riv"
+          stateMachine="AnalysisStateMachine"
+          inputs={{
+            "step": currentStep // Link React state to Rive input
+          }}
+          autoplay={true}
         />
-        
-        {/* Animated Icons */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
-              animate={{ scale: 1, opacity: 1, rotate: 0 }}
-              exit={{ scale: 1.5, opacity: 0, rotate: 20 }}
-              className={`p-6 rounded-3xl bg-card shadow-2xl relative ${steps[currentStep].color}`}
-            >
-              {(() => {
-                const Icon = steps[currentStep].icon;
-                return <Icon size={48} strokeWidth={2.5} />;
-              })()}
-              
-              <motion.div
-                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="absolute -top-2 -right-2"
-              >
-                <Sparkles size={20} className="text-primary" />
-              </motion.div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
       </div>
 
       <motion.div
@@ -96,13 +75,6 @@ export default function PremiumLoader({ onComplete, durationPerStep = 1200 }: Pr
           Dawa AI Intelligence Core
         </p>
       </motion.div>
-
-      {/* Decorative scanning line */}
-      <motion.div
-        animate={{ top: ["10%", "90%"] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-        className="absolute left-0 right-0 h-px bg-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.5)] z-[-1]"
-      />
     </div>
   );
 }
