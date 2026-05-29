@@ -38,13 +38,17 @@ const SplashScreen: React.FC = () => {
         }}
       />
 
-      <div className="relative w-full h-full max-w-4xl mx-auto flex items-center justify-center">
-        {showRive && (
+      <div className="relative flex-1 w-full max-w-4xl mx-auto flex items-center justify-center min-h-[420px]">
+        {showRive ? (
           <RiveAnimation
             src="/assets/rive/splash.riv"
             stateMachine="State Machine 1"
             className="w-full h-full"
           />
+        ) : (
+          <div className="flex h-40 w-40 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm text-white/70">
+            Loading…
+          </div>
         )}
       </div>
 

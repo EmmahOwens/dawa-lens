@@ -16,6 +16,18 @@ interface RiveAnimationProps {
 // Simple global cache for .riv files to avoid redundant fetches/decoding
 const rivCache: Record<string, ArrayBuffer> = {};
 
+const resolveRiveSrc = (src: string) => {
+  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/')) {
+    return src;
+  }
+
+  try {
+    return new URL(src, import.meta.url).href;
+  } catch {
+    return src;
+  }
+};
+
 /**
  * Optimized Rive Animation Wrapper
  * Implements Stage 2 Optimization Strategy:
@@ -35,8 +47,11 @@ export const RiveAnimation: React.FC<RiveAnimationProps> = ({
   fit = Fit.Contain,
   alignment = Alignment.Center,
 }) => {
+  const resolvedSrc = resolveRiveSrc(src);
   const containerRef = useRef<HTMLDivElement>(null);
   const [rivBuffer, setRivBuffer] = useState<ArrayBuffer | null>(null);
+  const [riveReady, setRiveReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Check for reduced motion preference
   const prefersReducedMotion = typeof window !== 'undefined'
@@ -45,30 +60,42 @@ export const RiveAnimation: React.FC<RiveAnimationProps> = ({
 
   const { rive, RiveComponent } = useRive({
     buffer: rivBuffer || undefined,
-    src: rivBuffer ? undefined : src,
+    src: rivBuffer ? undefined : resolvedSrc,
     stateMachines: stateMachine,
     artboard: artboard,
     autoplay: autoplay && !prefersReducedMotion,
     layout: new Layout({ fit, alignment }),
     onLoad: () => {
+      setRiveReady(true);
       if (onLoad) onLoad();
     },
   });
 
+  const animationReady = riveReady || Boolean(rive);
+
   // Handle caching
   useEffect(() => {
-    if (rivCache[src]) {
-      setRivBuffer(rivCache[src]);
-    } else {
-      fetch(src)
-        .then((res) => res.arrayBuffer())
-        .then((buffer) => {
-          rivCache[src] = buffer;
-          setRivBuffer(buffer);
-        })
-        .catch((err) => console.error('Failed to load Rive asset:', src, err));
+    if (rivCache[resolvedSrc]) {
+      setRivBuffer(rivCache[resolvedSrc]);
+      return;
     }
-  }, [src]);
+
+    fetch(resolvedSrc)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Failed to fetch ${resolvedSrc}: ${res.status}`);
+        }
+        return res.arrayBuffer();
+      })
+      .then((buffer) => {
+        rivCache[resolvedSrc] = buffer;
+        setRivBuffer(buffer);
+      })
+      .catch((err) => {
+        console.error('Failed to load Rive asset:', resolvedSrc, err);
+        setLoadError(true);
+      });
+  }, [resolvedSrc]);
 
   // Handle inputs updates
   useEffect(() => {
@@ -107,8 +134,22 @@ export const RiveAnimation: React.FC<RiveAnimationProps> = ({
   }, [rive, autoplay, prefersReducedMotion]);
 
   return (
-    <div ref={containerRef} className={className} style={{ width: '100%', height: '100%' }}>
-      <RiveComponent />
+    <div
+      ref={containerRef}
+      className={className}
+      style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 0 }}
+    >
+      {loadError ? (
+        <div className="flex h-full w-full items-center justify-center rounded-lg bg-muted/10 text-sm font-medium text-muted-foreground">
+          Animation failed to load
+        </div>
+      ) : !animationReady ? (
+        <div className="flex h-full w-full items-center justify-center rounded-lg bg-muted/5 text-sm font-medium text-muted-foreground/70">
+          Loading animation…
+        </div>
+      ) : (
+        <RiveComponent />
+      )}
     </div>
   );
 };
