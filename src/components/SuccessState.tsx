@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import RiveAnimation from "./rive/RiveAnimation";
+import { Check } from "@/lib/icons";
 
 interface SuccessStateProps {
   title: string;
@@ -14,13 +14,26 @@ export default function SuccessState({ title, subtitle }: SuccessStateProps) {
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background p-6 text-center"
     >
-      <div className="mb-8 h-48 w-48 relative">
-        <RiveAnimation
-          src="/assets/rive/success_state.riv"
-          stateMachine="State Machine 1"
-          autoplay={true}
-        />
-      </div>
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ 
+          type: "spring", 
+          stiffness: 260, 
+          damping: 20,
+          delay: 0.1 
+        }}
+        className="mb-8 flex h-40 w-40 items-center justify-center rounded-full bg-success/10"
+      >
+        <motion.div
+          initial={{ pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="flex h-24 w-24 items-center justify-center rounded-full bg-success text-success-foreground shadow-xl shadow-success/30"
+        >
+          <Check size={48} strokeWidth={4} />
+        </motion.div>
+      </motion.div>
 
       <motion.h2
         initial={{ y: 20, opacity: 0 }}

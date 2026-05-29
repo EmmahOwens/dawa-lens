@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
 import MessageRenderer from "@/components/MessageRenderer";
-import RiveAnimation from "./rive/RiveAnimation";
 
 export default function DawaGPT() {
   const { t } = useTranslation();
@@ -122,14 +121,7 @@ export default function DawaGPT() {
         onClick={() => setIsOpen(true)}
         className="fixed bottom-24 right-4 z-40 p-0 rounded-2xl shadow-[0_8px_32px_rgba(var(--primary),0.3)] flex items-center justify-center md:hidden overflow-hidden w-16 h-16 group"
       >
-        <div className="absolute inset-0">
-          <RiveAnimation
-            src="/assets/rive/dawa_gpt_glow.riv"
-            stateMachine="GlowStateMachine"
-            autoplay={true}
-          />
-        </div>
-        <div className="relative w-full h-full bg-primary/20 backdrop-blur-xl border border-white/30 rounded-2xl flex items-center justify-center overflow-hidden">
+        <div className="w-full h-full bg-primary/20 backdrop-blur-xl border border-white/30 rounded-2xl flex items-center justify-center overflow-hidden">
           <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
         </div>
       </motion.button>
@@ -153,13 +145,11 @@ export default function DawaGPT() {
                     <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-2xl border-2 border-primary/20 p-0.5 bg-background">
                       <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-full h-full object-cover rounded-[calc(1rem-2px)]" />
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4">
-                      <RiveAnimation
-                        src="/assets/rive/online_indicator.riv"
-                        stateMachine="State Machine 1"
-                        autoplay={true}
-                      />
-                    </div>
+                    {/* Pulsing online dot */}
+                    <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-card" />
+                    </span>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -210,12 +200,15 @@ export default function DawaGPT() {
                 ))}
                 {isTyping && (
                   <div className="flex justify-start">
-                    <div className="bg-card border border-border/50 px-5 py-2 rounded-[2rem] rounded-tl-sm w-24 h-12 shadow-xl shadow-black/5">
-                      <RiveAnimation
-                        src="/assets/rive/typing_indicator.riv"
-                        stateMachine="State Machine 1"
-                        autoplay={true}
-                      />
+                    <div className="bg-card border border-border/50 px-5 py-4 rounded-[2rem] rounded-tl-sm shadow-xl shadow-black/5 flex items-center gap-1.5">
+                      {[0, 0.15, 0.3].map((delay, i) => (
+                        <motion.span
+                          key={i}
+                          animate={{ y: [0, -5, 0], opacity: [0.4, 1, 0.4] }}
+                          transition={{ duration: 0.8, repeat: Infinity, delay, ease: "easeInOut" }}
+                          className="block w-2 h-2 rounded-full bg-primary/60"
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
