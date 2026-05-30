@@ -24,6 +24,7 @@ import {
 } from "@capacitor/camera";
 import PermissionRequest from "@/components/PermissionRequest";
 import { NativeCamera } from "@/plugins/nativeCamera";
+import PageLoader from "@/components/PageLoader";
 
 export type ScanMode = "pill" | "text";
 
@@ -48,6 +49,9 @@ export default function ScanPage() {
   const [flashlightOn, setFlashlightOn] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [permissionChecked, setPermissionChecked] = useState(false);
+  const [showWebScanner, setShowWebScanner] = useState(
+    !Capacitor.isNativePlatform()
+  );
 
   const isNative = Capacitor.isNativePlatform();
 
@@ -78,7 +82,7 @@ export default function ScanPage() {
   }, [flashlightOn]);
 
   const startCamera = useCallback(async () => {
-    if (Capacitor.isNativePlatform()) return;
+    if (Capacitor.isNativePlatform() && !showWebScanner) return;
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
@@ -96,20 +100,42 @@ export default function ScanPage() {
     } catch (err) {
       console.error("Camera access failed:", err);
     }
-  }, [facingMode]);
+  }, [facingMode, showWebScanner]);
+
+  const startNativeScan = useCallback(async () => {
+    try {
+      const result = await NativeCamera.startScan({ mode: scanMode });
+      if (!result.cancelled && result.imageData) {
+        navigate("/results", {
+          state: { imageUrl: result.imageData, mode: scanMode },
+        });
+      } else {
+        navigate(-1);
+      }
+    } catch (err) {
+      console.warn(
+        "[ScanPage] Native camera failed, using web fallback:",
+        err
+      );
+      setShowWebScanner(true);
+      startCamera();
+    }
+  }, [scanMode, navigate, startCamera]);
 
   useEffect(() => {
     const checkPermission = async () => {
       if (Capacitor.isNativePlatform()) {
         try {
           const status = await CapCamera.checkPermissions();
-          if (status.camera !== "granted") {
+          if (status.camera === "granted") {
+            startNativeScan();
+          } else {
             setShowPermissionModal(true);
           }
-          // On native, skip startCamera() — NativeCamera handles its own camera session
         } catch (e) {
-          console.warn("Permission check failed:", e);
-          // On native, skip startCamera() fallback
+          console.warn("Permission check failed, falling back to web:", e);
+          setShowWebScanner(true);
+          startCamera();
         }
       } else {
         startCamera();
@@ -121,7 +147,7 @@ export default function ScanPage() {
     return () => {
       streamRef.current?.getTracks().forEach((tk) => tk.stop());
     };
-  }, [startCamera]);
+  }, [startCamera, startNativeScan]);
 
   const handleRequestPermission = async () => {
     if (Capacitor.isNativePlatform()) {
@@ -129,13 +155,14 @@ export default function ScanPage() {
         const status = await CapCamera.requestPermissions();
         if (status.camera === "granted") {
           setShowPermissionModal(false);
-          startCamera();
+          startNativeScan();
         } else {
-          navigate("/"); // Go back if denied
+          navigate(-1); // Go back if denied
         }
       } catch (e) {
         console.error("Permission request failed:", e);
         setShowPermissionModal(false);
+        setShowWebScanner(true);
         startCamera();
       }
     } else {
@@ -145,7 +172,7 @@ export default function ScanPage() {
   };
 
   const capture = async () => {
-    if (Capacitor.isNativePlatform()) {
+    if (Capacitor.isNativePlatform() && !showWebScanner) {
       try {
         const result = await NativeCamera.startScan({ mode: scanMode });
         if (!result.cancelled && result.imageData) {
@@ -158,9 +185,10 @@ export default function ScanPage() {
           "[ScanPage] Native camera failed, using web fallback:",
           err
         );
-        // Fall through to web canvas capture below
+        setShowWebScanner(true);
+        startCamera();
       }
-      return; // Don't run the canvas path on native
+      return;
     }
 
     if (!videoRef.current || !canvasRef.current) return;
@@ -219,6 +247,10 @@ export default function ScanPage() {
       handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
     }
   };
+
+  if (!showWebScanner && !showPermissionModal) {
+    return <PageLoader label="Opening Camera..." />;
+  }
 
   return (
     <div className="relative min-h-screen bg-foreground flex flex-col">
@@ -287,7 +319,7 @@ export default function ScanPage() {
 
       {/* Camera view */}
       <div className="flex-1 w-full bg-black relative">
-        {!isNative && (
+        {showWebScanner && (
           <video
             ref={videoRef}
             className="h-full w-full object-cover"
@@ -299,7 +331,7 @@ export default function ScanPage() {
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Scan overlays */}
-        {!isNative && streaming && (
+        {showWebScanner && streaming && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <motion.div
               initial={{ opacity: 0 }}
@@ -330,7 +362,7 @@ export default function ScanPage() {
           </div>
         )}
 
-        {!isNative && !streaming && (
+        {showWebScanner && !streaming && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-50">
             <motion.div
               animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
@@ -379,7 +411,7 @@ export default function ScanPage() {
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={capture}
-            disabled={isNative ? false : !streaming}
+            disabled={showWebScanner ? !streaming : false}
             className="flex items-center justify-center w-[88px] h-[88px] rounded-full border-[4px] border-white/40 bg-transparent disabled:opacity-20 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] relative group"
           >
             <motion.div
