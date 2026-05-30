@@ -58,8 +58,17 @@ export function usePatientScope() {
    * string patientId → belongs to a managed patient.
    */
   const matchPatient = useCallback(
-    (pid?: string | null) => (pid ?? null) === (selectedPatientId ?? null),
-    [selectedPatientId]
+    (pid?: string | null) => {
+      const activeId = selectedPatientId ?? null;
+      const recordId = pid ?? null;
+      if (activeId === null) {
+        // Owner is active. Owner records can have patientId as null, undefined, or the owner's userId.
+        return recordId === null || recordId === userProfile?.id;
+      }
+      // Managed patient is active. Must match exactly.
+      return recordId === activeId;
+    },
+    [selectedPatientId, userProfile?.id]
   );
 
   /** Fully resolved profile for the active context (host or patient). */
@@ -94,7 +103,7 @@ export function usePatientScope() {
       : undefined;
 
     return {
-      id: userProfile?.id ?? null,
+      id: null,
       name: userProfile?.name ?? "You",
       age: ownerAge,
       gender: userProfile?.gender ?? null,

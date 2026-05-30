@@ -60,7 +60,7 @@ export default function AddReminderPage() {
   const location = useLocation();
   const state = location.state as LocationState | null;
 
-  const { addReminder, updateReminder, addMedicine, medicines, reminders } = useApp();
+  const { addReminder, updateReminder, addMedicine, medicines, reminders, userProfile } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -73,10 +73,13 @@ export default function AddReminderPage() {
   // Filter medicine inventory to the active patient scope
   const scopedMedicines = useMemo(() => {
     return medicines.filter(m => {
-      const pId = (m as any).patientId;
-      return contextPatientId === null ? !pId : pId === contextPatientId;
+      const pId = (m as any).patientId ?? null;
+      if (contextPatientId === null) {
+        return pId === null || pId === userProfile?.id;
+      }
+      return pId === contextPatientId;
     });
-  }, [medicines, contextPatientId]);
+  }, [medicines, contextPatientId, userProfile?.id]);
 
   const [medicineId, setMedicineId] = useState<string | undefined>(state?.medicineId);
   const [medicineName, setMedicineName] = useState(state?.medicineName || "");
