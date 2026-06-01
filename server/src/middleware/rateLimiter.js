@@ -10,12 +10,30 @@ export const globalLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json(options.message);
+  }
+});
+
+// Auth & User sensitive operations limiter
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per 15 mins (stricter for profile updates/auth)
+  message: {
+    status: 'fail',
+    message: 'Too many authentication or profile update attempts. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json(options.message);
+  }
 });
 
 // AI endpoints limiter (User-based with IP fallback)
 export const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // limit to 20 AI requests per hour
+  max: 30, // limit to 30 AI requests per hour
   keyGenerator: (req) => {
     return req.user?.uid || req.ip;
   },
@@ -25,6 +43,28 @@ export const aiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json(options.message);
+  }
+});
+
+// Vision / Heavy AI endpoints limiter (User-based with IP fallback)
+// Image processing is more expensive (TPM/RPD)
+export const visionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit to 5 vision requests per 15 minutes
+  keyGenerator: (req) => {
+    return req.user?.uid || req.ip;
+  },
+  message: {
+    status: 'fail',
+    message: 'Vision processing limit reached. Please wait a few minutes before identifying more pills.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json(options.message);
+  }
 });
 
 // Heavy AI endpoints limiter (User-based with IP fallback)

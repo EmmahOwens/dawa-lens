@@ -70,11 +70,11 @@ app.use(express.json({ limit: '10mb' })); // 10mb to allow base64 image uploads
 // API Routes (v1)
 const v1Router = express.Router();
 
-v1Router.use('/users', usersRouter);
+v1Router.use('/users', authLimiter, usersRouter);
 v1Router.use('/medicines', medicinesRouter);
 v1Router.use('/reminders', remindersRouter);
 v1Router.use('/doselogs', doseLogsRouter);
-v1Router.use('/vision', aiLimiter, visionRouter);
+v1Router.use('/vision', visionLimiter, visionRouter);
 v1Router.use('/ai', aiLimiter, aiRouter);
 v1Router.use('/patients', patientsRouter);
 v1Router.use('/wellness', wellnessRouter);

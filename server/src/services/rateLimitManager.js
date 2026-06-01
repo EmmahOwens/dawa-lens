@@ -93,7 +93,8 @@ class RateLimitManager {
 
     // Check if model is cooling down due to 429
     if (now < this.cooldownUntil[modelKey]) {
-      return { allowed: false, reason: `Cooling down until ${new Date(this.cooldownUntil[modelKey]).toISOString()}` };
+      const waitTime = Math.ceil((this.cooldownUntil[modelKey] - now) / 1000);
+      return { allowed: false, reason: `Cooling down for ${waitTime}s due to upstream 429` };
     }
 
     const config = this.configs[modelKey];
@@ -101,22 +102,22 @@ class RateLimitManager {
 
     // RPM Check
     if (counter.reqMinute >= config.rpm) {
-      return { allowed: false, reason: 'RPM limit reached' };
+      return { allowed: false, reason: 'RPM limit reached (Requests Per Minute)' };
     }
 
     // TPM Check
     if (counter.tokensMinute + estimatedTokens > config.tpm) {
-      return { allowed: false, reason: 'TPM limit reached' };
+      return { allowed: false, reason: `TPM limit reached (Tokens Per Minute). Estimated: ${estimatedTokens}, Remaining: ${config.tpm - counter.tokensMinute}` };
     }
 
     // RPD Check
     if (counter.reqDay >= config.rpd) {
-      return { allowed: false, reason: 'RPD limit reached' };
+      return { allowed: false, reason: 'RPD limit reached (Requests Per Day)' };
     }
 
     // TPD Check
     if (counter.tokensDay + estimatedTokens > config.tpd) {
-      return { allowed: false, reason: 'TPD limit reached' };
+      return { allowed: false, reason: 'TPD limit reached (Tokens Per Day)' };
     }
 
     return { allowed: true };
