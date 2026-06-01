@@ -218,7 +218,8 @@ export const getCoachAdvice = async (logs, medicines, userName, priority = 'high
     6. Tone: Warm and culturally appropriate for East Africa.
     7. Warning: Do not change dosages. Advise doctor visit if heart/BP meds are skipped.
     8. Use Markdown for formatting the advice (bolding, lists) to make it readable.
- 
+    9. DATE FORMATTING: For any dates or times generated in the response, only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds.
+
     Respond in JSON format:
     { "advice": "text (Markdown formatted)", "patterns": ["list"], "adherenceScore": 0-100 }
   `;
@@ -281,13 +282,22 @@ export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines, prio
     
     === DATA FOR ANALYSIS ===
     Medicines: ${JSON.stringify(medicines.map(m => m.name))}
-    Medication Logs (last 30 days): ${JSON.stringify(doseLogs.slice(0, 30).map(l => ({ med: l.medicineName, time: l.actionTime, status: l.action })))}
-    Wellness/Symptom Logs: ${JSON.stringify(wellnessLogs.slice(0, 20).map(l => ({ time: l.timestamp, type: l.type, data: l.data })))}
+    Medication Logs (last 30 days): ${JSON.stringify(doseLogs.slice(0, 30).map(l => ({ 
+      med: l.medicineName, 
+      time: l.actionTime ? l.actionTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined, 
+      status: l.action 
+    })))}
+    Wellness/Symptom Logs: ${JSON.stringify(wellnessLogs.slice(0, 20).map(l => ({ 
+      time: l.timestamp ? l.timestamp.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined, 
+      type: l.type, 
+      data: l.data 
+    })))}
     
     === TASK ===
     1. Correlate medication adherence with wellness trends (side effects, energy, mood).
     2. Identify specific dosage patterns (e.g., missed morning doses, timing delays).
     3. Generate a high-level clinical summary suitable for a doctor.
+    4. DATE FORMATTING: For any dates or times generated in the response, only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds.
 
     === RESPONSE FORMAT (STRICT JSON) ===
     { 
@@ -662,7 +672,11 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const activeMeds = medicines?.map(m => m.name).join(', ') || 'No active medications';
   
   // Provide basic summaries even for non-complex tasks so AI has state awareness
-  const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2)) : 'No logs';
+  const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2).map(l => ({
+    ...l,
+    actionTime: l.actionTime ? l.actionTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined,
+    scheduledTime: l.scheduledTime ? l.scheduledTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined
+  }))) : 'No logs';
   const remindersSummary = reminders?.length
     ? JSON.stringify(reminders.map(r => ({
       id: r.id,
@@ -675,7 +689,10 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     : 'No reminders set';
     
   const wellnessSummary = wellnessLogs?.length
-    ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1))
+    ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1).map(l => ({
+      ...l,
+      timestamp: l.timestamp ? l.timestamp.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined
+    })))
     : 'No wellness logs';
     
   const patientsSummary = patients?.length
@@ -707,7 +724,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - ADD_REMINDER: { medicineName, dose, time (HH:mm or "HH:mm,HH:mm,..."), repeatSchedule ("daily"|"weekly"|"once"|"custom"), repeatDays?, patientId?, medicineId? }
     - UPDATE_REMINDER: { id, enabled?, time? (HH:mm or "HH:mm,HH:mm,..."), repeatSchedule?, repeatDays?, dose? }
     - REMOVE_REMINDER: { id, medicineName? } — IMPORTANT: When the reminder list is available in context, you MUST always include the reminder "id" (Firestore document ID) in the payload. The "id" is shown in the Reminders context above. Including "id" ensures reliable deletion.
-    - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action ("taken"|"skipped"), patientId? }
+    - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime (YYYY-MM-DD HH:mm), action ("taken"|"skipped"), patientId? }
     - LOG_WELLNESS: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? }, patientId? }
     - ADD_PATIENT: { name, age?, gender?, relation? }
 
@@ -725,6 +742,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     6. Include clickable chips for navigation using these supported routes: [Dashboard / Home](/ or /dashboard or /home), [Medication Reminders](/reminders or /medications), [Add Reminder](/reminders/new or /new-reminder or /add-reminder), [History/Logs](/history or /logs), [Lifestyle/Interactions](/interactions or /safety), [Family Hub](/family or /family-hub), [Travel Companion](/travel or /travel-companion), [Wellness Hub](/wellness or /wellness-hub), [Care Report](/report or /care-report), [Settings/Profile](/settings or /profile), [Scan Medicine](/scan or /scan-medicine). These custom routes are dynamically translated by the frontend to their corresponding pages.
     7. Proactively suggest regional foods (Matooke, Avocado, G-nuts).
     8. Use Markdown for formatting (bold, italics, lists, tables) to make information clear and readable.
+    9. For any dates or times generated in text (e.g., in tables or summaries), only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds. (Example: 2026-06-01 14:30).
 
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
     Write your response as plain Markdown text.

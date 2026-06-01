@@ -437,7 +437,7 @@ export default function HistoryPage() {
                                 {log.action}
                               </Badge>
                               <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
-                                SCH: {log.scheduledTime || "N/A"}
+                                SCH: {log.scheduledTime ? log.scheduledTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : "N/A"}
                               </span>
                             </div>
                           </div>
