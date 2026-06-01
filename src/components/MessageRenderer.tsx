@@ -75,9 +75,9 @@ function InternalLinkChip({ to, label, onClick }: InternalLinkChipProps) {
     <Link
       to={to}
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-primary text-[13px] font-semibold hover:bg-primary/20 hover:border-primary/40 active:scale-95 transition-all mx-0.5 no-underline"
+      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-muted border border-border/60 text-foreground text-[12px] font-semibold hover:bg-muted/80 active:scale-95 transition-all mx-0.5 no-underline shadow-sm"
     >
-      <Icon size={12} className="shrink-0" />
+      <Icon size={11} className="shrink-0 text-primary/70" />
       {label}
     </Link>
   );
@@ -94,10 +94,10 @@ function ExternalLinkChip({ href, label }: ExternalLinkChipProps) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/60 border border-border/50 text-foreground text-[13px] font-semibold hover:bg-muted hover:border-border active:scale-95 transition-all mx-0.5 no-underline"
+      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-background border border-border/60 text-muted-foreground text-[12px] font-semibold hover:bg-muted/50 active:scale-95 transition-all mx-0.5 no-underline shadow-sm"
     >
       {label}
-      <ExternalLink size={11} className="shrink-0 opacity-60" />
+      <ExternalLink size={10} className="shrink-0 opacity-40" />
     </a>
   );
 }

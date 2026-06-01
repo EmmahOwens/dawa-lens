@@ -92,39 +92,41 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="mb-8 relative overflow-hidden rounded-[2rem] bg-indigo-600 p-6 text-white shadow-xl shadow-indigo-600/20"
+      className="mb-8 relative overflow-hidden rounded-3xl bg-background border border-border/50 p-6 text-foreground shadow-sm hover:shadow-md transition-shadow duration-300"
     >
-      <div className="absolute top-[-20%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+        <Sparkles size={100} className="text-primary" />
+      </div>
 
       <div className="relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-white/20 rounded-lg">
-              <Sparkles size={14} className="text-white" />
+            <div className="p-1.5 bg-primary/10 rounded-lg border border-primary/20">
+              <Sparkles size={14} className="text-primary" />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-white/80">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
               AI Health Insight
             </span>
           </div>
           {insightLoading ? (
-            <Loader2 size={14} className="text-white/60 animate-spin" />
+            <Loader2 size={14} className="text-muted-foreground animate-spin" />
           ) : (
-            <TrendIcon size={16} className={trendColor} />
+            <TrendIcon size={16} className={trendColor.replace("white", "primary").replace("indigo", "primary").replace("-300", "-500")} />
           )}
         </div>
 
         {/* Emotion summary pills (only when data exists) */}
         {(mood != null || energy != null) && (
-          <div className="flex gap-2 mb-4 flex-wrap">
+          <div className="flex gap-2 mb-5 flex-wrap">
             {mood != null && (
-              <span className="text-[9px] font-black uppercase tracking-widest bg-white/15 border border-white/20 px-2.5 py-1 rounded-full">
+              <span className="text-[10px] font-bold uppercase tracking-widest bg-muted/50 border border-border/50 px-3 py-1.5 rounded-xl text-muted-foreground">
                 Mood{" "}
                 {mood >= 4 ? "😊 Positive" : mood <= 2 ? "😔 Low" : "😐 Neutral"}
               </span>
             )}
             {energy != null && (
-              <span className="text-[9px] font-black uppercase tracking-widest bg-white/15 border border-white/20 px-2.5 py-1 rounded-full">
+              <span className="text-[10px] font-bold uppercase tracking-widest bg-muted/50 border border-border/50 px-3 py-1.5 rounded-xl text-muted-foreground">
                 Energy{" "}
                 {energy >= 4 ? "⚡ High" : energy <= 2 ? "🪫 Low" : "🔋 Moderate"}
               </span>
@@ -134,33 +136,33 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
 
         {/* Insight text */}
         {insightLoading && !displayInsight ? (
-          <div className="space-y-2 mb-5">
-            <div className="h-3 bg-white/20 rounded-full w-full animate-pulse" />
-            <div className="h-3 bg-white/20 rounded-full w-4/5 animate-pulse" />
-            <div className="h-3 bg-white/15 rounded-full w-3/5 animate-pulse" />
+          <div className="space-y-2 mb-6">
+            <div className="h-3 bg-muted rounded-full w-full animate-pulse" />
+            <div className="h-3 bg-muted rounded-full w-4/5 animate-pulse" />
+            <div className="h-3 bg-muted/80 rounded-full w-3/5 animate-pulse" />
           </div>
         ) : displayInsight ? (
-          <div className="text-sm font-medium leading-relaxed mb-5 text-white/95">
+          <div className="text-[15px] font-medium leading-relaxed mb-6 text-foreground/90">
             <ReactMarkdown
               components={{
                 p: ({ children }) => <p className="mb-2 last:mb-0">"{children}"</p>,
-                strong: ({ children }) => <strong className="font-black text-white">{children}</strong>,
+                strong: ({ children }) => <strong className="font-bold text-foreground">{children}</strong>,
                 ul: ({ children }) => <ul className="list-disc ml-4 mb-2 space-y-1">{children}</ul>,
-                li: ({ children }) => <li className="text-[11px] leading-tight">{children}</li>,
+                li: ({ children }) => <li className="text-[13px] leading-tight">{children}</li>,
               }}
             >
               {displayInsight}
             </ReactMarkdown>
           </div>
         ) : (
-          <p className="text-sm font-medium leading-relaxed mb-5 text-white/70 italic">
+          <p className="text-[15px] font-medium leading-relaxed mb-6 text-muted-foreground italic">
             Log your mood or take a medication dose to generate a personalized insight.
           </p>
         )}
 
         <button
           onClick={() => setIsDawaGPTOpen(true)}
-          className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl transition-colors border border-white/10 active:scale-95"
+          className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-xl transition-all active:scale-95 shadow-md shadow-primary/10"
         >
           Ask DawaGPT <ArrowRight size={12} />
         </button>

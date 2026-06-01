@@ -114,130 +114,123 @@ export default function DawaGPT() {
 
   return (
     <>
-      {/* Floating Toggle Button - Rive Optimized */}
+      {/* Floating Toggle Button - Claude Inspired */}
       <motion.button
-        whileHover={{ scale: 1.1, rotate: 5 }}
-        whileTap={{ scale: 0.9 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-4 z-40 p-0 rounded-2xl shadow-[0_8px_32px_rgba(var(--primary),0.3)] flex items-center justify-center md:hidden overflow-hidden w-16 h-16 group"
+        className="fixed bottom-24 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border/50 bg-background"
       >
-        <div className="w-full h-full bg-primary/20 backdrop-blur-xl border border-white/30 rounded-2xl flex items-center justify-center overflow-hidden">
-          <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+        <div className="w-full h-full flex items-center justify-center overflow-hidden">
+          <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-10 h-10 object-contain transition-transform group-hover:scale-110" />
         </div>
       </motion.button>
 
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center pointer-events-none p-0 md:p-6 bg-background/20 md:bg-background/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center pointer-events-none p-0 md:p-6 bg-background/10 md:bg-background/30 backdrop-blur-[2px]">
             <motion.div
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-card w-full md:max-w-2xl h-[80vh] md:h-[85vh] rounded-t-[2.5rem] md:rounded-3xl shadow-2xl border-x border-t md:border border-border/50 flex flex-col pointer-events-auto overflow-hidden ring-1 ring-white/10"
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="bg-[#f9f8f6] dark:bg-[#1a1a1a] w-full md:max-w-3xl h-[85vh] md:h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl border border-border/40 flex flex-col pointer-events-auto overflow-hidden"
             >
               {/* Header */}
-              <div className="p-6 border-b border-border/50 bg-background/40 backdrop-blur-xl flex items-center justify-between relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-                
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-2xl border-2 border-primary/20 p-0.5 bg-background">
-                      <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-full h-full object-cover rounded-[calc(1rem-2px)]" />
-                    </div>
-                    {/* Pulsing online dot */}
-                    <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-card" />
-                    </span>
+              <div className="px-6 py-4 border-b border-border/30 bg-background/50 backdrop-blur-md flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex items-center justify-center">
+                    <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-6 h-6 object-contain" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-black text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                        Dawa-GPT
-                      </h3>
-                      <span className="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-black uppercase tracking-widest text-primary">v2.0 AI</span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-[0.15em] opacity-60 flex items-center gap-1.5">
-                      <Sparkles size={10} className="text-primary" />
-                      East African Medical Assistant
-                    </p>
+                    <h3 className="font-semibold text-base tracking-tight text-foreground">
+                      Dawa-GPT
+                    </h3>
                   </div>
                 </div>
                 <button 
                   onClick={() => setIsOpen(false)} 
-                  className="p-3 hover:bg-muted/80 rounded-2xl transition-all active:scale-90 border border-transparent hover:border-border/50 group"
+                  className="p-2 hover:bg-muted/50 rounded-lg transition-all active:scale-95"
                 >
-                  <X size={20} className="text-muted-foreground group-hover:text-foreground transition-colors" />
+                  <X size={18} className="text-muted-foreground hover:text-foreground transition-colors" />
                 </button>
               </div>
 
 
               {/* Chat Messages */}
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth bg-[radial-gradient(circle_at_top_right,rgba(var(--primary),0.03),transparent_40%)]">
-                {messages.map((m) => (
-                  <motion.div
-                    key={m.id}
-                    initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div className={`group relative max-w-[85%] md:max-w-[75%] px-5 py-4 shadow-xl transition-all duration-300 ${
-                      m.role === "user"
-                        ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-[2rem] rounded-tr-sm shadow-primary/20"
-                        : "bg-card text-card-foreground rounded-[2rem] rounded-tl-sm border border-border/50 shadow-black/5"
-                    }`}>
-                      {m.role === "assistant" ? (
-                        <MessageRenderer
-                          text={m.text}
-                          onNavigate={() => setIsOpen(false)}
-                        />
-                      ) : (
-                        <p className="text-[15px] leading-[1.6] font-medium whitespace-pre-wrap">{m.text}</p>
-                      )}
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-10 space-y-10 scroll-smooth bg-transparent">
+                <div className="max-w-2xl mx-auto w-full space-y-10">
+                  {messages.map((m) => (
+                    <motion.div
+                      key={m.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div className={`flex gap-4 max-w-[90%] md:max-w-[85%] ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                        {m.role === "assistant" && (
+                          <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-1">
+                            <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
+                          </div>
+                        )}
+                        <div className={`px-1 py-1 ${
+                          m.role === "user"
+                            ? "bg-[#f0f0f0] dark:bg-[#2a2a2a] text-foreground rounded-2xl px-5 py-3 shadow-sm"
+                            : "text-foreground leading-relaxed"
+                        }`}>
+                          {m.role === "assistant" ? (
+                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                              <MessageRenderer
+                                text={m.text}
+                                onNavigate={() => setIsOpen(false)}
+                              />
+                            </div>
+                          ) : (
+                            <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                  {isTyping && (
+                    <div className="flex justify-start gap-4">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-1">
+                        <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
+                      </div>
+                      <div className="flex items-center gap-1.5 py-3">
+                        {[0, 0.15, 0.3].map((delay, i) => (
+                          <motion.span
+                            key={i}
+                            animate={{ opacity: [0.3, 1, 0.3] }}
+                            transition={{ duration: 1, repeat: Infinity, delay, ease: "easeInOut" }}
+                            className="block w-1.5 h-1.5 rounded-full bg-muted-foreground/40"
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </motion.div>
-                ))}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-card border border-border/50 px-5 py-4 rounded-[2rem] rounded-tl-sm shadow-xl shadow-black/5 flex items-center gap-1.5">
-                      {[0, 0.15, 0.3].map((delay, i) => (
-                        <motion.span
-                          key={i}
-                          animate={{ y: [0, -5, 0], opacity: [0.4, 1, 0.4] }}
-                          transition={{ duration: 0.8, repeat: Infinity, delay, ease: "easeInOut" }}
-                          className="block w-2 h-2 rounded-full bg-primary/60"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Footer / Input */}
-              <div className="p-6 bg-background/60 backdrop-blur-2xl border-t border-border/50 relative">
-                <div className="absolute top-0 left-0 w-full h-20 -translate-y-full bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
-                
-                {/* Prompt Suggestions */}
-                <div className="flex gap-2.5 overflow-x-auto no-scrollbar mb-6 pb-2">
-                  {activeSuggestions.map((suggestion, i) => (
-                    <motion.button
-                      key={i}
-                      whileHover={{ y: -2, scale: 1.02, backgroundColor: "rgba(var(--primary), 0.1)" }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleSend(suggestion)}
-                      className="whitespace-nowrap px-5 py-2.5 rounded-2xl bg-card border border-border/50 text-[13px] font-bold text-muted-foreground hover:text-primary hover:border-primary/30 transition-all flex items-center gap-2.5 shrink-0 shadow-sm"
-                    >
-                      <div className="p-1 rounded-lg bg-primary/10">
-                        <Sparkles size={12} className="text-primary" />
-                      </div>
-                      {suggestion}
-                    </motion.button>
-                  ))}
-                </div>
+              <div className="p-4 md:p-8 bg-transparent">
+                <div className="max-w-2xl mx-auto w-full space-y-4">
+                  {/* Prompt Suggestions */}
+                  {messages.length < 3 && (
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                      {activeSuggestions.map((suggestion, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleSend(suggestion)}
+                          className="whitespace-nowrap px-4 py-2 rounded-xl bg-background border border-border/50 text-xs font-medium text-muted-foreground hover:bg-muted/30 transition-all shrink-0"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
 
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1 bg-muted/30 backdrop-blur-md border border-border/50 rounded-[2rem] px-6 py-2 focus-within:ring-2 focus-within:ring-primary/40 focus-within:bg-background/80 focus-within:shadow-2xl focus-within:shadow-primary/5 transition-all group">
+                  <div className="relative flex items-end gap-2 bg-background border border-border/60 rounded-2xl p-2 shadow-sm focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
                     <textarea
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
@@ -247,18 +240,22 @@ export default function DawaGPT() {
                           handleSend(inputValue);
                         }
                       }}
-                      placeholder="Type a message..."
-                      className="bg-transparent border-none text-[15px] font-medium resize-none outline-none py-3 min-h-[52px] max-h-[160px] placeholder:text-muted-foreground/50 w-full"
+                      placeholder="Send a message..."
+                      className="bg-transparent border-none text-[15px] resize-none outline-none px-3 py-2 min-h-[44px] max-h-[200px] placeholder:text-muted-foreground/50 w-full"
                       rows={1}
                     />
+                    <Button
+                      onClick={() => handleSend(inputValue)}
+                      disabled={isTyping || !inputValue.trim()}
+                      size="icon"
+                      className="rounded-xl h-10 w-10 shrink-0 bg-primary hover:bg-primary/90 transition-all"
+                    >
+                      <Send size={18} />
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => handleSend(inputValue)}
-                    disabled={isTyping || !inputValue.trim()}
-                    className="rounded-full h-[60px] w-[60px] shrink-0 bg-primary hover:bg-primary/90 shadow-[0_10px_25px_rgba(var(--primary),0.4)] transition-all active:scale-90"
-                  >
-                    <Send size={22} className="ml-1" />
-                  </Button>
+                  <p className="text-[10px] text-center text-muted-foreground/60 px-4">
+                    Dawa-GPT can make mistakes. Please verify important medical information.
+                  </p>
                 </div>
               </div>
             </motion.div>

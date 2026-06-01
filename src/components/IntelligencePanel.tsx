@@ -237,43 +237,54 @@ export function IntelligencePanel() {
                 </button>
               </div>
               
-              <div className="bg-card/50 backdrop-blur-2xl rounded-[2rem] border border-border/60 p-4 flex flex-col h-[380px] relative overflow-hidden group/chat shadow-lg hover:shadow-xl transition-all duration-500 hover:border-primary/20 ring-1 ring-white/5">
-                <div className="absolute top-0 right-0 p-4 opacity-[0.02] pointer-events-none group-hover/chat:opacity-[0.05] transition-opacity grayscale group-hover/chat:grayscale-0 group-hover/chat:scale-110 duration-700">
-                  <img src="/dawa-gpt.png" alt="" className="w-24 h-24" />
-                </div>
-                
+              <div className="bg-background dark:bg-card/40 rounded-3xl border border-border/60 p-4 flex flex-col h-[380px] relative overflow-hidden group/chat shadow-sm hover:shadow-md transition-all duration-500">
                 {/* Message Stream */}
-                <div ref={scrollRef} className="flex-1 overflow-y-auto mb-3 space-y-4 no-scrollbar z-10 scroll-smooth pr-1">
+                <div ref={scrollRef} className="flex-1 overflow-y-auto mb-3 space-y-5 no-scrollbar z-10 scroll-smooth pr-1 pt-2">
                     {messages.map((m) => (
                       <motion.div
                         key={m.id}
-                        initial={{ opacity: 0, x: m.role === "user" ? 10 : -10, scale: 0.95 }}
-                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
                         className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                       >
-                        <div className={`relative max-w-[90%] px-4 py-3 text-[12px] font-medium shadow-sm leading-relaxed ${
-                          m.role === "user" 
-                            ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-[1.5rem] rounded-tr-sm shadow-primary/20" 
-                            : "bg-background text-foreground border border-border/50 rounded-[1.5rem] rounded-tl-sm shadow-black/5"
-                        }`}>
-                          {m.role === "assistant" ? (
-                            <MessageRenderer
-                              text={m.text}
-                              onNavigate={() => {}}
-                              className="text-[12px]"
-                            />
-                          ) : (
-                            <p className="whitespace-pre-wrap">{m.text}</p>
+                        <div className={`flex gap-3 max-w-[90%] ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                          {m.role === "assistant" && (
+                            <div className="w-6 h-6 rounded-md overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-0.5">
+                              <img src="/dawa-gpt.png" alt="AI" className="w-4 h-4 object-contain" />
+                            </div>
                           )}
+                          <div className={`px-4 py-2.5 text-[12.5px] leading-relaxed ${
+                            m.role === "user" 
+                              ? "bg-muted/50 text-foreground rounded-2xl shadow-sm border border-border/20" 
+                              : "text-foreground font-medium"
+                          }`}>
+                            {m.role === "assistant" ? (
+                              <MessageRenderer
+                                text={m.text}
+                                onNavigate={() => {}}
+                                className="text-[12.5px]"
+                              />
+                            ) : (
+                              <p className="whitespace-pre-wrap">{m.text}</p>
+                            )}
+                          </div>
                         </div>
                       </motion.div>
                     ))}
                     {isTyping && (
-                      <div className="flex justify-start">
-                        <div className="bg-background border border-border/50 px-4 py-3 rounded-[1.5rem] rounded-tl-sm flex items-center gap-1.5 shadow-sm">
-                          <motion.div animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6 }} className="w-1.5 h-1.5 bg-primary/80 rounded-full" />
-                          <motion.div animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.15 }} className="w-1.5 h-1.5 bg-primary/80 rounded-full" />
-                          <motion.div animate={{ y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.3 }} className="w-1.5 h-1.5 bg-primary/80 rounded-full" />
+                      <div className="flex justify-start gap-3">
+                        <div className="w-6 h-6 rounded-md overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-0.5">
+                          <img src="/dawa-gpt.png" alt="AI" className="w-4 h-4 object-contain" />
+                        </div>
+                        <div className="flex items-center gap-1.5 py-2">
+                          {[0, 0.15, 0.3].map((delay, i) => (
+                            <motion.span
+                              key={i}
+                              animate={{ opacity: [0.3, 1, 0.3] }}
+                              transition={{ duration: 1, repeat: Infinity, delay, ease: "easeInOut" }}
+                              className="block w-1 h-1 rounded-full bg-muted-foreground/40"
+                            />
+                          ))}
                         </div>
                       </div>
                     )}
@@ -288,34 +299,33 @@ export function IntelligencePanel() {
                     ]).slice(0, 3).map((suggestion, i) => (
                     <motion.button
                       key={i}
-                      whileHover={{ y: -1, scale: 1.02, backgroundColor: "rgba(var(--primary), 0.08)" }}
+                      whileHover={{ scale: 1.02, backgroundColor: "rgba(var(--muted), 0.5)" }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleSendMessage(suggestion)}
-                      className="whitespace-nowrap px-3.5 py-2 rounded-xl bg-background border border-border/50 text-[10px] font-black text-muted-foreground hover:text-primary hover:border-primary/40 transition-all flex items-center gap-1.5 shrink-0 uppercase tracking-tight shadow-sm"
+                      className="whitespace-nowrap px-3 py-1.5 rounded-lg bg-muted/30 border border-border/40 text-[10px] font-semibold text-muted-foreground hover:text-foreground transition-all shrink-0 shadow-sm"
                     >
-                      <Sparkles size={10} className="text-primary/80" />
                       {suggestion}
                     </motion.button>
                   ))}
                 </div>
 
                 {/* Input Area */}
-                 <div className="flex gap-2 z-10">
+                 <div className="flex gap-2 z-10 bg-background border border-border/60 rounded-2xl p-1.5 shadow-sm focus-within:border-primary/40 transition-all">
                     <input 
                       type="text" 
                       value={miniChatInput}
                       onChange={(e) => setMiniChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSendMessage(miniChatInput)}
                       placeholder="Ask anything..." 
-                      className="flex-1 bg-background/80 backdrop-blur-md rounded-2xl px-4 py-3 text-[12px] border border-border/50 outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all font-medium placeholder:text-muted-foreground/50 shadow-inner"
+                      className="flex-1 bg-transparent rounded-xl px-3 py-2 text-[12.5px] outline-none font-medium placeholder:text-muted-foreground/50"
                     />
                     <Button 
                       size="icon" 
                       disabled={isTyping || !miniChatInput.trim()}
                       onClick={() => handleSendMessage(miniChatInput)}
-                      className="rounded-2xl w-[46px] h-[46px] shrink-0 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 active:scale-90 transition-all"
+                      className="rounded-xl w-9 h-9 shrink-0 bg-primary hover:bg-primary/90 active:scale-95 transition-all shadow-sm"
                     >
-                      {isTyping ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} className="ml-0.5" />}
+                      {isTyping ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                     </Button>
                 </div>
               </div>
