@@ -307,6 +307,32 @@ export const localPersistence = {
       await storage.setItem(LOCAL_LOGS_KEY, all);
       return newItem;
     },
+    update: async (id: string, updates: Partial<DoseLog>): Promise<void> => {
+      if (Capacitor.isNativePlatform() && sqliteReady) {
+        await NativeSqlite.execute({
+          sql: `UPDATE dose_logs SET reminder_id=?,medicine_name=?,dose=?,scheduled_time=?,action_time=?,action=?,is_snoozed=?,snooze_until=?,patient_id=? WHERE id=?`,
+          params: [
+            updates.reminderId ?? null,
+            updates.medicineName ?? null,
+            updates.dose ?? null,
+            updates.scheduledTime ?? null,
+            updates.actionTime ?? null,
+            updates.action ?? null,
+            updates.isSnoozed !== undefined ? (updates.isSnoozed ? 1 : 0) : null,
+            updates.snoozeUntil ?? null,
+            updates.patientId ?? null,
+            id,
+          ],
+        });
+        return;
+      }
+      const all = await storage.getItem<DoseLog[]>(LOCAL_LOGS_KEY, []);
+      const idx = all.findIndex((l) => l.id === id);
+      if (idx !== -1) {
+        all[idx] = { ...all[idx], ...updates };
+        await storage.setItem(LOCAL_LOGS_KEY, all);
+      }
+    },
     remove: async (id: string): Promise<void> => {
       if (Capacitor.isNativePlatform() && sqliteReady) {
         await NativeSqlite.execute({

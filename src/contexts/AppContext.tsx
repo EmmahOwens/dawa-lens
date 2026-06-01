@@ -867,6 +867,116 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // 1.5. Dynamic Schedule Adjustment
+    // If a dose is taken early/late, automatically update the base reminder times
+    // to maintain equal intervals starting from the new actual take time.
+    if (
+      log.action === "taken" &&
+      reminder &&
+      reminder.repeatSchedule !== "once"
+    ) {
+      const scheduledDate = toDate(log.scheduledTime);
+      const actualDate = new Date();
+      const diffMinutes = Math.round(
+        (actualDate.getTime() - scheduledDate.getTime()) / (1000 * 60)
+      );
+
+      // Only shift if deviation is between 1 minute and 4 hours
+      if (Math.abs(diffMinutes) >= 1 && Math.abs(diffMinutes) <= 240) {
+        const times = reminder.time.split(",").map((t) => t.trim());
+        const freq = times.length;
+
+        // Find which slot index this log corresponds to
+        const schHHmm = `${scheduledDate
+          .getHours()
+          .toString()
+          .padStart(2, "0")}:${scheduledDate
+          .getMinutes()
+          .toString()
+          .padStart(2, "0")}`;
+        let slotIndex = times.indexOf(schHHmm);
+
+        if (slotIndex === -1) {
+          const schMins =
+            scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
+          let minDiff = Infinity;
+          times.forEach((t, i) => {
+            const [h, m] = t.split(":").map(Number);
+            const diff = Math.abs(h * 60 + m - schMins);
+            if (diff < minDiff) {
+              minDiff = diff;
+              slotIndex = i;
+            }
+          });
+        }
+
+        if (slotIndex !== -1) {
+          const intervalMinutes = (24 * 60) / freq;
+          const actH = actualDate.getHours();
+          const actM = actualDate.getMinutes();
+
+          const newTimes = times.map((_, i) => {
+            const distance = i - slotIndex;
+            const totalMinutes =
+              (((actH * 60 + actM + distance * intervalMinutes) % (24 * 60)) +
+                24 * 60) %
+              (24 * 60);
+            const h = Math.floor(totalMinutes / 60);
+            const m = Math.floor(totalMinutes % 60);
+            return `${h.toString().padStart(2, "0")}:${m
+              .toString()
+              .padStart(2, "0")}`;
+          });
+
+          const newTimeStr = newTimes.join(",");
+          if (newTimeStr !== reminder.time) {
+            console.log(
+              `[DynamicSchedule] Shifting ${reminder.medicineName} from ${reminder.time} to ${newTimeStr}`
+            );
+
+            // 1. Update the reminder itself
+            await updateReminder(reminder.id, { time: newTimeStr });
+            reminder.time = newTimeStr;
+
+            // 2. Update the log's scheduledTime to match the new schedule
+            // This prevents "double-shifting" in the UI (virtual shift + permanent shift)
+            const newScheduledISO = new Date(scheduledDate);
+            newScheduledISO.setHours(actH, actM, 0, 0);
+            const newScheduledTime = newScheduledISO.toISOString();
+
+            if (storageMode === "local") {
+              await localPersistence.doseLogs.update(newLog.id, {
+                scheduledTime: newScheduledTime,
+              });
+            } else {
+              const logDocRef = doc(db, "doseLogs", newLog.id);
+              await updateDoc(logDocRef, { scheduledTime: newScheduledTime });
+            }
+
+            // Update local references for immediate UI consistency
+            newLog.scheduledTime = newScheduledTime;
+            setDoseLogs((prev) =>
+              prev.map((l) =>
+                l.id === newLog.id ? { ...l, scheduledTime: newScheduledTime } : l
+              )
+            );
+
+            if (Math.abs(diffMinutes) >= 5) {
+              const direction = diffMinutes > 0 ? "later" : "earlier";
+              toast({
+                title: "Schedule Adjusted",
+                description: `Shifted ${
+                  reminder.medicineName
+                } ${Math.abs(
+                  diffMinutes
+                )}m ${direction} to maintain your dose intervals.`,
+              });
+            }
+          }
+        }
+      }
+    }
+
     // 2. Reschedule notifications immediately so remaining slots fire at the shifted time
     if (log.action === "taken" && reminder) {
       const freshLogs =
