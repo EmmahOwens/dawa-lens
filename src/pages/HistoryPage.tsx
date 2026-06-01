@@ -458,7 +458,7 @@ export default function HistoryPage() {
 
                           <button
                             onClick={() => handleDelete(log.id)}
-                            className="p-2.5 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                            className="p-2.5 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
                             title="Undo / Delete Record"
                           >
                             <Trash2 size={18} />

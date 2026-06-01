@@ -394,9 +394,9 @@ export default function SettingsPage() {
           <Button
             variant="destructive"
             className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-destructive/10"
-            onClick={() => {
+            onClick={async () => {
               if (window.confirm(t("settings.confirm_delete"))) {
-                clearAllData();
+                await clearAllData();
                 toast({ title: t("settings.data_cleared"), variant: "destructive" });
               }
             }}

@@ -174,6 +174,7 @@ type AppContextType = {
   addWellnessLog: (
     log: Omit<WellnessLog, "id" | "timestamp" | "userId">
   ) => Promise<void>;
+  deleteWellnessLog: (id: string) => Promise<void>;
 
   addPatient: (
     patient: Omit<Patient, "id" | "createdAt" | "managedBy">
@@ -190,7 +191,7 @@ type AppContextType = {
   completeOnboarding: (profile: Omit<UserProfile, "id">) => Promise<void>;
   loginUser: (userId: string, email: string) => void;
   logoutUser: () => void;
-  clearAllData: () => void;
+  clearAllData: () => Promise<void>;
   syncLocalToCloud: () => Promise<void>;
   isInitializing: boolean;
   isDawaGPTOpen: boolean;
@@ -493,16 +494,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // --- Local mode: one-shot load from IndexedDB ---
     if (storageMode === "local") {
       const loadLocal = async () => {
-        const [pMeds, pRems, pLogs, pPatients] = await Promise.all([
+        const [pMeds, pRems, pLogs, pPatients, pWell] = await Promise.all([
           localPersistence.medicines.getAll(),
           localPersistence.reminders.getAll(),
           localPersistence.doseLogs.getAll(),
           localPersistence.patients.getAll(),
+          localPersistence.wellnessLogs.getAll(),
         ]);
         setMedicines(pMeds);
         setReminders(pRems);
         setDoseLogs(pLogs);
         setPatients(pPatients);
+        setWellnessLogs(pWell);
         setIsDataLoading(false);
       };
       loadLocal();
@@ -1066,7 +1069,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     log: Omit<WellnessLog, "id" | "timestamp" | "userId">
   ) => {
     if (storageMode === "local") {
-      // Simple local save for wellness (optional, mainly cloud focused for AI)
+      const newLog = await localPersistence.wellnessLogs.create({
+        ...log,
+        patientId: selectedPatientId || null,
+      });
+      setWellnessLogs((p) => [newLog, ...p]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
       const logData = sanitizeFirestoreData({
@@ -1080,21 +1087,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteWellnessLog = async (id: string) => {
+    if (storageMode === "local") {
+      await localPersistence.wellnessLogs.remove(id);
+      setWellnessLogs((p) => p.filter((l) => l.id !== id));
+    } else {
+      const docRef = doc(db, "wellnessLogs", id);
+      await deleteDoc(docRef);
+      // onSnapshot listener will auto-update state
+    }
+  };
+
   const syncLocalToCloud = useCallback(async () => {
     if (!currentUserId || storageMode === "local") return;
 
-    const [localMeds, localRems, localLogs, localPatients] = await Promise.all([
+    const [localMeds, localRems, localLogs, localPatients, localWell] = await Promise.all([
       localPersistence.medicines.getAll(),
       localPersistence.reminders.getAll(),
       localPersistence.doseLogs.getAll(),
       localPersistence.patients.getAll(),
+      localPersistence.wellnessLogs.getAll(),
     ]);
 
     if (
       localMeds.length === 0 &&
       localRems.length === 0 &&
       localLogs.length === 0 &&
-      localPatients.length === 0
+      localPatients.length === 0 &&
+      localWell.length === 0
     )
       return;
 
@@ -1171,12 +1191,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await addDoc(collection(db, "doseLogs"), logData);
       }
 
+      // 4. Sync Wellness Logs to Firestore
+      for (const well of localWell) {
+        const { id, timestamp, ...data } = well;
+        const mappedPatientId = data.patientId
+          ? patientIdMap[data.patientId] || data.patientId
+          : null;
+        const wellData = sanitizeFirestoreData({
+          ...data,
+          patientId: mappedPatientId,
+          userId: currentUserId,
+          timestamp: timestamp || new Date().toISOString(),
+        });
+        await addDoc(collection(db, "wellnessLogs"), wellData);
+      }
+
       // Clear local persistence after successful sync
       await Promise.all([
         storage.removeItem("dawa_local_medicines"),
         storage.removeItem("dawa_local_reminders"),
         storage.removeItem("dawa_local_doselogs"),
         storage.removeItem("dawa_local_patients"),
+        storage.removeItem("dawa_local_wellness"),
       ]);
 
       if (selectedPatientId && patientIdMap[selectedPatientId]) {
@@ -1293,7 +1329,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (selectedPatientId === id) setSelectedPatientId(null);
   };
 
-  const clearAllData = useCallback(() => {
+  const clearAllData = useCallback(async () => {
+    // 0. Sign out from Firebase if logged in
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.warn("Sign out during clear all data failed:", e);
+    }
+
     // 1. Wipe State
     setMedicines([]);
     setReminders([]);
@@ -1307,9 +1350,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     storage.removeItem("dawa_local_reminders");
     storage.removeItem("dawa_local_doselogs");
     storage.removeItem("dawa_local_patients");
+    storage.removeItem("dawa_local_wellness");
 
-    // 3. Reset Professional Settings if any
+    // 3. Reset UI flags and metadata
+    storage.removeItem("med_selected_patient_id");
+    storage.removeItem("med_professional_mode");
+    storage.removeItem("med_has_seen_welcome");
+    storage.removeItem("med_intelligence_collapsed");
+    storage.removeItem("med_last_sync");
+    storage.removeItem("med_loggedin");
+    storage.removeItem("med_userId");
+    
+    localStorage.removeItem("med_selected_patient_id");
+    localStorage.removeItem("med_professional_mode");
+    localStorage.removeItem("med_has_seen_welcome");
+    localStorage.removeItem("med_intelligence_collapsed");
+    localStorage.removeItem("med_last_sync");
+    localStorage.removeItem("med_loggedin");
+    localStorage.removeItem("med_userId");
+
     setIsProfessionalMode(false);
+    setHasSeenWelcome(false);
+    setIntelligenceCollapsedState(false);
+    setLastSyncTimestamp(null);
+    setIsLoggedIn(false);
+    setCurrentUserId(null);
   }, [setIsProfessionalMode]);
 
   return (
@@ -1340,6 +1405,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updatePatient,
         deletePatient,
         addWellnessLog,
+        deleteWellnessLog,
         setSelectedPatientId,
         setIsProfessionalMode,
         setStorageMode,

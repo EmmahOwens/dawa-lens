@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp, WellnessLog } from "@/contexts/AppContext";
-import { Heart, Utensils, Sparkles, Loader2, Smile, Zap, CheckCircle2, AlertTriangle, ShieldCheck, Brain, Activity, Coffee, Info } from "@/lib/icons";
+import { Heart, Utensils, Sparkles, Loader2, Smile, Zap, CheckCircle2, AlertTriangle, ShieldCheck, Brain, Activity, Coffee, Info, Trash2 } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
 import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
@@ -30,7 +30,7 @@ function useEmotionSparkline(wellnessLogs: ReturnType<typeof useApp>["wellnessLo
 }
 
 export default function WellnessPage() {
-  const { wellnessLogs, addWellnessLog, medicines, doseLogs } = useApp();
+  const { wellnessLogs, addWellnessLog, deleteWellnessLog, medicines, doseLogs } = useApp();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"journal" | "food">("journal");
@@ -631,9 +631,26 @@ export default function WellnessPage() {
                         <p className="text-[10px] font-black text-foreground uppercase tracking-widest">
                           {log.type === "food" ? "Nutritional Log" : "Vitality Check"}
                         </p>
-                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter bg-muted/50 px-1.5 py-0.5 rounded">
-                          {format(toDate(log.timestamp), "MMM d • h:mm a")}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter bg-muted/50 px-1.5 py-0.5 rounded">
+                            {format(toDate(log.timestamp), "MMM d • h:mm a")}
+                          </p>
+                          <button
+                            onClick={async () => {
+                              if (confirm("Delete this log entry?")) {
+                                try {
+                                  await deleteWellnessLog(log.id);
+                                  toast({ title: "Log Deleted" });
+                                } catch (err) {
+                                  toast({ title: "Delete Failed", variant: "destructive" });
+                                }
+                              }
+                            }}
+                            className="p-1 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 rounded-md transition-all"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
                       <p className="text-xs font-semibold text-muted-foreground leading-relaxed">
                         {log.type === "food"

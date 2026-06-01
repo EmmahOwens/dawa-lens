@@ -1,12 +1,13 @@
 import { Capacitor } from "@capacitor/core";
 import { NativeSqlite } from "@/plugins/nativeSqlite";
 import { storage } from "../lib/storage";
-import { Medicine, Reminder, DoseLog, Patient } from "../contexts/AppContext";
+import { Medicine, Reminder, DoseLog, Patient, WellnessLog } from "../contexts/AppContext";
 
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const LOCAL_REMS_KEY = "dawa_local_reminders";
 const LOCAL_LOGS_KEY = "dawa_local_doselogs";
 const LOCAL_PATIENTS_KEY = "dawa_local_patients";
+const LOCAL_WELLNESS_KEY = "dawa_local_wellness";
 
 let sqliteReady = false;
 
@@ -436,6 +437,68 @@ export const localPersistence = {
       const all = await storage.getItem<Patient[]>(LOCAL_PATIENTS_KEY, []);
       const filtered = all.filter((p) => p.id !== id);
       await storage.setItem(LOCAL_PATIENTS_KEY, filtered);
+    },
+  },
+
+  wellnessLogs: {
+    getAll: async (): Promise<WellnessLog[]> => {
+      if (Capacitor.isNativePlatform() && sqliteReady) {
+        const { rows } = await NativeSqlite.query({
+          sql: "SELECT * FROM wellness_logs ORDER BY timestamp DESC",
+        });
+        return rows.map(
+          (r) =>
+            ({
+              id: r.id as string,
+              type: r.type as WellnessLog["type"],
+              timestamp: r.timestamp as string,
+              data: JSON.parse(r.data as string),
+              userId: r.user_id as string,
+              patientId: r.patient_id as string | null | undefined,
+            } as WellnessLog)
+        );
+      }
+      return storage.getItem<WellnessLog[]>(LOCAL_WELLNESS_KEY, []);
+    },
+    create: async (
+      data: Omit<WellnessLog, "id" | "timestamp" | "userId">
+    ): Promise<WellnessLog> => {
+      const id = `lwell-${Date.now()}`;
+      const timestamp = new Date().toISOString();
+      const userId = "local";
+
+      if (Capacitor.isNativePlatform() && sqliteReady) {
+        await NativeSqlite.execute({
+          sql: `INSERT INTO wellness_logs (id,type,timestamp,data,user_id,patient_id)
+                VALUES (?,?,?,?,?,?)`,
+          params: [
+            id,
+            data.type,
+            timestamp,
+            JSON.stringify(data.data),
+            userId,
+            data.patientId ?? null,
+          ],
+        });
+        return { ...data, id, timestamp, userId } as WellnessLog;
+      }
+      const all = await storage.getItem<WellnessLog[]>(LOCAL_WELLNESS_KEY, []);
+      const newItem: WellnessLog = { ...data, id, timestamp, userId };
+      all.push(newItem);
+      await storage.setItem(LOCAL_WELLNESS_KEY, all);
+      return newItem;
+    },
+    remove: async (id: string): Promise<void> => {
+      if (Capacitor.isNativePlatform() && sqliteReady) {
+        await NativeSqlite.execute({
+          sql: "DELETE FROM wellness_logs WHERE id=?",
+          params: [id],
+        });
+        return;
+      }
+      const all = await storage.getItem<WellnessLog[]>(LOCAL_WELLNESS_KEY, []);
+      const filtered = all.filter((l) => l.id !== id);
+      await storage.setItem(LOCAL_WELLNESS_KEY, filtered);
     },
   },
 };
