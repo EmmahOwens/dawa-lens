@@ -61,15 +61,37 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isLoggedIn, userProfile, isInitializing } = useApp(); 
   
   // Developer Backdoor: Check for a local storage flag to bypass auth/role checks
-  const isDevAdmin = localStorage.getItem("dawa_dev_admin") === "true";
+  // We check both string "true" and literal true (just in case)
+  const devFlag = localStorage.getItem("dawa_dev_admin");
+  const isDevAdmin = devFlag === "true" || devFlag === "1";
+  
+  // Debug log to help identify why access might be denied
+  console.log("[AdminRoute] Debug:", { 
+    path: window.location.pathname,
+    isDevAdmin, 
+    isLoggedIn, 
+    isInitializing, 
+    isProfessional: userProfile?.isProfessional 
+  });
+
+  // Grant access if the dev flag is set, regardless of initialization or login status
+  if (isDevAdmin) {
+    console.log("[AdminRoute] Access granted via Dev Backdoor");
+    return <>{children}</>;
+  }
 
   if (isInitializing) return <SplashScreen />; 
-  
-  // Grant access if the dev flag is set, regardless of login status
-  if (isDevAdmin) return <>{children}</>;
 
-  if (!isLoggedIn) return <Navigate to="/auth" replace />; 
-  if (!userProfile?.isProfessional) return <Navigate to="/" replace />; 
+  if (!isLoggedIn) {
+    console.log("[AdminRoute] Redirecting to /auth (not logged in)");
+    return <Navigate to="/auth" replace />; 
+  }
+
+  if (!userProfile?.isProfessional) {
+    console.log("[AdminRoute] Redirecting to / (not professional)");
+    return <Navigate to="/" replace />; 
+  }
+
   return <>{children}</>; 
 } 
 
