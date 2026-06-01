@@ -59,31 +59,38 @@ const queryClient = new QueryClient();
 // Guard for admin-only routes — requires isProfessional flag on UserProfile 
 function AdminRoute({ children }: { children: React.ReactNode }) { 
   const { isLoggedIn, userProfile, isInitializing } = useApp(); 
-  const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
   
-  // 1. URL Bypass: If ?admin=true is in the URL, grant access and "stick" it to localStorage
-  const urlBypass = queryParams.get("admin") === "true";
-  
-  if (urlBypass) {
-    localStorage.setItem("dawa_dev_admin", "true");
-  }
-
-  // 2. Check for the persisted flag
+  // Check for the persisted developer flag
   const isDevAdmin = localStorage.getItem("dawa_dev_admin") === "true";
 
-  // Grant access if either the URL bypass or the persisted flag is present
-  if (urlBypass || isDevAdmin) {
-    return <>{children}</>;
-  }
-
+  if (isDevAdmin) return <>{children}</>;
   if (isInitializing) return <SplashScreen />; 
-
   if (!isLoggedIn) return <Navigate to="/auth" replace />; 
   if (!userProfile?.isProfessional) return <Navigate to="/" replace />; 
   
   return <>{children}</>; 
 } 
+
+// Global handler to catch ?admin=true on ANY page
+const AdminBypassHandler = () => {
+  const location = useLocation();
+  
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("admin") === "true") {
+      localStorage.setItem("dawa_dev_admin", "true");
+      console.log("Admin bypass enabled via URL");
+      window.location.href = "/admin"; // Force redirect to admin panel
+    }
+    if (params.get("admin") === "false") {
+      localStorage.removeItem("dawa_dev_admin");
+      console.log("Admin bypass disabled via URL");
+      window.location.href = "/";
+    }
+  }, [location]);
+
+  return null;
+};
 
 // A wrapper to enforce onboarding redirect
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -237,6 +244,7 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AppProvider>
+            <AdminBypassHandler />
             <AppContent />
             <NotificationHandler />
             <OfflineOverlay />
