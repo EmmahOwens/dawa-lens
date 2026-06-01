@@ -66,7 +66,19 @@ export default function AuthPage() {
   const { loginUser, rememberMe, setRememberMe } = useApp();
 
   const [isLogin, setIsLogin] = useState(true);
+  const [logoTaps, setLogoTaps] = useState(0);
   const [stage, setStage] = useState<Stage>("form");
+
+  const handleLogoClick = () => {
+    const newTaps = logoTaps + 1;
+    if (newTaps >= 5) {
+      localStorage.setItem("dawa_dev_admin", "true");
+      notify.success("Admin Access", "Developer Admin Mode Activated!");
+      navigate("/admin");
+    } else {
+      setLogoTaps(newTaps);
+    }
+  };
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -263,7 +275,8 @@ export default function AuthPage() {
             <motion.div 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-4 mb-12"
+              className="flex items-center gap-4 mb-12 cursor-pointer active:scale-95 transition-transform"
+              onClick={handleLogoClick}
             >
               <div className="h-12 w-12 rounded-2xl bg-white shadow-xl shadow-primary/20 flex items-center justify-center p-2">
                 <img src="/logo.png" alt="Dawa Lens" className="w-full h-full object-contain" />
@@ -308,7 +321,7 @@ export default function AuthPage() {
       {/* Right Panel: Auth Forms */}
       <div className="flex-1 flex flex-col items-center justify-center p-8">
         <div className="w-full max-w-[400px] space-y-8">
-          <div className="lg:hidden text-center mb-8">
+          <div className="lg:hidden text-center mb-8 cursor-pointer active:scale-90 transition-transform" onClick={handleLogoClick}>
             <img src="/logo.png" alt="Logo" className="w-16 h-16 mx-auto mb-4" />
           </div>
 

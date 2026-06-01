@@ -59,39 +59,29 @@ const queryClient = new QueryClient();
 // Guard for admin-only routes — requires isProfessional flag on UserProfile 
 function AdminRoute({ children }: { children: React.ReactNode }) { 
   const { isLoggedIn, userProfile, isInitializing } = useApp(); 
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
   
-  // Developer Backdoor: Check for a local storage flag to bypass auth/role checks
-  // We check both string "true" and literal true (just in case)
-  const devFlag = localStorage.getItem("dawa_dev_admin");
-  const isDevAdmin = devFlag === "true" || devFlag === "1";
+  // 1. URL Bypass: If ?admin=true is in the URL, grant access and "stick" it to localStorage
+  const urlBypass = queryParams.get("admin") === "true";
   
-  // Debug log to help identify why access might be denied
-  console.log("[AdminRoute] Debug:", { 
-    path: window.location.pathname,
-    isDevAdmin, 
-    isLoggedIn, 
-    isInitializing, 
-    isProfessional: userProfile?.isProfessional 
-  });
+  if (urlBypass) {
+    localStorage.setItem("dawa_dev_admin", "true");
+  }
 
-  // Grant access if the dev flag is set, regardless of initialization or login status
-  if (isDevAdmin) {
-    console.log("[AdminRoute] Access granted via Dev Backdoor");
+  // 2. Check for the persisted flag
+  const isDevAdmin = localStorage.getItem("dawa_dev_admin") === "true";
+
+  // Grant access if either the URL bypass or the persisted flag is present
+  if (urlBypass || isDevAdmin) {
     return <>{children}</>;
   }
 
   if (isInitializing) return <SplashScreen />; 
 
-  if (!isLoggedIn) {
-    console.log("[AdminRoute] Redirecting to /auth (not logged in)");
-    return <Navigate to="/auth" replace />; 
-  }
-
-  if (!userProfile?.isProfessional) {
-    console.log("[AdminRoute] Redirecting to / (not professional)");
-    return <Navigate to="/" replace />; 
-  }
-
+  if (!isLoggedIn) return <Navigate to="/auth" replace />; 
+  if (!userProfile?.isProfessional) return <Navigate to="/" replace />; 
+  
   return <>{children}</>; 
 } 
 
