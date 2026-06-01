@@ -293,18 +293,18 @@ export default function HistoryPage() {
               doses.
             </p>
             <div className="flex gap-2 justify-center sm:justify-start">
-              <Badge
-                variant="secondary"
-                className="rounded-lg py-1 px-3 bg-success/10 text-success border-success/20"
+              <button
+                onClick={() => navigate("/wellness")}
+                className="inline-flex items-center rounded-lg py-1 px-3 bg-success/10 text-success border border-success/20 text-xs font-semibold hover:bg-success/20 transition-colors"
               >
                 <Check size={12} className="mr-1" /> Good Progress
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="rounded-lg py-1 px-3 bg-primary/10 text-primary border-primary/20"
+              </button>
+              <button
+                onClick={() => navigate("/report")}
+                className="inline-flex items-center rounded-lg py-1 px-3 bg-primary/10 text-primary border border-primary/20 text-xs font-semibold hover:bg-primary/20 transition-colors"
               >
                 <Calendar size={12} className="mr-1" /> Weekly Report
-              </Badge>
+              </button>
             </div>
           </div>
         </div>
