@@ -75,7 +75,7 @@ export default function AchievementOverlay({ open, onClose, title, subtitle, emo
                 transition={{ delay: 0.2, type: "spring", bounce: 0.6 }}
                 className="mb-8 filter drop-shadow-2xl"
               >
-                <RiveMoji emoji={emoji} size={120} />
+                <RiveMoji emoji={emoji} size={120} active={open} />
               </motion.div>
 
               <motion.h2

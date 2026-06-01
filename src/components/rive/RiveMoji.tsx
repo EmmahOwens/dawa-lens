@@ -6,6 +6,8 @@ interface RiveMojiProps {
   emoji: string;
   className?: string;
   size?: number;
+  /** If true, triggers the "Pressed" or active state in the Rive state machine */
+  active?: boolean;
 }
 
 // Public Rive asset URL for emojis
@@ -17,7 +19,7 @@ const EMOJI_RIVE_URL = "https://public.rive.app/community/runtime-files/2191-432
  * Maps standard emojis to animated Rive equivalents.
  * Uses public Rive assets for common expressions.
  */
-export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48 }) => {
+export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48, active = false }) => {
   // Map emoji to Rive Artboard
   const getArtboard = (e: string) => {
     switch (e) {
@@ -88,6 +90,8 @@ export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48 
       <RiveAnimation
         src={EMOJI_RIVE_URL}
         artboard={artboard}
+        stateMachine="State Machine 1"
+        inputs={{ "Pressed": active, "Hover": active }}
         fit={Fit.Contain}
         alignment={Alignment.Center}
         fallback={<span style={{ fontSize: size * 0.7 }}>{emoji}</span>}
