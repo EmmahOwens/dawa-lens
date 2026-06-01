@@ -70,12 +70,48 @@ export default function AchievementOverlay({ open, onClose, title, subtitle, emo
 
             <div className="relative z-10 flex flex-col items-center">
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", bounce: 0.6 }}
-                className="mb-8 filter drop-shadow-2xl"
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ 
+                  scale: [0, 1.2, 1],
+                  rotate: [0, 10, -10, 0],
+                  y: [0, -10, 0]
+                }}
+                transition={{ 
+                  delay: 0.2, 
+                  duration: 0.8,
+                  type: "spring", 
+                  bounce: 0.6 
+                }}
+                className="mb-8 filter drop-shadow-2xl relative"
               >
-                <RiveMoji emoji={emoji} size={120} active={open} />
+                {/* Floating life animation */}
+                <motion.div
+                  animate={{
+                    y: [0, -8, 0],
+                    rotate: [-2, 2, -2]
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                >
+                  <RiveMoji emoji={emoji} size={120} active={open} />
+                </motion.div>
+                
+                {/* Extra sparkle/glow behind emoji */}
+                <motion.div
+                  animate={{
+                    scale: [1, 1.5, 1],
+                    opacity: [0.3, 0.6, 0.3]
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute inset-0 bg-primary/20 blur-3xl rounded-full -z-10"
+                />
               </motion.div>
 
               <motion.h2

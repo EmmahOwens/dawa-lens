@@ -131,7 +131,19 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
                 {isLoading ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <RiveMoji emoji={mood.emoji} size={20} active={isActive} />
+                  <motion.div
+                    animate={isActive ? {
+                      y: [0, -4, 0],
+                      scale: [1, 1.05, 1],
+                    } : {}}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <RiveMoji emoji={mood.emoji} size={20} active={isActive} />
+                  </motion.div>
                 )}
               </motion.button>
             );

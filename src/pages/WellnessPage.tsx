@@ -282,7 +282,19 @@ export default function WellnessPage() {
                         onClick={() => setMood(m.val)}
                         className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl transition-all duration-300 ${mood === m.val ? "bg-success text-success-foreground scale-110 shadow-lg shadow-success/20 -translate-y-1" : "bg-muted/30 grayscale opacity-40 hover:opacity-100 hover:grayscale-0"}`}
                       >
-                        <RiveMoji emoji={m.emoji} size={32} className="mb-1" active={mood === m.val} />
+                        <motion.div
+                          animate={mood === m.val ? {
+                            y: [0, -6, 0],
+                            rotate: [0, -5, 5, 0]
+                          } : {}}
+                          transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        >
+                          <RiveMoji emoji={m.emoji} size={32} className="mb-1" active={mood === m.val} />
+                        </motion.div>
                         <span className={`text-[8px] font-black uppercase tracking-tighter ${mood === m.val ? "opacity-100" : "opacity-0"}`}>{m.label}</span>
                       </button>
                     ))}
