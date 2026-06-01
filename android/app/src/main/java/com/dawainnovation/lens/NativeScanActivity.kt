@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -332,4 +333,15 @@ class ScanOverlayView(context: Context) : View(context) {
         // Schedule next frame at ~60 fps
         postInvalidateDelayed(16)
     }
+}
+
+/**
+ * Extension to convert CameraX ImageProxy (YUV_420_884 or JPEG) to a Bitmap.
+ */
+fun ImageProxy.toBitmap(): Bitmap {
+    val buffer = planes[0].buffer
+    buffer.rewind()
+    val bytes = ByteArray(buffer.remaining())
+    buffer.get(bytes)
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 }

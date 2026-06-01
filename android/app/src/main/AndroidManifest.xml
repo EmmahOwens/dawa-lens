@@ -27,7 +27,7 @@
             android:name=".NativeScanActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+            android:theme="@style/AppTheme.FullScreen" />
 
         <receiver
             android:name=".AlarmReceiver"
