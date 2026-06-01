@@ -523,9 +523,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (docSnap.exists()) {
           const prof = docSnap.data() as Record<string, unknown>;
           
-          // Force isProfessional for admin account
-          const isAdmin = auth.currentUser?.email?.toLowerCase() === "admin@dawalens.web.app";
-          const isProfessional = isAdmin || (prof.isProfessional as boolean) || false;
+          const isProfessional = (prof.isProfessional as boolean) || false;
 
           if (!prof.dateOfBirth || !prof.gender) {
             setNeedsOnboarding(true);

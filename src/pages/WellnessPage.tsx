@@ -5,6 +5,7 @@ import { Heart, Utensils, Sparkles, Loader2, Smile, Zap, CheckCircle2, AlertTria
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
 import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
+import { RiveMoji } from "@/components/rive/RiveMoji";
 import { useToast } from "@/hooks/use-toast";
 import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
@@ -281,7 +282,7 @@ export default function WellnessPage() {
                         onClick={() => setMood(m.val)}
                         className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl transition-all duration-300 ${mood === m.val ? "bg-success text-success-foreground scale-110 shadow-lg shadow-success/20 -translate-y-1" : "bg-muted/30 grayscale opacity-40 hover:opacity-100 hover:grayscale-0"}`}
                       >
-                        <span className="text-2xl">{m.emoji}</span>
+                        <RiveMoji emoji={m.emoji} size={32} className="mb-1" />
                         <span className={`text-[8px] font-black uppercase tracking-tighter ${mood === m.val ? "opacity-100" : "opacity-0"}`}>{m.label}</span>
                       </button>
                     ))}
@@ -610,7 +611,7 @@ export default function WellnessPage() {
                       }`}
                     >
                       {log.type === "food" ? <Utensils size={20} /> : moodEmoji ? (
-                        <span className="text-xl leading-none">{moodEmoji}</span>
+                        <RiveMoji emoji={moodEmoji} size={24} />
                       ) : <Zap size={20} />}
                     </div>
                     <div className="flex-1 min-w-0">

@@ -76,20 +76,8 @@ const ONBOARDING_STEPS = [
 
 export default function WelcomePage() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [logoTaps, setLogoTaps] = useState(0);
   const navigate = useNavigate();
   const { setHasSeenWelcome } = useApp();
-
-  const handleLogoClick = () => {
-    const newTaps = logoTaps + 1;
-    if (newTaps >= 5) {
-      localStorage.setItem("dawa_dev_admin", "true");
-      alert("Developer Admin Mode Activated!");
-      navigate("/admin");
-    } else {
-      setLogoTaps(newTaps);
-    }
-  };
 
   const handleNext = () => {
     if (currentStep < ONBOARDING_STEPS.length - 1) {
@@ -126,8 +114,7 @@ export default function WelcomePage() {
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform"
-          onClick={handleLogoClick}
+          className="flex items-center gap-2"
         >
           <img src="/logo.png" alt="Dawa Lens Logo" className="w-8 h-8 object-contain" />
           <span className="font-black text-foreground tracking-tighter text-xl">Dawa Lens</span>

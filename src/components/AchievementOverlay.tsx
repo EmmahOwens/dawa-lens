@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, Heart, Trophy, CheckCircle2, Sparkles } from "@/lib/icons";
+import { RiveMoji } from "./rive/RiveMoji";
 import { useEffect, useState } from "react";
 import confetti from "canvas-confetti";
 
@@ -67,14 +68,14 @@ export default function AchievementOverlay({ open, onClose, title, subtitle, emo
               <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle,var(--primary)_0%,transparent_70%)]" />
             </motion.div>
 
-            <div className="relative z-10">
+            <div className="relative z-10 flex flex-col items-center">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring", bounce: 0.6 }}
-                className="text-7xl mb-8 filter drop-shadow-2xl"
+                className="mb-8 filter drop-shadow-2xl"
               >
-                {emoji}
+                <RiveMoji emoji={emoji} size={120} />
               </motion.div>
 
               <motion.h2

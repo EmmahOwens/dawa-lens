@@ -52,45 +52,7 @@ const FamilyHubPage = lazy(() => import("@/pages/FamilyHubPage"));
 const TravelCompanionPage = lazy(() => import("@/pages/TravelCompanionPage"));
 const WellnessPage = lazy(() => import("@/pages/WellnessPage"));
 const ReportPage = lazy(() => import("@/pages/ReportPage"));
-const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
-
 const queryClient = new QueryClient();
-
-// Guard for admin-only routes — requires isProfessional flag on UserProfile 
-function AdminRoute({ children }: { children: React.ReactNode }) { 
-  const { isLoggedIn, userProfile, isInitializing } = useApp(); 
-  
-  // Check for the persisted developer flag
-  const isDevAdmin = localStorage.getItem("dawa_dev_admin") === "true";
-
-  if (isDevAdmin) return <>{children}</>;
-  if (isInitializing) return <SplashScreen />; 
-  if (!isLoggedIn) return <Navigate to="/auth" replace />; 
-  if (!userProfile?.isProfessional) return <Navigate to="/" replace />; 
-  
-  return <>{children}</>; 
-} 
-
-// Global handler to catch ?admin=true on ANY page
-const AdminBypassHandler = () => {
-  const location = useLocation();
-  
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("admin") === "true") {
-      localStorage.setItem("dawa_dev_admin", "true");
-      console.log("Admin bypass enabled via URL");
-      window.location.href = "/admin"; // Force redirect to admin panel
-    }
-    if (params.get("admin") === "false") {
-      localStorage.removeItem("dawa_dev_admin");
-      console.log("Admin bypass disabled via URL");
-      window.location.href = "/";
-    }
-  }, [location]);
-
-  return null;
-};
 
 // A wrapper to enforce onboarding redirect
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -244,7 +206,6 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AppProvider>
-            <AdminBypassHandler />
             <AppContent />
             <NotificationHandler />
             <OfflineOverlay />
@@ -271,14 +232,6 @@ const App = () => {
                         </PageTransition>
                       </ProtectedRoute>
                     }
-                  />
-                  <Route 
-                    path="/admin" 
-                    element={ 
-                      <AdminRoute> 
-                        <AdminDashboard /> 
-                      </AdminRoute> 
-                    } 
                   />
                   <Route
                     path="/auth"

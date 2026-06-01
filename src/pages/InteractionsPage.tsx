@@ -9,6 +9,7 @@ import {
   Search, Plus, Trash2, Share2, X, Coffee, Wine, 
   GlassWater, Beef, Salad, Sparkles, Loader2, Brain 
 } from "@/lib/icons";
+import { RiveMoji } from "@/components/rive/RiveMoji";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
@@ -313,13 +314,12 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
       }
       reportText += `\n`;
 
-      reportText += `=== DETECTED INTERACTIONS ===\n`;
-      if (interactions.length === 0) {
-        reportText += `No drug-drug interactions detected.\n`;
-      } else {
+      if (interactions.length > 0) {
+        reportText += `Detected Interactions (${interactions.length}):\n`;
         interactions.forEach(inter => {
           const sev = inter.severity === "high" ? "🚨 SEVERE" : "⚠️ WARNING";
-          reportText += `[${sev}] ${inter.drug1} & ${inter.drug2}\nDescription: ${inter.description}\n\n`;
+          reportText += `[${sev}] ${inter.drug1} & ${inter.drug2}\n`;
+          reportText += `${inter.description}\n\n`;
         });
       }
     } else {
@@ -333,13 +333,12 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
       }
       reportText += `\n`;
 
-      reportText += `=== DETECTED INTERACTIONS ===\n`;
-      if (sandboxInteractions.length === 0) {
-        reportText += `No drug-drug interactions detected.\n`;
-      } else {
+      if (sandboxInteractions.length > 0) {
+        reportText += `Sandbox Interactions (${sandboxInteractions.length}):\n`;
         sandboxInteractions.forEach(inter => {
           const sev = inter.severity === "high" ? "🚨 SEVERE" : "⚠️ WARNING";
-          reportText += `[${sev}] ${inter.drug1} & ${inter.drug2}\nDescription: ${inter.description}\n\n`;
+          reportText += `[${sev}] ${inter.drug1} & ${inter.drug2}\n`;
+          reportText += `${inter.description}\n\n`;
         });
       }
     }

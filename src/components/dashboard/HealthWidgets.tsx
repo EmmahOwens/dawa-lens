@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Smile, Meh, Frown, Loader2 } from "@/lib/icons";
+import { RiveMoji } from "../rive/RiveMoji";
 import { WellnessLog } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
 import { useApp } from "@/contexts/AppContext";
@@ -11,11 +12,11 @@ interface HealthWidgetsProps {
 }
 
 const MOOD_OPTIONS = [
-  { value: 1, icon: Frown, color: "text-destructive", bg: "bg-destructive/10", label: "Low" },
-  { value: 2, icon: Frown, color: "text-orange-400", bg: "bg-orange-400/10", label: "Meh" },
-  { value: 3, icon: Meh, color: "text-warning", bg: "bg-warning/10", label: "Okay" },
-  { value: 4, icon: Smile, color: "text-emerald-400", bg: "bg-emerald-400/10", label: "Good" },
-  { value: 5, icon: Smile, color: "text-success", bg: "bg-success/10", label: "Great" },
+  { value: 1, icon: Frown, emoji: "😔", color: "text-destructive", bg: "bg-destructive/10", label: "Low" },
+  { value: 2, icon: Frown, emoji: "😕", color: "text-orange-400", bg: "bg-orange-400/10", label: "Meh" },
+  { value: 3, icon: Meh, emoji: "😐", color: "text-warning", bg: "bg-warning/10", label: "Okay" },
+  { value: 4, icon: Smile, emoji: "🙂", color: "text-emerald-400", bg: "bg-emerald-400/10", label: "Good" },
+  { value: 5, icon: Smile, emoji: "💎", color: "text-success", bg: "bg-success/10", label: "Great" },
 ];
 
 const getMoodLabel = (value: number) => {
@@ -84,12 +85,12 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
       <div className="bg-card border border-border/50 rounded-[2rem] p-5 shadow-sm flex flex-col">
         <div className="flex items-center justify-between mb-3">
           <div
-            className={`p-2 rounded-xl w-fit ${
+            className={`p-1 rounded-xl w-fit ${
               activeMoodCfg ? activeMoodCfg.bg : "bg-indigo-500/10 text-indigo-500"
             }`}
           >
             {activeMoodCfg ? (
-              <activeMoodCfg.icon size={18} className={activeMoodCfg.color} />
+              <RiveMoji emoji={activeMoodCfg.emoji} size={24} />
             ) : (
               <Smile size={18} className="text-indigo-500" />
             )}
@@ -130,7 +131,7 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
                 {isLoading ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <MoodIcon size={16} />
+                  <RiveMoji emoji={mood.emoji} size={20} />
                 )}
               </motion.button>
             );
