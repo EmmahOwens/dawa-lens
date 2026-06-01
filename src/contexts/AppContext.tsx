@@ -522,19 +522,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const prof = docSnap.data() as Record<string, unknown>;
+          
+          // Force isProfessional for admin account
+          const isAdmin = auth.currentUser?.email?.toLowerCase() === "admin@dawalens.web.app";
+          const isProfessional = isAdmin || (prof.isProfessional as boolean) || false;
+
           if (!prof.dateOfBirth || !prof.gender) {
             setNeedsOnboarding(true);
             setUserProfile({
               ...prof,
               id: currentUserId,
+              isProfessional
             } as unknown as UserProfile);
           } else {
             setNeedsOnboarding(false);
             setUserProfile({
               ...prof,
               id: currentUserId,
+              isProfessional
             } as unknown as UserProfile);
-            setIsProfessionalMode((prof.isProfessional as boolean) || false);
+            setIsProfessionalMode(isProfessional);
           }
         } else {
           setNeedsOnboarding(true);

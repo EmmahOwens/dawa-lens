@@ -52,8 +52,18 @@ const FamilyHubPage = lazy(() => import("@/pages/FamilyHubPage"));
 const TravelCompanionPage = lazy(() => import("@/pages/TravelCompanionPage"));
 const WellnessPage = lazy(() => import("@/pages/WellnessPage"));
 const ReportPage = lazy(() => import("@/pages/ReportPage"));
+const AdminDashboard = lazy(() => import("@/pages/admin/AdminDashboard"));
 
 const queryClient = new QueryClient();
+
+// Guard for admin-only routes — requires isProfessional flag on UserProfile 
+function AdminRoute({ children }: { children: React.ReactNode }) { 
+  const { isLoggedIn, userProfile, isInitializing } = useApp(); 
+  if (isInitializing) return <SplashScreen />; 
+  if (!isLoggedIn) return <Navigate to="/auth" replace />; 
+  if (!userProfile?.isProfessional) return <Navigate to="/" replace />; 
+  return <>{children}</>; 
+} 
 
 // A wrapper to enforce onboarding redirect
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -233,6 +243,14 @@ const App = () => {
                         </PageTransition>
                       </ProtectedRoute>
                     }
+                  />
+                  <Route 
+                    path="/admin" 
+                    element={ 
+                      <AdminRoute> 
+                        <AdminDashboard /> 
+                      </AdminRoute> 
+                    } 
                   />
                   <Route
                     path="/auth"

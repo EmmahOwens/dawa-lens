@@ -117,7 +117,13 @@ export default function AuthPage() {
         } else {
           setShowSuccess(true);
           loginUser(user.uid, user.email || "");
-          setTimeout(() => navigate("/"), 2000);
+          
+          // Special routing for admin account
+          if (email.toLowerCase() === "admin@dawalens.web.app") {
+            setTimeout(() => navigate("/admin"), 2000);
+          } else {
+            setTimeout(() => navigate("/"), 2000);
+          }
         }
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -129,7 +135,7 @@ export default function AuthPage() {
           name: name.trim(),
           email: email,
           createdAt: new Date().toISOString(),
-          isProfessional: false
+          isProfessional: email.toLowerCase() === "admin@dawalens.web.app"
         });
 
         await sendEmailVerification(user, {
