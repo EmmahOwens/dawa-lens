@@ -1,6 +1,8 @@
-import { useApp, Medicine, Reminder, DoseLog, WellnessLog, Patient } from "@/contexts/AppContext";
+import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { AIAction } from "@/services/aiAssistantService";
+import { RiveMoji } from "@/components/rive/RiveMoji";
+import React from "react";
 
 export function useAIActions() {
   const { 
@@ -19,7 +21,7 @@ export function useAIActions() {
         case "ADD_MEDICINE":
           await addMedicine(payload);
           toast({ 
-            title: "✅ Medicine added",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine added</span>,
             description: action.confirmMessage || `${payload.name} added to your cabinet.`,
           });
           break;
@@ -27,7 +29,7 @@ export function useAIActions() {
         case "UPDATE_MEDICINE":
           await updateMedicine(payload.id, payload);
           toast({
-            title: "✅ Medicine updated",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine updated</span>,
             description: action.confirmMessage || "Changes applied to your medicine.",
           });
           break;
@@ -35,7 +37,7 @@ export function useAIActions() {
         case "REMOVE_MEDICINE":
           await deleteMedicine(payload.id);
           toast({
-            title: "✅ Medicine removed",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine removed</span>,
             description: action.confirmMessage || "The medicine has been removed from your cabinet.",
           });
           break;
@@ -55,7 +57,7 @@ export function useAIActions() {
             patientName: payload.patientName || undefined
           });
           toast({
-            title: "✅ Reminder added",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Reminder added</span>,
             description: action.confirmMessage || `Scheduled ${payload.medicineName} for ${payload.time}.`,
           });
           break;
@@ -80,7 +82,7 @@ export function useAIActions() {
             enabled: payload.enabled !== undefined ? payload.enabled : true
           });
           toast({
-            title: "✅ Reminder updated",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Reminder updated</span>,
             description: action.confirmMessage || `Changes applied to ${payload.medicineName || "your reminder"}.`,
           });
           break;
@@ -105,7 +107,7 @@ export function useAIActions() {
 
           await deleteReminder(targetId);
           toast({
-            title: "✅ Reminder removed",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Reminder removed</span>,
             description: action.confirmMessage || "The reminder has been deleted.",
           });
           break;
@@ -121,7 +123,7 @@ export function useAIActions() {
             patientId: payload.patientId || undefined
           });
           toast({
-            title: "✅ Dose logged",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Dose logged</span>,
             description: action.confirmMessage || `Logged ${payload.medicineName} as ${payload.action || 'taken'}.`,
           });
           break;
@@ -133,7 +135,7 @@ export function useAIActions() {
             patientId: payload.patientId
           });
           toast({
-            title: "✅ Wellness logged",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Wellness logged</span>,
             description: action.confirmMessage || "Your health data has been recorded.",
           });
           break;
@@ -146,7 +148,7 @@ export function useAIActions() {
             relation: payload.relation
           });
           toast({
-            title: "✅ Family member added",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Family member added</span>,
             description: action.confirmMessage || `${payload.name} is now part of your health hub.`,
           });
           break;
@@ -154,7 +156,7 @@ export function useAIActions() {
         default:
           console.warn("Unknown AI action type:", action.type);
           toast({
-            title: "⚠️ Unsupported action",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="⚠️" size={16} /> Unsupported action</span>,
             description: "DawaGPT tried an unsupported action. Please try rephrasing your request.",
             variant: "destructive",
           });
@@ -162,7 +164,7 @@ export function useAIActions() {
     } catch (e) {
       console.error("AI Action Dispatch Error:", e);
       toast({
-        title: "❌ Action failed",
+        title: <span className="flex items-center gap-2"><RiveMoji emoji="❌" size={16} /> Action failed</span>,
         description: (e as Error).message || "Action failed. Please try again or do it manually.",
         variant: "destructive",
       });

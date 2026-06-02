@@ -119,7 +119,11 @@ export default function WellnessPage() {
       });
 
       toast({
-        title: aiReflection ? "Reflection Saved ✨" : "Journal Entry Saved",
+        title: aiReflection ? (
+          <span className="flex items-center gap-2">
+            Reflection Saved <RiveMoji emoji="✨" size={16} />
+          </span>
+        ) : "Journal Entry Saved",
         description: aiReflection
           ? "Your AI-powered reflection is ready."
           : "Your wellness data has been recorded.",
@@ -715,7 +719,7 @@ export default function WellnessPage() {
 
                       {/* Affirmation pill */}
                       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
-                        <span className="text-[10px]">✨</span>
+                        <span className="text-[10px]"><RiveMoji emoji="✨" size={12} /></span>
                         <span className="text-[10px] font-bold text-success italic">{logAiReflection.affirmation}</span>
                       </div>
 

@@ -5,6 +5,7 @@ import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus, Loader2 } from "
 import { useApp } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
 import { toDate } from "@/lib/utils";
+import { RiveMoji } from "../rive/RiveMoji";
 
 interface AIInsightCardProps {
   adherencePercent: number;
@@ -120,15 +121,27 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
         {(mood != null || energy != null) && (
           <div className="flex gap-2 mb-5 flex-wrap">
             {mood != null && (
-              <span className="text-[10px] font-bold uppercase tracking-widest bg-muted/50 border border-border/50 px-3 py-1.5 rounded-xl text-muted-foreground">
+              <span className="text-[10px] font-bold uppercase tracking-widest bg-muted/50 border border-border/50 px-3 py-1.5 rounded-xl text-muted-foreground flex items-center gap-1.5">
                 Mood{" "}
-                {mood >= 4 ? "😊 Positive" : mood <= 2 ? "😔 Low" : "😐 Neutral"}
+                {mood >= 4 ? (
+                  <span className="flex items-center gap-1"><RiveMoji emoji="😊" size={14} /> Positive</span>
+                ) : mood <= 2 ? (
+                  <span className="flex items-center gap-1"><RiveMoji emoji="😔" size={14} /> Low</span>
+                ) : (
+                  <span className="flex items-center gap-1"><RiveMoji emoji="😐" size={14} /> Neutral</span>
+                )}
               </span>
             )}
             {energy != null && (
-              <span className="text-[10px] font-bold uppercase tracking-widest bg-muted/50 border border-border/50 px-3 py-1.5 rounded-xl text-muted-foreground">
+              <span className="text-[10px] font-bold uppercase tracking-widest bg-muted/50 border border-border/50 px-3 py-1.5 rounded-xl text-muted-foreground flex items-center gap-1.5">
                 Energy{" "}
-                {energy >= 4 ? "⚡ High" : energy <= 2 ? "🪫 Low" : "🔋 Moderate"}
+                {energy >= 4 ? (
+                  <span className="flex items-center gap-1"><RiveMoji emoji="⚡" size={14} /> High</span>
+                ) : energy <= 2 ? (
+                  <span className="flex items-center gap-1"><RiveMoji emoji="🪫" size={14} /> Low</span>
+                ) : (
+                  <span className="flex items-center gap-1"><RiveMoji emoji="🔋" size={14} /> Moderate</span>
+                )}
               </span>
             )}
           </div>

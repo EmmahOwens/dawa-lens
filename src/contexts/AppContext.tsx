@@ -38,6 +38,7 @@ import { toast } from "../hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { storage } from "../lib/storage";
 import { toDate } from "../lib/utils";
+import { RiveMoji } from "../components/rive/RiveMoji";
 
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const CLOUD_CACHE_REMS_KEY = "dawa_cloud_cache_reminders";
@@ -1004,7 +1005,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           });
           const direction = allLate ? "late" : "early";
           toast({
-            title: "💡 Smart Schedule Suggestion",
+            title: (
+              <span className="flex items-center gap-2">
+                <RiveMoji emoji="💡" size={16} /> Smart Schedule Suggestion
+              </span>
+            ),
             description: reminder.patientName
               ? `${reminder.patientName} has taken ${
                   reminder.medicineName

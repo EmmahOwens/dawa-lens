@@ -1,10 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Brain, Shield, Sparkles, Loader2 } from "@/lib/icons";
 import { useState, useEffect } from "react";
+import { RiveMoji } from "./rive/RiveMoji";
 
 interface Step {
   id: number;
-  label: string;
+  label: string | React.ReactNode;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   color: string;
 }
@@ -18,9 +19,36 @@ export default function PremiumLoader({ onComplete, durationPerStep = 1200 }: Pr
   const [currentStep, setCurrentStep] = useState(0);
 
   const steps: Step[] = [
-    { id: 0, label: "🛰️ Calibrating Vision Systems...", icon: Search, color: "text-primary" },
-    { id: 1, label: "🧠 Extracting Molecular Markers...", icon: Brain, color: "text-purple-500" },
-    { id: 2, label: "🛡️ Cross-referencing Safety Registries...", icon: Shield, color: "text-success" },
+    { 
+      id: 0, 
+      label: (
+        <span className="flex items-center justify-center gap-2">
+          <RiveMoji emoji="🛰️" size={24} /> Calibrating Vision Systems...
+        </span>
+      ), 
+      icon: Search, 
+      color: "text-primary" 
+    },
+    { 
+      id: 1, 
+      label: (
+        <span className="flex items-center justify-center gap-2">
+          <RiveMoji emoji="🧠" size={24} /> Extracting Molecular Markers...
+        </span>
+      ), 
+      icon: Brain, 
+      color: "text-purple-500" 
+    },
+    { 
+      id: 2, 
+      label: (
+        <span className="flex items-center justify-center gap-2">
+          <RiveMoji emoji="🛡️" size={24} /> Cross-referencing Safety Registries...
+        </span>
+      ), 
+      icon: Shield, 
+      color: "text-success" 
+    },
   ];
 
   useEffect(() => {

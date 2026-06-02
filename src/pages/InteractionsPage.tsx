@@ -9,6 +9,7 @@ import {
   Search, Plus, Trash2, Share2, X, Coffee, Wine, 
   GlassWater, Beef, Salad, Sparkles, Loader2, Brain 
 } from "@/lib/icons";
+import { RiveMoji } from "@/components/rive/RiveMoji";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";

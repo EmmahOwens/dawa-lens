@@ -152,8 +152,8 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
 
         {/* Subtle AI hint while generating */}
         {savingMood !== null && (
-          <p className="text-[9px] text-muted-foreground/50 font-medium text-center mt-2 tracking-wider animate-pulse">
-            ✨ Generating your reflection…
+          <p className="text-[9px] text-muted-foreground/50 font-medium text-center mt-2 tracking-wider animate-pulse flex items-center justify-center gap-1">
+            <RiveMoji emoji="✨" size={10} /> Generating your reflection…
           </p>
         )}
       </div>

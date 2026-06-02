@@ -35,6 +35,7 @@ import { FeatureSlideshow } from "@/components/FeatureSlideshow";
 import { calculateRefillStatus, RefillStatus } from "@/services/refillService";
 import { calculateNextDose, NextDoseInfo } from "@/services/reminderService";
 import { StatusHero } from "@/components/StatusHero";
+import { RiveMoji } from "@/components/rive/RiveMoji";
 
 // New Dashboard Components
 
@@ -485,7 +486,9 @@ export default function Dashboard() {
       {/* 10. Disclaimer */}
       <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/5 p-5 mb-8">
         <p className="text-[10px] text-warning/80 leading-relaxed flex items-start gap-3 font-medium uppercase tracking-wide">
-          <span className="shrink-0 text-xs">⚠️</span>
+          <span className="shrink-0 text-xs">
+            <RiveMoji emoji="⚠️" size={16} />
+          </span>
           <span>{t("dashboard.disclaimer")}</span>
         </p>
       </div>

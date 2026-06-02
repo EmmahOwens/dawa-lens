@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Zap, Camera, Terminal, ShieldCheck } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
 
+import { RiveMoji } from "../rive/RiveMoji";
+
 export function ScanWidget() {
   const { t } = useTranslation();
 
@@ -42,7 +44,7 @@ export function ScanWidget() {
            <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-10 transition-opacity">
               <Zap size={40} className="text-primary" />
            </div>
-           <p className="flex items-center gap-2"><span className="text-success font-black">✔</span> <span className="opacity-80">CAMERA_FEED_READY</span></p>
+           <p className="flex items-center gap-2"><span className="text-success font-black"><RiveMoji emoji="✔" size={12} /></span> <span className="opacity-80">CAMERA_FEED_READY</span></p>
            <p className="flex items-center gap-2"><span className="text-primary animate-pulse font-black">●</span> <span className="text-primary/90 font-bold">ANALYZING_LIGHTING_V2.4</span></p>
            <p className="flex items-center gap-2 opacity-30"><span className="font-black">_</span> <span>WAITING_FOR_USER_CAPTURE_INPUT</span></p>
         </div>

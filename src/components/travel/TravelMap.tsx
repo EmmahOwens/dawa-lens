@@ -218,6 +218,8 @@ async function geocodeFallback(destination: string): Promise<[number, number] | 
   return null;
 }
 
+import { RiveMoji } from "../rive/RiveMoji";
+
 export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, userCoords, userCountry }) => {
   // Use real GPS coordinates when available, fall back to default
   const homeLngLat: [number, number] = userCoords ?? DEFAULT_HOME_LNG_LAT;
@@ -478,8 +480,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
 
       {/* Origin label */}
       <div className="absolute top-3 left-3 z-10 flex flex-col pointer-events-none">
-        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-foreground/50 bg-background/70 backdrop-blur-sm px-2 py-0.5 rounded-full">
-          📍 Current Location
+        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-foreground/50 bg-background/70 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1">
+          <RiveMoji emoji="📍" size={12} /> Current Location
         </span>
       </div>
 
@@ -493,8 +495,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
             exit={{ opacity: 0, y: 6 }}
             className="absolute bottom-3 right-3 z-10 flex flex-col items-end pointer-events-none"
           >
-            <span className="text-xs font-black text-white bg-primary px-3 py-1 rounded-full shadow-lg shadow-primary/30">
-              ✈️ {destination}
+            <span className="text-xs font-black text-white bg-primary px-3 py-1 rounded-full shadow-lg shadow-primary/30 flex items-center gap-1">
+              <RiveMoji emoji="✈️" size={14} /> {destination}
             </span>
           </motion.div>
         )}

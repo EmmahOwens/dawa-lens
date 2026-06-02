@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Clock, CheckCircle2, ChevronRight } from "@/lib/icons";
 import { NextDoseInfo } from "@/services/reminderService";
+import { RiveMoji } from "./rive/RiveMoji";
 
 interface StatusHeroProps {
   nextDose: NextDoseInfo | null;
@@ -34,7 +35,9 @@ export function StatusHero({ nextDose, takenToday, totalToday, onNextDoseClick, 
             </div>
             {progress === 100 && totalToday > 0 && (
               <div className="flex items-center gap-1.5 rounded-full bg-success/20 px-3 py-1 backdrop-blur-md border border-white/10">
-                <span className="text-[10px] font-bold uppercase tracking-wider">Perfect Day! 🏆</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  Perfect Day! <RiveMoji emoji="🏆" size={14} />
+                </span>
               </div>
             )}
           </div>

@@ -10,8 +10,8 @@ interface RiveMojiProps {
   active?: boolean;
 }
 
-// Public Rive asset URL for emojis
-const EMOJI_RIVE_URL = "https://public.rive.app/community/runtime-files/2191-4327-sticker-pack.riv";
+// Local Rive asset for emojis
+const EMOJI_RIVE_URL = "/assets/rive/animated-emoji-pack.riv";
 
 /**
  * RiveMoji
@@ -31,6 +31,7 @@ export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48,
       case "😐":
         return "Neutral";
       case "🙂":
+      case "😊":
         return "Smile";
       case "💎":
       case "Great":
@@ -77,6 +78,28 @@ export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48,
         return "Camera";
       case "📊":
         return "Analytics";
+      case "🛡️":
+        return "Shield";
+      case "✨":
+        return "Sparkles";
+      case "💡":
+        return "Idea";
+      case "🪫":
+        return "BatteryLow";
+      case "🔋":
+        return "BatteryFull";
+      case "🛰️":
+        return "Satellite";
+      case "🧠":
+        return "Brain";
+      case "❌":
+        return "Error";
+      case "📍":
+        return "MapPin";
+      case "✈️":
+        return "Plane";
+      case "✔":
+        return "Check";
       default:
         return "Smile";
     }
