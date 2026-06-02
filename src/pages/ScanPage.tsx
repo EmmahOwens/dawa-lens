@@ -10,7 +10,6 @@ import {
   Pill,
   FileText,
 } from "@/lib/icons";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import {
   ARInstructionOverlay,
@@ -24,7 +23,6 @@ import {
 } from "@capacitor/camera";
 import PermissionRequest from "@/components/PermissionRequest";
 import { NativeCamera } from "@/plugins/nativeCamera";
-import PageLoader from "@/components/PageLoader";
 
 export type ScanMode = "pill" | "text";
 
@@ -42,13 +40,13 @@ export default function ScanPage() {
 
   const [scanMode, setScanMode] = useState<ScanMode>("pill");
 
+  const [isNativeScanRunning, setIsNativeScanRunning] = useState(false);
   const [showAR, setShowAR] = useState(false);
   const [detectedInstructions, setDetectedInstructions] = useState<
     ARInstructionType[]
   >([]);
   const [flashlightOn, setFlashlightOn] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [permissionChecked, setPermissionChecked] = useState(false);
   const [showWebScanner, setShowWebScanner] = useState(
     !Capacitor.isNativePlatform()
   );
@@ -104,6 +102,7 @@ export default function ScanPage() {
 
   const startNativeScan = useCallback(async () => {
     try {
+      setIsNativeScanRunning(true);
       const result = await NativeCamera.startScan({ mode: scanMode });
       if (!result.cancelled && result.imageData) {
         navigate("/results", {
@@ -119,6 +118,8 @@ export default function ScanPage() {
       );
       setShowWebScanner(true);
       startCamera();
+    } finally {
+      setIsNativeScanRunning(false);
     }
   }, [scanMode, navigate, startCamera]);
 
@@ -140,7 +141,6 @@ export default function ScanPage() {
       } else {
         startCamera();
       }
-      setPermissionChecked(true);
     };
     checkPermission();
 
@@ -174,6 +174,7 @@ export default function ScanPage() {
   const capture = async () => {
     if (Capacitor.isNativePlatform() && !showWebScanner) {
       try {
+        setIsNativeScanRunning(true);
         const result = await NativeCamera.startScan({ mode: scanMode });
         if (!result.cancelled && result.imageData) {
           navigate("/results", {
@@ -187,6 +188,8 @@ export default function ScanPage() {
         );
         setShowWebScanner(true);
         startCamera();
+      } finally {
+        setIsNativeScanRunning(false);
       }
       return;
     }
@@ -247,10 +250,6 @@ export default function ScanPage() {
       handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
     }
   };
-
-  if (!showWebScanner && !showPermissionModal) {
-    return <PageLoader label="Opening Camera..." />;
-  }
 
   return (
     <div className="relative min-h-screen bg-foreground flex flex-col">
@@ -363,6 +362,19 @@ export default function ScanPage() {
         )}
 
         {showWebScanner && !streaming && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-50">
+            <motion.div
+              animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="w-16 h-16 rounded-full border-4 border-primary/30 border-t-primary"
+            />
+            <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mt-6">
+              {t("scan.camera_loading")}
+            </p>
+          </div>
+        )}
+
+        {isNative && isNativeScanRunning && !showWebScanner && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-50">
             <motion.div
               animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
