@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -12,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { formatDistanceToNow } from "date-fns";
 import pkg from "../../package.json";
+import ConfirmationDialog from "@/components/ConfirmationDialog";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ export default function SettingsPage() {
   } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
   const handleStorageModeChange = async (mode: "local" | "cloud") => {
     if (mode === "cloud" && !isLoggedIn) {
@@ -394,17 +397,28 @@ export default function SettingsPage() {
           <Button
             variant="destructive"
             className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-destructive/10"
-            onClick={async () => {
-              if (window.confirm(t("settings.confirm_delete"))) {
-                await clearAllData();
-                toast({ title: t("settings.data_cleared"), variant: "destructive" });
-              }
-            }}
+            onClick={() => setClearDialogOpen(true)}
           >
             {t("settings.clear_data")}
           </Button>
         </motion.div>
       </motion.div>
+
+      {/* Clear All Data Confirmation Dialog */}
+      <ConfirmationDialog
+        open={clearDialogOpen}
+        onOpenChange={setClearDialogOpen}
+        title="Delete All Data"
+        description="All your medications, dose logs, and profile information will be permanently deleted from this device. This cannot be undone."
+        variant="critical"
+        dangerBadgeLabel="Permanent & Irreversible"
+        confirmLabel="Yes, Delete Everything"
+        itemList={["All medications", "All dose logs", "Profile information"]}
+        onConfirm={async () => {
+          await clearAllData();
+          toast({ title: t("settings.data_cleared"), variant: "destructive" });
+        }}
+      />
 
 
 

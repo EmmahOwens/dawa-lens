@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { useState, useMemo } from "react";
+import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { toDate } from "@/lib/utils";
 
 // Helper for relative date
@@ -43,6 +44,12 @@ export default function HistoryPage() {
   const { logDose, deleteDoseLog } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    logId: string;
+    medicineName: string;
+  }>({ open: false, logId: "", medicineName: "" });
 
   const [statusFilter, setStatusFilter] = useState<
     "All" | "taken" | "skipped" | "snoozed"
@@ -102,22 +109,13 @@ export default function HistoryPage() {
 
   const days = Object.keys(grouped);
 
-  const handleDelete = async (logId: string) => {
-    if (confirm("Are you sure you want to delete this log?")) {
-      try {
-        await deleteDoseLog(logId);
-        toast({
-          title: "Log Deleted",
-          description: "The dose log has been removed from your history.",
-        });
-      } catch (err) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to delete log.",
-        });
-      }
-    }
+  const handleDelete = (logId: string) => {
+    const log = scopedDoseLogs.find((l) => l.id === logId);
+    setDeleteDialog({
+      open: true,
+      logId,
+      medicineName: log?.medicineName ?? "",
+    });
   };
 
   const exportCSV = () => {
@@ -485,6 +483,32 @@ export default function HistoryPage() {
           )}
         </div>
       )}
+      <ConfirmationDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setDeleteDialog({ open: false, logId: "", medicineName: "" });
+        }}
+        title="Delete Record"
+        description={`Are you sure you want to delete the dose record for ${deleteDialog.medicineName}?`}
+        onConfirm={async () => {
+          try {
+            await deleteDoseLog(deleteDialog.logId);
+            toast({
+              title: "Log Deleted",
+              description: "The dose log has been removed from your history.",
+            });
+          } catch (err) {
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Failed to delete log.",
+            });
+          }
+        }}
+        dangerBadgeLabel="Irreversible"
+        confirmLabel="Delete Record"
+        variant="default"
+      />
     </div>
   );
 }

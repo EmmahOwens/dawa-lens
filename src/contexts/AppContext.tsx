@@ -696,8 +696,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const docRef = await addDoc(collection(db, "medicines"), medData);
       newMed = { ...medData, id: docRef.id } as Medicine;
-      // Optimistic update
-      setMedicines((p) => [...p, newMed]);
     }
 
     // Fetch RxCUI in background
@@ -732,10 +730,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const docRef = doc(db, "medicines", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
-      // Optimistic update
-      setMedicines((p) =>
-        p.map((m) => (m.id === id ? { ...m, ...updates } : m))
-      );
     }
   };
 
@@ -746,8 +740,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const docRef = doc(db, "medicines", id);
       await deleteDoc(docRef);
-      // Optimistic update
-      setMedicines((p) => p.filter((m) => m.id !== id));
     }
   };
 
@@ -775,8 +767,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const docRef = await addDoc(collection(db, "reminders"), remData);
       newReminder = { ...remData, id: docRef.id } as Reminder;
-      // Optimistic update
-      setReminders((p) => [...p, newReminder]);
     }
   };
 
@@ -789,10 +779,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const docRef = doc(db, "reminders", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
-      // Optimistic update
-      setReminders((p) =>
-        p.map((r) => (r.id === id ? { ...r, ...updates } : r))
-      );
     }
   };
 
@@ -803,8 +789,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const docRef = doc(db, "reminders", id);
       await deleteDoc(docRef);
-      // Optimistic update
-      setReminders((p) => p.filter((r) => r.id !== id));
     }
   };
 
@@ -834,8 +818,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       const docRef = await addDoc(collection(db, "doseLogs"), logData);
       newLog = { ...logData, id: docRef.id } as DoseLog;
-      // Optimistic update
-      setDoseLogs((p) => [...p, newLog]);
     }
 
     // 1. Update Medicine Inventory if taken
@@ -1083,7 +1065,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         timestamp: new Date().toISOString(),
       });
       await addDoc(collection(db, "wellnessLogs"), logData);
-      // onSnapshot listener will auto-update state
     }
   };
 

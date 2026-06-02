@@ -538,6 +538,13 @@ export const scheduleReminders = async (
       await LocalNotifications.cancel({ notifications: pending.notifications });
     }
 
+    // Also cancel all native alarms to ensure ghost notifications are removed
+    try {
+      await NativeAlarm.cancelAllAlarms();
+    } catch (alarmErr) {
+      console.warn("[reminderService] Failed to cancel native alarms:", alarmErr);
+    }
+
     const notifications: LocalNotificationSchema[] = [];
     const alarmNotifications: AlarmNotification[] = [];
     const now = new Date();
