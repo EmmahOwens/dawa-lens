@@ -1,286 +1,364 @@
 /**
  * SplashScreen.tsx
  *
- * Deepin OS 25 – inspired boot animation for Dawa Lens.
+ * Faithful recreation of the Dawa Lens splash screen concept.
  *
- * Animation timeline
- * ──────────────────
- *  0 ms   : ambient glow & sparkles fade in
- *  300 ms : orbital dot rings appear; sonar pings begin
- *  400 ms : logo springs into view
- *  1 700 ms: "Dawa · Lens" assembles letter-by-letter (blur → sharp)
- *  2 300 ms: loading wave dots appear
- *  2 700 ms: tagline fades in
+ * Layout (top → bottom, vertically centered):
+ *   • Full-bleed background with scattered blurred pill decorations
+ *   • Central orbital: 3 concentric rings + glassmorphism lens bowl
+ *     with 8 colorful pills arranged around it, gold pill at center
+ *   • "Dawa Lens" brand text  (dark/light responsive)
+ *   • "See Medicine. Live Better." tagline
+ *   • Spinner + "Loading..." at the bottom
+ *
+ * Animation: only the bottom loading spinner animates.
+ * Everything else is static.
  */
 
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence, Variants } from "framer-motion";
+import React from "react";
+import { useTheme } from "next-themes";
 
-// ─── Brand tokens ────────────────────────────────────────────────────────────
-const TEAL_BRIGHT = "#22c9cc";
-const TEAL = "#1a9ca0";
-const BG = "#050505";
-
-const SPARKLES: { x: number; y: number; delay: number; dur: number }[] = [];
-
-// ─── OrbitalDot ──────────────────────────────────────────────────────────────
-// A square container (width = diameter) is centered on the logo and rotates.
-// The single dot sits at the top-center of that container, so it orbits
-// the center like a planet.  Since the dot is circular, no counter-rotation
-// is needed.
-interface OrbitalDotProps {
-  radius: number;
-  startAngle: number; // initial offset in degrees
-  duration: number; // seconds per revolution
-  dotSize: number;
+// ─── Pill shape helper ────────────────────────────────────────────────────────
+interface PillProps {
+  width: number;
+  height: number;
   color: string;
-  glowColor: string;
-  opacity?: number;
-  clockwise?: boolean;
-  delay?: number;
+  colorB?: string; // second half color (split-capsule style)
+  rotate?: number;
+  style?: React.CSSProperties;
 }
 
-const OrbitalDot: React.FC<OrbitalDotProps> = ({
-  radius,
-  startAngle,
-  duration,
-  dotSize,
+const Pill: React.FC<PillProps> = ({
+  width,
+  height,
   color,
-  glowColor,
-  opacity = 1,
-  clockwise = true,
-  delay = 0,
-}) => (
-  <motion.div
-    style={{
-      position: "absolute",
-      width: radius * 2,
-      height: radius * 2,
-      top: "50%",
-      left: "50%",
-      x: -radius,
-      y: -radius,
-      rotate: startAngle,
-      pointerEvents: "none",
-    }}
-    animate={{ rotate: clockwise ? startAngle + 360 : startAngle - 360 }}
-    transition={{ duration, repeat: Infinity, ease: "linear", delay }}
-  >
-    {/* Dot placed at the very top-center of the rotating container */}
+  colorB,
+  rotate = 0,
+  style,
+}) => {
+  const r = height / 2;
+  return (
     <div
       style={{
-        position: "absolute",
-        top: -dotSize / 2,
-        left: "50%",
-        marginLeft: -dotSize / 2,
-        width: dotSize,
-        height: dotSize,
-        borderRadius: "50%",
-        background: color,
-        opacity,
-        boxShadow: `0 0 ${dotSize * 2.5}px ${dotSize * 0.8}px ${glowColor}`,
+        width,
+        height,
+        borderRadius: r,
+        transform: `rotate(${rotate}deg)`,
+        overflow: "hidden",
+        flexShrink: 0,
+        boxShadow: `0 4px 16px rgba(0,0,0,0.22), inset 0 1px 2px rgba(255,255,255,0.35)`,
+        ...style,
       }}
-    />
-  </motion.div>
-);
+    >
+      {colorB ? (
+        // Split capsule: left half + right half
+        <div style={{ display: "flex", width: "100%", height: "100%" }}>
+          <div style={{ width: "50%", background: color }} />
+          <div style={{ width: "50%", background: colorB }} />
+        </div>
+      ) : (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
-// ─── SonarRing ───────────────────────────────────────────────────────────────
-// A ring that expands outward from the logo like a sonar ping, then fades.
-const SonarRing: React.FC<{ delay: number; baseSize: number }> = ({
-  delay,
-  baseSize,
-}) => (
-  <motion.div
-    initial={{ scale: 0.7, opacity: 0 }}
-    animate={{ scale: [0.7, 2.6], opacity: [0.65, 0] }}
-    transition={{
-      duration: 2.4,
-      repeat: Infinity,
-      repeatDelay: 0.8,
-      delay,
-      ease: "easeOut",
-    }}
+// ─── Round tablet helper ──────────────────────────────────────────────────────
+interface TabletProps {
+  size: number;
+  color: string;
+  style?: React.CSSProperties;
+}
+
+const Tablet: React.FC<TabletProps> = ({ size, color, style }) => (
+  <div
     style={{
-      position: "absolute",
-      width: baseSize,
-      height: baseSize,
+      width: size,
+      height: size,
       borderRadius: "50%",
-      border: `1px solid ${TEAL_BRIGHT}`,
-      top: "50%",
-      left: "50%",
-      x: -baseSize / 2,
-      y: -baseSize / 2,
-      pointerEvents: "none",
+      background: `radial-gradient(circle at 38% 38%, ${color}ee, ${color}99)`,
+      boxShadow: `0 4px 14px rgba(0,0,0,0.22), inset 0 1px 2px rgba(255,255,255,0.4)`,
+      flexShrink: 0,
+      ...style,
     }}
   />
 );
 
-// ─── LoadingDots ─────────────────────────────────────────────────────────────
-const LoadingDots: React.FC = () => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ duration: 0.5 }}
-    style={{
-      display: "flex",
-      gap: 10,
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    {[0, 1, 2, 3].map((i) => (
-      <motion.div
-        key={i}
+// ─── Spinner (the only animated element) ─────────────────────────────────────
+const Spinner: React.FC<{ dark: boolean }> = ({ dark }) => {
+  const color = dark ? "rgba(255,255,255,0.55)" : "rgba(80,80,100,0.55)";
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      {/* Ring spinner matching the concept screenshot */}
+      <div
         style={{
-          width: 4,
-          height: 4,
+          width: 22,
+          height: 22,
           borderRadius: "50%",
-          background: TEAL,
-          boxShadow: `0 0 6px 2px ${TEAL}55`,
-        }}
-        animate={{
-          y: [0, -8, 0],
-          opacity: [0.25, 1, 0.25],
-          scale: [0.75, 1.4, 0.75],
-        }}
-        transition={{
-          duration: 1.4,
-          repeat: Infinity,
-          ease: "easeInOut",
-          delay: i * 0.2,
+          border: `2.5px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(100,100,120,0.18)"}`,
+          borderTopColor: dark ? "rgba(255,255,255,0.7)" : "rgba(80,80,110,0.75)",
+          animation: "dawa-spin 0.85s linear infinite",
         }}
       />
-    ))}
-  </motion.div>
-);
+      <span
+        style={{
+          fontSize: "0.72rem",
+          color,
+          letterSpacing: "0.02em",
+          fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+        }}
+      >
+        Loading...
+      </span>
+
+      <style>{`
+        @keyframes dawa-spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// ─── The central orbital ──────────────────────────────────────────────────────
+// Three concentric SVG rings + glass bowl + 8 pills positioned around them
+// + gold pill in center.  All sizes are in px; the wrapper is 260×260.
+const OrbitalCenter: React.FC<{ dark: boolean }> = ({ dark }) => {
+  const ringColor = dark ? "rgba(255,255,255,0.18)" : "rgba(100,110,130,0.22)";
+  const bowlBg = dark
+    ? "radial-gradient(circle at 44% 38%, rgba(60,65,80,0.95) 0%, rgba(30,32,40,0.98) 60%, rgba(15,15,20,1) 100%)"
+    : "radial-gradient(circle at 44% 38%, rgba(230,235,245,0.95) 0%, rgba(210,215,230,0.90) 60%, rgba(195,200,218,0.88) 100%)";
+  const bowlBorder = dark
+    ? "1.5px solid rgba(255,255,255,0.12)"
+    : "1.5px solid rgba(180,185,200,0.6)";
+  const size = 260;
+  const cx = size / 2;
+
+  // Ring radii (outer → inner)
+  const R3 = 118; // outermost
+  const R2 = 96;
+  const R1 = 74;
+  const bowlR = 52; // glass bowl radius
+
+  // 8 pills placed on R2 at evenly-spaced angles (top = -90°)
+  // Arrangement matching the concept (clockwise from top):
+  // pink, teal, yellow-orange, orange tablet, blue-white, white-red, red-white, white
+  const pillsOnRing: {
+    angle: number;
+    type: "pill" | "tablet";
+    color: string;
+    colorB?: string;
+    w: number;
+    h: number;
+    rot: number;
+  }[] = [
+    { angle: -90, type: "pill", color: "#e8527a", w: 20, h: 10, rot: 0 },         // top: pink
+    { angle: -45, type: "pill", color: "#28bfbf", w: 20, h: 10, rot: 45 },        // top-right: teal
+    { angle: 0,   type: "pill", color: "#e8a22a", w: 20, h: 10, rot: 90 },        // right: orange-yellow
+    { angle: 45,  type: "tablet", color: "#f07540", w: 12, h: 12, rot: 0 },       // bottom-right: orange tablet
+    { angle: 90,  type: "pill", color: "#fff", colorB: "#2979e8", w: 20, h: 10, rot: 0 },  // bottom: blue-white
+    { angle: 135, type: "pill", color: "#fff", colorB: "#e03030", w: 20, h: 10, rot: -45 },// bottom-left: white-red
+    { angle: 180, type: "pill", color: "#e03030", colorB: "#fff", w: 20, h: 10, rot: 90 }, // left: red-white
+    { angle: 225, type: "pill", color: "#fff", w: 18, h: 9, rot: 135 },           // top-left: white
+  ];
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: size,
+        height: size,
+        flexShrink: 0,
+      }}
+    >
+      {/* SVG concentric rings */}
+      <svg
+        width={size}
+        height={size}
+        style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+      >
+        <circle cx={cx} cy={cx} r={R3} fill="none" stroke={ringColor} strokeWidth="1" />
+        <circle cx={cx} cy={cx} r={R2} fill="none" stroke={ringColor} strokeWidth="1" />
+        <circle cx={cx} cy={cx} r={R1} fill="none" stroke={ringColor} strokeWidth="1" />
+      </svg>
+
+      {/* Glass bowl */}
+      <div
+        style={{
+          position: "absolute",
+          top: cx - bowlR,
+          left: cx - bowlR,
+          width: bowlR * 2,
+          height: bowlR * 2,
+          borderRadius: "50%",
+          background: bowlBg,
+          border: bowlBorder,
+          boxShadow: dark
+            ? "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.08)"
+            : "0 8px 32px rgba(100,110,140,0.25), inset 0 1px 3px rgba(255,255,255,0.6)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+        }}
+      />
+
+      {/* Gold pill in center */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%) rotate(-15deg)",
+          zIndex: 10,
+        }}
+      >
+        <div
+          style={{
+            width: 44,
+            height: 20,
+            borderRadius: 10,
+            background: "linear-gradient(135deg, #f0c84a 0%, #d4a017 60%, #c49012 100%)",
+            boxShadow: "0 4px 18px rgba(212,160,23,0.55), inset 0 1px 3px rgba(255,255,200,0.5)",
+          }}
+        />
+      </div>
+
+      {/* Pills arranged around ring R2 */}
+      {pillsOnRing.map((p, i) => {
+        const rad = (p.angle * Math.PI) / 180;
+        const px = cx + R2 * Math.cos(rad);
+        const py = cx + R2 * Math.sin(rad);
+
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: px,
+              top: py,
+              transform: "translate(-50%, -50%)",
+              zIndex: 5,
+            }}
+          >
+            {p.type === "tablet" ? (
+              <Tablet size={p.w} color={p.color} />
+            ) : (
+              <Pill
+                width={p.w}
+                height={p.h}
+                color={p.color}
+                colorB={p.colorB}
+                rotate={p.rot}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ─── Scattered background pills ───────────────────────────────────────────────
+// Mimics the blurred scattered pills in the concept images.
+// We render them at fixed positions with blur applied, so they feel
+// like out-of-focus medicine scattered on a surface.
+const BackgroundPills: React.FC<{ dark: boolean }> = ({ dark }) => {
+  // [x%, y%, rotate, blur, opacity, width, height, color, colorB?]
+  const pills: [number, number, number, number, number, number, number, string, string?][] = [
+    [5,  4,  -30, 6, 0.55, 40, 18, "#e8e0d0"],
+    [80, 3,  20,  5, 0.50, 36, 15, "#ccc9c0"],
+    [92, 8,  -10, 4, 0.45, 28, 12, "#e07070"],
+    [2,  20, 45,  7, 0.40, 44, 19, "#4dc0e0"],
+    [88, 22, -50, 6, 0.50, 38, 16, "#e8a030"],
+    [7,  75, -15, 5, 0.55, 46, 20, "#4dc0e0"],
+    [85, 70, 30,  6, 0.45, 42, 18, "#d4a017"],
+    [15, 90, 10,  4, 0.50, 36, 15, "#e07070", "#fff"],
+    [70, 88, -25, 5, 0.48, 40, 17, "#888", "#aaa"],
+    [50, 6,  60,  7, 0.35, 30, 13, "#d4c0b0"],
+    [95, 45, -40, 8, 0.30, 38, 16, "#e8c0c0"],
+    [3,  50, 20,  6, 0.35, 32, 14, "#b0c0d8"],
+    [60, 92, 15,  5, 0.42, 38, 16, "#e8a020"],
+    [25, 5,  -5,  4, 0.30, 24, 11, "#d0d0c0"],
+  ];
+
+  return (
+    <>
+      {pills.map(([x, y, rot, blur, opacity, w, h, c, cB], i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: `${x}%`,
+            top: `${y}%`,
+            transform: `rotate(${rot}deg)`,
+            filter: `blur(${blur}px)`,
+            opacity: dark ? opacity * 0.75 : opacity,
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        >
+          {h === w ? (
+            <Tablet size={w} color={c} />
+          ) : (
+            <Pill width={w} height={h} color={c} colorB={cB} />
+          )}
+        </div>
+      ))}
+    </>
+  );
+};
 
 // ─── SplashScreen ────────────────────────────────────────────────────────────
 const SplashScreen: React.FC = () => {
-  const [showOrbits, setShowOrbits] = useState(false);
-  const [showText, setShowText] = useState(false);
-  const [showTagline, setShowTagline] = useState(false);
-  const [showLoader, setShowLoader] = useState(false);
+  const { resolvedTheme } = useTheme();
 
-  useEffect(() => {
-    const t0 = setTimeout(() => setShowOrbits(true), 100);
-    const t1 = setTimeout(() => setShowText(true), 400);
-    const t2 = setTimeout(() => setShowLoader(true), 600);
-    const t3 = setTimeout(() => setShowTagline(true), 800);
-    return () => {
-      clearTimeout(t0);
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
-  }, []);
+  // resolvedTheme may be undefined on first render before next-themes hydrates.
+  // Fall back to the OS colour-scheme preference so the screen never flashes
+  // the wrong theme.
+  const prefersDark =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const dark = resolvedTheme ? resolvedTheme === "dark" : prefersDark;
 
-  // Letter-reveal variants
-  const letterV: Variants = {
-    hidden: { opacity: 0, y: 6 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] },
-    },
-  };
-  const dawaContainerV: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.07, delayChildren: 0 },
-    },
-  };
-  const lensContainerV: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.05, delayChildren: 0.15 },
-    },
-  };
-
-  const titleStyle: React.CSSProperties = {
-    fontFamily:
-      '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif',
-    fontSize: "clamp(1.9rem, 7.5vw, 2.55rem)",
-    fontWeight: 400,
-    color: "#ffffff",
-    letterSpacing: "0.05em",
-    lineHeight: 1,
-  };
-
-  // Orbital ring dot angle
-  const RING1_ANGLES = [0, 120, 240]; // inner  – 3 dots CW
+  const bg = dark ? "#111114" : "#e8eaf0";
+  const titleDawa = dark ? "#ffffff" : "#1a2540";
+  const titleLens = "#e05c30"; // coral-orange in both modes (matches concept)
+  const tagline = dark ? "rgba(200,205,215,0.65)" : "rgba(60,65,85,0.62)";
 
   return (
     <div
       className="fixed inset-0 z-[9999] flex flex-col items-center justify-center overflow-hidden"
-      style={{ background: BG }}
+      style={{ background: bg }}
     >
-      {/* ── Ambient radial glow ─────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 3 }}
+      {/* Scattered background pills */}
+      <BackgroundPills dark={dark} />
+
+      {/* Subtle radial vignette to blend edges */}
+      <div
         style={{
           position: "absolute",
           inset: 0,
-          background: `radial-gradient(ellipse 72% 58% at 50% 52%,
-            rgba(26,156,160,0.10) 0%,
-            rgba(26,156,160,0.03) 42%,
-            transparent 68%)`,
+          background: dark
+            ? "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(0,0,0,0.55) 100%)"
+            : "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(180,185,200,0.45) 100%)",
           pointerEvents: "none",
+          zIndex: 2,
         }}
       />
 
-      {/* Ambient static glow */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.4 }}
-        transition={{
-          duration: 3,
-          ease: "easeInOut",
-          delay: 0.5,
-        }}
-        style={{
-          position: "absolute",
-          width: "50vmax",
-          height: "50vmax",
-          borderRadius: "50%",
-          background: `radial-gradient(circle, rgba(26,156,160,0.06) 0%, transparent 70%)`,
-          filter: "blur(48px)",
-          pointerEvents: "none",
-          willChange: "opacity",
-        }}
-      />
-
-      {/* ── Background sparkles ─────────────────────────────────────── */}
-      {SPARKLES.map((s, i) => (
-        <motion.div
-          key={`sp-${i}`}
-          initial={{ opacity: 0, scale: 0 }}
-          animate={{ opacity: [0, 0.5, 0], scale: [0, 1, 0] }}
-          transition={{
-            duration: s.dur,
-            delay: s.delay,
-            repeat: Infinity,
-            repeatDelay: s.dur * 0.6 + s.delay * 0.4,
-            ease: "easeInOut",
-          }}
-          style={{
-            position: "absolute",
-            width: 2,
-            height: 2,
-            borderRadius: "50%",
-            background: TEAL_BRIGHT,
-            left: `${s.x}%`,
-            top: `${s.y}%`,
-            boxShadow: `0 0 5px 2px rgba(34,201,204,0.48)`,
-            pointerEvents: "none",
-          }}
-        />
-      ))}
-
-      {/* ── Main content ────────────────────────────────────────────── */}
+      {/* Main content stack */}
       <div
         style={{
           position: "relative",
@@ -288,216 +366,65 @@ const SplashScreen: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          gap: 0,
         }}
       >
-        {/* ╔═══════════════════════════════════════╗
-            ║   Orbital arena + Logo                ║
-            ╚═══════════════════════════════════════╝ */}
+        {/* Central orbital */}
+        <OrbitalCenter dark={dark} />
+
+        {/* Brand name */}
         <div
           style={{
-            position: "relative",
-            width: 220,
-            height: 220,
+            marginTop: 28,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            alignItems: "baseline",
+            gap: "0.22em",
           }}
         >
-          {/* Sonar ring – single pulse */}
-          <SonarRing delay={1.0} baseSize={90} />
-
-          {/* Faint orbit guide circle */}
-          {showOrbits && (
-            <motion.div
-              key="guide-inner"
-              initial={{ opacity: 0, scale: 0.3 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.9, ease: "easeOut" }}
-              style={{
-                position: "absolute",
-                width: 58 * 2,
-                height: 58 * 2,
-                borderRadius: "50%",
-                border: `1px solid rgba(26,156,160,0.15)`,
-                top: "50%",
-                left: "50%",
-                x: -58,
-                y: -58,
-                pointerEvents: "none",
-              }}
-            />
-          )}
-
-          {/* Inner ring – 3 dots, clockwise, 7 s */}
-          {showOrbits &&
-            RING1_ANGLES.map((angle, i) => (
-              <OrbitalDot
-                key={`r1-${i}`}
-                radius={58}
-                startAngle={angle}
-                duration={7}
-                dotSize={3.5}
-                color={TEAL_BRIGHT}
-                glowColor="rgba(34,201,204,0.75)"
-                opacity={0.88}
-                clockwise
-                delay={i * 0.06}
-              />
-            ))}
-
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{
-              duration: 0.4,
-              delay: 0.1,
-              ease: "easeOut",
-            }}
+          <span
             style={{
-              position: "absolute",
-              zIndex: 10,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              fontFamily: '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif',
+              fontSize: "clamp(2rem, 8vw, 2.6rem)",
+              fontWeight: 700,
+              color: titleDawa,
+              letterSpacing: "-0.01em",
+              lineHeight: 1.1,
             }}
           >
-            {/* Pulsing inner halo */}
-            <motion.div
-              style={{
-                position: "absolute",
-                width: 92,
-                height: 92,
-                borderRadius: "50%",
-                background: `radial-gradient(circle, rgba(34,201,204,0.2) 0%, transparent 70%)`,
-                filter: "blur(10px)",
-              }}
-            />
-
-            {/* Logo image */}
-            <motion.img
-              src="/logo.png"
-              alt="Dawa Lens"
-              style={{
-                width: 76,
-                height: 76,
-                objectFit: "contain",
-                position: "relative",
-                zIndex: 1,
-                display: "block",
-                filter: "drop-shadow(0 0 12px rgba(34,201,204,0.4))",
-                willChange: "transform, opacity",
-              }}
-            />
-          </motion.div>
+            Dawa
+          </span>
+          <span
+            style={{
+              fontFamily: '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, sans-serif',
+              fontSize: "clamp(2rem, 8vw, 2.6rem)",
+              fontWeight: 700,
+              color: titleLens,
+              letterSpacing: "-0.01em",
+              lineHeight: 1.1,
+            }}
+          >
+            Lens
+          </span>
         </div>
 
-        {/* ╔═══════════════════════════════════════╗
-            ║   App name  "Dawa · Lens"             ║
-            ╚═══════════════════════════════════════╝ */}
-        <div
+        {/* Tagline */}
+        <p
           style={{
-            marginTop: 24,
-            display: "flex",
-            alignItems: "center",
-            gap: "0.3em",
-            minHeight: "3.2rem",
+            marginTop: 8,
+            fontSize: "0.92rem",
+            color: tagline,
+            letterSpacing: "0.01em",
+            fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+            fontWeight: 400,
+            textAlign: "center",
           }}
         >
-          <AnimatePresence>
-            {showText && (
-              <>
-                {/* "Dawa" */}
-                <motion.div
-                  key="dawa"
-                  variants={dawaContainerV}
-                  initial="hidden"
-                  animate="visible"
-                  style={{ display: "flex", willChange: "transform, opacity" }}
-                >
-                  {"Dawa".split("").map((ch, i) => (
-                    <motion.span key={i} variants={letterV} style={titleStyle}>
-                      {ch}
-                    </motion.span>
-                  ))}
-                </motion.div>
+          See Medicine. Live Better.
+        </p>
 
-                {/* Glowing separator dot */}
-                <motion.div
-                  key="dot"
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{
-                    delay: 0.32,
-                    duration: 0.35,
-                    ease: [0.34, 1.56, 0.64, 1],
-                  }}
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: TEAL_BRIGHT,
-                    boxShadow: `0 0 8px 3px rgba(34,201,204,0.58)`,
-                    flexShrink: 0,
-                    marginBottom: 2,
-                  }}
-                />
-
-                {/* "Lens" */}
-                <motion.div
-                  key="lens"
-                  variants={lensContainerV}
-                  initial="hidden"
-                  animate="visible"
-                  style={{ display: "flex", willChange: "transform, opacity" }}
-                >
-                  {"Lens".split("").map((ch, i) => (
-                    <motion.span key={i} variants={letterV} style={titleStyle}>
-                      {ch}
-                    </motion.span>
-                  ))}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* ╔═══════════════════════════════════════╗
-            ║   Tagline                             ║
-            ╚═══════════════════════════════════════╝ */}
-        <div style={{ marginTop: 10, minHeight: "1.4rem" }}>
-          <AnimatePresence>
-            {showTagline && (
-              <motion.p
-                key="tagline"
-                initial={{ opacity: 0, y: 7 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                style={{
-                  margin: 0,
-                  color: "rgba(255,255,255,0.38)",
-                  fontSize: "0.67rem",
-                  letterSpacing: "0.26em",
-                  textTransform: "uppercase",
-                  fontWeight: 400,
-                  textAlign: "center",
-                  fontFamily: '"Plus Jakarta Sans", -apple-system, sans-serif',
-                  willChange: "transform, opacity",
-                }}
-              >
-                Smart Medicine Reminder
-              </motion.p>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* ╔═══════════════════════════════════════╗
-            ║   Wave-pulse loading indicator        ║
-            ╚═══════════════════════════════════════╝ */}
-        <div style={{ marginTop: 48, minHeight: 24 }}>
-          <AnimatePresence>
-            {showLoader && <LoadingDots key="loader" />}
-          </AnimatePresence>
+        {/* Loading spinner */}
+        <div style={{ marginTop: 56 }}>
+          <Spinner dark={dark} />
         </div>
       </div>
     </div>

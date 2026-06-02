@@ -28,7 +28,11 @@ if (process.env.FIREBASE_PRIVATE_KEY) {
 
 let app;
 try {
-  app = initializeApp({ credential });
+  const options = {};
+  if (credential) {
+    options.credential = credential;
+  }
+  app = initializeApp(options);
   console.log('✅ Firebase Admin SDK initialized successfully.');
 } catch (err) {
   console.error('❌ Firebase Admin SDK failed to initialize:', err.message);

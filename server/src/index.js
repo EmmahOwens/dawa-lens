@@ -16,7 +16,7 @@ import patientsRouter from './routes/patients.js';
 import wellnessRouter from './routes/wellness.js';
 
 import errorMiddleware from './middleware/errorMiddleware.js';
-import { globalLimiter, aiLimiter } from './middleware/rateLimiter.js';
+import { globalLimiter, aiLimiter, authLimiter, visionLimiter } from './middleware/rateLimiter.js';
 import AppError from './utils/AppError.js';
 import { initScheduler } from './scheduler.js';
 
