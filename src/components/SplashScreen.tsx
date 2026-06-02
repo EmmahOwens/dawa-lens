@@ -5,8 +5,7 @@
  *
  * Layout (top → bottom, vertically centered):
  *   • Full-bleed background with scattered blurred pill decorations
- *   • Central orbital: 3 concentric rings + glassmorphism lens bowl
- *     with 8 colorful pills arranged around it, gold pill at center
+ *   • Central hero: /logo.png displayed large as the main focal point
  *   • "Dawa Lens" brand text  (dark/light responsive)
  *   • "See Medicine. Live Better." tagline
  *   • Spinner + "Loading..." at the bottom
@@ -133,142 +132,36 @@ const Spinner: React.FC<{ dark: boolean }> = ({ dark }) => {
   );
 };
 
-// ─── The central orbital ──────────────────────────────────────────────────────
-// Three concentric SVG rings + glass bowl + 8 pills positioned around them
-// + gold pill in center.  All sizes are in px; the wrapper is 260×260.
-const OrbitalCenter: React.FC<{ dark: boolean }> = ({ dark }) => {
-  const ringColor = dark ? "rgba(255,255,255,0.18)" : "rgba(100,110,130,0.22)";
-  const bowlBg = dark
-    ? "radial-gradient(circle at 44% 38%, rgba(60,65,80,0.95) 0%, rgba(30,32,40,0.98) 60%, rgba(15,15,20,1) 100%)"
-    : "radial-gradient(circle at 44% 38%, rgba(230,235,245,0.95) 0%, rgba(210,215,230,0.90) 60%, rgba(195,200,218,0.88) 100%)";
-  const bowlBorder = dark
-    ? "1.5px solid rgba(255,255,255,0.12)"
-    : "1.5px solid rgba(180,185,200,0.6)";
-  const size = 260;
-  const cx = size / 2;
-
-  // Ring radii (outer → inner)
-  const R3 = 118; // outermost
-  const R2 = 96;
-  const R1 = 74;
-  const bowlR = 52; // glass bowl radius
-
-  // 8 pills placed on R2 at evenly-spaced angles (top = -90°)
-  // Arrangement matching the concept (clockwise from top):
-  // pink, teal, yellow-orange, orange tablet, blue-white, white-red, red-white, white
-  const pillsOnRing: {
-    angle: number;
-    type: "pill" | "tablet";
-    color: string;
-    colorB?: string;
-    w: number;
-    h: number;
-    rot: number;
-  }[] = [
-    { angle: -90, type: "pill", color: "#e8527a", w: 20, h: 10, rot: 0 },         // top: pink
-    { angle: -45, type: "pill", color: "#28bfbf", w: 20, h: 10, rot: 45 },        // top-right: teal
-    { angle: 0,   type: "pill", color: "#e8a22a", w: 20, h: 10, rot: 90 },        // right: orange-yellow
-    { angle: 45,  type: "tablet", color: "#f07540", w: 12, h: 12, rot: 0 },       // bottom-right: orange tablet
-    { angle: 90,  type: "pill", color: "#fff", colorB: "#2979e8", w: 20, h: 10, rot: 0 },  // bottom: blue-white
-    { angle: 135, type: "pill", color: "#fff", colorB: "#e03030", w: 20, h: 10, rot: -45 },// bottom-left: white-red
-    { angle: 180, type: "pill", color: "#e03030", colorB: "#fff", w: 20, h: 10, rot: 90 }, // left: red-white
-    { angle: 225, type: "pill", color: "#fff", w: 18, h: 9, rot: 135 },           // top-left: white
-  ];
-
-  return (
-    <div
+// ─── The central logo ─────────────────────────────────────────────────────────
+// Displays the /logo.png app icon as the hero image, matching the concept
+// where the orbital illustration IS the logo.  A subtle drop shadow is applied
+// so it reads well on both light and dark backgrounds.
+const OrbitalCenter: React.FC<{ dark: boolean }> = ({ dark }) => (
+  <div
+    style={{
+      width: 220,
+      height: 220,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    }}
+  >
+    <img
+      src="/logo.png"
+      alt="Dawa Lens"
       style={{
-        position: "relative",
-        width: size,
-        height: size,
-        flexShrink: 0,
+        width: 220,
+        height: 220,
+        objectFit: "contain",
+        // Soft shadow so the logo lifts off the background in both modes
+        filter: dark
+          ? "drop-shadow(0 8px 32px rgba(0,0,0,0.55))"
+          : "drop-shadow(0 8px 24px rgba(80,90,120,0.22))",
       }}
-    >
-      {/* SVG concentric rings */}
-      <svg
-        width={size}
-        height={size}
-        style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-      >
-        <circle cx={cx} cy={cx} r={R3} fill="none" stroke={ringColor} strokeWidth="1" />
-        <circle cx={cx} cy={cx} r={R2} fill="none" stroke={ringColor} strokeWidth="1" />
-        <circle cx={cx} cy={cx} r={R1} fill="none" stroke={ringColor} strokeWidth="1" />
-      </svg>
-
-      {/* Glass bowl */}
-      <div
-        style={{
-          position: "absolute",
-          top: cx - bowlR,
-          left: cx - bowlR,
-          width: bowlR * 2,
-          height: bowlR * 2,
-          borderRadius: "50%",
-          background: bowlBg,
-          border: bowlBorder,
-          boxShadow: dark
-            ? "0 8px 32px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.08)"
-            : "0 8px 32px rgba(100,110,140,0.25), inset 0 1px 3px rgba(255,255,255,0.6)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-        }}
-      />
-
-      {/* Gold pill in center */}
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%) rotate(-15deg)",
-          zIndex: 10,
-        }}
-      >
-        <div
-          style={{
-            width: 44,
-            height: 20,
-            borderRadius: 10,
-            background: "linear-gradient(135deg, #f0c84a 0%, #d4a017 60%, #c49012 100%)",
-            boxShadow: "0 4px 18px rgba(212,160,23,0.55), inset 0 1px 3px rgba(255,255,200,0.5)",
-          }}
-        />
-      </div>
-
-      {/* Pills arranged around ring R2 */}
-      {pillsOnRing.map((p, i) => {
-        const rad = (p.angle * Math.PI) / 180;
-        const px = cx + R2 * Math.cos(rad);
-        const py = cx + R2 * Math.sin(rad);
-
-        return (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              left: px,
-              top: py,
-              transform: "translate(-50%, -50%)",
-              zIndex: 5,
-            }}
-          >
-            {p.type === "tablet" ? (
-              <Tablet size={p.w} color={p.color} />
-            ) : (
-              <Pill
-                width={p.w}
-                height={p.h}
-                color={p.color}
-                colorB={p.colorB}
-                rotate={p.rot}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+    />
+  </div>
+);
 
 // ─── Scattered background pills ───────────────────────────────────────────────
 // Mimics the blurred scattered pills in the concept images.
