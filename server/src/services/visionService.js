@@ -187,7 +187,7 @@ const identifyWithGroq = async (cleanBase64, mimeType, patientAge) => {
 
   let response;
   try {
-    response = await rateLimitManager.enqueue(fn, 'groq-scout', requestBody.messages, 'high');
+    response = await rateLimitManager.enqueue(fn, 'groq-scout', requestBody.messages, 'high', 3, true);
   } catch (err) {
     if (err.response) {
       const status = err.response.status;
@@ -275,7 +275,7 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge, modelName =
   let response;
   try {
     const modelKey = modelName === GEMINI_PRO_MODEL ? 'gemini-pro' : 'gemini';
-    response = await rateLimitManager.enqueue(fn, modelKey, requestBody.contents, 'high');
+    response = await rateLimitManager.enqueue(fn, modelKey, requestBody.contents, 'high', 3, true);
   } catch (err) {
     if (err.response) {
       const status    = err.response.status;

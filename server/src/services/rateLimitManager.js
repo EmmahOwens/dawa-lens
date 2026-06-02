@@ -9,10 +9,10 @@ class RateLimitManager {
     // Model limit configurations (RPM, TPM, RPD, TPD)
     this.configs = {
       'cerebras-120b': {
-        rpm: 5,
-        tpm: 30000,
+        rpm: 30,
+        tpm: 1000000,
         rpd: 14400,
-        tpd: 1000000,
+        tpd: 10000000,
       },
       'groq-70b': {
         rpm: 30,
@@ -213,9 +213,20 @@ class RateLimitManager {
   }
 
   // Enqueue a request
-  enqueue(fn, modelKey, messages, priority = 'low', maxRetries = 3) {
+  enqueue(fn, modelKey, messages, priority = 'low', maxRetries = 3, failFast = false) {
     return new Promise((resolve, reject) => {
       const estimatedTokens = this.estimateTokens(messages);
+      
+      if (failFast) {
+        const decision = this.canMakeRequest(modelKey, estimatedTokens);
+        if (!decision.allowed) {
+          const err = new Error(`Rate limit pre-check failed for ${modelKey}: ${decision.reason}`);
+          err.status = 429;
+          err.isRateLimit = true;
+          return reject(err);
+        }
+      }
+
       const queueItem = {
         id: crypto.randomUUID(),
         fn,

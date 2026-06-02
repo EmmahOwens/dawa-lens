@@ -14,6 +14,7 @@ dotenv.config();
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
+const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const GROQ_LIGHT_MODEL = 'llama-3.1-8b-instant';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -24,11 +25,11 @@ const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 /**
  * Determines which API key to use based on the model ID.
- * Features using llama 3.1 8b models MUST use GROQ_API_KEY_2.
+ * Features using llama 3.1 8b models SHOULD use GROQ_API_KEY_2 if available.
  */
 const getGroqApiKey = (modelId) => {
   if (modelId && modelId.toLowerCase().includes('llama-3.1-8b')) {
-    return GROQ_API_KEY_2;
+    return GROQ_API_KEY_2 || GROQ_API_KEY;
   }
   return GROQ_API_KEY;
 };
@@ -110,7 +111,7 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 2048
 /**
  * Standard chat completion call to Cerebras (GPT-OSS-120B)
  */
-const callCerebrasChat = async (messages, responseFormat = { type: 'json_object' }, modelId = CEREBRAS_MODEL, priority = 'high', maxTokens = 2048) => {
+const callCerebrasChat = async (messages, responseFormat = { type: 'json_object' }, modelId = CEREBRAS_MODEL, priority = 'high', maxTokens = 2048, failFast = false) => {
   if (!CEREBRAS_API_KEY) {
     throw new AppError('Cerebras API key not configured', 503);
   }
@@ -143,13 +144,13 @@ const callCerebrasChat = async (messages, responseFormat = { type: 'json_object'
     return result;
   };
 
-  return await rateLimitManager.enqueue(fn, 'cerebras-120b', messages, priority);
+  return await rateLimitManager.enqueue(fn, 'cerebras-120b', messages, priority, 3, failFast);
 };
 
 /**
  * Standard chat completion call to Groq routed via rate limit queue
  */
-const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GROQ_MODEL, priority = 'high', maxTokens = 2048) => {
+const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GROQ_MODEL, priority = 'high', maxTokens = 2048, failFast = false) => {
   const apiKey = getGroqApiKey(modelId);
   if (!apiKey) {
     throw new AppError('Groq API key not configured', 401);
@@ -185,20 +186,64 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
     return result;
   };
 
-  return await rateLimitManager.enqueue(fn, modelKey, messages, priority);
+  return await rateLimitManager.enqueue(fn, modelKey, messages, priority, 3, failFast);
+};
+
+/**
+ * Unified AI call with multi-provider fallback.
+ * Order: Cerebras -> Groq (70B) -> Groq (8B) -> Gemini
+ */
+export const callAiWithFallback = async (messages, options = {}) => {
+  const { 
+    isJson = true, 
+    priority = 'high', 
+    maxTokens = 2048, 
+    isComplex = true,
+    forceModel = null 
+  } = options;
+
+  const responseFormat = isJson ? { type: 'json_object' } : null;
+
+  // 1. Try Cerebras (Primary)
+  if (CEREBRAS_API_KEY && forceModel !== 'groq-70b' && forceModel !== 'groq-8b' && forceModel !== 'gemini') {
+    try {
+      return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, true);
+    } catch (err) {
+      console.warn("Fallback: Cerebras failed or rate limited, trying Groq 70B...", err.message);
+    }
+  }
+
+  // 2. Try Groq 70B
+  if (GROQ_API_KEY && (isComplex || forceModel === 'groq-70b' || !CEREBRAS_API_KEY)) {
+    try {
+      return await callGroqChat(messages, responseFormat, GROQ_MODEL, priority, maxTokens, true);
+    } catch (err) {
+      console.warn("Fallback: Groq 70B failed or rate limited, trying Groq 8B...", err.message);
+    }
+  }
+
+  // 3. Try Groq 8B (Secondary key/model)
+  if (GROQ_API_KEY_2 || GROQ_API_KEY) {
+    try {
+      return await callGroqChat(messages, responseFormat, GROQ_LIGHT_MODEL, priority, maxTokens, true);
+    } catch (err) {
+      console.warn("Fallback: Groq 8B failed or rate limited, trying Gemini...", err.message);
+    }
+  }
+
+  // 4. Try Gemini (Final fallback)
+  try {
+    return await callGeminiChat(messages, priority, maxTokens);
+  } catch (err) {
+    console.error("Fallback: ALL AI providers failed.", err.message);
+    throw new AppError('All AI services are currently unavailable. Please try again later.', 503);
+  }
 };
 
 const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 'high', maxTokens = 2048) => {
   const messages = [{ role: 'user', content: prompt }];
-  const responseFormat = isJson ? { type: 'json_object' } : null;
-
-  try {
-    // For specific task methods, we try Groq first, then Gemini
-    return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens);
-  } catch (err) {
-    console.warn(`Task call failed for ${modelId}, falling back to Gemini...`, err.message);
-    return await callGeminiChat(messages, priority, maxTokens);
-  }
+  const isComplex = modelId === GROQ_MODEL;
+  return await callAiWithFallback(messages, { isJson, priority, maxTokens, isComplex });
 };
 
 
@@ -419,32 +464,17 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
   const isComplex = isComplexTask(lastUserMsg);
   const { finalMessages } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex, selectedPatientId });
 
-  const selectedModel = isComplex ? GROQ_MODEL : GROQ_LIGHT_MODEL;
-
   // Increase max tokens for conversational chat
   const chatMaxTokens = 4096;
 
   try {
-    let result;
-
-    // 1. Try Cerebras for complex tasks first (with 5s timeout for fast fallback)
-    if (isComplex && CEREBRAS_API_KEY) {
-      try {
-        result = await callCerebrasChat(finalMessages, { type: 'json_object' }, CEREBRAS_MODEL, priority, chatMaxTokens);
-      } catch (cerebrasErr) {
-        console.warn("DawaGPT: Cerebras primary path failed or timed out, falling back to Groq...", cerebrasErr.message);
-      }
-    }
-
-    // 2. Try Groq if Cerebras wasn't used or failed
-    if (!result) {
-      try {
-        result = await callGroqChat(finalMessages, { type: 'json_object' }, selectedModel, priority, chatMaxTokens);
-      } catch (groqErr) {
-        console.warn("DawaGPT: Groq primary path failed, falling back to Gemini...", groqErr.message);
-        result = await callGeminiChat(finalMessages, priority, chatMaxTokens);
-      }
-    }
+    // Use the unified fallback logic
+    let result = await callAiWithFallback(finalMessages, { 
+      isJson: true, 
+      priority, 
+      maxTokens: chatMaxTokens, 
+      isComplex 
+    });
 
     // --- AUTONOMOUS AGENT EXECUTION LOOP ---
     if (result.action && result.action.type && isComplex) {
@@ -459,7 +489,14 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
           { role: 'system', content: `ACTION_RESULT: ${JSON.stringify(actionResult)}. Now confirm this to the user in a warm, human way.` }
         ];
 
-        const feedbackResponse = await callGroqChat(feedbackMessages, { type: 'json_object' }, GROQ_LIGHT_MODEL, priority, chatMaxTokens);
+        // For feedback, we can use the light model (8B) to save credits/limits
+        const feedbackResponse = await callAiWithFallback(feedbackMessages, { 
+          isJson: true, 
+          priority, 
+          maxTokens: chatMaxTokens, 
+          isComplex: false 
+        });
+        
         result = feedbackResponse;
         result.actionExecuted = true;
       } catch (actionErr) {
@@ -470,8 +507,8 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
 
     return result;
   } catch (err) {
-    console.warn("Groq Chat failed, falling back to Gemini...", err.message);
-    return await callGeminiChat(finalMessages, priority, chatMaxTokens);
+    console.error("DawaGPT critical failure:", err.message);
+    throw err; // Re-throw to be handled by route/middleware
   }
 };
 
@@ -561,10 +598,9 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     isStreaming: true, isComplex, selectedPatientId
   });
 
-  const selectedModel = isComplex ? GROQ_MODEL : GROQ_LIGHT_MODEL;
   const chatMaxTokens = 4096;
 
-  // Use a helper to transform non-streaming JSON response to a fake stream for fallback
+  // Helper for non-streaming fallback
   const createFakeStream = (jsonResp) => {
     return new Readable({
       read() {
@@ -583,73 +619,90 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
     });
   };
 
+  // --- STREAMING FALLBACK CHAIN ---
+  
+  // 1. Try Cerebras Streaming
+  if (CEREBRAS_API_KEY && isComplex) {
+    try {
+      const fn = async () => {
+        const response = await axios.post(CEREBRAS_API_URL, {
+          model: CEREBRAS_MODEL,
+          messages: finalMessages,
+          stream: true,
+          max_completion_tokens: chatMaxTokens
+        }, {
+          headers: {
+            'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          responseType: 'stream',
+          timeout: 20000
+        });
+        return response.data;
+      };
+      return await rateLimitManager.enqueue(fn, 'cerebras-120b', finalMessages, priority, 3, true);
+    } catch (err) {
+      console.warn("DawaGPT Stream Fallback: Cerebras failed, trying Groq 70B...", err.message);
+    }
+  }
+
+  // 2. Try Groq 70B Streaming
+  if (GROQ_API_KEY && isComplex) {
+    try {
+      const fn = async () => {
+        const response = await axios.post(GROQ_API_URL, {
+          model: GROQ_MODEL,
+          messages: finalMessages,
+          stream: true,
+          max_tokens: chatMaxTokens
+        }, {
+          headers: {
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          responseType: 'stream',
+          timeout: 15000
+        });
+        return response.data;
+      };
+      return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
+    } catch (err) {
+      console.warn("DawaGPT Stream Fallback: Groq 70B failed, trying Groq 8B...", err.message);
+    }
+  }
+
+  // 3. Try Groq 8B Streaming
+  if (GROQ_API_KEY_2 || GROQ_API_KEY) {
+    try {
+      const apiKey = GROQ_API_KEY_2 || GROQ_API_KEY;
+      const fn = async () => {
+        const response = await axios.post(GROQ_API_URL, {
+          model: GROQ_LIGHT_MODEL,
+          messages: finalMessages,
+          stream: true,
+          max_tokens: chatMaxTokens
+        }, {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          responseType: 'stream',
+          timeout: 15000
+        });
+        return response.data;
+      };
+      return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
+    } catch (err) {
+      console.warn("DawaGPT Stream Fallback: Groq 8B failed, trying Gemini...", err.message);
+    }
+  }
+
+  // 4. Fallback to Gemini (non-streaming, then wrapped in stream)
   try {
-    const isCerebras = isComplex && CEREBRAS_API_KEY;
-    const apiKey = getGroqApiKey(selectedModel);
-
-    // 1. Try Streaming Cerebras first (for complex tasks)
-    if (isCerebras) {
-      const cerebrasStart = Date.now();
-      try {
-        const fn = async () => {
-          const response = await axios.post(CEREBRAS_API_URL, {
-            model: CEREBRAS_MODEL,
-            messages: finalMessages,
-            stream: true,
-            max_completion_tokens: chatMaxTokens
-            // response_format intentionally omitted for streaming — not supported with stream: true
-          }, {
-            headers: {
-              'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            responseType: 'stream',
-            timeout: 20000
-          });
-          return response.data;
-        };
-
-        return await rateLimitManager.enqueue(fn, 'cerebras-120b', finalMessages, priority);
-      } catch (cerebrasErr) {
-        const elapsed = Date.now() - cerebrasStart;
-        console.warn(`DawaGPT Stream: Cerebras timed out after ${elapsed}ms, falling back to Groq.`, cerebrasErr.message);
-      }
-    }
-
-    // 2. Try Streaming Groq
-    if (apiKey) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(GROQ_API_URL, {
-            model: selectedModel,
-            messages: finalMessages,
-            stream: true,
-            max_tokens: chatMaxTokens
-            // response_format intentionally omitted for streaming — not supported with stream: true
-          }, {
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json'
-            },
-            responseType: 'stream',
-            timeout: 15000
-          });
-          return response.data;
-        };
-
-        const modelKey = selectedModel === GROQ_MODEL ? 'groq-70b' : 'groq-8b';
-        return await rateLimitManager.enqueue(fn, modelKey, finalMessages, priority);
-      } catch (groqErr) {
-        console.warn('DawaGPT Stream: Groq failed, falling back to Gemini...', groqErr.message);
-      }
-    }
-
-    // 3. Fallback to Gemini (non-streaming, then wrapped in stream)
     const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens);
     return createFakeStream(geminiResp);
-
   } catch (err) {
-    console.error("DawaGPT Stream: Total failure, returning error stream.", err.message);
+    console.error("DawaGPT Stream Fallback: ALL providers failed.", err.message);
     return createFakeStream({
       text: "Sorry, I'm having trouble connecting to my medical intelligence core right now. This may be due to a temporary service outage.",
       suggestions: ["Try again", "Go home"],
