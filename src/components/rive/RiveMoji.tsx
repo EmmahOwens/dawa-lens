@@ -52,8 +52,6 @@ export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48,
       case "🙂": // Good
       case "😊": // Positive
       case "🏆": // Perfect Day / Trophy
-      case "💎": // Great / Diamond
-      case "Great":
       case "🆕": // Plus / New
       case "✅": // Check
       case "✔": // Check mark
@@ -62,6 +60,11 @@ export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48,
       case "🔋": // Battery Full
       case "📈": // Graph Up
         return "Happy";
+
+      // Laughing (High Energy Joy / Great)
+      case "💎": // Great / Diamond
+      case "Great":
+        return "Laughing";
 
       // Wow (Insights / High Energy)
       case "💡": // Idea
