@@ -16,6 +16,14 @@
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Rive Android Runtime
+-keep class app.rive.runtime.** { *; }
+-keepclasseswithmembers class app.rive.runtime.** {
+    native <methods>;
+}
+
+# Capacitor
+-keep class com.getcapacitor.** { *; }
+
+# ML Kit
+-keep class com.google.mlkit.** { *; }
