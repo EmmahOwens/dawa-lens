@@ -37,10 +37,16 @@ export default function ScanPage() {
   );
   const [capturing, setCapturing] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
+  // Guard so the mount effect only fires once even if callbacks are recreated
+  const hasFiredRef = useRef(false);
 
   const [scanMode, setScanMode] = useState<ScanMode>("pill");
 
-  const [isNativeScanRunning, setIsNativeScanRunning] = useState(false);
+  // Start as `true` on native so the loading spinner is visible immediately
+  // without waiting for any async bridge call.
+  const [isNativeScanRunning, setIsNativeScanRunning] = useState(
+    Capacitor.isNativePlatform()
+  );
   const [showAR, setShowAR] = useState(false);
   const [detectedInstructions, setDetectedInstructions] = useState<
     ARInstructionType[]
@@ -124,25 +130,22 @@ export default function ScanPage() {
   }, [scanMode, navigate, startCamera]);
 
   useEffect(() => {
-    const checkPermission = async () => {
-      if (Capacitor.isNativePlatform()) {
-        try {
-          const status = await CapCamera.checkPermissions();
-          if (status.camera === "granted") {
-            startNativeScan();
-          } else {
-            setShowPermissionModal(true);
-          }
-        } catch (e) {
-          console.warn("Permission check failed, falling back to web:", e);
-          setShowWebScanner(true);
-          startCamera();
-        }
-      } else {
-        startCamera();
-      }
-    };
-    checkPermission();
+    // Guard: only run once on mount. Without this, recreating startCamera /
+    // startNativeScan (e.g. when showWebScanner flips in the fallback path)
+    // would re-trigger the effect and double-launch the scan.
+    if (hasFiredRef.current) return;
+    hasFiredRef.current = true;
+
+    if (Capacitor.isNativePlatform()) {
+      // Skip the redundant CapCamera.checkPermissions() bridge call.
+      // NativeScanActivity already handles its own permission check/request
+      // internally, so the extra async round-trip here only adds latency.
+      // If the user has permanently denied camera access, startNativeScan's
+      // catch block will fall back to the web scanner gracefully.
+      startNativeScan();
+    } else {
+      startCamera();
+    }
 
     return () => {
       streamRef.current?.getTracks().forEach((tk) => tk.stop());
