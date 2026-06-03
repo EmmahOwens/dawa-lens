@@ -9,7 +9,7 @@ android {
         minSdkVersion = rootProject.ext.minSdkVersion
         targetSdkVersion = rootProject.ext.targetSdkVersion
         versionCode = 29
-        versionName = "1.3.17"
+        versionName = "1.3.18"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resConfigs "en", "fr", "es", "xhdpi", "xxhdpi", "xxxhdpi"
         aaptOptions {
