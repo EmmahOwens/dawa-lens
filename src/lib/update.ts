@@ -1,4 +1,7 @@
 
+import { Capacitor } from '@capacitor/core';
+import AppUpdater from '@/plugins/app-updater';
+
 /**
  * Strips any leading non-numeric characters from a version string.
  * Handles tags like "v1.0.0", "v.1.0.0", "V.1.0.0", etc.
@@ -51,7 +54,31 @@ export const fetchLatestRelease = async (): Promise<UpdateInfo | null> => {
     
     if (!latestVersion) return null;
 
-    const apkAsset = data.assets?.find((asset: any) => asset.name.toLowerCase().endsWith('.apk'));
+    // Detect device ABI to select the correct split APK
+    let deviceAbi: string | null = null;
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      try {
+        const result = await AppUpdater.getDeviceABI();
+        deviceAbi = result.abi.toLowerCase();
+      } catch (e) {
+        console.warn("Failed to get device ABI:", e);
+      }
+    }
+
+    let apkAsset;
+    if (deviceAbi) {
+      // Try to find an APK that matches the device ABI (e.g. arm64-v8a, x86_64)
+      apkAsset = data.assets?.find((asset: any) => {
+        const name = asset.name.toLowerCase();
+        return name.endsWith('.apk') && name.includes(deviceAbi!);
+      });
+    }
+
+    // Fallback: If no ABI match or not on Android, just take the first APK found
+    if (!apkAsset) {
+      apkAsset = data.assets?.find((asset: any) => asset.name.toLowerCase().endsWith('.apk'));
+    }
+
     const downloadUrl = apkAsset ? apkAsset.browser_download_url : data.html_url;
 
     return {

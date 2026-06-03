@@ -7,6 +7,11 @@ export interface DownloadProgressEvent {
 
 export interface AppUpdaterPlugin {
   /**
+   * Returns the primary CPU ABI of the device (e.g. "arm64-v8a", "x86_64").
+   */
+  getDeviceABI(): Promise<{ abi: string }>;
+
+  /**
    * Downloads an APK from the given URL and triggers the system
    * package installer once the download completes.
    */

@@ -28,6 +28,21 @@ public class AppUpdaterPlugin extends Plugin {
     private static final String TAG = "AppUpdater";
 
     /**
+     * Returns the primary ABI (Application Binary Interface) of the device.
+     * Useful for selecting the correct APK split during self-updates.
+     */
+    @PluginMethod()
+    public void getDeviceABI(PluginCall call) {
+        JSObject ret = new JSObject();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            ret.put("abi", Build.SUPPORTED_ABIS[0]);
+        } else {
+            ret.put("abi", Build.CPU_ABI);
+        }
+        call.resolve(ret);
+    }
+
+    /**
      * Downloads an APK from `url` and opens the installer.
      * Emits `downloadProgress` events with { percent: 0-100 }.
      */

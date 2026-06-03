@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.dawainnovation.lens"
     xmlns:tools="http://schemas.android.com/tools">
     <application
-        android:name=".DawaLensApplication"
+        android:name="com.dawainnovation.lens.DawaLensApplication"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
         android:largeHeap="true"
@@ -13,7 +14,7 @@
         android:theme="@style/AppTheme">
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|density"
-            android:name=".MainActivity"
+            android:name="com.dawainnovation.lens.MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.Splash"
             android:launchMode="singleTask"
@@ -25,17 +26,17 @@
         </activity>
 
         <activity
-            android:name=".NativeScanActivity"
+            android:name="com.dawainnovation.lens.NativeScanActivity"
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.FullScreen" />
 
         <receiver
-            android:name=".AlarmReceiver"
+            android:name="com.dawainnovation.lens.AlarmReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".BootReceiver"
+            android:name="com.dawainnovation.lens.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -63,7 +64,7 @@
                 android:value="androidx.startup" />
         </provider>
         <activity
-            android:name=".NativeListActivity"
+            android:name="com.dawainnovation.lens.NativeListActivity"
             android:label="Native List"
             android:theme="@style/AppTheme" />
     </application>
