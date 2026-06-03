@@ -25,83 +25,66 @@ export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48,
   // Map emoji to Rive Artboard
   const getArtboard = (e: string) => {
     switch (e) {
-      case "😔":
-        return "Sad";
-      case "😕":
-      case "😐":
-        return "Neutral";
-      case "🙂":
-      case "😊":
-        return "Smile";
-      case "💎":
+      // Crying (Sadness / Failure / Danger)
+      case "😔": // Sad
+      case "❌": // Error/Fail
+      case "📉": // Graph Down
+      case "💉": // Syringe
+      case "⚡": // High side effect/danger
+      case "🪫": // Battery Low
+        return "Crying";
+
+      // Smiling (Neutral / Information / Static Objects)
+      case "😕": // Meh
+      case "😐": // Neutral
+      case "👤": // User
+      case "👥": // Users
+      case "🏥": // Hospital
+      case "💊": // Pill
+      case "🛡️": // Shield
+      case "📊": // Analytics
+      case "📄": // Doc
+      case "📦": // Box
+      case "🛰️": // Satellite
+        return "Smiling";
+
+      // Happy (Joy / Success / Validation)
+      case "🙂": // Good
+      case "😊": // Positive
+      case "🏆": // Perfect Day / Trophy
+      case "💎": // Great / Diamond
       case "Great":
-      case "🏆":
-        return "Love";
-      case "🔍":
-        return "Check";
-      case "🔔":
-        return "Bell";
-      case "💊":
-        return "Pill";
-      case "🏥":
-        return "Hospital";
-      case "⏰":
-        return "Timer";
-      case "⚡":
-        return "Zap";
-      case "📦":
-        return "Box";
-      case "📉":
-        return "GraphDown";
-      case "📄":
-        return "Doc";
-      case "🆕":
-        return "Plus";
-      case "🚨":
-        return "Alert";
-      case "⚠️":
-        return "Warning";
-      case "✅":
-        return "Check";
-      case "📈":
-        return "Graph";
-      case "👤":
-      case "👥":
-        return "User";
-      case "💉":
-        return "Syringe";
-      case "🤖":
-        return "Bot";
-      case "🎯":
-        return "Target";
-      case "📷":
-        return "Camera";
-      case "📊":
-        return "Analytics";
-      case "🛡️":
-        return "Shield";
-      case "✨":
-        return "Sparkles";
-      case "💡":
-        return "Idea";
-      case "🪫":
-        return "BatteryLow";
-      case "🔋":
-        return "BatteryFull";
-      case "🛰️":
-        return "Satellite";
-      case "🧠":
-        return "Brain";
-      case "❌":
-        return "Error";
-      case "📍":
-        return "MapPin";
-      case "✈️":
-        return "Plane";
-      case "✔":
-        return "Check";
+      case "🆕": // Plus / New
+      case "✅": // Check
+      case "✔": // Check mark
+      case "✈️": // Plane
+      case "🎯": // Target
+      case "🔋": // Battery Full
+      case "📈": // Graph Up
+        return "Happy";
+
+      // Wow (Insights / High Energy)
+      case "💡": // Idea
+      case "🧠": // Brain
+        return "Wow";
+
+      // Surprise (Alerts / Warnings)
+      case "⚠️": // Warning
+      case "🚨": // Alert
+        return "Surprise";
+
+      // Winking (Interactions / Actions / Dynamic items)
+      case "✨": // Sparkles
+      case "📍": // Map Pin
+      case "📷": // Camera
+      case "🤖": // Bot
+      case "🔍": // Search / Zoom
+      case "⏰": // Timer / Clock
+      case "🔔": // Bell
+        return "Winking";
+
       default:
-        return "Smile";
+        return "Smiling";
     }
   };
 
@@ -117,8 +100,7 @@ export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48,
       <RiveAnimation
         src={EMOJI_RIVE_URL}
         artboard={artboard}
-        stateMachine="State Machine 1"
-        inputs={{ "Pressed": active, "Hover": isHovered || active }}
+        autoplay={true}
         fit={Fit.Contain}
         alignment={Alignment.Center}
         fallback={<span style={{ fontSize: size * 0.7 }}>{emoji}</span>}
