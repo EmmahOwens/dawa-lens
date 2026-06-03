@@ -16,9 +16,9 @@
     </style>
 
 
-    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+    <style name="AppTheme.Splash" parent="Theme.SplashScreen">
         <!-- Match the app's dark background so there's no color flash on launch -->
-        <item name="windowSplashScreenBackground">#050505</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@null</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>

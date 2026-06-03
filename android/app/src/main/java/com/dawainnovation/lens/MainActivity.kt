@@ -11,9 +11,13 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import com.getcapacitor.BridgeActivity
 import java.util.concurrent.TimeUnit
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : BridgeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ✅ Install splash screen first
+        installSplashScreen()
+
         // Support edge-to-edge display (Android 15+)
         enableEdgeToEdge()
 
