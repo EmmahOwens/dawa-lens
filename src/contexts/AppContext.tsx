@@ -1243,10 +1243,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString(),
       });
       const docRef = await addDoc(collection(db, "patients"), patientData);
-      setPatients((prev) => [
-        ...prev,
-        { ...patientData, id: docRef.id } as Patient,
-      ]);
     }
   };
 
@@ -1260,9 +1256,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!currentUserId) throw new Error("Not logged in");
       const docRef = doc(db, "patients", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
-      setPatients((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
-      );
     }
   };
 
@@ -1309,7 +1302,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const docRef = doc(db, "patients", id);
       await deleteDoc(docRef);
-      setPatients((prev) => prev.filter((p) => p.id !== id));
     }
 
     if (selectedPatientId === id) setSelectedPatientId(null);
