@@ -81,7 +81,7 @@ export function PatientContextBanner() {
       : DEFAULT_SCHEME;
 
   // Up to 2 initials from the name
-  const initials = resolvedPatient.name
+  const initials = (resolvedPatient.name || "P")
     .split(" ")
     .map((w: string) => w[0])
     .join("")

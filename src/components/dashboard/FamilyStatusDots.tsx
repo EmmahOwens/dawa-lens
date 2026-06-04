@@ -112,7 +112,7 @@ export function FamilyStatusDots({ patients, onSelect, selectedId }: FamilyStatu
                 }`}
               >
                 <div className="w-full h-full rounded-full bg-accent flex items-center justify-center text-accent-foreground font-black text-sm">
-                  {p.name.charAt(0).toUpperCase()}
+                  {(p.name?.charAt(0) || "P").toUpperCase()}
                 </div>
                 <div
                   className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-background ${statusDotClass[status]}`}
@@ -123,7 +123,7 @@ export function FamilyStatusDots({ patients, onSelect, selectedId }: FamilyStatu
                   selectedId === p.id ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                {p.name.split(" ")[0]}
+                {(p.name || "Patient").split(" ")[0]}
               </span>
             </button>
           );

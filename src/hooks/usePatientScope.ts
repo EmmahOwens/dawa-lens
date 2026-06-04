@@ -82,7 +82,7 @@ export function usePatientScope() {
           : p.age;
         return {
           id: p.id,
-          name: p.name,
+          name: p.name || "Patient",
           age,
           gender: p.gender,
           relation: p.relation,

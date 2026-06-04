@@ -267,7 +267,7 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
                     : "fill-muted-foreground font-semibold"
                 }`}
               >
-                {day.name.split(" ")[1] || day.name}
+                {day.name?.split(" ")[1] || day.name || "Day"}
               </text>
             );
           })}
