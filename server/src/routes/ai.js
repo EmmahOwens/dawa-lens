@@ -6,6 +6,19 @@ import { heavyAiLimiter } from '../middleware/rateLimiter.js';
 const router = express.Router();
 
 /**
+ * Personalized Wellness Quote
+ */
+router.post('/wellness-quote', protect, async (req, res, next) => {
+  try {
+    const { userName } = req.body;
+    const quote = await aiService.getWellnessQuote(userName);
+    res.json(quote);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * AI Behavioral Adherence Coach
  */
 router.post('/coach', protect, async (req, res, next) => {

@@ -251,6 +251,17 @@ const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 
 };
 
 
+export const getWellnessQuote = async (userName, priority = 'medium') => {
+  const prompt = `
+    Generate a short, powerful, and inspiring wellness quote (max 15 words) for a health app user named ${userName || 'friend'}.
+    The quote should emphasize consistency, strength, or the journey to better health.
+    Context: East Africa (keep it culturally relevant but universally inspiring).
+    Respond in JSON format: { "quote": "..." }
+  `;
+  // Using GROQ_LIGHT_MODEL ('llama-3.1-8b-instant') which uses GROQ_API_KEY_2 via getGroqApiKey
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
+};
+
 export const getCoachAdvice = async (logs, medicines, userName, priority = 'high') => {
   const prompt = `
     You are the "Dawa-Lens Adherence Coach", a supportive health assistant for users in East Africa.

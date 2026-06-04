@@ -1,23 +1,134 @@
-import React from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, TrendingUp, Calendar, ArrowRight } from "@/lib/icons";
+import { Sparkles, TrendingUp, Calendar, ArrowRight, Loader2 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
+import { usePatientScope } from "@/hooks/usePatientScope";
+import { format, subDays, isSameDay } from "date-fns";
+import { toDate } from "@/lib/utils";
+import { aiApi } from "@/services/api";
 
 export function DashboardBanner() {
   const navigate = useNavigate();
-  const { doseLogs, reminders, userProfile } = useApp();
+  const { userProfile } = useApp();
+  const { scopedDoseLogs } = usePatientScope();
   const { t } = useTranslation();
 
-  // Basic stats calculation
-  const today = new Date().toDateString();
-  const takenToday = doseLogs.filter(
-    (l) => l.action === "taken" && new Date(l.actionTime).toDateString() === today
-  ).length;
-  
-  const totalDueToday = reminders.filter(r => r.enabled).length;
-  const adherencePercent = totalDueToday > 0 ? Math.round((takenToday / totalDueToday) * 100) : 100;
+  const [quote, setQuote] = useState<string | null>(null);
+  const [loadingQuote, setLoadingQuote] = useState(false);
+
+  // 1. Fetch Dynamic Quote using GROQ_API_KEY_2 (via backend)
+  useEffect(() => {
+    const fetchQuote = async () => {
+      setLoadingQuote(true);
+      try {
+        const res = await aiApi.getWellnessQuote({
+          userName: userProfile?.name?.split(" ")[0]
+        });
+        setQuote(res.quote);
+      } catch (err) {
+        console.error("Failed to fetch wellness quote:", err);
+        // Fallback
+        setQuote(`Consistency is your greatest strength, ${userProfile?.name?.split(" ")[0] || "friend"}.`);
+      } finally {
+        setLoadingQuote(false);
+      }
+    };
+
+    fetchQuote();
+  }, [userProfile?.name]);
+
+  // 2. Calculate 7-Day Consistency (Matching VitalityTrends logic)
+  const adherencePercent = useMemo(() => {
+    const days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i));
+    const dayScores = days.map(date => {
+      const dayLogs = scopedDoseLogs.filter((l) =>
+        isSameDay(toDate(l.actionTime), date)
+      );
+      const taken = dayLogs.filter((l) => l.action === "taken").length;
+      const total = dayLogs.length;
+      // If no doses scheduled, it's 100% adherence for that day
+      return total > 0 ? (taken / total) * 100 : 100;
+    });
+
+    return Math.round(dayScores.reduce((acc, score) => acc + score, 0) / 7);
+  }, [scopedDoseLogs]);
+
+  // 3. Calculate Success Streak
+  const streak = useMemo(() => {
+    if (scopedDoseLogs.length === 0) return 0;
+
+    let currentStreak = 0;
+    // Find the oldest log to know when to stop counting backwards
+    const oldestLogTimestamp = Math.min(...scopedDoseLogs.map(l => toDate(l.actionTime).getTime()));
+    const oldestDate = new Date(oldestLogTimestamp);
+    oldestDate.setHours(0, 0, 0, 0);
+
+    // Check up to 100 days back
+    for (let i = 0; i < 100; i++) {
+      const date = subDays(new Date(), i);
+      const comparisonDate = new Date(date);
+      comparisonDate.setHours(0, 0, 0, 0);
+
+      // Stop if we go before the user's first ever log
+      if (comparisonDate < oldestDate) break;
+
+      const dayLogs = scopedDoseLogs.filter((l) =>
+        isSameDay(toDate(l.scheduledTime || l.actionTime), date)
+      );
+
+      if (dayLogs.length === 0) {
+        // No logs for this day. Following the requirement to be similar to adherence,
+        // days with no scheduled doses don't break the streak.
+        currentStreak++;
+        continue;
+      }
+
+      const total = dayLogs.length;
+      const taken = dayLogs.filter((l) => l.action === "taken").length;
+      const failed = dayLogs.filter((l) => l.action === "missed" || l.action === "skipped").length;
+
+      if (failed > 0) {
+        // Any failure (missed or skipped) resets the streak immediately.
+        break;
+      }
+
+      if (taken === total) {
+        currentStreak++;
+      } else {
+        // Some taken, some pending.
+        if (i === 0) {
+          // If it's today and no failures yet, keep the streak alive (it's in progress).
+          currentStreak++;
+        } else {
+          // If it's a past day and it's not fully taken (and not a failure),
+          // we treat it as a break in consistency.
+          break;
+        }
+      }
+    }
+    return currentStreak;
+  }, [scopedDoseLogs]);
+
+  const renderQuote = () => {
+    if (loadingQuote && !quote) {
+      return (
+        <div className="flex items-center gap-2 opacity-30">
+          <Loader2 size={20} className="animate-spin text-primary" />
+          <span className="text-xl font-medium italic">Gathering inspiration...</span>
+        </div>
+      );
+    }
+
+    if (!quote) return null;
+
+    return (
+      <h2 className="text-2xl font-bold text-foreground max-w-sm leading-tight tracking-tight">
+        {quote}
+      </h2>
+    );
+  };
 
   return (
     <motion.div
@@ -56,9 +167,7 @@ export function DashboardBanner() {
             <span className="section-title mb-0">Wellness Pulse</span>
           </div>
           
-          <h2 className="text-2xl font-bold text-foreground max-w-sm leading-tight tracking-tight">
-            Consistency is your <span className="text-primary italic">greatest strength</span>, {userProfile?.name?.split(" ")[0] || "friend"}.
-          </h2>
+          {renderQuote()}
 
           <div className="flex items-center gap-6 pt-2">
             <div className="flex flex-col">
@@ -73,7 +182,9 @@ export function DashboardBanner() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Success Streak</span>
               <div className="flex items-center gap-2 mt-1">
                 <Calendar size={16} className="text-primary" />
-                <span className="text-xl font-bold text-foreground tracking-tight">12 Days</span>
+                <span className="text-xl font-bold text-foreground tracking-tight">
+                  {streak} {streak === 1 ? 'Day' : 'Days'}
+                </span>
               </div>
             </div>
           </div>
