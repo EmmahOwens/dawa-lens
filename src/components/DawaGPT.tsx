@@ -32,6 +32,15 @@ export default function DawaGPT() {
   const [isTyping, setIsTyping] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      const nextHeight = Math.min(textareaRef.current.scrollHeight, 200);
+      textareaRef.current.style.height = `${nextHeight}px`;
+    }
+  }, [inputValue]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -60,6 +69,9 @@ export default function DawaGPT() {
     
     setMessages(prev => [...prev, userMsg, initialBotMsg]);
     setInputValue("");
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
     setIsTyping(true);
 
     try {
@@ -232,6 +244,7 @@ export default function DawaGPT() {
 
                   <div className="relative flex items-end gap-2 bg-background border border-border/60 rounded-2xl p-2 shadow-sm focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
                     <textarea
+                      ref={textareaRef}
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       onKeyDown={(e) => {
