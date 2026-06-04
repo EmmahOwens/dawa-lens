@@ -716,7 +716,7 @@ export default function FamilyHubPage() {
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-[3rem] p-8 h-[85vh] border-none shadow-2xl"
+          className="rounded-t-[3rem] p-8 h-[85vh] border-none shadow-2xl overflow-y-auto"
         >
           <SheetHeader className="text-left mb-8">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4">
