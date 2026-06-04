@@ -53,7 +53,7 @@ export function FeatureSlideshow() {
 
   return (
     <div 
-      className="relative w-full h-56 mb-10 overflow-hidden rounded-[2.5rem] group shadow-2xl shadow-black/5"
+      className="relative w-full mb-10 overflow-hidden rounded-[2.5rem] group shadow-2xl shadow-black/5"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}
@@ -69,7 +69,7 @@ export function FeatureSlideshow() {
           animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
           exit={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className={`absolute inset-0 p-8 flex flex-col justify-between cursor-grab active:cursor-grabbing bg-gradient-to-br ${current.color} text-white`}
+          className={`relative w-full p-6 sm:p-8 flex flex-col min-h-[16rem] sm:min-h-[14rem] justify-between cursor-grab active:cursor-grabbing bg-gradient-to-br ${current.color} text-white`}
           onClick={() => current.to && navigate(current.to)}
         >
           {/* Background Decoration */}
@@ -112,7 +112,7 @@ export function FeatureSlideshow() {
             </div>
           </div>
 
-          <div className="relative z-10 max-w-[80%]">
+          <div className="relative z-10 max-w-[95%] sm:max-w-[80%]">
             <p className="text-sm font-medium leading-relaxed opacity-90">
               {current.description}
             </p>
