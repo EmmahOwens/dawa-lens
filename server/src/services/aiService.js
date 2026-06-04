@@ -24,11 +24,13 @@ const CEREBRAS_MODEL = 'gpt-oss-120b';
 const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 /**
- * Determines which API key to use based on the model ID.
- * Features using llama 3.1 8b models SHOULD use GROQ_API_KEY_2 if available.
+ * Determines which API key to use based on the model ID and preferred key.
+ * If model is llama-3.1-8b, we prefer GROQ_API_KEY_2 if it exists.
+ * Otherwise, we use GROQ_API_KEY.
  */
 const getGroqApiKey = (modelId) => {
   if (modelId && modelId.toLowerCase().includes('llama-3.1-8b')) {
+    // Independent key for 8B model to avoid 70B limit sharing if possible
     return GROQ_API_KEY_2 || GROQ_API_KEY;
   }
   return GROQ_API_KEY;
@@ -101,10 +103,10 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 2048
   };
 
   try {
-    return await rateLimitManager.enqueue(fn, 'gemini', finalMessages, priority);
+    return await rateLimitManager.enqueue(fn, 'gemini', finalMessages, priority, 3, false); // Allow retries for the final fallback
   } catch (err) {
     console.error("Gemini Fallback Error:", err.message);
-    throw new AppError('Both AI engines are currently unavailable. Please try again.', 503);
+    throw new AppError('All AI services are currently unavailable. Please try again later.', 503);
   }
 };
 
@@ -216,7 +218,8 @@ export const callAiWithFallback = async (messages, options = {}) => {
   // 2. Try Groq 70B
   if (GROQ_API_KEY && (isComplex || forceModel === 'groq-70b' || !CEREBRAS_API_KEY)) {
     try {
-      return await callGroqChat(messages, responseFormat, GROQ_MODEL, priority, maxTokens, true);
+      const modelId = GROQ_MODEL;
+      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true);
     } catch (err) {
       console.warn("Fallback: Groq 70B failed or rate limited, trying Groq 8B...", err.message);
     }
@@ -225,7 +228,8 @@ export const callAiWithFallback = async (messages, options = {}) => {
   // 3. Try Groq 8B (Secondary key/model)
   if (GROQ_API_KEY_2 || GROQ_API_KEY) {
     try {
-      return await callGroqChat(messages, responseFormat, GROQ_LIGHT_MODEL, priority, maxTokens, true);
+      const modelId = GROQ_LIGHT_MODEL;
+      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true);
     } catch (err) {
       console.warn("Fallback: Groq 8B failed or rate limited, trying Gemini...", err.message);
     }
@@ -649,15 +653,17 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   // 2. Try Groq 70B Streaming
   if (GROQ_API_KEY && isComplex) {
     try {
+      const modelId = GROQ_MODEL;
+      const apiKey = getGroqApiKey(modelId);
       const fn = async () => {
         const response = await axios.post(GROQ_API_URL, {
-          model: GROQ_MODEL,
+          model: modelId,
           messages: finalMessages,
           stream: true,
           max_tokens: chatMaxTokens
         }, {
           headers: {
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
+            'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
           },
           responseType: 'stream',
@@ -674,10 +680,11 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   // 3. Try Groq 8B Streaming
   if (GROQ_API_KEY_2 || GROQ_API_KEY) {
     try {
-      const apiKey = GROQ_API_KEY_2 || GROQ_API_KEY;
+      const modelId = GROQ_LIGHT_MODEL;
+      const apiKey = getGroqApiKey(modelId);
       const fn = async () => {
         const response = await axios.post(GROQ_API_URL, {
-          model: GROQ_LIGHT_MODEL,
+          model: modelId,
           messages: finalMessages,
           stream: true,
           max_tokens: chatMaxTokens

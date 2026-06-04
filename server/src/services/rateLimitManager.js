@@ -237,6 +237,7 @@ class RateLimitManager {
         reject,
         retries: 0,
         maxRetries,
+        failFast,
         createdAt: Date.now()
       };
 
@@ -300,7 +301,7 @@ class RateLimitManager {
   }
 
   async executeRequest(item) {
-    const { fn, modelKey, estimatedTokens, resolve, reject } = item;
+    const { fn, modelKey, estimatedTokens, resolve, reject, failFast } = item;
     try {
       const result = await fn();
       
@@ -328,7 +329,7 @@ class RateLimitManager {
 
       const isRateLimit = err.response?.status === 429 || err.status === 429 || err.message?.includes('429') || err.message?.includes('Too Many Requests');
       
-      if (isRateLimit && item.retries < item.maxRetries) {
+      if (isRateLimit && !failFast && item.retries < item.maxRetries) {
         item.retries += 1;
         
         let retryAfterMs = 2000 * Math.pow(2, item.retries);
@@ -363,6 +364,7 @@ class RateLimitManager {
       lowQueueLength: this.lowPriorityQueue.length,
       counters: this.counters,
       cooldowns: {
+        'cerebras-120b': Math.max(0, this.cooldownUntil['cerebras-120b'] - Date.now()),
         'groq-70b': Math.max(0, this.cooldownUntil['groq-70b'] - Date.now()),
         'groq-8b': Math.max(0, this.cooldownUntil['groq-8b'] - Date.now()),
         'groq-scout': Math.max(0, this.cooldownUntil['groq-scout'] - Date.now()),
