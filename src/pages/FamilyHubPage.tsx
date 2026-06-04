@@ -207,9 +207,13 @@ export default function FamilyHubPage() {
     }
   };
 
-  const currentSelection = selectedPatientId
+  const currentSelection = (selectedPatientId
     ? patients.find((p) => p.id === selectedPatientId)
-    : { name: userProfile?.name || "Self", id: null, relation: "Primary User" };
+    : null) || {
+    name: userProfile?.name || "Self",
+    id: null,
+    relation: "Primary User",
+  };
 
   const memberStats = useMemo(() => {
     const today = new Date().toDateString();
@@ -275,7 +279,7 @@ export default function FamilyHubPage() {
     return statsMap;
   }, [medicines, reminders, doseLogs, patients]);
 
-  const activeStats = selectedPatientId
+  const activeStats = (selectedPatientId && memberStats[selectedPatientId])
     ? memberStats[selectedPatientId]
     : memberStats["self"];
 
@@ -357,21 +361,19 @@ export default function FamilyHubPage() {
                 >
                   <DropdownMenuItem
                     className="rounded-xl p-3 focus:bg-primary/5 focus:text-primary cursor-pointer gap-3 font-bold text-xs"
-                    onClick={() =>
-                      handleOpenEdit(
-                        patients.find((p) => p.id === selectedPatientId)!
-                      )
-                    }
+                    onClick={() => {
+                      const p = patients.find((p) => p.id === selectedPatientId);
+                      if (p) handleOpenEdit(p);
+                    }}
                   >
                     <Edit2 size={16} /> Edit Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="rounded-xl p-3 focus:bg-destructive/5 focus:text-destructive text-destructive cursor-pointer gap-3 font-bold text-xs"
-                    onClick={() =>
-                      setPatientToDelete(
-                        patients.find((p) => p.id === selectedPatientId)!
-                      )
-                    }
+                    onClick={() => {
+                      const p = patients.find((p) => p.id === selectedPatientId);
+                      if (p) setPatientToDelete(p);
+                    }}
                   >
                     <Trash2 size={16} /> Delete Profile
                   </DropdownMenuItem>
