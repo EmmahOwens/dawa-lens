@@ -208,7 +208,7 @@ export const chatWithDawaGPTStream = async (
             allText += content;
 
             // Strip metadata delimiter and JSON from visible text (Requirement 2.3)
-            const delimIdx = allText.indexOf('###METADATA###');
+            const delimIdx = allText.lastIndexOf('###METADATA###');
             const visibleText = delimIdx !== -1
               ? allText.substring(0, delimIdx)
               : allText;
@@ -222,7 +222,7 @@ export const chatWithDawaGPTStream = async (
 
     // Split on the ###METADATA### delimiter to separate display text from metadata (Requirement 2.3)
     const METADATA_DELIMITER = '###METADATA###';
-    const delimiterIndex = allText.indexOf(METADATA_DELIMITER);
+    const delimiterIndex = allText.lastIndexOf(METADATA_DELIMITER);
 
     let displayText: string;
     let rawMetadata: string;

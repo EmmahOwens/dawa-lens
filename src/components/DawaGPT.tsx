@@ -228,7 +228,7 @@ export default function DawaGPT() {
               <div className="p-4 md:p-8 bg-transparent">
                 <div className="max-w-2xl mx-auto w-full space-y-4">
                   {/* Prompt Suggestions */}
-                  {messages.length < 3 && (
+                  {(messages.length === 0 || lastMsg?.suggestions) && (
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
                       {activeSuggestions.map((suggestion, i) => (
                         <button

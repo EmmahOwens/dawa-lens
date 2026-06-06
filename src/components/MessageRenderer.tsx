@@ -117,6 +117,9 @@ interface MessageRendererProps {
 }
 
 export default function MessageRenderer({ text, onNavigate, className }: MessageRendererProps) {
+  // Hide internal action execution metadata from the user (Requirement 2.6)
+  const cleanText = text.replace(/\[ACTION EXECUTED:.*?\]/g, '').trim();
+
   return (
     <div className={`prose prose-sm dark:prose-invert max-w-none leading-[1.6] font-medium ${className || "text-[15px]"}`}>
       <ReactMarkdown

@@ -449,7 +449,7 @@ export const isComplexTask = (text) => {
   // e.g. "How do I add a med?" vs "Add a med"
   const isHowToQuery = /^(how\s+do\s+i|can\s+you\s+explain|what\s+is|tell\s+me\s+about)/i.test(lower);
 
-  if (isHowToQuery) return false;
+  if (isHowToQuery && !lower.includes('my')) return false;
 
   // Delete/remove intent + domain noun (Requirement 5.1)
   // Uses (?:\w+\s+)*? to allow any number of words between the intent verb and domain noun
@@ -468,6 +468,14 @@ export const isComplexTask = (text) => {
   if (isMedicalQuery && text.split(' ').length > 5) return true;
 
   return false;
+};
+
+/**
+ * Helper to detect if the user's message likely requires an action (write operation).
+ */
+const isLikelyActionRequest = (text) => {
+  if (!text) return false;
+  return /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear)\s/i.test(text.toLowerCase());
 };
 
 export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }, priority = 'high') => {
@@ -496,24 +504,11 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
       console.log(`🤖 Agent executing action: ${result.action.type}`);
       try {
         const actionResult = await executeAiAction(result.action, userProfile.id, medicines, selectedPatientId);
-        
-        // Feed the result back to AI for a final human-like confirmation
-        const feedbackMessages = [
-          ...finalMessages,
-          { role: 'assistant', content: JSON.stringify(result) },
-          { role: 'system', content: `ACTION_RESULT: ${JSON.stringify(actionResult)}. Now confirm this to the user in a warm, human way.` }
-        ];
-
-        // For feedback, we can use the light model (8B) to save credits/limits
-        const feedbackResponse = await callAiWithFallback(feedbackMessages, { 
-          isJson: true, 
-          priority, 
-          maxTokens: chatMaxTokens, 
-          isComplex: false 
-        });
-        
-        result = feedbackResponse;
         result.actionExecuted = true;
+
+        // Inject the executed action into the text response for conversation history awareness
+        // This is hidden from the user in the frontend but present in formattedMessages for the next turn
+        result.text += `\n\n[ACTION EXECUTED: ${result.action.type} — ID: ${actionResult?.id || 'new'}]`;
       } catch (actionErr) {
         console.error("Agent Action Execution Failed:", actionErr.message);
         result.text += `\n\n(Note: I tried to perform that action but encountered an error: ${actionErr.message})`;
@@ -608,6 +603,17 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
   }
 
   const isComplex = isComplexTask(lastUserMsg);
+
+  // --- FORCE NON-STREAMING PATH FOR ACTIONS ---
+  if (isComplex && isLikelyActionRequest(lastUserMsg)) {
+    const result = await chatWithDawaGPT(
+      { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId },
+      priority
+    );
+    // Wrap result in a fake stream for the frontend
+    return createFakeStream(result);
+  }
+
   const { finalMessages } = await prepareDawaGPTContext({
     messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
     isStreaming: true, isComplex, selectedPatientId
@@ -740,7 +746,9 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n`
     : "";
 
-  const activeMeds = medicines?.map(m => m.name).join(', ') || 'No active medications';
+  const activeMeds = medicines?.length
+    ? medicines.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ')
+    : 'None';
   
   // Provide basic summaries even for non-complex tasks so AI has state awareness
   const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2).map(l => ({
@@ -799,23 +807,42 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - LOG_WELLNESS: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? }, patientId? }
     - ADD_PATIENT: { name, age?, gender?, relation? }
 
+    === MEDICINE KNOWLEDGE ===
+    You have built-in knowledge of thousands of medicines. When a user asks about a medicine NOT in their active medications list, you can still:
+    - Explain what it is, its typical uses, dosage ranges, and common side effects.
+    - Suggest it as a new medicine to ADD if appropriate.
+    - Warn about interactions with their CURRENT active medications.
+    - Reference WHO Essential Medicines List and NDA Uganda approved drugs where relevant.
+    Do NOT say "this medicine isn't in your list" as if that limits your knowledge. Your active medications list only shows what they're currently tracking — your medical knowledge is far broader.
+
     === RULES ===
     1. BE AGENTIC & PROACTIVE: If the user asks for a task that requires an action (e.g., adding a reminder, logging a dose), PERFORM THE ACTION IMMEDIATELY. Do not tell the user how to do it; just do it.
     2. MINIMAL TALK, MAXIMUM ACTION: Avoid long explanations of app features. If you have the info, execute.
-    3. Professional, warm "Dawa-Lens signature" tone.
-    4. Advise doctor visits for critical misses (Heart, BP, HIV).
-    5. Frequency Logic: Calculate evenly-spaced times based on frequency.
+    3. TONE — Sound like a knowledgeable friend, not a medical brochure:
+       - Use contractions naturally ("I've set that up", "You're all good", "Let's check").
+       - Keep sentences short. One idea per sentence.
+       - After completing an action, confirm it conversationally: "Done! I've added your Paracetamol reminder for 8am daily." NOT "The ADD_REMINDER action has been executed successfully."
+       - Use first-person naturally: "I've added...", "I found...", "I can see..."
+       - Avoid: "Certainly!", "Absolutely!", "Great question!", "As per your request".
+       - When you don't know something, say so plainly: "I'm not sure about that — it's worth checking with your pharmacist."
+       - Match the user's energy. If they're brief, be brief. If they're chatty, be warmer.
+    4. ACTION CONFIRMATION: When you include an action in your response, your "text" field should already contain the confirmation message as if the action succeeded. Say "I've added your reminder" not "I will add your reminder". The action executes immediately after your response — speak in the past tense of success.
+    5. MEDICINE RESOLUTION: Before ADD_REMINDER, check if the medicine already exists in Active Medications.
+       - If YES: use the existing medicineId in the ADD_REMINDER payload. Do NOT call ADD_MEDICINE first.
+       - If NO and the user wants to track it: call ADD_MEDICINE first, then ADD_REMINDER. Tell the user: "I've added [Medicine] to your medications and set up your reminder."
+       - Never silently fail. If you can't resolve a medicine, ask: "I don't see [medicine] in your list — want me to add it first?"
+    6. Advise doctor visits for critical misses (Heart, BP, HIV).
+    7. Frequency Logic: Calculate evenly-spaced times based on frequency.
        Examples:
        - "Twice a day" -> "08:00,20:00"
        - "Three times a day" or "8 hourly" -> "08:00,16:00,00:00"
        - "Four times a day" or "6 hourly" -> "06:00,12:00,18:00,00:00"
        Always provide times as a comma-separated string in the "time" field.
-    4. For ADD_REMINDER, if medicine exists, use UPDATE_REMINDER instead.
-    5. ALWAYS include "patientId" in action payloads. Use the "Active Profile (Target)" ID above unless another person is mentioned.
-    6. Include clickable chips for navigation using these supported routes: [Dashboard / Home](/ or /dashboard or /home), [Medication Reminders](/reminders or /medications), [Add Reminder](/reminders/new or /new-reminder or /add-reminder), [History/Logs](/history or /logs), [Lifestyle/Interactions](/interactions or /safety), [Family Hub](/family or /family-hub), [Travel Companion](/travel or /travel-companion), [Wellness Hub](/wellness or /wellness-hub), [Care Report](/report or /care-report), [Settings/Profile](/settings or /profile), [Scan Medicine](/scan or /scan-medicine). These custom routes are dynamically translated by the frontend to their corresponding pages.
-    7. Proactively suggest regional foods (Matooke, Avocado, G-nuts).
-    8. Use Markdown for formatting (bold, italics, lists, tables) to make information clear and readable.
-    9. For any dates or times generated in text (e.g., in tables or summaries), only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds. (Example: 2026-06-01 14:30).
+    8. ALWAYS include "patientId" in action payloads. Use the "Active Profile (Target)" ID above unless another person is mentioned.
+    9. Include clickable chips for navigation using these supported routes: [Dashboard / Home](/ or /dashboard or /home), [Medication Reminders](/reminders or /medications), [Add Reminder](/reminders/new or /new-reminder or /add-reminder), [History/Logs](/history or /logs), [Lifestyle/Interactions](/interactions or /safety), [Family Hub](/family or /family-hub), [Travel Companion](/travel or /travel-companion), [Wellness Hub](/wellness or /wellness-hub), [Care Report](/report or /care-report), [Settings/Profile](/settings or /profile), [Scan Medicine](/scan or /scan-medicine). These custom routes are dynamically translated by the frontend to their corresponding pages.
+    10. Proactively suggest regional foods (Matooke, Avocado, G-nuts).
+    11. Use Markdown for formatting (bold, italics, lists, tables) to make information clear and readable.
+    12. For any dates or times generated in text (e.g., in tables or summaries), only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds. (Example: 2026-06-01 14:30).
 
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
     Write your response as plain Markdown text.
