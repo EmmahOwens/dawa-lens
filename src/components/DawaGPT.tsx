@@ -50,14 +50,35 @@ export default function DawaGPT() {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
+      const activePatient = patients?.find(p => p.id === selectedPatientId);
+      const name = activePatient?.name || userProfile?.name || 'you';
+      const reminderCount = reminders?.length || 0;
+      const nextReminder = reminders?.[0];
+
+      let opening = `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT.`;
+      if (reminderCount > 0 && nextReminder) {
+        opening += ` ${name === 'you' ? 'You have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up.`;
+      }
+
+      // Generate first suggestions based on actual state
+      let firstSuggestions: string[] = [];
+      if (nextReminder) {
+        firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
+      }
+      if (medicines?.length > 0) {
+        firstSuggestions.push(`Does ${medicines[0].name} interact with anything?`);
+      }
+      firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
+
       setMessages([{
         id: "welcome",
         role: "assistant",
-        text: `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT. I have full access to your ${reminders.length} reminder(s) and medication history. Ask me anything about your health or say "Add a reminder for [medicine]" to get started!`,
+        text: opening,
+        suggestions: firstSuggestions.slice(0, 3),
         source: "System",
       }]);
     }
-  }, [isOpen, messages.length, reminders.length, userProfile?.name]);
+  }, [isOpen, messages.length, reminders.length, userProfile?.name, patients, selectedPatientId, medicines]);
 
 
   const handleSend = async (text: string) => {
@@ -122,7 +143,10 @@ export default function DawaGPT() {
     "I have a slight headache",
     "Add my mother Mary to the app"
   ];
-  const activeSuggestions = lastMsg?.suggestions ?? defaultSuggestions;
+  const activeSuggestions =
+    messages.length === 0
+      ? defaultSuggestions
+      : (lastMsg?.suggestions && lastMsg.suggestions.length > 0 ? lastMsg.suggestions : []);
 
   return (
     <>

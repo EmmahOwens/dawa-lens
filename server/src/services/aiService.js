@@ -741,9 +741,49 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
 
 // --- Helpers ---
 
+/**
+ * Generate a dynamic priming message for the first assistant turn.
+ */
+function buildPrimingMessage(reminders, medicines, patients, selectedPatientId) {
+  const activePatient = patients?.find(p => p.id === selectedPatientId);
+  const name = activePatient?.name || 'you';
+  const reminderCount = reminders?.length || 0;
+  const nextReminder = reminders?.[0];
+
+  let opening = `Hi! I'm Dawa-GPT.`;
+  if (reminderCount > 0 && nextReminder) {
+    opening += ` ${name === 'you' ? 'You have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up.`;
+  }
+
+  // Generate first suggestions based on actual state
+  let firstSuggestions = [];
+  if (nextReminder) {
+    firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
+  }
+  if (medicines?.length > 0) {
+    firstSuggestions.push(`Does ${medicines[0].name} interact with anything?`);
+  }
+  firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
+
+  // Format as JSON with metadata so the frontend parses suggestions correctly
+  return JSON.stringify({
+    text: opening,
+    suggestions: firstSuggestions.slice(0, 3),
+    source: 'Dawa-GPT',
+    action: null
+  });
+}
+
 async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
   const recentMessages = messages.slice(-5);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || "";
+  const lastAction = recentMessages.find(m => m.role === 'assistant' && m.action)?.action;
+
+  const conversationPhase = messages.length === 0 ? 'opening'
+    : messages.length < 4 ? 'discovery'
+    : lastAction ? 'post-action'
+    : 'ongoing';
+
   const knowledgeSnippets = await retrieveMedicalKnowledge(lastUserMsg);
   const knowledgeContext = knowledgeSnippets.length > 0
     ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n`
@@ -853,6 +893,39 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     11. Use Markdown for formatting (bold, italics, lists, tables) to make information clear and readable.
     12. For any dates or times generated in text (e.g., in tables or summaries), only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds. (Example: 2026-06-01 14:30).
 
+    === SUGGESTION RULES ===
+    The "suggestions" array contains 3 SHORT chips the user can tap as their next message.
+    Each chip must be a complete, natural sentence the user would actually say — not a label or category.
+
+    RULES:
+    1. CONTEXTUAL: Every suggestion must follow directly from what just happened.
+       - After ADD_REMINDER: ["Set a food reminder for Metformin", "What are all my reminders?", "Add another medicine"]
+       - After logging a dose: ["Log my evening Paracetamol", "How many doses have I taken this week?", "I felt nauseous after taking it"]
+       - After a medicine question: ["Does ${medicineName} interact with ${otherMedicine}?", "What's the best time to take it?", "Add a reminder for ${medicineName}"]
+       - After ADD_PATIENT: ["Set a reminder for ${patientName}", "What medicines is ${patientName} taking?", "Switch to ${patientName}'s profile"]
+       - After a wellness check-in: ["What should I eat today?", "Log my blood pressure", "How has my health been this week?"]
+
+    2. PROGRESSIVE: Suggestions should lead somewhere new — not repeat what was just done.
+       BAD (after adding a reminder): "Add a reminder" ← already done
+       GOOD: "Add a food note to this reminder", "What time is my next dose?", "Log this dose as taken"
+
+    3. SPECIFIC not GENERIC: Use the actual medicine name, patient name, or action from the conversation.
+       BAD: "Tell me about my medications"
+       GOOD: "Does Metformin 500mg interact with Ibuprofen?"
+
+    4. ONE ACTION SHORTCUT: At least one chip should be a quick action the user can execute immediately.
+       Example: "Log Paracetamol as taken now", "Add reminder for tonight at 9pm", "Switch to Mary's profile"
+
+    5. LENGTH: Each chip must be under 8 words. Natural spoken phrasing, not menu labels.
+       BAD: "Medication Interaction Check"
+       GOOD: "Does this interact with my BP meds?"
+
+    CONVERSATION PHASE: ${conversationPhase}
+    - opening: Suggest things that help the user discover what DawaGPT can do
+    - discovery: Suggest actions related to what they've been asking about
+    - post-action: Suggest the natural next step after the action just completed
+    - ongoing: Suggest deeper dives or related features they haven't tried yet
+
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
     Write your response as plain Markdown text.
     At the very end, on a new line, append exactly:
@@ -878,22 +951,33 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     }`}
   `;
 
-  const formattedMessages = recentMessages.map(msg => ({
-    role: msg.role === 'user' ? 'user' : 'assistant',
-    content: msg.text || ""
-  }));
+  const formattedMessages = recentMessages.map(msg => {
+    if (msg.role === 'assistant') {
+      // Append the previous suggestions as a silent annotation the AI can read
+      const suggestionContext = msg.suggestions?.length
+        ? `\n[Previous suggestions offered: ${msg.suggestions.join(' | ')}]`
+        : '';
+      return {
+        role: 'assistant',
+        content: (msg.text || "") + suggestionContext
+      };
+    }
+    return { role: 'user', content: msg.text || "" };
+  });
 
   // Clean and validate message history:
-  // 1. Conversation MUST start with a 'user' message.
-  // 2. Roles MUST alternate between 'user' and 'assistant'.
+  // 1. Conversation SHOULD alternate between 'user' and 'assistant'.
   const cleanedMessages = [];
   let lastRole = null;
 
   for (const msg of formattedMessages) {
-    if (cleanedMessages.length === 0 && msg.role !== 'user') continue; // Skip till first user msg
     if (msg.role === lastRole) {
       // Merge consecutive messages with the same role
-      cleanedMessages[cleanedMessages.length - 1].content += "\n\n" + msg.content;
+      if (cleanedMessages.length > 0) {
+        cleanedMessages[cleanedMessages.length - 1].content += "\n\n" + msg.content;
+      } else {
+        cleanedMessages.push(msg);
+      }
     } else {
       cleanedMessages.push(msg);
       lastRole = msg.role;
@@ -905,8 +989,13 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     cleanedMessages.push({ role: 'user', content: lastUserMsg });
   }
 
+  // Prime the first turn with contextual suggestions if it's the beginning or no assistant msg present
+  const primingMessage = buildPrimingMessage(reminders, medicines, patients, selectedPatientId);
+
   const finalMessages = [
     { role: 'system', content: systemInstruction },
+    // If the history doesn't start with an assistant message, inject the priming message
+    ...(cleanedMessages.length === 0 || cleanedMessages[0].role !== 'assistant' ? [{ role: 'assistant', content: primingMessage }] : []),
     ...cleanedMessages
   ];
 
