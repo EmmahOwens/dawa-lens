@@ -20,6 +20,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
+import android.graphics.RectF
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
@@ -30,6 +31,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.common.util.concurrent.ListenableFuture
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -51,7 +53,19 @@ class NativeScanActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Fix 3: Remove default window enter animation for instant appearance
+        window.setWindowAnimations(0)
+        // Make it truly edge-to-edge with no status bar flash
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        )
+        
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Fix 2: Pre-warm CameraX immediately
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
 
         // Build layout programmatically — avoids needing a layout XML resource
         val root = FrameLayout(this).also { setContentView(it) }
@@ -133,7 +147,7 @@ class NativeScanActivity : AppCompatActivity() {
         // permission is missing — so we must check here before calling startCamera().
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED) {
-            startCamera()
+            startCamera(cameraProviderFuture)
         } else {
             ActivityCompat.requestPermissions(
                 this,
@@ -160,10 +174,9 @@ class NativeScanActivity : AppCompatActivity() {
         }
     }
 
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
+    private fun startCamera(future: ListenableFuture<ProcessCameraProvider> = ProcessCameraProvider.getInstance(this)) {
+        future.addListener({
+            val cameraProvider = future.get()
 
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(previewView.surfaceProvider)
@@ -265,15 +278,16 @@ class ScanOverlayView(context: Context) : View(context) {
     }
 
     private val bracketPaint = Paint().apply {
-        color = Color.parseColor("#4CAF50") // Material Green 500
+        color = Color.parseColor("#007CFF") // brand primary
         style = Paint.Style.STROKE
         strokeWidth = 8f
         isAntiAlias = true
-        strokeCap = Paint.Cap.SQUARE
+        strokeCap = Paint.Cap.ROUND
     }
 
     private val linePaint = Paint().apply {
-        color = Color.parseColor("#80C784") // Material Green 300 at ~75 % opacity
+        color = Color.parseColor("#007CFF") // brand primary at ~75 % opacity
+        alpha = 191
         strokeWidth = 4f
         isAntiAlias = true
     }
@@ -281,7 +295,8 @@ class ScanOverlayView(context: Context) : View(context) {
     // Scan-line state
     private var scanLineY = -1f        // -1 = not yet initialised
     private var scanLineDirection = 1f // +1 = moving downward
-    private val bracketLength = 60f
+    private val bracketLength = 80f
+    private val cornerRadius = 60f // matches rounded-3xl (~24dp)
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -302,20 +317,29 @@ class ScanOverlayView(context: Context) : View(context) {
         canvas.drawRect(0f,   top,   left, bottom, dimPaint) // left
         canvas.drawRect(right, top,   w,    bottom, dimPaint) // right
 
-        // --- Corner brackets ---
+        // --- Corner brackets (Rounded to match web) ---
         val bl = bracketLength
+        val cr = cornerRadius
+        
         // Top-left
-        canvas.drawLine(left,        top + bl, left,        top,        bracketPaint)
-        canvas.drawLine(left,        top,      left + bl,   top,        bracketPaint)
+        canvas.drawArc(RectF(left, top, left + cr * 2, top + cr * 2), 180f, 90f, false, bracketPaint)
+        canvas.drawLine(left, top + cr, left, top + bl, bracketPaint)
+        canvas.drawLine(left + cr, top, left + bl, top, bracketPaint)
+        
         // Top-right
-        canvas.drawLine(right - bl,  top,      right,       top,        bracketPaint)
-        canvas.drawLine(right,       top,      right,       top + bl,   bracketPaint)
+        canvas.drawArc(RectF(right - cr * 2, top, right, top + cr * 2), 270f, 90f, false, bracketPaint)
+        canvas.drawLine(right, top + cr, right, top + bl, bracketPaint)
+        canvas.drawLine(right - cr, top, right - bl, top, bracketPaint)
+        
         // Bottom-left
-        canvas.drawLine(left,        bottom - bl, left,     bottom,     bracketPaint)
-        canvas.drawLine(left,        bottom,   left + bl,   bottom,     bracketPaint)
+        canvas.drawArc(RectF(left, bottom - cr * 2, left + cr * 2, bottom), 90f, 90f, false, bracketPaint)
+        canvas.drawLine(left, bottom - cr, left, bottom - bl, bracketPaint)
+        canvas.drawLine(left + cr, bottom, left + bl, bottom, bracketPaint)
+        
         // Bottom-right
-        canvas.drawLine(right - bl,  bottom,   right,       bottom,     bracketPaint)
-        canvas.drawLine(right,       bottom - bl, right,    bottom,     bracketPaint)
+        canvas.drawArc(RectF(right - cr * 2, bottom - cr * 2, right, bottom), 0f, 90f, false, bracketPaint)
+        canvas.drawLine(right, bottom - cr, right, bottom - bl, bracketPaint)
+        canvas.drawLine(right - cr, bottom, right - bl, bottom, bracketPaint)
 
         // --- Animated scan line ---
         // Initialise at the top of the scan box on the first draw

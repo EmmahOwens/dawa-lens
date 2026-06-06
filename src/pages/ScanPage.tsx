@@ -122,6 +122,7 @@ export default function ScanPage() {
         "[ScanPage] Native camera failed, using web fallback:",
         err
       );
+      setIsNativeScanRunning(false);
       setShowWebScanner(true);
       startCamera();
     } finally {
@@ -189,6 +190,7 @@ export default function ScanPage() {
           "[ScanPage] Native camera failed, using web fallback:",
           err
         );
+        setIsNativeScanRunning(false);
         setShowWebScanner(true);
         startCamera();
       } finally {
@@ -253,6 +255,10 @@ export default function ScanPage() {
       handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
     }
   };
+
+  if (isNative && !showWebScanner) {
+    return <div className="flex-1 bg-black" />;
+  }
 
   return (
     <div className="relative min-h-screen bg-foreground flex flex-col">

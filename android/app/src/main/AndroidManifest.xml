@@ -29,7 +29,8 @@
             android:name="com.dawainnovation.lens.NativeScanActivity"
             android:exported="false"
             android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.FullScreen" />
+            android:theme="@style/AppTheme.FullScreen"
+            android:windowSoftInputMode="stateHidden" />
 
         <receiver
             android:name="com.dawainnovation.lens.AlarmReceiver"
