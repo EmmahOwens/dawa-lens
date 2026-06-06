@@ -122,7 +122,7 @@ const callCerebrasChat = async (messages, responseFormat = { type: 'json_object'
     const payload = {
       model: modelId,
       messages,
-      max_completion_tokens: maxTokens
+      max_tokens: maxTokens
     };
     if (responseFormat) {
       payload.response_format = responseFormat;
@@ -503,7 +503,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     if (result.action && result.action.type && isComplex) {
       console.log(`🤖 Agent executing action: ${result.action.type}`);
       try {
-        const actionResult = await executeAiAction(result.action, userProfile.id, medicines, selectedPatientId);
+        const actionResult = await executeAiAction(result.action, userProfile.uid, medicines, selectedPatientId);
         result.actionExecuted = true;
 
         // Inject the executed action into the text response for conversation history awareness
@@ -631,7 +631,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
           action: jsonResp.action || null
         });
         const data = JSON.stringify({
-          choices: [{ delta: { content: (jsonResp.text || "") + "\n" + metadata } }]
+          choices: [{ delta: { content: (jsonResp.text || "") + "\n###METADATA###\n" + metadata } }]
         });
         this.push(`data: ${data}\n`);
         this.push(`data: [DONE]\n`);
@@ -650,7 +650,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
           model: CEREBRAS_MODEL,
           messages: finalMessages,
           stream: true,
-          max_completion_tokens: chatMaxTokens
+          max_tokens: chatMaxTokens
         }, {
           headers: {
             'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
@@ -753,11 +753,17 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     ? medicines.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ')
     : 'None';
   
+  // Safe date formatting helper to avoid crashes on non-string inputs (e.g., Firestore Timestamps)
+  const safeFormatDate = (val) => {
+    if (typeof val !== 'string') return val;
+    return val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
+  };
+
   // Provide basic summaries even for non-complex tasks so AI has state awareness
   const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2).map(l => ({
     ...l,
-    actionTime: l.actionTime ? l.actionTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined,
-    scheduledTime: l.scheduledTime ? l.scheduledTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined
+    actionTime: safeFormatDate(l.actionTime),
+    scheduledTime: safeFormatDate(l.scheduledTime)
   }))) : 'No logs';
   const remindersSummary = reminders?.length
     ? JSON.stringify(reminders.map(r => ({
@@ -773,7 +779,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const wellnessSummary = wellnessLogs?.length
     ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1).map(l => ({
       ...l,
-      timestamp: l.timestamp ? l.timestamp.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined
+      timestamp: safeFormatDate(l.timestamp)
     })))
     : 'No wellness logs';
     
@@ -874,13 +880,34 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
 
   const formattedMessages = recentMessages.map(msg => ({
     role: msg.role === 'user' ? 'user' : 'assistant',
-    content: msg.text
+    content: msg.text || ""
   }));
+
+  // Clean and validate message history:
+  // 1. Conversation MUST start with a 'user' message.
+  // 2. Roles MUST alternate between 'user' and 'assistant'.
+  const cleanedMessages = [];
+  let lastRole = null;
+
+  for (const msg of formattedMessages) {
+    if (cleanedMessages.length === 0 && msg.role !== 'user') continue; // Skip till first user msg
+    if (msg.role === lastRole) {
+      // Merge consecutive messages with the same role
+      cleanedMessages[cleanedMessages.length - 1].content += "\n\n" + msg.content;
+    } else {
+      cleanedMessages.push(msg);
+      lastRole = msg.role;
+    }
+  }
+
+  // Final check: if history is now empty (e.g., only assistant welcome msg), start fresh
+  if (cleanedMessages.length === 0 && lastUserMsg) {
+    cleanedMessages.push({ role: 'user', content: lastUserMsg });
+  }
 
   const finalMessages = [
     { role: 'system', content: systemInstruction },
-    { role: 'assistant', content: 'Understood. I am Dawa-GPT with full access to your medication system. How can I help you today?' },
-    ...formattedMessages
+    ...cleanedMessages
   ];
 
   return { finalMessages, systemInstruction };
