@@ -503,7 +503,8 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
     if (result.action && result.action.type && isComplex) {
       console.log(`🤖 Agent executing action: ${result.action.type}`);
       try {
-        const actionResult = await executeAiAction(result.action, userProfile.uid, medicines, selectedPatientId);
+        const userId = userProfile?.id || userProfile?.uid;
+        const actionResult = await executeAiAction(result.action, userId, medicines, selectedPatientId);
         result.actionExecuted = true;
 
         // Inject the executed action into the text response for conversation history awareness
@@ -901,8 +902,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     1. CONTEXTUAL: Every suggestion must follow directly from what just happened.
        - After ADD_REMINDER: ["Set a food reminder for Metformin", "What are all my reminders?", "Add another medicine"]
        - After logging a dose: ["Log my evening Paracetamol", "How many doses have I taken this week?", "I felt nauseous after taking it"]
-       - After a medicine question: ["Does ${medicineName} interact with ${otherMedicine}?", "What's the best time to take it?", "Add a reminder for ${medicineName}"]
-       - After ADD_PATIENT: ["Set a reminder for ${patientName}", "What medicines is ${patientName} taking?", "Switch to ${patientName}'s profile"]
+       - After a medicine question: ["Does \${medicineName} interact with \${otherMedicine}?", "What's the best time to take it?", "Add a reminder for \${medicineName}"]
+       - After ADD_PATIENT: ["Set a reminder for \${patientName}", "What medicines is \${patientName} taking?", "Switch to \${patientName}'s profile"]
        - After a wellness check-in: ["What should I eat today?", "Log my blood pressure", "How has my health been this week?"]
 
     2. PROGRESSIVE: Suggestions should lead somewhere new — not repeat what was just done.
