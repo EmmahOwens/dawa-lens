@@ -24,6 +24,33 @@ const CEREBRAS_MODEL = 'gpt-oss-120b';
 const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 /**
+ * Global AI error handler to ensure all errors returned are "operational" AppErrors.
+ * Prevents non-operational errors (SyntaxError, TypeError) from triggering
+ * the generic "Something went very wrong!" production message.
+ */
+export function handleAiError(err) {
+  if (err.isOperational) throw err;
+
+  console.error("AI Service Error:", err);
+
+  if (err.response) {
+    const status = err.response.status;
+    const msg = err.response.data?.error?.message || 'AI API request failed';
+    throw new AppError(`AI API error (${status}): ${msg}`, 502);
+  }
+
+  if (err instanceof SyntaxError) {
+    throw new AppError('AI returned malformed data. Please try again.', 502);
+  }
+
+  if (err instanceof TypeError) {
+    throw new AppError('Internal processing error in AI service.', 500);
+  }
+
+  throw new AppError(err.message || 'Unexpected AI service error. Please try again.', 500);
+}
+
+/**
  * Determines which API key to use based on the model ID and preferred key.
  * If model is llama-3.1-8b, we prefer GROQ_API_KEY_2 if it exists.
  * Otherwise, we use GROQ_API_KEY.
@@ -44,6 +71,7 @@ const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/
  * Strip markdown code fences that AI sometimes wraps JSON responses in.
  */
 const sanitizeJson = (text) => {
+  if (typeof text !== 'string') return text;
   return text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
 };
 
@@ -247,7 +275,11 @@ export const callAiWithFallback = async (messages, options = {}) => {
 const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 'high', maxTokens = 2048) => {
   const messages = [{ role: 'user', content: prompt }];
   const isComplex = modelId === GROQ_MODEL;
-  return await callAiWithFallback(messages, { isJson, priority, maxTokens, isComplex });
+  try {
+    return await callAiWithFallback(messages, { isJson, priority, maxTokens, isComplex });
+  } catch (err) {
+    handleAiError(err);
+  }
 };
 
 
@@ -478,19 +510,30 @@ const isLikelyActionRequest = (text) => {
   return /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear)\s/i.test(text.toLowerCase());
 };
 
-export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }, priority = 'high') => {
-  const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
-  if (detectEmergency(lastUserMsg)) {
-    return EMERGENCY_RESPONSE;
-  }
-
-  const isComplex = isComplexTask(lastUserMsg);
-  const { finalMessages } = await prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex, selectedPatientId });
-
-  // Increase max tokens for conversational chat
-  const chatMaxTokens = 4096;
-
+export const chatWithDawaGPT = async (params, priority = 'high') => {
   try {
+    const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId } = params;
+
+    if (!Array.isArray(messages)) {
+      throw new AppError('Invalid messages format: expected an array.', 400);
+    }
+
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || messages.filter(m => m.role === 'user').pop()?.content;
+
+    if (detectEmergency(lastUserMsg)) {
+      return EMERGENCY_RESPONSE;
+    }
+
+    const isComplex = isComplexTask(lastUserMsg);
+
+    // Wrap context preparation in its own try-catch or ensure it is handled by the outer one
+    const { finalMessages } = await prepareDawaGPTContext({
+      messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex, selectedPatientId
+    });
+
+    // Increase max tokens for conversational chat
+    const chatMaxTokens = 4096;
+
     // Use the unified fallback logic
     let result = await callAiWithFallback(finalMessages, { 
       isJson: true, 
@@ -508,7 +551,6 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
         result.actionExecuted = true;
 
         // Inject the executed action into the text response for conversation history awareness
-        // This is hidden from the user in the frontend but present in formattedMessages for the next turn
         result.text += `\n\n[ACTION EXECUTED: ${result.action.type} — ID: ${actionResult?.id || 'new'}]`;
       } catch (actionErr) {
         console.error("Agent Action Execution Failed:", actionErr.message);
@@ -518,8 +560,7 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
 
     return result;
   } catch (err) {
-    console.error("DawaGPT critical failure:", err.message);
-    throw err; // Re-throw to be handled by route/middleware
+    handleAiError(err);
   }
 };
 
@@ -529,6 +570,10 @@ export const chatWithDawaGPT = async ({ messages, medicines, userProfile, doseLo
 async function executeAiAction(action, userId, userMedicines = [], selectedPatientId = null) {
   const { type, payload } = action;
   
+  if (!type || !payload) {
+    throw new Error('Action type and payload are required');
+  }
+
   // Ensure userId is attached to payloads
   const data = { ...payload, userId };
 
@@ -583,159 +628,189 @@ async function executeAiAction(action, userId, userMedicines = [], selectedPatie
  * Streaming version of Dawa-GPT.
  * Returns the raw axios stream from Groq.
  */
-export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId }, priority = 'high') => {
-  const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text;
-  if (detectEmergency(lastUserMsg)) {
-    return new Readable({
-      read() {
-        const metadata = JSON.stringify({
-          suggestions: EMERGENCY_RESPONSE.suggestions,
-          source: EMERGENCY_RESPONSE.source,
+export const streamChatWithDawaGPT = async (params, priority = 'high') => {
+  try {
+    const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId } = params;
+
+    if (!Array.isArray(messages)) {
+      throw new AppError('Invalid messages format: expected an array.', 400);
+    }
+
+    const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || messages.filter(m => m.role === 'user').pop()?.content;
+
+    if (detectEmergency(lastUserMsg)) {
+      return new Readable({
+        read() {
+          const metadata = JSON.stringify({
+            suggestions: EMERGENCY_RESPONSE.suggestions,
+            source: EMERGENCY_RESPONSE.source,
+            action: null
+          });
+          const data = JSON.stringify({
+            choices: [{ delta: { content: EMERGENCY_RESPONSE.text + "\n" + metadata } }]
+          });
+          this.push(`data: ${data}\n`);
+          this.push(`data: [DONE]\n`);
+          this.push(null);
+        }
+      });
+    }
+
+    const isComplex = isComplexTask(lastUserMsg);
+
+    // --- FORCE NON-STREAMING PATH FOR ACTIONS ---
+    if (isComplex && isLikelyActionRequest(lastUserMsg)) {
+      try {
+        const result = await chatWithDawaGPT(params, priority);
+        // Wrap result in a fake stream for the frontend
+        return createFakeStream(result);
+      } catch (err) {
+        // chatWithDawaGPT already calls handleAiError, but we might need to wrap it in a stream
+        return createFakeStream({
+          text: err.message || "I encountered an error processing your request.",
+          suggestions: ["Try again"],
+          source: "System",
           action: null
         });
-        const data = JSON.stringify({
-          choices: [{ delta: { content: EMERGENCY_RESPONSE.text + "\n" + metadata } }]
-        });
-        this.push(`data: ${data}\n`);
-        this.push(`data: [DONE]\n`);
-        this.push(null);
       }
+    }
+
+    const { finalMessages } = await prepareDawaGPTContext({
+      messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
+      isStreaming: true, isComplex, selectedPatientId
     });
-  }
 
-  const isComplex = isComplexTask(lastUserMsg);
+    const chatMaxTokens = 4096;
 
-  // --- FORCE NON-STREAMING PATH FOR ACTIONS ---
-  if (isComplex && isLikelyActionRequest(lastUserMsg)) {
-    const result = await chatWithDawaGPT(
-      { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId },
-      priority
-    );
-    // Wrap result in a fake stream for the frontend
-    return createFakeStream(result);
-  }
+    // Helper for non-streaming fallback
+    function createFakeStream(jsonResp) {
+      return new Readable({
+        read() {
+          const metadata = JSON.stringify({
+            suggestions: jsonResp.suggestions || [],
+            source: jsonResp.source || "Dawa-GPT",
+            action: jsonResp.action || null
+          });
+          const data = JSON.stringify({
+            choices: [{ delta: { content: (jsonResp.text || "") + "\n###METADATA###\n" + metadata } }]
+          });
+          this.push(`data: ${data}\n`);
+          this.push(`data: [DONE]\n`);
+          this.push(null);
+        }
+      });
+    }
 
-  const { finalMessages } = await prepareDawaGPTContext({
-    messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
-    isStreaming: true, isComplex, selectedPatientId
-  });
+    // --- STREAMING FALLBACK CHAIN ---
 
-  const chatMaxTokens = 4096;
+    // 1. Try Cerebras Streaming
+    if (CEREBRAS_API_KEY && isComplex) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(CEREBRAS_API_URL, {
+            model: CEREBRAS_MODEL,
+            messages: finalMessages,
+            stream: true,
+            max_tokens: chatMaxTokens
+          }, {
+            headers: {
+              'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            responseType: 'stream',
+            timeout: 20000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'cerebras-120b', finalMessages, priority, 3, true);
+      } catch (err) {
+        if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
+        console.warn("DawaGPT Stream Fallback: Cerebras failed, trying Groq 70B...", err.message);
+      }
+    }
 
-  // Helper for non-streaming fallback
-  const createFakeStream = (jsonResp) => {
+    // 2. Try Groq 70B Streaming
+    if (GROQ_API_KEY && isComplex) {
+      try {
+        const modelId = GROQ_MODEL;
+        const apiKey = getGroqApiKey(modelId);
+        const fn = async () => {
+          const response = await axios.post(GROQ_API_URL, {
+            model: modelId,
+            messages: finalMessages,
+            stream: true,
+            max_tokens: chatMaxTokens
+          }, {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            responseType: 'stream',
+            timeout: 15000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
+      } catch (err) {
+        if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
+        console.warn("DawaGPT Stream Fallback: Groq 70B failed, trying Groq 8B...", err.message);
+      }
+    }
+
+    // 3. Try Groq 8B Streaming
+    if (GROQ_API_KEY_2 || GROQ_API_KEY) {
+      try {
+        const modelId = GROQ_LIGHT_MODEL;
+        const apiKey = getGroqApiKey(modelId);
+        const fn = async () => {
+          const response = await axios.post(GROQ_API_URL, {
+            model: modelId,
+            messages: finalMessages,
+            stream: true,
+            max_tokens: chatMaxTokens
+          }, {
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            responseType: 'stream',
+            timeout: 15000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
+      } catch (err) {
+        if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
+        console.warn("DawaGPT Stream Fallback: Groq 8B failed, trying Gemini...", err.message);
+      }
+    }
+
+    // 4. Fallback to Gemini (non-streaming, then wrapped in stream)
+    try {
+      const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens);
+      return createFakeStream(geminiResp);
+    } catch (err) {
+      console.error("DawaGPT Stream Fallback: ALL providers failed.", err.message);
+      return createFakeStream({
+        text: "Sorry, I'm having trouble connecting to my medical intelligence core right now. This may be due to a temporary service outage.",
+        suggestions: ["Try again", "Go home"],
+        source: "System",
+        action: null
+      });
+    }
+  } catch (err) {
+    // For streams, we can't easily throw an AppError that the middleware handles nicely
+    // after headers might have been sent (though here headers aren't sent yet).
+    // We'll wrap the error in a fake stream.
     return new Readable({
       read() {
-        const metadata = JSON.stringify({
-          suggestions: jsonResp.suggestions || [],
-          source: jsonResp.source || "Dawa-GPT",
-          action: jsonResp.action || null
-        });
         const data = JSON.stringify({
-          choices: [{ delta: { content: (jsonResp.text || "") + "\n###METADATA###\n" + metadata } }]
+          choices: [{ delta: { content: "I encountered an error starting the chat stream. Please try again later." } }]
         });
         this.push(`data: ${data}\n`);
         this.push(`data: [DONE]\n`);
         this.push(null);
       }
-    });
-  };
-
-  // --- STREAMING FALLBACK CHAIN ---
-  
-  // 1. Try Cerebras Streaming
-  if (CEREBRAS_API_KEY && isComplex) {
-    try {
-      const fn = async () => {
-        const response = await axios.post(CEREBRAS_API_URL, {
-          model: CEREBRAS_MODEL,
-          messages: finalMessages,
-          stream: true,
-          max_tokens: chatMaxTokens
-        }, {
-          headers: {
-            'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          responseType: 'stream',
-          timeout: 20000
-        });
-        return response.data;
-      };
-      return await rateLimitManager.enqueue(fn, 'cerebras-120b', finalMessages, priority, 3, true);
-    } catch (err) {
-      if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
-      console.warn("DawaGPT Stream Fallback: Cerebras failed, trying Groq 70B...", err.message);
-    }
-  }
-
-  // 2. Try Groq 70B Streaming
-  if (GROQ_API_KEY && isComplex) {
-    try {
-      const modelId = GROQ_MODEL;
-      const apiKey = getGroqApiKey(modelId);
-      const fn = async () => {
-        const response = await axios.post(GROQ_API_URL, {
-          model: modelId,
-          messages: finalMessages,
-          stream: true,
-          max_tokens: chatMaxTokens
-        }, {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          responseType: 'stream',
-          timeout: 15000
-        });
-        return response.data;
-      };
-      return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
-    } catch (err) {
-      if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
-      console.warn("DawaGPT Stream Fallback: Groq 70B failed, trying Groq 8B...", err.message);
-    }
-  }
-
-  // 3. Try Groq 8B Streaming
-  if (GROQ_API_KEY_2 || GROQ_API_KEY) {
-    try {
-      const modelId = GROQ_LIGHT_MODEL;
-      const apiKey = getGroqApiKey(modelId);
-      const fn = async () => {
-        const response = await axios.post(GROQ_API_URL, {
-          model: modelId,
-          messages: finalMessages,
-          stream: true,
-          max_tokens: chatMaxTokens
-        }, {
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          responseType: 'stream',
-          timeout: 15000
-        });
-        return response.data;
-      };
-      return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
-    } catch (err) {
-      if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
-      console.warn("DawaGPT Stream Fallback: Groq 8B failed, trying Gemini...", err.message);
-    }
-  }
-
-  // 4. Fallback to Gemini (non-streaming, then wrapped in stream)
-  try {
-    const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens);
-    return createFakeStream(geminiResp);
-  } catch (err) {
-    console.error("DawaGPT Stream Fallback: ALL providers failed.", err.message);
-    return createFakeStream({
-      text: "Sorry, I'm having trouble connecting to my medical intelligence core right now. This may be due to a temporary service outage.",
-      suggestions: ["Try again", "Go home"],
-      source: "System",
-      action: null
     });
   }
 };
@@ -777,8 +852,8 @@ function buildPrimingMessage(reminders, medicines, patients, selectedPatientId) 
 
 async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
   const recentMessages = messages.slice(-5);
-  const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || "";
-  const lastAction = recentMessages.find(m => m.role === 'assistant' && m.action)?.action;
+  const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
+  const lastAction = recentMessages.find(m => m.role === 'assistant' && (m.action || m.content?.includes('action')) )?.action;
 
   const conversationPhase = messages.length === 0 ? 'opening'
     : messages.length < 4 ? 'discovery'
@@ -953,6 +1028,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   `;
 
   const formattedMessages = recentMessages.map(msg => {
+    const content = msg.text || msg.content || "";
     if (msg.role === 'assistant') {
       // Append the previous suggestions as a silent annotation the AI can read
       const suggestionContext = msg.suggestions?.length
@@ -960,10 +1036,10 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
         : '';
       return {
         role: 'assistant',
-        content: (msg.text || "") + suggestionContext
+        content: content + suggestionContext
       };
     }
-    return { role: 'user', content: msg.text || "" };
+    return { role: 'user', content: content };
   });
 
   // Clean and validate message history:
@@ -1046,18 +1122,9 @@ export const getEmotionReflection = async (mood, energy, symptoms, medicines = [
     }
   `;
 
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
+  try {
+    return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
+  } catch (err) {
+    handleAiError(err);
+  }
 };
-
-function handleAiError(err) {
-  if (err.isOperational) throw err;
-  if (err.response) {
-    const status = err.response.status;
-    const msg = err.response.data?.error?.message || 'AI API request failed';
-    throw new AppError(`Groq API error (${status}): ${msg}`, 502);
-  }
-  if (err instanceof SyntaxError) {
-    throw new AppError('AI returned malformed data. Please try again.', 502);
-  }
-  throw new AppError('Unexpected AI service error. Please try again.', 500);
-}
