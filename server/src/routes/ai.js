@@ -8,7 +8,7 @@ const router = express.Router();
 /**
  * Personalized Wellness Quote
  */
-router.post('/wellness-quote', protect, async (req, res, next) => {
+router.post('/wellness-quote', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const { userName } = req.body;
     const quote = await aiService.getWellnessQuote(userName);
@@ -21,7 +21,7 @@ router.post('/wellness-quote', protect, async (req, res, next) => {
 /**
  * AI Behavioral Adherence Coach
  */
-router.post('/coach', protect, async (req, res, next) => {
+router.post('/coach', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const { logs, medicines, userName } = req.body;
     const advice = await aiService.getCoachAdvice(logs, medicines, userName);
@@ -34,7 +34,7 @@ router.post('/coach', protect, async (req, res, next) => {
 /**
  * Holistic Safety Engine
  */
-router.post('/holistic-safety', protect, async (req, res, next) => {
+router.post('/holistic-safety', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const { medicines, lifestyleFactors } = req.body;
     const safety = await aiService.checkHolisticSafety(medicines, lifestyleFactors);
@@ -59,7 +59,7 @@ router.post('/travel', protect, heavyAiLimiter, async (req, res, next) => {
 /**
  * Wellness Pattern Insight
  */
-router.post('/wellness-insight', protect, async (req, res, next) => {
+router.post('/wellness-insight', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const { doseLogs, wellnessLogs, medicines } = req.body;
     const insight = await aiService.getWellnessInsight(doseLogs, wellnessLogs, medicines);
@@ -72,7 +72,7 @@ router.post('/wellness-insight', protect, async (req, res, next) => {
 /**
  * Instant Meal Safety Check
  */
-router.post('/meal-check', protect, async (req, res, next) => {
+router.post('/meal-check', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const { medicines, mealDescription } = req.body;
     const safety = await aiService.checkMealSafety(medicines, mealDescription);
@@ -85,7 +85,7 @@ router.post('/meal-check', protect, async (req, res, next) => {
 /**
  * Proactive Nutritional Guidance
  */
-router.post('/nutritional-guidance', protect, async (req, res, next) => {
+router.post('/nutritional-guidance', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const { medicines } = req.body;
     const guidance = await aiService.getNutritionalGuidance(medicines);
@@ -98,7 +98,7 @@ router.post('/nutritional-guidance', protect, async (req, res, next) => {
 /**
  * Personalized Emotion Reflection (Wellness Hub – Daily Vibe + Body Scan)
  */
-router.post('/emotion-reflection', protect, async (req, res, next) => {
+router.post('/emotion-reflection', protect, heavyAiLimiter, async (req, res, next) => {
   try {
     const { mood, energy, symptoms, medicines } = req.body;
     const reflection = await aiService.getEmotionReflection(mood, energy, symptoms, medicines);

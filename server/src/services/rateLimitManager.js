@@ -1,4 +1,7 @@
 import crypto from 'crypto';
+import { writeFileSync, readFileSync, existsSync } from 'fs';
+
+const STATE_FILE = '/tmp/rl_state.json';
 
 class RateLimitManager {
   constructor() {
@@ -65,6 +68,33 @@ class RateLimitManager {
     this.cooldownUntil = { 'cerebras-120b': 0, 'groq-70b': 0, 'groq-8b': 0, 'groq-scout': 0, 'gemini': 0, 'gemini-pro': 0 };
 
     this.isProcessing = false;
+
+    // Load persisted state if exists
+    this.loadState();
+  }
+
+  loadState() {
+    if (existsSync(STATE_FILE)) {
+      try {
+        const saved = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
+        if (saved.counters) this.counters = { ...this.counters, ...saved.counters };
+        if (saved.lastDayReset) this.lastDayReset = { ...this.lastDayReset, ...saved.lastDayReset };
+        console.log('[RateLimitManager] Loaded persisted state from', STATE_FILE);
+      } catch (err) {
+        console.error('[RateLimitManager] Failed to load state:', err.message);
+      }
+    }
+  }
+
+  saveState() {
+    try {
+      writeFileSync(STATE_FILE, JSON.stringify({
+        counters: this.counters,
+        lastDayReset: this.lastDayReset
+      }));
+    } catch (err) {
+      console.error('[RateLimitManager] Failed to save state:', err.message);
+    }
   }
 
   // Reset counters if minute/day has elapsed
@@ -130,6 +160,7 @@ class RateLimitManager {
     this.counters[modelKey].reqDay += 1;
     this.counters[modelKey].tokensMinute += estimatedTokens;
     this.counters[modelKey].tokensDay += estimatedTokens;
+    this.saveState();
   }
 
   // Refund reserved budget if request fails
@@ -138,6 +169,7 @@ class RateLimitManager {
     this.counters[modelKey].reqDay = Math.max(0, this.counters[modelKey].reqDay - 1);
     this.counters[modelKey].tokensMinute = Math.max(0, this.counters[modelKey].tokensMinute - estimatedTokens);
     this.counters[modelKey].tokensDay = Math.max(0, this.counters[modelKey].tokensDay - estimatedTokens);
+    this.saveState();
   }
 
   // Adjust reserved budget with actual token usage on success
@@ -145,6 +177,7 @@ class RateLimitManager {
     const diff = actualTokens - estimatedTokens;
     this.counters[modelKey].tokensMinute = Math.max(0, this.counters[modelKey].tokensMinute + diff);
     this.counters[modelKey].tokensDay = Math.max(0, this.counters[modelKey].tokensDay + diff);
+    this.saveState();
   }
 
   // Add cooldown block
@@ -209,7 +242,7 @@ class RateLimitManager {
 
     const promptTokens = Math.ceil(text.length / 3.7);
     const imageTokens = imageCount * 1000; // Standard image token weight
-    return promptTokens + imageTokens + defaultMaxTokens;
+    return promptTokens + imageTokens + Math.ceil(defaultMaxTokens * 0.5);
   }
 
   // Enqueue a request

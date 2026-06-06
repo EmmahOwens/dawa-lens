@@ -209,7 +209,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
   // 1. Try Cerebras (Primary)
   if (CEREBRAS_API_KEY && forceModel !== 'groq-70b' && forceModel !== 'groq-8b' && forceModel !== 'gemini') {
     try {
-      return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, true);
+      return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, false);
     } catch (err) {
       console.warn("Fallback: Cerebras failed or rate limited, trying Groq 70B...", err.message);
     }
@@ -219,7 +219,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
   if (GROQ_API_KEY && (isComplex || forceModel === 'groq-70b' || !CEREBRAS_API_KEY)) {
     try {
       const modelId = GROQ_MODEL;
-      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true);
+      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, false);
     } catch (err) {
       console.warn("Fallback: Groq 70B failed or rate limited, trying Groq 8B...", err.message);
     }
@@ -229,7 +229,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
   if (GROQ_API_KEY_2 || GROQ_API_KEY) {
     try {
       const modelId = GROQ_LIGHT_MODEL;
-      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true);
+      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, false);
     } catch (err) {
       console.warn("Fallback: Groq 8B failed or rate limited, trying Gemini...", err.message);
     }
@@ -663,6 +663,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
       };
       return await rateLimitManager.enqueue(fn, 'cerebras-120b', finalMessages, priority, 3, true);
     } catch (err) {
+      if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
       console.warn("DawaGPT Stream Fallback: Cerebras failed, trying Groq 70B...", err.message);
     }
   }
@@ -690,6 +691,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
       };
       return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
     } catch (err) {
+      if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
       console.warn("DawaGPT Stream Fallback: Groq 70B failed, trying Groq 8B...", err.message);
     }
   }
@@ -717,6 +719,7 @@ export const streamChatWithDawaGPT = async ({ messages, medicines, userProfile, 
       };
       return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
     } catch (err) {
+      if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
       console.warn("DawaGPT Stream Fallback: Groq 8B failed, trying Gemini...", err.message);
     }
   }
