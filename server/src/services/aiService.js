@@ -446,6 +446,29 @@ export const getNutritionalGuidance = async (medicines, priority = 'high') => {
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
 };
 
+export const getHealthDiscoveries = async (priority = 'low') => {
+  const prompt = `
+    Generate TWO distinct health discovery items for an East African health app:
+    1. A "Health Tip": A short, actionable health or medication advice (max 15 words).
+    2. A "Did You Know": A surprising, evidence-based health fact (max 15 words).
+
+    Context: East Africa (e.g., Uganda, Kenya, Tanzania). Use regional context where appropriate (e.g., local foods like Matooke, G-nuts, or local climate/lifestyle).
+
+    Respond in EXACT JSON format:
+    {
+      "healthTip": "...",
+      "didYouKnow": "..."
+    }
+  `;
+  // Force Gemini as requested by user
+  return await callAiWithFallback([{ role: 'user', content: prompt }], {
+    isJson: true,
+    priority,
+    maxTokens: 500,
+    forceModel: 'gemini'
+  });
+};
+
 /**
  * Advanced task complexity detection to avoid unnecessary usage of 70B model.
  * Returns true if the query requires system context (logs, reminders) or tool-use capabilities.

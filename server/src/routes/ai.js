@@ -19,6 +19,18 @@ router.post('/wellness-quote', protect, heavyAiLimiter, async (req, res, next) =
 });
 
 /**
+ * Health Discoveries (Health Tip & Did You Know)
+ */
+router.post('/health-discoveries', protect, heavyAiLimiter, async (req, res, next) => {
+  try {
+    const discoveries = await aiService.getHealthDiscoveries();
+    res.json(discoveries);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * AI Behavioral Adherence Coach
  */
 router.post('/coach', protect, heavyAiLimiter, async (req, res, next) => {

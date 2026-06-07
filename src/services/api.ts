@@ -126,6 +126,11 @@ export const aiApi = {
       { method: "POST", body: JSON.stringify(data) }
     ),
 
+  getHealthDiscoveries: () =>
+    request<{ healthTip: string; didYouKnow: string }>("/ai/health-discoveries", {
+      method: "POST",
+    }),
+
   getWellnessQuote: (data: { userName?: string }) =>
     request<{ quote: string }>("/ai/wellness-quote", {
       method: "POST",

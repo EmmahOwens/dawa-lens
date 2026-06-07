@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Camera, Users, Heart, FileText, History, Plane, Sparkles, Lightbulb, ArrowRight } from "@/lib/icons";
+import { aiApi } from "@/services/api";
 
 interface SlideItem {
   id: string;
@@ -23,17 +24,38 @@ const SLIDES: SlideItem[] = [
 
 export function FeatureSlideshow() {
   const navigate = useNavigate();
+  const [slides, setSlides] = useState<SlideItem[]>(SLIDES);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const nextSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev === SLIDES.length - 1 ? 0 : prev + 1));
+  useEffect(() => {
+    const fetchTips = async () => {
+      try {
+        const data = await aiApi.getHealthDiscoveries();
+        setSlides(prev => prev.map(slide => {
+          if (slide.id === "tip1") {
+            return { ...slide, description: data.healthTip };
+          }
+          if (slide.id === "tip2") {
+            return { ...slide, description: data.didYouKnow };
+          }
+          return slide;
+        }));
+      } catch (error) {
+        console.error("Failed to fetch health tips:", error);
+      }
+    };
+    fetchTips();
   }, []);
 
+  const nextSlide = useCallback(() => {
+    setCurrentIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+  }, [slides.length]);
+
   const prevSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev === 0 ? SLIDES.length - 1 : prev - 1));
-  }, []);
+    setCurrentIndex((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
+  }, [slides.length]);
 
   useEffect(() => {
     if (!isPaused) {
@@ -44,7 +66,7 @@ export function FeatureSlideshow() {
     };
   }, [isPaused, nextSlide]);
 
-  const current = SLIDES[currentIndex];
+  const current = slides[currentIndex];
 
   const handleDragEnd = (_event: unknown, info: { offset: { x: number } }) => {
     if (info.offset.x < -50) nextSlide();
@@ -93,7 +115,7 @@ export function FeatureSlideshow() {
             
             <div className="flex flex-col items-end gap-3">
               <div className="flex gap-1.5">
-                {SLIDES.map((_, i) => (
+                {slides.map((_, i) => (
                   <div 
                     key={i}
                     className="relative h-1 w-6 rounded-full bg-white/20 overflow-hidden"
