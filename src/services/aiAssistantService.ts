@@ -28,6 +28,10 @@ export interface ChatMessage {
 const FAQ_RESPONSE_MAP: Record<string, string> = {
   "is this safe for me?": "Checking your health profile... Based on NDA Uganda guidelines, this medication is generally safe for you. However, please consult your doctor directly before making changes.",
   "can i take this with milk?": "For Coartem (Artemether/Lumefantrine), it is recommended to take with a fatty meal or milk to increase absorption. For many other antibiotics, avoid milk as it can hinder absorption. Check your specific prescription.",
+  "is matooke safe?": "Matooke (steamed green bananas) is generally safe and very healthy (high in potassium). It's a great staple to have with your medications, especially if they require a meal.",
+  "what about g-nuts?": "G-nut sauce is rich in healthy fats and protein. The fats in G-nuts actually help your body absorb certain medications like Coartem better!",
+  "is kalo healthy?": "Kalo (millet bread) is excellent for you. It's rich in iron and calcium, which are great for your blood and bones.",
+  "can i eat nsenene?": "Yes! Nsenene (grasshoppers) are a great source of protein and healthy fats. Just ensure they are prepared hygienically.",
   "what are the side effects?": "Common side effects for medications in this category include dizziness and nausea. If you experience severe rashes or palpitations, seek medical help immediately.",
   "how do i take this?": "Always follow the dosage on your pill bottle or prescription. For acute cases, consistency is key to recovery.",
 };

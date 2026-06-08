@@ -384,9 +384,9 @@ export default function WellnessPage() {
 
               {/* Suggestions */}
               <div className="mt-4 mb-6">
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 mb-3 ml-1">Quick Suggestions</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 mb-3 ml-1">Local Favorites</p>
                 <div className="flex flex-wrap gap-2">
-                  {["Grilled Fish & Salad", "Fruit Smoothie", "Chicken Breast & Rice", "Oatmeal with Nuts"].map(s => (
+                  {["Matooke & G-nut Sauce", "Fish Stew & Kalo", "Katogo with Beans", "Steamed Luwombo", "Mukene & Posho", "Nakati & Sweet Potatoes", "Nsenene (Grasshoppers)", "Roasted Gonja"].map(s => (
                     <button
                       key={s}
                       onClick={() => setMeal(s)}

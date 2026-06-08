@@ -159,6 +159,8 @@ export default function DawaGPT() {
   const defaultSuggestions = [
     "What are my reminders?",
     "Add a reminder for Paracetamol 500mg at 8am daily",
+    "Is Matooke safe with my meds?",
+    "What are the benefits of Mukene?",
     "Log Paracetamol as taken",
     "I have a slight headache",
     "Add my mother Mary to the app"

@@ -9,6 +9,7 @@ import * as doseLogService from './doseLogService.js';
 import * as patientService from './patientService.js';
 import * as wellnessService from './wellnessService.js';
 import { rateLimitManager } from './rateLimitManager.js';
+import { getFoodKnowledgePrompt, LOCAL_FOODS } from './localFoodService.js';
 
 dotenv.config();
 
@@ -385,6 +386,7 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors, priority 
     Factors: ${JSON.stringify(lifestyleFactors)}
 
     Task: Identify interactions with food/lifestyle (Alcohol, Caffeine, Grapefruit, Dairy, etc.).
+    Include East African context: also check for interactions with local staples (e.g., Mukene, Kalo, Nakati) if mentioned or relevant.
     Categorize risk: High, Medium, Low.
     Use Markdown for formatting the explanation and advice if helpful.
 
@@ -493,7 +495,7 @@ export const getNutritionalGuidance = async (medicines, priority = 'high') => {
       1. Provide 2-3 specific "Food Recommendations" that aid absorption or mitigate side effects for these medications.
       2. Identify "Critical Safety Warnings" regarding foods/drinks to avoid (e.g., Grapefruit, Alcohol, Dairy, Caffeine).
       3. Include "Timing Advice" (e.g., "Take 2 hours after dairy").
-      4. Focus on East African regional foods (Matooke, G-nuts, Avocado, Posho, etc.) where appropriate.
+      4. Focus on East African regional foods (Matooke, G-nuts, Mukene, Kalo, Nakati, etc.) where appropriate, explaining their specific local benefits.
       5. Use Markdown for formatting reasons, explanations, and advice.
 
       Respond in EXACT JSON format:
@@ -518,7 +520,7 @@ export const getHealthDiscoveries = async (priority = 'low') => {
       1. A "Health Tip": A short, actionable health or medication advice (max 15 words).
       2. A "Did You Know": A surprising, evidence-based health fact (max 15 words).
 
-      Context: East Africa (e.g., Uganda, Kenya, Tanzania). Use regional context where appropriate (e.g., local foods like Matooke, G-nuts, or local climate/lifestyle).
+      Context: East Africa (e.g., Uganda, Kenya, Tanzania). Use regional context where appropriate (e.g., local foods like Matooke, G-nuts, Mukene, Kalo, or local climate/lifestyle).
 
       Respond in EXACT JSON format:
       {
@@ -797,6 +799,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const STATIC_SYSTEM_PROMPT = `
     You are "Dawa-GPT", a warm and caring medical AI assistant integrated into the Dawa-Lens app.
     Regional Context: Uganda / East Africa.
+
+    ${getFoodKnowledgePrompt()}
 
     === PERSONALITY & TONE ===
     - VOICE: You are an empathetic health companion. Think of a knowledgeable, caring pharmacist or a friend in the medical field.
