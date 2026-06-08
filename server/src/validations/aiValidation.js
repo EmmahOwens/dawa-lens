@@ -77,6 +77,7 @@ export const chatSchema = z.object({
     doseLogs: z.array(z.any()).max(50).optional(),
     reminders: z.array(z.any()).max(50).optional(),
     wellnessLogs: z.array(z.any()).max(50).optional(),
+    vitalitySummary: z.array(z.any()).max(10).optional(),
     patients: z.array(z.any()).max(20).optional(),
     selectedPatientId: z.string().max(100).optional(),
   })

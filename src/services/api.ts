@@ -208,6 +208,7 @@ export const aiApi = {
     doseLogs: DoseLog[];
     reminders?: Reminder[];
     wellnessLogs?: WellnessLog[];
+    vitalitySummary?: any[];
     patients?: Patient[];
     selectedPatientId?: string | null;
   }) =>
@@ -225,6 +226,7 @@ export const aiApi = {
     doseLogs: DoseLog[];
     reminders?: Reminder[];
     wellnessLogs?: WellnessLog[];
+    vitalitySummary?: any[];
     patients?: Patient[];
     selectedPatientId?: string | null;
   }) =>

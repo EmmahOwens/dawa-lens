@@ -8,6 +8,8 @@ import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
+import { usePatientScope } from "@/hooks/usePatientScope";
+import { calculateVitalitySummary } from "@/lib/vitalityUtils";
 import MessageRenderer from "@/components/MessageRenderer";
 
 export default function DawaGPT() {
@@ -15,15 +17,23 @@ export default function DawaGPT() {
   const location = useLocation();
   const {
     userProfile,
-    medicines,
-    reminders,
-    doseLogs,
-    wellnessLogs,
-    patients,
-    selectedPatientId,
     isDawaGPTOpen: isOpen,
     setIsDawaGPTOpen: setIsOpen,
   } = useApp();
+
+  const {
+    scopedMedicines: medicines,
+    scopedReminders: reminders,
+    scopedDoseLogs: doseLogs,
+    scopedWellnessLogs: wellnessLogs,
+    resolvedPatient,
+  } = usePatientScope();
+
+  // Calculate 7-day vitality summary for DawaGPT context
+  const vitalitySummary = React.useMemo(() => {
+    return calculateVitalitySummary(doseLogs, wellnessLogs);
+  }, [doseLogs, wellnessLogs]);
+
   const { toast } = useToast();
   const { dispatchAIAction } = useAIActions();
 
@@ -50,8 +60,7 @@ export default function DawaGPT() {
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      const activePatient = patients?.find(p => p.id === selectedPatientId);
-      const name = activePatient?.name || userProfile?.name || 'you';
+      const name = resolvedPatient?.name || userProfile?.name || 'you';
       const reminderCount = reminders?.length || 0;
       const nextReminder = reminders?.[0];
 
@@ -73,9 +82,9 @@ export default function DawaGPT() {
 
       if (reminderCount > 0 && nextReminder) {
         const reminderPhrases = [
-          ` I see ${name === 'you' ? 'you have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up. I'm here to help you stay on track!`,
-          ` Just a quick check-in: ${name === 'you' ? 'you have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} waiting. Shall we take a look?`,
-          ` Don't forget, ${name === 'you' ? 'you have' : `${name} has`} ${reminderCount} medicine reminder${reminderCount > 1 ? 's' : ''} today. Consistency is key!`
+          ` I see ${name === 'you' || name === 'You' ? 'you have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up. I'm here to help you stay on track!`,
+          ` Just a quick check-in: ${name === 'you' || name === 'You' ? 'you have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} waiting. Shall we take a look?`,
+          ` Don't forget, ${name === 'you' || name === 'You' ? 'you have' : `${name} has`} ${reminderCount} medicine reminder${reminderCount > 1 ? 's' : ''} today. Consistency is key!`
         ];
         opening += reminderPhrases[Math.floor(Math.random() * reminderPhrases.length)];
       }
@@ -98,7 +107,7 @@ export default function DawaGPT() {
         source: "System",
       }]);
     }
-  }, [isOpen, messages.length, reminders.length, userProfile?.name, patients, selectedPatientId, medicines]);
+  }, [isOpen, messages.length, reminders.length, userProfile?.name, resolvedPatient, medicines]);
 
 
   const handleSend = async (text: string) => {
@@ -123,8 +132,9 @@ export default function DawaGPT() {
         doseLogs,
         reminders,
         wellnessLogs,
-        patients,
-        selectedPatientId,
+        vitalitySummary,
+        [], // patients (already handled via scope)
+        resolvedPatient.id,
         (streamedText) => {
           setMessages(prev => prev.map(msg => 
             msg.id === botId ? { ...msg, text: streamedText } : msg
@@ -156,19 +166,49 @@ export default function DawaGPT() {
   if (hiddenPaths.includes(location.pathname)) return null;
 
   const lastMsg = messages[messages.length - 1];
-  const defaultSuggestions = [
-    "What are my reminders?",
-    "Add a reminder for Paracetamol 500mg at 8am daily",
-    "Is Matooke safe with my meds?",
-    "What are the benefits of Mukene?",
-    "Log Paracetamol as taken",
-    "I have a slight headache",
-    "Add my mother Mary to the app"
-  ];
+
+  // Smart Fallback Suggestions logic
+  const getSmartFallbacks = () => {
+    const fallbacks: string[] = [];
+
+    // 1. Check for due reminders
+    if (reminders && reminders.length > 0) {
+      const nextReminder = reminders.find(r => r.enabled);
+      if (nextReminder) {
+        fallbacks.push(`Log ${nextReminder.medicineName} as taken`);
+      }
+    }
+
+    // 2. Check for medicines
+    if (medicines && medicines.length > 0) {
+      const firstMed = medicines[0];
+      fallbacks.push(`When should I take ${firstMed.name}?`);
+      fallbacks.push(`Does ${firstMed.name} have side effects?`);
+    }
+
+    // 3. Default generic ones
+    if (fallbacks.length < 3) {
+      const generic = [
+        "What are my reminders?",
+        "Add a new medicine",
+        "Is Matooke safe with my meds?",
+        "I'm feeling a bit sick"
+      ];
+      while (fallbacks.length < 3 && generic.length > 0) {
+        const item = generic.shift();
+        if (item && !fallbacks.includes(item)) fallbacks.push(item);
+      }
+    }
+
+    return fallbacks.slice(0, 3);
+  };
+
   const activeSuggestions =
     messages.length === 0
-      ? defaultSuggestions
-      : (lastMsg?.suggestions && lastMsg.suggestions.length > 0 ? lastMsg.suggestions : []);
+      ? getSmartFallbacks() // Use smart fallbacks for empty state too
+      : (lastMsg?.suggestions && lastMsg.suggestions.length > 0
+          ? lastMsg.suggestions.slice(0, 3)
+          : getSmartFallbacks());
 
   return (
     <>

@@ -123,6 +123,7 @@ export const chatWithDawaGPT = async (
   doseLogs: DoseLog[] = [],
   reminders: Reminder[] = [],
   wellnessLogs: WellnessLog[] = [],
+  vitalitySummary: any[] = [],
   patients: Patient[] = [],
   selectedPatientId: string | null = null
 ): Promise<ChatMessage> => {
@@ -134,6 +135,7 @@ export const chatWithDawaGPT = async (
       doseLogs: doseLogs.slice(0, 20),
       reminders,
       wellnessLogs: wellnessLogs.slice(0, 10),
+      vitalitySummary,
       patients,
       selectedPatientId,
     });
@@ -173,6 +175,7 @@ export const chatWithDawaGPTStream = async (
   doseLogs: DoseLog[] = [],
   reminders: Reminder[] = [],
   wellnessLogs: WellnessLog[] = [],
+  vitalitySummary: any[] = [],
   patients: Patient[] = [],
   selectedPatientId: string | null = null,
   onChunk: (text: string) => void
@@ -185,6 +188,7 @@ export const chatWithDawaGPTStream = async (
       doseLogs: doseLogs.slice(0, 20),
       reminders,
       wellnessLogs: wellnessLogs.slice(0, 10),
+      vitalitySummary,
       patients,
       selectedPatientId,
     });
@@ -226,14 +230,17 @@ export const chatWithDawaGPTStream = async (
 
     // Split on the ###METADATA### delimiter to separate display text from metadata (Requirement 2.3)
     const METADATA_DELIMITER = '###METADATA###';
-    const delimiterIndex = allText.lastIndexOf(METADATA_DELIMITER);
+    // Use a regex to find the last occurrence of the delimiter, handling potential whitespace/newlines
+    const delimMatch = allText.match(/[\s\S]*###METADATA###\s*([\s\S]*)$/);
 
     let displayText: string;
     let rawMetadata: string;
 
-    if (delimiterIndex !== -1) {
-      displayText = allText.substring(0, delimiterIndex).trim();
-      rawMetadata = allText.substring(delimiterIndex + METADATA_DELIMITER.length).trim();
+    if (delimMatch) {
+      const fullMatch = delimMatch[0];
+      const delimIndex = fullMatch.lastIndexOf(METADATA_DELIMITER);
+      displayText = allText.substring(0, delimIndex).trim();
+      rawMetadata = delimMatch[1].trim();
     } else {
       // Delimiter absent — treat entire text as display text, no metadata
       displayText = allText.trim();

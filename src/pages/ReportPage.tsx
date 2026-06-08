@@ -27,8 +27,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
 import { VitalityTrends2D } from "@/components/wellness/VitalityTrends2D";
-import { format, subDays, isSameDay } from "date-fns";
-import { toDate } from "@/lib/utils";
+import { format, subDays } from "date-fns";
+import { calculateVitalitySummary } from "@/lib/vitalityUtils";
 import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
 import { Filesystem, Directory } from "@capacitor/filesystem";
@@ -78,40 +78,7 @@ export default function ReportPage() {
 
   // Prepare Chart Data (Last 7 Days)
   const chartData = useMemo(() => {
-    return Array.from({ length: 7 }).map((_, i) => {
-      const date = subDays(new Date(), 6 - i);
-      const dayStr = format(date, "MMM dd");
-
-      const dayLogs = scopedDoseLogs.filter((l) =>
-        isSameDay(toDate(l.actionTime), date)
-      );
-      const taken = dayLogs.filter((l) => l.action === "taken").length;
-      const total = dayLogs.length;
-      const adherence = total > 0 ? (taken / total) * 100 : 100;
-
-      // Average wellness logs if multiple exist for the day
-      const dayWellnessLogs = scopedWellnessLogs.filter(
-        (l) => l.type === "symptom" && isSameDay(toDate(l.timestamp), date)
-      );
-
-      let energy: number | null = null;
-      let mood: number | null = null;
-
-      if (dayWellnessLogs.length > 0) {
-        const sumEnergy = dayWellnessLogs.reduce(
-          (acc, l) => acc + (Number(l.data?.energy) || 0),
-          0
-        );
-        const sumMood = dayWellnessLogs.reduce(
-          (acc, l) => acc + (Number(l.data?.mood) || 0),
-          0
-        );
-        energy = (sumEnergy / dayWellnessLogs.length) * 20;
-        mood = (sumMood / dayWellnessLogs.length) * 20;
-      }
-
-      return { name: dayStr, adherence, energy, mood };
-    });
+    return calculateVitalitySummary(scopedDoseLogs, scopedWellnessLogs);
   }, [scopedDoseLogs, scopedWellnessLogs]);
 
   const adherenceScore =

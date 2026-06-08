@@ -290,17 +290,6 @@ export const callAiWithFallback = async (messages, options = {}) => {
   try {
     return await callGeminiChat(messages, priority, maxTokens, temperature);
   } catch (err) {
-      const modelId = GROQ_LIGHT_MODEL;
-      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, false);
-    } catch (err) {
-      console.warn("Fallback: Groq 8B failed, trying Gemini...", err.message);
-    }
-  }
-
-  // 4. Try Gemini (Final fallback)
-  try {
-    return await callGeminiChat(messages, priority, maxTokens);
-  } catch (err) {
     console.error("Fallback: ALL AI providers failed.", err.message);
     throw new AppError('All AI services are currently unavailable. Please try again later.', 503);
   }
@@ -573,7 +562,7 @@ const isLikelyActionRequest = (text) => {
 
 export const chatWithDawaGPT = async (params, priority = 'high') => {
   try {
-    const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId } = params;
+    const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, selectedPatientId } = params;
 
     if (!Array.isArray(messages)) {
       throw new AppError('Invalid messages format: expected an array.', 400);
@@ -588,7 +577,7 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
     const isComplex = isComplexTask(lastUserMsg);
 
     const { finalMessages } = await prepareDawaGPTContext({
-      messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex, selectedPatientId
+      messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isComplex, selectedPatientId
     });
 
     const chatMaxTokens = 2048;
@@ -652,7 +641,7 @@ async function executeAiAction(action, userId, userMedicines = [], selectedPatie
 
 export const streamChatWithDawaGPT = async (params, priority = 'high') => {
   try {
-    const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId } = params;
+    const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, selectedPatientId } = params;
 
     if (!Array.isArray(messages)) throw new AppError('Invalid messages format.', 400);
 
@@ -682,7 +671,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     }
 
     const { finalMessages } = await prepareDawaGPTContext({
-      messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
+      messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients,
       isStreaming: true, isComplex, selectedPatientId
     });
 
@@ -781,7 +770,7 @@ function buildPrimingMessage(reminders, medicines, patients, selectedPatientId) 
   return JSON.stringify({ text: opening, suggestions: firstSuggestions.slice(0, 3), source: 'Dawa-GPT', action: null });
 }
 
-async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
+async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
   const recentMessages = messages.slice(-5);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
   const lastAction = recentMessages.find(m => m.role === 'assistant' && (m.action || m.content?.includes('action')) )?.action;
@@ -792,6 +781,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
   const remindersSummary = reminders?.length ? JSON.stringify(reminders.map(r => ({ id: r.id, medicineName: r.medicineName, dose: r.dose, time: r.time, repeat: r.repeatSchedule, enabled: r.enabled })).slice(0, isComplex ? 10 : 3)) : 'No reminders set';
   const wellnessSummary = wellnessLogs?.length ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1).map(l => ({ ...l, timestamp: safeFormatDate(l.timestamp) }))) : 'No wellness logs';
+  const vitalityContext = vitalitySummary?.length ? `Vitality Trends (Last 7 Days): ${JSON.stringify(vitalitySummary.map(d => ({ day: d.name, adherence: `${d.adherence}%`, energy: d.energy ? `${(d.energy/20).toFixed(1)}/5` : 'N/A', mood: d.mood ? `${(d.mood/20).toFixed(1)}/5` : 'N/A' })))}` : 'No vitality trends available';
   const patientsSummary = patients?.length ? JSON.stringify(patients.map(p => ({ id: p.id, name: p.name, relation: p.relation }))) : 'No family profiles';
   const knowledgeSnippets = await knowledgePromise;
   const knowledgeContext = knowledgeSnippets.length > 0 ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n` : "";
@@ -824,7 +814,11 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     === RULES ===
     1. BE AGENTIC: PERFORM ACTIONS IMMEDIATELY.
     2. CONFIRMATION: Confirm actions in past tense ("I've added that for you.").
-    3. SUGGESTIONS: Provide 3 short, contextual chips.
+    3. SUGGESTIONS: Provide EXACTLY 3 short, context-aware suggestions in the 'suggestions' field.
+       - Suggestions must be from the USER's perspective (e.g., "Log my dose", NOT "You should log your dose").
+       - Suggestions MUST be relevant to the current response or conversation state.
+       - If you asked the user a question, provide potential answers as suggestions.
+       - Keep them under 6 words each.
 
     CONVERSATION PHASE: ${conversationPhase}
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
@@ -840,6 +834,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     Reminders: ${remindersSummary}
     Recent Dose Logs: ${recentLogs}
     Wellness Logs: ${wellnessSummary}
+    ${vitalityContext}
     Family: ${patientsSummary}
     ${knowledgeContext}
   `;
