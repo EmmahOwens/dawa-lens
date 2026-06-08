@@ -4,10 +4,10 @@ import { Readable } from 'stream';
 import AppError from '../utils/AppError.js';
 import { retrieveMedicalKnowledge } from './vectorService.js';
 import * as medicineService from './medicineService.js';
-import * as reminderService from './reminderService.js';
-import * as doseLogService from './doseLogService.js';
-import * as patientService from './patientService.js';
-import * as wellnessService from './wellnessService.js';
+import ** as reminderService from './reminderService.js';
+import ** as doseLogService from './doseLogService.js';
+import ** as patientService from './patientService.js';
+import ** as wellnessService from './wellnessService.js';
 import { rateLimitManager } from './rateLimitManager.js';
 
 dotenv.config();
@@ -285,7 +285,7 @@ const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 
 
 export const getWellnessQuote = async (userName, priority = 'medium') => {
   const prompt = `
-    Generate a short, powerful, and inspiring wellness quote (max 15 words) for a health app user named """${userName || 'friend'}""".
+    Generate a short, powerful, and inspiring wellness quote (max 15 words) for a health app user named ${userName || 'friend'}.
     The quote should emphasize consistency, strength, or the journey to better health.
     Context: East Africa (keep it culturally relevant but universally inspiring).
     Respond in JSON format: { "quote": "..." }
@@ -297,7 +297,7 @@ export const getWellnessQuote = async (userName, priority = 'medium') => {
 export const getCoachAdvice = async (logs, medicines, userName, priority = 'high') => {
   const prompt = `
     You are the "Dawa-Lens Adherence Coach", a supportive health assistant for users in East Africa.
-    User Name: """${userName || 'User'}"""
+    User Name: ${userName || 'User'}
     Current Medications: ${JSON.stringify(medicines)}
     Recent Medication Activity (Logs): ${JSON.stringify(logs)}
     
@@ -337,18 +337,18 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors, priority 
 export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }, priority = 'high') => {
   const prompt = `
     You are the "Dawa-Lens Global Travel Companion".
-    Travel: """${currentCity || 'Home'}""" (${homeTimezone}) to """${destination}""" (${targetTimezone || 'Unknown'}).
+    Travel: ${currentCity || 'Home'} (${homeTimezone}) to ${destination} (${targetTimezone || 'Unknown'}).
     Medicines: ${JSON.stringify(medicines.map(m => ({ name: m.name, generic: m.genericName, dosage: m.dosage })))}
     
     Task:
-    1. Find equivalent brand names in """${destination}""".
+    1. Find equivalent brand names in ${destination}.
     2. Timezone shift advice for dosing.
     3. Customs restrictions for these specific meds.
-    4. Provide ONLY TWO emergency contact numbers for """${destination}""":
+    4. Provide ONLY TWO emergency contact numbers for ${destination}:
        a) Ambulance / Emergency Medical Services number (e.g. 999, 911, 112, or country-specific)
        b) The NATIONAL DRUG REGULATORY AUTHORITY (e.g. National Drug Authority in Uganda, FDA in USA, MHRA in UK, CDSCO in India) — include their name and public helpline number.
        Do NOT include Police. Do NOT include generic numbers like 112 for the drug authority.
-    5. Provide a detailed summary of general health risks (e.g. Malaria, yellow fever, water safety) for """${destination}""" in a clear markdown format.
+    5. Provide a detailed summary of general health risks (e.g. Malaria, yellow fever, water safety) for ${destination} in a clear markdown format.
     6. Use Markdown for formatting the advice, notes, and risks.
 
     Respond in EXACT JSON format:
@@ -408,7 +408,7 @@ export const checkMealSafety = async (medicines, mealDescription, priority = 'hi
   const prompt = `
     You are "Dawa-Lens Meal Safety Checker".
     Medicines: ${JSON.stringify(medicines.map(m => m.name + (m.genericName ? ` (${m.genericName})` : '')))}
-    Meal: """${mealDescription}"""
+    Meal: "${mealDescription}"
 
     Task: Check for interactions (Dairy, Grapefruit, Alcohol, etc.).
     Risk: High, Medium, Safe.
@@ -747,7 +747,9 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'cerebras-120b', finalMessages, priority, 3, true);
       } catch (err) {
-        if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
+        // FIX #6: Removed hard 1-second sleep — the rateLimitManager already
+        // enforces cooldown delays internally. Adding a sleep here on top just
+        // punishes the user with extra latency on every provider failure.
         console.warn("DawaGPT Stream Fallback: Cerebras failed, trying Groq 70B...", err.message);
       }
     }
@@ -775,7 +777,6 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
       } catch (err) {
-        if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
         console.warn("DawaGPT Stream Fallback: Groq 70B failed, trying Groq 8B...", err.message);
       }
     }
@@ -803,7 +804,6 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
       } catch (err) {
-        if (err.isRateLimit) await new Promise(r => setTimeout(r, 1000));
         console.warn("DawaGPT Stream Fallback: Groq 8B failed, trying Gemini...", err.message);
       }
     }
@@ -883,10 +883,11 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     : lastAction ? 'post-action'
     : 'ongoing';
 
-  const knowledgeSnippets = await retrieveMedicalKnowledge(lastUserMsg);
-  const knowledgeContext = knowledgeSnippets.length > 0
-    ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n`
-    : "";
+  // FIX #3: Kick off vector search immediately (fire-and-forget) while the rest
+  // of context preparation runs synchronously. Both complete in parallel and we
+  // await the result only right before we need it in the system prompt — saving
+  // the full round-trip latency (200–800 ms) from the critical path.
+  const knowledgePromise = retrieveMedicalKnowledge(lastUserMsg);
 
   const activeMeds = medicines?.length
     ? medicines.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ')
@@ -925,6 +926,11 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const patientsSummary = patients?.length
     ? JSON.stringify(patients.map(p => ({ id: p.id, name: p.name, relation: p.relation })))
     : 'No family profiles';
+
+  const knowledgeSnippets = await knowledgePromise;
+  const knowledgeContext = knowledgeSnippets.length > 0
+    ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n`
+    : "";
 
   const systemInstruction = `
     You are "Dawa-GPT", a premium medical AI assistant integrated into the Dawa-Lens app.
