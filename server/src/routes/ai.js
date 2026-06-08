@@ -1,7 +1,7 @@
 import express from 'express';
 import * as aiService from '../services/aiService.js';
 import { protect } from '../middleware/authMiddleware.js';
-import { heavyAiLimiter } from '../middleware/rateLimiter.js';
+import { heavyAiLimiter, tokenBudgetGuard } from '../middleware/rateLimiter.js';
 import { validate } from '../middleware/validateMiddleware.js';
 import * as aiValidation from '../validations/aiValidation.js';
 
@@ -125,7 +125,7 @@ router.post('/emotion-reflection', protect, validate(aiValidation.emotionReflect
 /**
  * Conversational AI Assistant (Dawa-GPT)
  */
-router.post('/chat', protect, validate(aiValidation.chatSchema), heavyAiLimiter, async (req, res, next) => {
+router.post('/chat', protect, validate(aiValidation.chatSchema), heavyAiLimiter, tokenBudgetGuard, async (req, res, next) => {
   try {
     const chat = await aiService.chatWithDawaGPT(req.body);
     res.json(chat);
@@ -137,7 +137,7 @@ router.post('/chat', protect, validate(aiValidation.chatSchema), heavyAiLimiter,
 /**
  * Streaming Conversational AI Assistant
  */
-router.post('/chat/stream', protect, validate(aiValidation.chatSchema), heavyAiLimiter, async (req, res, next) => {
+router.post('/chat/stream', protect, validate(aiValidation.chatSchema), heavyAiLimiter, tokenBudgetGuard, async (req, res, next) => {
   try {
     const stream = await aiService.streamChatWithDawaGPT(req.body);
     

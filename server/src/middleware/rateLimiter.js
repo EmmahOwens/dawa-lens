@@ -81,3 +81,25 @@ export const heavyAiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Per-user token budget guard.
+ * Blocks requests that are too large before they hit the AI service.
+ */
+export const tokenBudgetGuard = (req, res, next) => {
+  const body = req.body || {};
+
+  // Rough token estimate from request body
+  const roughEstimate =
+    JSON.stringify(body.messages || []).length / 3.7 +
+    JSON.stringify(body.medicines || []).length / 3.7 +
+    JSON.stringify(body.doseLogs || []).length / 3.7;
+
+  if (roughEstimate > 8000) {
+    return res.status(429).json({
+      status: 'fail',
+      message: 'Request context is too large. Please start a new conversation to clear history.'
+    });
+  }
+  next();
+};

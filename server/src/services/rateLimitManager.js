@@ -13,11 +13,36 @@ class RateLimitManager {
 
     // Model limit configurations (RPM, TPM, RPD, TPD)
     this.configs = {
-      'cerebras-120b': { rpm: 30,  tpm: 1000000, rpd: 14400, tpd: 10000000 },
-      'groq-70b':      { rpm: 30,  tpm: 14000,   rpd: 1000,  tpd: 500000   },
-      'groq-8b':       { rpm: 30,  tpm: 28000,   rpd: 14400, tpd: 1000000  },
-      'groq-scout':    { rpm: 30,  tpm: 15000,   rpd: 1000,  tpd: 500000   },
-      'gemini':        { rpm: 15,  tpm: 500000,  rpd: 1500,  tpd: 5000000  },
+      'cerebras-120b': {
+        rpm: 30,
+        tpm: 60000,     // 60,000 TPM
+        rpd: 1000,      // 1,000 RPD
+        tpd: 1000000,   // 1M tokens/day
+      },
+      'groq-70b': {
+        rpm: 30,
+        tpm: 6000,      // 6,000 TPM
+        rpd: 1000,
+        tpd: 500000,
+      },
+      'groq-8b': {
+        rpm: 30,
+        tpm: 6000,      // 6,000 TPM
+        rpd: 14400,     // 14,400 RPD
+        tpd: 1000000,
+      },
+      'groq-scout': {   // Llama 4 Scout
+        rpm: 30,
+        tpm: 6000,
+        rpd: 1000,
+        tpd: 500000,
+      },
+      'gemini': {
+        rpm: 15,
+        tpm: 1000000,   // Gemini 2.0 Flash: very generous TPM
+        rpd: 1500,
+        tpd: 5000000,
+      },
       'gemini-pro':    { rpm: 15,  tpm: 360000,  rpd: 1000,  tpd: 3000000  },
     };
 

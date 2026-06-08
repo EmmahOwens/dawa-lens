@@ -15,8 +15,11 @@ export const runWeeklyReports = async () => {
   console.log('📊 Weekly Report Worker Started...');
   
   const usersSnapshot = await db.collection('users').get();
-  
-  for (const userDoc of usersSnapshot.docs) {
+  const users = usersSnapshot.docs;
+  const WORKER_DELAY_MS = 3000; // 3 seconds between users
+
+  for (let i = 0; i < users.length; i++) {
+    const userDoc = users[i];
     const userId = userDoc.id;
     const userData = userDoc.data();
     
@@ -50,5 +53,8 @@ export const runWeeklyReports = async () => {
     } catch (err) {
       console.error(`❌ Failed to generate report for user ${userId}:`, err.message);
     }
+
+    // Throttle: never more than 20 users/minute on background work
+    if (i < users.length - 1) await sleep(WORKER_DELAY_MS);
   }
 };

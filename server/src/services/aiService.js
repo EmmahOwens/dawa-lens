@@ -4,10 +4,10 @@ import { Readable } from 'stream';
 import AppError from '../utils/AppError.js';
 import { retrieveMedicalKnowledge } from './vectorService.js';
 import * as medicineService from './medicineService.js';
-import ** as reminderService from './reminderService.js';
-import ** as doseLogService from './doseLogService.js';
-import ** as patientService from './patientService.js';
-import ** as wellnessService from './wellnessService.js';
+import * as reminderService from './reminderService.js';
+import * as doseLogService from './doseLogService.js';
+import * as patientService from './patientService.js';
+import * as wellnessService from './wellnessService.js';
 import { rateLimitManager } from './rateLimitManager.js';
 
 dotenv.config();
@@ -16,6 +16,7 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_SCOUT_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 const GROQ_LIGHT_MODEL = 'llama-3.1-8b-instant';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -25,8 +26,6 @@ const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 /**
  * Global AI error handler to ensure all errors returned are "operational" AppErrors.
- * Prevents non-operational errors (SyntaxError, TypeError) from triggering
- * the generic "Something went very wrong!" production message.
  */
 export function handleAiError(err) {
   if (err.isOperational) throw err;
@@ -51,16 +50,24 @@ export function handleAiError(err) {
 }
 
 /**
- * Determines which API key to use based on the model ID and preferred key.
- * If model is llama-3.1-8b, we prefer GROQ_API_KEY_2 if it exists.
- * Otherwise, we use GROQ_API_KEY.
+ * Determines which API key to use based on the model ID.
+ * Implements round-robin rotation across available keys for 70B.
+ * For 8B, prefer KEY_2 if available.
  */
+const GROQ_KEYS = [GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3].filter(Boolean);
+let groqKeyIndex = 0;
+
 const getGroqApiKey = (modelId) => {
   if (modelId && modelId.toLowerCase().includes('llama-3.1-8b')) {
     // Independent key for 8B model to avoid 70B limit sharing if possible
     return GROQ_API_KEY_2 || GROQ_API_KEY;
   }
-  return GROQ_API_KEY;
+
+  // Round-robin across all available keys (each key has its own RPD budget if from different accounts)
+  if (GROQ_KEYS.length === 0) return null;
+  const key = GROQ_KEYS[groqKeyIndex % GROQ_KEYS.length];
+  groqKeyIndex++;
+  return key;
 };
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -186,7 +193,9 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
     throw new AppError('Groq API key not configured', 401);
   }
 
-  const modelKey = modelId === GROQ_MODEL ? 'groq-70b' : 'groq-8b';
+  const modelKey = modelId === GROQ_MODEL ? 'groq-70b'
+    : modelId === GROQ_SCOUT_MODEL ? 'groq-scout'
+    : 'groq-8b';
 
   const fn = async () => {
     const payload = {
@@ -221,7 +230,7 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
 
 /**
  * Unified AI call with multi-provider fallback.
- * Order: Cerebras -> Groq (70B) -> Groq (8B) -> Gemini
+ * Order: Cerebras -> Groq (70B) -> Groq (Scout) -> Groq (8B) -> Gemini
  */
 export const callAiWithFallback = async (messages, options = {}) => {
   const { 
@@ -235,11 +244,11 @@ export const callAiWithFallback = async (messages, options = {}) => {
   const responseFormat = isJson ? { type: 'json_object' } : null;
 
   // 1. Try Cerebras (Primary)
-  if (CEREBRAS_API_KEY && forceModel !== 'groq-70b' && forceModel !== 'groq-8b' && forceModel !== 'gemini') {
+  if (CEREBRAS_API_KEY && forceModel !== 'groq-70b' && forceModel !== 'groq-scout' && forceModel !== 'groq-8b' && forceModel !== 'gemini') {
     try {
       return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, false);
     } catch (err) {
-      console.warn("Fallback: Cerebras failed or rate limited, trying Groq 70B...", err.message);
+      console.warn("Fallback: Cerebras failed, trying Groq 70B...", err.message);
     }
   }
 
@@ -249,7 +258,16 @@ export const callAiWithFallback = async (messages, options = {}) => {
       const modelId = GROQ_MODEL;
       return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, false);
     } catch (err) {
-      console.warn("Fallback: Groq 70B failed or rate limited, trying Groq 8B...", err.message);
+      console.warn("Fallback: Groq 70B failed, trying Groq Scout...", err.message);
+    }
+  }
+
+  // 2.5 Try Groq Scout
+  if (GROQ_API_KEY) {
+    try {
+      return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, false);
+    } catch (err) {
+      console.warn("Fallback: Groq Scout failed, trying Groq 8B...", err.message);
     }
   }
 
@@ -259,7 +277,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
       const modelId = GROQ_LIGHT_MODEL;
       return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, false);
     } catch (err) {
-      console.warn("Fallback: Groq 8B failed or rate limited, trying Gemini...", err.message);
+      console.warn("Fallback: Groq 8B failed, trying Gemini...", err.message);
     }
   }
 
@@ -274,7 +292,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
 
 const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 'high', maxTokens = 2048) => {
   const messages = [{ role: 'user', content: prompt }];
-  const isComplex = modelId === GROQ_MODEL;
+  const isComplex = modelId === GROQ_MODEL || modelId === GROQ_SCOUT_MODEL;
   try {
     return await callAiWithFallback(messages, { isJson, priority, maxTokens, isComplex });
   } catch (err) {
@@ -282,16 +300,43 @@ const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 
   }
 };
 
+// --- Helpers ---
+
+const responseCache = new Map();
+
+/**
+ * Helper to wrap AI calls with a simple in-memory TTL cache.
+ */
+const withCache = async (key, ttlMs, fn) => {
+  const hit = responseCache.get(key);
+  if (hit && Date.now() < hit.expiresAt) return hit.value;
+
+  const value = await fn();
+  responseCache.set(key, { value, expiresAt: Date.now() + ttlMs });
+
+  // Evict stale entries to prevent memory leak
+  if (responseCache.size > 500) {
+    const now = Date.now();
+    for (const [k, v] of responseCache) {
+      if (now > v.expiresAt) responseCache.delete(k);
+    }
+  }
+  return value;
+};
 
 export const getWellnessQuote = async (userName, priority = 'medium') => {
-  const prompt = `
-    Generate a short, powerful, and inspiring wellness quote (max 15 words) for a health app user named ${userName || 'friend'}.
-    The quote should emphasize consistency, strength, or the journey to better health.
-    Context: East Africa (keep it culturally relevant but universally inspiring).
-    Respond in JSON format: { "quote": "..." }
-  `;
-  // Using GROQ_LIGHT_MODEL ('llama-3.1-8b-instant') which uses GROQ_API_KEY_2 via getGroqApiKey
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
+  const today = new Date().toISOString().slice(0, 10);
+  const cacheKey = `quote:${userName || 'friend'}:${today}`;
+
+  return withCache(cacheKey, 24 * 60 * 60 * 1000, async () => {
+    const prompt = `
+      Generate a short, powerful, and inspiring wellness quote (max 15 words) for a health app user named ${userName || 'friend'}.
+      The quote should emphasize consistency, strength, or the journey to better health.
+      Context: East Africa (keep it culturally relevant but universally inspiring).
+      Respond in JSON format: { "quote": "..." }
+    `;
+    return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 200);
+  });
 };
 
 export const getCoachAdvice = async (logs, medicines, userName, priority = 'high') => {
@@ -315,7 +360,7 @@ export const getCoachAdvice = async (logs, medicines, userName, priority = 'high
     Respond in JSON format:
     { "advice": "text (Markdown formatted)", "patterns": ["list"], "adherenceScore": 0-100 }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 800);
 };
 
 export const checkHolisticSafety = async (medicines, lifestyleFactors, priority = 'high') => {
@@ -331,7 +376,7 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors, priority 
     Respond in JSON format:
     { "interactions": [{ "factor": "...", "risk": "...", "explanation": "text (Markdown)", "advice": "text (Markdown)" }] }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 600);
 };
 
 export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }, priority = 'high') => {
@@ -356,7 +401,7 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
       "equivalents": [
         { "original": "Original medicine name", "equivalent": "Local equivalent brand name in ${destination}" }
       ],
-      "timezoneAdvice": "text (Markdown formatted)", 
+      "timezoneAdvice": "text (Markdown formatted)",
       "customsNotes": "text (Markdown formatted)",
       "emergencyContacts": [
         { "service": "Ambulance", "number": "...", "type": "ambulance" },
@@ -365,7 +410,7 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
       "healthRisks": "text (Markdown formatted)"
     }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 1200);
 };
 
 export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines, priority = 'high') => {
@@ -393,15 +438,15 @@ export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines, prio
 
     === RESPONSE FORMAT (STRICT JSON) ===
     { 
-      "summary": "2-3 sentences high level clinical overview (Markdown formatted).", 
+      "summary": "2-3 sentences high level clinical overview (Markdown formatted).",
       "dosagePatterns": "Analysis of adherence, skipped doses, and timing (Markdown formatted).",
       "lifestyleAnalysis": "Correlation between symptoms/energy and logs (Markdown formatted).",
-      "insights": ["Specific correlation bullet 1", "Specific correlation bullet 2"], 
+      "insights": ["Specific correlation bullet 1", "Specific correlation bullet 2"],
       "actionItems": ["Actionable clinical suggestion 1", "Suggestion 2"],
       "correlationScore": 85
     }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 800);
 };
 
 export const checkMealSafety = async (medicines, mealDescription, priority = 'high') => {
@@ -417,117 +462,93 @@ export const checkMealSafety = async (medicines, mealDescription, priority = 'hi
     Respond in JSON format:
     { "risk": "...", "verdict": "text (Markdown)", "explanation": "text (Markdown)" }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
+  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 400);
 };
 
 export const getNutritionalGuidance = async (medicines, priority = 'high') => {
-  const prompt = `
-    You are the "Dawa-Lens Nutritional Guard".
-    Active Medications: ${JSON.stringify(medicines.map(m => ({ name: m.name, generic: m.genericName })))}
+  const medKey = medicines.map(m => m.name + (m.genericName || '')).sort().join(',');
+  const cacheKey = `nutrition:${medKey}`;
 
-    Task:
-    1. Provide 2-3 specific "Food Recommendations" that aid absorption or mitigate side effects for these medications.
-    2. Identify "Critical Safety Warnings" regarding foods/drinks to avoid (e.g., Grapefruit, Alcohol, Dairy, Caffeine).
-    3. Include "Timing Advice" (e.g., "Take 2 hours after dairy").
-    4. Focus on East African regional foods (Matooke, G-nuts, Avocado, Posho, etc.) where appropriate.
-    5. Use Markdown for formatting reasons, explanations, and advice.
+  return withCache(cacheKey, 24 * 60 * 60 * 1000, async () => {
+    const prompt = `
+      You are the "Dawa-Lens Nutritional Guard".
+      Active Medications: ${JSON.stringify(medicines.map(m => ({ name: m.name, generic: m.genericName })))}
 
-    Respond in EXACT JSON format:
-    {
-      "recommendations": [
-        { "food": "string", "reason": "text (Markdown)", "benefit": "string" }
-      ],
-      "warnings": [
-        { "factor": "string", "severity": "High" | "Medium", "explanation": "text (Markdown)" }
-      ],
-      "timingAdvice": "text (Markdown)"
-    }
-  `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
-};
+      Task:
+      1. Provide 2-3 specific "Food Recommendations" that aid absorption or mitigate side effects for these medications.
+      2. Identify "Critical Safety Warnings" regarding foods/drinks to avoid (e.g., Grapefruit, Alcohol, Dairy, Caffeine).
+      3. Include "Timing Advice" (e.g., "Take 2 hours after dairy").
+      4. Focus on East African regional foods (Matooke, G-nuts, Avocado, Posho, etc.) where appropriate.
+      5. Use Markdown for formatting reasons, explanations, and advice.
 
-export const getHealthDiscoveries = async (priority = 'low') => {
-  const prompt = `
-    Generate TWO distinct health discovery items for an East African health app:
-    1. A "Health Tip": A short, actionable health or medication advice (max 15 words).
-    2. A "Did You Know": A surprising, evidence-based health fact (max 15 words).
-
-    Context: East Africa (e.g., Uganda, Kenya, Tanzania). Use regional context where appropriate (e.g., local foods like Matooke, G-nuts, or local climate/lifestyle).
-
-    Respond in EXACT JSON format:
-    {
-      "healthTip": "...",
-      "didYouKnow": "..."
-    }
-  `;
-  // Force Gemini as requested by user
-  return await callAiWithFallback([{ role: 'user', content: prompt }], {
-    isJson: true,
-    priority,
-    maxTokens: 500,
-    forceModel: 'gemini'
+      Respond in EXACT JSON format:
+      {
+        "recommendations": [
+          { "food": "string", "reason": "text (Markdown)", "benefit": "string" }
+        ],
+        "warnings": [
+          { "factor": "string", "severity": "High" | "Medium", "explanation": "text (Markdown)" }
+        ],
+        "timingAdvice": "text (Markdown)"
+      }
+    `;
+    return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 800);
   });
 };
 
-/**
- * Advanced task complexity detection to avoid unnecessary usage of 70B model.
- * Returns true if the query requires system context (logs, reminders) or tool-use capabilities.
- */
+export const getHealthDiscoveries = async (priority = 'low') => {
+  return withCache('health-discoveries', 12 * 60 * 60 * 1000, async () => {
+    const prompt = `
+      Generate TWO distinct health discovery items for an East African health app:
+      1. A "Health Tip": A short, actionable health or medication advice (max 15 words).
+      2. A "Did You Know": A surprising, evidence-based health fact (max 15 words).
+
+      Context: East Africa (e.g., Uganda, Kenya, Tanzania). Use regional context where appropriate (e.g., local foods like Matooke, G-nuts, or local climate/lifestyle).
+
+      Respond in EXACT JSON format:
+      {
+        "healthTip": "...",
+        "didYouKnow": "..."
+      }
+    `;
+    return await callAiWithFallback([{ role: 'user', content: prompt }], {
+      isJson: true,
+      priority,
+      maxTokens: 500,
+      forceModel: 'gemini'
+    });
+  });
+};
+
 export const isComplexTask = (text) => {
   if (!text) return false;
   const lower = text.toLowerCase().trim();
-  
-  // High threshold for complexity by length (approx 100-120 words)
   if (text.length > 500) return true;
-  
-  // Specific command-oriented patterns that require tool-use/action capabilities
   const actionPatterns = [
     /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear)/i,
     /(reminder|alarm|med|medicine|dose|taken|skipped|feeling|wellness|food|meal|profile|patient|family|mother|father|son|daughter|wife|husband|parent|child)/i
   ];
-  
-  // Data retrieval patterns
   const dataPatterns = [
     /(what|show|list|tell|view|see|check|get|summary|history|status)/i,
     /(my|current|active|recent|all)/i
   ];
-
-  // If it matches an action verb OR a data retrieval verb + a noun from our domain
   const hasActionVerb = /(add|create|set|remind|log|record|track|update|delete|remove|register)/i.test(lower);
   const hasDomainNoun = /(reminder|med|medicine|dose|log|wellness|family|profile|patient|history)/i.test(lower);
   const hasDataVerb = /(what|show|list|tell|view|check|get)/i.test(lower);
-
   const isActionRequest = hasActionVerb && hasDomainNoun;
   const isDataRequest = hasDataVerb && (hasDomainNoun || /(my|current|active|recent)/i.test(lower));
-  
-  // Generic informational queries about keywords should NOT trigger 70B
-  // e.g. "How do I add a med?" vs "Add a med"
   const isHowToQuery = /^(how\s+do\s+i|can\s+you\s+explain|what\s+is|tell\s+me\s+about)/i.test(lower);
-
   if (isHowToQuery && !lower.includes('my')) return false;
-
-  // Delete/remove intent + domain noun (Requirement 5.1)
-  // Uses (?:\w+\s+)*? to allow any number of words between the intent verb and domain noun
-  // e.g. "remove the Metformin alarm" (two words between intent and noun) must match
   const hasDeleteIntent = /(delete|remove|cancel|stop)\s+(?:\w+\s+)*?(reminder|alarm|med|medicine)/i.test(lower);
   if (hasDeleteIntent) return true;
-
-  // Show/list reminders intent (Requirement 5.2)
   const hasShowRemindersIntent = /(show|list|what\s+are|check|view)\s+\w*\s*reminders?/i.test(lower);
   if (hasShowRemindersIntent) return true;
-
   if (isActionRequest || isDataRequest) return true;
-
-  // Check for medical advice needs (symptoms, dosage questions etc)
   const isMedicalQuery = /(dose|dosage|effect|safe|interact|symptom|pain|sick|hurt|doctor|health)/i.test(lower);
   if (isMedicalQuery && text.split(' ').length > 5) return true;
-
   return false;
 };
 
-/**
- * Helper to detect if the user's message likely requires an action (write operation).
- */
 const isLikelyActionRequest = (text) => {
   if (!text) return false;
   return /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear)\s/i.test(text.toLowerCase());
@@ -549,31 +570,25 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
 
     const isComplex = isComplexTask(lastUserMsg);
 
-    // Wrap context preparation in its own try-catch or ensure it is handled by the outer one
     const { finalMessages } = await prepareDawaGPTContext({
       messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isComplex, selectedPatientId
     });
 
-    // Increase max tokens for conversational chat
-    const chatMaxTokens = 4096;
+    const chatMaxTokens = 2048;
 
-    // Use the unified fallback logic
-    let result = await callAiWithFallback(finalMessages, { 
+    let result = await callAiWithFallback(finalMessages, {
       isJson: true, 
       priority, 
       maxTokens: chatMaxTokens, 
       isComplex 
     });
 
-    // --- AUTONOMOUS AGENT EXECUTION LOOP ---
     if (result.action && result.action.type && isComplex) {
       console.log(`🤖 Agent executing action: ${result.action.type}`);
       try {
         const userId = userProfile?.id || userProfile?.uid;
         const actionResult = await executeAiAction(result.action, userId, medicines, selectedPatientId);
         result.actionExecuted = true;
-
-        // Inject the executed action into the text response for conversation history awareness
         result.text += `\n\n[ACTION EXECUTED: ${result.action.type} — ID: ${actionResult?.id || 'new'}]`;
       } catch (actionErr) {
         console.error("Agent Action Execution Failed:", actionErr.message);
@@ -587,33 +602,16 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
   }
 };
 
-/**
- * Execute an AI-requested action against the Firestore database.
- */
 async function executeAiAction(action, userId, userMedicines = [], selectedPatientId = null) {
   const { type, payload } = action;
-  
-  if (!type || !payload) {
-    throw new Error('Action type and payload are required');
-  }
-
-  // Ensure userId is attached to payloads
+  if (!type || !payload) throw new Error('Action type and payload are required');
   const data = { ...payload, userId };
-
-  // Default patientId to selectedPatientId (current profile) if missing
-  if (!data.patientId) {
-    data.patientId = selectedPatientId;
-  }
+  if (!data.patientId) data.patientId = selectedPatientId;
 
   switch (type) {
-    case 'ADD_MEDICINE':
-      return await medicineService.createMedicine(data);
-    
-    case 'UPDATE_MEDICINE':
-      return await medicineService.updateMedicine(payload.id, data);
-    
+    case 'ADD_MEDICINE': return await medicineService.createMedicine(data);
+    case 'UPDATE_MEDICINE': return await medicineService.updateMedicine(payload.id, data);
     case 'ADD_REMINDER':
-      // If medicineName is provided but no medicineId, try to resolve it from the inventory
       if (!data.medicineId && data.medicineName && userMedicines.length > 0) {
         const match = userMedicines.find(m => 
           m.name.toLowerCase() === data.medicineName.toLowerCase() ||
@@ -626,52 +624,28 @@ async function executeAiAction(action, userId, userMedicines = [], selectedPatie
         }
       }
       return await reminderService.createReminder(data);
-    
-    case 'UPDATE_REMINDER':
-      return await reminderService.updateReminder(payload.id, data, userId);
-    
-    case 'REMOVE_REMINDER':
-      return await reminderService.deleteReminder(payload.id, userId);
-    
-    case 'LOG_DOSE':
-      return await doseLogService.createDoseLog(data);
-    
-    case 'LOG_WELLNESS':
-      return await wellnessService.createWellnessLog(data);
-    
-    case 'ADD_PATIENT':
-      return await patientService.createPatient(data);
-      
-    default:
-      throw new Error(`Unknown action type: ${type}`);
+    case 'UPDATE_REMINDER': return await reminderService.updateReminder(payload.id, data, userId);
+    case 'REMOVE_REMINDER': return await reminderService.deleteReminder(payload.id, userId);
+    case 'LOG_DOSE': return await doseLogService.createDoseLog(data);
+    case 'LOG_WELLNESS': return await wellnessService.createWellnessLog(data);
+    case 'ADD_PATIENT': return await patientService.createPatient(data);
+    default: throw new Error(`Unknown action type: ${type}`);
   }
 }
 
-/**
- * Streaming version of Dawa-GPT.
- * Returns the raw axios stream from Groq.
- */
 export const streamChatWithDawaGPT = async (params, priority = 'high') => {
   try {
     const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, selectedPatientId } = params;
 
-    if (!Array.isArray(messages)) {
-      throw new AppError('Invalid messages format: expected an array.', 400);
-    }
+    if (!Array.isArray(messages)) throw new AppError('Invalid messages format.', 400);
 
     const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || messages.filter(m => m.role === 'user').pop()?.content;
 
     if (detectEmergency(lastUserMsg)) {
       return new Readable({
         read() {
-          const metadata = JSON.stringify({
-            suggestions: EMERGENCY_RESPONSE.suggestions,
-            source: EMERGENCY_RESPONSE.source,
-            action: null
-          });
-          const data = JSON.stringify({
-            choices: [{ delta: { content: EMERGENCY_RESPONSE.text + "\n" + metadata } }]
-          });
+          const metadata = JSON.stringify({ suggestions: EMERGENCY_RESPONSE.suggestions, source: EMERGENCY_RESPONSE.source, action: null });
+          const data = JSON.stringify({ choices: [{ delta: { content: EMERGENCY_RESPONSE.text + "\n" + metadata } }] });
           this.push(`data: ${data}\n`);
           this.push(`data: [DONE]\n`);
           this.push(null);
@@ -681,20 +655,12 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
 
     const isComplex = isComplexTask(lastUserMsg);
 
-    // --- FORCE NON-STREAMING PATH FOR ACTIONS ---
     if (isComplex && isLikelyActionRequest(lastUserMsg)) {
       try {
         const result = await chatWithDawaGPT(params, priority);
-        // Wrap result in a fake stream for the frontend
         return createFakeStream(result);
       } catch (err) {
-        // chatWithDawaGPT already calls handleAiError, but we might need to wrap it in a stream
-        return createFakeStream({
-          text: err.message || "I encountered an error processing your request.",
-          suggestions: ["Try again"],
-          source: "System",
-          action: null
-        });
+        return createFakeStream({ text: err.message || "I encountered an error.", suggestions: ["Try again"], source: "System", action: null });
       }
     }
 
@@ -703,20 +669,13 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       isStreaming: true, isComplex, selectedPatientId
     });
 
-    const chatMaxTokens = 4096;
+    const chatMaxTokens = 2048;
 
-    // Helper for non-streaming fallback
     function createFakeStream(jsonResp) {
       return new Readable({
         read() {
-          const metadata = JSON.stringify({
-            suggestions: jsonResp.suggestions || [],
-            source: jsonResp.source || "Dawa-GPT",
-            action: jsonResp.action || null
-          });
-          const data = JSON.stringify({
-            choices: [{ delta: { content: (jsonResp.text || "") + "\n###METADATA###\n" + metadata } }]
-          });
+          const metadata = JSON.stringify({ suggestions: jsonResp.suggestions || [], source: jsonResp.source || "Dawa-GPT", action: jsonResp.action || null });
+          const data = JSON.stringify({ choices: [{ delta: { content: (jsonResp.text || "") + "\n###METADATA###\n" + metadata } }] });
           this.push(`data: ${data}\n`);
           this.push(`data: [DONE]\n`);
           this.push(null);
@@ -724,112 +683,65 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       });
     }
 
-    // --- STREAMING FALLBACK CHAIN ---
-
-    // 1. Try Cerebras Streaming
     if (CEREBRAS_API_KEY && isComplex) {
       try {
         const fn = async () => {
-          const response = await axios.post(CEREBRAS_API_URL, {
-            model: CEREBRAS_MODEL,
-            messages: finalMessages,
-            stream: true,
-            max_tokens: chatMaxTokens
-          }, {
-            headers: {
-              'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            responseType: 'stream',
-            timeout: 20000
+          const response = await axios.post(CEREBRAS_API_URL, { model: CEREBRAS_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens }, {
+            headers: { 'Authorization': `Bearer ${CEREBRAS_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 20000
           });
           return response.data;
         };
         return await rateLimitManager.enqueue(fn, 'cerebras-120b', finalMessages, priority, 3, true);
       } catch (err) {
-        // FIX #6: Removed hard 1-second sleep — the rateLimitManager already
-        // enforces cooldown delays internally. Adding a sleep here on top just
-        // punishes the user with extra latency on every provider failure.
-        console.warn("DawaGPT Stream Fallback: Cerebras failed, trying Groq 70B...", err.message);
+        console.warn("Stream Fallback: Cerebras failed.", err.message);
       }
     }
 
-    // 2. Try Groq 70B Streaming
     if (GROQ_API_KEY && isComplex) {
       try {
         const modelId = GROQ_MODEL;
         const apiKey = getGroqApiKey(modelId);
         const fn = async () => {
-          const response = await axios.post(GROQ_API_URL, {
-            model: modelId,
-            messages: finalMessages,
-            stream: true,
-            max_tokens: chatMaxTokens
-          }, {
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json'
-            },
-            responseType: 'stream',
-            timeout: 15000
+          const response = await axios.post(GROQ_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens }, {
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 15000
           });
           return response.data;
         };
         return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("DawaGPT Stream Fallback: Groq 70B failed, trying Groq 8B...", err.message);
+        console.warn("Stream Fallback: Groq 70B failed.", err.message);
       }
     }
 
-    // 3. Try Groq 8B Streaming
     if (GROQ_API_KEY_2 || GROQ_API_KEY) {
       try {
         const modelId = GROQ_LIGHT_MODEL;
         const apiKey = getGroqApiKey(modelId);
         const fn = async () => {
-          const response = await axios.post(GROQ_API_URL, {
-            model: modelId,
-            messages: finalMessages,
-            stream: true,
-            max_tokens: chatMaxTokens
-          }, {
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json'
-            },
-            responseType: 'stream',
-            timeout: 15000
+          const response = await axios.post(GROQ_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens }, {
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 15000
           });
           return response.data;
         };
         return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("DawaGPT Stream Fallback: Groq 8B failed, trying Gemini...", err.message);
+        console.warn("Stream Fallback: Groq 8B failed.", err.message);
       }
     }
 
-    // 4. Fallback to Gemini (non-streaming, then wrapped in stream)
     try {
       const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens);
       return createFakeStream(geminiResp);
     } catch (err) {
-      console.error("DawaGPT Stream Fallback: ALL providers failed.", err.message);
-      return createFakeStream({
-        text: "Sorry, I'm having trouble connecting to my medical intelligence core right now. This may be due to a temporary service outage.",
-        suggestions: ["Try again", "Go home"],
-        source: "System",
-        action: null
-      });
+      return createFakeStream({ text: "Sorry, I'm having trouble connecting.", suggestions: ["Try again"], source: "System", action: null });
     }
   } catch (err) {
-    // For streams, we can't easily throw an AppError that the middleware handles nicely
-    // after headers might have been sent (though here headers aren't sent yet).
-    // We'll wrap the error in a fake stream.
     return new Readable({
       read() {
-        const data = JSON.stringify({
-          choices: [{ delta: { content: "I encountered an error starting the chat stream. Please try again later." } }]
-        });
+        const data = JSON.stringify({ choices: [{ delta: { content: "Error starting chat stream." } }] });
         this.push(`data: ${data}\n`);
         this.push(`data: [DONE]\n`);
         this.push(null);
@@ -838,322 +750,106 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
   }
 };
 
-// --- Helpers ---
-
-/**
- * Generate a dynamic priming message for the first assistant turn.
- */
 function buildPrimingMessage(reminders, medicines, patients, selectedPatientId) {
   const activePatient = patients?.find(p => p.id === selectedPatientId);
   const name = activePatient?.name || 'you';
   const reminderCount = reminders?.length || 0;
   const nextReminder = reminders?.[0];
-
   let opening = `Hi! I'm Dawa-GPT.`;
-  if (reminderCount > 0 && nextReminder) {
-    opening += ` ${name === 'you' ? 'You have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up.`;
-  }
-
-  // Generate first suggestions based on actual state
+  if (reminderCount > 0 && nextReminder) opening += ` ${name === 'you' ? 'You have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up.`;
   let firstSuggestions = [];
-  if (nextReminder) {
-    firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
-  }
-  if (medicines?.length > 0) {
-    firstSuggestions.push(`Does ${medicines[0].name} interact with anything?`);
-  }
+  if (nextReminder) firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
+  if (medicines?.length > 0) firstSuggestions.push(`Does ${medicines[0].name} interact with anything?`);
   firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
-
-  // Format as JSON with metadata so the frontend parses suggestions correctly
-  return JSON.stringify({
-    text: opening,
-    suggestions: firstSuggestions.slice(0, 3),
-    source: 'Dawa-GPT',
-    action: null
-  });
+  return JSON.stringify({ text: opening, suggestions: firstSuggestions.slice(0, 3), source: 'Dawa-GPT', action: null });
 }
 
 async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
   const recentMessages = messages.slice(-5);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
   const lastAction = recentMessages.find(m => m.role === 'assistant' && (m.action || m.content?.includes('action')) )?.action;
-
-  const conversationPhase = messages.length === 0 ? 'opening'
-    : messages.length < 4 ? 'discovery'
-    : lastAction ? 'post-action'
-    : 'ongoing';
-
-  // FIX #3: Kick off vector search immediately (fire-and-forget) while the rest
-  // of context preparation runs synchronously. Both complete in parallel and we
-  // await the result only right before we need it in the system prompt — saving
-  // the full round-trip latency (200–800 ms) from the critical path.
+  const conversationPhase = messages.length === 0 ? 'opening' : messages.length < 4 ? 'discovery' : lastAction ? 'post-action' : 'ongoing';
   const knowledgePromise = retrieveMedicalKnowledge(lastUserMsg);
-
-  const activeMeds = medicines?.length
-    ? medicines.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ')
-    : 'None';
-  
-  // Safe date formatting helper to avoid crashes on non-string inputs (e.g., Firestore Timestamps)
-  const safeFormatDate = (val) => {
-    if (typeof val !== 'string') return val;
-    return val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
-  };
-
-  // Provide basic summaries even for non-complex tasks so AI has state awareness
-  const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2).map(l => ({
-    ...l,
-    actionTime: safeFormatDate(l.actionTime),
-    scheduledTime: safeFormatDate(l.scheduledTime)
-  }))) : 'No logs';
-  const remindersSummary = reminders?.length
-    ? JSON.stringify(reminders.map(r => ({
-      id: r.id,
-      medicineName: r.medicineName,
-      dose: r.dose,
-      time: r.time,
-      repeat: r.repeatSchedule,
-      enabled: r.enabled
-    })).slice(0, isComplex ? 10 : 3))
-    : 'No reminders set';
-    
-  const wellnessSummary = wellnessLogs?.length
-    ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1).map(l => ({
-      ...l,
-      timestamp: safeFormatDate(l.timestamp)
-    })))
-    : 'No wellness logs';
-    
-  const patientsSummary = patients?.length
-    ? JSON.stringify(patients.map(p => ({ id: p.id, name: p.name, relation: p.relation })))
-    : 'No family profiles';
-
+  const activeMeds = medicines?.length ? medicines.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ') : 'None';
+  const safeFormatDate = (val) => typeof val !== 'string' ? val : val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
+  const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
+  const remindersSummary = reminders?.length ? JSON.stringify(reminders.map(r => ({ id: r.id, medicineName: r.medicineName, dose: r.dose, time: r.time, repeat: r.repeatSchedule, enabled: r.enabled })).slice(0, isComplex ? 10 : 3)) : 'No reminders set';
+  const wellnessSummary = wellnessLogs?.length ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1).map(l => ({ ...l, timestamp: safeFormatDate(l.timestamp) }))) : 'No wellness logs';
+  const patientsSummary = patients?.length ? JSON.stringify(patients.map(p => ({ id: p.id, name: p.name, relation: p.relation }))) : 'No family profiles';
   const knowledgeSnippets = await knowledgePromise;
-  const knowledgeContext = knowledgeSnippets.length > 0
-    ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n`
-    : "";
+  const knowledgeContext = knowledgeSnippets.length > 0 ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n` : "";
 
-  const systemInstruction = `
+  const STATIC_SYSTEM_PROMPT = `
     You are "Dawa-GPT", a premium medical AI assistant integrated into the Dawa-Lens app.
     Regional Context: Uganda / East Africa.
 
-    === SYSTEM CONTEXT ===
+    === CAPABILITIES & ACTIONS ===
+    You have FULL READ and WRITE access to the user's medication system.
+    Actions:
+    - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, dosagePerDose?, patientId? }
+    - UPDATE_MEDICINE: { id, name?, dosage?, notes? }
+    - ADD_REMINDER: { medicineName, dose, time (HH:mm), repeatSchedule, patientId?, medicineId? }
+    - UPDATE_REMINDER: { id, enabled?, time?, dose? }
+    - REMOVE_REMINDER: { id }
+    - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action, patientId? }
+    - LOG_WELLNESS: { type, data, patientId? }
+    - ADD_PATIENT: { name, age, gender, relation }
+
+    === RULES ===
+    1. BE AGENTIC: PERFORM ACTIONS IMMEDIATELY.
+    2. TONE: Knowledgeable friend. Natural contractions. Short sentences.
+    3. CONFIRMATION: Confirm actions in past tense ("I've added...").
+    4. SUGGESTIONS: Provide 3 short, contextual chips.
+
+    CONVERSATION PHASE: ${conversationPhase}
+    ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
+    Append ###METADATA### and JSON at the end.` : `=== RESPONSE FORMAT ===
+    Respond in JSON.`}
+  `;
+
+  const dynamicContextBlock = `
+    === CURRENT SESSION CONTEXT ===
     User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'}
-    Active Profile (Target): ${selectedPatientId || 'Self (Account Owner)'}
+    Active Profile: ${selectedPatientId || 'Self'}
     Active Medications: ${activeMeds}
     Reminders: ${remindersSummary}
     Recent Dose Logs: ${recentLogs}
     Wellness Logs: ${wellnessSummary}
     Family: ${patientsSummary}
-
     ${knowledgeContext}
-
-    === CAPABILITIES & ACTIONS ===
-    You have FULL READ and WRITE access to the user's medication system.
-    To perform an operation, include an "action" field in your metadata JSON.
-    
-    Actions:
-    - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, dosagePerDose?, patientId? }
-    - UPDATE_MEDICINE: { id, name?, dosage?, notes? }
-    - ADD_REMINDER: { medicineName, dose, time (HH:mm or "HH:mm,HH:mm,..."), repeatSchedule ("daily"|"weekly"|"once"|"custom"), repeatDays?, patientId?, medicineId? }
-    - UPDATE_REMINDER: { id, enabled?, time? (HH:mm or "HH:mm,HH:mm,..."), repeatSchedule?, repeatDays?, dose? }
-    - REMOVE_REMINDER: { id, medicineName? } — IMPORTANT: When the reminder list is available in context, you MUST always include the reminder "id" (Firestore document ID) in the payload. The "id" is shown in the Reminders context above. Including "id" ensures reliable deletion.
-    - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime (YYYY-MM-DD HH:mm), action ("taken"|"skipped"), patientId? }
-    - LOG_WELLNESS: { type ("food"|"symptom"), data: { symptoms: [], mood?, meal?, notes? }, patientId? }
-    - ADD_PATIENT: { name, age?, gender?, relation? }
-
-    === MEDICINE KNOWLEDGE ===
-    You have built-in knowledge of thousands of medicines. When a user asks about a medicine NOT in their active medications list, you can still:
-    - Explain what it is, its typical uses, dosage ranges, and common side effects.
-    - Suggest it as a new medicine to ADD if appropriate.
-    - Warn about interactions with their CURRENT active medications.
-    - Reference WHO Essential Medicines List and NDA Uganda approved drugs where relevant.
-    Do NOT say "this medicine isn't in your list" as if that limits your knowledge. Your active medications list only shows what they're currently tracking — your medical knowledge is far broader.
-
-    === RULES ===
-    1. BE AGENTIC & PROACTIVE: If the user asks for a task that requires an action (e.g., adding a reminder, logging a dose), PERFORM THE ACTION IMMEDIATELY. Do not tell the user how to do it; just do it.
-    2. MINIMAL TALK, MAXIMUM ACTION: Avoid long explanations of app features. If you have the info, execute.
-    3. TONE — Sound like a knowledgeable friend, not a medical brochure:
-       - Use contractions naturally ("I've set that up", "You're all good", "Let's check").
-       - Keep sentences short. One idea per sentence.
-       - After completing an action, confirm it conversationally: "Done! I've added your Paracetamol reminder for 8am daily." NOT "The ADD_REMINDER action has been executed successfully."
-       - Use first-person naturally: "I've added...", "I found...", "I can see..."
-       - Avoid: "Certainly!", "Absolutely!", "Great question!", "As per your request".
-       - When you don't know something, say so plainly: "I'm not sure about that — it's worth checking with your pharmacist."
-       - Match the user's energy. If they're brief, be brief. If they're chatty, be warmer.
-    4. ACTION CONFIRMATION: When you include an action in your response, your "text" field should already contain the confirmation message as if the action succeeded. Say "I've added your reminder" not "I will add your reminder". The action executes immediately after your response — speak in the past tense of success.
-    5. MEDICINE RESOLUTION: Before ADD_REMINDER, check if the medicine already exists in Active Medications.
-       - If YES: use the existing medicineId in the ADD_REMINDER payload. Do NOT call ADD_MEDICINE first.
-       - If NO and the user wants to track it: call ADD_MEDICINE first, then ADD_REMINDER. Tell the user: "I've added [Medicine] to your medications and set up your reminder."
-       - Never silently fail. If you can't resolve a medicine, ask: "I don't see [medicine] in your list — want me to add it first?"
-    6. Advise doctor visits for critical misses (Heart, BP, HIV).
-    7. Frequency Logic: Calculate evenly-spaced times based on frequency.
-       Examples:
-       - "Twice a day" -> "08:00,20:00"
-       - "Three times a day" or "8 hourly" -> "08:00,16:00,00:00"
-       - "Four times a day" or "6 hourly" -> "06:00,12:00,18:00,00:00"
-       Always provide times as a comma-separated string in the "time" field.
-    8. ALWAYS include "patientId" in action payloads. Use the "Active Profile (Target)" ID above unless another person is mentioned.
-    9. Include clickable chips for navigation using these supported routes: [Dashboard / Home](/ or /dashboard or /home), [Medication Reminders](/reminders or /medications), [Add Reminder](/reminders/new or /new-reminder or /add-reminder), [History/Logs](/history or /logs), [Lifestyle/Interactions](/interactions or /safety), [Family Hub](/family or /family-hub), [Travel Companion](/travel or /travel-companion), [Wellness Hub](/wellness or /wellness-hub), [Care Report](/report or /care-report), [Settings/Profile](/settings or /profile), [Scan Medicine](/scan or /scan-medicine). These custom routes are dynamically translated by the frontend to their corresponding pages.
-    10. Proactively suggest regional foods (Matooke, Avocado, G-nuts).
-    11. Use Markdown for formatting (bold, italics, lists, tables) to make information clear and readable.
-    12. For any dates or times generated in text (e.g., in tables or summaries), only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds. (Example: 2026-06-01 14:30).
-
-    === SUGGESTION RULES ===
-    The "suggestions" array contains 3 SHORT chips the user can tap as their next message.
-    Each chip must be a complete, natural sentence the user would actually say — not a label or category.
-
-    RULES:
-    1. CONTEXTUAL: Every suggestion must follow directly from what just happened.
-       - After ADD_REMINDER: ["Set a food reminder for Metformin", "What are all my reminders?", "Add another medicine"]
-       - After logging a dose: ["Log my evening Paracetamol", "How many doses have I taken this week?", "I felt nauseous after taking it"]
-       - After a medicine question: ["Does \${medicineName} interact with \${otherMedicine}?", "What's the best time to take it?", "Add a reminder for \${medicineName}"]
-       - After ADD_PATIENT: ["Set a reminder for \${patientName}", "What medicines is \${patientName} taking?", "Switch to \${patientName}'s profile"]
-       - After a wellness check-in: ["What should I eat today?", "Log my blood pressure", "How has my health been this week?"]
-
-    2. PROGRESSIVE: Suggestions should lead somewhere new — not repeat what was just done.
-       BAD (after adding a reminder): "Add a reminder" ← already done
-       GOOD: "Add a food note to this reminder", "What time is my next dose?", "Log this dose as taken"
-
-    3. SPECIFIC not GENERIC: Use the actual medicine name, patient name, or action from the conversation.
-       BAD: "Tell me about my medications"
-       GOOD: "Does Metformin 500mg interact with Ibuprofen?"
-
-    4. ONE ACTION SHORTCUT: At least one chip should be a quick action the user can execute immediately.
-       Example: "Log Paracetamol as taken now", "Add reminder for tonight at 9pm", "Switch to Mary's profile"
-
-    5. LENGTH: Each chip must be under 8 words. Natural spoken phrasing, not menu labels.
-       BAD: "Medication Interaction Check"
-       GOOD: "Does this interact with my BP meds?"
-
-    CONVERSATION PHASE: ${conversationPhase}
-    - opening: Suggest things that help the user discover what DawaGPT can do
-    - discovery: Suggest actions related to what they've been asking about
-    - post-action: Suggest the natural next step after the action just completed
-    - ongoing: Suggest deeper dives or related features they haven't tried yet
-
-    ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
-    Write your response as plain Markdown text.
-    At the very end, on a new line, append exactly:
-
-    ###METADATA###
-    {"suggestions":["...","..."],"source":"Dawa-GPT","action":{"type":"...","payload":{...}}}
-
-    Rules:
-    - The ###METADATA### line must be the LAST thing you output.
-    - The JSON must be on a single line immediately after ###METADATA###.
-    - If no action is needed, set "action" to null.
-    - Do NOT wrap your response in a JSON object. Only the metadata block is JSON.
-    - Do NOT include any text after the metadata JSON line.` : `=== RESPONSE FORMAT ===
-    Respond STRICTLY in JSON format, with the "text" field containing Markdown-formatted content.
-    NEVER append text outside the JSON block.
-
-    Structure:
-    {
-      "text": "Your markdown response here",
-      "suggestions": ["suggestion 1", "2", "3"],
-      "source": "Dawa-GPT",
-      "action": { "type": "...", "payload": {...} } | null
-    }`}
   `;
 
-  const formattedMessages = recentMessages.map(msg => {
-    const content = msg.text || msg.content || "";
-    if (msg.role === 'assistant') {
-      // Append the previous suggestions as a silent annotation the AI can read
-      const suggestionContext = msg.suggestions?.length
-        ? `\n[Previous suggestions offered: ${msg.suggestions.join(' | ')}]`
-        : '';
-      return {
-        role: 'assistant',
-        content: content + suggestionContext
-      };
-    }
-    return { role: 'user', content: content };
-  });
-
-  // Clean and validate message history:
-  // 1. Conversation SHOULD alternate between 'user' and 'assistant'.
+  const formattedMessages = recentMessages.map(msg => ({ role: msg.role === 'assistant' ? 'assistant' : 'user', content: msg.text || msg.content || "" }));
   const cleanedMessages = [];
   let lastRole = null;
-
   for (const msg of formattedMessages) {
-    if (msg.role === lastRole) {
-      // Merge consecutive messages with the same role
-      if (cleanedMessages.length > 0) {
-        cleanedMessages[cleanedMessages.length - 1].content += "\n\n" + msg.content;
-      } else {
-        cleanedMessages.push(msg);
-      }
-    } else {
-      cleanedMessages.push(msg);
-      lastRole = msg.role;
-    }
+    if (msg.role === lastRole) cleanedMessages[cleanedMessages.length - 1].content += "\n\n" + msg.content;
+    else { cleanedMessages.push(msg); lastRole = msg.role; }
   }
-
-  // Final check: if history is now empty (e.g., only assistant welcome msg), start fresh
-  if (cleanedMessages.length === 0 && lastUserMsg) {
-    cleanedMessages.push({ role: 'user', content: lastUserMsg });
-  }
-
-  // Prime the first turn with contextual suggestions if it's the beginning or no assistant msg present
+  if (cleanedMessages.length === 0 && lastUserMsg) cleanedMessages.push({ role: 'user', content: lastUserMsg });
   const primingMessage = buildPrimingMessage(reminders, medicines, patients, selectedPatientId);
 
   const finalMessages = [
-    { role: 'system', content: systemInstruction },
-    // If the history doesn't start with an assistant message, inject the priming message
+    { role: 'system', content: STATIC_SYSTEM_PROMPT },
+    { role: 'user', content: dynamicContextBlock },
     ...(cleanedMessages.length === 0 || cleanedMessages[0].role !== 'assistant' ? [{ role: 'assistant', content: primingMessage }] : []),
     ...cleanedMessages
   ];
-
-  return { finalMessages, systemInstruction };
+  return { finalMessages, systemInstruction: STATIC_SYSTEM_PROMPT };
 }
 
-/**
- * Generate a personalized emotional reflection from a single Daily Vibe + Body Scan check-in.
- * Called immediately after the user taps "Secure Daily Reflection" in the Wellness Hub.
- */
 export const getEmotionReflection = async (mood, energy, symptoms, medicines = [], priority = 'high') => {
   const moodLabels = { 1: 'Very Low', 2: 'Low', 3: 'Neutral', 4: 'Good', 5: 'Great' };
   const moodLabel = moodLabels[mood] || 'Unknown';
   const energyLabel = moodLabels[energy] || 'Unknown';
   const symptomList = symptoms && symptoms.length > 0 ? symptoms.join(', ') : 'None reported';
-  const medList = medicines.length > 0
-    ? medicines.map(m => m.name).join(', ')
-    : 'Not specified';
-
+  const medList = medicines.length > 0 ? medicines.map(m => m.name).join(', ') : 'Not specified';
   const prompt = `
-    You are "Dawa-Lens Wellness Companion", a warm and empathetic emotional health assistant.
-    Regional Context: Uganda / East Africa.
-
-    The user just completed their daily wellness check-in:
-    - Current Mood: ${moodLabel} (${mood}/5)
-    - Energy Level: ${energyLabel} (${energy}/5)
-    - Reported Symptoms: ${symptomList}
-    - Active Medications: ${medList}
-
-    Your task:
-    1. Write a warm, personalized 2-3 sentence "reflection" that acknowledges their current state.
-       - If mood or energy is low (1-2), be extra compassionate and validating.
-       - If symptoms are reported, gently acknowledge them and relate to their treatment context.
-       - If mood is high (4-5), celebrate and reinforce positive momentum.
-    2. Write a short, punchy "affirmation" (one sentence, max 12 words) that feels authentic — not generic.
-    3. Write one concrete "tip" (one sentence) — a specific, actionable wellness suggestion for their state.
-       - Prioritize East African context (rest, hydration, walking, regional foods like Matooke or Avocado).
-       - If they have active medications, tie the tip to medication adherence or side effect management.
-
-    Tone: Warm, human, culturally grounded. Never clinical or robotic.
-
-    Respond in EXACT JSON format:
-    {
-      "reflection": "2-3 sentence personalized reflection",
-      "affirmation": "Short encouraging affirmation",
-      "tip": "One actionable wellness tip"
-    }
+    You are "Dawa-Lens Wellness Companion".
+    Check-in: Mood ${moodLabel}, Energy ${energyLabel}, Symptoms ${symptomList}, Meds ${medList}.
+    Task: Warm 2-3 sentence reflection, short affirmation, concrete tip.
+    Respond in JSON: { "reflection": "...", "affirmation": "...", "tip": "..." }
   `;
-
-  try {
-    return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority);
-  } catch (err) {
-    handleAiError(err);
-  }
+  try { return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 500); }
+  catch (err) { handleAiError(err); }
 };
