@@ -55,9 +55,29 @@ export default function DawaGPT() {
       const reminderCount = reminders?.length || 0;
       const nextReminder = reminders?.[0];
 
-      let opening = `Hi ${userProfile?.name || "there"}! I'm Dawa-GPT.`;
+      // Variety & Time-aware Greeting
+      const hour = new Date().getHours();
+      const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+      const openers = [
+        "How are you feeling today?",
+        "I hope you're having a healthy day!",
+        "Ready to manage your wellness together?",
+        "Always here to help with your medications.",
+        "How can I support your health journey today?",
+        "I hope you're feeling strong today!"
+      ];
+      const randomOpener = openers[Math.floor(Math.random() * openers.length)];
+
+      let opening = `${timeGreeting}, ${userProfile?.name || "there"}! I'm Dawa-GPT, your health companion. ${randomOpener}`;
+
       if (reminderCount > 0 && nextReminder) {
-        opening += ` ${name === 'you' ? 'You have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up.`;
+        const reminderPhrases = [
+          ` I see ${name === 'you' ? 'you have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up. I'm here to help you stay on track!`,
+          ` Just a quick check-in: ${name === 'you' ? 'you have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} waiting. Shall we take a look?`,
+          ` Don't forget, ${name === 'you' ? 'you have' : `${name} has`} ${reminderCount} medicine reminder${reminderCount > 1 ? 's' : ''} today. Consistency is key!`
+        ];
+        opening += reminderPhrases[Math.floor(Math.random() * reminderPhrases.length)];
       }
 
       // Generate first suggestions based on actual state
