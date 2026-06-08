@@ -30,7 +30,7 @@ router.post('/', protect, validate(createDoseLogSchema), restrictToOwner, async 
 // DELETE a specific dose log (e.g., undo a logged dose)
 router.delete('/:id', protect, async (req, res, next) => {
   try {
-    await doseLogService.deleteDoseLog(req.params.id);
+    await doseLogService.deleteDoseLog(req.params.id, req.user.uid);
     res.json({ message: 'Dose log deleted successfully' });
   } catch (err) {
     next(err);

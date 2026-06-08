@@ -7,9 +7,9 @@ export const logWellnessSchema = z.object({
       required_error: 'Log type must be symptom, food, or mood' 
     }),
     patientId: z.string().optional(),
-    timestamp: z.string().optional(),
-    data: z.record(z.any()).optional(),
-    notes: z.string().optional(),
+    timestamp: z.string().max(100).optional(),
+    data: z.record(z.union([z.string().max(500), z.number(), z.boolean(), z.array(z.string().max(200))])).optional(),
+    notes: z.string().max(1000).optional(),
   })
 });
 

@@ -41,9 +41,14 @@ export const restrictToOwner = (req, res, next) => {
     return next(new AppError('Authentication data missing. Please log in again.', 401));
   }
 
-  const requestedUid = req.params.uid || req.body.uid || req.params.userId || req.query.userId || req.body.userId || req.query.managedBy || req.body.managedBy;
+  const requestedUid = req.params.uid || req.body.uid || req.params.userId || req.query.userId || req.body.userId || req.query.managedBy || req.body.managedBy || req.query.uid;
   
-  if (!requestedUid) return next(); // Fall through if no UID is present to check
+  // If the route is expected to carry a uid but none is found, fail closed.
+  // We check req.route to see if this is a route that typically needs a UID.
+  // For simplicity and security, we now expect a UID to be present if restrictToOwner is used.
+  if (!requestedUid) {
+    return next(new AppError('User identification missing in request', 400));
+  }
 
   if (req.user.uid !== requestedUid) {
     return next(

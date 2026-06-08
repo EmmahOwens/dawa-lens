@@ -1,4 +1,5 @@
 import { db } from '../db.js';
+import AppError from '../utils/AppError.js';
 import * as medicineService from './medicineService.js';
 import { sendPushNotification } from './notificationService.js';
 import * as autonomousService from './autonomousService.js';
@@ -87,7 +88,17 @@ export const createDoseLog = async (data) => {
 /**
  * Delete a single dose log by ID.
  */
-export const deleteDoseLog = async (id) => {
+export const deleteDoseLog = async (id, requestingUserId) => {
+  if (requestingUserId) {
+    const docSnap = await doseLogsCol.doc(id).get();
+    if (!docSnap.exists) {
+      throw new AppError('Dose log not found', 404);
+    }
+    if (docSnap.data().userId !== requestingUserId) {
+      throw new AppError('You do not have permission to delete this dose log', 403);
+    }
+  }
+
   await doseLogsCol.doc(id).delete();
   return true;
 };

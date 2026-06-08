@@ -47,7 +47,17 @@ export const createMedicine = async (data) => {
   return result;
 };
 
-export const updateMedicine = async (id, data) => {
+export const updateMedicine = async (id, data, requestingUserId) => {
+  if (requestingUserId) {
+    const docSnap = await medicinesCol.doc(id).get();
+    if (!docSnap.exists) {
+      throw new AppError('Medicine not found', 404);
+    }
+    if (docSnap.data().userId !== requestingUserId) {
+      throw new AppError('You do not have permission to modify this medicine', 403);
+    }
+  }
+
   data.updatedAt = new Date().toISOString();
   
   await medicinesCol.doc(id).update(data);
@@ -56,7 +66,17 @@ export const updateMedicine = async (id, data) => {
   return { id: docRef.id, _id: docRef.id, ...docRef.data() };
 };
 
-export const deleteMedicine = async (id) => {
+export const deleteMedicine = async (id, requestingUserId) => {
+  if (requestingUserId) {
+    const docSnap = await medicinesCol.doc(id).get();
+    if (!docSnap.exists) {
+      throw new AppError('Medicine not found', 404);
+    }
+    if (docSnap.data().userId !== requestingUserId) {
+      throw new AppError('You do not have permission to delete this medicine', 403);
+    }
+  }
+
   await medicinesCol.doc(id).delete();
   return true;
 };

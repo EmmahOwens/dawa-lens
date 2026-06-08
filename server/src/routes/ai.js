@@ -2,13 +2,15 @@ import express from 'express';
 import * as aiService from '../services/aiService.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { heavyAiLimiter } from '../middleware/rateLimiter.js';
+import { validate } from '../middleware/validateMiddleware.js';
+import * as aiValidation from '../validations/aiValidation.js';
 
 const router = express.Router();
 
 /**
  * Personalized Wellness Quote
  */
-router.post('/wellness-quote', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/wellness-quote', protect, validate(aiValidation.wellnessQuoteSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const { userName } = req.body;
     const quote = await aiService.getWellnessQuote(userName);
@@ -21,7 +23,7 @@ router.post('/wellness-quote', protect, heavyAiLimiter, async (req, res, next) =
 /**
  * Health Discoveries (Health Tip & Did You Know)
  */
-router.post('/health-discoveries', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/health-discoveries', protect, validate(aiValidation.healthDiscoveriesSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const discoveries = await aiService.getHealthDiscoveries();
     res.json(discoveries);
@@ -33,7 +35,7 @@ router.post('/health-discoveries', protect, heavyAiLimiter, async (req, res, nex
 /**
  * AI Behavioral Adherence Coach
  */
-router.post('/coach', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/coach', protect, validate(aiValidation.coachAdviceSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const { logs, medicines, userName } = req.body;
     const advice = await aiService.getCoachAdvice(logs, medicines, userName);
@@ -46,7 +48,7 @@ router.post('/coach', protect, heavyAiLimiter, async (req, res, next) => {
 /**
  * Holistic Safety Engine
  */
-router.post('/holistic-safety', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/holistic-safety', protect, validate(aiValidation.holisticSafetySchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const { medicines, lifestyleFactors } = req.body;
     const safety = await aiService.checkHolisticSafety(medicines, lifestyleFactors);
@@ -59,7 +61,7 @@ router.post('/holistic-safety', protect, heavyAiLimiter, async (req, res, next) 
 /**
  * Medication Travel Companion
  */
-router.post('/travel', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/travel', protect, validate(aiValidation.travelAdviceSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const advice = await aiService.getTravelAdvice(req.body);
     res.json(advice);
@@ -71,7 +73,7 @@ router.post('/travel', protect, heavyAiLimiter, async (req, res, next) => {
 /**
  * Wellness Pattern Insight
  */
-router.post('/wellness-insight', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/wellness-insight', protect, validate(aiValidation.wellnessInsightSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const { doseLogs, wellnessLogs, medicines } = req.body;
     const insight = await aiService.getWellnessInsight(doseLogs, wellnessLogs, medicines);
@@ -84,7 +86,7 @@ router.post('/wellness-insight', protect, heavyAiLimiter, async (req, res, next)
 /**
  * Instant Meal Safety Check
  */
-router.post('/meal-check', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/meal-check', protect, validate(aiValidation.mealCheckSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const { medicines, mealDescription } = req.body;
     const safety = await aiService.checkMealSafety(medicines, mealDescription);
@@ -97,7 +99,7 @@ router.post('/meal-check', protect, heavyAiLimiter, async (req, res, next) => {
 /**
  * Proactive Nutritional Guidance
  */
-router.post('/nutritional-guidance', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/nutritional-guidance', protect, validate(aiValidation.nutritionalGuidanceSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const { medicines } = req.body;
     const guidance = await aiService.getNutritionalGuidance(medicines);
@@ -110,7 +112,7 @@ router.post('/nutritional-guidance', protect, heavyAiLimiter, async (req, res, n
 /**
  * Personalized Emotion Reflection (Wellness Hub – Daily Vibe + Body Scan)
  */
-router.post('/emotion-reflection', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/emotion-reflection', protect, validate(aiValidation.emotionReflectionSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const { mood, energy, symptoms, medicines } = req.body;
     const reflection = await aiService.getEmotionReflection(mood, energy, symptoms, medicines);
@@ -123,7 +125,7 @@ router.post('/emotion-reflection', protect, heavyAiLimiter, async (req, res, nex
 /**
  * Conversational AI Assistant (Dawa-GPT)
  */
-router.post('/chat', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/chat', protect, validate(aiValidation.chatSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const chat = await aiService.chatWithDawaGPT(req.body);
     res.json(chat);
@@ -135,7 +137,7 @@ router.post('/chat', protect, heavyAiLimiter, async (req, res, next) => {
 /**
  * Streaming Conversational AI Assistant
  */
-router.post('/chat/stream', protect, heavyAiLimiter, async (req, res, next) => {
+router.post('/chat/stream', protect, validate(aiValidation.chatSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const stream = await aiService.streamChatWithDawaGPT(req.body);
     

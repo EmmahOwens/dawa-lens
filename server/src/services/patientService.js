@@ -1,4 +1,5 @@
 import { db } from '../db.js';
+import AppError from '../utils/AppError.js';
 import { deleteRemindersByPatient } from './reminderService.js';
 import { deleteDoseLogsByPatient } from './doseLogService.js';
 
@@ -33,7 +34,17 @@ export const createPatient = async (data) => {
 /**
  * Update an existing patient profile.
  */
-export const updatePatient = async (id, data) => {
+export const updatePatient = async (id, data, requestingUserId) => {
+  if (requestingUserId) {
+    const docSnap = await patientsCol.doc(id).get();
+    if (!docSnap.exists) {
+      throw new AppError('Patient profile not found', 404);
+    }
+    if (docSnap.data().managedBy !== requestingUserId) {
+      throw new AppError('You do not have permission to modify this patient profile', 403);
+    }
+  }
+
   data.updatedAt = new Date().toISOString();
 
   await patientsCol.doc(id).update(data);
@@ -51,7 +62,17 @@ export const updatePatient = async (id, data) => {
  * All three cascade deletions run in parallel for performance,
  * then the patient profile itself is deleted.
  */
-export const deletePatient = async (id) => {
+export const deletePatient = async (id, requestingUserId) => {
+  if (requestingUserId) {
+    const docSnap = await patientsCol.doc(id).get();
+    if (!docSnap.exists) {
+      throw new AppError('Patient profile not found', 404);
+    }
+    if (docSnap.data().managedBy !== requestingUserId) {
+      throw new AppError('You do not have permission to delete this patient profile', 403);
+    }
+  }
+
   // Run cascade deletions in parallel
   await Promise.all([
     deleteRemindersByPatient(id),

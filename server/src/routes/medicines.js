@@ -30,7 +30,7 @@ router.post('/', protect, validate(createMedicineSchema), restrictToOwner, async
 // PATCH update a medicine by id
 router.patch('/:id', protect, validate(updateMedicineSchema), async (req, res, next) => {
   try {
-    const medicine = await medicineService.updateMedicine(req.params.id, req.body);
+    const medicine = await medicineService.updateMedicine(req.params.id, req.body, req.user.uid);
     res.json(medicine);
   } catch (err) {
     next(err);
@@ -40,7 +40,7 @@ router.patch('/:id', protect, validate(updateMedicineSchema), async (req, res, n
 // DELETE remove a medicine by id
 router.delete('/:id', protect, async (req, res, next) => {
   try {
-    await medicineService.deleteMedicine(req.params.id);
+    await medicineService.deleteMedicine(req.params.id, req.user.uid);
     res.json({ message: 'Deleted successfully' });
   } catch (err) {
     next(err);

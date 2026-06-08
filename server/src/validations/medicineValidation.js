@@ -3,12 +3,12 @@ import { z } from 'zod';
 export const createMedicineSchema = z.object({
   body: z.object({
     userId: z.string({ required_error: 'userId is required' }),
-    name: z.string({ required_error: 'Medicine name is required' }),
-    genericName: z.string().optional(),
-    dosage: z.string().optional(),
+    name: z.string({ required_error: 'Medicine name is required' }).min(1).max(200),
+    genericName: z.string().max(200).optional(),
+    dosage: z.string().max(100).optional(),
     patientId: z.string().optional(),
-    icon: z.string().optional(),
-    color: z.string().optional(),
+    icon: z.string().max(50).optional(),
+    color: z.string().max(50).optional(),
     totalDoses: z.number().optional(),
     dosesTaken: z.number().optional(),
   })
@@ -19,11 +19,11 @@ export const updateMedicineSchema = z.object({
     id: z.string({ required_error: 'Medicine ID is required' }),
   }),
   body: z.object({
-    name: z.string().optional(),
-    genericName: z.string().optional(),
-    dosage: z.string().optional(),
-    icon: z.string().optional(),
-    color: z.string().optional(),
+    name: z.string().min(1).max(200).optional(),
+    genericName: z.string().max(200).optional(),
+    dosage: z.string().max(100).optional(),
+    icon: z.string().max(50).optional(),
+    color: z.string().max(50).optional(),
     totalDoses: z.number().optional(),
     dosesTaken: z.number().optional(),
   })
