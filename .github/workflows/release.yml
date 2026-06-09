@@ -42,16 +42,9 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease
 
-      - name: Prepare APK for Release
-        run: |
-          # Rename the APK to match the expected format
-          # Extracts version from tag (e.g., v1.1.8 -> 1.1.8)
-          VERSION=${GITHUB_REF#refs/tags/v}
-          cp android/app/build/outputs/apk/release/dawa-lens-*.apk dawa-lens-$VERSION.apk
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dawa-lens-*.apk
+          files: android/app/build/outputs/apk/release/dawa-lens-*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
