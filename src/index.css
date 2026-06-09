@@ -1,0 +1,262 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 3% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 3% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 3% 12%;
+
+    --primary: 211 100% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 9% 96%;
+    --secondary-foreground: 240 3% 12%;
+
+    --muted: 240 9% 96%;
+    --muted-foreground: 240 2% 54%;
+
+    --accent: 240 9% 96%;
+    --accent-foreground: 211 100% 50%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+
+    --border: 240 4% 83%;
+    --input: 240 4% 83%;
+    --ring: 211 100% 50%;
+
+    --radius: 1.25rem; /* Slightly more modern and consistent */
+    --card-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+      0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --card-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1),
+      0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+    --sidebar-background: 240 9% 96%;
+    --sidebar-foreground: 240 3% 12%;
+    --sidebar-primary: 211 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 90%;
+    --sidebar-accent-foreground: 240 3% 12%;
+    --sidebar-border: 240 4% 83%;
+    --sidebar-ring: 211 100% 50%;
+
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+      "Segoe UI Symbol";
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 240 9% 96%;
+
+    --card: 240 3% 11%;
+    --card-foreground: 240 9% 96%;
+
+    --popover: 240 3% 11%;
+    --popover-foreground: 240 9% 96%;
+
+    --primary: 210 100% 52%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 2% 18%;
+    --secondary-foreground: 240 9% 96%;
+
+    --muted: 240 3% 11%;
+    --muted-foreground: 240 1% 61%;
+
+    --accent: 240 2% 18%;
+    --accent-foreground: 210 100% 52%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 240 9% 96%;
+
+    --success: 149 61% 20%;
+    --success-foreground: 240 9% 96%;
+
+    --warning: 48 96% 15%;
+    --warning-foreground: 240 9% 96%;
+
+    --border: 240 2% 23%;
+    --input: 240 2% 23%;
+    --ring: 210 100% 52%;
+
+    --sidebar-background: 240 3% 11%;
+    --sidebar-foreground: 240 9% 96%;
+    --sidebar-primary: 210 100% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 2% 18%;
+    --sidebar-accent-foreground: 240 9% 96%;
+    --sidebar-border: 240 2% 23%;
+    --sidebar-ring: 210 100% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: var(--font-sans);
+    transition: background-color 0.3s ease, color 0.3s ease,
+      border-color 0.3s ease;
+    user-select: none;
+    -webkit-user-drag: none;
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
+    width: 100%;
+    height: 100%;
+    overscroll-behavior-y: none; /* Prevent web-like rubber-banding */
+    touch-action: manipulation; /* Eliminate 300ms click delay */
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    user-select: text;
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(
+      safe-area-inset-top,
+      20px
+    ); /* fallback for immersive mode */
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  .safe-top-margin {
+    margin-top: env(safe-area-inset-top, 20px);
+  }
+
+  .safe-bottom-margin {
+    margin-bottom: env(safe-area-inset-bottom, 20px);
+  }
+
+  .premium-card {
+    @apply rounded-2xl border border-border/50 bg-card p-5 shadow-sm transition-all duration-300;
+  }
+
+  .premium-card:active {
+    @apply scale-[0.98] brightness-95;
+  }
+
+  .premium-card-hover {
+    @apply hover:shadow-md hover:border-primary/20 hover:translate-y-[-2px];
+  }
+
+  .glass-card {
+    @apply rounded-2xl border border-white/20 bg-white/70 dark:bg-black/60 dark:border-white/10 shadow-lg blur-frost;
+  }
+
+  .blur-frost {
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .frost-nav {
+    @apply bg-white/40 dark:bg-black/40 border-white/30 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.1)] blur-frost;
+  }
+
+  .section-title {
+    @apply text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3;
+  }
+
+  .native-active:active {
+    @apply opacity-70 scale-[0.97] transition-all duration-100;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .gpu-accel {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    perspective: 1000;
+  }
+
+  .content-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 100px;
+  }
+
+  .tap-feedback {
+    @apply active:scale-95 active:opacity-80 transition-all duration-100 ease-out;
+  }
+}
+
+/* ─── GPU-composited page transitions ─────────────────────────────────────────
+   CSS-only animations using only `transform` and `opacity` so every frame is
+   composited on the GPU thread with zero main-thread JavaScript cost.
+   Pattern from lichobile: avoid layout-triggering properties entirely.
+─────────────────────────────────────────────────────────────────────────────── */
+
+/* Android / Web: Material-style vertical fade-up */
+.page-transition-enter {
+  animation: pageSlideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* iOS: horizontal slide matching the native push transition */
+.page-transition-slide {
+  animation: pageSlideFromRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) translateZ(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
+}
+
+@keyframes pageSlideFromRight {
+  from {
+    opacity: 0.9;
+    transform: translateX(100%) translateZ(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateZ(0);
+  }
+}
+
+/* Contain overscroll within scrollable containers (prevents bleed-through) */
+main,
+.overflow-y-auto {
+  overscroll-behavior: contain;
+}

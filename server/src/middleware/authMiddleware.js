@@ -1,0 +1,60 @@
+import { authAdmin } from '../db.js';
+import AppError from '../utils/AppError.js';
+
+export const protect = async (req, res, next) => {
+  try {
+    // 1) Getting token and check if it's there
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return next(
+        new AppError('You are not logged in! Please log in to get access.', 401)
+      );
+    }
+
+    // 2) Verification token
+    const decodedToken = await authAdmin.verifyIdToken(token);
+
+    // 3) Check if user still exists (Optional but good practice)
+    // For now we just attach the user data to the request
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    console.error('Token verification failed:', error?.message || error);
+    return next(new AppError('Invalid token. Please log in again.', 401));
+  }
+};
+
+/**
+ * Middleware to ensure the authenticated user can only access their own data.
+ * Assumes 'uid' is passed in either params or body.
+ */
+export const restrictToOwner = (req, res, next) => {
+  // Safety guard: req.user should always be set by `protect`, but guard defensively
+  if (!req.user || !req.user.uid) {
+    return next(new AppError('Authentication data missing. Please log in again.', 401));
+  }
+
+  const requestedUid = req.params.uid || req.body.uid || req.params.userId || req.query.userId || req.body.userId || req.query.managedBy || req.body.managedBy || req.query.uid;
+  
+  // If the route is expected to carry a uid but none is found, fail closed.
+  // We check req.route to see if this is a route that typically needs a UID.
+  // For simplicity and security, we now expect a UID to be present if restrictToOwner is used.
+  if (!requestedUid) {
+    return next(new AppError('User identification missing in request', 400));
+  }
+
+  if (req.user.uid !== requestedUid) {
+    return next(
+      new AppError('You do not have permission to perform this action', 403)
+    );
+  }
+
+  next();
+};

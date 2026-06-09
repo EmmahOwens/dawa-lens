@@ -1,0 +1,371 @@
+package com.dawainnovation.lens
+
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.os.Bundle
+import android.util.Base64
+import android.view.Gravity
+import android.view.Surface
+import android.view.View
+import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.ImageButton
+import androidx.appcompat.app.AppCompatActivity
+import android.graphics.RectF
+import androidx.camera.core.Camera
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.google.common.util.concurrent.ListenableFuture
+import java.io.ByteArrayOutputStream
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
+class NativeScanActivity : AppCompatActivity() {
+
+    private lateinit var previewView: PreviewView
+    private lateinit var overlayView: ScanOverlayView
+    private var camera: Camera? = null
+    private var imageCapture: ImageCapture? = null
+    private lateinit var cameraExecutor: ExecutorService
+    private var lensFacing = CameraSelector.LENS_FACING_BACK
+    private var flashEnabled = false
+    private val scanMode by lazy { intent.getStringExtra("SCAN_MODE") ?: "pill" }
+
+    companion object {
+        private const val RC_CAMERA_PERMISSION = 1001
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Fix 3: Remove default window enter animation for instant appearance
+        window.setWindowAnimations(0)
+        // Make it truly edge-to-edge with no status bar flash
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        )
+        
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Fix 2: Pre-warm CameraX immediately
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+
+        // Build layout programmatically — avoids needing a layout XML resource
+        val root = FrameLayout(this).also { setContentView(it) }
+
+        previewView = PreviewView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            implementationMode = PreviewView.ImplementationMode.PERFORMANCE
+        }
+        root.addView(previewView)
+
+        overlayView = ScanOverlayView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        }
+        root.addView(overlayView)
+
+        // Close button — top-left
+        val closeBtn = ImageButton(this).apply {
+            setImageDrawable(
+                ContextCompat.getDrawable(context, android.R.drawable.ic_menu_close_clear_cancel)
+            )
+            setBackgroundColor(Color.TRANSPARENT)
+            val p = 48
+            setPadding(p, p, p, p)
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).also {
+                it.leftMargin = 32
+                it.topMargin = 80
+            }
+        }
+        closeBtn.setOnClickListener {
+            setResult(Activity.RESULT_CANCELED)
+            finish()
+        }
+        root.addView(closeBtn)
+
+        // Flash toggle button — top-right
+        val flashBtn = ImageButton(this).apply {
+            setImageDrawable(
+                ContextCompat.getDrawable(context, android.R.drawable.ic_menu_compass)
+            )
+            setBackgroundColor(Color.TRANSPARENT)
+            val p = 48
+            setPadding(p, p, p, p)
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).also {
+                it.gravity = Gravity.TOP or Gravity.END
+                it.rightMargin = 32
+                it.topMargin = 80
+            }
+        }
+        flashBtn.setOnClickListener { toggleFlash() }
+        root.addView(flashBtn)
+
+        // Capture button — bottom-center
+        val captureBtn = View(this).apply {
+            background = ContextCompat.getDrawable(context, android.R.drawable.btn_default_small)
+            val size = 200
+            layoutParams = FrameLayout.LayoutParams(size, size).also {
+                it.gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+                it.bottomMargin = 120
+            }
+        }
+        captureBtn.setOnClickListener { captureImage() }
+        root.addView(captureBtn)
+
+        cameraExecutor = Executors.newSingleThreadExecutor()
+        // On Android 6+ the CAMERA permission must be granted at runtime.
+        // CameraX's bindToLifecycle() silently throws SecurityException when
+        // permission is missing — so we must check here before calling startCamera().
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+            startCamera(cameraProviderFuture)
+        } else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.CAMERA),
+                RC_CAMERA_PERMISSION
+            )
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == RC_CAMERA_PERMISSION) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                startCamera()
+            } else {
+                // User denied camera — return cancelled so ScanPage can react
+                setResult(Activity.RESULT_CANCELED)
+                finish()
+            }
+        }
+    }
+
+    private fun startCamera(future: ListenableFuture<ProcessCameraProvider> = ProcessCameraProvider.getInstance(this)) {
+        future.addListener({
+            val cameraProvider = future.get()
+
+            val preview = Preview.Builder().build().also {
+                it.setSurfaceProvider(previewView.surfaceProvider)
+            }
+
+            imageCapture = ImageCapture.Builder()
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                .build()
+
+            val cameraSelector = CameraSelector.Builder()
+                .requireLensFacing(lensFacing)
+                .build()
+
+            try {
+                cameraProvider.unbindAll()
+                camera = cameraProvider.bindToLifecycle(
+                    this, cameraSelector, preview, imageCapture
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun toggleFlash() {
+        flashEnabled = !flashEnabled
+        camera?.cameraControl?.enableTorch(flashEnabled)
+    }
+
+    private fun captureImage() {
+        val capture = imageCapture ?: return
+        capture.takePicture(cameraExecutor, object : ImageCapture.OnImageCapturedCallback() {
+            override fun onCaptureSuccess(image: ImageProxy) {
+                val bitmap = image.toBitmap()
+                image.close()
+                val processed = preprocessBitmap(bitmap)
+                val out = ByteArrayOutputStream()
+                processed.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+                val dataUrl = "data:image/jpeg;base64,$base64"
+                runOnUiThread {
+                    val result = Intent().putExtra("IMAGE_DATA", dataUrl)
+                    setResult(Activity.RESULT_OK, result)
+                    finish()
+                }
+            }
+
+            override fun onError(exc: ImageCaptureException) {
+                runOnUiThread {
+                    setResult(Activity.RESULT_CANCELED)
+                    finish()
+                }
+            }
+        })
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraExecutor.shutdown()
+    }
+
+    /**
+     * Boosts contrast and brightness so text/markings on pills and packaging
+     * are sharper before JPEG compression and OCR processing.
+     * The original bitmap is recycled; callers must use the returned bitmap.
+     */
+    private fun preprocessBitmap(input: Bitmap): Bitmap {
+        val output = Bitmap.createBitmap(input.width, input.height, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(output)
+        val contrast  = 1.25f
+        val translate = (-(0.5f * contrast) + 0.5f) * 255f + 8f
+        val cm = android.graphics.ColorMatrix(floatArrayOf(
+            contrast, 0f, 0f, 0f, translate,
+            0f, contrast, 0f, 0f, translate,
+            0f, 0f, contrast, 0f, translate,
+            0f, 0f, 0f, 1f, 0f
+        ))
+        val paint = android.graphics.Paint().apply {
+            colorFilter = android.graphics.ColorMatrixColorFilter(cm)
+        }
+        canvas.drawBitmap(input, 0f, 0f, paint)
+        input.recycle()
+        return output
+    }
+}
+
+/**
+ * Animated scan-area overlay drawn entirely on a Canvas:
+ *  - Darkened mask outside the scan box (four rectangles)
+ *  - Green corner brackets (L-shapes) at each corner
+ *  - Scanning line that bounces top-to-bottom at ~60 fps via postInvalidateDelayed(16)
+ *
+ * The scan box is centered, square, and 85 % of the smaller screen dimension.
+ */
+class ScanOverlayView(context: Context) : View(context) {
+
+    private val dimPaint = Paint().apply {
+        color = Color.argb(140, 0, 0, 0)
+    }
+
+    private val bracketPaint = Paint().apply {
+        color = Color.parseColor("#007CFF") // brand primary
+        style = Paint.Style.STROKE
+        strokeWidth = 8f
+        isAntiAlias = true
+        strokeCap = Paint.Cap.ROUND
+    }
+
+    private val linePaint = Paint().apply {
+        color = Color.parseColor("#007CFF") // brand primary at ~75 % opacity
+        alpha = 191
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+
+    // Scan-line state
+    private var scanLineY = -1f        // -1 = not yet initialised
+    private var scanLineDirection = 1f // +1 = moving downward
+    private val bracketLength = 80f
+    private val cornerRadius = 60f // matches rounded-3xl (~24dp)
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+
+        val w = width.toFloat()
+        val h = height.toFloat()
+        if (w == 0f || h == 0f) return
+
+        val boxSize = minOf(w, h) * 0.85f
+        val left   = (w - boxSize) / 2f
+        val top    = (h - boxSize) / 2f
+        val right  = left + boxSize
+        val bottom = top  + boxSize
+
+        // --- Darkened mask outside the scan box (four rects; avoids PorterDuff) ---
+        canvas.drawRect(0f,   0f,    w,    top,    dimPaint) // above
+        canvas.drawRect(0f,   bottom, w,    h,      dimPaint) // below
+        canvas.drawRect(0f,   top,   left, bottom, dimPaint) // left
+        canvas.drawRect(right, top,   w,    bottom, dimPaint) // right
+
+        // --- Corner brackets (Rounded to match web) ---
+        val bl = bracketLength
+        val cr = cornerRadius
+        
+        // Top-left
+        canvas.drawArc(RectF(left, top, left + cr * 2, top + cr * 2), 180f, 90f, false, bracketPaint)
+        canvas.drawLine(left, top + cr, left, top + bl, bracketPaint)
+        canvas.drawLine(left + cr, top, left + bl, top, bracketPaint)
+        
+        // Top-right
+        canvas.drawArc(RectF(right - cr * 2, top, right, top + cr * 2), 270f, 90f, false, bracketPaint)
+        canvas.drawLine(right, top + cr, right, top + bl, bracketPaint)
+        canvas.drawLine(right - cr, top, right - bl, top, bracketPaint)
+        
+        // Bottom-left
+        canvas.drawArc(RectF(left, bottom - cr * 2, left + cr * 2, bottom), 90f, 90f, false, bracketPaint)
+        canvas.drawLine(left, bottom - cr, left, bottom - bl, bracketPaint)
+        canvas.drawLine(left + cr, bottom, left + bl, bottom, bracketPaint)
+        
+        // Bottom-right
+        canvas.drawArc(RectF(right - cr * 2, bottom - cr * 2, right, bottom), 0f, 90f, false, bracketPaint)
+        canvas.drawLine(right, bottom - cr, right, bottom - bl, bracketPaint)
+        canvas.drawLine(right - cr, bottom, right - bl, bottom, bracketPaint)
+
+        // --- Animated scan line ---
+        // Initialise at the top of the scan box on the first draw
+        if (scanLineY < 0f) scanLineY = top
+
+        canvas.drawLine(left + 4f, scanLineY, right - 4f, scanLineY, linePaint)
+
+        // Advance position and bounce at box edges
+        scanLineY += scanLineDirection * 4f
+        when {
+            scanLineY >= bottom -> { scanLineY = bottom; scanLineDirection = -1f }
+            scanLineY <= top    -> { scanLineY = top;    scanLineDirection =  1f }
+        }
+
+        // Schedule next frame at ~60 fps
+        postInvalidateDelayed(16)
+    }
+}
+
+/**
+ * Extension to convert CameraX ImageProxy (YUV_420_884 or JPEG) to a Bitmap.
+ */
+fun ImageProxy.toBitmap(): Bitmap {
+    val buffer = planes[0].buffer
+    buffer.rewind()
+    val bytes = ByteArray(buffer.remaining())
+    buffer.get(bytes)
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+}

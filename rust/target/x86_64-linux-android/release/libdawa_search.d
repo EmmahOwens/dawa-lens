@@ -1,0 +1,1 @@
+/home/iammbayo/Documents/Projects/dawa-lens/rust/target/x86_64-linux-android/release/libdawa_search.so: /home/iammbayo/Documents/Projects/dawa-lens/rust/src/lib.rs /home/iammbayo/Documents/Projects/dawa-lens/rust/src/search.rs
