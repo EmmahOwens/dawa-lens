@@ -775,7 +775,7 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/routes/ai.js": {
-    "mtime": 1780919332.0221424,
+    "mtime": 1781260008.9092925,
     "ast_hash": "ab740624245a48982c84c6db4ed21bba",
     "semantic_hash": ""
   },
@@ -1005,8 +1005,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AppShell.tsx": {
-    "mtime": 1781258802.1306767,
-    "ast_hash": "045d1964620604ca41d052a74916721a",
+    "mtime": 1781260487.492288,
+    "ast_hash": "38b1a63ab5c0e1da8a57d57ec1563a52",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AppSidebar.tsx": {
@@ -1015,8 +1015,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BottomNav.tsx": {
-    "mtime": 1781258531.0054114,
-    "ast_hash": "7da615f16705d057410e6ac99f434155",
+    "mtime": 1781260479.4150195,
+    "ast_hash": "d1ea7d1adbd571f6f459aa91a7c028fd",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ConfirmationDialog.test.tsx": {
@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/Navbar.tsx": {
-    "mtime": 1781258521.2011602,
-    "ast_hash": "8d7791e9dc4f5e558c7c2ef0243f67aa",
+    "mtime": 1781260472.5937884,
+    "ast_hash": "539ed53131da1bd73422a97f82b9f388",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/NotificationHandler.tsx": {
@@ -2662,6 +2662,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/resources/icon-only.png": {
     "mtime": 1776768812.1741648,
     "ast_hash": "7b85fd9b35f89ab4a41f5d1818701dbb",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-cerebras-key.js": {
+    "mtime": 1781259464.728018,
+    "ast_hash": "6cb071eaadfcae36fb6af982da6d83cd",
     "semantic_hash": ""
   }
 }
