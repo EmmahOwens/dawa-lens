@@ -179,17 +179,19 @@
   }
 
   .liquid-glass {
-    backdrop-filter: blur(20px) saturate(120%);
-    -webkit-backdrop-filter: blur(20px) saturate(120%);
-    background-color: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(28px) saturate(160%) contrast(90%) brightness(105%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%) contrast(90%) brightness(105%);
+    background-color: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.65);
   }
 
   .dark .liquid-glass {
-    background-color: rgba(10, 10, 10, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.4);
+    background-color: rgba(10, 10, 10, 0.68);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
   }
 
   .section-title {
