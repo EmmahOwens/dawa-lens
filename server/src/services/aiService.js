@@ -122,7 +122,7 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 2048
     const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       contents,
       systemInstruction: {
-        parts: [{ text: "You are Dawa-Lens AI, a warm and caring health companion. Respond STRICTLY in JSON format with 'text', 'suggestions', 'source', and 'action' fields. Use Markdown for formatting in the 'text' field. Agentic capabilities are enabled via the 'action' field." }]
+        parts: [{ text: "You are Dawa-Lens AI, a warm and caring health companion. Respond STRICTLY in JSON format with 'text', 'suggestions', 'source', and 'action' fields. Use Markdown for formatting in the 'text' field. The 'suggestions' field MUST contain EXACTLY 3 short follow-up prompts (under 6 words each) that are NATURAL CONTINUATIONS of the conversation — what the user would logically ask or do next based on your response. Suggestions must be from the user's perspective. Agentic capabilities are enabled via the 'action' field." }]
       },
       generationConfig: {
         responseMimeType: 'application/json',
@@ -815,16 +815,36 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     1. BE AGENTIC: PERFORM ACTIONS IMMEDIATELY.
     2. CONFIRMATION: Confirm actions in past tense ("I've added that for you.").
     3. MEDICINE NAME FORMAT: Whenever you mention any medicine, ALWAYS write the brand name first, followed by the chemical (generic/active ingredient) name in brackets. Example: "Panadol (Paracetamol)", "Augmentin (Amoxicillin/Clavulanate)", "Flagyl (Metronidazole)". Never mention only a generic name without its brand name, and never omit the chemical name in brackets.
-    4. SUGGESTIONS: Provide EXACTLY 3 short, context-aware suggestions in the 'suggestions' field.
+    4. SUGGESTIONS (CRITICAL — READ CAREFULLY):
+       - You MUST provide EXACTLY 3 short, context-aware follow-up suggestions in the 'suggestions' field.
+       - Suggestions must be NATURAL CONTINUATIONS of the current conversation — what the user would logically ask or do NEXT based on YOUR response.
        - Suggestions must be from the USER's perspective (e.g., "Log my dose", NOT "You should log your dose").
-       - Suggestions MUST be relevant to the current response or conversation state.
-       - If you asked the user a question, provide potential answers as suggestions.
+       - If you asked the user a question, provide likely answers as suggestions.
+       - If you discussed a medicine, suggest related actions (interactions, side effects, logging).
+       - If you performed an action, suggest the next logical step.
+       - NEVER repeat suggestions from earlier turns. Keep them fresh and relevant.
        - Keep them under 6 words each.
+       ${(() => {
+         const lastAssistantMsg = messages.slice().reverse().find(m => m.role === 'assistant');
+         const prevSuggestions = lastAssistantMsg?.suggestions || lastAssistantMsg?.text?.match?.(/suggestions.*?\[(.*?)\]/s);
+         if (lastAssistantMsg?.suggestions?.length) {
+           return `- Previous turn suggestions were: ${JSON.stringify(lastAssistantMsg.suggestions)}. Generate NEW ones that follow the conversation forward.`;
+         }
+         return '';
+       })()}
 
     CONVERSATION PHASE: ${conversationPhase}
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
-    Append ###METADATA### and JSON at the end.` : `=== RESPONSE FORMAT ===
-    Respond in JSON.`}
+    Write your response as normal Markdown text first, then on a new line append EXACTLY:
+    ###METADATA###
+    {"suggestions":["suggestion 1","suggestion 2","suggestion 3"],"source":"Gemini","action":null}
+    
+    The metadata JSON MUST contain:
+    - "suggestions": array of EXACTLY 3 short follow-up prompts relevant to your response
+    - "source": always "Gemini"
+    - "action": null or an action object if you performed a system action
+    DO NOT omit the suggestions field. DO NOT leave it empty.` : `=== RESPONSE FORMAT ===
+    Respond in JSON: {"text":"...","suggestions":["s1","s2","s3"],"source":"Gemini","action":null}`}
   `;
 
   const dynamicContextBlock = `
@@ -840,7 +860,14 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     ${knowledgeContext}
   `;
 
-  const formattedMessages = recentMessages.map(msg => ({ role: msg.role === 'assistant' ? 'assistant' : 'user', content: msg.text || msg.content || "" }));
+  const formattedMessages = recentMessages.map(msg => {
+    const content = msg.text || msg.content || "";
+    // Include suggestions in assistant message content so the LLM knows what follow-ups were previously offered
+    if (msg.role === 'assistant' && msg.suggestions?.length) {
+      return { role: 'assistant', content: content + `\n[Previous suggestions offered: ${msg.suggestions.join(', ')}]` };
+    }
+    return { role: msg.role === 'assistant' ? 'assistant' : 'user', content };
+  });
   const cleanedMessages = [];
   let lastRole = null;
   for (const msg of formattedMessages) {
