@@ -35,6 +35,25 @@ export default function ScanPage() {
 
   const scanMode = "text" as const;
 
+  /** Downscales an image data-URL to max 800px on longest side at 75% quality. */
+  const downscaleImage = (dataUrl: string, maxPx = 800, quality = 0.75): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        c.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => resolve(dataUrl); // fallback: send original
+      img.src = dataUrl;
+    });
+  };
+
   // Start as `true` on native so the loading spinner is visible immediately
   // without waiting for any async bridge call.
   const [isNativeScanRunning, setIsNativeScanRunning] = useState(
@@ -197,7 +216,9 @@ export default function ScanPage() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d")!.drawImage(video, 0, 0);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    // Capture at native resolution first, then downscale to ≤800px to reduce AI token cost
+    const rawDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    const dataUrl = await downscaleImage(rawDataUrl);
 
     navigate("/results", { state: { imageUrl: dataUrl, mode: scanMode } });
   };
@@ -206,14 +227,15 @@ export default function ScanPage() {
     if (Capacitor.isNativePlatform()) {
       try {
         const image = await CapCamera.getPhoto({
-          quality: 90,
+          quality: 70,  // reduced from 90 to limit token cost
           allowEditing: false,
           resultType: CameraResultType.DataUrl,
           source: CameraSource.Photos,
         });
         if (image.dataUrl) {
+          const scaled = await downscaleImage(image.dataUrl);
           navigate("/results", {
-            state: { imageUrl: image.dataUrl, mode: scanMode },
+            state: { imageUrl: scaled, mode: scanMode },
           });
         }
       } catch (err) {

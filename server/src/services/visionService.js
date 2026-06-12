@@ -23,50 +23,31 @@ const getGroqApiKey = (modelId) => {
 };
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_PRO_MODEL   = 'gemini-1.5-pro';
-const GEMINI_FLASH_MODEL = 'gemini-2.0-flash';
+const GEMINI_FLASH_MODEL = 'gemini-2.0-flash';   // Primary — cheap & fast
+const GEMINI_PRO_MODEL   = 'gemini-1.5-pro';     // Last-resort fallback only
 
 // ── Prompt ───────────────────────────────────────────────────────────────────
 const getPillIdPrompt = (patientAge) => {
-  const ageContext = patientAge
-    ? `specifically for a patient aged ${patientAge}`
-    : 'standard adult';
+  const ageCtx = patientAge ? `for a patient aged ${patientAge}` : 'for a standard adult';
 
-  return `You are a Senior Pharmaceutical Consultant AI for Dawa Lens.
-Your task is to identify medications from images with extreme precision.
+  return `You are a pharmaceutical identification AI. Identify the medication in the image.
 
-ANALYSIS GUIDELINES:
-1. Examine the pill's COLOR, SHAPE (e.g., round, oval, capsule-shaped), and SIZE.
-2. Read and extract any IMPRINTS (letters or numbers) on the surface of the medication.
-3. If the image is a medication package or label, extract the brand name and active ingredients.
-4. Compare these physical characteristics against your knowledge of pharmaceutical products.
-
-OUTPUT REQUIREMENTS:
-- Provide 5 potential matches, ranked by confidence (1.0 = certain, 0.0 = no match).
-- 'name': The most common brand name or a clear descriptive name.
-- 'genericName': The active ingredient(s).
-- 'recommendedDosage': A safe, standard dosage context ${ageContext}.
-- 'summary': A concise, professional summary of the identified medication, its primary use, and one critical safety warning.
-- 'imprints': Any text/numbers found imprinted on the pill surface (empty array if none).
-- 'labels': Any brand or label text visible on packaging (empty array if none).
-- 'draftSchedule': A suggested daily schedule based on common usage (e.g., ["08:00", "20:00"] for twice daily).
-- 'safetyFlag': A short one-sentence critical warning if this med is high-risk (e.g., "Do not take with alcohol").
-
-Respond ONLY with a valid JSON object in this exact schema:
+Steps: examine color, shape, size, imprints, packaging text, and brand labels.
+Return ONLY valid JSON matching this schema exactly:
 {
-  "matches": [
+  "matches": [ // exactly 5 entries ranked by confidence desc
     {
-      "name": "string",
-      "genericName": "string",
-      "confidence": number,
-      "recommendedDosage": "string",
-      "draftSchedule": ["string"],
-      "safetyFlag": "string"
+      "name": "brand name",
+      "genericName": "active ingredient(s)",
+      "confidence": 0.0,
+      "recommendedDosage": "safe standard dose ${ageCtx}",
+      "draftSchedule": ["HH:MM"],
+      "safetyFlag": "one critical warning or empty string"
     }
   ],
-  "imprints": ["string"],
-  "labels": ["string"],
-  "summary": "string"
+  "imprints": ["text on pill surface"],
+  "labels": ["text on packaging"],
+  "summary": "2-3 sentence summary: primary use and one safety warning"
 }`;
 };
 
@@ -187,7 +168,7 @@ const identifyWithGroq = async (cleanBase64, mimeType, patientAge) => {
 
   let response;
   try {
-    response = await rateLimitManager.enqueue(fn, 'groq-scout', requestBody.messages, 'high', 3, true);
+    response = await rateLimitManager.enqueue(fn, 'groq-scout', requestBody.messages, 'high', 1, true);
   } catch (err) {
     if (err.response) {
       const status = err.response.status;
@@ -259,6 +240,7 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge, modelName =
     ],
     generationConfig: {
       temperature: 0.4,
+      maxOutputTokens: 700,   // cap output — schema is compact, 700 is ample
       responseMimeType: 'application/json',
       responseSchema: PILL_ID_SCHEMA,
     },
@@ -275,7 +257,7 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge, modelName =
   let response;
   try {
     const modelKey = modelName === GEMINI_PRO_MODEL ? 'gemini-pro' : 'gemini';
-    response = await rateLimitManager.enqueue(fn, modelKey, requestBody.contents, 'high', 3, true);
+    response = await rateLimitManager.enqueue(fn, modelKey, requestBody.contents, 'high', 1, true);
   } catch (err) {
     if (err.response) {
       const status    = err.response.status;
@@ -355,10 +337,10 @@ const identifyWithGemini = async (cleanBase64, mimeType, patientAge, modelName =
 /**
  * Identifies a pill/medication from a base64-encoded image.
  *
- * Strategy:
- *   1. Try Gemini 1.5 Pro as primary model.
- *   2. If Gemini 1.5 Pro fails, fall back to Llama 4 Scout.
- *   3. If Llama 4 Scout fails, fall back to Gemini 2.0 Flash.
+ * Fallback chain (cheapest → most capable):
+ *   1. Gemini 2.0 Flash  — fast, low-cost, good vision
+ *   2. Groq Llama 4 Scout — free-tier fallback
+ *   3. Gemini 1.5 Pro    — last resort only (highest token cost)
  *
  * @param {string} image       - Raw base64 image (no data URI prefix).
  * @param {number} [patientAge] - Optional patient age for dosage context.
@@ -378,22 +360,22 @@ export const identifyPill = async (image, patientAge) => {
     );
   }
 
-  // ── 1. Try Primary: Gemini 1.5 Pro ──────────────────────────────────────────
+  // ── 1. Primary: Gemini 2.0 Flash (cheapest Gemini model with vision) ─────────
   if (GEMINI_API_KEY) {
     try {
-      console.log(`[visionService] 🔄 Scanning with Gemini 1.5 Pro (${GEMINI_PRO_MODEL})...`);
-      const result = await identifyWithGemini(cleanBase64, mimeType, patientAge, GEMINI_PRO_MODEL);
-      console.log(`[visionService] ✅ Identified via Gemini 1.5 Pro (${GEMINI_PRO_MODEL})`);
+      console.log(`[visionService] 🔄 Scanning with Primary: Gemini 2.0 Flash (${GEMINI_FLASH_MODEL})...`);
+      const result = await identifyWithGemini(cleanBase64, mimeType, patientAge, GEMINI_FLASH_MODEL);
+      console.log(`[visionService] ✅ Identified via Gemini 2.0 Flash`);
       return result;
     } catch (err) {
       if (err.retriable) {
-        console.warn(`[visionService] ⚠️  Gemini 1.5 Pro failed (${err.message}), falling back to Llama 4 Scout…`);
+        console.warn(`[visionService] ⚠️  Gemini 2.0 Flash failed (${err.message}), falling back to Groq…`);
       } else {
         throw err;
       }
     }
   } else {
-    console.warn('[visionService] GEMINI_API_KEY not set, skipping Gemini 1.5 Pro.');
+    console.warn('[visionService] GEMINI_API_KEY not set, skipping Gemini 2.0 Flash.');
   }
 
   // ── 2. Fallback 1: Groq Llama 4 Scout ───────────────────────────────────────
@@ -401,11 +383,11 @@ export const identifyPill = async (image, patientAge) => {
     try {
       console.log(`[visionService] 🔄 Scanning with Fallback 1: Llama 4 Scout (${GROQ_MODEL})...`);
       const result = await identifyWithGroq(cleanBase64, mimeType, patientAge);
-      console.log(`[visionService] ✅ Identified via Groq Llama 4 Scout (${GROQ_MODEL})`);
+      console.log(`[visionService] ✅ Identified via Groq Llama 4 Scout`);
       return result;
     } catch (err) {
       if (err.retriable) {
-        console.warn(`[visionService] ⚠️  Llama 4 Scout failed (${err.message}), falling back to Gemini 2.0 Flash…`);
+        console.warn(`[visionService] ⚠️  Llama 4 Scout failed (${err.message}), falling back to Gemini 1.5 Pro…`);
       } else {
         throw err;
       }
@@ -414,23 +396,21 @@ export const identifyPill = async (image, patientAge) => {
     console.warn('[visionService] GROQ_API_KEY_3 not set, skipping Llama 4 Scout.');
   }
 
-  // ── 3. Fallback 2: Gemini 2.0 Flash ─────────────────────────────────────────
+  // ── 3. Last Resort: Gemini 1.5 Pro (higher cost — only if both above failed) ─
   if (GEMINI_API_KEY) {
     try {
-      console.log(`[visionService] 🔄 Scanning with Fallback 2: Gemini 2.0 Flash (${GEMINI_FLASH_MODEL})...`);
-      const result = await identifyWithGemini(cleanBase64, mimeType, patientAge, GEMINI_FLASH_MODEL);
-      console.log(`[visionService] ✅ Identified via Gemini 2.0 Flash (${GEMINI_FLASH_MODEL})`);
+      console.log(`[visionService] 🔄 Scanning with Last Resort: Gemini 1.5 Pro (${GEMINI_PRO_MODEL})...`);
+      const result = await identifyWithGemini(cleanBase64, mimeType, patientAge, GEMINI_PRO_MODEL);
+      console.log(`[visionService] ✅ Identified via Gemini 1.5 Pro`);
       return result;
     } catch (err) {
-      // Map transient/retriable errors to a final user-friendly response or throw directly if already mapped
       if (err.isOperational) throw err;
       if (err.status === 429) {
-        throw new AppError('Both AI engines are rate-limited. Please wait a moment and try again.', 429, 'RATE_LIMITED');
+        throw new AppError('All AI engines are rate-limited. Please wait a moment and try again.', 429, 'RATE_LIMITED');
       }
       throw new AppError(`Scan failed: ${err.message}`, 502);
     }
   } else {
-    // If we reach here, it means we don't have GEMINI_API_KEY for fallback 2, and Groq already failed.
     throw new AppError('AI vision services failed to identify the medication.', 502);
   }
 };
