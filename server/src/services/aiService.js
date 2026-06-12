@@ -814,7 +814,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     === RULES ===
     1. BE AGENTIC: PERFORM ACTIONS IMMEDIATELY.
     2. CONFIRMATION: Confirm actions in past tense ("I've added that for you.").
-    3. SUGGESTIONS: Provide EXACTLY 3 short, context-aware suggestions in the 'suggestions' field.
+    3. MEDICINE NAME FORMAT: Whenever you mention any medicine, ALWAYS write the brand name first, followed by the chemical (generic/active ingredient) name in brackets. Example: "Panadol (Paracetamol)", "Augmentin (Amoxicillin/Clavulanate)", "Flagyl (Metronidazole)". Never mention only a generic name without its brand name, and never omit the chemical name in brackets.
+    4. SUGGESTIONS: Provide EXACTLY 3 short, context-aware suggestions in the 'suggestions' field.
        - Suggestions must be from the USER's perspective (e.g., "Log my dose", NOT "You should log your dose").
        - Suggestions MUST be relevant to the current response or conversation state.
        - If you asked the user a question, provide potential answers as suggestions.
