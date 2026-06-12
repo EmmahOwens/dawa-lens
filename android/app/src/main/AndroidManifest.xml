@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.dawainnovation.lens"
     xmlns:tools="http://schemas.android.com/tools">
     <application
@@ -30,15 +31,12 @@
             android:exported="false"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.FullScreen"
-            android:windowSoftInputMode="stateHidden" />
+            android:windowSoftInputMode="stateHidden"
+        />
 
-        <receiver
-            android:name="com.dawainnovation.lens.AlarmReceiver"
-            android:exported="false" />
+        <receiver android:name="com.dawainnovation.lens.AlarmReceiver" android:exported="false" />
 
-        <receiver
-            android:name="com.dawainnovation.lens.BootReceiver"
-            android:exported="true">
+        <receiver android:name="com.dawainnovation.lens.BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
@@ -60,14 +58,13 @@
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
             tools:node="merge">
-            <meta-data
-                android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup" />
+            <meta-data android:name="androidx.work.WorkManagerInitializer" android:value="androidx.startup" />
         </provider>
         <activity
             android:name="com.dawainnovation.lens.NativeListActivity"
             android:label="Native List"
-            android:theme="@style/AppTheme" />
+            android:theme="@style/AppTheme"
+        />
     </application>
 
     <!-- Permissions -->
