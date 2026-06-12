@@ -17,7 +17,6 @@ import {
   CameraSource,
 } from "@capacitor/camera";
 import PermissionRequest from "@/components/PermissionRequest";
-import { NativeCamera } from "@/plugins/nativeCamera";
 
 export default function ScanPage() {
   const navigate = useNavigate();
@@ -30,14 +29,16 @@ export default function ScanPage() {
   );
   const [capturing, setCapturing] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
+  const [flashlightOn, setFlashlightOn] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
   // Guard so the mount effect only fires once even if callbacks are recreated
   const hasFiredRef = useRef(false);
 
   const scanMode = "text" as const;
 
   /** Downscales an image data-URL to max 800px on longest side at 75% quality. */
-  const downscaleImage = (dataUrl: string, maxPx = 800, quality = 0.75): Promise<string> => {
-    return new Promise((resolve) => {
+  const downscaleImage = (dataUrl: string, maxPx = 800, quality = 0.75): Promise<string> =>
+    new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
@@ -52,21 +53,6 @@ export default function ScanPage() {
       img.onerror = () => resolve(dataUrl); // fallback: send original
       img.src = dataUrl;
     });
-  };
-
-  // Start as `true` on native so the loading spinner is visible immediately
-  // without waiting for any async bridge call.
-  const [isNativeScanRunning, setIsNativeScanRunning] = useState(
-    Capacitor.isNativePlatform()
-  );
-  const [showAR, setShowAR] = useState(false);
-  const [flashlightOn, setFlashlightOn] = useState(false);
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [showWebScanner, setShowWebScanner] = useState(
-    !Capacitor.isNativePlatform()
-  );
-
-  const isNative = Capacitor.isNativePlatform();
 
   const toggleFlashlight = useCallback(async () => {
     try {
@@ -95,7 +81,6 @@ export default function ScanPage() {
   }, [flashlightOn]);
 
   const startCamera = useCallback(async () => {
-    if (Capacitor.isNativePlatform() && !showWebScanner) return;
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
@@ -112,55 +97,33 @@ export default function ScanPage() {
       }
     } catch (err) {
       console.error("Camera access failed:", err);
+      setShowPermissionModal(true);
     }
-  }, [facingMode, showWebScanner]);
+  }, [facingMode]);
 
-  const startNativeScan = useCallback(async () => {
-    try {
-      setIsNativeScanRunning(true);
-      const result = await NativeCamera.startScan({ mode: scanMode });
-      if (!result.cancelled && result.imageData) {
-        navigate("/results", {
-          state: { imageUrl: result.imageData, mode: scanMode },
-        });
-      } else {
-        navigate(-1);
-      }
-    } catch (err) {
-      console.warn(
-        "[ScanPage] Native camera failed, using web fallback:",
-        err
-      );
-      setIsNativeScanRunning(false);
-      setShowWebScanner(true);
-      startCamera();
-    } finally {
-      setIsNativeScanRunning(false);
-    }
-  }, [scanMode, navigate, startCamera]);
+  // Switch camera: stop existing stream then restart with the new facing mode
+  const switchCamera = useCallback(() => {
+    setStreaming(false);
+    setFacingMode((m) => (m === "environment" ? "user" : "environment"));
+  }, []);
 
+  // Start camera on mount and restart whenever facingMode changes
   useEffect(() => {
-    // Guard: only run once on mount. Without this, recreating startCamera /
-    // startNativeScan (e.g. when showWebScanner flips in the fallback path)
-    // would re-trigger the effect and double-launch the scan.
-    if (hasFiredRef.current) return;
-    hasFiredRef.current = true;
-
-    if (Capacitor.isNativePlatform()) {
-      // Skip the redundant CapCamera.checkPermissions() bridge call.
-      // NativeScanActivity already handles its own permission check/request
-      // internally, so the extra async round-trip here only adds latency.
-      // If the user has permanently denied camera access, startNativeScan's
-      // catch block will fall back to the web scanner gracefully.
-      startNativeScan();
+    if (hasFiredRef.current) {
+      // facingMode changed after mount — restart with new facing
+      startCamera();
     } else {
+      hasFiredRef.current = true;
       startCamera();
     }
 
     return () => {
       streamRef.current?.getTracks().forEach((tk) => tk.stop());
     };
-  }, [startCamera, startNativeScan]);
+  // startCamera is stable between facingMode changes; including it here
+  // ensures the camera restarts when switchCamera() updates facingMode.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facingMode]);
 
   const handleRequestPermission = async () => {
     if (Capacitor.isNativePlatform()) {
@@ -168,14 +131,13 @@ export default function ScanPage() {
         const status = await CapCamera.requestPermissions();
         if (status.camera === "granted") {
           setShowPermissionModal(false);
-          startNativeScan();
+          startCamera();
         } else {
-          navigate(-1); // Go back if denied
+          navigate(-1);
         }
       } catch (e) {
         console.error("Permission request failed:", e);
         setShowPermissionModal(false);
-        setShowWebScanner(true);
         startCamera();
       }
     } else {
@@ -185,29 +147,6 @@ export default function ScanPage() {
   };
 
   const capture = async () => {
-    if (Capacitor.isNativePlatform() && !showWebScanner) {
-      try {
-        setIsNativeScanRunning(true);
-        const result = await NativeCamera.startScan({ mode: scanMode });
-        if (!result.cancelled && result.imageData) {
-          navigate("/results", {
-            state: { imageUrl: result.imageData, mode: scanMode },
-          });
-        }
-      } catch (err) {
-        console.warn(
-          "[ScanPage] Native camera failed, using web fallback:",
-          err
-        );
-        setIsNativeScanRunning(false);
-        setShowWebScanner(true);
-        startCamera();
-      } finally {
-        setIsNativeScanRunning(false);
-      }
-      return;
-    }
-
     if (!videoRef.current || !canvasRef.current) return;
 
     setCapturing(true);
@@ -225,9 +164,10 @@ export default function ScanPage() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (Capacitor.isNativePlatform()) {
+      // Use native photo picker on Capacitor for proper gallery access
       try {
         const image = await CapCamera.getPhoto({
-          quality: 70,  // reduced from 90 to limit token cost
+          quality: 70,
           allowEditing: false,
           resultType: CameraResultType.DataUrl,
           source: CameraSource.Photos,
@@ -261,13 +201,6 @@ export default function ScanPage() {
       handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
     }
   };
-
-  if (isNative && !showWebScanner) {
-    // Full-screen black backdrop behind the native camera activity.
-    // Using fixed positioning ensures it fills the screen regardless of
-    // the parent's flex layout (PageTransition wraps in w-full h-full).
-    return <div className="fixed inset-0 bg-black" />;
-  }
 
   return (
     <div className="relative min-h-screen bg-foreground flex flex-col items-center">
@@ -306,19 +239,17 @@ export default function ScanPage() {
 
       {/* Camera view — centred column on wide screens */}
       <div className="flex-1 w-full max-w-2xl bg-black relative self-center">
-        {showWebScanner && (
-          <video
-            ref={videoRef}
-            className="h-full w-full object-cover"
-            playsInline
-            muted
-            autoPlay
-          />
-        )}
+        <video
+          ref={videoRef}
+          className="h-full w-full object-cover"
+          playsInline
+          muted
+          autoPlay
+        />
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Scan overlays */}
-        {showWebScanner && streaming && (
+        {streaming && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <motion.div
               initial={{ opacity: 0 }}
@@ -349,20 +280,7 @@ export default function ScanPage() {
           </div>
         )}
 
-        {showWebScanner && !streaming && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-50">
-            <motion.div
-              animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-16 h-16 rounded-full border-4 border-primary/30 border-t-primary"
-            />
-            <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mt-6">
-              {t("scan.camera_loading")}
-            </p>
-          </div>
-        )}
-
-        {isNative && isNativeScanRunning && !showWebScanner && (
+        {!streaming && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-50">
             <motion.div
               animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
@@ -378,25 +296,10 @@ export default function ScanPage() {
         {capturing && (
           <motion.div
             initial={{ opacity: 1 }}
-            animate={{ opacity: showAR ? 0.8 : 0 }}
+            animate={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="absolute inset-0 bg-primary-foreground/20 backdrop-blur-sm z-50 flex flex-col items-center justify-center"
-          >
-            {showAR && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-8 text-center"
-              >
-                <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5 px-3 py-0.5 bg-primary/10 rounded-full inline-block">
-                  Dawa-AR Detected
-                </p>
-                <h2 className="text-2xl font-bold text-white tracking-tight">
-                  Usage Instructions
-                </h2>
-              </motion.div>
-            )}
-          </motion.div>
+            className="absolute inset-0 bg-white/20 backdrop-blur-sm z-50"
+          />
         )}
       </div>
 
@@ -413,7 +316,7 @@ export default function ScanPage() {
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={capture}
-            disabled={showWebScanner ? !streaming : false}
+            disabled={!streaming}
             className="flex items-center justify-center w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 rounded-full border-[4px] border-white/40 bg-transparent disabled:opacity-20 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] relative group"
           >
             <motion.div
@@ -426,11 +329,7 @@ export default function ScanPage() {
           {/* Camera flip + upload */}
           <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={() =>
-                setFacingMode((m) =>
-                  m === "environment" ? "user" : "environment"
-                )
-              }
+              onClick={switchCamera}
               className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90"
             >
               <SwitchCamera size={20} className="sm:hidden" />

@@ -60,15 +60,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     useApp();
   const location = useLocation();
 
-  // On native Capacitor, the /scan route launches the native camera activity
-  // which takes over the full display. Showing SplashScreen here would appear
-  // as an unwanted overlay covering the scan UI. Skip the splash for this
-  // route on native since the user is always authenticated when navigating
-  // from within the app.
-  const isNativeScan =
-    Capacitor.isNativePlatform() && location.pathname === "/scan";
-
-  if (isInitializing && !isNativeScan) {
+  if (isInitializing) {
     return <SplashScreen />;
   }
 
