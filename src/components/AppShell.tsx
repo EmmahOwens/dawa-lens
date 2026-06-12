@@ -16,7 +16,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return (
       <div className="h-screen bg-background overflow-y-auto no-scrollbar scroll-smooth flex flex-col overscroll-none">
         {/* Transparent safe-top spacer for edge-to-edge */}
-        <div className="h-[env(safe-area-inset-top,20px)] bg-background/40 blur-frost border-b border-white/10 sticky top-0 z-40 w-full" />
+        <div className="h-[env(safe-area-inset-top,20px)] liquid-glass border-t-0 border-x-0 border-b sticky top-0 z-40 w-full" />
 
         <PatientContextBanner />
         <main className="flex-1 px-3 safe-bottom pb-24">

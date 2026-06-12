@@ -178,6 +178,20 @@
     @apply bg-white/60 dark:bg-black/50 border-white/30 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.08)] blur-frost;
   }
 
+  .liquid-glass {
+    backdrop-filter: blur(20px) saturate(120%);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);
+  }
+
+  .dark .liquid-glass {
+    background-color: rgba(10, 10, 10, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.4);
+  }
+
   .section-title {
     @apply text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3;
   }
