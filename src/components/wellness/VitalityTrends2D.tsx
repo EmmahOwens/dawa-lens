@@ -119,29 +119,7 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
 
   const currentHoveredData = hoveredIdx !== null ? data[hoveredIdx] : null;
 
-  // Animation variants for floating dots
-  const floatingVariant = {
-    animate: (i: number) => ({
-      y: [0, -4, 0],
-      transition: {
-        duration: 2 + Math.sin(i) * 0.5,
-        repeat: Infinity,
-        ease: "easeInOut",
-      },
-    }),
-  };
-
-  const pulseVariant = {
-    animate: {
-      scale: [1, 1.5, 1],
-      opacity: [0.5, 0, 0.5],
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-        ease: "easeOut",
-      },
-    },
-  };
+  // Today's pulse animation details are defined inline for SVG center stability
 
   return (
     <div className="flex flex-col gap-4">
@@ -321,10 +299,10 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
                 strokeWidth={3}
                 strokeLinecap="round"
                 filter="url(#glow-adherence)"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
               />
             )}
 
@@ -337,10 +315,10 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
                 strokeDasharray="6 4"
                 strokeLinecap="round"
                 filter="url(#glow-energy)"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
+                transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
               />
             )}
 
@@ -353,10 +331,10 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
                 strokeDasharray="2 4"
                 strokeLinecap="round"
                 filter="url(#glow-mood)"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
+                transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
               />
             )}
           </AnimatePresence>
@@ -375,15 +353,22 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
               <g key={idx} className="pointer-events-none">
                 {/* Adherence */}
                 {visibleLines.adherence && (
-                  <motion.g custom={idx} variants={floatingVariant} animate="animate">
+                  <g>
                     {isToday && (
                       <motion.circle
                         cx={x}
                         cy={adhY}
-                        r={8}
                         className="fill-primary"
-                        variants={pulseVariant}
-                        animate="animate"
+                        initial={{ r: 3.5, opacity: 0.5 }}
+                        animate={{
+                          r: [3.5, 9, 3.5],
+                          opacity: [0.5, 0, 0.5],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeOut",
+                        }}
                       />
                     )}
                     <circle
@@ -393,20 +378,27 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
                       className="fill-background stroke-primary transition-all duration-200"
                       strokeWidth={isHovered ? 2.5 : 1.5}
                     />
-                  </motion.g>
+                  </g>
                 )}
 
                 {/* Energy */}
                 {visibleLines.energy && energyY !== null && (
-                  <motion.g custom={idx + 1} variants={floatingVariant} animate="animate">
+                  <g>
                     {isToday && (
                       <motion.circle
                         cx={x}
                         cy={energyY}
-                        r={8}
                         className="fill-emerald-500"
-                        variants={pulseVariant}
-                        animate="animate"
+                        initial={{ r: 3.5, opacity: 0.5 }}
+                        animate={{
+                          r: [3.5, 9, 3.5],
+                          opacity: [0.5, 0, 0.5],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeOut",
+                        }}
                       />
                     )}
                     <circle
@@ -416,20 +408,27 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
                       className="fill-background stroke-emerald-500 transition-all duration-200"
                       strokeWidth={isHovered ? 2.5 : 1.5}
                     />
-                  </motion.g>
+                  </g>
                 )}
 
                 {/* Mood */}
                 {visibleLines.mood && moodY !== null && (
-                  <motion.g custom={idx + 2} variants={floatingVariant} animate="animate">
+                  <g>
                     {isToday && (
                       <motion.circle
                         cx={x}
                         cy={moodY}
-                        r={8}
                         className="fill-indigo-500"
-                        variants={pulseVariant}
-                        animate="animate"
+                        initial={{ r: 3.5, opacity: 0.5 }}
+                        animate={{
+                          r: [3.5, 9, 3.5],
+                          opacity: [0.5, 0, 0.5],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeOut",
+                        }}
                       />
                     )}
                     <circle
@@ -439,7 +438,7 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
                       className="fill-background stroke-indigo-500 transition-all duration-200"
                       strokeWidth={isHovered ? 2.5 : 1.5}
                     />
-                  </motion.g>
+                  </g>
                 )}
               </g>
             );
