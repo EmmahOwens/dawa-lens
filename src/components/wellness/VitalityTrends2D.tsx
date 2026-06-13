@@ -290,54 +290,40 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
           </AnimatePresence>
 
           {/* Trend Lines */}
-          <AnimatePresence>
-            {visibleLines.adherence && adherencePoints.length > 0 && (
-              <motion.path
-                d={makeSmoothPath(adherencePoints)}
-                fill="none"
-                stroke="hsl(var(--primary))"
-                strokeWidth={3}
-                strokeLinecap="round"
-                filter="url(#glow-adherence)"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-              />
-            )}
+          {visibleLines.adherence && adherencePoints.length > 0 && (
+            <path
+              d={makeSmoothPath(adherencePoints)}
+              fill="none"
+              stroke="hsl(var(--primary))"
+              strokeWidth={3}
+              strokeLinecap="round"
+              className="transition-opacity duration-300"
+            />
+          )}
 
-            {visibleLines.energy && energyPoints.length > 0 && (
-              <motion.path
-                d={makeSmoothPath(energyPoints)}
-                fill="none"
-                stroke="#10b981"
-                strokeWidth={2.5}
-                strokeDasharray="6 4"
-                strokeLinecap="round"
-                filter="url(#glow-energy)"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
-              />
-            )}
+          {visibleLines.energy && energyPoints.length > 0 && (
+            <path
+              d={makeSmoothPath(energyPoints)}
+              fill="none"
+              stroke="#10b981"
+              strokeWidth={2.5}
+              strokeDasharray="6 4"
+              strokeLinecap="round"
+              className="transition-opacity duration-300"
+            />
+          )}
 
-            {visibleLines.mood && moodPoints.length > 0 && (
-              <motion.path
-                d={makeSmoothPath(moodPoints)}
-                fill="none"
-                stroke="#6366f1"
-                strokeWidth={2.5}
-                strokeDasharray="2 4"
-                strokeLinecap="round"
-                filter="url(#glow-mood)"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
-              />
-            )}
-          </AnimatePresence>
+          {visibleLines.mood && moodPoints.length > 0 && (
+            <path
+              d={makeSmoothPath(moodPoints)}
+              fill="none"
+              stroke="#6366f1"
+              strokeWidth={2.5}
+              strokeDasharray="2 4"
+              strokeLinecap="round"
+              className="transition-opacity duration-300"
+            />
+          )}
 
           {/* Dots and Pulsing Today */}
           {data.map((day, idx) => {
