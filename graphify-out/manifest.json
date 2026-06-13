@@ -995,8 +995,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1781258303.8966033,
-    "ast_hash": "f116013c23701701bd9d80fdd60bc03a",
+    "mtime": 1781365169.0715594,
+    "ast_hash": "12bb537b9f4f8a4316543f6e9a923b2c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -1040,8 +1040,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
-    "mtime": 1779175437.9189634,
-    "ast_hash": "4914f3b1b589c20da916b010b1658deb",
+    "mtime": 1781365161.729312,
+    "ast_hash": "eda5f836a00e9c1f8c7170902304b07e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorDialog.tsx": {
@@ -1625,8 +1625,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/Dashboard.tsx": {
-    "mtime": 1780440546.030532,
-    "ast_hash": "f6c9c758343350e2754780a319520a31",
+    "mtime": 1781365476.4649534,
+    "ast_hash": "c71d023c37c45fbb52d546531aaab6bb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/FamilyHubPage.tsx": {

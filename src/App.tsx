@@ -123,6 +123,11 @@ const App = () => {
   // Initialize app lifecycle manager once on mount.
   // Handles foreground/background events and network tracking.
   useEffect(() => {
+    try {
+      sessionStorage.removeItem("chunk-load-failed-reload");
+    } catch (e) {
+      console.warn("sessionStorage access failed:", e);
+    }
     return initLifecycle();
   }, []);
 

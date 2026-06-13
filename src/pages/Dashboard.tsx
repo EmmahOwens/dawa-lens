@@ -377,17 +377,30 @@ export default function Dashboard() {
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[0].to)}
-            className={`col-span-2 row-span-2 rounded-[2rem] p-6 flex flex-col justify-between items-start text-left relative overflow-hidden ${quickActions[0].color} shadow-lg shadow-primary/20`}
+            className="col-span-2 row-span-2 rounded-[2rem] p-6 flex flex-col justify-between items-start text-left relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-[1.01] transition-all duration-300"
           >
-            <div className="absolute top-[-10%] right-[-10%] w-32 h-32 bg-white/20 rounded-full blur-2xl" />
-            <div className="p-3 bg-white/20 rounded-2xl backdrop-blur-md">
-              <Camera size={28} />
+            {/* Animated Scanning Line */}
+            <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_12px_#22d3ee] animate-scanner-line pointer-events-none" />
+            
+            {/* Ambient Background Glows */}
+            <div className="absolute -top-12 -right-12 w-36 h-36 bg-cyan-400/25 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-400/25 rounded-full blur-2xl pointer-events-none" />
+            
+            {/* Top Badge */}
+            <div className="absolute top-5 right-5 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-[9px] font-black tracking-widest uppercase text-white/95 flex items-center gap-1.5 backdrop-blur-md shadow-sm">
+              <Sparkles size={8} className="animate-pulse text-cyan-300" />
+              AI Vision
             </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider opacity-70 mb-1">
+
+            <div className="p-3 bg-white/15 border border-white/20 rounded-2xl backdrop-blur-md shadow-inner relative z-10">
+              <Camera size={26} />
+            </div>
+            
+            <div className="relative z-10">
+              <p className="text-[10px] font-black uppercase tracking-wider text-blue-200 opacity-90 mb-0.5">
                 {quickActions[0].description}
               </p>
-              <h3 className="text-xl font-black leading-tight">
+              <h3 className="text-2xl font-black leading-tight tracking-tight">
                 {quickActions[0].label}
               </h3>
             </div>
@@ -397,77 +410,186 @@ export default function Dashboard() {
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[1].to)}
-            className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${quickActions[1].color}`}
+            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-emerald-500/5 via-teal-500/10 to-emerald-500/5 dark:from-emerald-950/20 dark:to-teal-900/25 border-emerald-500/20 text-emerald-800 dark:text-emerald-300 hover:border-emerald-500/40 hover-wiggle transition-all duration-200"
           >
-            <div className="p-2.5 bg-success/20 rounded-xl">
+            <div className="p-2.5 bg-emerald-500/15 dark:bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon transition-transform">
               <Users size={20} />
             </div>
-            <span className="font-bold text-sm tracking-tight">
-              {quickActions[1].label}
+            <div className="text-left flex-grow min-w-0">
+              <span className="font-extrabold text-sm tracking-tight block leading-tight text-foreground truncate">
+                {quickActions[1].label}
+              </span>
+              <span className="text-[9px] text-emerald-600/80 dark:text-emerald-400/80 font-bold uppercase tracking-wider block">
+                Circle of Care
+              </span>
+            </div>
+            
+            {/* Dynamic Patient Bubbles */}
+            <div className="flex -space-x-1.5 overflow-hidden shrink-0 pr-1">
+              {patients.slice(0, 3).map((p, idx) => (
+                <div
+                  key={p.id || idx}
+                  className="w-7 h-7 rounded-full border-2 border-background bg-gradient-to-br from-emerald-400 to-teal-500 text-[10px] font-black text-white flex items-center justify-center shadow-sm uppercase shrink-0"
+                >
+                  {p.name.charAt(0)}
+                </div>
+              ))}
+              {patients.length > 3 && (
+                <div className="w-7 h-7 rounded-full border-2 border-background bg-teal-800 text-[9px] font-black text-white flex items-center justify-center shadow-sm shrink-0">
+                  +{patients.length - 3}
+                </div>
+              )}
+              {patients.length === 0 && (
+                <div className="w-7 h-7 rounded-full border-2 border-dashed border-emerald-500/30 flex items-center justify-center text-emerald-500/50 shrink-0">
+                  <Plus size={10} />
+                </div>
+              )}
+            </div>
+          </motion.button>
+
+          {/* Small Card: Wellness */}
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate(quickActions[2].to)}
+            className="col-span-1 row-span-1 rounded-[1.25rem] border bg-gradient-to-br from-rose-500/5 to-pink-500/10 dark:from-rose-950/20 dark:to-pink-900/20 border-rose-500/20 text-rose-600 dark:text-rose-400 hover:border-rose-500/40 hover-wiggle flex flex-col items-center justify-center gap-1.5 transition-all duration-200"
+          >
+            <div className="w-9 h-9 rounded-xl bg-rose-500/15 dark:bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center animate-pulse-glow wiggle-icon">
+              <Heart size={18} />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-rose-700 dark:text-rose-400 leading-none">
+              {quickActions[2].label}
             </span>
           </motion.button>
 
-          {/* Small Cards Row 2 */}
-          {quickActions.slice(2, 4).map((action) => (
-            <motion.button
-              key={action.label}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate(action.to)}
-              className={`col-span-1 row-span-1 rounded-[1.25rem] border ${action.color} flex flex-col items-center justify-center gap-1.5`}
-            >
-              <action.icon size={20} />
-              <span className="text-[9px] font-bold uppercase tracking-wider">
-                {action.label}
-              </span>
-            </motion.button>
-          ))}
+          {/* Small Card: Travel */}
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate(quickActions[3].to)}
+            className="col-span-1 row-span-1 rounded-[1.25rem] border bg-gradient-to-br from-sky-500/5 to-blue-500/10 dark:from-sky-950/20 dark:to-blue-900/20 border-sky-500/20 text-sky-600 dark:text-sky-400 hover:border-sky-500/40 hover-wiggle flex flex-col items-center justify-center gap-1.5 transition-all duration-200"
+          >
+            <div className="w-9 h-9 rounded-xl bg-sky-500/15 dark:bg-sky-500/10 border border-sky-500/20 text-sky-500 flex items-center justify-center animate-float-plane wiggle-icon">
+              <Plane size={18} />
+            </div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-sky-700 dark:text-sky-400 leading-none">
+              {quickActions[3].label}
+            </span>
+          </motion.button>
 
-          {/* Row 3: Safety Check (2x1) and Reminders (2x1) */}
+          {/* Row 3: Safety Check (2x1) */}
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[4].to)}
-            className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${quickActions[4].color}`}
+            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-amber-500/5 via-orange-500/10 to-amber-500/5 dark:from-amber-950/25 dark:to-orange-950/20 border-amber-500/30 text-amber-900 dark:text-amber-300 hover:border-amber-500/50 hover-wiggle transition-all duration-200"
           >
-            <div className="p-2.5 bg-warning/20 rounded-xl">
-              <ShieldAlert
-                size={20}
-                className="text-warning-foreground dark:text-warning"
-              />
+            <div className="p-2.5 bg-amber-500/20 dark:bg-amber-500/15 rounded-xl text-amber-700 dark:text-amber-400 border border-amber-500/35 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
+              <ShieldAlert size={20} />
             </div>
-            <span className="font-bold text-sm tracking-tight">
-              {quickActions[4].label}
-            </span>
+            <div className="text-left flex-grow min-w-0">
+              <span className="font-extrabold text-sm tracking-tight block leading-tight text-amber-950 dark:text-amber-200 truncate">
+                {quickActions[4].label}
+              </span>
+              <span className="text-[9px] text-amber-700/80 dark:text-amber-400/80 font-bold uppercase tracking-wider block">
+                Rx Interactions
+              </span>
+            </div>
+            <div className="ml-auto shrink-0 pr-1">
+              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-amber-500/15 dark:bg-amber-500/25 border border-amber-500/30 text-amber-800 dark:text-amber-300 uppercase tracking-widest">
+                Check
+              </span>
+            </div>
           </motion.button>
 
+          {/* Row 3: Reminders (2x1) */}
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[5].to)}
-            className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${quickActions[5].color}`}
+            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-violet-500/5 to-fuchsia-500/10 dark:from-violet-950/20 dark:to-fuchsia-900/20 border-violet-500/20 text-violet-800 dark:text-violet-300 hover:border-violet-500/40 hover-wiggle transition-all duration-200"
           >
-            <div className="p-2.5 bg-white/10 rounded-xl">
+            <div className="p-2.5 bg-violet-500/15 dark:bg-violet-500/10 rounded-xl text-violet-600 dark:text-violet-400 border border-violet-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
               <Bell size={20} />
             </div>
-            <span className="font-bold text-sm tracking-tight">
-              {quickActions[5].label}
-            </span>
+            <div className="text-left flex-grow min-w-0">
+              <span className="font-extrabold text-sm tracking-tight block leading-tight text-foreground truncate">
+                {quickActions[5].label}
+              </span>
+              <span className="text-[9px] text-violet-600/80 dark:text-violet-400/80 font-bold uppercase tracking-wider block">
+                Daily Schedule
+              </span>
+            </div>
+            <div className="ml-auto shrink-0 pr-1">
+              {todayReminders.length > 0 ? (
+                <span className="text-[9px] font-black px-2 py-0.5 rounded bg-violet-500/15 dark:bg-violet-500/25 border border-violet-500/30 text-violet-700 dark:text-violet-300 uppercase tracking-widest">
+                  {expectedDosesToday - takenToday <= 0 ? "Done" : `${expectedDosesToday - takenToday} Left`}
+                </span>
+              ) : (
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">None</span>
+              )}
+            </div>
           </motion.button>
 
-          {/* Row 4: History (2x1) and Reports (2x1) */}
-          {quickActions.slice(6, 8).map((action) => (
-            <motion.button
-              key={action.label}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate(action.to)}
-              className={`col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-4 border ${action.color}`}
-            >
-              <div className="p-2.5 bg-white/10 rounded-xl">
-                <action.icon size={20} />
-              </div>
-              <span className="font-bold text-sm tracking-tight">
-                {action.label}
+          {/* Row 4: History (2x1) */}
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate(quickActions[6].to)}
+            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-cyan-500/5 to-blue-500/10 dark:from-cyan-950/20 dark:to-blue-900/20 border-cyan-500/20 text-cyan-800 dark:text-cyan-300 hover:border-cyan-500/40 hover-wiggle transition-all duration-200"
+          >
+            <div className="p-2.5 bg-cyan-500/15 dark:bg-cyan-500/10 rounded-xl text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
+              <History size={20} />
+            </div>
+            <div className="text-left flex-grow min-w-0">
+              <span className="font-extrabold text-sm tracking-tight block leading-tight text-foreground truncate">
+                {quickActions[6].label}
               </span>
-            </motion.button>
-          ))}
+              <span className="text-[9px] text-cyan-600/80 dark:text-cyan-400/80 font-bold uppercase tracking-wider block">
+                Dose Log Book
+              </span>
+            </div>
+            <div className="ml-auto shrink-0 pr-1">
+              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-cyan-500/15 dark:bg-cyan-500/25 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 uppercase tracking-widest">
+                {adherencePercent}% Score
+              </span>
+            </div>
+          </motion.button>
+
+          {/* Row 4: Reports (2x1) */}
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate(quickActions[7].to)}
+            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-indigo-500/5 to-purple-500/10 dark:from-indigo-950/20 dark:to-purple-900/20 border-indigo-500/20 text-indigo-800 dark:text-indigo-300 hover:border-indigo-500/40 hover-wiggle transition-all duration-200"
+          >
+            <div className="p-2.5 bg-indigo-500/15 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
+              <FileText size={20} />
+            </div>
+            <div className="text-left flex-grow min-w-0">
+              <span className="font-extrabold text-sm tracking-tight block leading-tight text-foreground truncate">
+                {quickActions[7].label}
+              </span>
+              <span className="text-[9px] text-indigo-600/80 dark:text-indigo-400/80 font-bold uppercase tracking-wider block">
+                PDF & Analytics
+              </span>
+            </div>
+            
+            {/* Sparkline Graphic */}
+            <div className="ml-auto shrink-0 pr-1 w-12 h-6 opacity-75 dark:opacity-90">
+              <svg className="w-full h-full" viewBox="0 0 50 20" fill="none">
+                <path
+                  d="M2 18 C 10 12, 12 16, 20 6 C 28 -4, 32 10, 48 4"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-indigo-500 dark:text-indigo-400"
+                />
+                <circle
+                  cx="48"
+                  cy="4"
+                  r="2.5"
+                  fill="currentColor"
+                  className="text-purple-400 animate-pulse"
+                />
+              </svg>
+            </div>
+          </motion.button>
         </div>
       </div>
 

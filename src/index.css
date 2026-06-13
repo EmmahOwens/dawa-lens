@@ -290,3 +290,65 @@ main,
 .overflow-y-auto {
   overscroll-behavior: contain;
 }
+
+/* Bento Grid Custom Animations */
+@keyframes scanner-line {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.animate-scanner-line {
+  animation: scanner-line 3.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(8deg); }
+  75% { transform: rotate(-8deg); }
+}
+
+.hover-wiggle:hover .wiggle-icon,
+.hover-wiggle:active .wiggle-icon {
+  animation: wiggle 0.5s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(244, 63, 94, 0));
+  }
+  50% {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.45));
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes float-plane {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(-3px) translateX(3px);
+  }
+}
+
+.animate-float-plane {
+  animation: float-plane 3s ease-in-out infinite;
+}
+
