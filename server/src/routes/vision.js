@@ -9,12 +9,12 @@ const router = express.Router();
  */
 router.post('/pill-id', protect, async (req, res, next) => {
   try {
-    const { image, patientAge } = req.body;
-    if (!image) {
-      return res.status(400).json({ error: 'No image data provided', code: 'NO_IMAGE' });
+    const { image, patientAge, ocrText } = req.body;
+    if (!ocrText) {
+      return res.status(400).json({ error: 'No OCR text provided', code: 'NO_TEXT' });
     }
 
-    const result = await visionService.identifyPill(image, patientAge);
+    const result = await visionService.identifyPill(image, patientAge, ocrText);
     res.json(result);
   } catch (error) {
     next(error);

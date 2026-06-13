@@ -107,7 +107,7 @@ async function streamRequest(
 
 // --- Vision AI ---
 export const visionApi = {
-  identifyPill: (data: { image: string; patientAge?: string }) =>
+  identifyPill: (data: { image?: string; patientAge?: string; ocrText: string }) =>
     request<unknown>("/vision/pill-id", {
       method: "POST",
       body: JSON.stringify(data),

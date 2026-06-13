@@ -2,51 +2,46 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import AppError from '../utils/AppError.js';
 import { rateLimitManager } from './rateLimitManager.js';
+import { callAiWithFallback } from './aiService.js';
 
 dotenv.config();
 
 // ── API Config ───────────────────────────────────────────────────────────────
-const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
-const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
-const GROQ_MODEL     = 'meta-llama/llama-4-scout-17b-16e-instruct';
-const GROQ_API_URL   = 'https://api.groq.com/openai/v1/chat/completions';
-
-/**
- * Determines which API key to use based on the model ID.
- * Features using llama 3.1 8b models MUST use GROQ_API_KEY_2.
- */
-const getGroqApiKey = (modelId) => {
-  if (modelId && modelId.toLowerCase().includes('llama-3.1-8b')) {
-    return GROQ_API_KEY_2;
-  }
-  return GROQ_API_KEY_3;
-};
+const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API_KEY;
+const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
+const CLOUDFLARE_TEXT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_FLASH_MODEL = 'gemini-2.0-flash';   // Primary — cheap & fast
-const GEMINI_PRO_MODEL   = 'gemini-1.5-pro';     // Last-resort fallback only
+const GEMINI_FLASH_MODEL = 'gemini-2.0-flash';   // cheap & fast
 
 // ── Prompt ───────────────────────────────────────────────────────────────────
-const getPillIdPrompt = (patientAge) => {
+const getTextPillIdPrompt = (ocrText, patientAge) => {
   const ageCtx = patientAge ? `for a patient aged ${patientAge}` : 'for a standard adult';
 
-  return `You are a pharmaceutical identification AI. Identify the medication in the image.
+  return `You are a pharmaceutical identification AI. Identify the medication from the following OCR text extracted from the medication packaging or pill.
 
-Steps: examine color, shape, size, imprints, packaging text, and brand labels.
+OCR Text:
+"${ocrText}"
+
+Analyze the OCR text to extract:
+1. The brand name(s) or generic name(s) of the medication.
+2. Any imprints or labels mentioned in the text.
+3. Formulate exactly 5 matching candidates (ranked by confidence, with the most likely match first). If there are fewer than 5 candidates, fill the rest with inconclusive entries.
+
 Return ONLY valid JSON matching this schema exactly:
 {
   "matches": [ // exactly 5 entries ranked by confidence desc
     {
       "name": "brand name",
       "genericName": "active ingredient(s)",
-      "confidence": 0.0,
+      "confidence": 0.0, // confidence between 0.0 and 1.0
       "recommendedDosage": "safe standard dose ${ageCtx}",
       "draftSchedule": ["HH:MM"],
       "safetyFlag": "one critical warning or empty string"
     }
   ],
-  "imprints": ["text on pill surface"],
-  "labels": ["text on packaging"],
+  "imprints": ["text on pill surface extracted from OCR"],
+  "labels": ["text on packaging extracted from OCR"],
   "summary": "2-3 sentence summary: primary use and one safety warning"
 }`;
 };
@@ -82,21 +77,6 @@ const PILL_ID_SCHEMA = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Detects the MIME type from a base64 string's magic bytes.
- */
-const detectMimeType = (base64) => {
-  try {
-    const header = base64.substring(0, 8);
-    if (atob(header).charCodeAt(0) === 0x89) return 'image/png';
-    if (atob(header).charCodeAt(0) === 0x52) return 'image/webp';
-    if (atob(header).charCodeAt(0) === 0x47) return 'image/gif';
-  } catch {
-    // fall through
-  }
-  return 'image/jpeg';
-};
-
-/**
  * Normalises and pads the matches array to exactly 5 entries.
  */
 const normaliseMatches = (raw) => {
@@ -125,292 +105,222 @@ const normaliseMatches = (raw) => {
   return matches;
 };
 
-// ── Primary: Groq Llama 4 Scout ───────────────────────────────────────────────
+// ── Primary: DawaGPT text-only model pipeline ─────────────────────────────────
 
-/**
- * Calls the Groq vision API with the given base64 image.
- * Returns parsed result or throws an AppError.
- */
-const identifyWithGroq = async (cleanBase64, mimeType, patientAge) => {
-  const dataUri = `data:${mimeType};base64,${cleanBase64}`;
-
-  const requestBody = {
-    model: GROQ_MODEL,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image_url',
-            image_url: { url: dataUri },
-          },
-          {
-            type: 'text',
-            text: getPillIdPrompt(patientAge),
-          },
-        ],
-      },
-    ],
-    temperature: 0.4,
-    max_completion_tokens: 1024,
-    response_format: { type: 'json_object' },
-  };
-
-  const fn = async () => {
-    return await axios.post(GROQ_API_URL, requestBody, {
-      headers: {
-        Authorization: `Bearer ${getGroqApiKey(GROQ_MODEL)}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 30000,
-    });
-  };
-
-  let response;
-  try {
-    response = await rateLimitManager.enqueue(fn, 'groq-scout', requestBody.messages, 'high', 1, true);
-  } catch (err) {
-    if (err.response) {
-      const status = err.response.status;
-      const msg    = err.response.data?.error?.message || '';
-
-      if (status === 401 || status === 403) {
-        throw new AppError('The Groq API key is invalid or expired. Check server/.env.', 401, 'INVALID_API_KEY');
-      }
-      if (status === 429) {
-        throw new AppError('Groq rate limit reached. Retrying with fallback engine…', 429, 'RATE_LIMITED');
-      }
-      // Propagate as a retriable error so the caller can fall back
-      const groqErr = new Error(`Groq API error (${status}): ${msg}`);
-      groqErr.retriable = true;
-      throw groqErr;
-    }
-    if (err.code === 'ECONNABORTED') {
-      const timeoutErr = new Error('Groq timed out');
-      timeoutErr.retriable = true;
-      throw timeoutErr;
-    }
-    const netErr = new Error('Groq unreachable');
-    netErr.retriable = true;
-    throw netErr;
-  }
-
-  const rawText = response.data?.choices?.[0]?.message?.content;
-  if (!rawText) {
-    const emptyErr = new Error('Groq returned an empty response');
-    emptyErr.retriable = true;
-    throw emptyErr;
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(rawText);
-  } catch {
-    const parseErr = new Error('Groq returned malformed JSON');
-    parseErr.retriable = true;
-    throw parseErr;
-  }
-
+const identifyWithDawaGPT = async (ocrText, patientAge) => {
+  const prompt = getTextPillIdPrompt(ocrText, patientAge);
+  const messages = [{ role: 'user', content: prompt }];
+  
+  // Call DawaGPT's fallback chain
+  const result = await callAiWithFallback(messages, {
+    isJson: true,
+    priority: 'high',
+    maxTokens: 1000,
+    isComplex: true
+  });
+  
   return {
-    success:  true,
-    matches:  normaliseMatches(parsed.matches),
-    imprints: parsed.imprints || [],
-    labels:   parsed.labels   || [],
-    summary:  parsed.summary  || '',
-    engine:   GROQ_MODEL,
+    success: true,
+    matches: normaliseMatches(result.matches),
+    imprints: result.imprints || [],
+    labels: result.labels || [],
+    summary: result.summary || '',
+    engine: result.source || 'DawaGPT (Text)',
   };
 };
 
-// ── Fallback: Gemini 2.0 Flash ────────────────────────────────────────────────
+// ── Fallback: Cloudflare Text model ──────────────────────────────────────────
 
-/**
- * Calls the Gemini vision API with the given base64 image.
- * Returns parsed result or throws an AppError.
- */
-const identifyWithGemini = async (cleanBase64, mimeType, patientAge, modelName = GEMINI_PRO_MODEL) => {
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+const identifyWithCloudflareText = async (ocrText, patientAge) => {
+  if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_ACCOUNT_ID) {
+    throw new Error('Cloudflare API key or Account ID not configured');
+  }
+  
+  const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/${CLOUDFLARE_TEXT_MODEL}`;
+  const requestBody = {
+    messages: [
+      {
+        role: 'user',
+        content: getTextPillIdPrompt(ocrText, patientAge)
+      }
+    ]
+  };
+  
+  const fn = async () => {
+    return await axios.post(apiUrl, requestBody, {
+      headers: {
+        Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      timeout: 20000,
+    });
+  };
+  
+  let response;
+  try {
+    response = await rateLimitManager.enqueue(fn, 'cloudflare-llama-3.1-text', requestBody.messages, 'high', 1, true);
+  } catch (err) {
+    const cfErr = new Error(`Cloudflare Text API error: ${err.message}`);
+    cfErr.retriable = true;
+    throw cfErr;
+  }
+  
+  const rawText = response.data?.result?.response;
+  if (!rawText) {
+    const emptyErr = new Error('Cloudflare returned an empty response');
+    emptyErr.retriable = true;
+    throw emptyErr;
+  }
+  
+  let parsed;
+  try {
+    const sanitized = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+    parsed = JSON.parse(sanitized);
+  } catch {
+    const parseErr = new Error('Cloudflare returned malformed JSON');
+    parseErr.retriable = true;
+    throw parseErr;
+  }
+  
+  return {
+    success: true,
+    matches: normaliseMatches(parsed.matches),
+    imprints: parsed.imprints || [],
+    labels: parsed.labels || [],
+    summary: parsed.summary || '',
+    engine: CLOUDFLARE_TEXT_MODEL,
+  };
+};
+
+// ── Final Fallback: Gemini Text model ────────────────────────────────────────
+
+const identifyWithGeminiText = async (ocrText, patientAge) => {
+  if (!GEMINI_API_KEY) {
+    throw new Error('Gemini API key not configured');
+  }
+  
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FLASH_MODEL}:generateContent`;
   const requestBody = {
     contents: [
       {
         parts: [
-          { inline_data: { mime_type: mimeType, data: cleanBase64 } },
-          { text: getPillIdPrompt(patientAge) },
+          { text: getTextPillIdPrompt(ocrText, patientAge) },
         ],
       },
     ],
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 700,   // cap output — schema is compact, 700 is ample
+      maxOutputTokens: 700,
       responseMimeType: 'application/json',
       responseSchema: PILL_ID_SCHEMA,
     },
   };
-
+  
   const fn = async () => {
     return await axios.post(
       `${apiUrl}?key=${GEMINI_API_KEY}`,
       requestBody,
-      { timeout: 30000 }
+      { timeout: 20000 }
     );
   };
-
+  
   let response;
   try {
-    const modelKey = modelName === GEMINI_PRO_MODEL ? 'gemini-pro' : 'gemini';
-    response = await rateLimitManager.enqueue(fn, modelKey, requestBody.contents, 'high', 1, true);
+    response = await rateLimitManager.enqueue(fn, 'gemini-text', requestBody.contents, 'high', 1, true);
   } catch (err) {
-    if (err.response) {
-      const status    = err.response.status;
-      const geminiMsg = err.response.data?.error?.message || '';
-
-      if (status === 400 && geminiMsg.toLowerCase().includes('api key')) {
-        throw new AppError('The Gemini API key is invalid or expired. Check server/.env.', 401, 'INVALID_API_KEY');
-      }
-      if (status === 401 || status === 403) {
-        throw new AppError('The Gemini API key is invalid or expired. Check server/.env.', 401, 'INVALID_API_KEY');
-      }
-      if (status === 429) {
-        const rateLimitErr = new Error(`Gemini rate limited: ${geminiMsg}`);
-        rateLimitErr.status = 429;
-        rateLimitErr.retriable = true;
-        throw rateLimitErr;
-      }
-      if (status === 402) {
-        throw new AppError('Google Cloud Vision billing is not enabled on this GCP project.', 402, 'BILLING_DISABLED');
-      }
-      const genericErr = new Error(`Gemini API error (${status}): ${geminiMsg}`);
-      genericErr.retriable = true;
-      throw genericErr;
-    }
-    if (err.code === 'ECONNABORTED') {
-      const timeoutErr = new Error('Gemini timed out');
-      timeoutErr.retriable = true;
-      throw timeoutErr;
-    }
-    const netErr = new Error('Gemini unreachable');
-    netErr.retriable = true;
-    throw netErr;
+    const genericErr = new Error(`Gemini Text API error: ${err.message}`);
+    genericErr.status = err.response?.status;
+    throw genericErr;
   }
-
+  
   const candidate = response.data?.candidates?.[0];
   if (!candidate) {
-    const emptyErr = new Error('No response received from Gemini');
-    emptyErr.retriable = true;
-    throw emptyErr;
+    throw new Error('No response received from Gemini');
   }
-  if (candidate.finishReason === 'SAFETY') {
-    throw new AppError(
-      'The image was blocked by safety filters. Please try a clearer photo.',
-      400,
-      'SAFETY_BLOCKED'
-    );
-  }
-
+  
   const rawText = candidate.content?.parts?.[0]?.text;
   if (!rawText) {
-    const emptyErr = new Error('Gemini returned an empty response');
-    emptyErr.retriable = true;
-    throw emptyErr;
+    throw new Error('Gemini returned an empty response');
   }
-
+  
   let parsed;
   try {
     parsed = JSON.parse(rawText);
   } catch {
-    const parseErr = new Error('AI returned malformed data');
-    parseErr.retriable = true;
-    throw parseErr;
+    throw new Error('AI returned malformed data');
   }
-
+  
   return {
-    success:  true,
-    matches:  normaliseMatches(parsed.matches),
+    success: true,
+    matches: normaliseMatches(parsed.matches),
     imprints: parsed.imprints || [],
-    labels:   parsed.labels   || [],
-    summary:  parsed.summary  || '',
-    engine:   modelName,
+    labels: parsed.labels || [],
+    summary: parsed.summary || '',
+    engine: `${GEMINI_FLASH_MODEL} (Text)`,
   };
 };
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Identifies a pill/medication from a base64-encoded image.
+ * Identifies a pill/medication using extracted OCR text.
  *
- * Fallback chain (cheapest → most capable):
- *   1. Gemini 2.0 Flash  — fast, low-cost, good vision
- *   2. Groq Llama 4 Scout — free-tier fallback
- *   3. Gemini 1.5 Pro    — last resort only (highest token cost)
+ * Fallback chain:
+ *   1. DawaGPT Text Models
+ *   2. Cloudflare Llama 3.1 8B Text
+ *   3. Gemini 2.0 Flash Text
  *
- * @param {string} image       - Raw base64 image (no data URI prefix).
+ * @param {string} [image]     - Ignored/Optional base64 image.
  * @param {number} [patientAge] - Optional patient age for dosage context.
+ * @param {string} ocrText     - Extracted OCR text from the medication.
  * @returns {Promise<object>}
  */
-export const identifyPill = async (image, patientAge) => {
-  // Strip data URI prefix if it somehow arrives with one
-  const cleanBase64 = image.replace(/^data:image\/\w+;base64,/, '');
-  const mimeType    = detectMimeType(cleanBase64);
-
-  // Ensure at least one key is present
-  if (!GEMINI_API_KEY && !GROQ_API_KEY_3) {
+export const identifyPill = async (image, patientAge, ocrText) => {
+  if (!ocrText || !ocrText.trim()) {
     throw new AppError(
-      'No AI vision engine is configured. Add GROQ_API_KEY_3 or GEMINI_API_KEY to server/.env.',
-      503,
-      'API_KEY_MISSING'
+      'No text was detected from the scan. Please try again with a clearer photo of the label.',
+      400,
+      'NO_TEXT_DETECTED'
     );
   }
 
-  // ── 1. Primary: Gemini 2.0 Flash (cheapest Gemini model with vision) ─────────
-  if (GEMINI_API_KEY) {
-    try {
-      console.log(`[visionService] 🔄 Scanning with Primary: Gemini 2.0 Flash (${GEMINI_FLASH_MODEL})...`);
-      const result = await identifyWithGemini(cleanBase64, mimeType, patientAge, GEMINI_FLASH_MODEL);
-      console.log(`[visionService] ✅ Identified via Gemini 2.0 Flash`);
-      return result;
-    } catch (err) {
-      if (err.retriable) {
-        console.warn(`[visionService] ⚠️  Gemini 2.0 Flash failed (${err.message}), falling back to Groq…`);
-      } else {
-        throw err;
-      }
-    }
-  } else {
-    console.warn('[visionService] GEMINI_API_KEY not set, skipping Gemini 2.0 Flash.');
+  // ── 1. Primary: DawaGPT text models ──
+  try {
+    console.log(`[visionService] 🔄 Processing scan with Primary: DawaGPT text models...`);
+    const result = await identifyWithDawaGPT(ocrText, patientAge);
+    console.log(`[visionService] ✅ Identified via DawaGPT text models`);
+    return result;
+  } catch (err) {
+    console.warn(`[visionService] ⚠️  DawaGPT text models failed (${err.message}), falling back to Cloudflare text model…`);
   }
 
-  // ── 2. Fallback 1: Groq Llama 4 Scout ───────────────────────────────────────
-  if (GROQ_API_KEY_3) {
+  // ── 2. Fallback: Cloudflare text model ──
+  if (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID) {
     try {
-      console.log(`[visionService] 🔄 Scanning with Fallback 1: Llama 4 Scout (${GROQ_MODEL})...`);
-      const result = await identifyWithGroq(cleanBase64, mimeType, patientAge);
-      console.log(`[visionService] ✅ Identified via Groq Llama 4 Scout`);
+      console.log(`[visionService] 🔄 Processing scan with Fallback: Cloudflare text model (${CLOUDFLARE_TEXT_MODEL})...`);
+      const result = await identifyWithCloudflareText(ocrText, patientAge);
+      console.log(`[visionService] ✅ Identified via Cloudflare text model`);
       return result;
     } catch (err) {
-      if (err.retriable) {
-        console.warn(`[visionService] ⚠️  Llama 4 Scout failed (${err.message}), falling back to Gemini 1.5 Pro…`);
-      } else {
-        throw err;
-      }
+      console.warn(`[visionService] ⚠️  Cloudflare text model failed (${err.message}), falling back to Gemini text model…`);
     }
   } else {
-    console.warn('[visionService] GROQ_API_KEY_3 not set, skipping Llama 4 Scout.');
+    console.warn('[visionService] CLOUDFLARE_API_KEY or CLOUDFLARE_ACCOUNT_ID not set, skipping Cloudflare text fallback.');
   }
 
-  // ── 3. Last Resort: Gemini 1.5 Pro (higher cost — only if both above failed) ─
+  // ── 3. Final Fallback: Gemini text model ──
   if (GEMINI_API_KEY) {
     try {
-      console.log(`[visionService] 🔄 Scanning with Last Resort: Gemini 1.5 Pro (${GEMINI_PRO_MODEL})...`);
-      const result = await identifyWithGemini(cleanBase64, mimeType, patientAge, GEMINI_PRO_MODEL);
-      console.log(`[visionService] ✅ Identified via Gemini 1.5 Pro`);
+      console.log(`[visionService] 🔄 Processing scan with Final Fallback: Gemini text model (${GEMINI_FLASH_MODEL})...`);
+      const result = await identifyWithGeminiText(ocrText, patientAge);
+      console.log(`[visionService] ✅ Identified via Gemini text model`);
       return result;
     } catch (err) {
+      console.error(`[visionService] ❌ Gemini text fallback failed:`, err.message);
       if (err.isOperational) throw err;
-      if (err.status === 429) {
-        throw new AppError('All AI engines are rate-limited. Please wait a moment and try again.', 429, 'RATE_LIMITED');
-      }
       throw new AppError(`Scan failed: ${err.message}`, 502);
     }
   } else {
-    throw new AppError('AI vision services failed to identify the medication.', 502);
+    throw new AppError('AI text services failed to identify the medication.', 502);
   }
 };

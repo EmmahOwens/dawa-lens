@@ -805,8 +805,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/routes/vision.js": {
-    "mtime": 1776079242.141342,
-    "ast_hash": "ae06bf0e212729f013f92497b42815ba",
+    "mtime": 1781364137.132312,
+    "ast_hash": "8a395202ddc39f22e55bd6a9b19e18e8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/routes/wellness.js": {
@@ -855,8 +855,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/rateLimitManager.js": {
-    "mtime": 1780919153.639263,
-    "ast_hash": "72210804714c5287b8f0f99c0b116b4c",
+    "mtime": 1781362241.7785127,
+    "ast_hash": "b0c4a253058d7531f7ce5db5b4c3ebe6",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/reminderService.js": {
@@ -875,8 +875,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/visionService.js": {
-    "mtime": 1781257898.4996493,
-    "ast_hash": "35e4688de973db2d15c70700a53ccd2a",
+    "mtime": 1781364150.6977096,
+    "ast_hash": "4298752f5e327f13ca5e088ae5e90951",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/wellnessService.js": {
@@ -985,8 +985,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-vision.js": {
-    "mtime": 1776608844.186248,
-    "ast_hash": "07577bdf367606cd21df70636bec8903",
+    "mtime": 1781364157.0574636,
+    "ast_hash": "8c22ec3ada60ef7da4d46e3f96576b78",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/skills-lock.json": {
@@ -1780,8 +1780,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
-    "mtime": 1780921887.315603,
-    "ast_hash": "0f7f3e6cb08984540242beab5b766d80",
+    "mtime": 1781364123.3000455,
+    "ast_hash": "5ad736eec60a19dad88dfaf0c4273013",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/barcodeResolver.ts": {
@@ -1855,8 +1855,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/pillIdService.ts": {
-    "mtime": 1775972777.6614323,
-    "ast_hash": "94952b6581f1ecba35ce434ecfdbb3e4",
+    "mtime": 1781364131.0886168,
+    "ast_hash": "9674ee680d7de2ecacd376912f0d422f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/refillService.ts": {
