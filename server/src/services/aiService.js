@@ -122,7 +122,7 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 2048
     const response = await axios.post(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       contents,
       systemInstruction: {
-        parts: [{ text: "You are Dawa-Lens AI, a warm and caring health companion. Respond STRICTLY in JSON format with 'text', 'suggestions', 'source', and 'action' fields. Use Markdown for formatting in the 'text' field. The 'suggestions' field MUST contain EXACTLY 3 short follow-up prompts (under 6 words each) that are NATURAL CONTINUATIONS of the conversation — what the user would logically ask or do next based on your response. Suggestions must be from the user's perspective. Agentic capabilities are enabled via the 'action' field. You can include inline markdown links in the 'text' field to help the user navigate using custom labels like 'Let's add a client' to '/family', 'Add first client' to '/family', 'View history' to '/history', 'Add a reminder' to '/reminders/new', etc. Available routes include: /family, /reminders, /reminders/new, /history, /interactions, /travel, /wellness, /report, /settings, /scan, /search." }]
+        parts: [{ text: "You are Dawa-Lens AI, a warm and caring health companion. Respond STRICTLY in JSON format with 'text', 'suggestions', 'source', and 'action' fields. Use Markdown for formatting in the 'text' field. The 'suggestions' field MUST contain EXACTLY 3 short follow-up prompts (under 6 words each) that are NATURAL CONTINUATIONS of the conversation — what the user would logically ask or do next based on your response. Suggestions must be from the user's perspective. Agentic capabilities are enabled via the 'action' field. You can include inline markdown links in the 'text' field to help the user navigate using custom labels like 'Let's add a client' to '/family', 'Add first client' to '/family', 'Add a reminder' to '/reminders/new', etc. Available routes include: /family, /reminders, /reminders/new, /history, /interactions, /travel, /wellness, /report, /settings, /scan, /search. You can log user wellness using the LOG_WELLNESS action: type 'symptom' (data contains mood: 1-5, energy: 1-5, symptoms: string[]) or 'food' (data contains meal: string)." }]
       },
       generationConfig: {
         responseMimeType: 'application/json',
@@ -633,7 +633,26 @@ async function executeAiAction(action, userId, userMedicines = [], selectedPatie
     case 'UPDATE_REMINDER': return await reminderService.updateReminder(payload.id, data, userId);
     case 'REMOVE_REMINDER': return await reminderService.deleteReminder(payload.id, userId);
     case 'LOG_DOSE': return await doseLogService.createDoseLog(data);
-    case 'LOG_WELLNESS': return await wellnessService.createWellnessLog(data);
+    case 'LOG_WELLNESS':
+      if (data.type === 'symptom') {
+        const mood = data.data?.mood;
+        const energy = data.data?.energy;
+        const symptoms = data.data?.symptoms || [];
+        if (!data.data?.aiReflection && (mood !== undefined || energy !== undefined || symptoms.length > 0)) {
+          try {
+            const reflectionData = await getEmotionReflection(mood, energy, symptoms, userMedicines);
+            if (reflectionData) {
+              data.data = {
+                ...data.data,
+                aiReflection: reflectionData
+              };
+            }
+          } catch (e) {
+            console.error("Failed to generate reflection in executeAiAction:", e);
+          }
+        }
+      }
+      return await wellnessService.createWellnessLog(data);
     case 'ADD_PATIENT': return await patientService.createPatient(data);
     default: throw new Error(`Unknown action type: ${type}`);
   }
@@ -808,7 +827,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - UPDATE_REMINDER: { id, enabled?, time?, dose? }
     - REMOVE_REMINDER: { id }
     - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action, patientId? }
-    - LOG_WELLNESS: { type, data, patientId? }
+    - LOG_WELLNESS: { type: 'symptom' | 'food', data: { mood?: 1-5, energy?: 1-5, symptoms?: string[], meal?: string }, patientId? }
     - ADD_PATIENT: { name, age, gender, relation }
 
     === RULES ===
@@ -833,7 +852,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
          - '/settings' or '/profile' (Settings / Profile page)
          - '/scan' or '/scan-medicine' (Scan Medicine page)
          - '/search' or '/medication-info' (Search / Medication Info page)
-    5. SUGGESTIONS (CRITICAL — READ CAREFULLY):
+    5. WELLNESS LOGGING: If the user mentions how they are feeling, their mood, energy level, or symptoms, proactively ask if they want to log it or log it immediately. When logging a symptom check-in, set type to 'symptom' and include mood (1-5), energy (1-5), and/or symptoms (array of strings, e.g. ["Headache", "Fatigue"]) in the data object. If the user mentions what they ate or logs a meal, set type to 'food' and include meal (string, e.g., "Matooke & G-nut sauce") in the data object. You can generate the aiReflection yourself inside data (with reflection, affirmation, and tip), or leave it to the server.
+    6. SUGGESTIONS (CRITICAL — READ CAREFULLY):
        - You MUST provide EXACTLY 3 short, context-aware follow-up suggestions in the 'suggestions' field.
        - Suggestions must be NATURAL CONTINUATIONS of the current conversation — what the user would logically ask or do NEXT based on YOUR response.
        - Suggestions must be from the USER's perspective (e.g., "Log my dose", NOT "You should log your dose").
