@@ -117,4 +117,25 @@ export const NativeService = {
     prompt: (title: string, message: string) =>
       Dialog.prompt({ title, message }),
   },
+
+  /**
+   * Request exemption from battery optimization to ensure alarms are reliable.
+   */
+  requestBatteryOptimizationExemption: async () => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+    try {
+      const { value: confirmed } = await Dialog.confirm({
+        title: "Reliable Reminders",
+        message: "To ensure you receive medication reminders on time, please exclude Dawa Lens from battery optimization in the next screen.",
+        okButtonTitle: "Exempt",
+        cancelButtonTitle: "Later",
+      });
+      if (confirmed) {
+        const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+        await NativeAlarm.requestIgnoreBatteryOptimization();
+      }
+    } catch (err) {
+      console.error("Failed to request battery optimization exemption:", err);
+    }
+  },
 };

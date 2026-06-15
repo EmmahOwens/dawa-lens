@@ -231,6 +231,17 @@ export default function AddReminderPage() {
             ? `For ${contextPatientName}: ${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`
             : `${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`,
         });
+
+        // Ask for battery optimization exemption on Android after adding first reminder
+        if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+          const hasRequested = await NativeService.preferences.get("has_requested_battery_exemption");
+          if (!hasRequested) {
+            await NativeService.preferences.set("has_requested_battery_exemption", "true");
+            setTimeout(async () => {
+              await NativeService.requestBatteryOptimizationExemption();
+            }, 800);
+          }
+        }
       }
       navigate("/reminders");
     } catch {

@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import org.json.JSONArray
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -52,10 +53,13 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
 
             for (i in 0 until schedule.length()) {
                 val alarm           = schedule.getJSONObject(i)
-                val reminderId      = alarm.optString("reminderId",   "")
-                val medicineName    = alarm.optString("medicineName", "Your medicine")
-                val scheduledTimeStr = alarm.optString("scheduledTime", "")
-                val dose            = alarm.optString("dose", "")
+                val extraStr        = alarm.optString("extra", "{}")
+                val extra           = try { JSONObject(extraStr) } catch (e: Exception) { JSONObject() }
+
+                val reminderId       = extra.optString("reminderId",   "")
+                val medicineName     = extra.optString("medicineName", "Your medicine")
+                val scheduledTimeStr = extra.optString("scheduledTime", "")
+                val dose             = extra.optString("dose", "")
 
                 if (reminderId.isEmpty() || scheduledTimeStr.isEmpty()) continue
 

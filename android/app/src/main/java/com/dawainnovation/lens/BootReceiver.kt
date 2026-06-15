@@ -6,7 +6,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequest
+import androidx.work.WorkManager
 import org.json.JSONArray
+import java.util.concurrent.TimeUnit
 
 class BootReceiver : BroadcastReceiver() {
 
@@ -36,6 +40,16 @@ class BootReceiver : BroadcastReceiver() {
                     scheduleOne(context, id, triggerAtMillis, title, body, extra)
                 }
             }
+
+            // Re-enqueue the missed-dose background worker
+            val missedDoseWork = PeriodicWorkRequest.Builder(
+                MissedDoseWorker::class.java, 15, TimeUnit.MINUTES
+            ).build()
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "missed_dose_check",
+                ExistingPeriodicWorkPolicy.KEEP,
+                missedDoseWork
+            )
         } catch (e: Exception) {
             e.printStackTrace()
         }

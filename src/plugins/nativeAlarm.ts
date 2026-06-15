@@ -28,6 +28,8 @@ export interface NativeAlarmPlugin {
   cancelAllAlarms(): Promise<void>;
   /** Returns whether native alarm scheduling is available on this platform. */
   isSupported(): Promise<{ supported: boolean }>;
+  /** Request exemption from battery optimization to ensure alarms are reliable. */
+  requestIgnoreBatteryOptimization(): Promise<void>;
 }
 
 const NativeAlarm = registerPlugin<NativeAlarmPlugin>('NativeAlarm');

@@ -3,6 +3,7 @@ import {
   LocalNotificationSchema,
 } from "@capacitor/local-notifications";
 import { NativeAlarm, AlarmNotification } from "@/plugins/nativeAlarm";
+import { notify } from "@/lib/notifications";
 import { Capacitor } from "@capacitor/core";
 import { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
 import {
@@ -621,6 +622,8 @@ export const scheduleReminders = async (
           extra: JSON.stringify({
             reminderId: r.id,
             medicineName: r.medicineName,
+            scheduledTime: next.toISOString(),
+            dose: r.dose,
           }),
         });
 
@@ -640,11 +643,17 @@ export const scheduleReminders = async (
           await NativeAlarm.scheduleAlarms({
             notifications: alarmNotifications,
           });
-        } catch (alarmErr) {
+        } catch (alarmErr: any) {
           console.warn(
             "[reminderService] NativeAlarm fallback failed (non-fatal):",
             alarmErr
           );
+          if (alarmErr?.message === "EXACT_ALARM_PERMISSION_REQUIRED") {
+            notify.warning(
+              "Permission Required",
+              "Please grant exact alarm permission for reliable reminders."
+            );
+          }
         }
       }
     } else {
