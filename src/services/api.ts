@@ -115,6 +115,11 @@ export const visionApi = {
 };
 
 // --- Generative AI (Coaching & Holistic Safety) ---
+const sanitizeMedicines = (medicines?: Medicine[]): Medicine[] | undefined => {
+  if (!medicines) return undefined;
+  return medicines.map(({ imageUrl, ...rest }) => rest) as Medicine[];
+};
+
 export const aiApi = {
   getCoachAdvice: (data: {
     logs: DoseLog[];
@@ -123,7 +128,13 @@ export const aiApi = {
   }) =>
     request<{ advice: string; patterns: string[]; adherenceScore: number }>(
       "/ai/coach",
-      { method: "POST", body: JSON.stringify(data) }
+      {
+        method: "POST",
+        body: JSON.stringify({
+          ...data,
+          medicines: sanitizeMedicines(data.medicines),
+        }),
+      }
     ),
 
   getHealthDiscoveries: () =>
@@ -143,7 +154,10 @@ export const aiApi = {
   }) =>
     request<unknown>("/ai/holistic-safety", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        medicines: sanitizeMedicines(data.medicines),
+      }),
     }),
 
   getTravelAdvice: (data: {
@@ -155,7 +169,10 @@ export const aiApi = {
   }) =>
     request<unknown>("/ai/travel", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        medicines: sanitizeMedicines(data.medicines),
+      }),
     }),
 
   getWellnessInsight: (data: {
@@ -175,19 +192,28 @@ export const aiApi = {
   }) =>
     request<unknown>("/ai/wellness-insight", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        medicines: sanitizeMedicines(data.medicines),
+      }),
     }),
 
   checkMealSafety: (data: { medicines: Medicine[]; mealDescription: string }) =>
     request<unknown>("/ai/meal-check", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        medicines: sanitizeMedicines(data.medicines),
+      }),
     }),
 
   getNutritionalGuidance: (data: { medicines: Medicine[] }) =>
     request<unknown>("/ai/nutritional-guidance", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        medicines: sanitizeMedicines(data.medicines),
+      }),
     }),
 
   getEmotionReflection: (data: {
@@ -198,7 +224,13 @@ export const aiApi = {
   }) =>
     request<{ reflection: string; affirmation: string; tip: string }>(
       "/ai/emotion-reflection",
-      { method: "POST", body: JSON.stringify(data) }
+      {
+        method: "POST",
+        body: JSON.stringify({
+          ...data,
+          medicines: sanitizeMedicines(data.medicines),
+        }),
+      }
     ),
 
   chat: (data: {
@@ -217,7 +249,13 @@ export const aiApi = {
       source: string;
       suggestions: string[];
       action?: AIAction;
-    }>("/ai/chat", { method: "POST", body: JSON.stringify(data) }),
+    }>("/ai/chat", {
+      method: "POST",
+      body: JSON.stringify({
+        ...data,
+        medicines: sanitizeMedicines(data.medicines),
+      }),
+    }),
 
   chatStream: (data: {
     messages: unknown[];
@@ -232,6 +270,9 @@ export const aiApi = {
   }) =>
     streamRequest("/ai/chat/stream", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        medicines: sanitizeMedicines(data.medicines),
+      }),
     }),
 };

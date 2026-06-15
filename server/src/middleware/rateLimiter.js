@@ -89,6 +89,17 @@ export const heavyAiLimiter = rateLimit({
 export const tokenBudgetGuard = (req, res, next) => {
   const body = req.body || {};
 
+  // Strip imageUrl from medicines in the request body to avoid triggering size limits
+  if (Array.isArray(body.medicines)) {
+    body.medicines = body.medicines.map(med => {
+      if (med && typeof med === 'object') {
+        const { imageUrl, ...rest } = med;
+        return rest;
+      }
+      return med;
+    });
+  }
+
   // Rough token estimate from request body
   const roughEstimate =
     JSON.stringify(body.messages || []).length / 3.7 +
