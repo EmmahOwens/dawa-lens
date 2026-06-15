@@ -372,12 +372,12 @@ export default function Dashboard() {
           <Plus size={14} />
           Tools & Actions
         </h2>
-        <div className="grid grid-cols-4 grid-rows-4 gap-3 h-[420px]">
+        <div className="grid grid-cols-2 sm:grid-cols-4 sm:grid-rows-4 gap-3 h-auto sm:h-[420px]">
           {/* Large Card: Quick Scan */}
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[0].to)}
-            className="col-span-2 row-span-2 rounded-[2rem] p-6 flex flex-col justify-between items-start text-left relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-[1.01] transition-all duration-300"
+            className="col-span-2 sm:row-span-2 rounded-[2rem] p-6 min-h-[160px] sm:min-h-0 flex flex-col justify-between items-start text-left relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-[1.01] transition-all duration-300"
           >
             {/* Animated Scanning Line */}
             <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_12px_#22d3ee] animate-scanner-line pointer-events-none" />
@@ -410,7 +410,7 @@ export default function Dashboard() {
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[1].to)}
-            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-emerald-500/5 via-teal-500/10 to-emerald-500/5 dark:from-emerald-950/20 dark:to-teal-900/25 border-emerald-500/20 text-emerald-800 dark:text-emerald-300 hover:border-emerald-500/40 hover-wiggle transition-all duration-200"
+            className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-emerald-500/5 via-teal-500/10 to-emerald-500/5 dark:from-emerald-950/20 dark:to-teal-900/25 border-emerald-500/20 text-emerald-800 dark:text-emerald-300 hover:border-emerald-500/40 hover-wiggle transition-all duration-200"
           >
             <div className="p-2.5 bg-emerald-500/15 dark:bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon transition-transform">
               <Users size={20} />
@@ -451,7 +451,7 @@ export default function Dashboard() {
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[2].to)}
-            className="col-span-1 row-span-1 rounded-[1.25rem] border bg-gradient-to-br from-rose-500/5 to-pink-500/10 dark:from-rose-950/20 dark:to-pink-900/20 border-rose-500/20 text-rose-600 dark:text-rose-400 hover:border-rose-500/40 hover-wiggle flex flex-col items-center justify-center gap-1.5 transition-all duration-200"
+            className="col-span-1 sm:row-span-1 h-24 sm:h-auto rounded-[1.25rem] border bg-gradient-to-br from-rose-500/5 to-pink-500/10 dark:from-rose-950/20 dark:to-pink-900/20 border-rose-500/20 text-rose-600 dark:text-rose-400 hover:border-rose-500/40 hover-wiggle flex flex-col items-center justify-center gap-1.5 transition-all duration-200"
           >
             <div className="w-9 h-9 rounded-xl bg-rose-500/15 dark:bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center animate-pulse-glow wiggle-icon">
               <Heart size={18} />
@@ -465,7 +465,7 @@ export default function Dashboard() {
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[3].to)}
-            className="col-span-1 row-span-1 rounded-[1.25rem] border bg-gradient-to-br from-sky-500/5 to-blue-500/10 dark:from-sky-950/20 dark:to-blue-900/20 border-sky-500/20 text-sky-600 dark:text-sky-400 hover:border-sky-500/40 hover-wiggle flex flex-col items-center justify-center gap-1.5 transition-all duration-200"
+            className="col-span-1 sm:row-span-1 h-24 sm:h-auto rounded-[1.25rem] border bg-gradient-to-br from-sky-500/5 to-blue-500/10 dark:from-sky-950/20 dark:to-blue-900/20 border-sky-500/20 text-sky-600 dark:text-sky-400 hover:border-sky-500/40 hover-wiggle flex flex-col items-center justify-center gap-1.5 transition-all duration-200"
           >
             <div className="w-9 h-9 rounded-xl bg-sky-500/15 dark:bg-sky-500/10 border border-sky-500/20 text-sky-500 flex items-center justify-center animate-float-plane wiggle-icon">
               <Plane size={18} />
@@ -479,7 +479,7 @@ export default function Dashboard() {
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[4].to)}
-            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-amber-500/5 via-orange-500/10 to-amber-500/5 dark:from-amber-950/25 dark:to-orange-950/20 border-amber-500/30 text-amber-900 dark:text-amber-300 hover:border-amber-500/50 hover-wiggle transition-all duration-200"
+            className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-amber-500/5 via-orange-500/10 to-amber-500/5 dark:from-amber-950/25 dark:to-orange-950/20 border-amber-500/30 text-amber-900 dark:text-amber-300 hover:border-amber-500/50 hover-wiggle transition-all duration-200"
           >
             <div className="p-2.5 bg-amber-500/20 dark:bg-amber-500/15 rounded-xl text-amber-700 dark:text-amber-400 border border-amber-500/35 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
               <ShieldAlert size={20} />
@@ -503,7 +503,7 @@ export default function Dashboard() {
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[5].to)}
-            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-violet-500/5 to-fuchsia-500/10 dark:from-violet-950/20 dark:to-fuchsia-900/20 border-violet-500/20 text-violet-800 dark:text-violet-300 hover:border-violet-500/40 hover-wiggle transition-all duration-200"
+            className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-violet-500/5 to-fuchsia-500/10 dark:from-violet-950/20 dark:to-fuchsia-900/20 border-violet-500/20 text-violet-800 dark:text-violet-300 hover:border-violet-500/40 hover-wiggle transition-all duration-200"
           >
             <div className="p-2.5 bg-violet-500/15 dark:bg-violet-500/10 rounded-xl text-violet-600 dark:text-violet-400 border border-violet-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
               <Bell size={20} />
@@ -531,7 +531,7 @@ export default function Dashboard() {
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[6].to)}
-            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-cyan-500/5 to-blue-500/10 dark:from-cyan-950/20 dark:to-blue-900/20 border-cyan-500/20 text-cyan-800 dark:text-cyan-300 hover:border-cyan-500/40 hover-wiggle transition-all duration-200"
+            className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-cyan-500/5 to-blue-500/10 dark:from-cyan-950/20 dark:to-blue-900/20 border-cyan-500/20 text-cyan-800 dark:text-cyan-300 hover:border-cyan-500/40 hover-wiggle transition-all duration-200"
           >
             <div className="p-2.5 bg-cyan-500/15 dark:bg-cyan-500/10 rounded-xl text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
               <History size={20} />
@@ -555,7 +555,7 @@ export default function Dashboard() {
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[7].to)}
-            className="col-span-2 row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-indigo-500/5 to-purple-500/10 dark:from-indigo-950/20 dark:to-purple-900/20 border-indigo-500/20 text-indigo-800 dark:text-indigo-300 hover:border-indigo-500/40 hover-wiggle transition-all duration-200"
+            className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-indigo-500/5 to-purple-500/10 dark:from-indigo-950/20 dark:to-purple-900/20 border-indigo-500/20 text-indigo-800 dark:text-indigo-300 hover:border-indigo-500/40 hover-wiggle transition-all duration-200"
           >
             <div className="p-2.5 bg-indigo-500/15 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
               <FileText size={20} />
