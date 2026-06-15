@@ -12,7 +12,7 @@ export function Navbar({ className }: NavbarProps) {
   return (
     <header
       className={cn(
-        "h-16 flex items-center justify-between px-8 liquid-glass sticky top-0 z-30 border-t-0 border-x-0 border-b",
+        "h-16 flex items-center justify-between px-8 bg-white/10 dark:bg-black/20 backdrop-blur-xl border-white/10 dark:border-white/5 sticky top-0 z-30 border-t-0 border-x-0 border-b",
         className
       )}
     >
