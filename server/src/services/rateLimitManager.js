@@ -413,6 +413,27 @@ class RateLimitManager {
         // Wake the drain loop (no-op if already running)
         this._drainQueue();
       } else {
+        // Circuit breaker: set cooldown on terminal or connection errors
+        const status = err.response?.status || err.status;
+        const msg = err.message || "";
+        const isAuthError = status === 401 || status === 403;
+        const isTimeout = err.code === 'ECONNABORTED' || msg.includes('timeout') || msg.includes('Timeout');
+        const isNetworkOr5xx = err.code === 'ENOTFOUND' || err.code === 'ECONNREFUSED' || msg.includes('Network Error') || (status >= 500 && status < 600);
+
+        if (isAuthError) {
+          // Bad/expired key: cool down for 1 hour
+          console.warn(`[RateLimitManager] Authentication error on ${modelKey} (status: ${status}). Bypassing for 1 hour.`);
+          this.setCooldown(modelKey, 3600000);
+        } else if (isTimeout) {
+          // Timeout: cool down for 1 minute
+          console.warn(`[RateLimitManager] Timeout on ${modelKey}. Bypassing for 1 minute.`);
+          this.setCooldown(modelKey, 60000);
+        } else if (isNetworkOr5xx) {
+          // Network issue or server error: cool down for 1 minute
+          console.warn(`[RateLimitManager] Network/Server error on ${modelKey} (status: ${status}, code: ${err.code}). Bypassing for 1 minute.`);
+          this.setCooldown(modelKey, 60000);
+        }
+
         reject(err);
       }
     }

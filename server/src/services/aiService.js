@@ -248,8 +248,14 @@ export const callAiWithFallback = async (messages, options = {}) => {
 
   const responseFormat = isJson ? { type: 'json_object' } : null;
 
-  // 1. Try Cerebras (Primary)
-  if (CEREBRAS_API_KEY && forceModel !== 'groq-70b' && forceModel !== 'groq-scout' && forceModel !== 'groq-8b' && forceModel !== 'gemini') {
+  const isForceGroq70b = forceModel === 'groq-70b' || forceModel === GROQ_MODEL;
+  const isForceGroqScout = forceModel === 'groq-scout' || forceModel === GROQ_SCOUT_MODEL;
+  const isForceGroq8b = forceModel === 'groq-8b' || forceModel === GROQ_LIGHT_MODEL;
+  const isForceGemini = forceModel === 'gemini' || forceModel === GEMINI_MODEL;
+  const isForceCerebras = forceModel === 'cerebras' || forceModel === CEREBRAS_MODEL;
+
+  // 1. Try Cerebras (Primary, only for complex tasks or if forced)
+  if (CEREBRAS_API_KEY && !isForceGroq70b && !isForceGroqScout && !isForceGroq8b && !isForceGemini && (isComplex || isForceCerebras)) {
     try {
       return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
@@ -257,8 +263,8 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 2. Try Groq 70B
-  if (GROQ_API_KEY && (isComplex || forceModel === 'groq-70b' || !CEREBRAS_API_KEY)) {
+  // 2. Try Groq 70B (only for complex tasks or if forced)
+  if (GROQ_API_KEY && !isForceGroqScout && !isForceGroq8b && !isForceGemini && !isForceCerebras && (isComplex || isForceGroq70b)) {
     try {
       const modelId = GROQ_MODEL;
       return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true, temperature);
@@ -267,8 +273,8 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 2.5 Try Groq Scout
-  if (GROQ_API_KEY) {
+  // 2.5 Try Groq Scout (only for complex tasks or if forced)
+  if (GROQ_API_KEY && !isForceGroq70b && !isForceGroq8b && !isForceGemini && !isForceCerebras && (isComplex || isForceGroqScout)) {
     try {
       return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
@@ -276,8 +282,8 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 3. Try Groq 8B (Secondary key/model)
-  if (GROQ_API_KEY_2 || GROQ_API_KEY) {
+  // 3. Try Groq 8B (Secondary key/model, for simple tasks or forced)
+  if ((GROQ_API_KEY_2 || GROQ_API_KEY) && !isForceGemini && !isForceCerebras && !isForceGroq70b && !isForceGroqScout) {
     try {
       const modelId = GROQ_LIGHT_MODEL;
       return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true, temperature);
@@ -299,7 +305,7 @@ const callGroq = async (prompt, isJson = true, modelId = GROQ_MODEL, priority = 
   const messages = [{ role: 'user', content: prompt }];
   const isComplex = modelId === GROQ_MODEL || modelId === GROQ_SCOUT_MODEL;
   try {
-    return await callAiWithFallback(messages, { isJson, priority, maxTokens, isComplex, temperature });
+    return await callAiWithFallback(messages, { isJson, priority, maxTokens, isComplex, forceModel: modelId, temperature });
   } catch (err) {
     handleAiError(err);
   }
@@ -737,7 +743,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(CEREBRAS_API_URL, { model: CEREBRAS_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${CEREBRAS_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 6000
+            responseType: 'stream', timeout: 3000
           });
           return response.data;
         };
@@ -754,7 +760,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(GROQ_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 5000
+            responseType: 'stream', timeout: 3000
           });
           return response.data;
         };
@@ -771,7 +777,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(GROQ_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 5000
+            responseType: 'stream', timeout: 3000
           });
           return response.data;
         };
