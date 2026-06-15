@@ -16,14 +16,20 @@ export function DashboardWidget() {
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
-    return d.toDateString();
+    return {
+      dateStr: d.toDateString(),
+      letter: d.toDateString()[0], // First letter of the day (e.g. 'M', 'T', 'W', etc.)
+    };
   });
 
-  const dailyStatus = last7Days.map(dateStr => {
+  const dailyStatus = last7Days.map(({ dateStr, letter }) => {
     const logsForDay = doseLogs.filter(l => new Date(l.actionTime).toDateString() === dateStr);
-    if (logsForDay.length === 0) return "none";
-    const takenLogs = logsForDay.filter(l => l.action === "taken");
-    return takenLogs.length > 0 ? "success" : "missed";
+    let status: "success" | "missed" | "none" = "none";
+    if (logsForDay.length > 0) {
+      const takenLogs = logsForDay.filter(l => l.action === "taken");
+      status = takenLogs.length > 0 ? "success" : "missed";
+    }
+    return { status, letter };
   });
 
   return (
@@ -73,20 +79,22 @@ export function DashboardWidget() {
           <TrendingUp size={14} className="text-success" />
         </div>
         <div className="flex gap-1.5 justify-between">
-          {dailyStatus.map((status, i) => (
+          {dailyStatus.map((item, i) => (
             <motion.div 
               key={i} 
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: i * 0.05 }}
-              className={`h-10 flex-1 rounded-xl border-2 shadow-sm ${
-                status === "success"
-                  ? "bg-success/10 border-success/30 ring-4 ring-success/5" 
-                  : status === "missed"
-                  ? "bg-destructive/10 border-destructive/30"
-                  : "bg-muted/20 border-border/50"
+              className={`h-10 flex-1 rounded-xl border-2 shadow-sm flex items-center justify-center text-[11px] font-black uppercase transition-all duration-300 ${
+                item.status === "success"
+                  ? "bg-success/10 border-success/30 ring-4 ring-success/5 text-success" 
+                  : item.status === "missed"
+                  ? "bg-destructive/10 border-destructive/30 text-destructive"
+                  : "bg-muted/20 border-border/50 text-muted-foreground/40"
               }`} 
-            />
+            >
+              {item.letter}
+            </motion.div>
           ))}
         </div>
         
