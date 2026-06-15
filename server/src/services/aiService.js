@@ -22,7 +22,7 @@ const GROQ_LIGHT_MODEL = 'llama-3.1-8b-instant';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
-const CEREBRAS_MODEL = 'gpt-oss-120b';
+const CEREBRAS_MODEL = 'llama-3.3-70b';
 const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 /**
@@ -171,7 +171,7 @@ const callCerebrasChat = async (messages, responseFormat = { type: 'json_object'
         'Authorization': `Bearer ${CEREBRAS_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 15000 // Increased timeout to give Cerebras more time before fallback
+      timeout: 4000 // Reduced timeout for fast fallback
     });
 
     const text = response.data?.choices?.[0]?.message?.content;
@@ -180,7 +180,7 @@ const callCerebrasChat = async (messages, responseFormat = { type: 'json_object'
     }
 
     const result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
-    if (typeof result === 'object') result.source = "Cerebras (Llama-3-120B)";
+    if (typeof result === 'object') result.source = "Cerebras (Llama-3.3-70B)";
     return result;
   };
 
@@ -216,7 +216,7 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      timeout: 10000
+      timeout: 4000 // Reduced timeout for fast fallback
     });
 
     const text = response.data?.choices?.[0]?.message?.content;
@@ -251,7 +251,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
   // 1. Try Cerebras (Primary)
   if (CEREBRAS_API_KEY && forceModel !== 'groq-70b' && forceModel !== 'groq-scout' && forceModel !== 'groq-8b' && forceModel !== 'gemini') {
     try {
-      return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, false, temperature);
+      return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
       console.warn("Fallback: Cerebras failed, trying Groq 70B...", err.message);
     }
@@ -261,7 +261,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
   if (GROQ_API_KEY && (isComplex || forceModel === 'groq-70b' || !CEREBRAS_API_KEY)) {
     try {
       const modelId = GROQ_MODEL;
-      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, false, temperature);
+      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true, temperature);
     } catch (err) {
       console.warn("Fallback: Groq 70B failed, trying Groq Scout...", err.message);
     }
@@ -270,7 +270,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
   // 2.5 Try Groq Scout
   if (GROQ_API_KEY) {
     try {
-      return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, false, temperature);
+      return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
       console.warn("Fallback: Groq Scout failed, trying Groq 8B...", err.message);
     }
@@ -280,7 +280,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
   if (GROQ_API_KEY_2 || GROQ_API_KEY) {
     try {
       const modelId = GROQ_LIGHT_MODEL;
-      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, false, temperature);
+      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true, temperature);
     } catch (err) {
       console.warn("Fallback: Groq 8B failed, trying Gemini...", err.message);
     }
@@ -560,6 +560,30 @@ const isLikelyActionRequest = (text) => {
   return /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear)\s/i.test(text.toLowerCase());
 };
 
+/**
+ * Determines whether a user query requires retrieving verified medical knowledge.
+ * This avoids the latency of generating embeddings and querying Firestore for simple greetings,
+ * general app navigation, or clear user action commands.
+ */
+export const shouldRetrieveMedicalKnowledge = (text) => {
+  if (!text || text.length < 3) return false;
+  const lower = text.toLowerCase().trim();
+
+  // Exclude simple greetings/small talk
+  const greetings = /^(hi|hello|hey|good\s+(morning|afternoon|evening)|yo|habari|jambo|sasa)\b/i;
+  if (greetings.test(lower) && lower.split(/\s+/).length <= 3) return false;
+
+  // Exclude typical app commands/action queries unless they explicitly request safety/medical information
+  const isSimpleAction = /^(show|list|delete|remove|cancel|stop|add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust)\s/i.test(lower);
+  const asksForMedicalInfo = /(interact|safety|safe|side\s*effect|contraindication|warn|hazard|allergic|allergy|poison|overdose|symptom|pain|sick|hurt|doctor|disease|treat|cure|prevent|work|mechanism)/i.test(lower);
+  
+  if (isSimpleAction && !asksForMedicalInfo) return false;
+
+  // Check for medical keywords or general health topics
+  const medicalKeywords = /(interact|safety|safe|side\s*effect|contraindication|warn|hazard|allergic|allergy|poison|overdose|symptom|pain|sick|hurt|doctor|disease|treat|cure|prevent|dose|dosage|interaction|effect|medicine|medication|drug|pill|tablet)/i;
+  return medicalKeywords.test(lower);
+};
+
 export const chatWithDawaGPT = async (params, priority = 'high') => {
   try {
     const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, selectedPatientId } = params;
@@ -713,7 +737,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(CEREBRAS_API_URL, { model: CEREBRAS_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${CEREBRAS_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 20000
+            responseType: 'stream', timeout: 6000
           });
           return response.data;
         };
@@ -730,7 +754,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(GROQ_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 15000
+            responseType: 'stream', timeout: 5000
           });
           return response.data;
         };
@@ -747,7 +771,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(GROQ_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 15000
+            responseType: 'stream', timeout: 5000
           });
           return response.data;
         };
@@ -794,7 +818,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
   const lastAction = recentMessages.find(m => m.role === 'assistant' && (m.action || m.content?.includes('action')) )?.action;
   const conversationPhase = messages.length === 0 ? 'opening' : messages.length < 4 ? 'discovery' : lastAction ? 'post-action' : 'ongoing';
-  const knowledgePromise = retrieveMedicalKnowledge(lastUserMsg);
+  const shouldRetrieve = shouldRetrieveMedicalKnowledge(lastUserMsg);
+  const knowledgePromise = shouldRetrieve ? retrieveMedicalKnowledge(lastUserMsg) : Promise.resolve([]);
   const activeMeds = medicines?.length ? medicines.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ') : 'None';
   const safeFormatDate = (val) => typeof val !== 'string' ? val : val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
   const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
