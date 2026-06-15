@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/BootReceiver.kt": {
-    "mtime": 1779487504.700775,
-    "ast_hash": "d9e2d2ffa875dc7c1168b2c8879760d2",
+    "mtime": 1781516259.967257,
+    "ast_hash": "300c31ce9615a5bf112c8aa711b9a3f6",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/DawaLensApplication.kt": {
@@ -130,13 +130,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/MissedDoseWorker.kt": {
-    "mtime": 1779532292.3154588,
-    "ast_hash": "76f637373f3fd69a620827daf35dbb5b",
+    "mtime": 1781516249.7933333,
+    "ast_hash": "f2fe806f690acb94b2bad7368718388d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeAlarmPlugin.kt": {
-    "mtime": 1779487474.7777615,
-    "ast_hash": "114fc20681f2101869acf5629a86533d",
+    "mtime": 1781516233.2908347,
+    "ast_hash": "51b2f20c2b97c35d48102aa86b409856",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeCameraPlugin.kt": {
@@ -1490,8 +1490,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AddReminderPage.tsx": {
-    "mtime": 1780135217.9223897,
-    "ast_hash": "7553b09566ce9fff95f5e7cbcc8cc360",
+    "mtime": 1781516212.6199577,
+    "ast_hash": "47dae87e87b0ca58efbff750627ad75e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AuthPage.tsx": {
@@ -1610,8 +1610,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/nativeAlarm.ts": {
-    "mtime": 1779487603.3339927,
-    "ast_hash": "c618d41ed4e0b4c23bcce5774a2e0293",
+    "mtime": 1781516190.6339614,
+    "ast_hash": "ffa3c0a914c60b7d1478273dd59511e2",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/nativeCamera.ts": {
@@ -1725,8 +1725,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/nativeService.ts": {
-    "mtime": 1779470600.4270995,
-    "ast_hash": "bb0394c6e863be35d6ce77f6003df1f3",
+    "mtime": 1781516201.5509527,
+    "ast_hash": "cf9e8c0c691fbea0646d75b97e4b13ca",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/pillIdService.ts": {
@@ -1740,8 +1740,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/reminderService.ts": {
-    "mtime": 1780404516.2698374,
-    "ast_hash": "f2e49ecbe35ea0d64584a7c94d6e2067",
+    "mtime": 1781516163.9245362,
+    "ast_hash": "05d6c18512de222eff40e28d0bd6417d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/visionService.ts": {
