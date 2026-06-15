@@ -9,7 +9,7 @@ android {
         minSdkVersion = rootProject.ext.minSdkVersion
         targetSdkVersion = rootProject.ext.targetSdkVersion
         versionCode = 31
-        versionName = "1.4.9"
+        versionName = "1.4.10"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resConfigs "en", "fr", "es"
         aaptOptions {
