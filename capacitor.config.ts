@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from "@capacitor/cli";
+import { KeyboardResize } from "@capacitor/keyboard";
 
 const config: CapacitorConfig = {
   appId: "com.dawainnovation.lens",
@@ -22,10 +23,11 @@ const config: CapacitorConfig = {
       launchFadeOutDuration: 300,
       backgroundColor: "#050505",
       showSpinner: false,
+      androidScaleType: "CENTER_CROP",
     },
     Keyboard: {
       // Resize content area instead of the full viewport for smoother keyboard handling
-      resize: "ionic",
+      resize: KeyboardResize.Ionic,
       resizeOnFullScreen: true,
     },
   },
