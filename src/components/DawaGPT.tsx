@@ -34,6 +34,43 @@ export default function DawaGPT() {
     return calculateVitalitySummary(doseLogs, wellnessLogs);
   }, [doseLogs, wellnessLogs]);
 
+  // Filter active/recent medicines (with reminders or logged in the past 7 days)
+  const activeMedicines = React.useMemo(() => {
+    if (!medicines) return [];
+    const now = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(now.getDate() - 7);
+
+    // 1. Medicines with reminders
+    const reminderNames = new Set(
+      reminders.map((r) => r.medicineName?.toLowerCase().trim())
+    );
+    const reminderIds = new Set(
+      reminders.map((r) => r.medicineId).filter(Boolean)
+    );
+
+    // 2. Featured in reminders in the past 7 days (via dose logs)
+    const recentLogNames = new Set<string>();
+    doseLogs.forEach((log) => {
+      if (log.actionTime || log.scheduledTime) {
+        const logDate = new Date(log.actionTime || log.scheduledTime);
+        if (logDate >= sevenDaysAgo && logDate <= now) {
+          if (log.medicineName) {
+            recentLogNames.add(log.medicineName.toLowerCase().trim());
+          }
+        }
+      }
+    });
+
+    return medicines.filter((m) => {
+      const nameLower = m.name?.toLowerCase().trim();
+      const genericLower = m.genericName?.toLowerCase().trim();
+      const hasReminder = reminderIds.has(m.id) || reminderNames.has(nameLower) || (genericLower && reminderNames.has(genericLower));
+      const featuredRecently = recentLogNames.has(nameLower) || (genericLower && recentLogNames.has(genericLower));
+      return hasReminder || featuredRecently;
+    });
+  }, [medicines, reminders, doseLogs]);
+
   const { toast } = useToast();
   const { dispatchAIAction } = useAIActions();
 
@@ -94,8 +131,8 @@ export default function DawaGPT() {
       if (nextReminder) {
         firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
       }
-      if (medicines?.length > 0) {
-        firstSuggestions.push(`Does ${medicines[0].name} interact with anything?`);
+      if (activeMedicines?.length > 0) {
+        firstSuggestions.push(`Does ${activeMedicines[0].name} interact with anything?`);
       }
       firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
 
@@ -107,7 +144,7 @@ export default function DawaGPT() {
         source: "System",
       }]);
     }
-  }, [isOpen, messages.length, reminders.length, userProfile?.name, resolvedPatient, medicines]);
+  }, [isOpen, messages.length, reminders.length, userProfile?.name, resolvedPatient, activeMedicines]);
 
 
   const handleSend = async (text: string) => {
@@ -180,8 +217,8 @@ export default function DawaGPT() {
     }
 
     // 2. Check for medicines
-    if (medicines && medicines.length > 0) {
-      const firstMed = medicines[0];
+    if (activeMedicines && activeMedicines.length > 0) {
+      const firstMed = activeMedicines[0];
       fallbacks.push(`When should I take ${firstMed.name}?`);
       fallbacks.push(`Does ${firstMed.name} have side effects?`);
     }

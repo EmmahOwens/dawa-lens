@@ -819,6 +819,74 @@ function buildPrimingMessage(reminders, medicines, patients, selectedPatientId) 
   return JSON.stringify({ text: opening, suggestions: firstSuggestions.slice(0, 3), source: 'Dawa-GPT', action: null });
 }
 
+function getActiveAndPastMedicines(medicines, reminders, doseLogs) {
+  if (!medicines) return { active: [], past: [] };
+
+  const now = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(now.getDate() - 7);
+
+  // Active/recent medication criteria:
+  // 1. Medicine is currently available as a reminder
+  const reminderMedNames = new Set(
+    (reminders || []).map(r => r.medicineName?.toLowerCase().trim())
+  );
+  const reminderMedIds = new Set(
+    (reminders || []).map(r => r.medicineId).filter(Boolean)
+  );
+
+  // 2. Medicine has featured in reminders in the past 7 days (via dose logs)
+  const recentLogMedNames = new Set();
+  if (doseLogs) {
+    for (const log of doseLogs) {
+      if (log.actionTime || log.scheduledTime) {
+        const logDate = new Date(log.actionTime || log.scheduledTime);
+        if (logDate >= sevenDaysAgo && logDate <= now) {
+          if (log.medicineName) {
+            recentLogMedNames.add(log.medicineName.toLowerCase().trim());
+          }
+        }
+      }
+    }
+  }
+
+  const active = [];
+  const past = [];
+
+  for (const m of medicines) {
+    const nameLower = m.name?.toLowerCase().trim();
+    const genericLower = m.genericName?.toLowerCase().trim();
+
+    const hasReminder = reminderMedIds.has(m.id) || reminderMedNames.has(nameLower) || (genericLower && reminderMedNames.has(genericLower));
+    const featuredRecently = recentLogMedNames.has(nameLower) || (genericLower && recentLogMedNames.has(genericLower));
+
+    if (hasReminder || featuredRecently) {
+      active.push(m);
+    } else {
+      past.push(m);
+    }
+  }
+
+  return { active, past };
+}
+
+function userAskedForAllMeds(text) {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  
+  // Specific phrases asking for history/all/past
+  const keywords = [
+    "all medicine", "all medication", "all med",
+    "past medicine", "past medication", "past med",
+    "inactive medicine", "inactive medication", "inactive med",
+    "used to take", "ever taken", "ever took",
+    "history of my medicine", "history of medicine", "medication history",
+    "show all", "list all", "view all"
+  ];
+  
+  return keywords.some(keyword => lower.includes(keyword));
+}
+
 async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
   const recentMessages = messages.slice(-5);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
@@ -826,9 +894,26 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const conversationPhase = messages.length === 0 ? 'opening' : messages.length < 4 ? 'discovery' : lastAction ? 'post-action' : 'ongoing';
   const shouldRetrieve = shouldRetrieveMedicalKnowledge(lastUserMsg);
   const knowledgePromise = shouldRetrieve ? retrieveMedicalKnowledge(lastUserMsg) : Promise.resolve([]);
-  const activeMeds = medicines?.length ? medicines.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ') : 'None';
+
+  const { active: activeMedsList } = getActiveAndPastMedicines(medicines, reminders, doseLogs);
+  const userRequestedAll = userAskedForAllMeds(lastUserMsg);
+
+  // If user did not ask for all/past medicines, filter medicines and logs.
+  const filteredMeds = userRequestedAll ? medicines : activeMedsList;
+
+  // Filter doseLogs to only include logs for active medicines if user did not ask for all
+  const filteredDoseLogs = userRequestedAll
+    ? doseLogs
+    : (doseLogs || []).filter(log => {
+        return activeMedsList.some(m =>
+          m.name?.toLowerCase() === log.medicineName?.toLowerCase() ||
+          (m.genericName && m.genericName?.toLowerCase() === log.medicineName?.toLowerCase())
+        );
+      });
+
+  const activeMeds = filteredMeds?.length ? filteredMeds.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ') : 'None';
   const safeFormatDate = (val) => typeof val !== 'string' ? val : val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
-  const recentLogs = doseLogs ? JSON.stringify(doseLogs.slice(0, isComplex ? 5 : 2).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
+  const recentLogs = filteredDoseLogs ? JSON.stringify(filteredDoseLogs.slice(0, isComplex ? 5 : 2).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
   const remindersSummary = reminders?.length ? JSON.stringify(reminders.map(r => ({ id: r.id, medicineName: r.medicineName, dose: r.dose, time: r.time, repeat: r.repeatSchedule, enabled: r.enabled })).slice(0, isComplex ? 10 : 3)) : 'No reminders set';
   const wellnessSummary = wellnessLogs?.length ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1).map(l => ({ ...l, timestamp: safeFormatDate(l.timestamp) }))) : 'No wellness logs';
   const vitalityContext = vitalitySummary?.length ? `Vitality Trends (Last 7 Days): ${JSON.stringify(vitalitySummary.map(d => ({ day: d.name, adherence: `${d.adherence}%`, energy: d.energy ? `${(d.energy/20).toFixed(1)}/5` : 'N/A', mood: d.mood ? `${(d.mood/20).toFixed(1)}/5` : 'N/A' })))}` : 'No vitality trends available';
@@ -944,7 +1029,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     else { cleanedMessages.push(msg); lastRole = msg.role; }
   }
   if (cleanedMessages.length === 0 && lastUserMsg) cleanedMessages.push({ role: 'user', content: lastUserMsg });
-  const primingMessage = buildPrimingMessage(reminders, medicines, patients, selectedPatientId);
+  const primingMessage = buildPrimingMessage(reminders, filteredMeds, patients, selectedPatientId);
 
   const finalMessages = [
     { role: 'system', content: STATIC_SYSTEM_PROMPT },
