@@ -2,17 +2,23 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import AppError from '../utils/AppError.js';
 import { rateLimitManager } from './rateLimitManager.js';
-import { callAiWithFallback } from './aiService.js';
 
 dotenv.config();
 
 // ── API Config ───────────────────────────────────────────────────────────────
-const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API_KEY;
-const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
-const CLOUDFLARE_TEXT_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+const GEMINI_FLASH_MODEL = 'gemini-2.5-flash';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_FLASH_MODEL = 'gemini-2.0-flash';   // cheap & fast
+const getGeminiApiKeyForScan = () => {
+  const key = process.env.GEMINI_API_KEY_2;
+  if (!key) {
+    if (process.env.NODE_ENV !== 'production' && process.env.GEMINI_API_KEY) {
+      console.warn('[visionService] ⚠️ GEMINI_API_KEY_2 is not set. Falling back to GEMINI_API_KEY for development.');
+      return process.env.GEMINI_API_KEY;
+    }
+    throw new AppError('Gemini API key for scanning (GEMINI_API_KEY_2) is not configured.', 500, 'GEMINI_KEY_2_MISSING');
+  }
+  return key;
+};
 
 // ── Prompt ───────────────────────────────────────────────────────────────────
 const getTextPillIdPrompt = (ocrText, patientAge) => {
@@ -105,99 +111,10 @@ const normaliseMatches = (raw) => {
   return matches;
 };
 
-// ── Primary: DawaGPT text-only model pipeline ─────────────────────────────────
-
-const identifyWithDawaGPT = async (ocrText, patientAge) => {
-  const prompt = getTextPillIdPrompt(ocrText, patientAge);
-  const messages = [{ role: 'user', content: prompt }];
-  
-  // Call DawaGPT's fallback chain
-  const result = await callAiWithFallback(messages, {
-    isJson: true,
-    priority: 'high',
-    maxTokens: 1000,
-    isComplex: true
-  });
-  
-  return {
-    success: true,
-    matches: normaliseMatches(result.matches),
-    imprints: result.imprints || [],
-    labels: result.labels || [],
-    summary: result.summary || '',
-    engine: result.source || 'DawaGPT (Text)',
-  };
-};
-
-// ── Fallback: Cloudflare Text model ──────────────────────────────────────────
-
-const identifyWithCloudflareText = async (ocrText, patientAge) => {
-  if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_ACCOUNT_ID) {
-    throw new Error('Cloudflare API key or Account ID not configured');
-  }
-  
-  const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/${CLOUDFLARE_TEXT_MODEL}`;
-  const requestBody = {
-    messages: [
-      {
-        role: 'user',
-        content: getTextPillIdPrompt(ocrText, patientAge)
-      }
-    ]
-  };
-  
-  const fn = async () => {
-    return await axios.post(apiUrl, requestBody, {
-      headers: {
-        Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 20000,
-    });
-  };
-  
-  let response;
-  try {
-    response = await rateLimitManager.enqueue(fn, 'cloudflare-llama-3.1-text', requestBody.messages, 'high', 1, true);
-  } catch (err) {
-    const cfErr = new Error(`Cloudflare Text API error: ${err.message}`);
-    cfErr.retriable = true;
-    throw cfErr;
-  }
-  
-  const rawText = response.data?.result?.response;
-  if (!rawText) {
-    const emptyErr = new Error('Cloudflare returned an empty response');
-    emptyErr.retriable = true;
-    throw emptyErr;
-  }
-  
-  let parsed;
-  try {
-    const sanitized = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
-    parsed = JSON.parse(sanitized);
-  } catch {
-    const parseErr = new Error('Cloudflare returned malformed JSON');
-    parseErr.retriable = true;
-    throw parseErr;
-  }
-  
-  return {
-    success: true,
-    matches: normaliseMatches(parsed.matches),
-    imprints: parsed.imprints || [],
-    labels: parsed.labels || [],
-    summary: parsed.summary || '',
-    engine: CLOUDFLARE_TEXT_MODEL,
-  };
-};
-
-// ── Final Fallback: Gemini Text model ────────────────────────────────────────
+// ── Gemini Text model ────────────────────────────────────────
 
 const identifyWithGeminiText = async (ocrText, patientAge) => {
-  if (!GEMINI_API_KEY) {
-    throw new Error('Gemini API key not configured');
-  }
+  const apiKey = getGeminiApiKeyForScan();
   
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FLASH_MODEL}:generateContent`;
   const requestBody = {
@@ -218,7 +135,7 @@ const identifyWithGeminiText = async (ocrText, patientAge) => {
   
   const fn = async () => {
     return await axios.post(
-      `${apiUrl}?key=${GEMINI_API_KEY}`,
+      `${apiUrl}?key=${apiKey}`,
       requestBody,
       { timeout: 20000 }
     );
@@ -226,7 +143,12 @@ const identifyWithGeminiText = async (ocrText, patientAge) => {
   
   let response;
   try {
-    response = await rateLimitManager.enqueue(fn, 'gemini-text', requestBody.contents, 'high', 1, true);
+    // Best rate limiting techniques:
+    // - Enqueue under 'gemini-2.5-flash' rate limit config
+    // - priority: high
+    // - maxRetries: 3
+    // - failFast: false (queues request on rate limit instead of immediate failure)
+    response = await rateLimitManager.enqueue(fn, 'gemini-2.5-flash', requestBody.contents, 'high', 3, false);
   } catch (err) {
     const genericErr = new Error(`Gemini Text API error: ${err.message}`);
     genericErr.status = err.response?.status;
@@ -256,7 +178,7 @@ const identifyWithGeminiText = async (ocrText, patientAge) => {
     imprints: parsed.imprints || [],
     labels: parsed.labels || [],
     summary: parsed.summary || '',
-    engine: `${GEMINI_FLASH_MODEL} (Text)`,
+    engine: `${GEMINI_FLASH_MODEL}`,
   };
 };
 
@@ -265,10 +187,7 @@ const identifyWithGeminiText = async (ocrText, patientAge) => {
 /**
  * Identifies a pill/medication using extracted OCR text.
  *
- * Fallback chain:
- *   1. DawaGPT Text Models
- *   2. Cloudflare Llama 3.1 8B Text
- *   3. Gemini 2.0 Flash Text
+ * Exclusively uses Gemini 2.5 Flash with GEMINI_API_KEY_2 (isolated from DawaGPT).
  *
  * @param {string} [image]     - Ignored/Optional base64 image.
  * @param {number} [patientAge] - Optional patient age for dosage context.
@@ -284,43 +203,14 @@ export const identifyPill = async (image, patientAge, ocrText) => {
     );
   }
 
-  // ── 1. Primary: DawaGPT text models ──
   try {
-    console.log(`[visionService] 🔄 Processing scan with Primary: DawaGPT text models...`);
-    const result = await identifyWithDawaGPT(ocrText, patientAge);
-    console.log(`[visionService] ✅ Identified via DawaGPT text models`);
+    console.log(`[visionService] 🔄 Processing scan with Gemini (${GEMINI_FLASH_MODEL})...`);
+    const result = await identifyWithGeminiText(ocrText, patientAge);
+    console.log(`[visionService] ✅ Identified via Gemini`);
     return result;
   } catch (err) {
-    console.warn(`[visionService] ⚠️  DawaGPT text models failed (${err.message}), falling back to Cloudflare text model…`);
-  }
-
-  // ── 2. Fallback: Cloudflare text model ──
-  if (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID) {
-    try {
-      console.log(`[visionService] 🔄 Processing scan with Fallback: Cloudflare text model (${CLOUDFLARE_TEXT_MODEL})...`);
-      const result = await identifyWithCloudflareText(ocrText, patientAge);
-      console.log(`[visionService] ✅ Identified via Cloudflare text model`);
-      return result;
-    } catch (err) {
-      console.warn(`[visionService] ⚠️  Cloudflare text model failed (${err.message}), falling back to Gemini text model…`);
-    }
-  } else {
-    console.warn('[visionService] CLOUDFLARE_API_KEY or CLOUDFLARE_ACCOUNT_ID not set, skipping Cloudflare text fallback.');
-  }
-
-  // ── 3. Final Fallback: Gemini text model ──
-  if (GEMINI_API_KEY) {
-    try {
-      console.log(`[visionService] 🔄 Processing scan with Final Fallback: Gemini text model (${GEMINI_FLASH_MODEL})...`);
-      const result = await identifyWithGeminiText(ocrText, patientAge);
-      console.log(`[visionService] ✅ Identified via Gemini text model`);
-      return result;
-    } catch (err) {
-      console.error(`[visionService] ❌ Gemini text fallback failed:`, err.message);
-      if (err.isOperational) throw err;
-      throw new AppError(`Scan failed: ${err.message}`, 502);
-    }
-  } else {
-    throw new AppError('AI text services failed to identify the medication.', 502);
+    console.error(`[visionService] ❌ Gemini scan failed:`, err.message);
+    if (err.isOperational) throw err;
+    throw new AppError(`Scan failed: ${err.message}`, err.status || 502);
   }
 };

@@ -43,6 +43,12 @@ class RateLimitManager {
         rpd: 1500,
         tpd: 5000000,
       },
+      'gemini-2.5-flash': {
+        rpm: 15,
+        tpm: 1000000,   // Gemini 2.5 Flash Free Tier
+        rpd: 1500,
+        tpd: 5000000,
+      },
       'gemini-pro':    { rpm: 15,  tpm: 360000,  rpd: 1000,  tpd: 3000000  },
       'cloudflare-llama-3.2-vision': { rpm: 50,  tpm: 100000, rpd: 1000,  tpd: 1000000  },
     };

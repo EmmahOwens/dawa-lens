@@ -395,8 +395,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/check-env.js": {
-    "mtime": 1779920158.5236192,
-    "ast_hash": "52013fcb8bb3d27a980bace9ed4efc49",
+    "mtime": 1782014776.489007,
+    "ast_hash": "1753a8dd56937f6034126f71e89b8ed7",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/debug-ai.js": {
@@ -525,8 +525,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/rateLimitManager.js": {
-    "mtime": 1781533976.6379728,
-    "ast_hash": "8b766cc4802427545742f3d26fe9a656",
+    "mtime": 1782014699.588021,
+    "ast_hash": "a7b02f7e772f098c7b8668a18aad975b",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/reminderService.js": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/visionService.js": {
-    "mtime": 1781364150.6977096,
-    "ast_hash": "4298752f5e327f13ca5e088ae5e90951",
+    "mtime": 1782014751.6603,
+    "ast_hash": "f121f63ecafef295c83f66109e62a5a7",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/wellnessService.js": {
@@ -2927,6 +2927,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/index-CU-63-iQ.js": {
     "mtime": 1781537737.3133817,
     "ast_hash": "f5a805d108ac80c3594c6c8af796d5af",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-scan-isolated.js": {
+    "mtime": 1782014811.9818377,
+    "ast_hash": "078df429dae03462e7c3e0611b6384e1",
     "semantic_hash": ""
   }
 }
