@@ -730,8 +730,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MedicalReportContent.tsx": {
-    "mtime": 1782017190.887553,
-    "ast_hash": "61bc8a39c20cd16754efdf36e70fe56d",
+    "mtime": 1782017789.4871917,
+    "ast_hash": "5eaed6d6ded9fdcaf5ce38879436199b",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MessageRenderer.tsx": {
@@ -760,8 +760,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PageLoader.tsx": {
-    "mtime": 1780059696.2016194,
-    "ast_hash": "6339afc1f39e9f39044f819908ba219e",
+    "mtime": 1782019113.7643886,
+    "ast_hash": "7de66a6eba2bcb3b13252cddc2542506",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PageTransition.tsx": {
@@ -780,8 +780,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PremiumLoader.tsx": {
-    "mtime": 1780440588.5104678,
-    "ast_hash": "69d0b93634f25d21621856786297cf75",
+    "mtime": 1782019201.7504103,
+    "ast_hash": "b4d3c01a05708d294e882dfb69f9dfcb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/SplashScreen.tsx": {
@@ -1345,8 +1345,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ReportPage.tsx": {
-    "mtime": 1782017130.4506445,
-    "ast_hash": "01ba1d13e46fc6159d3a532c526773f1",
+    "mtime": 1782017807.9378881,
+    "ast_hash": "c01cfacd8ec0de230b5c620b301db33c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ResultsPage.tsx": {
@@ -2937,6 +2937,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useTypewriterPlaceholder.ts": {
     "mtime": 1782015108.7195103,
     "ast_hash": "a9afd59665c1602215d41f256cb222f7",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/GooeyPillLoader.tsx": {
+    "mtime": 1782018887.3563607,
+    "ast_hash": "3f7450f6908ef99e33583197e1debfee",
     "semantic_hash": ""
   }
 }
