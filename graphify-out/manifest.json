@@ -730,8 +730,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MedicalReportContent.tsx": {
-    "mtime": 1782015798.7757554,
-    "ast_hash": "e152391fb7c8095255ca663caf21a09c",
+    "mtime": 1782017190.887553,
+    "ast_hash": "61bc8a39c20cd16754efdf36e70fe56d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MessageRenderer.tsx": {
@@ -1345,8 +1345,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ReportPage.tsx": {
-    "mtime": 1782015844.0934224,
-    "ast_hash": "1c21012d7714ec7cfe80c7d86652153a",
+    "mtime": 1782017130.4506445,
+    "ast_hash": "01ba1d13e46fc6159d3a532c526773f1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ResultsPage.tsx": {
