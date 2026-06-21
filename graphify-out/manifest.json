@@ -705,8 +705,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1781976266.272602,
-    "ast_hash": "166dbf16b3d16a346e8e9d9ed691756d",
+    "mtime": 1782015118.4717007,
+    "ast_hash": "5b31a455510e0b44f5eb092aa2e748a0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -725,8 +725,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/IntelligencePanel.tsx": {
-    "mtime": 1780316627.792987,
-    "ast_hash": "06b82ad02fc4650baa521c366ac49c15",
+    "mtime": 1782015264.0362482,
+    "ast_hash": "31113a08765b9bcad9e8f1bccab48ebc",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MedicalReportContent.tsx": {
@@ -2932,6 +2932,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-scan-isolated.js": {
     "mtime": 1782014811.9818377,
     "ast_hash": "078df429dae03462e7c3e0611b6384e1",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useTypewriterPlaceholder.ts": {
+    "mtime": 1782015108.7195103,
+    "ast_hash": "a9afd59665c1602215d41f256cb222f7",
     "semantic_hash": ""
   }
 }

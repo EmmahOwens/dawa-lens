@@ -13,6 +13,18 @@ import { useAIActions } from "@/hooks/useAIActions";
 import MessageRenderer from "@/components/MessageRenderer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { AlertCircle } from "@/lib/icons";
+import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
+import { calculateVitalitySummary } from "@/lib/vitalityUtils";
+
+const SAMPLE_PROMPTS = [
+  "Does Panadol interact with Ibuprofen?",
+  "Add a medicine reminder for 8:00 AM...",
+  "Is it safe to take my pills with milk?",
+  "Log my morning dose of Metformin...",
+  "What are the side effects of Amoxicillin?",
+  "I'm feeling dizzy after taking my medicine...",
+  "Can you help me build a healthy routine?"
+];
 
 // Widgets
 import { DashboardWidget } from "./intelligence/DashboardWidget";
@@ -41,7 +53,16 @@ export function IntelligencePanel() {
   const [miniChatInput, setMiniChatInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const placeholder = useTypewriterPlaceholder(SAMPLE_PROMPTS, {
+    isPaused: isFocused || miniChatInput !== "" || isTyping
+  });
+
+  const vitalitySummary = React.useMemo(() => {
+    return calculateVitalitySummary(doseLogs, wellnessLogs);
+  }, [doseLogs, wellnessLogs]);
 
   useEffect(() => {
     if (messages.length === 0) {
@@ -89,6 +110,7 @@ export function IntelligencePanel() {
         doseLogs, 
         reminders, 
         wellnessLogs, 
+        vitalitySummary,
         patients, 
         selectedPatientId,
         (streamedText) => {
@@ -310,15 +332,17 @@ export function IntelligencePanel() {
                 </div>
 
                 {/* Input Area */}
-                 <div className="flex gap-2 z-10 bg-background border border-border/60 rounded-2xl p-1.5 shadow-sm focus-within:border-primary/40 transition-all">
-                    <input 
-                      type="text" 
-                      value={miniChatInput}
-                      onChange={(e) => setMiniChatInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSendMessage(miniChatInput)}
-                      placeholder="Ask anything..." 
-                      className="flex-1 bg-transparent rounded-xl px-3 py-2 text-[12.5px] outline-none font-medium placeholder:text-muted-foreground/50"
-                    />
+                  <div className="flex gap-2 z-10 bg-background border border-border/60 rounded-2xl p-1.5 shadow-sm focus-within:border-primary/40 transition-all">
+                     <input 
+                       type="text" 
+                       value={miniChatInput}
+                       onChange={(e) => setMiniChatInput(e.target.value)}
+                       onKeyDown={(e) => e.key === "Enter" && handleSendMessage(miniChatInput)}
+                       placeholder={placeholder || "Ask anything..."} 
+                       onFocus={() => setIsFocused(true)}
+                       onBlur={() => setIsFocused(false)}
+                       className="flex-1 bg-transparent rounded-xl px-3 py-2 text-[12.5px] outline-none font-medium placeholder:text-muted-foreground/50"
+                     />
                     <Button 
                       size="icon" 
                       disabled={isTyping || !miniChatInput.trim()}

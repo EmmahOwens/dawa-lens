@@ -11,6 +11,17 @@ import { useAIActions } from "@/hooks/useAIActions";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { calculateVitalitySummary } from "@/lib/vitalityUtils";
 import MessageRenderer from "@/components/MessageRenderer";
+import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
+
+const SAMPLE_PROMPTS = [
+  "Does Panadol interact with Ibuprofen?",
+  "Add a medicine reminder for 8:00 AM...",
+  "Is it safe to take my pills with milk?",
+  "Log my morning dose of Metformin...",
+  "What are the side effects of Amoxicillin?",
+  "I'm feeling dizzy after taking my medicine...",
+  "Can you help me build a healthy routine?"
+];
 
 export default function DawaGPT() {
   const { t } = useTranslation();
@@ -77,6 +88,11 @@ export default function DawaGPT() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const placeholder = useTypewriterPlaceholder(SAMPLE_PROMPTS, {
+    isPaused: isFocused || inputValue !== "" || isTyping
+  });
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -376,7 +392,9 @@ export default function DawaGPT() {
                           handleSend(inputValue);
                         }
                       }}
-                      placeholder="Send a message..."
+                      placeholder={placeholder || "Send a message..."}
+                      onFocus={() => setIsFocused(true)}
+                      onBlur={() => setIsFocused(false)}
                       className="bg-transparent border-none text-[15px] resize-none outline-none px-3 py-2 min-h-[44px] max-h-[200px] placeholder:text-muted-foreground/50 w-full"
                       rows={1}
                     />
