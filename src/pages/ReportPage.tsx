@@ -261,18 +261,34 @@ export default function ReportPage() {
       // Wait a bit to ensure everything is rendered
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Set options for html2canvas - reduce scale on mobile to save memory
-      const scale = Capacitor.getPlatform() === "web" ? 2 : 1.5;
+      // Find all PDF blocks to process pagination
+      const blocks = Array.from(element.querySelectorAll(".pdf-block")) as HTMLElement[];
+      if (blocks.length === 0) {
+        throw new Error("No PDF content blocks found");
+      }
 
-      const canvas = await html2canvas(element, {
-        scale: scale,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-        windowWidth: 800, // Fixed width for consistent rendering
+      // Distribute blocks into pages
+      const pages: HTMLElement[][] = [[]];
+      let currentPageHeight = 0;
+      const maxPageHeightPx = 1050; // Target height limit per page
+
+      blocks.forEach((block) => {
+        const rect = block.getBoundingClientRect();
+        const blockHeight = rect.height;
+
+        const computedStyle = window.getComputedStyle(block);
+        const marginBottom = parseFloat(computedStyle.marginBottom) || 0;
+        const totalBlockHeight = blockHeight + marginBottom;
+
+        if (currentPageHeight + totalBlockHeight > maxPageHeightPx && pages[pages.length - 1].length > 0) {
+          pages.push([block]);
+          currentPageHeight = totalBlockHeight;
+        } else {
+          pages[pages.length - 1].push(block);
+          currentPageHeight += totalBlockHeight;
+        }
       });
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.95); // Use JPEG for better compression/memory
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -282,43 +298,79 @@ export default function ReportPage() {
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = imgWidth / pdfWidth;
-      const imgPdfHeight = imgHeight / ratio;
+      const marginX = 15;
+      const marginY = 15;
+      const printableWidth = pdfWidth - 2 * marginX;
 
-      let heightLeft = imgPdfHeight;
-      let position = 0;
+      const scale = Capacitor.getPlatform() === "web" ? 2 : 1.5;
 
-      // Add first page
-      pdf.addImage(
-        imgData,
-        "JPEG",
-        0,
-        position,
-        pdfWidth,
-        imgPdfHeight,
-        undefined,
-        "FAST"
-      );
-      heightLeft -= pdfHeight;
+      // Create a temporary container off-screen to render pages
+      const tempContainer = document.createElement("div");
+      tempContainer.style.position = "absolute";
+      tempContainer.style.left = "-9999px";
+      tempContainer.style.top = "0";
+      tempContainer.style.width = "800px";
+      tempContainer.style.background = "#ffffff";
+      document.body.appendChild(tempContainer);
 
-      // Add subsequent pages if content is longer than one page
-      while (heightLeft > 0) {
-        position = heightLeft - imgPdfHeight;
-        pdf.addPage();
+      for (let i = 0; i < pages.length; i++) {
+        const pageBlocks = pages[i];
+
+        const pageWrapper = document.createElement("div");
+        pageWrapper.className = "font-sans text-slate-900 bg-white w-full px-12 py-8";
+        pageWrapper.style.width = "800px";
+        pageWrapper.style.boxSizing = "border-box";
+        pageWrapper.style.display = "flex";
+        pageWrapper.style.flexDirection = "column";
+
+        pageBlocks.forEach((block) => {
+          const clone = block.cloneNode(true) as HTMLElement;
+          pageWrapper.appendChild(clone);
+        });
+
+        tempContainer.appendChild(pageWrapper);
+
+        const canvas = await html2canvas(pageWrapper, {
+          scale: scale,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          width: 800,
+        });
+
+        tempContainer.removeChild(pageWrapper);
+
+        const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+        if (i > 0) {
+          pdf.addPage();
+        }
+
+        const canvasHeightToWidthRatio = canvas.height / canvas.width;
+        const imgPdfHeight = printableWidth * canvasHeightToWidthRatio;
+
         pdf.addImage(
           imgData,
           "JPEG",
-          0,
-          position,
-          pdfWidth,
+          marginX,
+          marginY,
+          printableWidth,
           imgPdfHeight,
           undefined,
           "FAST"
         );
-        heightLeft -= pdfHeight;
+
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(
+          `Page ${i + 1} of ${pages.length}`,
+          pdfWidth / 2,
+          pdfHeight - 10,
+          { align: "center" }
+        );
       }
+
+      document.body.removeChild(tempContainer);
 
       // Sanitize filename: remove characters that might cause issues on some file systems
       const safePatientName = patientName

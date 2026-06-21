@@ -69,7 +69,7 @@ export const MedicalReportContent = ({
   return (
     <div id="medical-report-content" className="font-sans text-slate-900 bg-white w-full max-w-4xl mx-auto px-6 sm:px-12 py-10 sm:py-16">
       {/* Report Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-4 border-blue-600 pb-8 mb-10 gap-6">
+      <div className="pdf-block flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-4 border-blue-600 pb-8 mb-10 gap-6">
         <div className="flex items-center gap-4">
           <div className="bg-blue-600 p-3 rounded-2xl shadow-lg shadow-blue-200">
             <Stethoscope className="text-white" size={32} />
@@ -101,7 +101,7 @@ export const MedicalReportContent = ({
       </div>
 
       {/* Patient Overview Card */}
-      <div className="bg-slate-50 rounded-3xl p-8 mb-10 border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8 relative overflow-hidden">
+      <div className="pdf-block bg-slate-50 rounded-3xl p-8 mb-10 border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-8 opacity-5">
           <User size={120} />
         </div>
@@ -178,7 +178,7 @@ export const MedicalReportContent = ({
       </div>
 
       {/* Active Medications Section */}
-      <section className="mb-12">
+      <section className="pdf-block mb-12">
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-amber-50 p-2 rounded-xl border border-amber-100">
             <Pill className="text-amber-600" size={20} />
@@ -259,7 +259,7 @@ export const MedicalReportContent = ({
 
       {/* Wellness Metrics Section */}
       {hasPRO && (
-        <section className="mb-12">
+        <section className="pdf-block mb-12">
           <div className="flex items-center gap-3 mb-6">
             <div className="bg-rose-50 p-2 rounded-xl border border-rose-100">
               <Heart className="text-rose-600" size={20} />
@@ -310,15 +310,15 @@ export const MedicalReportContent = ({
       {/* AI Clinical Summary Section */}
       {insights && (
         <section className="mb-12">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100">
-              <Brain className="text-indigo-600" size={20} />
+          <div className="pdf-block space-y-6 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-indigo-50 p-2 rounded-xl border border-indigo-100">
+                <Brain className="text-indigo-600" size={20} />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">AI Clinical Assessment</h3>
+              <div className="h-[2px] flex-1 bg-slate-100 ml-2"></div>
             </div>
-            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">AI Clinical Assessment</h3>
-            <div className="h-[2px] flex-1 bg-slate-100 ml-2"></div>
-          </div>
 
-          <div className="space-y-6">
             <div className="bg-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-indigo-100 relative overflow-hidden">
               <Brain className="absolute -bottom-10 -right-10 opacity-10" size={200} />
               <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-70">Executive Summary</p>
@@ -333,7 +333,7 @@ export const MedicalReportContent = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="pdf-block grid grid-cols-1 md:grid-cols-2 gap-6">
               {insights.dosagePatterns && (
                 <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Dosage Patterns</p>
@@ -367,7 +367,7 @@ export const MedicalReportContent = ({
             </div>
 
             {insights.insights && insights.insights.length > 0 && (
-              <div className="bg-slate-50 rounded-3xl p-8 border border-slate-200">
+              <div className="pdf-block bg-slate-50 rounded-3xl p-8 border border-slate-200">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                   <ShieldCheck size={14} className="text-emerald-500" /> Observed Patterns
                 </p>
@@ -393,7 +393,7 @@ export const MedicalReportContent = ({
             )}
 
             {insights.actionItems && insights.actionItems.length > 0 && (
-              <div className="bg-amber-50 rounded-3xl p-8 border border-amber-100">
+              <div className="pdf-block bg-amber-50 rounded-3xl p-8 border border-amber-100">
                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-6 flex items-center gap-2">
                   <AlertCircle size={14} /> Priority Action Items
                 </p>
@@ -422,7 +422,7 @@ export const MedicalReportContent = ({
       )}
 
       {/* Report Footer */}
-      <div className="mt-20 pt-10 border-t-2 border-slate-100 text-center">
+      <div className="pdf-block mt-20 pt-10 border-t-2 border-slate-100 text-center">
         <div className="flex justify-center mb-6">
           <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100">
             <ShieldCheck size={14} className="text-blue-600" />
