@@ -36,14 +36,7 @@ export const MedicalReportContent = ({
   insights,
   wellnessLogs = [],
 }: MedicalReportContentProps) => {
-  // Split medicines into chunks of 8 to prevent layout cutting in PDF
-  const MEDICINES_PER_PAGE = 8;
-  const medicineChunks = [];
-  if (medicines && medicines.length > 0) {
-    for (let i = 0; i < medicines.length; i += MEDICINES_PER_PAGE) {
-      medicineChunks.push(medicines.slice(i, i + MEDICINES_PER_PAGE));
-    }
-  }
+
 
   // Compute PROs from wellnessLogs
   const last7 = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), 6 - i));
@@ -187,83 +180,47 @@ export const MedicalReportContent = ({
       </div>
 
       {/* Active Medications Section */}
-      {medicineChunks.map((chunk, chunkIdx) => (
-        <section key={chunkIdx} className="pdf-block mb-12">
-          <div className="flex items-center gap-3 mb-6">
+      {medicines && medicines.length > 0 ? (
+        <section className="mb-12">
+          <div className="pdf-block flex items-center gap-3 mb-6">
             <div className="bg-amber-50 p-2 rounded-xl border border-amber-100">
               <Pill className="text-amber-600" size={20} />
             </div>
-            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-              Active Medications {chunkIdx > 0 && <span className="text-xs font-bold text-slate-400 font-sans ml-2">(Continued)</span>}
-            </h3>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Active Medications</h3>
             <div className="h-[2px] flex-1 bg-slate-100 ml-2"></div>
           </div>
 
           <div className="space-y-4">
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Medication Details</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Schedule</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clinical Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-100">
-                  {chunk.map((med) => (
-                    <tr key={med.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-5">
-                        <p className="text-sm font-black text-slate-900">{med.name}</p>
-                        {med.genericName && (
-                          <p className="text-[10px] font-bold text-blue-600/70 italic mt-0.5">{med.genericName}</p>
-                        )}
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Clock size={12} className="text-slate-400" />
-                          <span className="text-xs font-bold">{med.dosage}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <p className="text-xs text-slate-500 font-medium leading-relaxed italic">
-                          {med.notes || "As directed by physician"}
-                        </p>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-3">
-              {chunk.map((med) => (
-                <div key={med.id} className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <p className="text-base font-black text-slate-900">{med.name}</p>
-                      {med.genericName && (
-                        <p className="text-[10px] font-bold text-blue-600/70 italic">{med.genericName}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 rounded-lg border border-slate-100">
-                      <Clock size={10} className="text-slate-400" />
-                      <span className="text-[10px] font-black text-slate-700">{med.dosage}</span>
-                    </div>
+            {medicines.map((med) => (
+              <div key={med.id} className="pdf-block p-5 rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="bg-amber-50 p-3 rounded-2xl border border-amber-100 text-amber-600 shrink-0">
+                    <Pill size={20} />
                   </div>
-                  <div className="pt-3 border-t border-slate-100">
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed italic">
-                      {med.notes || "As directed by physician"}
-                    </p>
+                  <div>
+                    <p className="text-sm font-black text-slate-900">{med.name}</p>
+                    {med.genericName && (
+                      <p className="text-[10px] font-bold text-blue-600/70 italic mt-0.5">{med.genericName}</p>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
+
+                <div className="flex flex-col sm:items-end gap-2 shrink-0">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-xl border border-slate-100 self-start sm:self-auto">
+                    <Clock size={12} className="text-slate-400" />
+                    <span className="text-xs font-bold text-slate-700">{med.dosage}</span>
+                  </div>
+                  {med.notes && (
+                    <p className="text-xs text-slate-500 font-medium leading-relaxed italic max-w-xs text-left sm:text-right">
+                      {med.notes}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
-      ))}
-      {(!medicines || medicines.length === 0) && (
+      ) : (
         <section className="pdf-block mb-12">
           <div className="flex items-center gap-3 mb-6">
             <div className="bg-amber-50 p-2 rounded-xl border border-amber-100">

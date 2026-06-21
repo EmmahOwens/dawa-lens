@@ -271,23 +271,20 @@ export default function ReportPage() {
       const pages: HTMLElement[][] = [[]];
       let currentPageHeight = 0;
       const maxPageHeightPx = 1050; // Target height limit per page
-      const gapPx = 32; // Spacing gap between blocks (2rem / 32px)
+      const gapPx = 24; // Compact spacing gap between blocks (1.5rem / 24px)
 
       blocks.forEach((block) => {
         const rect = block.getBoundingClientRect();
         const blockHeight = rect.height;
-
-        const computedStyle = window.getComputedStyle(block);
-        const marginBottom = parseFloat(computedStyle.marginBottom) || 0;
         
-        let totalBlockHeight = blockHeight + marginBottom;
+        let totalBlockHeight = blockHeight;
         if (pages[pages.length - 1].length > 0) {
           totalBlockHeight += gapPx;
         }
 
         if (currentPageHeight + totalBlockHeight > maxPageHeightPx && pages[pages.length - 1].length > 0) {
           pages.push([block]);
-          currentPageHeight = blockHeight + marginBottom;
+          currentPageHeight = blockHeight;
         } else {
           pages[pages.length - 1].push(block);
           currentPageHeight += totalBlockHeight;
@@ -322,12 +319,14 @@ export default function ReportPage() {
         const pageBlocks = pages[i];
 
         const pageWrapper = document.createElement("div");
-        pageWrapper.className = "font-sans text-slate-900 bg-white w-full px-12 py-8 flex flex-col gap-8";
+        pageWrapper.className = "font-sans text-slate-900 bg-white w-full px-12 py-8 flex flex-col gap-6";
         pageWrapper.style.width = "800px";
         pageWrapper.style.boxSizing = "border-box";
 
         pageBlocks.forEach((block) => {
           const clone = block.cloneNode(true) as HTMLElement;
+          // Reset margin-bottom on clones so that the flexbox gap regulates spacing exactly
+          clone.style.setProperty("margin-bottom", "0", "important");
           pageWrapper.appendChild(clone);
         });
 
