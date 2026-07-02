@@ -71,7 +71,11 @@ function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: R
       onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
       className="relative flex flex-col items-center justify-center w-12 h-12 group"
     >
-      <div className="relative flex flex-col items-center">
+      <motion.div
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.92 }}
+        className="relative flex flex-col items-center"
+      >
         <Icon
           size={24}
           className={`relative z-10 transition-colors duration-300 ${active ? "text-primary dark:text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
@@ -87,18 +91,18 @@ function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: R
         )}
 
         {/* macOS Dock style dot indicator */}
-        <AnimatePresence>
-          {active && (
-            <motion.div
-              layoutId="nav-indicator"
-              className="absolute -bottom-3 w-1 h-1 rounded-full bg-primary dark:bg-foreground"
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0 }}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+        {active && (
+          <motion.div
+            layoutId="nav-indicator"
+            className="absolute -bottom-3 w-1.5 h-1.5 rounded-full bg-primary dark:bg-foreground"
+            transition={{
+              type: "spring",
+              stiffness: 380,
+              damping: 30,
+            }}
+          />
+        )}
+      </motion.div>
     </NavLink>
   );
 }

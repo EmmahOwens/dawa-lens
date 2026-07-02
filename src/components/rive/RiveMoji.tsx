@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { RiveAnimation } from './RiveAnimation';
 import { Fit, Alignment } from '@rive-app/react-canvas';
+import { motion } from 'framer-motion';
 
 interface RiveMojiProps {
   emoji: string;
@@ -20,7 +21,6 @@ const EMOJI_RIVE_URL = "/assets/rive/animated-emoji-pack.riv";
  * Uses public Rive assets for common expressions.
  */
 export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48, active = false }) => {
-  const [isHovered, setIsHovered] = useState(false);
 
   // Map emoji to Rive Artboard
   const getArtboard = (e: string) => {
@@ -94,11 +94,18 @@ export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48,
   const artboard = getArtboard(emoji);
 
   return (
-    <div 
-      className={`flex items-center justify-center transition-transform duration-300 ${isHovered ? 'scale-110' : 'scale-100'} ${className}`} 
+    <motion.div 
+      className={`flex items-center justify-center ${className}`} 
       style={{ width: size, height: size }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      whileHover={{ 
+        scale: 1.15,
+        rotate: [0, -3, 3, 0],
+        transition: { type: "spring", stiffness: 400, damping: 15 }
+      }}
+      whileTap={{ 
+        scale: 0.9,
+        transition: { type: "spring", stiffness: 400, damping: 10 }
+      }}
     >
       <RiveAnimation
         src={EMOJI_RIVE_URL}
@@ -108,6 +115,6 @@ export const RiveMoji: React.FC<RiveMojiProps> = ({ emoji, className, size = 48,
         alignment={Alignment.Center}
         fallback={<span style={{ fontSize: size * 0.7 }}>{emoji}</span>}
       />
-    </div>
+    </motion.div>
   );
 };

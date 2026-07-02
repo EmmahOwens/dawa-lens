@@ -1,8 +1,9 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Pill, Check, Clock, AlertCircle, RefreshCw } from "@/lib/icons";
 import { Reminder, DoseLog } from "@/contexts/AppContext";
 import { computeShiftOffset } from "@/services/reminderService";
+import confetti from "canvas-confetti";
 
 interface DailyTimelineProps {
   reminders: Reminder[];
@@ -27,6 +28,27 @@ function todayAt(hhmm: string): Date {
 
 export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelineProps) {
   const today = new Date().toDateString();
+
+  const handleActionWithConfetti = (
+    e: React.MouseEvent,
+    r: Reminder,
+    action: "taken" | "skipped",
+    scheduledISO: string
+  ) => {
+    if (action === "taken") {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = (rect.left + rect.width / 2) / window.innerWidth;
+      const y = (rect.top + rect.height / 2) / window.innerHeight;
+      confetti({
+        particleCount: 30,
+        spread: 60,
+        origin: { x, y },
+        colors: ["#3b82f6", "#10b981", "#8b5cf6", "#e05c30"],
+        zIndex: 150,
+      });
+    }
+    onAction(r, action, scheduledISO);
+  };
 
   // Expand each reminder into individual (reminder, slotIndex, slotTime) entries
   // so the user can log each dose independently
@@ -152,10 +174,20 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
             >
               <div className="flex flex-col gap-4 h-full justify-between">
                 <div>
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 ${
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 transition-colors duration-300 ${
                     isTaken ? "bg-success/20 text-success" : "bg-primary/10 text-primary"
                   }`}>
-                    {isTaken ? <Check size={20} /> : <Pill size={20} />}
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.div
+                        key={isTaken ? "check" : "pill"}
+                        initial={{ scale: 0.8, rotate: -45, opacity: 0 }}
+                        animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                        exit={{ scale: 0.8, rotate: 45, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        {isTaken ? <Check size={20} /> : <Pill size={20} />}
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
 
                   {/* Time display with shift badge */}
@@ -185,18 +217,22 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
 
                 {!isActioned ? (
                   <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={() => onAction(r, "taken", scheduledISO)}
-                      className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-transform"
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.92 }}
+                      onClick={(e) => handleActionWithConfetti(e, r, "taken", scheduledISO)}
+                      className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center transition-colors"
                     >
                       <Check size={16} strokeWidth={3} />
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.92 }}
                       onClick={() => onAction(r, "skipped", scheduledISO)}
-                      className="h-9 w-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive active:scale-95 transition-transform"
+                      className="h-9 w-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                     >
                       <AlertCircle size={16} />
-                    </button>
+                    </motion.button>
                   </div>
                 ) : (
                   <div className="pt-2 text-center">

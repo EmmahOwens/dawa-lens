@@ -273,6 +273,20 @@ export default function ScanPage() {
               <div className="absolute bottom-0 left-0 w-10 h-10 sm:w-12 sm:h-12 border-b-[3px] border-l-[3px] border-primary rounded-bl-3xl" />
               <div className="absolute bottom-0 right-0 w-10 h-10 sm:w-12 sm:h-12 border-b-[3px] border-r-[3px] border-primary rounded-br-3xl" />
 
+              {/* Radar pulsing ring */}
+              <motion.div
+                className="absolute inset-[-4px] border border-primary/30 rounded-3xl"
+                animate={{
+                  scale: [1, 1.05, 1],
+                  opacity: [0.2, 0.6, 0.2]
+                }}
+                transition={{
+                  duration: 2.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+
               <p className="absolute -bottom-12 left-0 right-0 text-center text-[10px] sm:text-xs font-bold text-white/40 uppercase tracking-[0.3em]">
                 Align Label
               </p>
@@ -297,8 +311,8 @@ export default function ScanPage() {
           <motion.div
             initial={{ opacity: 1 }}
             animate={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="absolute inset-0 bg-white/20 backdrop-blur-sm z-50"
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="absolute inset-0 bg-white z-50 pointer-events-none"
           />
         )}
       </div>
@@ -322,7 +336,15 @@ export default function ScanPage() {
             <motion.div
               whileTap={{ scale: 0.88 }}
               className="w-[60px] h-[60px] sm:w-[68px] sm:h-[68px] md:w-[76px] md:h-[76px] rounded-full bg-white shadow-xl flex items-center justify-center group-active:bg-primary transition-colors"
-            />
+            >
+              {capturing && (
+                <motion.div
+                  className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                />
+              )}
+            </motion.div>
             <div className="absolute inset-[-8px] border border-white/5 rounded-full animate-pulse" />
           </motion.button>
 

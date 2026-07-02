@@ -367,14 +367,22 @@ export default function Dashboard() {
       />
 
       {/* 7. Bento Grid Quick Actions */}
+      {/* 7. Bento Grid Quick Actions */}
       <div className="mb-10">
         <h2 className="section-title flex items-center gap-2">
           <Plus size={14} />
           Tools & Actions
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 sm:grid-rows-4 gap-3 h-auto sm:h-[420px]">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-40px" }}
+          className="grid grid-cols-2 sm:grid-cols-4 sm:grid-rows-4 gap-3 h-auto sm:h-[420px]"
+        >
           {/* Large Card: Quick Scan */}
           <motion.button
+            variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[0].to)}
             className="col-span-2 sm:row-span-2 rounded-[2rem] p-6 min-h-[160px] sm:min-h-0 flex flex-col justify-between items-start text-left relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-[1.01] transition-all duration-300"
@@ -383,8 +391,33 @@ export default function Dashboard() {
             <div className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_12px_#22d3ee] animate-scanner-line pointer-events-none" />
             
             {/* Ambient Background Glows */}
-            <div className="absolute -top-12 -right-12 w-36 h-36 bg-cyan-400/25 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-400/25 rounded-full blur-2xl pointer-events-none" />
+            <motion.div
+              className="absolute -top-12 -right-12 w-36 h-36 bg-cyan-400/25 rounded-full blur-2xl pointer-events-none"
+              animate={{
+                scale: [1, 1.2, 1],
+                x: [0, 8, -8, 0],
+                y: [0, -8, 8, 0],
+              }}
+              transition={{
+                duration: 6,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+            <motion.div
+              className="absolute -bottom-8 -left-8 w-28 h-28 bg-violet-400/25 rounded-full blur-2xl pointer-events-none"
+              animate={{
+                scale: [1, 1.15, 1],
+                x: [0, -6, 6, 0],
+                y: [0, 6, -6, 0],
+              }}
+              transition={{
+                duration: 5,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 0.5,
+              }}
+            />
             
             {/* Top Badge */}
             <div className="absolute top-5 right-5 px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-[9px] font-black tracking-widest uppercase text-white/95 flex items-center gap-1.5 backdrop-blur-md shadow-sm">
@@ -408,6 +441,7 @@ export default function Dashboard() {
 
           {/* Medium Card: Family Hub */}
           <motion.button
+            variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[1].to)}
             className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-emerald-500/5 via-teal-500/10 to-emerald-500/5 dark:from-emerald-950/20 dark:to-teal-900/25 border-emerald-500/20 text-emerald-800 dark:text-emerald-300 hover:border-emerald-500/40 hover-wiggle transition-all duration-200"
@@ -449,6 +483,7 @@ export default function Dashboard() {
 
           {/* Small Card: Wellness */}
           <motion.button
+            variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[2].to)}
             className="col-span-1 sm:row-span-1 h-24 sm:h-auto rounded-[1.25rem] border bg-gradient-to-br from-rose-500/5 to-pink-500/10 dark:from-rose-950/20 dark:to-pink-900/20 border-rose-500/20 text-rose-600 dark:text-rose-400 hover:border-rose-500/40 hover-wiggle flex flex-col items-center justify-center gap-1.5 transition-all duration-200"
@@ -463,6 +498,7 @@ export default function Dashboard() {
 
           {/* Small Card: Travel */}
           <motion.button
+            variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[3].to)}
             className="col-span-1 sm:row-span-1 h-24 sm:h-auto rounded-[1.25rem] border bg-gradient-to-br from-sky-500/5 to-blue-500/10 dark:from-sky-950/20 dark:to-blue-900/20 border-sky-500/20 text-sky-600 dark:text-sky-400 hover:border-sky-500/40 hover-wiggle flex flex-col items-center justify-center gap-1.5 transition-all duration-200"
@@ -477,6 +513,7 @@ export default function Dashboard() {
 
           {/* Row 3: Safety Check (2x1) */}
           <motion.button
+            variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[4].to)}
             className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-amber-500/5 via-orange-500/10 to-amber-500/5 dark:from-amber-950/25 dark:to-orange-950/20 border-amber-500/30 text-amber-900 dark:text-amber-300 hover:border-amber-500/50 hover-wiggle transition-all duration-200"
@@ -501,6 +538,7 @@ export default function Dashboard() {
 
           {/* Row 3: Reminders (2x1) */}
           <motion.button
+            variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[5].to)}
             className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-violet-500/5 to-fuchsia-500/10 dark:from-violet-950/20 dark:to-fuchsia-900/20 border-violet-500/20 text-violet-800 dark:text-violet-300 hover:border-violet-500/40 hover-wiggle transition-all duration-200"
@@ -529,6 +567,7 @@ export default function Dashboard() {
 
           {/* Row 4: History (2x1) */}
           <motion.button
+            variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[6].to)}
             className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-cyan-500/5 to-blue-500/10 dark:from-cyan-950/20 dark:to-blue-900/20 border-cyan-500/20 text-cyan-800 dark:text-cyan-300 hover:border-cyan-500/40 hover-wiggle transition-all duration-200"
@@ -553,6 +592,7 @@ export default function Dashboard() {
 
           {/* Row 4: Reports (2x1) */}
           <motion.button
+            variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[7].to)}
             className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-indigo-500/5 to-purple-500/10 dark:from-indigo-950/20 dark:to-purple-900/20 border-indigo-500/20 text-indigo-800 dark:text-indigo-300 hover:border-indigo-500/40 hover-wiggle transition-all duration-200"
@@ -572,13 +612,17 @@ export default function Dashboard() {
             {/* Sparkline Graphic */}
             <div className="ml-auto shrink-0 pr-1 w-12 h-6 opacity-75 dark:opacity-90">
               <svg className="w-full h-full" viewBox="0 0 50 20" fill="none">
-                <path
+                <motion.path
                   d="M2 18 C 10 12, 12 16, 20 6 C 28 -4, 32 10, 48 4"
                   stroke="currentColor"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   className="text-indigo-500 dark:text-indigo-400"
+                  initial={{ pathLength: 0 }}
+                  whileInView={{ pathLength: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 1.5, ease: "easeInOut", delay: 0.2 }}
                 />
                 <circle
                   cx="48"
@@ -590,7 +634,7 @@ export default function Dashboard() {
               </svg>
             </div>
           </motion.button>
-        </div>
+        </motion.div>
       </div>
 
       {/* 8. Wellness Pulse */}
