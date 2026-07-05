@@ -665,8 +665,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1783229344.0365975,
-    "ast_hash": "a6c2caf0beaaaf006861bb1d89a6ce19",
+    "mtime": 1783237241.43917,
+    "ast_hash": "be14e2cf6fee4eaa9eecfd096c4fa41e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -680,8 +680,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AppSidebar.tsx": {
-    "mtime": 1783233064.9042795,
-    "ast_hash": "a137803d90926c52100634a3b1fce067",
+    "mtime": 1783237248.7016654,
+    "ast_hash": "46dc0c9e712083b859c3378ac42e7765",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BottomNav.tsx": {
@@ -1230,8 +1230,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/i18n.ts": {
-    "mtime": 1783236241.8118818,
-    "ast_hash": "d9d079f8242c1d2c751615c498acfbbf",
+    "mtime": 1783237234.6817074,
+    "ast_hash": "3139b464f0723bca9d40e8ed1be83548",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/icons.tsx": {
@@ -1295,8 +1295,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/Dashboard.tsx": {
-    "mtime": 1783236235.1907191,
-    "ast_hash": "ae8aeea20cb735544b45f5c070f69925",
+    "mtime": 1783238149.320965,
+    "ast_hash": "7ae0ed16cfa89d81693449bf85f7901d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/FamilyHubPage.tsx": {
@@ -2945,8 +2945,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedVaultPage.tsx": {
-    "mtime": 1783235375.091315,
-    "ast_hash": "b2820fb1368d41d4b4303b563dd850e9",
+    "mtime": 1783237289.264402,
+    "ast_hash": "6b4380a7a07b2be169b80a0a787976f9",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicationsPage.tsx": {
+    "mtime": 1783237334.2883866,
+    "ast_hash": "d9639dbea729e5ec9534f049e7e9eeec",
     "semantic_hash": ""
   }
 }
