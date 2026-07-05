@@ -312,7 +312,7 @@ const SplashScreen: React.FC = () => {
             textAlign: "center",
           }}
         >
-          See Medicine. Live Better.
+          Smart Medicine Reminder
         </p>
 
         {/* Loading spinner */}
