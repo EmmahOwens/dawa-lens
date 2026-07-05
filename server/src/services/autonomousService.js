@@ -20,7 +20,7 @@ export const interceptMedicineSafety = async (userId, patientId, newMedicine) =>
     if (medicines.length <= 1) return;
 
     // Fetch wellness logs for lifestyle factors (alcohol, etc.)
-    const wellnessSnapshot = await db.collection('wellness')
+    const wellnessSnapshot = await db.collection('wellnessLogs')
       .where('userId', '==', userId)
       .where('patientId', '==', patientId || null)
       .orderBy('timestamp', 'desc')

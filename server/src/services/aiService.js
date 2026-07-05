@@ -619,17 +619,11 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
       isComplex 
     });
 
-    if (result.action && result.action.type && isComplex) {
-      console.log(`🤖 Agent executing action: ${result.action.type}`);
-      try {
-        const userId = userProfile?.id || userProfile?.uid;
-        const actionResult = await executeAiAction(result.action, userId, medicines, selectedPatientId);
-        result.actionExecuted = true;
-        result.text += `\n\n[ACTION EXECUTED: ${result.action.type} — ID: ${actionResult?.id || 'new'}]`;
-      } catch (actionErr) {
-        console.error("Agent Action Execution Failed:", actionErr.message);
-        result.text += `\n\n(Note: I tried to perform that action but encountered an error: ${actionErr.message})`;
-      }
+    // Action execution is handled client-side by dispatchAIAction (useAIActions.tsx).
+    // The server's role is to generate the action intent and return it in result.action.
+    // Executing server-side here caused duplicate writes and error notes in the response.
+    if (result.action && result.action.type) {
+      console.log(`🤖 Agent intent detected: ${result.action.type} — delegating to client.`);
     }
 
     return result;

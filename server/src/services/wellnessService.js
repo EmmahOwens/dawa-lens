@@ -1,7 +1,7 @@
 import { db } from '../db.js';
 import * as autonomousService from './autonomousService.js';
 
-const wellnessCol = db.collection('wellness');
+const wellnessCol = db.collection('wellnessLogs');
 
 export const getWellnessLogs = async (userId, patientId) => {
   let query = wellnessCol.where('userId', '==', userId);
