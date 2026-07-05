@@ -183,7 +183,8 @@ const sw = {
       history: "Historia",
       safety: "Usalama",
       settings: "Mipangilio",
-      remind: "Kumbusha"
+      remind: "Kumbusha",
+      medvault: "Med Vault"
     },
     dashboard: {
       title: "Dawa Lens",
