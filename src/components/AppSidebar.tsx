@@ -1,4 +1,4 @@
-import { Home, Camera, Clock, History, Settings, CopyPlus, Users, LogOut, Heart, ShieldCheck, Package } from "@/lib/icons";
+import { Home, Camera, Clock, History, Settings, CopyPlus, Users, LogOut, Heart, ShieldCheck, Package, Pill } from "@/lib/icons";
 import { NavLink } from "@/components/NavLink";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
@@ -30,6 +30,7 @@ export function AppSidebar() {
     { title: t("nav.scan"), url: "/scan", icon: Camera },
     { title: t("nav.remind"), url: "/reminders/new", icon: Clock },
     { title: t("nav.history"), url: "/history", icon: History },
+    { title: t("nav.medications", "Medications"), url: "/medications", icon: Pill },
     { title: t("nav.medvault", "Med Vault"), url: "/medvault", icon: Package },
     ...(isProfessionalMode ? [{ title: "Family Hub", url: "/family", icon: Users, isPro: true }] : []),
     { title: t("nav.safety"), url: "/interactions", icon: CopyPlus },

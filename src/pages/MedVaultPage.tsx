@@ -465,22 +465,31 @@ export default function MedVaultPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 mb-6"
+        className="flex items-center justify-between mb-6"
       >
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-xl bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground leading-none">
-            Med Vault
-          </h1>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
-            Your pill stock tracker
-          </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 rounded-xl bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-foreground leading-none">
+              Med Vault
+            </h1>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+              Your pill stock tracker
+            </p>
+          </div>
         </div>
+        <button
+          onClick={() => navigate("/medications")}
+          className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary px-3 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
+        >
+          <Pill className="size-3.5" />
+          <span>Medications</span>
+        </button>
       </motion.div>
 
       {/* Hero Stats */}
@@ -562,10 +571,10 @@ export default function MedVaultPage() {
             </p>
           </div>
           <button
-            onClick={() => navigate("/reminders/new")}
+            onClick={() => navigate("/medications")}
             className="flex items-center gap-2 bg-teal-600 text-white px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-teal-500/20 mt-1"
           >
-            <Plus size={14} /> Add Medicine
+            <Plus size={14} /> Manage Medications
           </button>
         </motion.div>
       ) : (

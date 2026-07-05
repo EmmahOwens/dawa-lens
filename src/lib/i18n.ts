@@ -21,7 +21,8 @@ const en = {
       safety: "Safety",
       settings: "Settings",
       remind: "Reminders",
-      medvault: "Med Vault"
+      medvault: "Med Vault",
+      medications: "Medications"
     },
     dashboard: {
       title: "Dawa Lens",
@@ -184,7 +185,8 @@ const sw = {
       safety: "Usalama",
       settings: "Mipangilio",
       remind: "Kumbusha",
-      medvault: "Med Vault"
+      medvault: "Med Vault",
+      medications: "Dawa Zangu"
     },
     dashboard: {
       title: "Dawa Lens",

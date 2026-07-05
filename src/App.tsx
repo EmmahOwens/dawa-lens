@@ -53,6 +53,7 @@ const TravelCompanionPage = lazy(() => import("@/pages/TravelCompanionPage"));
 const WellnessPage = lazy(() => import("@/pages/WellnessPage"));
 const ReportPage = lazy(() => import("@/pages/ReportPage"));
 const MedVaultPage = lazy(() => import("@/pages/MedVaultPage"));
+const MedicationsPage = lazy(() => import("@/pages/MedicationsPage"));
 const queryClient = new QueryClient();
 
 // A wrapper to enforce onboarding redirect
@@ -397,6 +398,14 @@ const App = () => {
                                       element={
                                         <PageTransition>
                                           <MedVaultPage />
+                                        </PageTransition>
+                                      }
+                                    />
+                                    <Route
+                                      path="/medications"
+                                      element={
+                                        <PageTransition>
+                                          <MedicationsPage />
                                         </PageTransition>
                                       }
                                     />

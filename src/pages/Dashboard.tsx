@@ -174,6 +174,13 @@ export default function Dashboard() {
       color: "bg-teal-500/10 border-teal-500/20 text-teal-600",
       description: "Pill Stock Tracker",
     },
+    {
+      icon: Pill,
+      label: t("nav.medications", "Medications"),
+      to: "/medications",
+      color: "bg-indigo-500/10 border-indigo-500/20 text-indigo-600",
+      description: "Prescription Cabinet",
+    },
   ];
 
   const todayReminders = scopedReminders.filter((r) => r.enabled);
@@ -653,48 +660,53 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* Row 5: Med Vault (col-span-2 sm:col-span-4 sm:row-span-1) */}
+          {/* Row 5: Med Vault (col-span-2 sm:row-span-1) */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.98 }}
-            onClick={() => navigate(quickActions[8].to)}
-            className="col-span-2 sm:col-span-4 sm:row-span-1 rounded-[1.5rem] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border bg-gradient-to-br from-teal-500/5 via-cyan-500/10 to-teal-500/5 dark:from-teal-950/20 dark:to-cyan-900/25 border-teal-500/20 text-teal-800 dark:text-teal-300 hover:border-teal-500/40 hover-wiggle transition-all duration-200"
+            onClick={() => navigate("/medvault")}
+            className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-teal-500/5 to-cyan-500/10 dark:from-teal-950/20 dark:to-cyan-900/20 border-teal-500/20 text-teal-800 dark:text-teal-300 hover:border-teal-500/40 hover-wiggle transition-all duration-200 text-left"
           >
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-teal-500/15 dark:bg-teal-500/10 rounded-xl text-teal-600 dark:text-teal-400 border border-teal-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
-                <Package2 size={20} />
-              </div>
-              <div className="text-left min-w-0">
-                <span className="font-extrabold text-sm tracking-tight block leading-tight text-foreground truncate">
-                  {quickActions[8].label}
-                </span>
-                <span className="text-[9px] text-teal-600/80 dark:text-teal-400/80 font-bold uppercase tracking-wider block">
-                  {quickActions[8].description}
-                </span>
-              </div>
+            <div className="p-2.5 bg-teal-500/15 dark:bg-teal-500/10 rounded-xl text-teal-600 dark:text-teal-400 border border-teal-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
+              <Package2 size={20} />
             </div>
+            <div className="text-left flex-grow min-w-0">
+              <span className="font-extrabold text-sm tracking-tight block leading-tight text-foreground truncate">
+                {t("nav.medvault", "Med Vault")}
+              </span>
+              <span className="text-[9px] text-teal-600/80 dark:text-teal-400/80 font-bold uppercase tracking-wider block">
+                Pill Stock Tracker
+              </span>
+            </div>
+            <div className="ml-auto shrink-0 pr-1">
+              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-teal-500/15 dark:bg-teal-500/25 border border-teal-500/30 text-teal-700 dark:text-teal-300 uppercase tracking-widest">
+                {totalPillsCount} Pills
+              </span>
+            </div>
+          </motion.button>
 
-            {/* Live stats visualization */}
-            <div className="flex items-center gap-4 ml-auto sm:ml-0 shrink-0 pr-1 text-xs">
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider leading-none">Tracked</p>
-                  <p className="font-black text-sm text-foreground mt-0.5">{trackedMedicinesCount}</p>
-                </div>
-                <div className="text-right border-l border-teal-500/20 pl-3">
-                  <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider leading-none">Total Pills</p>
-                  <p className="font-black text-sm text-foreground mt-0.5">{totalPillsCount}</p>
-                </div>
-                {refillStatuses.length > 0 && (
-                  <div className="text-right border-l border-teal-500/20 pl-3">
-                    <p className="text-[9px] text-red-500 uppercase font-black tracking-wider leading-none">Low Stock</p>
-                    <p className="font-black text-sm text-red-500 mt-0.5 animate-pulse">{refillStatuses.length}</p>
-                  </div>
-                )}
-              </div>
-              <div className="w-8 h-8 rounded-xl bg-teal-500/10 dark:bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-600 dark:text-teal-400 ml-1">
-                <Plus size={14} />
-              </div>
+          {/* Row 5: Medications (col-span-2 sm:row-span-1) */}
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate("/medications")}
+            className="col-span-2 sm:row-span-1 rounded-[1.5rem] p-4 flex items-center gap-3 border bg-gradient-to-br from-indigo-500/5 to-purple-500/10 dark:from-indigo-950/20 dark:to-purple-900/20 border-indigo-500/20 text-indigo-800 dark:text-indigo-300 hover:border-indigo-500/40 hover-wiggle transition-all duration-200 text-left"
+          >
+            <div className="p-2.5 bg-indigo-500/15 dark:bg-indigo-500/10 rounded-xl text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0 w-10 h-10 wiggle-icon">
+              <Pill size={20} />
+            </div>
+            <div className="text-left flex-grow min-w-0">
+              <span className="font-extrabold text-sm tracking-tight block leading-tight text-foreground truncate">
+                {t("nav.medications", "Medications")}
+              </span>
+              <span className="text-[9px] text-indigo-600/80 dark:text-indigo-400/80 font-bold uppercase tracking-wider block">
+                Prescription Cabinet
+              </span>
+            </div>
+            <div className="ml-auto shrink-0 pr-1">
+              <span className="text-[9px] font-black px-2 py-0.5 rounded bg-indigo-500/15 dark:bg-indigo-500/25 border border-indigo-500/30 text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
+                {scopedMedicines.length} Saved
+              </span>
             </div>
           </motion.button>
         </motion.div>
