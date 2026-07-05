@@ -899,7 +899,7 @@ export default function ReportPage() {
       {/* -------------------- HIDDEN DOWNLOAD/PRINT TEMPLATE -------------------- */}
       {/* We use an off-screen container for PDF generation to ensure html2canvas can capture it */}
       <div
-        className="fixed -left-[9999px] top-0 w-[800px] bg-white"
+        className="fixed -left-[9999px] top-0 w-[800px] h-0 overflow-hidden pointer-events-none"
         id="medical-report-content-download"
       >
         <MedicalReportContent

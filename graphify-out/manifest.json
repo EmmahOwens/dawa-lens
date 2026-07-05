@@ -665,8 +665,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1781365169.0715594,
-    "ast_hash": "12bb537b9f4f8a4316543f6e9a923b2c",
+    "mtime": 1783229344.0365975,
+    "ast_hash": "a6c2caf0beaaaf006861bb1d89a6ce19",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -705,8 +705,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1782015118.4717007,
-    "ast_hash": "5b31a455510e0b44f5eb092aa2e748a0",
+    "mtime": 1783229317.1126127,
+    "ast_hash": "964a3ded98590a907fc0e3981b20d385",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -720,8 +720,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/FeatureSlideshow.tsx": {
-    "mtime": 1780833594.6936557,
-    "ast_hash": "77f8ce55efe48f2d12a1ff206524086c",
+    "mtime": 1783229357.2585592,
+    "ast_hash": "de9569b037432ba860dd8380d6226c3d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/IntelligencePanel.tsx": {
@@ -735,8 +735,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MessageRenderer.tsx": {
-    "mtime": 1780741811.7631629,
-    "ast_hash": "183f322f3a84ebfef2b5b2cc90f80d56",
+    "mtime": 1783229284.6201608,
+    "ast_hash": "90bf16a5519b58732c99bb836582215f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/NavLink.tsx": {
@@ -1170,8 +1170,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1780569607.3506777,
-    "ast_hash": "41cc8ec0a866afaba39e47a7c3307fbc",
+    "mtime": 1783229109.3038328,
+    "ast_hash": "5f56956261c152a02f659ad4ec278f15",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1285,8 +1285,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AddReminderPage.tsx": {
-    "mtime": 1781516212.6199577,
-    "ast_hash": "47dae87e87b0ca58efbff750627ad75e",
+    "mtime": 1783229249.7254395,
+    "ast_hash": "bd02f8a118813a1c87b66400a39167d6",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AuthPage.tsx": {
@@ -1295,8 +1295,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/Dashboard.tsx": {
-    "mtime": 1783010993.8149073,
-    "ast_hash": "c1befa8715537b07954e216c947c6963",
+    "mtime": 1783229384.7605371,
+    "ast_hash": "8ca35a54a909fc240e697575914a59d1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/FamilyHubPage.tsx": {
@@ -1345,8 +1345,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ReportPage.tsx": {
-    "mtime": 1782017807.9378881,
-    "ast_hash": "c01cfacd8ec0de230b5c620b301db33c",
+    "mtime": 1783229659.0713093,
+    "ast_hash": "eeeae8d667eb49a2ca2a24eacf8189f8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ResultsPage.tsx": {
@@ -1445,8 +1445,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1780921898.4014657,
-    "ast_hash": "9a8cd0af7ab3da55a49cdb235d3aaaf3",
+    "mtime": 1783229299.946326,
+    "ast_hash": "54dba0e04819dc1ad523fc6a05f1e65f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -1530,13 +1530,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/refillService.ts": {
-    "mtime": 1777106806.8971834,
-    "ast_hash": "8ad0ced3cba992d6a737a3d40ea132ef",
+    "mtime": 1783229056.5548496,
+    "ast_hash": "ff51a317228db9765e986d0ee9603d7d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/reminderService.ts": {
-    "mtime": 1781516163.9245362,
-    "ast_hash": "05d6c18512de222eff40e28d0bd6417d",
+    "mtime": 1783229094.4922514,
+    "ast_hash": "316adfabb46dda2c3aa0bb3d5aae07cc",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/visionService.ts": {
@@ -2942,6 +2942,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/vendor-CTCGauOJ.js": {
     "mtime": 1783011816.0226698,
     "ast_hash": "8fbdd4ff83f36d7b463aa97ed7473cc1",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedVaultPage.tsx": {
+    "mtime": 1783229037.338387,
+    "ast_hash": "7961c33248155f38d3ae35252c536872",
     "semantic_hash": ""
   }
 }
