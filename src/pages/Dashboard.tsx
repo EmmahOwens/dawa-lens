@@ -338,9 +338,7 @@ export default function Dashboard() {
               </div>
               <button
                 onClick={() =>
-                  navigate(
-                    `/medicine/${encodeURIComponent(status.medicineName)}`
-                  )
+                  navigate("/medvault")
                 }
                 className="bg-warning text-warning-foreground text-[10px] font-bold px-4 py-2 rounded-lg uppercase tracking-wider"
               >

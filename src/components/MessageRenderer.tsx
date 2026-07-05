@@ -16,6 +16,7 @@ import {
   PlusCircle,
   ExternalLink,
   LucideIcon,
+  Package,
 } from "@/lib/icons";
 
 /** Maps DawaGPT custom/alias routes to actual application page routes. */
@@ -46,6 +47,8 @@ const GPT_ROUTE_MAP: Record<string, string> = {
   "/profile": "/settings",
   "/scan": "/scan",
   "/scan-medicine": "/scan",
+  "/medvault": "/medvault",
+  "/med-vault": "/medvault",
 };
 
 /** Maps known internal routes to an icon for the link chip. */
@@ -61,6 +64,7 @@ const ROUTE_ICONS: Record<string, LucideIcon> = {
   "/report": FileText,
   "/settings": Settings,
   "/scan": ScanLine,
+  "/medvault": Package,
 };
 
 interface InternalLinkChipProps {
@@ -152,7 +156,8 @@ export default function MessageRenderer({ text, onNavigate, className }: Message
                 "/settings",
                 "/scan",
                 "/search",
-                "/results"
+                "/results",
+                "/medvault"
               ];
               
               if (validRoutes.includes(resolvedRoute)) {

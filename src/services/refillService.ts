@@ -1,11 +1,15 @@
 import { Medicine, Reminder } from "../contexts/AppContext";
 
+export const LOW_STOCK_THRESHOLD = 5;     // Days: amber warning
+export const CRITICAL_STOCK_THRESHOLD = 2; // Days: red critical alert
+
 export interface RefillStatus {
   medicineId: string;
   medicineName: string;
   daysRemaining: number;
   currentQuantity: number;
-  isLow: boolean;
+  isLow: boolean;    // true if <= CRITICAL_STOCK_THRESHOLD (red)
+  isWarning: boolean; // true if <= LOW_STOCK_THRESHOLD but > critical (amber)
 }
 
 /**
@@ -54,7 +58,8 @@ export function calculateRefillStatus(
     medicineName: name,
     daysRemaining,
     currentQuantity,
-    isLow: daysRemaining <= 5
+    isLow: daysRemaining <= CRITICAL_STOCK_THRESHOLD,
+    isWarning: daysRemaining > CRITICAL_STOCK_THRESHOLD && daysRemaining <= LOW_STOCK_THRESHOLD,
   };
 }
 

@@ -6,6 +6,7 @@ import { NativeAlarm, AlarmNotification } from "@/plugins/nativeAlarm";
 import { notify } from "@/lib/notifications";
 import { Capacitor } from "@capacitor/core";
 import { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
+import { calculateRefillStatus, CRITICAL_STOCK_THRESHOLD } from "@/services/refillService";
 import {
   addDays,
   isAfter,
@@ -481,6 +482,68 @@ const stringToHash = (str: string): number => {
   return Math.abs(hash);
 };
 
+/**
+ * Schedules a one-time native push notification for each medicine that is
+ * critically low (≤ CRITICAL_STOCK_THRESHOLD days remaining).
+ * Deduped per medicine per day via localStorage so it doesn't spam on every
+ * foreground resume.
+ */
+export const scheduleRefillNotifications = async (
+  medicines: Medicine[],
+  reminders: Reminder[]
+): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    const perm = await LocalNotifications.checkPermissions();
+    if (perm.display !== "granted") return;
+
+    // Ensure the refill alert channel exists on Android
+    if (Capacitor.getPlatform() === "android") {
+      await LocalNotifications.createChannel({
+        id: "dawa_refill_alerts",
+        name: "Med Vault Refill Alerts",
+        description: "Notifies you when medicine stock is critically low",
+        importance: 4, // High
+        vibration: true,
+        sound: "default",
+      });
+    }
+
+    const todayKey = new Date().toDateString();
+    const notifications: LocalNotificationSchema[] = [];
+
+    for (const med of medicines) {
+      const status = calculateRefillStatus(med, reminders);
+      if (!status) continue;
+      if (status.daysRemaining <= 0 || status.daysRemaining > CRITICAL_STOCK_THRESHOLD) continue;
+
+      // Dedupe: only fire once per medicine per calendar day
+      const sentKey = `medvault_refill_notif_${med.id}_${todayKey}`;
+      const alreadySent = localStorage.getItem(sentKey);
+      if (alreadySent) continue;
+
+      notifications.push({
+        title: `⚠️ Refill Soon: ${med.name}`,
+        body: `Only ~${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} of ${med.name} left (${status.currentQuantity} ${med.unit || "units"}). Open Med Vault to refill.`,
+        id: stringToHash(med.id + "low_stock" + todayKey),
+        schedule: { at: new Date(Date.now() + 3000), allowWhileIdle: true }, // fire after 3s
+        channelId: "dawa_refill_alerts",
+        sound: "default",
+        extra: { type: "low_stock", medicineId: med.id, route: "/medvault" },
+      });
+
+      localStorage.setItem(sentKey, "1");
+    }
+
+    if (notifications.length > 0) {
+      await LocalNotifications.schedule({ notifications });
+    }
+  } catch (err) {
+    console.warn("[reminderService] Failed to schedule refill notifications:", err);
+  }
+};
+
 export const scheduleReminders = async (
   reminders: Reminder[],
   doseLogs: DoseLog[],
@@ -492,6 +555,11 @@ export const scheduleReminders = async (
     const perm = await LocalNotifications.checkPermissions();
     if (perm.display !== "granted") {
       await LocalNotifications.requestPermissions();
+    }
+
+    // Schedule low-stock refill notifications for Med Vault
+    if (medicines && medicines.length > 0) {
+      await scheduleRefillNotifications(medicines, reminders);
     }
 
     const activeReminders = reminders.filter((r) => r.enabled);

@@ -108,10 +108,29 @@ export const generateDawaGPTResponse = async (
   };
 };
 
-/**
- * Primary conversational path — uses backend Groq LLM with full system context.
- * Returns an optional `action` field that callers should dispatch to AppContext.
- */
+const getMedVaultSystemContext = (medicines: Medicine[], reminders: Reminder[]): string => {
+  const trackedMeds = medicines.filter(m => m.currentQuantity !== undefined);
+  if (trackedMeds.length === 0) {
+    return "Med Vault (Pill Stock Tracker) Status: No medicine stocks are currently tracked. Explain that they can track pill counts by setting a quantity on any medicine. Recommend they open [Med Vault](/medvault).";
+  }
+
+  const stockLines = trackedMeds.map(m => {
+    const qty = m.currentQuantity ?? 0;
+    const unit = m.unit || "tablets";
+    const medReminders = reminders.filter(r => r.medicineId === m.id && r.enabled);
+    let dailyDose = 0;
+    for (const r of medReminders) {
+      const dosesPerDay = r.time.split(",").length;
+      dailyDose += (m.dosagePerDose || 1) * dosesPerDay;
+    }
+    const daysRemaining = dailyDose > 0 ? Math.floor(qty / dailyDose) : null;
+    const daysStr = daysRemaining !== null ? `~${daysRemaining} days left` : "no active reminders";
+    return `- ${m.name} (ID: ${m.id}): ${qty} ${unit} remaining (${daysStr}, dosage/dose: ${m.dosagePerDose || 1} ${unit})`;
+  });
+
+  return `Med Vault (Pill Stock Tracker) Status:\n${stockLines.join("\n")}\n\nInstructions for DawaGPT:\n1. If a medicine has <= 2 days of supply left, proactively alert the user about the low stock and recommend refilling soon.\n2. Recommend the user to open [Med Vault](/medvault) (using exactly that markdown link format) to manage their stock.\n3. If the user asks to refill a medicine (e.g. "I refilled my Coartem to 30 pills"), reply to confirm and append an action block. The action type is UPDATE_MEDICINE and payload is { id: "medicine_id", currentQuantity: new_quantity }.`;
+};
+
 /**
  * Primary conversational path — uses backend Groq LLM with full system context.
  * Returns an optional `action` field that callers should dispatch to AppContext.
@@ -128,8 +147,18 @@ export const chatWithDawaGPT = async (
   selectedPatientId: string | null = null
 ): Promise<ChatMessage> => {
   try {
+    const lastUserIdx = messages.map(m => m.role).lastIndexOf("user");
+    let enrichedMessages = [...messages];
+    if (lastUserIdx !== -1) {
+      const context = getMedVaultSystemContext(medicines, reminders);
+      enrichedMessages[lastUserIdx] = {
+        ...messages[lastUserIdx],
+        text: `${messages[lastUserIdx].text}\n\n[SYSTEM CONTEXT]\n${context}\n[END SYSTEM CONTEXT]`
+      };
+    }
+
     const response = await aiApi.chat({
-      messages,
+      messages: enrichedMessages,
       medicines,
       userProfile,
       doseLogs: doseLogs.slice(0, 20),
@@ -181,8 +210,18 @@ export const chatWithDawaGPTStream = async (
   onChunk: (text: string) => void
 ): Promise<ChatMessage> => {
   try {
+    const lastUserIdx = messages.map(m => m.role).lastIndexOf("user");
+    let enrichedMessages = [...messages];
+    if (lastUserIdx !== -1) {
+      const context = getMedVaultSystemContext(medicines, reminders);
+      enrichedMessages[lastUserIdx] = {
+        ...messages[lastUserIdx],
+        text: `${messages[lastUserIdx].text}\n\n[SYSTEM CONTEXT]\n${context}\n[END SYSTEM CONTEXT]`
+      };
+    }
+
     const stream = await aiApi.chatStream({
-      messages,
+      messages: enrichedMessages,
       medicines,
       userProfile,
       doseLogs: doseLogs.slice(0, 20),

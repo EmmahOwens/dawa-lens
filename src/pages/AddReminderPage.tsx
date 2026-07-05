@@ -60,7 +60,7 @@ export default function AddReminderPage() {
   const location = useLocation();
   const state = location.state as LocationState | null;
 
-  const { addReminder, updateReminder, addMedicine, medicines, reminders, userProfile } = useApp();
+  const { addReminder, updateReminder, addMedicine, updateMedicine, medicines, reminders, userProfile } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -96,6 +96,12 @@ export default function AddReminderPage() {
   const [icon, setIcon] = useState(state?.icon || "pill");
   const [isSaving, setIsSaving] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+
+  // Med Vault stock tracking fields
+  const [stockQty, setStockQty] = useState("");        // current pills on hand
+  const [stockPerDose, setStockPerDose] = useState("1"); // pills per dose
+  const [stockUnit, setStockUnit] = useState("tablets");  // unit type
+  const [stockTotal, setStockTotal] = useState("");      // full pack size
 
   const toggleDay = (day: number) => {
     setRepeatDays(prev => 
@@ -174,16 +180,40 @@ export default function AddReminderPage() {
       // patient even if selectedPatientId doesn't match (e.g., navigated from FamilyHub).
       if (!finalMedId && medicineName.trim()) {
         try {
+          const stockFields: Record<string, unknown> = {};
+          const parsedQty = parseFloat(stockQty);
+          if (!isNaN(parsedQty) && parsedQty > 0) {
+            stockFields.currentQuantity = parsedQty;
+            stockFields.totalQuantity = parseFloat(stockTotal) || parsedQty;
+            stockFields.dosagePerDose = parseFloat(stockPerDose) || 1;
+            stockFields.unit = stockUnit;
+          }
           const newMed = await addMedicine({
             name: medicineName.trim(),
             dosage: dose.trim(),
             icon: icon,
             color: color,
+            ...stockFields,
           }, contextPatientId);
           finalMedId = newMed.id;
         } catch (e) {
           console.warn("Could not auto-add medicine to cabinet:", e);
           // Continue anyway, reminder will just be unlinked
+        }
+      } else if (finalMedId) {
+        // Update existing medicine's stock fields if user provided them
+        const parsedQty = parseFloat(stockQty);
+        if (!isNaN(parsedQty) && parsedQty > 0) {
+          try {
+            await updateMedicine(finalMedId, {
+              currentQuantity: parsedQty,
+              totalQuantity: parseFloat(stockTotal) || parsedQty,
+              dosagePerDose: parseFloat(stockPerDose) || 1,
+              unit: stockUnit,
+            });
+          } catch (e) {
+            console.warn("Could not update medicine stock:", e);
+          }
         }
       }
 
@@ -592,6 +622,83 @@ export default function AddReminderPage() {
               </motion.div>
             )}
           </div>
+        </motion.section>
+        
+        {/* Stock Tracking (Med Vault) Section */}
+        <motion.section
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.35 }}
+          className="premium-card space-y-6"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-1 h-4 bg-primary rounded-full" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Stock Tracking (Med Vault)</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="stockQty" className="text-xs font-bold text-muted-foreground ml-1">
+                Total pills/units you have right now
+              </Label>
+              <Input
+                id="stockQty"
+                type="number"
+                inputMode="numeric"
+                value={stockQty}
+                onChange={(e) => setStockQty(e.target.value)}
+                placeholder="Leave blank if not tracking stock"
+                className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="stockPerDose" className="text-xs font-bold text-muted-foreground ml-1">
+                Pills/units per dose
+              </Label>
+              <Input
+                id="stockPerDose"
+                type="number"
+                inputMode="numeric"
+                value={stockPerDose}
+                onChange={(e) => setStockPerDose(e.target.value)}
+                placeholder="e.g. 1"
+                className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-muted-foreground ml-1">Unit</Label>
+              <Select value={stockUnit} onValueChange={setStockUnit}>
+                <SelectTrigger className="h-12 rounded-xl border-border/50 bg-muted/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {["tablets", "capsules", "ml", "puffs", "drops", "units"].map(u => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="stockTotal" className="text-xs font-bold text-muted-foreground ml-1">
+                Total when full (original pack size)
+              </Label>
+              <Input
+                id="stockTotal"
+                type="number"
+                inputMode="numeric"
+                value={stockTotal}
+                onChange={(e) => setStockTotal(e.target.value)}
+                placeholder="e.g. 30"
+                className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground italic ml-1">
+            Setting a stock count enables Med Vault tracking, which automatically reduces stock as you take doses.
+          </p>
         </motion.section>
 
         {/* Notes Section */}

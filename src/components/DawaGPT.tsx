@@ -12,15 +12,18 @@ import { usePatientScope } from "@/hooks/usePatientScope";
 import { calculateVitalitySummary } from "@/lib/vitalityUtils";
 import MessageRenderer from "@/components/MessageRenderer";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
+import { calculateRefillStatus } from "@/services/refillService";
 
 const SAMPLE_PROMPTS = [
   "Does Panadol interact with Ibuprofen?",
+  "How many days of meds do I have left?",
   "Add a medicine reminder for 8:00 AM...",
   "Is it safe to take my pills with milk?",
   "Log my morning dose of Metformin...",
+  "Open my Med Vault",
+  "Refill my Metformin stock to 30",
   "What are the side effects of Amoxicillin?",
   "I'm feeling dizzy after taking my medicine...",
-  "Can you help me build a healthy routine?"
 ];
 
 export default function DawaGPT() {
@@ -224,10 +227,22 @@ export default function DawaGPT() {
   const getSmartFallbacks = () => {
     const fallbacks: string[] = [];
 
+    // 0. Check for critically low stock in Med Vault (daysRemaining <= 2)
+    if (medicines && reminders) {
+      const lowMeds = medicines.filter(m => {
+        const status = calculateRefillStatus(m, reminders);
+        return status && status.isLow;
+      });
+      if (lowMeds.length > 0) {
+        fallbacks.push(`Refill my ${lowMeds[0].name}`);
+        fallbacks.push("How many days of meds do I have left?");
+      }
+    }
+
     // 1. Check for due reminders
     if (reminders && reminders.length > 0) {
       const nextReminder = reminders.find(r => r.enabled);
-      if (nextReminder) {
+      if (nextReminder && !fallbacks.includes(`Log ${nextReminder.medicineName} as taken`)) {
         fallbacks.push(`Log ${nextReminder.medicineName} as taken`);
       }
     }
@@ -235,17 +250,21 @@ export default function DawaGPT() {
     // 2. Check for medicines
     if (activeMedicines && activeMedicines.length > 0) {
       const firstMed = activeMedicines[0];
-      fallbacks.push(`When should I take ${firstMed.name}?`);
-      fallbacks.push(`Does ${firstMed.name} have side effects?`);
+      if (fallbacks.length < 3) {
+        fallbacks.push(`When should I take ${firstMed.name}?`);
+      }
+      if (fallbacks.length < 3) {
+        fallbacks.push(`Does ${firstMed.name} have side effects?`);
+      }
     }
 
     // 3. Default generic ones
     if (fallbacks.length < 3) {
       const generic = [
+        "Open my Med Vault",
         "What are my reminders?",
         "Add a new medicine",
         "Is Matooke safe with my meds?",
-        "I'm feeling a bit sick"
       ];
       while (fallbacks.length < 3 && generic.length > 0) {
         const item = generic.shift();

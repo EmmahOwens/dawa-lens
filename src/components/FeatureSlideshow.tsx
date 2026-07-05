@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
-import { Camera, Users, Heart, FileText, History, Plane, Sparkles, Lightbulb, ArrowRight } from "@/lib/icons";
+import { Camera, Users, Heart, FileText, History, Plane, Sparkles, Lightbulb, ArrowRight, Package } from "@/lib/icons";
 import { aiApi } from "@/services/api";
 
 interface SlideItem {
@@ -18,6 +18,7 @@ const SLIDES: SlideItem[] = [
   { id: "scan", icon: Camera, label: "Quick Scan", to: "/scan", color: "from-blue-600 to-blue-400", description: "Identify pills instantly with Vision AI Recognition", type: "feature" },
   { id: "tip1", icon: Lightbulb, label: "Health Tip", color: "from-amber-500 to-orange-400", description: "Taking meds with water instead of juice improves absorption", type: "tip" },
   { id: "family", icon: Users, label: "Family Hub", to: "/family", color: "from-emerald-600 to-teal-400", description: "Keep track of your loved ones' health in one place", type: "feature" },
+  { id: "medvault", icon: Package, label: "Med Vault", to: "/medvault", color: "from-teal-600 to-cyan-400", description: "Track your pill stock — know exactly when to refill", type: "feature" },
   { id: "wellness", icon: Heart, label: "Wellness Tracker", to: "/wellness", color: "from-rose-600 to-pink-400", description: "Log your mood and energy to see health patterns", type: "feature" },
   { id: "tip2", icon: Sparkles, label: "Did you know?", color: "from-indigo-600 to-violet-400", description: "Consistency is key. 12 days streak improves recovery odds by 40%", type: "tip" },
 ];

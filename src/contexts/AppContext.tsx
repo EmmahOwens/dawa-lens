@@ -840,13 +840,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           m.id === medicine.id ? { ...m, currentQuantity: newQuantity } : m
         );
 
-        // Optional: Trigger refill toast if low
-        if (newQuantity <= medicine.dosagePerDose * 5) {
+        // Trigger refill toast when critically low (≤ 2 days of doses)
+        if (newQuantity <= medicine.dosagePerDose * 2) {
           toast({
-            title: t("reminders.low_stock_warning"),
-            description: `${medicine.name}: ${newQuantity} ${
-              medicine.unit || "units"
-            } remaining.`,
+            title: `⚠️ Refill Soon — ${medicine.name}`,
+            description: `Only ${newQuantity} ${medicine.unit || "units"} left. Open Med Vault to refill.`,
             variant: "destructive",
           });
         }
