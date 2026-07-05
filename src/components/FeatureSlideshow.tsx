@@ -93,7 +93,7 @@ export function FeatureSlideshow() {
           exit={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           className={`relative w-full p-6 sm:p-8 flex flex-col min-h-[16rem] sm:min-h-[14rem] justify-between cursor-grab active:cursor-grabbing bg-gradient-to-br ${current.color} text-white`}
-          onClick={() => current.to && navigate(current.to)}
+          onTap={() => current.to && navigate(current.to)}
         >
           {/* Background Decoration */}
           <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />

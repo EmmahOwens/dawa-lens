@@ -516,7 +516,7 @@ export const scheduleRefillNotifications = async (
     for (const med of medicines) {
       const status = calculateRefillStatus(med, reminders);
       if (!status) continue;
-      if (status.daysRemaining <= 0 || status.daysRemaining > CRITICAL_STOCK_THRESHOLD) continue;
+      if (status.daysRemaining === null || status.daysRemaining <= 0 || status.daysRemaining > CRITICAL_STOCK_THRESHOLD) continue;
 
       // Dedupe: only fire once per medicine per calendar day
       const sentKey = `medvault_refill_notif_${med.id}_${todayKey}`;

@@ -20,7 +20,8 @@ const en = {
       history: "History",
       safety: "Safety",
       settings: "Settings",
-      remind: "Remind"
+      remind: "Remind",
+      medvault: "Med Vault"
     },
     dashboard: {
       title: "Dawa Lens",

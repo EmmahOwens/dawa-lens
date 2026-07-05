@@ -332,7 +332,11 @@ export default function Dashboard() {
                     {status.medicineName}
                   </p>
                   <p className="text-[10px] font-bold text-warning uppercase tracking-wider">
-                    {status.daysRemaining} days remaining
+                    {status.currentQuantity === 0
+                      ? "Out of Stock"
+                      : status.daysRemaining !== null
+                      ? `${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} remaining`
+                      : `Low stock (${status.currentQuantity} left)`}
                   </p>
                 </div>
               </div>

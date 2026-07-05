@@ -427,10 +427,10 @@ export default function MedVaultPage() {
     0
   );
   const criticalCount = tracked.filter(
-    ({ status }) => status && status.daysRemaining <= 2
+    ({ status }) => status && status.isLow
   ).length;
   const warningCount = tracked.filter(
-    ({ status }) => status && status.daysRemaining > 2 && status.daysRemaining <= 5
+    ({ status }) => status && status.isWarning
   ).length;
 
   const handleRefillSave = async (
@@ -587,14 +587,22 @@ export default function MedVaultPage() {
                   {/* Critical first, then warning, then OK */}
                   {[...tracked]
                     .sort((a, b) => {
-                      const da = a.status?.daysRemaining ?? 999;
-                      const db = b.status?.daysRemaining ?? 999;
-                      return da - db;
+                      const getOrder = (item: typeof a) => {
+                        if ((item.medicine.currentQuantity ?? 0) === 0) return 0;
+                        if (item.status?.isLow) return 1;
+                        if (item.status?.isWarning) return 2;
+                        return 3;
+                      };
+                      const orderA = getOrder(a);
+                      const orderB = getOrder(b);
+                      if (orderA !== orderB) return orderA - orderB;
+                      // Sub-sort by quantity ascending
+                      return (a.medicine.currentQuantity ?? 0) - (b.medicine.currentQuantity ?? 0);
                     })
                     .map(({ medicine, status }) => {
                       const days = status?.daysRemaining ?? null;
-                      const isCritical = days !== null && days <= 2;
-                      const isWarn = days !== null && days > 2 && days <= 5;
+                      const isCritical = status?.isLow ?? false;
+                      const isWarn = status?.isWarning ?? false;
                       const isOut = (medicine.currentQuantity ?? 0) === 0;
                       return (
                         <StockCard

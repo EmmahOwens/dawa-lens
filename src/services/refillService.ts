@@ -6,7 +6,7 @@ export const CRITICAL_STOCK_THRESHOLD = 2; // Days: red critical alert
 export interface RefillStatus {
   medicineId: string;
   medicineName: string;
-  daysRemaining: number;
+  daysRemaining: number | null;
   currentQuantity: number;
   isLow: boolean;    // true if <= CRITICAL_STOCK_THRESHOLD (red)
   isWarning: boolean; // true if <= LOW_STOCK_THRESHOLD but > critical (amber)
@@ -22,44 +22,49 @@ export function calculateRefillStatus(
 ): RefillStatus | null {
   const { id, name, currentQuantity, dosagePerDose } = medicine;
   
-  if (currentQuantity === undefined || !dosagePerDose) return null;
+  if (currentQuantity === undefined) return null;
 
   // Find all enabled reminders for this medicine
   const medReminders = reminders.filter(r => r.medicineId === id && r.enabled);
-  if (medReminders.length === 0) return null;
 
   // Calculate daily dose sum
   let dailyDoseTotal = 0;
-  for (const rem of medReminders) {
-    if (rem.repeatSchedule === "daily") {
-      dailyDoseTotal += dosagePerDose;
-    } else if (rem.repeatSchedule === "custom") {
-      const timesPerDay = rem.time.split(",").length;
-      if (rem.repeatDays && rem.repeatDays.length > 0) {
-        dailyDoseTotal += (dosagePerDose * timesPerDay * rem.repeatDays.length) / 7;
+  if (medReminders.length > 0) {
+    const doseVal = dosagePerDose || 1;
+    for (const rem of medReminders) {
+      if (rem.repeatSchedule === "daily") {
+        dailyDoseTotal += doseVal;
+      } else if (rem.repeatSchedule === "custom") {
+        const timesPerDay = rem.time.split(",").length;
+        if (rem.repeatDays && rem.repeatDays.length > 0) {
+          dailyDoseTotal += (doseVal * timesPerDay * rem.repeatDays.length) / 7;
+        } else {
+          dailyDoseTotal += (doseVal * timesPerDay);
+        }
+      } else if (rem.repeatSchedule === "weekly" && rem.repeatDays) {
+        // Average daily dose for weekly schedule
+        dailyDoseTotal += (doseVal * rem.repeatDays.length) / 7;
       } else {
-        dailyDoseTotal += (dosagePerDose * timesPerDay);
+        // Fallback for other schedules
+        dailyDoseTotal += doseVal;
       }
-    } else if (rem.repeatSchedule === "weekly" && rem.repeatDays) {
-      // Average daily dose for weekly schedule
-      dailyDoseTotal += (dosagePerDose * rem.repeatDays.length) / 7;
-    } else {
-      // Fallback for other schedules
-      dailyDoseTotal += dosagePerDose;
     }
   }
 
-  if (dailyDoseTotal === 0) return null;
+  const daysRemaining = dailyDoseTotal > 0 ? Math.floor(currentQuantity / dailyDoseTotal) : null;
+  const isOutOfStock = currentQuantity === 0;
 
-  const daysRemaining = Math.floor(currentQuantity / dailyDoseTotal);
+  // Status flags based on remaining stock numbers OR days remaining
+  const isLow = isOutOfStock || (daysRemaining !== null && daysRemaining <= CRITICAL_STOCK_THRESHOLD) || (currentQuantity <= 5);
+  const isWarning = !isLow && ((daysRemaining !== null && daysRemaining <= LOW_STOCK_THRESHOLD) || (currentQuantity <= 10));
 
   return {
     medicineId: id,
     medicineName: name,
     daysRemaining,
     currentQuantity,
-    isLow: daysRemaining <= CRITICAL_STOCK_THRESHOLD,
-    isWarning: daysRemaining > CRITICAL_STOCK_THRESHOLD && daysRemaining <= LOW_STOCK_THRESHOLD,
+    isLow,
+    isWarning,
   };
 }
 
