@@ -20,7 +20,7 @@ const en = {
       history: "History",
       safety: "Safety",
       settings: "Settings",
-      remind: "Remind",
+      remind: "Reminder",
       medvault: "Med Vault"
     },
     dashboard: {
