@@ -614,7 +614,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate("/medications")}
-            className="col-span-1 rounded-[1.5rem] p-4 h-[95px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-indigo-500/8 to-purple-600/12 dark:from-indigo-950/30 dark:to-purple-900/25 border-indigo-500/20 hover:border-indigo-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-1 rounded-[1.5rem] p-4 h-[160px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-indigo-500/8 to-purple-600/12 dark:from-indigo-950/30 dark:to-purple-900/25 border-indigo-500/20 hover:border-indigo-400/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -bottom-5 -right-5 w-20 h-20 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none" />
             <div className="flex items-center justify-between">
