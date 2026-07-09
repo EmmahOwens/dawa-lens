@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { LocalNotifications, ActionPerformed } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "@/contexts/AppContext";
-import { registerNotificationActions } from "@/services/reminderService";
+import { registerNotificationActions, migrateNotificationChannels } from "@/services/reminderService";
 import { toast } from "sonner";
 import { addMinutes } from "date-fns";
 
@@ -13,6 +13,9 @@ export const NotificationHandler = () => {
     if (!Capacitor.isNativePlatform()) return;
 
     const setupNotifications = async () => {
+      // One-time migration: delete old silent channels and let v2 ones take over.
+      // Safe to call every launch — guarded internally by a localStorage flag.
+      await migrateNotificationChannels();
       await registerNotificationActions();
 
       // Handle notification received while app is in foreground
@@ -92,7 +95,7 @@ export const NotificationHandler = () => {
                   id: snoozeId,
                   // allowWhileIdle so the snooze fires even in Doze/offline mode
                   schedule: { at: snoozeTime, allowWhileIdle: true },
-                  channelId: 'dawa_reminders',
+                  channelId: 'dawa_reminders_v2',
                   sound: 'default',
                   actionTypeId: 'MEDICINE_REMINDER',
                   extra: notification.extra

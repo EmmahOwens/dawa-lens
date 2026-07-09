@@ -6,6 +6,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
@@ -108,12 +110,18 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
 
         // Create channel on Android O+ (idempotent — safe to call every time)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val audioAttributes = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build()
             val channel = NotificationChannel(
                 AlarmReceiver.CHANNEL_ID,
                 "Medicine Reminders",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Notifications for medicine reminder alarms"
+                setSound(notifSound, audioAttributes)
             }
             nm.createNotificationChannel(channel)
         }
@@ -129,6 +137,7 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
         )
 
         val doseLabel = if (dose.isNotEmpty()) " ($dose)" else ""
+        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val notification = NotificationCompat.Builder(applicationContext, AlarmReceiver.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle("Missed Dose")
@@ -136,6 +145,7 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pi)
             .setAutoCancel(true)
+            .setSound(defaultSoundUri)
             .build()
 
         // Offset by 10 000 so IDs never collide with AlarmReceiver notifications

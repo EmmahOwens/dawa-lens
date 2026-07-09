@@ -24,6 +24,47 @@ import {
 } from "date-fns";
 import { toDate } from "@/lib/utils";
 
+// ─── Notification channel IDs ────────────────────────────────────────────────
+// v2 channels carry the correct default sound. The old channels were created
+// without an explicit sound URI and Android locks those settings permanently.
+// Bumping the ID forces Android to create a fresh channel with sound enabled.
+const CHANNEL_OWNER       = "dawa_owner_v2";
+const CHANNEL_REFILL      = "dawa_refill_alerts_v2";
+const CHANNEL_REMINDERS   = "dawa_reminders_v2";   // used by registerNotificationActions
+const patientChannelId    = (id: string) => `dawa_patient_v2_${id}`;
+
+/** Legacy IDs that may already be cached on existing devices (silent — no sound). */
+const LEGACY_CHANNELS = [
+  "dawa_owner",
+  "dawa_refill_alerts",
+  "dawa_reminders",
+];
+const MIGRATION_KEY = "dawa_notif_channels_v2_migrated";
+
+/**
+ * Run once on app launch (after permissions are confirmed).
+ * Deletes the old silent channels so Android creates fresh v2 ones with sound.
+ * Guarded by a localStorage flag — a no-op after the first run.
+ */
+export const migrateNotificationChannels = async (): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  if (localStorage.getItem(MIGRATION_KEY)) return;
+
+  try {
+    // Delete every legacy channel. deleteChannel is a no-op if the ID doesn't exist.
+    for (const id of LEGACY_CHANNELS) {
+      await LocalNotifications.deleteChannel({ id });
+    }
+    // Also clean up any patient-scoped legacy channels that may exist.
+    // We can't enumerate them, but their absence is harmless — Android will
+    // just not show them in settings until the next schedule() call creates v2 ones.
+    localStorage.setItem(MIGRATION_KEY, "1");
+    console.log("[reminderService] Notification channel migration to v2 complete.");
+  } catch (err) {
+    console.warn("[reminderService] Channel migration failed (non-fatal):", err);
+  }
+};
+
 /**
  * Computes how many minutes off today's most recent taken dose was from its scheduled time.
  * Returns 0 if no log exists today or deviation > 240 min (4-hour cap).
@@ -208,8 +249,8 @@ export const checkMissedDoses = async (
                       } dose scheduled for ${timeStr.trim()}. Please stay on track!`,
                   id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
                   channelId: r.patientId
-                    ? `dawa_patient_${r.patientId}`
-                    : "dawa_owner",
+                    ? patientChannelId(r.patientId)
+                    : CHANNEL_OWNER,
                   sound: "default",
                   extra: {
                     type: "missed_alert",
@@ -431,7 +472,7 @@ export const registerNotificationActions = async () => {
   try {
     if (Capacitor.getPlatform() === "android") {
       await LocalNotifications.createChannel({
-        id: "dawa_reminders",
+        id: CHANNEL_REMINDERS,
         name: "Medicine Reminders",
         description: "Notifications for medicine reminders",
         importance: 5, // High importance
@@ -501,7 +542,7 @@ export const scheduleRefillNotifications = async (
     // Ensure the refill alert channel exists on Android
     if (Capacitor.getPlatform() === "android") {
       await LocalNotifications.createChannel({
-        id: "dawa_refill_alerts",
+        id: CHANNEL_REFILL,
         name: "Med Vault Refill Alerts",
         description: "Notifies you when medicine stock is critically low",
         importance: 4, // High
@@ -528,7 +569,7 @@ export const scheduleRefillNotifications = async (
         body: `Only ~${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} of ${med.name} left (${status.currentQuantity} ${med.unit || "units"}). Open Med Vault to refill.`,
         id: stringToHash(med.id + "low_stock" + todayKey),
         schedule: { at: new Date(Date.now() + 3000), allowWhileIdle: true }, // fire after 3s
-        channelId: "dawa_refill_alerts",
+        channelId: CHANNEL_REFILL,
         sound: "default",
         extra: { type: "low_stock", medicineId: med.id, route: "/medvault" },
       });
@@ -568,7 +609,7 @@ export const scheduleReminders = async (
     if (Capacitor.getPlatform() === "android") {
       // Always ensure the owner channel exists
       await LocalNotifications.createChannel({
-        id: "dawa_owner",
+        id: CHANNEL_OWNER,
         name: "My Reminders",
         description: "Your personal medication reminders",
         importance: 5,
@@ -577,8 +618,7 @@ export const scheduleReminders = async (
         sound: "default",
       });
 
-      // Create one channel per managed patient so the user can control
-      // notification behaviour independently for each person in Android Settings
+      // Create one channel per managed patient
       const seenPatientIds = new Set<string>();
       for (const r of activeReminders) {
         if (r.patientId && !seenPatientIds.has(r.patientId)) {
@@ -587,7 +627,7 @@ export const scheduleReminders = async (
             ? `${r.patientName}'s Reminders`
             : "Family Member Reminders";
           await LocalNotifications.createChannel({
-            id: `dawa_patient_${r.patientId}`,
+            id: patientChannelId(r.patientId),
             name: channelName,
             description: `Medication reminders for ${
               r.patientName ?? "a family member"
@@ -638,8 +678,8 @@ export const scheduleReminders = async (
             id: stringToHash(r.id + "refill"),
             schedule: { at: next, allowWhileIdle: true },
             channelId: r.patientId
-              ? `dawa_patient_${r.patientId}`
-              : "dawa_owner",
+              ? patientChannelId(r.patientId)
+              : CHANNEL_OWNER,
             sound: "default",
             extra: { type: "refill", medicineId: r.medicineId },
           });
@@ -667,7 +707,7 @@ export const scheduleReminders = async (
           // allowWhileIdle: fires even when Android is in Doze/battery-saver mode.
           // This is the key flag that makes notifications work fully offline.
           schedule: { at: next, allowWhileIdle: true },
-          channelId: r.patientId ? `dawa_patient_${r.patientId}` : "dawa_owner",
+          channelId: r.patientId ? patientChannelId(r.patientId) : CHANNEL_OWNER,
           sound: "default",
           actionTypeId: "MEDICINE_REMINDER",
           extra: {
