@@ -1,5 +1,6 @@
 import { format, subDays, isSameDay } from "date-fns";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { 
   Activity, 
   User, 
@@ -302,8 +303,17 @@ export const MedicalReportContent = ({
               <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 opacity-70">Executive Summary</p>
               <div className="text-lg font-bold leading-relaxed relative z-10">
                 <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
                   components={{
                     p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    table: ({ children }) => (
+                      <div className="overflow-x-auto my-3 rounded-xl border border-white/20">
+                        <table className="w-full text-sm text-left border-collapse text-white">{children}</table>
+                      </div>
+                    ),
+                    thead: ({ children }) => <thead className="bg-white/10">{children}</thead>,
+                    th: ({ children }) => <th className="px-3 py-2 border-b border-white/20 font-bold whitespace-nowrap">{children}</th>,
+                    td: ({ children }) => <td className="px-3 py-2 border-b border-white/10">{children}</td>,
                   }}
                 >
                   {insights.summary}
@@ -318,10 +328,19 @@ export const MedicalReportContent = ({
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Dosage Patterns</p>
                   <div className="text-sm text-slate-700 font-semibold leading-relaxed">
                     <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
                       components={{
                         p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
                         ul: ({ children }) => <ul className="list-disc ml-4 mb-2 space-y-1">{children}</ul>,
                         li: ({ children }) => <li className="text-[12px]">{children}</li>,
+                        table: ({ children }) => (
+                          <div className="overflow-x-auto my-3 rounded-xl border border-slate-200">
+                            <table className="w-full text-xs text-left border-collapse">{children}</table>
+                          </div>
+                        ),
+                        thead: ({ children }) => <thead className="bg-slate-100">{children}</thead>,
+                        th: ({ children }) => <th className="px-3 py-2 border-b border-slate-200 font-bold whitespace-nowrap">{children}</th>,
+                        td: ({ children }) => <td className="px-3 py-2 border-b border-slate-100">{children}</td>,
                       }}
                     >
                       {insights.dosagePatterns}
@@ -334,8 +353,17 @@ export const MedicalReportContent = ({
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Lifestyle & Environment</p>
                   <div className="text-sm text-slate-700 font-semibold leading-relaxed italic">
                     <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
                       components={{
                         p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        table: ({ children }) => (
+                          <div className="overflow-x-auto my-3 rounded-xl border border-slate-200">
+                            <table className="w-full text-xs text-left border-collapse">{children}</table>
+                          </div>
+                        ),
+                        thead: ({ children }) => <thead className="bg-slate-100">{children}</thead>,
+                        th: ({ children }) => <th className="px-3 py-2 border-b border-slate-200 font-bold whitespace-nowrap">{children}</th>,
+                        td: ({ children }) => <td className="px-3 py-2 border-b border-slate-100">{children}</td>,
                       }}
                     >
                       {insights.lifestyleAnalysis}
@@ -358,6 +386,7 @@ export const MedicalReportContent = ({
                       </div>
                       <div className="text-xs font-bold text-slate-700 leading-relaxed">
                         <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
                           components={{
                             p: ({ children }) => <span className="m-0">{children}</span>,
                           }}
@@ -384,6 +413,7 @@ export const MedicalReportContent = ({
                       </div>
                       <div className="text-sm font-black text-slate-900 leading-tight">
                         <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
                           components={{
                             p: ({ children }) => <span className="m-0">{children}</span>,
                           }}

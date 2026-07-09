@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useApp } from "@/contexts/AppContext";
 import {
   FileText,
@@ -719,10 +720,19 @@ export default function ReportPage() {
                 <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10 relative">
                   <div className="text-sm font-semibold text-foreground leading-relaxed prose prose-sm max-w-none">
                     <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
                       components={{
                         p: ({ children }) => (
                           <p className="mb-2 last:mb-0">{children}</p>
                         ),
+                        table: ({ children }) => (
+                          <div className="overflow-x-auto my-3 rounded-xl border border-primary/20">
+                            <table className="w-full text-xs text-left border-collapse">{children}</table>
+                          </div>
+                        ),
+                        thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
+                        th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap">{children}</th>,
+                        td: ({ children }) => <td className="px-3 py-2 border-b border-border/30">{children}</td>,
                       }}
                     >
                       {insights.summary}
@@ -734,10 +744,19 @@ export default function ReportPage() {
                         Dosage Patterns:
                       </strong>
                       <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({ children }) => (
                             <span className="ml-1">{children}</span>
                           ),
+                          table: ({ children }) => (
+                            <div className="overflow-x-auto my-3 rounded-xl border border-primary/20">
+                              <table className="w-full text-xs text-left border-collapse">{children}</table>
+                            </div>
+                          ),
+                          thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
+                          th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap">{children}</th>,
+                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/30">{children}</td>,
                         }}
                       >
                         {insights.dosagePatterns}
@@ -750,10 +769,19 @@ export default function ReportPage() {
                         Lifestyle & Symptoms:
                       </strong>
                       <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({ children }) => (
                             <span className="ml-1">{children}</span>
                           ),
+                          table: ({ children }) => (
+                            <div className="overflow-x-auto my-3 rounded-xl border border-primary/20">
+                              <table className="w-full text-xs text-left border-collapse">{children}</table>
+                            </div>
+                          ),
+                          thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
+                          th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap">{children}</th>,
+                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/30">{children}</td>,
                         }}
                       >
                         {insights.lifestyleAnalysis}
@@ -777,6 +805,7 @@ export default function ReportPage() {
                         </div>
                         <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm max-w-none">
                           <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
                             components={{
                               p: ({ children }) => (
                                 <p className="m-0">{children}</p>
@@ -803,6 +832,7 @@ export default function ReportPage() {
                       >
                         <div className="text-xs font-semibold text-warning-foreground leading-snug pr-4 prose prose-sm max-w-none">
                           <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
                             components={{
                               p: ({ children }) => (
                                 <p className="m-0">{children}</p>
