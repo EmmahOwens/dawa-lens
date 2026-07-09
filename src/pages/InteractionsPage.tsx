@@ -533,7 +533,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                       {interaction.severity === 'high' ? (
                         <Badge variant="destructive" className="ml-2 px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.severe")}</Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-warning/10 text-warning-foreground px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.warning")}</Badge>
+                        <Badge variant="secondary" className="bg-warning/10 text-amber-800 dark:text-amber-300 px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.warning")}</Badge>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed font-medium mb-3">
@@ -737,7 +737,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                       {interaction.severity === 'high' ? (
                         <Badge variant="destructive" className="ml-2 px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.severe")}</Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-warning/10 text-warning-foreground px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.warning")}</Badge>
+                        <Badge variant="secondary" className="bg-warning/10 text-amber-800 dark:text-amber-300 px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.warning")}</Badge>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed font-medium mb-3">
@@ -852,7 +852,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                   onClick={() => toggleFactor(factor)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
                     active 
-                      ? "bg-warning/10 border-warning/40 text-warning-foreground dark:text-warning" 
+                      ? "bg-warning/10 border-warning/40 text-amber-800 dark:text-amber-300" 
                       : "bg-card border-border/30 text-muted-foreground hover:border-warning/20"
                   }`}
                 >

@@ -830,7 +830,7 @@ export default function ReportPage() {
                         key={idx}
                         className="flex items-center justify-between p-3.5 rounded-xl bg-warning/5 border border-warning/20"
                       >
-                        <div className="text-xs font-semibold text-warning-foreground leading-snug pr-4 prose prose-sm max-w-none">
+                        <div className="text-xs font-semibold text-amber-900 dark:text-amber-200 leading-snug pr-4 prose prose-sm max-w-none">
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{

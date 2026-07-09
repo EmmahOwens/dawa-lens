@@ -157,7 +157,7 @@ export default function Dashboard() {
       label: "Safety Check",
       to: "/interactions",
       color:
-        "bg-warning/10 border-warning/20 text-warning-foreground dark:text-warning",
+        "bg-warning/10 border-warning/20 text-amber-800 dark:text-amber-300",
     },
     {
       icon: Bell,
