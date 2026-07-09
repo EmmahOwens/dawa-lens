@@ -244,12 +244,8 @@ export default function AuthPage() {
       {/* Left Panel: Branding (Desktop Only) */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary/5">
         <div className="absolute inset-0 z-0">
-          <img 
-            src="/home/iammbayo/.gemini/antigravity/brain/97f9dd79-ac67-44c0-8f1a-673027f40f95/auth_sidebar_bg_1776767750838.png" 
-            alt="Branding Background" 
-            className="w-full h-full object-cover opacity-60 mix-blend-multiply"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent" />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 20% 50%, hsl(var(--primary) / 0.15) 0%, transparent 60%)" }} />
         </div>
         
         <div className="relative z-10 p-16 flex flex-col justify-between w-full">
