@@ -626,25 +626,7 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* ── WIDE TILE: Safety Check (col-span-2) ── */}
-          <motion.button
-            variants={item}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate(quickActions[4].to)}
-            className="col-span-2 rounded-[1.75rem] p-4 h-[80px] sm:h-auto flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-amber-500/8 via-orange-500/10 to-amber-500/8 dark:from-amber-950/25 dark:to-orange-950/20 border-amber-500/20 hover:border-amber-500/40 hover-wiggle transition-all duration-200"
-          >
-            <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="p-2.5 bg-amber-500/15 border border-amber-500/20 rounded-xl text-amber-700 dark:text-amber-400 wiggle-icon shrink-0">
-              <ShieldAlert size={18} />
-            </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="font-extrabold text-sm leading-tight text-foreground">Safety Check</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-amber-700/80 dark:text-amber-400/80 mt-0.5">Rx Interactions</p>
-            </div>
-            <span className="text-[9px] font-black px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/25 text-amber-800 dark:text-amber-300 uppercase tracking-widest shrink-0">Check</span>
-          </motion.button>
-
-          {/* ── METRIC TILE: Medicines Saved (small) ── */}
+          {/* ── METRIC TILE: Medications Saved (small) ── */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.96 }}
@@ -664,12 +646,30 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* ── WIDE METRIC TILE: Reports with sparkline (col-span-3) ── */}
+          {/* ── WIDE TILE: Safety Check (col-span-2, sm:col-span-3) ── */}
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => navigate(quickActions[4].to)}
+            className="col-span-2 sm:col-span-3 rounded-[1.75rem] p-4 h-[80px] sm:h-auto flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-amber-500/8 via-orange-500/10 to-amber-500/8 dark:from-amber-950/25 dark:to-orange-950/20 border-amber-500/20 hover:border-amber-500/40 hover-wiggle transition-all duration-200"
+          >
+            <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="p-2.5 bg-amber-500/15 border border-amber-500/20 rounded-xl text-amber-700 dark:text-amber-400 wiggle-icon shrink-0">
+              <ShieldAlert size={18} />
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="font-extrabold text-sm leading-tight text-foreground">Safety Check</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-amber-700/80 dark:text-amber-400/80 mt-0.5">Rx Interactions</p>
+            </div>
+            <span className="text-[9px] font-black px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/25 text-amber-800 dark:text-amber-300 uppercase tracking-widest shrink-0">Check</span>
+          </motion.button>
+
+          {/* ── WIDE METRIC TILE: Reports with sparkline (col-span-2, sm:col-span-4) ── */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[7].to)}
-            className="col-span-1 sm:col-span-3 rounded-[1.75rem] p-4 h-[95px] sm:h-auto flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-indigo-500/8 via-purple-500/8 to-indigo-500/8 dark:from-indigo-950/25 dark:to-purple-900/20 border-indigo-500/20 hover:border-indigo-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-2 sm:col-span-4 rounded-[1.75rem] p-4 h-[95px] sm:h-auto flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-indigo-500/8 via-purple-500/8 to-indigo-500/8 dark:from-indigo-950/25 dark:to-purple-900/20 border-indigo-500/20 hover:border-indigo-400/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -left-6 -bottom-6 w-28 h-28 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="p-2.5 bg-indigo-500/15 border border-indigo-500/20 rounded-xl text-indigo-600 dark:text-indigo-400 wiggle-icon shrink-0">

@@ -705,8 +705,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1783229317.1126127,
-    "ast_hash": "964a3ded98590a907fc0e3981b20d385",
+    "mtime": 1783615278.1313384,
+    "ast_hash": "80329efbede7ef57e8a6e404ccc20514",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -735,8 +735,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MessageRenderer.tsx": {
-    "mtime": 1783229284.6201608,
-    "ast_hash": "90bf16a5519b58732c99bb836582215f",
+    "mtime": 1783615289.0094953,
+    "ast_hash": "250ae5fc55726256a1763abcf8a54dc2",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/NavLink.tsx": {
@@ -1290,13 +1290,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AuthPage.tsx": {
-    "mtime": 1780315669.95323,
-    "ast_hash": "9b147e35286fe479f3b919b3488b1390",
+    "mtime": 1783615741.1022353,
+    "ast_hash": "540bfc3292a1444bd8100b6fb8b9c7b9",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/Dashboard.tsx": {
-    "mtime": 1783614913.5363617,
-    "ast_hash": "2c4e6a7bf7f2c2b227bf2e29cf2309c1",
+    "mtime": 1783617406.2007763,
+    "ast_hash": "19f087c42b8f77d1039428d5909346d6",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/FamilyHubPage.tsx": {
