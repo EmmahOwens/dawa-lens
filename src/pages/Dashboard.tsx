@@ -556,7 +556,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate("/reminders")}
-            className="col-span-1 sm:row-span-2 rounded-[1.75rem] p-4 h-[160px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-violet-500/8 to-fuchsia-600/12 dark:from-violet-950/30 dark:to-fuchsia-900/25 border-violet-500/20 hover:border-violet-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-1 row-span-2 rounded-[1.75rem] p-4 h-full flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-violet-500/8 to-fuchsia-600/12 dark:from-violet-950/30 dark:to-fuchsia-900/25 border-violet-500/20 hover:border-violet-400/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -top-8 -right-8 w-28 h-28 bg-violet-500/15 rounded-full blur-2xl pointer-events-none" />
 
@@ -609,23 +609,6 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* ── SMALL TILE: Travel ── */}
-          <motion.button
-            variants={item}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => navigate(quickActions[3].to)}
-            className="col-span-1 rounded-[1.5rem] p-4 h-[95px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-sky-500/8 to-blue-600/12 dark:from-sky-950/30 dark:to-blue-900/25 border-sky-500/20 hover:border-sky-400/40 hover-wiggle transition-all duration-200"
-          >
-            <div className="absolute -bottom-5 -right-5 w-20 h-20 bg-sky-500/15 rounded-full blur-2xl pointer-events-none" />
-            <div className="p-2 bg-sky-500/15 border border-sky-500/20 rounded-xl text-sky-500 animate-float-plane wiggle-icon">
-              <Plane size={15} />
-            </div>
-            <div>
-              <p className="text-sm font-black text-foreground leading-tight">Travel</p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-sky-600/80 dark:text-sky-400/80 mt-0.5">Companion</p>
-            </div>
-          </motion.button>
-
           {/* ── METRIC TILE: Medications Saved (small) ── */}
           <motion.button
             variants={item}
@@ -643,6 +626,23 @@ export default function Dashboard() {
             <div>
               <p className="text-sm font-black text-foreground leading-tight">Medications</p>
               <p className="text-[9px] font-bold uppercase tracking-wider text-indigo-600/80 dark:text-indigo-400/80 mt-0.5">Cabinet</p>
+            </div>
+          </motion.button>
+
+          {/* ── SMALL TILE: Travel ── */}
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.96 }}
+            onClick={() => navigate(quickActions[3].to)}
+            className="col-span-2 sm:col-span-1 rounded-[1.5rem] p-4 h-[95px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-sky-500/8 to-blue-600/12 dark:from-sky-950/30 dark:to-blue-900/25 border-sky-500/20 hover:border-sky-400/40 hover-wiggle transition-all duration-200"
+          >
+            <div className="absolute -bottom-5 -right-5 w-20 h-20 bg-sky-500/15 rounded-full blur-2xl pointer-events-none" />
+            <div className="p-2 bg-sky-500/15 border border-sky-500/20 rounded-xl text-sky-500 animate-float-plane wiggle-icon">
+              <Plane size={15} />
+            </div>
+            <div>
+              <p className="text-sm font-black text-foreground leading-tight">Travel</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-sky-600/80 dark:text-sky-400/80 mt-0.5">Companion</p>
             </div>
           </motion.button>
 
