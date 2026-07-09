@@ -337,19 +337,19 @@ export default function DawaGPT() {
                       animate={{ opacity: 1, y: 0 }}
                       className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                     >
-                      <div className={`flex gap-4 max-w-[90%] md:max-w-[85%] ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                      <div className={`flex gap-4 max-w-[90%] md:max-w-[85%] min-w-0 ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                         {m.role === "assistant" && (
                           <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-1">
                             <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
                           </div>
                         )}
-                        <div className={`px-1 py-1 ${
+                        <div className={`min-w-0 px-1 py-1 ${
                           m.role === "user"
                             ? "bg-[#f0f0f0] dark:bg-[#2a2a2a] text-foreground rounded-2xl px-5 py-3 shadow-sm"
                             : "text-foreground leading-relaxed"
                         }`}>
                           {m.role === "assistant" ? (
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <div className="prose prose-sm dark:prose-invert max-w-none min-w-0">
                               <MessageRenderer
                                 text={m.text}
                                 onNavigate={() => setIsOpen(false)}
