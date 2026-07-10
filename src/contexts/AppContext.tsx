@@ -1427,6 +1427,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString(),
       });
       const docRef = await addDoc(collection(db, "patients"), patientData);
+      const newPatient = { ...patientData, id: docRef.id } as Patient;
+      setPatients((prev) => [...prev, newPatient]);
     }
   };
 
@@ -1440,6 +1442,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!currentUserId) throw new Error("Not logged in");
       const docRef = doc(db, "patients", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
+      setPatients((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+      );
     }
   };
 
@@ -1483,6 +1488,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         console.error("Failed to cascade delete wellness logs:", e);
       }
+
+      setPatients((prev) => prev.filter((p) => p.id !== id));
 
       const docRef = doc(db, "patients", id);
       await deleteDoc(docRef);
