@@ -13,6 +13,7 @@ import { calculateVitalitySummary } from "@/lib/vitalityUtils";
 import MessageRenderer from "@/components/MessageRenderer";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { calculateRefillStatus } from "@/services/refillService";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 
 const SAMPLE_PROMPTS = [
   "Does Panadol interact with Ibuprofen?",
@@ -87,6 +88,7 @@ export default function DawaGPT() {
 
   const { toast } = useToast();
   const { dispatchAIAction } = useAIActions();
+  const panelSwipe = useSwipeToDismiss(() => setIsOpen(false), 60);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -315,8 +317,19 @@ export default function DawaGPT() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.03, bottom: 0.25 }}
+              onDragEnd={(_e, info) => {
+                if (info.offset.y > 60) setIsOpen(false);
+              }}
               className="bg-[#f9f8f6] dark:bg-[#1a1a1a] w-full md:max-w-3xl h-[85vh] md:h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl border border-border/40 flex flex-col pointer-events-auto overflow-hidden"
+              {...panelSwipe}
             >
+              {/* Drag handle — only visible on mobile where the panel slides up */}
+              <div className="md:hidden flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 transition-colors" />
+              </div>
               {/* Header */}
               <div className="px-6 py-4 border-b border-border/30 bg-background/50 backdrop-blur-md flex items-center justify-between">
                 <div className="flex items-center gap-3">
