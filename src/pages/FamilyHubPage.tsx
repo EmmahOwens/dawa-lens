@@ -24,6 +24,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
 import { toDate } from "@/lib/utils";
+import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import {
   Sheet,
   SheetContent,
@@ -78,6 +79,7 @@ export default function FamilyHubPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
+  const sheetSwipe = useSwipeToDismiss(() => setIsSheetOpen(false));
 
   const [formData, setFormData] = useState({
     name: "",
@@ -719,7 +721,9 @@ export default function FamilyHubPage() {
         <SheetContent
           side="bottom"
           className="rounded-t-[3rem] p-8 h-[85vh] border-none shadow-2xl overflow-y-auto"
+          {...sheetSwipe}
         >
+          <div className="w-12 h-1.5 rounded-full bg-muted/70 hover:bg-muted mx-auto -mt-2 mb-8 transition-colors" />
           <SheetHeader className="text-left mb-8">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-4">
               {editingPatient ? <Edit2 size={24} /> : <UserPlus size={24} />}
