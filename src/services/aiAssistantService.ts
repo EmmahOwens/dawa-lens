@@ -34,6 +34,14 @@ const FAQ_RESPONSE_MAP: Record<string, string> = {
   "can i eat nsenene?": "Yes! Nsenene (grasshoppers) are a great source of protein and healthy fats. Just ensure they are prepared hygienically.",
   "what are the side effects?": "Common side effects for medications in this category include dizziness and nausea. If you experience severe rashes or palpitations, seek medical help immediately.",
   "how do i take this?": "Always follow the dosage on your pill bottle or prescription. For acute cases, consistency is key to recovery.",
+  "oli otya": "Oli otya! I am doing well, ssebo/nyabo. How can Dawa-GPT help you with your health or medicines today?",
+  "wasuze otya": "Wasuze otya! I hope you slept well and are ready for a healthy day. How can I help you today?",
+  "osiibye otya": "Osiibye otya! How has your day been? Let's check your evening medication adherence.",
+  "gyebaleko": "Gyebaleko! Thank you. I am here to help you manage your health. How are you feeling today?",
+  "webale": "Kale! You're welcome. Let me know if you need help with reminders or safety checks.",
+  "eddagala": "Eddagala (medicine) is key to your health. Do you want to check details for one of your medicines, or set up a reminder?",
+  "omutwe gunnuma": "Bambi (oh dear), sorry about the headache. Ensure you are hydrated, and check if you have a pain reliever reminder like Panadol (Paracetamol) set up.",
+  "olubuto lunnuma": "Bambi, sorry about the stomach ache. Have you taken any medication recently, or eaten? Some medicines should be taken with food (like Matooke or Posho) to prevent stomach irritation.",
 };
 
 export const generateDawaGPTResponse = async (
