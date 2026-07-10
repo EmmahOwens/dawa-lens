@@ -137,6 +137,8 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
 
   return (
     <motion.div
+      role="dialog"
+      aria-modal="true"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

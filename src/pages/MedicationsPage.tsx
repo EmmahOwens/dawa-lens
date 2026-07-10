@@ -155,6 +155,8 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
 
   return createPortal(
     <motion.div
+      role="dialog"
+      aria-modal="true"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

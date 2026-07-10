@@ -13,3 +13,9 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: () => {},
   }),
 });
+
+// Mock HTMLMediaElement functions that jsdom does not support
+window.HTMLMediaElement.prototype.play = () => Promise.resolve();
+window.HTMLMediaElement.prototype.pause = () => {};
+window.HTMLMediaElement.prototype.load = () => {};
+

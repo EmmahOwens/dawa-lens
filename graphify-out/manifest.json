@@ -665,8 +665,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
-    "mtime": 1780318671.930109,
-    "ast_hash": "ab3dfc59fc97e7074a991aa336ca2ec9",
+    "mtime": 1783705917.8219104,
+    "ast_hash": "4e9cdcd20adab1611b9c12cdc4e3b262",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AppShell.tsx": {
@@ -700,8 +700,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1783703279.4913316,
-    "ast_hash": "b9fe36d701f996b4e47954c6591c67d6",
+    "mtime": 1783705900.0197763,
+    "ast_hash": "40d7f09b8411367ba6fba4b96efc2f19",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -770,8 +770,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PermissionRequest.tsx": {
-    "mtime": 1778881360.8491025,
-    "ast_hash": "655f6cfb0fc0d1e04de7602e0f7b4b06",
+    "mtime": 1783705906.1478224,
+    "ast_hash": "c177e52b4b6a8ae4c27d29e900747823",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PremiumLoader.tsx": {
@@ -790,8 +790,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/StoreUpdateModal.tsx": {
-    "mtime": 1779028936.5902483,
-    "ast_hash": "92c6b7f0f7ea9d120886969759cb6c56",
+    "mtime": 1783705912.1388674,
+    "ast_hash": "5c78e8817de1a4bf13a11c52be89a655",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/SuccessState.tsx": {
@@ -1295,8 +1295,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/FamilyHubPage.tsx": {
-    "mtime": 1780567876.3655424,
-    "ast_hash": "9d343cb0e2685707c8f1f6a8c2e11f7b",
+    "mtime": 1783705060.7601829,
+    "ast_hash": "9569c894665bf53d51cfb33ff1903385",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/HistoryPage.test.tsx": {
@@ -1560,8 +1560,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/test/setup.ts": {
-    "mtime": 1774593986.5967324,
-    "ast_hash": "3ed816a7adf0e76610ce76bd32744ea0",
+    "mtime": 1783706039.392867,
+    "ast_hash": "0317ad5e6b7564f2e2e10a7ded0d1e6f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/types/api.ts": {
@@ -2780,13 +2780,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedVaultPage.tsx": {
-    "mtime": 1783237289.264402,
-    "ast_hash": "6b4380a7a07b2be169b80a0a787976f9",
+    "mtime": 1783705708.9084527,
+    "ast_hash": "7c69ad00f48f420635cfdba8b9bb0bd1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicationsPage.tsx": {
-    "mtime": 1783237334.2883866,
-    "ast_hash": "d9639dbea729e5ec9534f049e7e9eeec",
+    "mtime": 1783705629.7399807,
+    "ast_hash": "ba12074cf24c1a6939fda46323d5f048",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/AddReminderPage-BWpJrsyI.js": {
@@ -2972,6 +2972,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/offlineQueue.ts": {
     "mtime": 1783657078.8107884,
     "ast_hash": "511602df20fb32fb702d7b76c3d555bc",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useSwipeToDismiss.ts": {
+    "mtime": 1783704979.7602324,
+    "ast_hash": "1c4ba82ac89592d39f48fecb067fbf17",
     "semantic_hash": ""
   }
 }

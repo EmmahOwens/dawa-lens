@@ -313,6 +313,8 @@ export default function DawaGPT() {
         {isOpen && (
           <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center pointer-events-none p-0 md:p-6 bg-background/10 md:bg-background/30 backdrop-blur-[2px]">
             <motion.div
+              role="dialog"
+              aria-modal="true"
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
