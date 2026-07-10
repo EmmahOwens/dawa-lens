@@ -563,7 +563,12 @@ export const isComplexTask = (text) => {
 
 const isLikelyActionRequest = (text) => {
   if (!text) return false;
-  return /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear)\s/i.test(text.toLowerCase());
+  const lower = text.toLowerCase();
+  // Direct action verbs (broad — catches "add", "log", "refill", "delete", etc.)
+  const directVerbs = /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear|refill|reset|enable|disable|snooze|mute)/i;
+  // Indirect / polite phrasing (e.g. "I need to log", "can you add", "help me set")
+  const indirectAction = /(i need|i want|i'd like|i would like|can you|could you|please|help me|let's|let us)\s.{0,30}(add|create|set|remind|log|record|track|update|delete|remove|refill|schedule|register)/i;
+  return directVerbs.test(lower) || indirectAction.test(lower);
 };
 
 /**
@@ -923,7 +928,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
 
     === PERSONALITY & TONE ===
     - VOICE: You are an empathetic health companion. Think of a knowledgeable, caring pharmacist or a friend in the medical field.
-    - DIALECT: Use standard English, but feel free to use subtle local flavor (e.g., "Kare", "Webale", "Well done", "How are you feeling today?") to build rapport.
+    - DIALECT: Use standard English, but feel free to use subtle local flavor (e.g., "Kale", "Webale", "Well done", "How are you feeling today?") to build rapport.
     - EMPATHY: If a user mentions pain, fatigue, symptoms, or difficulty with their meds, acknowledge it with warmth before providing assistance.
     - NATURAL FLOW: Use natural contractions (I've, you're, we'll). Avoid sounding like a robot.
     - NO DISCLAIMER OVERLOAD: You already have a UI disclaimer. Focus on being helpful.
@@ -940,11 +945,13 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - LOG_WELLNESS: { type: 'symptom' | 'food', data: { mood?: 1-5, energy?: 1-5, symptoms?: string[], meal?: string }, patientId? }
     - ADD_PATIENT: { name, age, gender, relation }
 
-    === RULES ===
-    1. BE AGENTIC: PERFORM ACTIONS IMMEDIATELY.
-    2. CONFIRMATION: Confirm actions in past tense ("I've added that for you.").
-    3. MEDICINE NAME FORMAT: Whenever you mention any medicine, ALWAYS write the brand name first, followed by the chemical (generic/active ingredient) name in brackets. Example: "Panadol (Paracetamol)", "Augmentin (Amoxicillin/Clavulanate)", "Flagyl (Metronidazole)". Never mention only a generic name without its brand name, and never omit the chemical name in brackets.
-    4. NAVIGATION LINKS (CRITICAL):
+    === MANDATORY AGENTIC RULES — READ BEFORE EVERY RESPONSE ===
+    1. PERFORM ACTIONS IMMEDIATELY: When the user asks you to add, update, delete, log, or refill ANYTHING — do it NOW by including a valid action object in your response. NEVER say "I can help you with that", "Would you like me to...", "I'll add that for you", or any future-tense phrasing. NEVER describe what you *would* do — just do it.
+    2. NEVER LIE ABOUT ACTIONS: You MUST ONLY confirm an action in past tense ("I've added...", "Done! I've logged...", "I've set a reminder...") if your response includes a valid, non-null action object with a populated type and payload. If you do not include an action object, you MUST NOT claim the action was performed. This is a CRITICAL rule — lying about performed actions is a system failure.
+    3. ALWAYS INCLUDE ACTION OBJECT: For ANY request involving: adding medicine, setting reminders, logging doses, logging wellness, updating or deleting anything — your response MUST include a populated 'action' field with a valid type (ADD_MEDICINE, ADD_REMINDER, LOG_DOSE, UPDATE_MEDICINE, UPDATE_REMINDER, REMOVE_MEDICINE, REMOVE_REMINDER, LOG_WELLNESS, ADD_PATIENT) and a complete payload. The action field MUST NEVER be null or omitted for such requests. Omitting the action when one was requested is a CRITICAL failure.
+    4. FIRST ATTEMPT SUCCESS: Execute actions on the user's FIRST request. Do not ask for confirmation unless critical data is genuinely missing (e.g., dose time not specified). If you have enough information to act, ACT.
+    5. MEDICINE NAME FORMAT: Whenever you mention any medicine, ALWAYS write the brand name first, followed by the chemical (generic/active ingredient) name in brackets. Example: "Panadol (Paracetamol)", "Augmentin (Amoxicillin/Clavulanate)", "Flagyl (Metronidazole)". Never mention only a generic name without its brand name, and never omit the chemical name in brackets.
+    6. NAVIGATION LINKS (CRITICAL):
        - You can and should include inline markdown links in your response to help the user navigate to other pages in the app.
        - Format internal links using custom, action-oriented, and context-aware labels based on the conversation (e.g. "Add first client", "Let's add a client", "Log medication", "Add a reminder", "View history").
        - Never use generic link texts like "click here" or raw path names.
@@ -962,8 +969,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
          - '/settings' or '/profile' (Settings / Profile page)
          - '/scan' or '/scan-medicine' (Scan Medicine page)
          - '/search' or '/medication-info' (Search / Medication Info page)
-    5. WELLNESS LOGGING: If the user mentions how they are feeling, their mood, energy level, or symptoms, proactively ask if they want to log it or log it immediately. When logging a symptom check-in, set type to 'symptom' and include mood (1-5), energy (1-5), and/or symptoms (array of strings, e.g. ["Headache", "Fatigue"]) in the data object. If the user mentions what they ate or logs a meal, set type to 'food' and include meal (string, e.g., "Matooke & G-nut sauce") in the data object. You can generate the aiReflection yourself inside data (with reflection, affirmation, and tip), or leave it to the server.
-    6. SUGGESTIONS (CRITICAL — READ CAREFULLY):
+    7. WELLNESS LOGGING: If the user mentions how they are feeling, their mood, energy level, or symptoms, proactively ask if they want to log it or log it immediately. When logging a symptom check-in, set type to 'symptom' and include mood (1-5), energy (1-5), and/or symptoms (array of strings, e.g. ["Headache", "Fatigue"]) in the data object. If the user mentions what they ate or logs a meal, set type to 'food' and include meal (string, e.g., "Matooke & G-nut sauce") in the data object. You can generate the aiReflection yourself inside data (with reflection, affirmation, and tip), or leave it to the server.
+    8. SUGGESTIONS (CRITICAL — READ CAREFULLY):
        - You MUST provide EXACTLY 3 short, context-aware follow-up suggestions in the 'suggestions' field.
        - Suggestions must be NATURAL CONTINUATIONS of the current conversation — what the user would logically ask or do NEXT based on YOUR response.
        - Suggestions must be from the USER's perspective (e.g., "Log my dose", NOT "You should log your dose").
@@ -990,9 +997,11 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     The metadata JSON MUST contain:
     - "suggestions": array of EXACTLY 3 short follow-up prompts relevant to your response
     - "source": always "Gemini"
-    - "action": null or an action object if you performed a system action
-    DO NOT omit the suggestions field. DO NOT leave it empty.` : `=== RESPONSE FORMAT ===
-    Respond in JSON: {"text":"...","suggestions":["s1","s2","s3"],"source":"Gemini","action":null}`}
+    - "action": CRITICAL — if you performed or are performing a system action (add, update, delete, log, etc.), this MUST be a fully populated action object with 'type' and 'payload'. Setting action to null when you discussed performing an action is a SYSTEM FAILURE. Only use null for purely informational responses where no system mutation occurred.
+    DO NOT omit the suggestions field. DO NOT leave it empty.
+    EXAMPLE of correct action in metadata: {"suggestions":["View my reminders","Add another medicine","Check interactions"],"source":"Gemini","action":{"type":"ADD_REMINDER","payload":{"medicineName":"Panadol","dose":"500mg","time":"08:00","repeatSchedule":"daily"},"confirmMessage":"Reminder set for Panadol at 8:00 AM daily."}}` : `=== RESPONSE FORMAT ===
+    Respond in JSON: {"text":"...","suggestions":["s1","s2","s3"],"source":"Gemini","action":null}
+    CRITICAL: If you performed or are performing a system action, 'action' MUST be a fully populated object (not null). Only use null for purely informational responses.`}
   `;
 
   const dynamicContextBlock = `

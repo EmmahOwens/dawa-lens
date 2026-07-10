@@ -204,7 +204,18 @@ export default function DawaGPT() {
 
       if (response.action) {
         await dispatchAIAction(response.action);
+      } else if (
+        response.text &&
+        /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved)\b/i.test(response.text)
+      ) {
+        // AI confirmed an action in past tense but returned no action object.
+        // This is a hallucination — log it so it can be tracked.
+        console.warn(
+          "[DawaGPT] ⚠️ AI claimed to perform an action but returned no action object. " +
+          "This is likely a model hallucination. Response text:", response.text.slice(0, 200)
+        );
       }
+
     } catch (e) {
       setMessages(prev => prev.map(msg => 
         msg.id === botId ? {
