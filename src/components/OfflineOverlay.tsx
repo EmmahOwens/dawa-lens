@@ -1,40 +1,51 @@
-import { useState, useEffect } from "react";
-import { Network } from "@capacitor/network";
+/**
+ * OfflineOverlay — Route-aware offline blocker.
+ *
+ * Shows a full-screen blocking overlay when the device has no internet
+ * connection. EXCEPTION: reminder routes (/reminders, /reminders/new) are
+ * always accessible offline because all reminder operations are handled
+ * locally first and synced to the cloud on reconnect.
+ */
+import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff, RefreshCw } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { Network } from "@capacitor/network";
+import { useState } from "react";
+
+/** Routes that are fully operational without internet. */
+const OFFLINE_ALLOWED_ROUTES = ["/reminders", "/reminders/new"];
 
 export default function OfflineOverlay() {
-  const [isOffline, setIsOffline] = useState(false);
+  const { isOnline } = useNetworkStatus();
+  const location = useLocation();
+  const [retrying, setRetrying] = useState(false);
 
-  useEffect(() => {
-    // Check initial status
-    const checkInitialStatus = async () => {
-      const status = await Network.getStatus();
-      setIsOffline(!status.connected);
-    };
-    checkInitialStatus();
-
-    // Listen for changes
-    const listener = Network.addListener("networkStatusChange", (status) => {
-      setIsOffline(!status.connected);
-    });
-
-    return () => {
-      listener.then(l => l.remove());
-    };
-  }, []);
+  // Do not block reminder routes — they operate fully offline.
+  const isExemptRoute = OFFLINE_ALLOWED_ROUTES.some(
+    (route) =>
+      location.pathname === route ||
+      location.pathname.startsWith(route + "/")
+  );
 
   const handleRetry = async () => {
-    const status = await Network.getStatus();
-    if (status.connected) {
-      setIsOffline(false);
+    setRetrying(true);
+    try {
+      const status = await Network.getStatus();
+      // If we're now connected, the useNetworkStatus hook will update isOnline
+      // automatically via the listener. This button is just a manual nudge.
+      if (!status.connected) {
+        // Still offline — nothing to do, let the listener handle it
+      }
+    } finally {
+      setRetrying(false);
     }
   };
 
   return (
     <AnimatePresence>
-      {isOffline && (
+      {!isOnline && !isExemptRoute && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -68,19 +79,25 @@ export default function OfflineOverlay() {
             <h2 className="mb-2 text-2xl font-bold tracking-tight text-foreground">
               Connection Lost
             </h2>
-            <p className="mb-8 text-sm leading-relaxed text-muted-foreground">
-              Oops! It looks like you're currently offline. Please check your internet connection to continue using Dawa Lens.
+            <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
+              This feature requires an internet connection. Your{" "}
+              <span className="font-semibold text-foreground">reminders</span>{" "}
+              are still accessible offline.
             </p>
 
             <Button
               onClick={handleRetry}
+              disabled={retrying}
               className="group w-full rounded-xl transition-all duration-300 active:scale-[0.98]"
               size="lg"
             >
-              <RefreshCw size={18} className="mr-2 transition-transform group-hover:rotate-180" />
+              <RefreshCw
+                size={18}
+                className={`mr-2 transition-transform ${retrying ? "animate-spin" : "group-hover:rotate-180"}`}
+              />
               Try Again
             </Button>
-            
+
             <p className="mt-4 text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold">
               Offline Mode Active
             </p>

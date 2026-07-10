@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound } from "@/lib/icons";
+import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound, WifiOff } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import { Bell } from "@/lib/icons";
 import PermissionRequest from "@/components/PermissionRequest";
 import { NativeService } from "@/services/nativeService";
 import { ImpactStyle } from "@capacitor/haptics";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 interface LocationState {
   // Pre-fill from scan/results
@@ -61,6 +62,7 @@ export default function AddReminderPage() {
   const state = location.state as LocationState | null;
 
   const { addReminder, updateReminder, addMedicine, updateMedicine, medicines, reminders, userProfile } = useApp();
+  const { isOnline } = useNetworkStatus();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -136,8 +138,9 @@ export default function AddReminderPage() {
       return;
     }
 
-    // Check notification permissions on native
-    if (Capacitor.isNativePlatform()) {
+    // Skip permission gate when offline — the reminder will be saved locally
+    // and notifications are scheduled on-device via NativeAlarm regardless.
+    if (Capacitor.isNativePlatform() && isOnline) {
       const perm = await LocalNotifications.checkPermissions();
       if (perm.display !== 'granted') {
         setShowPermissionModal(true);
@@ -294,9 +297,15 @@ export default function AddReminderPage() {
           <ArrowLeft size={16} /> {t("common.back")}
         </button>
         
-        <Badge variant="outline" className="rounded-lg bg-primary/5 text-primary border-primary/20">
-          <Info size={12} className="mr-1" /> Premium Experience
-        </Badge>
+        {!isOnline ? (
+          <Badge variant="outline" className="rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5">
+            <WifiOff size={11} /> Saving Locally
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="rounded-lg bg-primary/5 text-primary border-primary/20">
+            <Info size={12} className="mr-1" /> Premium Experience
+          </Badge>
+        )}
       </div>
 
       {/* Patient Context Banner — shown when scheduling for a family member / client */}
@@ -741,6 +750,8 @@ export default function AddReminderPage() {
                   ? "Saving Schedule..."
                   : isEditing
                   ? t("reminders.save_reminder", "Update Reminder")
+                  : !isOnline
+                  ? "Save Offline"
                   : t("reminders.save_reminder")}
               </span>
             </Button>

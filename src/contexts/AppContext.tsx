@@ -39,6 +39,13 @@ import { useTranslation } from "react-i18next";
 import { storage } from "../lib/storage";
 import { toDate } from "../lib/utils";
 import { RiveMoji } from "../components/rive/RiveMoji";
+import {
+  enqueueOp,
+  flushQueue,
+  clearQueue,
+  getPendingCount,
+} from "../services/offlineQueue";
+import { onNetworkChange, hasNetwork } from "../lib/appLifecycle";
 
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const CLOUD_CACHE_REMS_KEY = "dawa_cloud_cache_reminders";
@@ -160,6 +167,10 @@ type AppContextType = {
   currentUserId: string | null;
   selectedPatientId: string | null; // null = self
   isProfessionalMode: boolean;
+  /** Whether the device currently has a network connection. */
+  isOnline: boolean;
+  /** Number of reminder/dose operations pending sync to Firestore. */
+  pendingOfflineOps: number;
 
   addMedicine: (
     med: Omit<Medicine, "id" | "addedAt">,
@@ -268,6 +279,10 @@ function sanitizeFirestoreData(data: Record<string, unknown>) {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
+  const [isOnline, setIsOnline] = useState(() => hasNetwork());
+  const [pendingOfflineOps, setPendingOfflineOps] = useState(() =>
+    getPendingCount()
+  );
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
@@ -430,9 +445,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
     scheduleReminders(reminders, doseLogs, medicines);
   }, [reminders, doseLogs, medicines]);
 
+  // ─── Network status + offline queue flush ──────────────────────────────────
+  // Listen for connectivity changes. When the device comes back online, flush
+  // any reminder/dose ops that were queued while offline.
+  useEffect(() => {
+    const unsub = onNetworkChange(async (connected: boolean) => {
+      setIsOnline(connected);
+      if (connected && currentUserId && storageMode === "cloud") {
+        console.log("[AppContext] Connectivity restored — flushing offline queue…");
+        try {
+          const flushed = await flushQueue(db);
+          if (flushed > 0) {
+            setPendingOfflineOps(getPendingCount());
+            toast({
+              title: "Synced!",
+              description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
+            });
+          }
+        } catch (err) {
+          console.warn("[AppContext] Queue flush error:", err);
+        }
+      }
+    });
+    return unsub;
+  }, [currentUserId, storageMode]);
+
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
     setIsLoggedIn(true);
+    // Flush any ops that were queued while logged out / offline
+    if (hasNetwork()) {
+      flushQueue(db)
+        .then((n) => { if (n > 0) setPendingOfflineOps(getPendingCount()); })
+        .catch(console.warn);
+    }
   }, []);
 
   const logoutUser = useCallback(async () => {
@@ -441,6 +487,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Logout failed", err);
     }
+    // Clear the offline queue on logout — pending ops belong to this user
+    clearQueue();
+    setPendingOfflineOps(0);
     setCurrentUserId(null);
     setIsLoggedIn(false);
     setUserProfile(null);
@@ -750,25 +799,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (storageMode === "local") {
       newReminder = await localPersistence.reminders.create(rem);
       setReminders((p) => [...p, newReminder]);
-    } else {
-      if (!currentUserId) throw new Error("Not logged in");
+      return;
+    }
 
-      // Use Firestore directly for unique ID and persistence
-      // Use the explicit patientId from the caller if provided (e.g. from AddReminderPage),
-      // otherwise fall back to the global selectedPatientId context.
-      const effectivePatientId =
-        rem.patientId !== undefined ? rem.patientId : selectedPatientId;
+    if (!currentUserId) throw new Error("Not logged in");
+
+    const effectivePatientId =
+      rem.patientId !== undefined ? rem.patientId : selectedPatientId;
+    const createdAt = new Date().toISOString();
+
+    if (!isOnline) {
+      // ── Offline path: generate a local ID, persist + queue ──
+      const localId = `offline-rem-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
       const remData = sanitizeFirestoreData({
         ...rem,
         medicineId: rem.medicineId || null,
         userId: currentUserId,
         patientId: effectivePatientId || null,
-        createdAt: new Date().toISOString(),
+        createdAt,
       });
+      newReminder = { ...remData, id: localId } as Reminder;
 
-      const docRef = await addDoc(collection(db, "reminders"), remData);
-      newReminder = { ...remData, id: docRef.id } as Reminder;
+      // Persist locally for crash-survival
+      await localPersistence.reminders.create({ ...rem, id: localId, createdAt } as any);
+
+      // Optimistic UI update
+      setReminders((p) => [...p, newReminder]);
+      // Update local cache so scheduleReminders works immediately
+      storage.setItem(CLOUD_CACHE_REMS_KEY, [...reminders, newReminder]);
+
+      // Queue for Firestore sync on reconnect
+      enqueueOp({
+        type: "add-reminder",
+        collection: "reminders",
+        docId: localId,
+        data: remData,
+        userId: currentUserId,
+      });
+      setPendingOfflineOps(getPendingCount());
+      return;
     }
+
+    // ── Online path: write to Firestore directly ──
+    const remData = sanitizeFirestoreData({
+      ...rem,
+      medicineId: rem.medicineId || null,
+      userId: currentUserId,
+      patientId: effectivePatientId || null,
+      createdAt,
+    });
+    const docRef = await addDoc(collection(db, "reminders"), remData);
+    newReminder = { ...remData, id: docRef.id } as Reminder;
   };
 
   const updateReminder = async (id: string, updates: Partial<Reminder>) => {
@@ -777,20 +860,73 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReminders((p) =>
         p.map((r) => (r.id === id ? { ...r, ...updates } : r))
       );
-    } else {
-      const docRef = doc(db, "reminders", id);
-      await updateDoc(docRef, sanitizeFirestoreData(updates));
+      return;
     }
+
+    // Optimistic local state update regardless of connectivity
+    setReminders((p) =>
+      p.map((r) => (r.id === id ? { ...r, ...updates } : r))
+    );
+
+    if (!isOnline) {
+      // Persist to local cache so updates survive a crash/reload
+      const current = reminders.find((r) => r.id === id);
+      if (current) {
+        const updated = { ...current, ...updates };
+        await localPersistence.reminders.update(id, updates).catch(() => {});
+        storage.setItem(
+          CLOUD_CACHE_REMS_KEY,
+          reminders.map((r) => (r.id === id ? updated : r))
+        );
+      }
+      if (currentUserId) {
+        enqueueOp({
+          type: "update-reminder",
+          collection: "reminders",
+          docId: id,
+          data: sanitizeFirestoreData(updates),
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
+      }
+      return;
+    }
+
+    const docRef = doc(db, "reminders", id);
+    await updateDoc(docRef, sanitizeFirestoreData(updates));
   };
 
   const deleteReminder = async (id: string) => {
     if (storageMode === "local") {
       await localPersistence.reminders.remove(id);
       setReminders((p) => p.filter((r) => r.id !== id));
-    } else {
-      const docRef = doc(db, "reminders", id);
-      await deleteDoc(docRef);
+      return;
     }
+
+    // Optimistic local removal
+    setReminders((p) => p.filter((r) => r.id !== id));
+    storage.setItem(
+      CLOUD_CACHE_REMS_KEY,
+      reminders.filter((r) => r.id !== id)
+    );
+
+    if (!isOnline) {
+      // Remove from local cache and queue the Firestore delete
+      await localPersistence.reminders.remove(id).catch(() => {});
+      if (currentUserId) {
+        enqueueOp({
+          type: "delete-reminder",
+          collection: "reminders",
+          docId: id,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
+      }
+      return;
+    }
+
+    const docRef = doc(db, "reminders", id);
+    await deleteDoc(docRef);
   };
 
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
@@ -808,17 +944,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setDoseLogs((p) => [...p, newLog]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      // Derive patientId from the reminder's own patientId field (not selectedPatientId)
-      // so family member dose logs are always scoped correctly regardless of the
-      // currently viewed profile.
-      const logData = sanitizeFirestoreData({
-        ...log,
-        userId: currentUserId,
-        patientId: effectivePatientId,
-        actionTime: new Date().toISOString(),
-      });
-      const docRef = await addDoc(collection(db, "doseLogs"), logData);
-      newLog = { ...logData, id: docRef.id } as DoseLog;
+      const actionTime = new Date().toISOString();
+
+      if (!isOnline) {
+        // ── Offline path: generate a local ID, persist + queue ──
+        const localId = `offline-log-${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2, 9)}`;
+        const logData = sanitizeFirestoreData({
+          ...log,
+          userId: currentUserId,
+          patientId: effectivePatientId,
+          actionTime,
+        });
+        newLog = { ...logData, id: localId } as DoseLog;
+
+        // Persist locally
+        await localPersistence.doseLogs.create({
+          ...log,
+          patientId: effectivePatientId,
+          userId: currentUserId,
+        });
+
+        // Optimistic UI update
+        setDoseLogs((p) => [...p, newLog]);
+        storage.setItem(CLOUD_CACHE_LOGS_KEY, [...doseLogs, newLog]);
+
+        // Queue for Firestore sync
+        enqueueOp({
+          type: "add-dose-log",
+          collection: "doseLogs",
+          docId: localId,
+          data: logData,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
+      } else {
+        // ── Online path ──
+        const logData = sanitizeFirestoreData({
+          ...log,
+          userId: currentUserId,
+          patientId: effectivePatientId,
+          actionTime,
+        });
+        const docRef = await addDoc(collection(db, "doseLogs"), logData);
+        newLog = { ...logData, id: docRef.id } as DoseLog;
+      }
     }
 
     // 1. Update Medicine Inventory if taken
@@ -932,9 +1103,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
               await localPersistence.doseLogs.update(newLog.id, {
                 scheduledTime: newScheduledTime,
               });
-            } else {
+            } else if (isOnline) {
               const logDocRef = doc(db, "doseLogs", newLog.id);
               await updateDoc(logDocRef, { scheduledTime: newScheduledTime });
+            } else {
+              // Offline: queue the scheduledTime update
+              await localPersistence.doseLogs.update(newLog.id, {
+                scheduledTime: newScheduledTime,
+              }).catch(() => {});
+              if (currentUserId) {
+                enqueueOp({
+                  type: "update-dose-log",
+                  collection: "doseLogs",
+                  docId: newLog.id,
+                  data: { scheduledTime: newScheduledTime },
+                  userId: currentUserId,
+                });
+                setPendingOfflineOps(getPendingCount());
+              }
             }
 
             // Update local references for immediate UI consistency
@@ -1351,6 +1537,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLastSyncTimestamp(null);
     setIsLoggedIn(false);
     setCurrentUserId(null);
+    // Clear offline queue — all pending ops belong to the cleared user
+    clearQueue();
+    setPendingOfflineOps(0);
   }, [setIsProfessionalMode]);
 
   return (
@@ -1369,6 +1558,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         currentUserId,
         selectedPatientId,
         isProfessionalMode,
+        isOnline,
+        pendingOfflineOps,
         addMedicine,
         updateMedicine,
         deleteMedicine,

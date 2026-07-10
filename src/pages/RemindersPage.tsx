@@ -17,6 +17,7 @@ import {
   Tablets,
   UserRound,
   RefreshCw,
+  WifiOff,
 } from "@/lib/icons";
 import { useApp, Reminder } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
@@ -25,6 +26,7 @@ import { addMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -119,7 +121,8 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 export default function RemindersPage() {
   const navigate = useNavigate();
-  const { updateReminder, deleteReminder, isInitializing } = useApp();
+  const { updateReminder, deleteReminder, isInitializing, pendingOfflineOps } = useApp();
+  const { isOnline } = useNetworkStatus();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -233,6 +236,41 @@ export default function RemindersPage() {
             : resolvedPatient.name}
         </span>
       </motion.div>
+
+      {/* Offline Banner */}
+      <AnimatePresence>
+        {!isOnline && (
+          <motion.div
+            key="offline-banner"
+            initial={{ opacity: 0, y: -8, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -8, height: 0 }}
+            transition={{ duration: 0.25 }}
+            className="mb-4 overflow-hidden"
+          >
+            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/25">
+              <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center">
+                <WifiOff size={14} className="text-amber-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                  Offline mode
+                </p>
+                <p className="text-[10px] text-amber-600/70 dark:text-amber-400/70 leading-snug">
+                  {pendingOfflineOps > 0
+                    ? `${pendingOfflineOps} change${pendingOfflineOps !== 1 ? "s" : ""} will sync when you reconnect`
+                    : "Changes you make will sync when you reconnect"}
+                </p>
+              </div>
+              {pendingOfflineOps > 0 && (
+                <span className="flex-shrink-0 text-[10px] font-black bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full">
+                  {pendingOfflineOps} pending
+                </span>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Stats Row */}
       <motion.div
