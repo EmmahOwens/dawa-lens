@@ -93,7 +93,7 @@ export default function AddReminderPage() {
   const [repeat, setRepeat] = useState<"daily" | "weekly" | "once" | "custom">(
     state?.repeat || "daily"
   );
-  const [repeatDays, setRepeatDays] = useState<number[]>(state?.repeatDays || []);
+
   const [notes, setNotes] = useState(state?.notes || "");
   const [color, setColor] = useState(state?.color || "blue");
   const [icon, setIcon] = useState(state?.icon || "pill");
@@ -139,11 +139,7 @@ export default function AddReminderPage() {
     }
   }, [medicineId, medicines, prevMedicineId]);
 
-  const toggleDay = (day: number) => {
-    setRepeatDays(prev => 
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort()
-    );
-  };
+
 
   const distributeTimes = (startTime: string, freq: number) => {
     const [h, m] = startTime.split(":").map(Number);
@@ -278,7 +274,7 @@ export default function AddReminderPage() {
           dose: dose.trim(),
           time: times.join(","),
           repeatSchedule: repeat,
-          repeatDays: repeat === "custom" || repeat === "weekly" ? repeatDays : undefined,
+          repeatDays: undefined,
           notes: notes.trim() || undefined,
           enabled: state?.enabled !== undefined ? state.enabled : true,
           color,
@@ -300,7 +296,7 @@ export default function AddReminderPage() {
           dose: dose.trim(),
           time: times.join(","),
           repeatSchedule: repeat,
-          repeatDays: repeat === "custom" ? repeatDays : undefined,
+          repeatDays: undefined,
           notes: notes.trim() || undefined,
           enabled: true,
           color,
@@ -631,53 +627,32 @@ export default function AddReminderPage() {
               </div>
             </div>
 
-            {(repeat === "custom" || repeat === "weekly") && (
+            {repeat === "custom" && (
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 className="col-span-full space-y-4 pt-2"
               >
-                {repeat === "custom" && (
-                  <div className="space-y-3">
-                    <Label className="text-xs font-bold text-muted-foreground ml-1">Frequency (Times per day)</Label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5, 6].map((f) => (
-                        <button
-                          key={f}
-                          onClick={() => handleFrequencyChange(f)}
-                          className={`flex-1 h-10 rounded-xl text-xs font-bold transition-all border ${
-                            times.length === f
-                              ? "bg-primary border-primary text-primary-foreground shadow-md"
-                              : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
-                          }`}
-                        >
-                          {f}x
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground ml-1 italic">
-                      Example: 2 pills taken 3 times a day
-                    </p>
-                  </div>
-                )}
-
                 <div className="space-y-3">
-                  <Label className="text-xs font-bold text-muted-foreground ml-1">Repeat on Days</Label>
-                  <div className="flex justify-between gap-2">
-                    {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => (
+                  <Label className="text-xs font-bold text-muted-foreground ml-1">Frequency (Times per day)</Label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5, 6].map((f) => (
                       <button
-                        key={`${day}-${i}`}
-                        onClick={() => toggleDay(i)}
-                        className={`w-10 h-10 rounded-full text-xs font-bold transition-all border ${
-                          repeatDays.includes(i)
-                            ? "bg-primary border-primary text-primary-foreground shadow-md scale-110"
+                        key={f}
+                        onClick={() => handleFrequencyChange(f)}
+                        className={`flex-1 h-10 rounded-xl text-xs font-bold transition-all border ${
+                          times.length === f
+                            ? "bg-primary border-primary text-primary-foreground shadow-md"
                             : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
                         }`}
                       >
-                        {day}
+                        {f}x
                       </button>
                     ))}
                   </div>
+                  <p className="text-[10px] text-muted-foreground ml-1 italic">
+                    Example: 2 pills taken 3 times a day
+                  </p>
                 </div>
               </motion.div>
             )}
