@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
@@ -135,7 +136,7 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
 
   const swipe = useSwipeToDismiss(onClose);
 
-  return (
+  return createPortal(
     <motion.div
       role="dialog"
       aria-modal="true"
@@ -240,7 +241,8 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
           </Button>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 

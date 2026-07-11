@@ -168,16 +168,23 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0.05, bottom: 0.3 }}
-        onDragEnd={(_e, info) => {
-          if (info.offset.y > 80) onClose();
-        }}
-        className="w-full max-w-xl bg-card rounded-t-[2.5rem] p-6 pb-12 shadow-2xl border border-border/50 max-h-[92vh] overflow-y-auto no-scrollbar cursor-grab active:cursor-grabbing touch-pan-x"
-        {...swipe}
+        className="w-full max-w-xl bg-card rounded-t-[2.5rem] shadow-2xl border border-border/50 max-h-[92vh] flex flex-col"
       >
-        <div className="w-12 h-1.5 rounded-full bg-muted/70 hover:bg-muted mx-auto mb-6 transition-colors" />
+        {/* Drag handle — swipe this area to dismiss */}
+        <motion.div
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0.05, bottom: 0.3 }}
+          onDragEnd={(_e, info) => {
+            if (info.offset.y > 80) onClose();
+          }}
+          className="flex-shrink-0 pt-5 pb-2 px-6 cursor-grab active:cursor-grabbing touch-pan-x"
+          {...swipe}
+        >
+          <div className="w-12 h-1.5 rounded-full bg-muted/70 hover:bg-muted mx-auto transition-colors" />
+        </motion.div>
+        {/* Scrollable form body */}
+        <div className="overflow-y-auto no-scrollbar touch-auto flex-1 px-6 pb-12">
         
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-2xl font-black tracking-tight">
@@ -414,6 +421,7 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
             {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Add Medication"}
           </Button>
         </div>
+        </div>{/* end scrollable body */}
       </motion.div>
     </motion.div>,
     document.body

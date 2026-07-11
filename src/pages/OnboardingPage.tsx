@@ -58,7 +58,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="px-4 pt-12 pb-4 min-h-screen flex flex-col bg-background relative overflow-hidden">
+    <div className="px-4 pt-12 pb-10 min-h-screen flex flex-col bg-background relative overflow-y-auto">
       {/* Background ambient light */}
       <div className="absolute top-0 left-0 w-full h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -translate-y-1/2" />
       

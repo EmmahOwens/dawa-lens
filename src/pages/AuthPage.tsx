@@ -216,7 +216,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen overflow-hidden flex bg-background">
       <AnimatePresence>
         {showSuccess && (
           <SuccessState 
@@ -296,7 +296,7 @@ export default function AuthPage() {
       </div>
 
       {/* Right Panel: Auth Forms */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
+      <div className="flex-1 flex flex-col items-center overflow-y-auto p-8 py-12">
         <div className="w-full max-w-[400px] space-y-8">
           <div className="lg:hidden text-center mb-8 transition-transform">
             <img src="/logo.png" alt="Logo" className="w-16 h-16 mx-auto mb-4" />

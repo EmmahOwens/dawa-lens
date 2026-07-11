@@ -994,25 +994,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // 1. Update Medicine Inventory if taken
     let freshMeds = medicines;
-    if (reminder && reminder.medicineId && log.action === "taken") {
-      const medicine = medicines.find((m) => m.id === reminder.medicineId);
-      if (
-        medicine &&
-        medicine.currentQuantity !== undefined &&
-        medicine.dosagePerDose
-      ) {
-        const newQuantity = Math.max(
-          0,
-          medicine.currentQuantity - medicine.dosagePerDose
+    if (log.action === "taken") {
+      // Primary: resolve medicine via reminder.medicineId
+      // Fallback: match by medicine name (handles reminders without medicineId,
+      //           deleted reminders, or logs imported from CSV / AI actions)
+      let medicine: Medicine | undefined;
+
+      if (reminder?.medicineId) {
+        medicine = medicines.find((m) => m.id === reminder.medicineId);
+      }
+
+      // Name-based fallback — only if we haven't already resolved via ID
+      if (!medicine && log.medicineName) {
+        medicine = medicines.find(
+          (m) => m.name.toLowerCase() === log.medicineName.toLowerCase()
         );
+      }
+
+      if (medicine && medicine.currentQuantity !== undefined) {
+        // Default to 1 unit per dose when dosagePerDose is unset
+        const doseAmount = medicine.dosagePerDose || 1;
+        const newQuantity = Math.max(0, medicine.currentQuantity - doseAmount);
         await updateMedicine(medicine.id, { currentQuantity: newQuantity });
 
         freshMeds = medicines.map((m) =>
-          m.id === medicine.id ? { ...m, currentQuantity: newQuantity } : m
+          m.id === medicine!.id ? { ...m, currentQuantity: newQuantity } : m
         );
 
         // Trigger refill toast when critically low (≤ 2 days of doses)
-        if (newQuantity <= medicine.dosagePerDose * 2) {
+        if (newQuantity <= doseAmount * 2) {
           toast({
             title: `⚠️ Refill Soon — ${medicine.name}`,
             description: `Only ${newQuantity} ${medicine.unit || "units"} left. Open Med Vault to refill.`,
