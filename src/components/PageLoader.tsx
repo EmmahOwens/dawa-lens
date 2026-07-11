@@ -1,5 +1,5 @@
 import { motion, type Transition } from "framer-motion";
-import { GooeyPillLoader } from "./GooeyPillLoader";
+import { BouncingPillsLoader } from "./BouncingPillsLoader";
 
 interface PageLoaderProps {
   /** "full" renders a full-screen overlay with backdrop blur (default).
@@ -46,7 +46,7 @@ export default function PageLoader({
   if (variant === "inline") {
     return (
       <div className="flex items-center justify-center py-6" role="status" aria-label="Loading">
-        <GooeyPillLoader size="sm" />
+        <BouncingPillsLoader size="sm" />
       </div>
     );
   }
@@ -145,7 +145,7 @@ export default function PageLoader({
 
         {/* High-fidelity fluid gooey loader */}
         <div className="mb-6">
-          <GooeyPillLoader size="md" />
+          <BouncingPillsLoader size="md" />
         </div>
 
         {/* Dynamic scanning label */}
