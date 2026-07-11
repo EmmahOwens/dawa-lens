@@ -25,6 +25,10 @@ const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
 const CEREBRAS_MODEL = 'llama-3.3-70b';
 const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
+const Z_AI_API_KEY = process.env.Z_AI_API_KEY;
+const Z_AI_MODEL = 'glm-4.7-flash';
+const Z_AI_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
+
 /**
  * Global AI error handler to ensure all errors returned are "operational" AppErrors.
  */
@@ -188,6 +192,46 @@ const callCerebrasChat = async (messages, responseFormat = { type: 'json_object'
 };
 
 /**
+ * Standard chat completion call to Z.ai (GLM-4.7-Flash)
+ */
+const callZaiChat = async (messages, responseFormat = { type: 'json_object' }, modelId = Z_AI_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
+  if (!Z_AI_API_KEY) {
+    throw new AppError('Z.ai API key not configured', 503);
+  }
+
+  const fn = async () => {
+    const payload = {
+      model: modelId,
+      messages,
+      max_tokens: maxTokens,
+      temperature: temperature
+    };
+    if (responseFormat) {
+      payload.response_format = responseFormat;
+    }
+
+    const response = await axios.post(Z_AI_API_URL, payload, {
+      headers: {
+        'Authorization': `Bearer ${Z_AI_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 5000 // Reduced timeout for fast fallback
+    });
+
+    const text = response.data?.choices?.[0]?.message?.content;
+    if (!text) {
+      throw new AppError('Z.ai returned an empty response.', 502);
+    }
+
+    const result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
+    if (typeof result === 'object') result.source = "Z.ai (GLM-4.7-Flash)";
+    return result;
+  };
+
+  return await rateLimitManager.enqueue(fn, 'zai-glm-4.7-flash', messages, priority, 3, failFast);
+};
+
+/**
  * Standard chat completion call to Groq routed via rate limit queue
  */
 const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GROQ_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
@@ -253,9 +297,10 @@ export const callAiWithFallback = async (messages, options = {}) => {
   const isForceGroq8b = forceModel === 'groq-8b' || forceModel === GROQ_LIGHT_MODEL;
   const isForceGemini = forceModel === 'gemini' || forceModel === GEMINI_MODEL;
   const isForceCerebras = forceModel === 'cerebras' || forceModel === CEREBRAS_MODEL;
+  const isForceZai = forceModel === 'zai' || forceModel === Z_AI_MODEL;
 
   // 1. Try Cerebras (Primary, only for complex tasks or if forced)
-  if (CEREBRAS_API_KEY && !isForceGroq70b && !isForceGroqScout && !isForceGroq8b && !isForceGemini && (isComplex || isForceCerebras)) {
+  if (CEREBRAS_API_KEY && !isForceGroq70b && !isForceGroqScout && !isForceGroq8b && !isForceGemini && !isForceZai && (isComplex || isForceCerebras)) {
     try {
       return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
@@ -264,7 +309,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
   }
 
   // 2. Try Groq 70B (only for complex tasks or if forced)
-  if (GROQ_API_KEY && !isForceGroqScout && !isForceGroq8b && !isForceGemini && !isForceCerebras && (isComplex || isForceGroq70b)) {
+  if (GROQ_API_KEY && !isForceGroqScout && !isForceGroq8b && !isForceGemini && !isForceZai && !isForceCerebras && (isComplex || isForceGroq70b)) {
     try {
       const modelId = GROQ_MODEL;
       return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true, temperature);
@@ -274,7 +319,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
   }
 
   // 2.5 Try Groq Scout (only for complex tasks or if forced)
-  if (GROQ_API_KEY && !isForceGroq70b && !isForceGroq8b && !isForceGemini && !isForceCerebras && (isComplex || isForceGroqScout)) {
+  if (GROQ_API_KEY && !isForceGroq70b && !isForceGroq8b && !isForceGemini && !isForceZai && !isForceCerebras && (isComplex || isForceGroqScout)) {
     try {
       return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
@@ -283,12 +328,21 @@ export const callAiWithFallback = async (messages, options = {}) => {
   }
 
   // 3. Try Groq 8B (Secondary key/model, for simple tasks or forced)
-  if ((GROQ_API_KEY_2 || GROQ_API_KEY) && !isForceGemini && !isForceCerebras && !isForceGroq70b && !isForceGroqScout) {
+  if ((GROQ_API_KEY_2 || GROQ_API_KEY) && !isForceGemini && !isForceZai && !isForceCerebras && !isForceGroq70b && !isForceGroqScout) {
     try {
       const modelId = GROQ_LIGHT_MODEL;
       return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true, temperature);
     } catch (err) {
-      console.warn("Fallback: Groq 8B failed, trying Gemini...", err.message);
+      console.warn("Fallback: Groq 8B failed, trying Z.ai...", err.message);
+    }
+  }
+
+  // 3.5 Try Z.ai (GLM-4.7-Flash)
+  if (Z_AI_API_KEY && !isForceGemini && !isForceCerebras && !isForceGroq70b && !isForceGroqScout && !isForceGroq8b) {
+    try {
+      return await callZaiChat(messages, responseFormat, Z_AI_MODEL, priority, maxTokens, true, temperature);
+    } catch (err) {
+      console.warn("Fallback: Z.ai GLM-4.7-Flash failed, trying Gemini...", err.message);
     }
   }
 
@@ -783,6 +837,22 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: Groq 8B failed.", err.message);
+      }
+    }
+
+    if (Z_AI_API_KEY) {
+      try {
+        const modelId = Z_AI_MODEL;
+        const fn = async () => {
+          const response = await axios.post(Z_AI_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${Z_AI_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 3000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'zai-glm-4.7-flash', finalMessages, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: Z.ai GLM-4.7-Flash failed.", err.message);
       }
     }
 

@@ -50,6 +50,12 @@ class RateLimitManager {
         tpd: 5000000,
       },
       'gemini-pro':    { rpm: 15,  tpm: 360000,  rpd: 1000,  tpd: 3000000  },
+      'zai-glm-4.7-flash': {
+        rpm: 15,
+        tpm: 100000,    // 100k TPM
+        rpd: 1000,      // 1,000 RPD
+        tpd: 1000000,   // 1M tokens/day
+      },
       'cloudflare-llama-3.2-vision': { rpm: 50,  tpm: 100000, rpd: 1000,  tpd: 1000000  },
     };
 
