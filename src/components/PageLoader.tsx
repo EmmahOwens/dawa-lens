@@ -1,5 +1,6 @@
 import { motion, type Transition } from "framer-motion";
 import { BouncingPillsLoader } from "./BouncingPillsLoader";
+import { LOGO_BASE64 } from "@/lib/logoBase64";
 
 interface PageLoaderProps {
   /** "full" renders a full-screen overlay with backdrop blur (default).
@@ -136,7 +137,7 @@ export default function PageLoader({
           className="mb-8"
         >
           <img
-            src="/logo.png"
+            src={LOGO_BASE64}
             alt="Dawa Lens"
             style={{ width: 72, height: 72, objectFit: "contain" }}
             className="drop-shadow-[0_0_12px_hsl(var(--primary)/0.25)] dark:drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]"

@@ -1,5 +1,6 @@
 import { Home, Camera, Clock, History, Settings, CopyPlus, Users, LogOut, Heart, ShieldCheck, Package, Pill } from "@/lib/icons";
 import { NavLink } from "@/components/NavLink";
+import { LOGO_BASE64 } from "@/lib/logoBase64";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
@@ -48,7 +49,7 @@ export function AppSidebar() {
           <div className="relative group">
             <div className="absolute -inset-1 rounded-xl bg-gradient-to-tr from-primary/50 to-primary/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             <div className="relative h-10 w-10 flex items-center justify-center rounded-xl bg-gradient-to-b from-primary/20 to-primary/5 border border-primary/30 text-primary shadow-inner">
-              <img src="/logo.png" alt="Logo" className="w-6 h-6 object-contain drop-shadow-sm" />
+              <img src={LOGO_BASE64} alt="Logo" className="w-6 h-6 object-contain drop-shadow-sm" />
             </div>
           </div>
           {!collapsed && (

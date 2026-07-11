@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LOGO_BASE64 } from "@/lib/logoBase64";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar as CalendarIcon, User, UserSquare2, Loader2, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
@@ -82,7 +83,7 @@ export default function OnboardingPage() {
             <div className="text-center mb-8">
               <div className="mb-6 relative">
                 <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-                <img src="/logo.png" alt="Dawa Lens Logo" className="w-24 h-24 mx-auto object-contain relative z-10 drop-shadow-lg" />
+                <img src={LOGO_BASE64} alt="Dawa Lens Logo" className="w-24 h-24 mx-auto object-contain relative z-10 drop-shadow-lg" />
               </div>
               <h1 className="text-3xl font-extrabold tracking-tight text-foreground bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
                 Complete Your Profile

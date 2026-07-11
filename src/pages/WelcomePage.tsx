@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { LOGO_BASE64 } from "@/lib/logoBase64";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ChevronRight, 
@@ -116,7 +117,7 @@ export default function WelcomePage() {
           animate={{ opacity: 1, x: 0 }}
           className="flex items-center gap-2"
         >
-          <img src="/logo.png" alt="Dawa Lens Logo" className="w-8 h-8 object-contain" />
+          <img src={LOGO_BASE64} alt="Dawa Lens Logo" className="w-8 h-8 object-contain" />
           <span className="font-black text-foreground tracking-tighter text-xl">Dawa Lens</span>
         </motion.div>
         <Button 

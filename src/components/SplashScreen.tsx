@@ -16,6 +16,7 @@
 
 import React from "react";
 import { useTheme } from "next-themes";
+import { LOGO_BASE64 } from "@/lib/logoBase64";
 
 // ─── Pill shape helper ────────────────────────────────────────────────────────
 interface PillProps {
@@ -148,7 +149,7 @@ const OrbitalCenter: React.FC<{ dark: boolean }> = ({ dark }) => (
     }}
   >
     <img
-      src="/logo.png"
+      src={LOGO_BASE64}
       alt="Dawa Lens"
       style={{
         width: 220,

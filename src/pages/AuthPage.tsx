@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { LOGO_BASE64 } from "@/lib/logoBase64";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, Loader2, CheckCircle2, RefreshCw, User, Info, ShieldCheck, Heart } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
@@ -256,7 +257,7 @@ export default function AuthPage() {
               className="flex items-center gap-4 mb-12 transition-transform"
             >
               <div className="h-12 w-12 rounded-2xl bg-white shadow-xl shadow-primary/20 flex items-center justify-center p-2">
-                <img src="/logo.png" alt="Dawa Lens" className="w-full h-full object-contain" />
+                <img src={LOGO_BASE64} alt="Dawa Lens" className="w-full h-full object-contain" />
               </div>
               <span className="text-2xl font-bold tracking-tight text-foreground">Dawa Lens</span>
             </motion.div>
@@ -299,7 +300,7 @@ export default function AuthPage() {
       <div className="flex-1 flex flex-col items-center overflow-y-auto p-8 py-12">
         <div className="w-full max-w-[400px] space-y-8">
           <div className="lg:hidden text-center mb-8 transition-transform">
-            <img src="/logo.png" alt="Logo" className="w-16 h-16 mx-auto mb-4" />
+            <img src={LOGO_BASE64} alt="Logo" className="w-16 h-16 mx-auto mb-4" />
           </div>
 
           <AnimatePresence mode="wait">
