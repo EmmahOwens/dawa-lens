@@ -54,7 +54,15 @@ function repeatLabel(reminder: Reminder): string {
     case "once":
       return "One time";
     case "custom": {
-      const timesCount = reminder.time.split(",").length;
+      const timesCount = reminder.time
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => {
+          const parts = t.split(":");
+          if (parts.length !== 2) return false;
+          const [h, m] = parts.map(Number);
+          return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+        }).length;
       let label = timesCount > 1 ? `${timesCount} times a day` : "Custom";
       if (repeatDays && repeatDays.length > 0) {
         label += ` (${repeatDays.map((d) => days[d]).join(", ")})`;
@@ -431,7 +439,13 @@ export default function RemindersPage() {
                       );
                       const baseTimes = reminder.time
                         .split(",")
-                        .map((t) => t.trim());
+                        .map((t) => t.trim())
+                        .filter((t) => {
+                          const parts = t.split(":");
+                          if (parts.length !== 2) return false;
+                          const [h, m] = parts.map(Number);
+                          return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+                        });
                       // Determine which slots to shift: those after the taken slot index
                       let takenSlotIndex = -1;
                       if (offsetMinutes !== 0) {

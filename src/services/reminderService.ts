@@ -134,7 +134,10 @@ function getIntervalMinutes(
   toIndex: number
 ): number {
   const toMins = (t: string) => {
-    const [h, m] = t.split(":").map(Number);
+    const parts = (t || "").split(":");
+    if (parts.length !== 2) return 0;
+    const [h, m] = parts.map(Number);
+    if (isNaN(h) || isNaN(m)) return 0;
     return h * 60 + m;
   };
   if (times.length <= 1) return 24 * 60;
@@ -178,10 +181,18 @@ export const checkMissedDoses = async (
     // as missed before the reminder even existed.
     const reminderCreatedAt = r.createdAt ? parseISO(r.createdAt) : now;
 
-    const times = r.time.split(",");
+    const times = r.time
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t) => {
+        const parts = t.split(":");
+        if (parts.length !== 2) return false;
+        const [h, m] = parts.map(Number);
+        return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+      });
 
     for (const timeStr of times) {
-      const [hours, minutes] = timeStr.trim().split(":").map(Number);
+      const [hours, minutes] = timeStr.split(":").map(Number);
 
       // Check today and yesterday
       for (let i = -1; i <= 0; i++) {
@@ -277,7 +288,15 @@ const getNextOccurrence = (
   fromDate: Date,
   doseLogs: DoseLog[]
 ): Date | null => {
-  const times = reminder.time.split(",").map((t) => t.trim());
+  const times = reminder.time
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => {
+      const parts = t.split(":");
+      if (parts.length !== 2) return false;
+      const [h, m] = parts.map(Number);
+      return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+    });
   const occurrences: Date[] = [];
   const now = new Date();
   const todayStart = startOfDay(now);

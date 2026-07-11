@@ -138,6 +138,23 @@ export default function AddReminderPage() {
       return;
     }
 
+    const hasInvalidTime = times.some(t => {
+      if (!t || t.trim() === "") return true;
+      const parts = t.split(":");
+      if (parts.length !== 2) return true;
+      const [h, m] = parts.map(Number);
+      return isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59;
+    });
+
+    if (hasInvalidTime || times.length === 0) {
+      toast({
+        title: "Invalid Time",
+        description: "Please specify valid scheduled times (HH:MM format).",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Skip permission gate when offline — the reminder will be saved locally
     // and notifications are scheduled on-device via NativeAlarm regardless.
     if (Capacitor.isNativePlatform() && isOnline) {

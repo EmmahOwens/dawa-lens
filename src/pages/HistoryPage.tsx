@@ -447,7 +447,7 @@ export default function HistoryPage() {
                               Logged at
                             </p>
                             <p className="text-sm font-bold text-foreground">
-                              {new Date(log.actionTime).toLocaleTimeString([], {
+                              {toDate(log.actionTime).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
                               })}

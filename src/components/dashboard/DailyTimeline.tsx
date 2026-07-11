@@ -4,6 +4,7 @@ import { Pill, Check, Clock, AlertCircle, RefreshCw } from "@/lib/icons";
 import { Reminder, DoseLog } from "@/contexts/AppContext";
 import { computeShiftOffset } from "@/services/reminderService";
 import confetti from "canvas-confetti";
+import { toDate } from "@/lib/utils";
 
 interface DailyTimelineProps {
   reminders: Reminder[];
@@ -69,7 +70,15 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
     .sort((a, b) => a.time.localeCompare(b.time));
 
   activeReminders.forEach(r => {
-    const times = r.time.split(",").map(t => t.trim());
+    const times = r.time
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t) => {
+        const parts = t.split(":");
+        if (parts.length !== 2) return false;
+        const [h, m] = parts.map(Number);
+        return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+      });
     const offsetMinutes = computeShiftOffset(r, doseLogs);
 
     // Determine taken slot index from today's logs
@@ -243,7 +252,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                     </span>
                     {isTaken && log && (
                       <p className="text-[9px] text-muted-foreground mt-0.5">
-                        @ {new Date(log.actionTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        @ {toDate(log.actionTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </p>
                     )}
                   </div>

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { History, Activity } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
+import { toDate } from "@/lib/utils";
 
 export function HistoryWidget() {
   const { doseLogs } = useApp();
@@ -29,7 +30,7 @@ export function HistoryWidget() {
                 <div className="flex flex-col">
                   <span className="text-[12px] font-black">{log.medicineName}</span>
                   <span className="text-[10px] text-muted-foreground uppercase font-medium mt-0.5">
-                    {new Date(log.actionTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {toDate(log.actionTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${

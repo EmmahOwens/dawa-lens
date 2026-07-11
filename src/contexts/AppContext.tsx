@@ -100,7 +100,15 @@ export function isShiftIntoPast(
   shiftOffset: number, // in minutes
   now: Date
 ): boolean {
-  const times = reminder.time.split(",").map((t) => t.trim());
+  const times = reminder.time
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => {
+      const parts = t.split(":");
+      if (parts.length !== 2) return false;
+      const [h, m] = parts.map(Number);
+      return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+    });
   
   // We only check subsequent doses (i > slotIndex)
   for (let i = slotIndex + 1; i < times.length; i++) {
@@ -1168,7 +1176,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // Trigger recalculation for any deviation taken outside originally scheduled time
       if (Math.abs(diffMinutes) >= 1) {
-        const times = reminder.time.split(",").map((t) => t.trim());
+        const times = reminder.time
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => {
+            const parts = t.split(":");
+            if (parts.length !== 2) return false;
+            const [h, m] = parts.map(Number);
+            return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+          });
 
         // Find which slot index this log corresponds to
         const schHHmm = `${scheduledDate
@@ -1362,8 +1378,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const avgOffset = Math.round(
             offsets.reduce((a, b) => a + b, 0) / offsets.length
           );
-          const suggestedTimes = reminder.time.split(",").map((t) => {
-            const [h, m] = t.trim().split(":").map(Number);
+          const suggestedTimes = reminder.time
+            .split(",")
+            .map((t) => t.trim())
+            .filter((t) => {
+              const parts = t.split(":");
+              if (parts.length !== 2) return false;
+              const [h, m] = parts.map(Number);
+              return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+            })
+            .map((t) => {
+              const [h, m] = t.split(":").map(Number);
             const total =
               (((h * 60 + m + avgOffset) % (24 * 60)) + 24 * 60) % (24 * 60);
             return `${Math.floor(total / 60)
