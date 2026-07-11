@@ -1165,8 +1165,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1783744121.002967,
-    "ast_hash": "742659e52996a707890137bbce507225",
+    "mtime": 1783745516.1629806,
+    "ast_hash": "f120577ac28d1b3d04de0acb31d9287f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1505,8 +1505,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/localPersistence.ts": {
-    "mtime": 1783743909.3397505,
-    "ast_hash": "e137acf0431c6e70647de02cab052bb8",
+    "mtime": 1783745374.6668026,
+    "ast_hash": "0c9c7e933c188a5de262536f7d685ac0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/mlService.ts": {
@@ -1530,8 +1530,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/reminderService.ts": {
-    "mtime": 1783613511.8174772,
-    "ast_hash": "369563c92a57c6b6b35dc66ad200f5d2",
+    "mtime": 1783745453.2716794,
+    "ast_hash": "091c1d01c4d9ff5da2aeb0af9fec1003",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/visionService.ts": {
@@ -2980,8 +2980,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/__tests__/AppContext.test.tsx": {
-    "mtime": 1783744033.29104,
-    "ast_hash": "db2aa1c92d275adcb64537b5cdc3422d",
+    "mtime": 1783745389.805394,
+    "ast_hash": "232f6e60a4e9e866e7025c1ba5c7d143",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/reminderService.test.ts": {
+    "mtime": 1783745534.2924907,
+    "ast_hash": "dff34be1d2376efbc2e945f61a5a8e7b",
     "semantic_hash": ""
   }
 }
