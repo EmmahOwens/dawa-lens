@@ -6,7 +6,7 @@
  * always accessible offline because all reminder operations are handled
  * locally first and synced to the cloud on reconnect.
  */
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff, RefreshCw } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ const OFFLINE_ALLOWED_ROUTES = ["/reminders", "/reminders/new"];
 export default function OfflineOverlay() {
   const { isOnline } = useNetworkStatus();
   const location = useLocation();
+  const navigate = useNavigate();
   const [retrying, setRetrying] = useState(false);
 
   // Do not block reminder routes — they operate fully offline.
@@ -96,6 +97,15 @@ export default function OfflineOverlay() {
                 className={`mr-2 transition-transform ${retrying ? "animate-spin" : "group-hover:rotate-180"}`}
               />
               Try Again
+            </Button>
+
+            <Button
+              onClick={() => navigate("/reminders")}
+              variant="outline"
+              className="w-full mt-2 rounded-xl transition-all duration-300 active:scale-[0.98]"
+              size="lg"
+            >
+              Go to Reminders
             </Button>
 
             <p className="mt-4 text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold">

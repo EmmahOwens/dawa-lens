@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { DailyTimeline } from "@/components/dashboard/DailyTimeline";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -129,7 +130,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 export default function RemindersPage() {
   const navigate = useNavigate();
-  const { updateReminder, deleteReminder, isInitializing, pendingOfflineOps } = useApp();
+  const { updateReminder, deleteReminder, isInitializing, pendingOfflineOps, logDose } = useApp();
   const { isOnline } = useNetworkStatus();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -188,6 +189,31 @@ export default function RemindersPage() {
       toast({ variant: "destructive", title: "Failed to delete reminder" });
     } finally {
       setPendingDeleteId(null);
+    }
+  };
+
+  const handleAction = async (
+    reminder: any,
+    action: "taken" | "skipped",
+    scheduledTime: string
+  ) => {
+    try {
+      await logDose({
+        reminderId: reminder.id,
+        medicineName: reminder.medicineName,
+        dose: reminder.dose,
+        scheduledTime,
+        action,
+      });
+      toast({
+        title: action === "taken" ? "Dose logged!" : "Dose skipped.",
+        description: `${reminder.medicineName} @ ${reminder.time}`,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Failed to log dose",
+      });
     }
   };
 
@@ -326,6 +352,15 @@ export default function RemindersPage() {
           </p>
         </div>
       </motion.div>
+
+      {/* Daily Timeline (Only when offline since Dashboard is blocked) */}
+      {!isOnline && (
+        <DailyTimeline
+          reminders={scopedReminders}
+          doseLogs={scopedDoseLogs}
+          onAction={handleAction}
+        />
+      )}
 
       {/* Reminder List */}
       {isInitializing ? (

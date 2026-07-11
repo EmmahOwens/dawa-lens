@@ -105,6 +105,37 @@ export function initLifecycle(): () => void {
       }
     });
     cleanupFns.push(() => networkPromise.then(h => h.remove()));
+  } else {
+    // Web fallback
+    networkStatus = { connected: navigator.onLine, connectionType: 'unknown' };
+
+    const handleWebOnline = () => {
+      const wasConnected = networkStatus.connected;
+      networkStatus = { connected: true, connectionType: 'unknown' };
+      if (!wasConnected) {
+        onNetworkChangeCallbacks.forEach(cb => {
+          try { cb(true); } catch (e) { console.warn('[Lifecycle] network callback error:', e); }
+        });
+      }
+    };
+
+    const handleWebOffline = () => {
+      const wasConnected = networkStatus.connected;
+      networkStatus = { connected: false, connectionType: 'unknown' };
+      if (wasConnected) {
+        onNetworkChangeCallbacks.forEach(cb => {
+          try { cb(false); } catch (e) { console.warn('[Lifecycle] network callback error:', e); }
+        });
+      }
+    };
+
+    window.addEventListener('online', handleWebOnline);
+    window.addEventListener('offline', handleWebOffline);
+
+    cleanupFns.push(() => {
+      window.removeEventListener('online', handleWebOnline);
+      window.removeEventListener('offline', handleWebOffline);
+    });
   }
 
   // Return cleanup function
