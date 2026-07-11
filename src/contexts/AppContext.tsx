@@ -46,11 +46,92 @@ import {
   getPendingCount,
 } from "../services/offlineQueue";
 import { onNetworkChange, hasNetwork } from "../lib/appLifecycle";
+import { notify } from "../lib/notifications";
+
+/**
+ * Helper to check if proposed reminder times conflict with any other medication reminder
+ * for the same patient (difference < 10 minutes with midnight wrap protection).
+ */
+export function hasOverlapConflict(
+  proposedTimes: string[],
+  reminderId: string,
+  patientId: string | null | undefined,
+  allReminders: Reminder[]
+): boolean {
+  const parseTimeToMins = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const proposedMinsList = proposedTimes.map(parseTimeToMins);
+
+  const otherReminders = allReminders.filter(
+    (r) =>
+      r.enabled &&
+      r.id !== reminderId &&
+      (r.patientId ?? null) === (patientId ?? null)
+  );
+
+  for (const other of otherReminders) {
+    const otherMinsList = other.time.split(",").map((t) => parseTimeToMins(t.trim()));
+    for (const pMins of proposedMinsList) {
+      for (const oMins of otherMinsList) {
+        let diff = Math.abs(pMins - oMins);
+        // Handle midnight wrap (e.g. 23:55 and 00:02 is 7 mins difference)
+        if (diff > 12 * 60) {
+          diff = 24 * 60 - diff;
+        }
+        if (diff < 10) {
+          console.warn(`[ConflictCheck] Conflict: proposed slot ${pMins} overlaps with ${other.medicineName} slot ${oMins} (diff: ${diff}m)`);
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Helper to check if shifting subsequent doses would schedule them in the past (before now).
+ */
+export function isShiftIntoPast(
+  reminder: Reminder,
+  slotIndex: number,
+  shiftOffset: number, // in minutes
+  now: Date
+): boolean {
+  const times = reminder.time.split(",").map((t) => t.trim());
+  
+  // We only check subsequent doses (i > slotIndex)
+  for (let i = slotIndex + 1; i < times.length; i++) {
+    const [h, m] = times[i].split(":").map(Number);
+    let originalScheduled = new Date(now);
+    originalScheduled.setHours(h, m, 0, 0);
+    
+    // Determine if slot i is today or tomorrow (if slot i was originally chronologically before slotIndex)
+    const [sh, sm] = times[slotIndex].split(":").map(Number);
+    const originalSlotMins = sh * 60 + sm;
+    const currentSlotMins = h * 60 + m;
+    
+    let isTomorrow = currentSlotMins < originalSlotMins;
+    if (isTomorrow) {
+      originalScheduled.setDate(originalScheduled.getDate() + 1);
+    }
+    
+    const shiftedScheduled = new Date(originalScheduled.getTime() + shiftOffset * 60 * 1000);
+    if (shiftedScheduled.getTime() < now.getTime()) {
+      console.warn(`[ShiftValidation] Invalid shift: slot ${times[i]} shifts to ${shiftedScheduled.toISOString()} (past relative to now: ${now.toISOString()})`);
+      return true;
+    }
+  }
+  return false;
+}
 
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const CLOUD_CACHE_REMS_KEY = "dawa_cloud_cache_reminders";
 const CLOUD_CACHE_MEDS_KEY = "dawa_cloud_cache_medicines";
 const CLOUD_CACHE_LOGS_KEY = "dawa_cloud_cache_doselogs";
+const CLOUD_CACHE_AUDIT_KEY = "dawa_cloud_cache_schedule_audit";
 
 export type Medicine = {
   id: string; // maps to Firestore doc.id
@@ -115,6 +196,19 @@ export type WellnessLog = {
   patientId?: string | null;
 };
 
+export type ScheduleAuditLog = {
+  id: string;
+  reminderId: string;
+  medicineName: string;
+  originalTime: string;
+  adjustedTime: string;
+  actionTime: string;
+  triggerEvent: "early-dose" | "late-dose";
+  timeOffsetMinutes: number;
+  userId: string;
+  patientId?: string | null;
+};
+
 export type UserProfile = {
   id: string;
   name: string;
@@ -159,6 +253,7 @@ type AppContextType = {
   doseLogs: DoseLog[];
   patients: Patient[];
   wellnessLogs: WellnessLog[];
+  scheduleAuditLogs: ScheduleAuditLog[];
   userProfile: UserProfile | null;
   storageMode: "local" | "cloud";
   isLoggedIn: boolean;
@@ -187,6 +282,9 @@ type AppContextType = {
     log: Omit<WellnessLog, "id" | "timestamp" | "userId">
   ) => Promise<void>;
   deleteWellnessLog: (id: string) => Promise<void>;
+  addScheduleAuditLog: (
+    log: Omit<ScheduleAuditLog, "id">
+  ) => Promise<void>;
 
   addPatient: (
     patient: Omit<Patient, "id" | "createdAt" | "managedBy">
@@ -288,6 +386,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>([]);
+  const [scheduleAuditLogs, setScheduleAuditLogs] = useState<ScheduleAuditLog[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     () => loadLocal("med_selected_patient_id", null)
@@ -544,18 +643,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // --- Local mode: one-shot load from IndexedDB ---
     if (storageMode === "local") {
       const loadLocal = async () => {
-        const [pMeds, pRems, pLogs, pPatients, pWell] = await Promise.all([
+        const [pMeds, pRems, pLogs, pPatients, pWell, pAudit] = await Promise.all([
           localPersistence.medicines.getAll(),
           localPersistence.reminders.getAll(),
           localPersistence.doseLogs.getAll(),
           localPersistence.patients.getAll(),
           localPersistence.wellnessLogs.getAll(),
+          localPersistence.scheduleAuditLogs.getAll(),
         ]);
         setMedicines(pMeds);
         setReminders(pRems);
         setDoseLogs(pLogs);
         setPatients(pPatients);
         setWellnessLogs(pWell);
+        setScheduleAuditLogs(pAudit);
         setIsDataLoading(false);
       };
       loadLocal();
@@ -604,14 +705,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // 2. Load cached data for instant display before listeners fire
     const loadCache = async () => {
-      const [cachedMeds, cachedRems, cachedLogs] = await Promise.all([
+      const [cachedMeds, cachedRems, cachedLogs, cachedAudit] = await Promise.all([
         storage.getItem<Medicine[]>(CLOUD_CACHE_MEDS_KEY, []),
         storage.getItem<Reminder[]>(CLOUD_CACHE_REMS_KEY, []),
         storage.getItem<DoseLog[]>(CLOUD_CACHE_LOGS_KEY, []),
+        storage.getItem<ScheduleAuditLog[]>(CLOUD_CACHE_AUDIT_KEY, []),
       ]);
       if (cachedMeds.length > 0) setMedicines(cachedMeds);
       if (cachedRems.length > 0) setReminders(cachedRems);
       if (cachedLogs.length > 0) setDoseLogs(cachedLogs);
+      if (cachedAudit.length > 0) setScheduleAuditLogs(cachedAudit);
     };
 
     loadProfile();
@@ -636,6 +739,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
     const wellQuery = query(
       collection(db, "wellnessLogs"),
+      where("userId", "==", currentUserId)
+    );
+    const auditQuery = query(
+      collection(db, "scheduleAuditLogs"),
       where("userId", "==", currentUserId)
     );
 
@@ -697,6 +804,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       (err) => console.error("WellnessLogs listener error:", err)
     );
 
+    const unsubAudit = onSnapshot(
+      auditQuery,
+      (snap) => {
+        const data = snap.docs.map(
+          (d) => ({ id: d.id, ...d.data() } as ScheduleAuditLog)
+        );
+        setScheduleAuditLogs(data);
+        storage.setItem(CLOUD_CACHE_AUDIT_KEY, data);
+      },
+      (err) => console.error("ScheduleAuditLogs listener error:", err)
+    );
+
     setIsDataLoading(false);
 
     // Cleanup listeners on unmount or dependency change
@@ -706,6 +825,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       unsubLogs();
       unsubPats();
       unsubWell();
+      unsubAudit();
     };
   }, [currentUserId, storageMode, isAuthLoading]);
 
@@ -1046,10 +1166,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         (actualDate.getTime() - scheduledDate.getTime()) / (1000 * 60)
       );
 
-      // Only shift if deviation is between 1 minute and 4 hours
-      if (Math.abs(diffMinutes) >= 1 && Math.abs(diffMinutes) <= 240) {
+      // Trigger recalculation for any deviation taken outside originally scheduled time
+      if (Math.abs(diffMinutes) >= 1) {
         const times = reminder.time.split(",").map((t) => t.trim());
-        const freq = times.length;
 
         // Find which slot index this log corresponds to
         const schHHmm = `${scheduledDate
@@ -1076,82 +1195,136 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         if (slotIndex !== -1) {
-          const intervalMinutes = (24 * 60) / freq;
-          const actH = actualDate.getHours();
-          const actM = actualDate.getMinutes();
+          const timesInMinutes = times.map(t => {
+            const [h, m] = t.split(":").map(Number);
+            return h * 60 + m;
+          });
+          const actualMins = actualDate.getHours() * 60 + actualDate.getMinutes();
 
-          const newTimes = times.map((_, i) => {
-            const distance = i - slotIndex;
-            const totalMinutes =
-              (((actH * 60 + actM + distance * intervalMinutes) % (24 * 60)) +
-                24 * 60) %
-              (24 * 60);
-            const h = Math.floor(totalMinutes / 60);
-            const m = Math.floor(totalMinutes % 60);
-            return `${h.toString().padStart(2, "0")}:${m
-              .toString()
-              .padStart(2, "0")}`;
+          const newTimes = times.map((t, i) => {
+            if (i < slotIndex) {
+              // Past doses remain unchanged
+              return t;
+            }
+            if (i === slotIndex) {
+              // Current dose updated to actual intake time
+              const h = Math.floor(actualMins / 60);
+              const m = Math.floor(actualMins % 60);
+              return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+            }
+            
+            // Subsequent doses shifted by the exact same offset
+            let totalMins = timesInMinutes[i] + diffMinutes;
+            totalMins = ((totalMins % 1440) + 1440) % 1440;
+            const h = Math.floor(totalMins / 60);
+            const m = Math.floor(totalMins % 60);
+            return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
           });
 
-          const newTimeStr = newTimes.join(",");
-          if (newTimeStr !== reminder.time) {
-            console.log(
-              `[DynamicSchedule] Shifting ${reminder.medicineName} from ${reminder.time} to ${newTimeStr}`
-            );
+          // Sort the new times list chronologically
+          const sortedNewTimes = [...newTimes].sort((a, b) => {
+            const [hA, mA] = a.split(":").map(Number);
+            const [hB, mB] = b.split(":").map(Number);
+            return (hA * 60 + mA) - (hB * 60 + mB);
+          });
 
-            // 1. Update the reminder itself
-            await updateReminder(reminder.id, { time: newTimeStr });
-            reminder.time = newTimeStr;
+          // Validation checks
+          const isShiftPast = isShiftIntoPast(reminder, slotIndex, diffMinutes, actualDate);
+          const hasConflict = hasOverlapConflict(sortedNewTimes, reminder.id, reminder.patientId, reminders);
 
-            // 2. Update the log's scheduledTime to match the new schedule
-            // This prevents "double-shifting" in the UI (virtual shift + permanent shift)
-            const newScheduledISO = new Date(scheduledDate);
-            newScheduledISO.setHours(actH, actM, 0, 0);
-            const newScheduledTime = newScheduledISO.toISOString();
+          if (!isShiftPast && !hasConflict) {
+            const newTimeStr = sortedNewTimes.join(",");
+            if (newTimeStr !== reminder.time) {
+              const originalTime = reminder.time;
+              console.log(
+                `[DynamicSchedule] Shifting ${reminder.medicineName} from ${originalTime} to ${newTimeStr}`
+              );
 
-            if (storageMode === "local") {
-              await localPersistence.doseLogs.update(newLog.id, {
-                scheduledTime: newScheduledTime,
-              });
-            } else if (isOnline) {
-              const logDocRef = doc(db, "doseLogs", newLog.id);
-              await updateDoc(logDocRef, { scheduledTime: newScheduledTime });
-            } else {
-              // Offline: queue the scheduledTime update
-              await localPersistence.doseLogs.update(newLog.id, {
-                scheduledTime: newScheduledTime,
-              }).catch(() => {});
-              if (currentUserId) {
-                enqueueOp({
-                  type: "update-dose-log",
-                  collection: "doseLogs",
-                  docId: newLog.id,
-                  data: { scheduledTime: newScheduledTime },
-                  userId: currentUserId,
+              // 1. Update the reminder itself
+              await updateReminder(reminder.id, { time: newTimeStr });
+              reminder.time = newTimeStr;
+
+              // 2. Update the log's scheduledTime to match the new schedule
+              const newScheduledISO = new Date(actualDate);
+              newScheduledISO.setSeconds(0, 0);
+              newScheduledISO.setMilliseconds(0);
+              const newScheduledTime = newScheduledISO.toISOString();
+
+              if (storageMode === "local") {
+                await localPersistence.doseLogs.update(newLog.id, {
+                  scheduledTime: newScheduledTime,
                 });
-                setPendingOfflineOps(getPendingCount());
+              } else if (isOnline) {
+                const logDocRef = doc(db, "doseLogs", newLog.id);
+                await updateDoc(logDocRef, { scheduledTime: newScheduledTime });
+              } else {
+                // Offline: queue the scheduledTime update
+                await localPersistence.doseLogs.update(newLog.id, {
+                  scheduledTime: newScheduledTime,
+                }).catch(() => {});
+                if (currentUserId) {
+                  enqueueOp({
+                    type: "update-dose-log",
+                    collection: "doseLogs",
+                    docId: newLog.id,
+                    data: { scheduledTime: newScheduledTime },
+                    userId: currentUserId,
+                  });
+                  setPendingOfflineOps(getPendingCount());
+                }
               }
-            }
 
-            // Update local references for immediate UI consistency
-            newLog.scheduledTime = newScheduledTime;
-            setDoseLogs((prev) =>
-              prev.map((l) =>
-                l.id === newLog.id ? { ...l, scheduledTime: newScheduledTime } : l
-              )
-            );
+              // Update local references for immediate UI consistency
+              newLog.scheduledTime = newScheduledTime;
+              setDoseLogs((prev) =>
+                prev.map((l) =>
+                  l.id === newLog.id ? { ...l, scheduledTime: newScheduledTime } : l
+                )
+              );
 
-            if (Math.abs(diffMinutes) >= 5) {
-              const direction = diffMinutes > 0 ? "later" : "earlier";
-              toast({
-                title: "Schedule Adjusted",
-                description: `Shifted ${
-                  reminder.medicineName
-                } ${Math.abs(
-                  diffMinutes
-                )}m ${direction} to maintain your dose intervals.`,
+              // 3. Write Schedule Audit Log
+              await addScheduleAuditLog({
+                reminderId: reminder.id,
+                medicineName: reminder.medicineName,
+                originalTime,
+                adjustedTime: newTimeStr,
+                actionTime: actualDate.toISOString(),
+                triggerEvent: diffMinutes < 0 ? "early-dose" : "late-dose",
+                timeOffsetMinutes: diffMinutes,
+                userId: storageMode === "local" ? "local" : currentUserId || "local",
+                patientId: reminder.patientId ?? null,
               });
+
+              // 4. Trigger Capacitor Local Notification immediately if native
+              if (Capacitor.isNativePlatform()) {
+                try {
+                  const perm = await LocalNotifications.checkPermissions();
+                  if (perm.display === "granted") {
+                    await LocalNotifications.schedule({
+                      notifications: [
+                        {
+                          title: "Schedule Adjusted",
+                          body: `Shifted reminders for ${reminder.medicineName} to maintain intervals.`,
+                          id: Math.floor(Math.random() * 1000000),
+                          channelId: reminder.patientId ? `dawa_patient_v2_${reminder.patientId}` : "dawa_owner_v2",
+                          sound: "default",
+                        }
+                      ]
+                    });
+                  }
+                } catch (err) {
+                  console.warn("Failed to trigger local notification for schedule shift:", err);
+                }
+              }
+
+              const direction = diffMinutes > 0 ? "later" : "earlier";
+              notify.info(
+                "Schedule Adjusted",
+                `Shifted remaining doses of ${reminder.medicineName} by ${Math.abs(diffMinutes)}m ${direction} to preserve spacing.`
+              );
             }
+          } else {
+            console.warn(`[DynamicSchedule] Recalculation blocked: shiftIntoPast=${isShiftPast}, overlapConflict=${hasConflict}`);
           }
         }
       }
@@ -1274,6 +1447,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       const docRef = doc(db, "wellnessLogs", id);
       await deleteDoc(docRef);
+      // onSnapshot listener will auto-update state
+    }
+  };
+
+  const addScheduleAuditLog = async (
+    log: Omit<ScheduleAuditLog, "id">
+  ) => {
+    if (storageMode === "local") {
+      const newLog = await localPersistence.scheduleAuditLogs.create(log);
+      setScheduleAuditLogs((p) => [newLog, ...p]);
+    } else {
+      if (!currentUserId) throw new Error("Not logged in");
+      const logData = sanitizeFirestoreData(log);
+      await addDoc(collection(db, "scheduleAuditLogs"), logData);
       // onSnapshot listener will auto-update state
     }
   };
@@ -1567,6 +1754,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         doseLogs,
         patients,
         wellnessLogs,
+        scheduleAuditLogs,
         userProfile,
         storageMode,
         isLoggedIn,
@@ -1590,6 +1778,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         deletePatient,
         addWellnessLog,
         deleteWellnessLog,
+        addScheduleAuditLog,
         setSelectedPatientId,
         setIsProfessionalMode,
         setStorageMode,

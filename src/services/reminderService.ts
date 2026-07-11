@@ -97,8 +97,8 @@ export function computeShiftOffset(
       (1000 * 60)
   );
 
-  // Hard cap: ignore deviation > 4 hours (likely an unrelated log from a different day)
-  if (Math.abs(offsetMinutes) > 240) return 0;
+  // Hard cap: ignore deviation > 24 hours (likely an unrelated log from a different day)
+  if (Math.abs(offsetMinutes) > 1440) return 0;
   return offsetMinutes;
 }
 

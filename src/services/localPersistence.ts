@@ -1,13 +1,14 @@
 import { Capacitor } from "@capacitor/core";
 import { NativeSqlite } from "@/plugins/nativeSqlite";
 import { storage } from "../lib/storage";
-import { Medicine, Reminder, DoseLog, Patient, WellnessLog } from "../contexts/AppContext";
+import { Medicine, Reminder, DoseLog, Patient, WellnessLog, ScheduleAuditLog } from "../contexts/AppContext";
 
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const LOCAL_REMS_KEY = "dawa_local_reminders";
 const LOCAL_LOGS_KEY = "dawa_local_doselogs";
 const LOCAL_PATIENTS_KEY = "dawa_local_patients";
 const LOCAL_WELLNESS_KEY = "dawa_local_wellness";
+const LOCAL_AUDIT_KEY = "dawa_local_schedule_audit";
 
 let sqliteReady = false;
 
@@ -499,6 +500,26 @@ export const localPersistence = {
       const all = await storage.getItem<WellnessLog[]>(LOCAL_WELLNESS_KEY, []);
       const filtered = all.filter((l) => l.id !== id);
       await storage.setItem(LOCAL_WELLNESS_KEY, filtered);
+    },
+  },
+  scheduleAuditLogs: {
+    getAll: async (): Promise<ScheduleAuditLog[]> => {
+      return storage.getItem<ScheduleAuditLog[]>(LOCAL_AUDIT_KEY, []);
+    },
+    create: async (
+      data: Omit<ScheduleAuditLog, "id">
+    ): Promise<ScheduleAuditLog> => {
+      const id = `laudit-${Date.now()}`;
+      const all = await storage.getItem<ScheduleAuditLog[]>(LOCAL_AUDIT_KEY, []);
+      const newItem: ScheduleAuditLog = { ...data, id };
+      all.push(newItem);
+      await storage.setItem(LOCAL_AUDIT_KEY, all);
+      return newItem;
+    },
+    remove: async (id: string): Promise<void> => {
+      const all = await storage.getItem<ScheduleAuditLog[]>(LOCAL_AUDIT_KEY, []);
+      const filtered = all.filter((l) => l.id !== id);
+      await storage.setItem(LOCAL_AUDIT_KEY, filtered);
     },
   },
 };
