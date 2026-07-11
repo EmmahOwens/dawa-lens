@@ -140,6 +140,7 @@ const CLOUD_CACHE_REMS_KEY = "dawa_cloud_cache_reminders";
 const CLOUD_CACHE_MEDS_KEY = "dawa_cloud_cache_medicines";
 const CLOUD_CACHE_LOGS_KEY = "dawa_cloud_cache_doselogs";
 const CLOUD_CACHE_AUDIT_KEY = "dawa_cloud_cache_schedule_audit";
+const CLOUD_CACHE_PATIENTS_KEY = "dawa_cloud_cache_patients";
 
 export type Medicine = {
   id: string; // maps to Firestore doc.id
@@ -713,16 +714,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // 2. Load cached data for instant display before listeners fire
     const loadCache = async () => {
-      const [cachedMeds, cachedRems, cachedLogs, cachedAudit] = await Promise.all([
+      const [cachedMeds, cachedRems, cachedLogs, cachedAudit, cachedPatients] = await Promise.all([
         storage.getItem<Medicine[]>(CLOUD_CACHE_MEDS_KEY, []),
         storage.getItem<Reminder[]>(CLOUD_CACHE_REMS_KEY, []),
         storage.getItem<DoseLog[]>(CLOUD_CACHE_LOGS_KEY, []),
         storage.getItem<ScheduleAuditLog[]>(CLOUD_CACHE_AUDIT_KEY, []),
+        storage.getItem<Patient[]>(CLOUD_CACHE_PATIENTS_KEY, []),
       ]);
       if (cachedMeds.length > 0) setMedicines(cachedMeds);
       if (cachedRems.length > 0) setReminders(cachedRems);
       if (cachedLogs.length > 0) setDoseLogs(cachedLogs);
       if (cachedAudit.length > 0) setScheduleAuditLogs(cachedAudit);
+      if (cachedPatients.length > 0) setPatients(cachedPatients);
     };
 
     loadProfile();
@@ -797,6 +800,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           (d) => ({ id: d.id, ...d.data() } as Patient)
         );
         setPatients(data);
+        storage.setItem(CLOUD_CACHE_PATIENTS_KEY, data);
       },
       (err) => console.error("Patients listener error:", err)
     );
@@ -1648,9 +1652,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         managedBy: currentUserId,
         createdAt: new Date().toISOString(),
       });
-      const docRef = await addDoc(collection(db, "patients"), patientData);
-      const newPatient = { ...patientData, id: docRef.id } as Patient;
-      setPatients((prev) => [...prev, newPatient]);
+      await addDoc(collection(db, "patients"), patientData);
     }
   };
 
@@ -1664,9 +1666,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!currentUserId) throw new Error("Not logged in");
       const docRef = doc(db, "patients", id);
       await updateDoc(docRef, sanitizeFirestoreData(updates));
-      setPatients((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
-      );
     }
   };
 
@@ -1711,8 +1710,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.error("Failed to cascade delete wellness logs:", e);
       }
 
-      setPatients((prev) => prev.filter((p) => p.id !== id));
-
       const docRef = doc(db, "patients", id);
       await deleteDoc(docRef);
     }
@@ -1742,6 +1739,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     storage.removeItem("dawa_local_doselogs");
     storage.removeItem("dawa_local_patients");
     storage.removeItem("dawa_local_wellness");
+    storage.removeItem(CLOUD_CACHE_PATIENTS_KEY);
 
     // 3. Reset UI flags and metadata
     storage.removeItem("med_selected_patient_id");
