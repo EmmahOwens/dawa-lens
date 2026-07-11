@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound, WifiOff } from "@/lib/icons";
+import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound, WifiOff, Package } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -83,6 +83,7 @@ export default function AddReminderPage() {
     });
   }, [medicines, contextPatientId, userProfile?.id]);
 
+
   const [medicineId, setMedicineId] = useState<string | undefined>(state?.medicineId);
   const [medicineName, setMedicineName] = useState(state?.medicineName || "");
   const [dose, setDose] = useState(state?.dose || "");
@@ -99,11 +100,44 @@ export default function AddReminderPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
+  const selectedMedicine = useMemo(() => {
+    return scopedMedicines.find(m => m.id === medicineId);
+  }, [scopedMedicines, medicineId]);
+
+  const isAlreadyTracked = !!(selectedMedicine && selectedMedicine.currentQuantity !== undefined);
+
   // Med Vault stock tracking fields
   const [stockQty, setStockQty] = useState("");        // current pills on hand
   const [stockPerDose, setStockPerDose] = useState("1"); // pills per dose
   const [stockUnit, setStockUnit] = useState("tablets");  // unit type
   const [stockTotal, setStockTotal] = useState("");      // full pack size
+
+  // Keep track of loaded medicine ID to prevent resetting stock inputs while manually typing
+  const [prevMedicineId, setPrevMedicineId] = useState<string | undefined>(undefined);
+  const [isEditingStock, setIsEditingStock] = useState(false);
+
+  // Sync stock tracking fields when a medicine is selected or during initial load/edit
+  useEffect(() => {
+    if (medicineId !== prevMedicineId) {
+      setIsEditingStock(false);
+      if (medicineId) {
+        const med = medicines.find((m) => m.id === medicineId);
+        if (med) {
+          setStockQty(med.currentQuantity !== undefined ? med.currentQuantity.toString() : "");
+          setStockPerDose(med.dosagePerDose !== undefined ? med.dosagePerDose.toString() : "1");
+          setStockUnit(med.unit || "tablets");
+          setStockTotal(med.totalQuantity !== undefined ? med.totalQuantity.toString() : "");
+        }
+      } else {
+        // Clear stock tracking fields only when switching back to manual entry
+        setStockQty("");
+        setStockPerDose("1");
+        setStockUnit("tablets");
+        setStockTotal("");
+      }
+      setPrevMedicineId(medicineId);
+    }
+  }, [medicineId, medicines, prevMedicineId]);
 
   const toggleDay = (day: number) => {
     setRepeatDays(prev => 
@@ -657,74 +691,172 @@ export default function AddReminderPage() {
           transition={{ delay: 0.35 }}
           className="premium-card space-y-6"
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1 h-4 bg-primary rounded-full" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Stock Tracking (Med Vault)</h2>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 bg-primary rounded-full" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Stock Tracking (Med Vault)</h2>
+            </div>
+            {isAlreadyTracked && !isEditingStock && (
+              <span className="text-[9px] font-black uppercase tracking-widest text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2.5 py-1 rounded-lg">
+                Tracked
+              </span>
+            )}
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="stockQty" className="text-xs font-bold text-muted-foreground ml-1">
-                Total pills/units you have right now
-              </Label>
-              <Input
-                id="stockQty"
-                type="number"
-                inputMode="numeric"
-                value={stockQty}
-                onChange={(e) => setStockQty(e.target.value)}
-                placeholder="Leave blank if not tracking stock"
-                className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
-              />
+
+          {isAlreadyTracked && selectedMedicine && !isEditingStock ? (
+            <div className="p-5 rounded-2xl border border-teal-500/20 bg-teal-500/5 dark:bg-teal-500/10 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-teal-500/20 text-teal-600 dark:text-teal-400 rounded-xl">
+                    <Package size={16} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                      Stock Tracking Active
+                    </p>
+                    <p className="text-[10px] text-muted-foreground font-medium">
+                      Managed in Med Vault
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingStock(true)}
+                  className="px-3 py-1.5 rounded-xl text-[10px] font-bold bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 transition-colors"
+                >
+                  Adjust Stock Settings
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-1">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Current Stock</p>
+                  <p className="text-xl font-black text-foreground mt-0.5">
+                    {selectedMedicine.currentQuantity} <span className="text-xs font-semibold text-muted-foreground">{selectedMedicine.unit || "units"}</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Original Pack Size</p>
+                  <p className="text-xl font-black text-foreground mt-0.5">
+                    {selectedMedicine.totalQuantity || selectedMedicine.currentQuantity} <span className="text-xs font-semibold text-muted-foreground">{selectedMedicine.unit || "units"}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              {selectedMedicine.totalQuantity && selectedMedicine.totalQuantity > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="w-full h-2.5 rounded-full bg-muted/45 overflow-hidden">
+                    <div 
+                      className="h-full bg-teal-500 rounded-full transition-all duration-500" 
+                      style={{ width: `${Math.min(100, ((selectedMedicine.currentQuantity || 0) / selectedMedicine.totalQuantity) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[9px] text-muted-foreground font-semibold">
+                    <span>{Math.round(((selectedMedicine.currentQuantity || 0) / selectedMedicine.totalQuantity) * 100)}% remaining</span>
+                    <span>Dose size: {selectedMedicine.dosagePerDose || 1} {selectedMedicine.unit || "units"}</span>
+                  </div>
+                </div>
+              )}
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="stockPerDose" className="text-xs font-bold text-muted-foreground ml-1">
-                Pills/units per dose
-              </Label>
-              <Input
-                id="stockPerDose"
-                type="number"
-                inputMode="numeric"
-                value={stockPerDose}
-                onChange={(e) => setStockPerDose(e.target.value)}
-                placeholder="e.g. 1"
-                className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label className="text-xs font-bold text-muted-foreground ml-1">Unit</Label>
-              <Select value={stockUnit} onValueChange={setStockUnit}>
-                <SelectTrigger className="h-12 rounded-xl border-border/50 bg-muted/20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {["tablets", "capsules", "ml", "puffs", "drops", "units"].map(u => (
-                    <SelectItem key={u} value={u}>{u}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="stockTotal" className="text-xs font-bold text-muted-foreground ml-1">
-                Total when full (original pack size)
-              </Label>
-              <Input
-                id="stockTotal"
-                type="number"
-                inputMode="numeric"
-                value={stockTotal}
-                onChange={(e) => setStockTotal(e.target.value)}
-                placeholder="e.g. 30"
-                className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
-              />
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground italic ml-1">
-            Setting a stock count enables Med Vault tracking, which automatically reduces stock as you take doses.
-          </p>
+          ) : (
+            <>
+              {isAlreadyTracked && isEditingStock && (
+                <div className="flex items-center justify-between p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-400 mb-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex items-center gap-2">
+                    <Package size={14} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Adjusting Stock Settings</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingStock(false)}
+                    className="text-[10px] font-bold hover:underline"
+                  >
+                    Cancel Adjustments
+                  </button>
+                </div>
+              )}
+
+              {!isAlreadyTracked && selectedMedicine && (
+                <div className="flex items-start gap-3 p-4 rounded-2xl bg-muted/30 border border-border/40 text-muted-foreground mb-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="p-2 bg-muted/60 text-muted-foreground rounded-xl">
+                    <Package size={16} className="opacity-60" />
+                  </div>
+                  <div className="flex-1 min-w-0 pt-0.5">
+                    <p className="text-xs font-black uppercase tracking-wider">Stock Tracking Disabled</p>
+                    <p className="text-[11px] font-medium opacity-90 mt-0.5 leading-relaxed">
+                      This medication is not yet tracked in your Med Vault. 
+                      Fill in the details below to enable automatic stock deduction when taking doses.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="stockQty" className="text-xs font-bold text-muted-foreground ml-1">
+                    Total pills/units you have right now
+                  </Label>
+                  <Input
+                    id="stockQty"
+                    type="number"
+                    inputMode="numeric"
+                    value={stockQty}
+                    onChange={(e) => setStockQty(e.target.value)}
+                    placeholder="Leave blank if not tracking stock"
+                    className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="stockPerDose" className="text-xs font-bold text-muted-foreground ml-1">
+                    Pills/units per dose
+                  </Label>
+                  <Input
+                    id="stockPerDose"
+                    type="number"
+                    inputMode="numeric"
+                    value={stockPerDose}
+                    onChange={(e) => setStockPerDose(e.target.value)}
+                    placeholder="e.g. 1"
+                    className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground ml-1">Unit</Label>
+                  <Select value={stockUnit} onValueChange={setStockUnit}>
+                    <SelectTrigger className="h-12 rounded-xl border-border/50 bg-muted/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["tablets", "capsules", "ml", "puffs", "drops", "units"].map(u => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="stockTotal" className="text-xs font-bold text-muted-foreground ml-1">
+                    Total when full (original pack size)
+                  </Label>
+                  <Input
+                    id="stockTotal"
+                    type="number"
+                    inputMode="numeric"
+                    value={stockTotal}
+                    onChange={(e) => setStockTotal(e.target.value)}
+                    placeholder="e.g. 30"
+                    className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground italic ml-1">
+                Setting a stock count enables Med Vault tracking, which automatically reduces stock as you take doses.
+              </p>
+            </>
+          )}
         </motion.section>
 
         {/* Notes Section */}
