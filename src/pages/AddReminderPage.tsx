@@ -610,12 +610,12 @@ export default function AddReminderPage() {
                 {t("reminders.repeat")}
               </Label>
               <div className="flex flex-wrap gap-2">
-                {(["once", "daily", "weekly", "custom"] as const).map((r) => (
+                {(["once", "daily", "custom"] as const).map((r) => (
                   <button
                     key={r}
                     onClick={() => {
                       setRepeat(r);
-                      if (r !== "custom" && r !== "weekly" && times.length > 1) {
+                      if (r !== "custom" && times.length > 1) {
                         setTimes([times[0]]);
                       }
                     }}
