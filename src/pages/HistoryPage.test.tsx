@@ -76,6 +76,7 @@ vi.mock("@/hooks/usePatientScope", () => ({
   // Reads from the shared testState object — always reflects the latest assignment
   usePatientScope: () => ({
     scopedDoseLogs: testState.scopedDoseLogs,
+    scopedWellnessLogs: [],
     resolvedPatient: { id: null, name: "You", isOwner: true, type: "self" },
     matchPatient: () => true,
   }),

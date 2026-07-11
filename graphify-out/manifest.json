@@ -1265,8 +1265,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/vitalityUtils.ts": {
-    "mtime": 1780921860.3449287,
-    "ast_hash": "76b5b6598caa537a551e683de6a903bb",
+    "mtime": 1783769287.0852125,
+    "ast_hash": "82bf40dc904e270046934e9c577130b0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/workerBridge.ts": {
@@ -1290,8 +1290,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/Dashboard.tsx": {
-    "mtime": 1783618096.619502,
-    "ast_hash": "3596b7a88964f8ac6c934ca9644f1769",
+    "mtime": 1783769194.6714697,
+    "ast_hash": "728125a65b02f601d47ca4ef13bd9ae4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/FamilyHubPage.tsx": {
@@ -1300,13 +1300,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/HistoryPage.test.tsx": {
-    "mtime": 1780434892.214973,
-    "ast_hash": "35212628f6140279222bd7348f5497d2",
+    "mtime": 1783769296.1904824,
+    "ast_hash": "18b89b17f1a8b34ac81a02a9315381a4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/HistoryPage.tsx": {
-    "mtime": 1783768910.4473987,
-    "ast_hash": "f81cfead0a0107e43cc973f806038c8e",
+    "mtime": 1783769211.3292482,
+    "ast_hash": "9523026991978ddbbe0300dc72783308",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/Index.tsx": {

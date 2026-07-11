@@ -14,15 +14,15 @@ export interface VitalityDataPoint {
  * based on provided dose logs and wellness logs.
  */
 export function calculateVitalitySummary(
-  doseLogs: DoseLog[],
-  wellnessLogs: WellnessLog[]
+  doseLogs: DoseLog[] = [],
+  wellnessLogs: WellnessLog[] = []
 ): VitalityDataPoint[] {
   return Array.from({ length: 7 }).map((_, i) => {
     const date = subDays(new Date(), 6 - i);
     const dayStr = format(date, "MMM dd");
 
     // Adherence Calculation
-    const dayLogs = doseLogs.filter((l) =>
+    const dayLogs = (doseLogs || []).filter((l) =>
       isSameDay(toDate(l.actionTime), date)
     );
     const taken = dayLogs.filter((l) => l.action === "taken").length;
@@ -30,7 +30,7 @@ export function calculateVitalitySummary(
     const adherence = total > 0 ? (taken / total) * 100 : 100;
 
     // Wellness Calculation (Mood & Energy)
-    const dayWellnessLogs = wellnessLogs.filter(
+    const dayWellnessLogs = (wellnessLogs || []).filter(
       (l) => l.type === "symptom" && isSameDay(toDate(l.timestamp), date)
     );
 

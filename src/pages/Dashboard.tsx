@@ -36,6 +36,7 @@ import { calculateRefillStatus, RefillStatus } from "@/services/refillService";
 import { calculateNextDose, NextDoseInfo } from "@/services/reminderService";
 import { StatusHero } from "@/components/StatusHero";
 import { RiveMoji } from "@/components/rive/RiveMoji";
+import { calculateVitalitySummary } from "@/lib/vitalityUtils";
 
 // New Dashboard Components
 
@@ -225,10 +226,10 @@ export default function Dashboard() {
       new Date(l.actionTime).toDateString() === new Date().toDateString()
   ).length;
 
-  const adherencePercent =
-    expectedDosesToday > 0
-      ? Math.round((takenToday / expectedDosesToday) * 100)
-      : 100;
+  const adherencePercent = useMemo(() => {
+    const chartData = calculateVitalitySummary(scopedDoseLogs, scopedWellnessLogs);
+    return Math.round(chartData.reduce((acc, d) => acc + d.adherence, 0) / 7) || 0;
+  }, [scopedDoseLogs, scopedWellnessLogs]);
 
   useEffect(() => {
     if (expectedDosesToday > 0 && takenToday >= expectedDosesToday) {

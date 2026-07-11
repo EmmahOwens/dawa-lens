@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { useState, useMemo } from "react";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { toDate } from "@/lib/utils";
+import { calculateVitalitySummary } from "@/lib/vitalityUtils";
 
 // Helper for relative date
 function getRelativeDate(dateString: string) {
@@ -57,10 +58,13 @@ export default function HistoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(30);
 
-  const { scopedDoseLogs } = usePatientScope();
+  const { scopedDoseLogs, scopedWellnessLogs } = usePatientScope();
 
   // Adherence Stats
   const stats = useMemo(() => {
+    const chartData = calculateVitalitySummary(scopedDoseLogs, scopedWellnessLogs);
+    const rate = Math.round(chartData.reduce((acc, d) => acc + d.adherence, 0) / 7) || 0;
+
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     // Set to start of day for accurate comparison
@@ -73,10 +77,9 @@ export default function HistoryPage() {
 
     const taken = last7Days.filter((l) => l.action === "taken").length;
     const total = last7Days.length;
-    const rate = total > 0 ? Math.round((taken / total) * 100) : 0;
 
     return { taken, total, rate };
-  }, [scopedDoseLogs]);
+  }, [scopedDoseLogs, scopedWellnessLogs]);
 
   // Group and sort
   const filteredLogs = useMemo(() => {
