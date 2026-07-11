@@ -8,8 +8,8 @@ android {
         applicationId = "com.dawainnovation.lens"
         minSdkVersion = rootProject.ext.minSdkVersion
         targetSdkVersion = rootProject.ext.targetSdkVersion
-        versionCode = 32
-        versionName = "1.4.15"
+        versionCode = 33
+        versionName = "1.4.16"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resConfigs "en", "fr", "es"
         aaptOptions {
