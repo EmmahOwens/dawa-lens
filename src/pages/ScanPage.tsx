@@ -241,7 +241,7 @@ export default function ScanPage() {
       <div className="flex-1 w-full max-w-2xl bg-black relative self-center">
         <video
           ref={videoRef}
-          className="h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
           playsInline
           muted
           autoPlay
