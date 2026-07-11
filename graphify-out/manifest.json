@@ -755,8 +755,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PageLoader.tsx": {
-    "mtime": 1782019113.7643886,
-    "ast_hash": "7de66a6eba2bcb3b13252cddc2542506",
+    "mtime": 1783769531.9725192,
+    "ast_hash": "481d718223fa3225c525e566988ebd9c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PageTransition.tsx": {
@@ -2774,11 +2774,6 @@
     "ast_hash": "a9afd59665c1602215d41f256cb222f7",
     "semantic_hash": ""
   },
-  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/GooeyPillLoader.tsx": {
-    "mtime": 1782018887.3563607,
-    "ast_hash": "3f7450f6908ef99e33583197e1debfee",
-    "semantic_hash": ""
-  },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedVaultPage.tsx": {
     "mtime": 1783742068.5117025,
     "ast_hash": "eaad249e5a9ce7b54e5b8724555b6d90",
@@ -2987,6 +2982,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/index-DHB2XcDU.js": {
     "mtime": 1783746106.9978144,
     "ast_hash": "bc3dde8a93c7f5f0f8094dae5ece5322",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BouncingPillsLoader.tsx": {
+    "mtime": 1783769523.7285433,
+    "ast_hash": "2cfca7ba2d74248f73e3cecc93ef0a07",
     "semantic_hash": ""
   }
 }
