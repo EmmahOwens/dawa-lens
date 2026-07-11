@@ -4,11 +4,46 @@ import { AIAction } from "@/services/aiAssistantService";
 import { RiveMoji } from "@/components/rive/RiveMoji";
 import React from "react";
 
+function normalizeTimeStr(timeStr: string): string {
+  return timeStr
+    .split(",")
+    .map((t) => {
+      const trimmed = t.trim();
+      // Match 12-hour format like "8:00 AM", "08:00 PM", "8 PM", "12 AM"
+      const match12 = trimmed.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+      if (match12) {
+        let hours = parseInt(match12[1], 10);
+        const minutes = match12[2] || "00";
+        const ampm = match12[3].toUpperCase();
+
+        if (ampm === "PM" && hours < 12) {
+          hours += 12;
+        } else if (ampm === "AM" && hours === 12) {
+          hours = 0;
+        }
+        return `${hours.toString().padStart(2, "0")}:${minutes}`;
+      }
+
+      // Match 24-hour format like "8:00", "08:00", "8"
+      const match24 = trimmed.match(/^(\d{1,2})(?::(\d{2}))?$/);
+      if (match24) {
+        const hours = parseInt(match24[1], 10);
+        const minutes = match24[2] || "00";
+        if (hours >= 0 && hours <= 23) {
+          return `${hours.toString().padStart(2, "0")}:${minutes}`;
+        }
+      }
+
+      return trimmed;
+    })
+    .join(",");
+}
+
 export function useAIActions() {
   const { 
     addMedicine, updateMedicine, deleteMedicine, deleteReminder, 
     addReminder, updateReminder, logDose, 
-    addWellnessLog, addPatient, reminders
+    addWellnessLog, addPatient, reminders, medicines
   } = useApp();
   const { toast } = useToast();
 
@@ -42,17 +77,34 @@ export function useAIActions() {
           });
           break;
 
-        case "ADD_REMINDER":
+        case "ADD_REMINDER": {
+          let medicineId = payload.medicineId;
+          let color = payload.color;
+          let icon = payload.icon;
+
+          if (!medicineId && payload.medicineName && medicines.length > 0) {
+            const match = medicines.find(m => 
+              m.name.toLowerCase() === payload.medicineName.toLowerCase() ||
+              (m.genericName && m.genericName.toLowerCase() === payload.medicineName.toLowerCase())
+            );
+            if (match) {
+              medicineId = match.id;
+              if (!color) color = match.color;
+              if (!icon) icon = match.icon;
+            }
+          }
+
           await addReminder({
+            medicineId: medicineId || undefined,
             medicineName: payload.medicineName,
             dose: payload.dose,
-            time: payload.time,
+            time: payload.time ? normalizeTimeStr(payload.time) : "",
             repeatSchedule: payload.repeatSchedule || "daily",
             repeatDays: payload.repeatDays || undefined,
             notes: payload.notes || "",
             enabled: true,
-            color: payload.color || "blue",
-            icon: payload.icon || "pill",
+            color: color || "blue",
+            icon: icon || "pill",
             patientId: payload.patientId || undefined,
             patientName: payload.patientName || undefined
           });
@@ -61,6 +113,7 @@ export function useAIActions() {
             description: action.confirmMessage || `Scheduled ${payload.medicineName} for ${payload.time}.`,
           });
           break;
+        }
 
         case "UPDATE_REMINDER": {
           let targetId = payload.id;
@@ -77,8 +130,13 @@ export function useAIActions() {
             throw new Error(`Could not find reminder for ${payload.medicineName || "specified medicine"}`);
           }
 
+          const reminderUpdates = { ...payload };
+          if (reminderUpdates.time) {
+            reminderUpdates.time = normalizeTimeStr(reminderUpdates.time);
+          }
+
           await updateReminder(targetId, {
-            ...payload,
+            ...reminderUpdates,
             enabled: payload.enabled !== undefined ? payload.enabled : true
           });
           toast({

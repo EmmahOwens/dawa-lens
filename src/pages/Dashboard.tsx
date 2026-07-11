@@ -194,30 +194,47 @@ export default function Dashboard() {
     },
   ];
 
-  const todayReminders = scopedReminders.filter((r) => r.enabled);
-
-  const expectedDosesToday = useMemo(() => {
-    let count = 0;
+  const todayReminders = useMemo(() => {
     const todayNum = new Date().getDay();
-    todayReminders.forEach((r) => {
-      if (
-        r.repeatSchedule === "custom" &&
-        r.repeatDays &&
-        r.repeatDays.length > 0
-      ) {
-        if (!r.repeatDays.includes(todayNum)) return;
-      }
-      if (r.repeatSchedule === "weekly") {
-        if (r.repeatDays && r.repeatDays.length > 0) {
-          if (!r.repeatDays.includes(todayNum)) return;
-        } else {
-          const createdDay = new Date(r.createdAt).getDay();
-          if (createdDay !== todayNum) return;
+    const todayStr = new Date().toDateString();
+
+    return scopedReminders.filter((r) => {
+      if (!r.enabled) return false;
+
+      // 1. Filter out 'once' reminders if they are not for today
+      if (r.repeatSchedule === "once") {
+        const createdDate = r.createdAt ? new Date(r.createdAt) : new Date();
+        if (isNaN(createdDate.getTime()) || createdDate.toDateString() !== todayStr) {
+          const hasTodayLog = scopedDoseLogs.some(l => 
+            l.reminderId === r.id && 
+            new Date(l.actionTime).toDateString() === todayStr
+          );
+          if (!hasTodayLog) return false;
         }
       }
-      count += r.time.split(",").length;
+
+      // 2. Filter out custom reminders if today is not in repeatDays
+      if (r.repeatSchedule === "custom" && r.repeatDays && r.repeatDays.length > 0) {
+        if (!r.repeatDays.includes(todayNum)) return false;
+      }
+
+      // 3. Filter out weekly reminders if today is not the scheduled day
+      if (r.repeatSchedule === "weekly") {
+        if (r.repeatDays && r.repeatDays.length > 0) {
+          if (!r.repeatDays.includes(todayNum)) return false;
+        } else {
+          const createdDate = r.createdAt ? new Date(r.createdAt) : new Date();
+          const createdDay = isNaN(createdDate.getTime()) ? todayNum : createdDate.getDay();
+          if (createdDay !== todayNum) return false;
+        }
+      }
+
+      return true;
     });
-    return count;
+  }, [scopedReminders, scopedDoseLogs]);
+
+  const expectedDosesToday = useMemo(() => {
+    return todayReminders.reduce((sum, r) => sum + r.time.split(",").length, 0);
   }, [todayReminders]);
 
   const takenToday = scopedDoseLogs.filter(
