@@ -22,7 +22,7 @@ export interface ResolvedPatient {
   name: string;
   /** Age in years, derived from dateOfBirth if available, otherwise from stored age */
   age?: number;
-  gender?: "male" | "female" | "other" | null;
+  gender?: "male" | "female" | null;
   /** e.g. "Mother", "Client", "Primary User" */
   relation?: string;
   /** "self" = account owner; "family" = family member; "client" = professional client */

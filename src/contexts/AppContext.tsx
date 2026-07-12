@@ -237,7 +237,7 @@ export type Patient = {
   age?: number;
   /** ISO date string — used to compute exact age and for clinical reports */
   dateOfBirth?: string;
-  gender?: "male" | "female" | "other";
+  gender?: "male" | "female";
   /** e.g. "Mother", "Client", "Father" */
   relation?: string;
   /** "family" | "client" — drives report template & notification channel */

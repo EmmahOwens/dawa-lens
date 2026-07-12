@@ -1165,8 +1165,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1783834043.7188678,
-    "ast_hash": "246ff405fb4485983643a78cabb06704",
+    "mtime": 1783835687.1937685,
+    "ast_hash": "6d0d198be1d5d41d702a5fb46b7d155a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1205,8 +1205,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/usePatientScope.ts": {
-    "mtime": 1780565866.1803966,
-    "ast_hash": "03be1fc0d4f20a6ebfd48b20c5db8221",
+    "mtime": 1783835615.188178,
+    "ast_hash": "55ed4c27c7895ba93bda3f8faf0db61c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useTheme.ts": {
@@ -1295,8 +1295,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/FamilyHubPage.tsx": {
-    "mtime": 1783834846.4566765,
-    "ast_hash": "fb89ee7976ae7521f2debca4c11a4f24",
+    "mtime": 1783835633.708351,
+    "ast_hash": "7bbe6aa6822fd72effe04731cce1c1b6",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/HistoryPage.test.tsx": {

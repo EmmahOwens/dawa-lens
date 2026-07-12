@@ -85,7 +85,7 @@ export default function FamilyHubPage() {
     name: "",
     relation: "",
     age: "",
-    gender: "other" as "male" | "female" | "other",
+    gender: "male" as "male" | "female",
     type: "family" as "family" | "client",
     color: "blue" as string,
     conditions: "", // comma-separated string in form
@@ -103,12 +103,13 @@ export default function FamilyHubPage() {
 
   const handleOpenAdd = () => {
     setEditingPatient(null);
+    const initialType = isProfessionalMode ? "client" : "family";
     setFormData({
       name: "",
       relation: "",
       age: "",
-      gender: "other",
-      type: isProfessionalMode ? "client" : "family",
+      gender: "male",
+      type: initialType,
       color: "blue",
       conditions: "",
       allergies: "",
@@ -118,12 +119,14 @@ export default function FamilyHubPage() {
 
   const handleOpenEdit = (patient: Patient) => {
     setEditingPatient(patient);
+    const resolvedType = patient.type ?? (isProfessionalMode ? "client" : "family");
+    const resolvedGender = patient.gender === "female" ? "female" : "male";
     setFormData({
       name: patient.name,
       relation: patient.relation || "",
       age: patient.age?.toString() || "",
-      gender: patient.gender || "other",
-      type: patient.type ?? (isProfessionalMode ? "client" : "family"),
+      gender: resolvedGender,
+      type: resolvedType,
       color: patient.color ?? "blue",
       conditions: patient.conditions?.join(", ") ?? "",
       allergies: patient.allergies?.join(", ") ?? "",
@@ -793,12 +796,12 @@ export default function FamilyHubPage() {
                 Gender
               </label>
               <div className="flex gap-3">
-                {["male", "female", "other"].map((g) => (
+                {(["male", "female"] as const).map((g) => (
                   <button
                     key={g}
                     type="button"
                     onClick={() =>
-                      setFormData({ ...formData, gender: g as any })
+                      setFormData({ ...formData, gender: g })
                     }
                     className={`flex-1 h-14 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all border-2 ${
                       formData.gender === g
