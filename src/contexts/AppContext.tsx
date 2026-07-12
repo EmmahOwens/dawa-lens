@@ -1647,12 +1647,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPatients((prev) => [...prev, newPatient]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
+
+      const docRef = doc(collection(db, "patients"));
+      const docId = docRef.id;
       const patientData = sanitizeFirestoreData({
         ...patient,
         managedBy: currentUserId,
         createdAt: new Date().toISOString(),
       });
-      await addDoc(collection(db, "patients"), patientData);
+      const newPatient = { ...patientData, id: docId } as Patient;
+
+      // Optimistic update
+      setPatients((prev) => [...prev, newPatient]);
+
+      try {
+        await setDoc(docRef, patientData);
+      } catch (error) {
+        // Rollback optimistic update
+        setPatients((prev) => prev.filter((p) => p.id !== docId));
+        throw error;
+      }
     }
   };
 
@@ -1664,57 +1678,98 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
     } else {
       if (!currentUserId) throw new Error("Not logged in");
-      const docRef = doc(db, "patients", id);
-      await updateDoc(docRef, sanitizeFirestoreData(updates));
+
+      let previousPatient: Patient | undefined;
+      setPatients((prev) => {
+        return prev.map((p) => {
+          if (p.id === id) {
+            previousPatient = p;
+            return { ...p, ...updates };
+          }
+          return p;
+        });
+      });
+
+      try {
+        const docRef = doc(db, "patients", id);
+        await updateDoc(docRef, sanitizeFirestoreData(updates));
+      } catch (error) {
+        if (previousPatient) {
+          const backup = previousPatient;
+          setPatients((prev) =>
+            prev.map((p) => (p.id === id ? backup : p))
+          );
+        }
+        throw error;
+      }
     }
   };
 
   const deletePatient = async (id: string) => {
-    // Cascade delete associated items
+    if (!currentUserId && storageMode !== "local") throw new Error("Not logged in");
+
+    // Backup current state for rollback
+    const backupPatients = [...patients];
+    const backupMedicines = [...medicines];
+    const backupReminders = [...reminders];
+    const backupDoseLogs = [...doseLogs];
+    const backupWellnessLogs = [...wellnessLogs];
+
     const relatedMeds = medicines.filter((m) => m.patientId === id);
-    for (const med of relatedMeds) {
-      await deleteMedicine(med.id);
-    }
-
     const relatedRems = reminders.filter((r) => r.patientId === id);
-    for (const rem of relatedRems) {
-      await deleteReminder(rem.id);
-    }
-
     const relatedLogs = doseLogs.filter((l) => l.patientId === id);
-    for (const l of relatedLogs) {
-      await deleteDoseLog(l.id);
-    }
 
-    // Optimistic local update for wellness logs
+    // Optimistic local update
+    setMedicines((prev) => prev.filter((m) => m.patientId !== id));
+    setReminders((prev) => prev.filter((r) => r.patientId !== id));
+    setDoseLogs((prev) => prev.filter((l) => l.patientId !== id));
     setWellnessLogs((prev) => prev.filter((w) => w.patientId !== id));
+    setPatients((prev) => prev.filter((p) => p.id !== id));
 
-    if (storageMode === "local") {
-      await localPersistence.patients.remove(id);
-      setPatients((prev) => prev.filter((p) => p.id !== id));
-    } else {
-      if (!currentUserId) throw new Error("Not logged in");
-
-      // Delete wellness logs from cloud
-      try {
-        const wQuery = query(
-          collection(db, "wellnessLogs"),
-          where("patientId", "==", id),
-          where("userId", "==", currentUserId)
-        );
-        const snapshot = await getDocs(wQuery);
-        snapshot.forEach((docSnap) => {
-          deleteDoc(doc(db, "wellnessLogs", docSnap.id)).catch(console.error);
-        });
-      } catch (e) {
-        console.error("Failed to cascade delete wellness logs:", e);
+    try {
+      // Cascade delete associated items
+      for (const med of relatedMeds) {
+        await deleteMedicine(med.id);
+      }
+      for (const rem of relatedRems) {
+        await deleteReminder(rem.id);
+      }
+      for (const l of relatedLogs) {
+        await deleteDoseLog(l.id);
       }
 
-      const docRef = doc(db, "patients", id);
-      await deleteDoc(docRef);
-    }
+      if (storageMode === "local") {
+        await localPersistence.patients.remove(id);
+      } else {
+        // Delete wellness logs from cloud
+        try {
+          const wQuery = query(
+            collection(db, "wellnessLogs"),
+            where("patientId", "==", id),
+            where("userId", "==", currentUserId)
+          );
+          const snapshot = await getDocs(wQuery);
+          for (const docSnap of snapshot.docs) {
+            await deleteDoc(doc(db, "wellnessLogs", docSnap.id));
+          }
+        } catch (e) {
+          console.error("Failed to cascade delete wellness logs:", e);
+        }
 
-    if (selectedPatientId === id) setSelectedPatientId(null);
+        const docRef = doc(db, "patients", id);
+        await deleteDoc(docRef);
+      }
+
+      if (selectedPatientId === id) setSelectedPatientId(null);
+    } catch (error) {
+      // Rollback all updates on error
+      setPatients(backupPatients);
+      setMedicines(backupMedicines);
+      setReminders(backupReminders);
+      setDoseLogs(backupDoseLogs);
+      setWellnessLogs(backupWellnessLogs);
+      throw error;
+    }
   };
 
   const clearAllData = useCallback(async () => {

@@ -175,7 +175,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h3 className="font-bold text-foreground">{t("settings.professional_hub")}</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">Beta Feature</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">CARING MODE</p>
               </div>
             </div>
             <Switch 
