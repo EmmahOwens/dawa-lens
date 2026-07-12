@@ -30,45 +30,45 @@ public class NativeAlarmPlugin: CAPPlugin, CAPBridgedPlugin {
             center.getPendingNotificationRequests { existing in
                 let dawaIds = existing.filter { $0.identifier.hasPrefix("dawa_alarm_") }.map { $0.identifier }
                 center.removePendingNotificationRequests(withIdentifiers: dawaIds)
-            }
 
-            let items = notifications.compactMap { $0 as? [String: Any] }
-            var scheduled = 0
+                let items = notifications.compactMap { $0 as? [String: Any] }
+                var scheduled = 0
 
-            for item in items {
-                guard let id = item["id"] as? Int,
-                      let title = item["title"] as? String,
-                      let body = item["body"] as? String,
-                      let triggerAtMillis = item["triggerAtMillis"] as? Double else { continue }
+                for item in items {
+                    guard let id = item["id"] as? Int,
+                          let title = item["title"] as? String,
+                          let body = item["body"] as? String,
+                          let triggerAtMillis = item["triggerAtMillis"] as? Double else { continue }
 
-                let triggerDate = Date(timeIntervalSince1970: triggerAtMillis / 1000.0)
-                guard triggerDate > Date() else { continue }
+                    let triggerDate = Date(timeIntervalSince1970: triggerAtMillis / 1000.0)
+                    guard triggerDate > Date() else { continue }
 
-                let content = UNMutableNotificationContent()
-                content.title = title
-                content.body = body
-                content.sound = .default
-                if let extraStr = item["extra"] as? String,
-                   let extraData = extraStr.data(using: .utf8),
-                   let extraDict = try? JSONSerialization.jsonObject(with: extraData) as? [String: Any] {
-                    content.userInfo = extraDict
+                    let content = UNMutableNotificationContent()
+                    content.title = title
+                    content.body = body
+                    content.sound = .default
+                    if let extraStr = item["extra"] as? String,
+                       let extraData = extraStr.data(using: .utf8),
+                       let extraDict = try? JSONSerialization.jsonObject(with: extraData) as? [String: Any] {
+                        content.userInfo = extraDict
+                    }
+
+                    let calendar = Calendar.current
+                    let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: triggerDate)
+                    let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+
+                    let request = UNNotificationRequest(
+                        identifier: "dawa_alarm_\(id)",
+                        content: content,
+                        trigger: trigger
+                    )
+
+                    center.add(request) { _ in }
+                    scheduled += 1
                 }
 
-                let calendar = Calendar.current
-                let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: triggerDate)
-                let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-
-                let request = UNNotificationRequest(
-                    identifier: "dawa_alarm_\(id)",
-                    content: content,
-                    trigger: trigger
-                )
-
-                center.add(request) { _ in }
-                scheduled += 1
+                call.resolve(["scheduled": scheduled])
             }
-
-            call.resolve(["scheduled": scheduled])
         }
     }
 

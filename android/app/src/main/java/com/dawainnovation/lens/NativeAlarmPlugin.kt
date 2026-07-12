@@ -121,9 +121,10 @@ class NativeAlarmPlugin : Plugin() {
                 ctx,
                 id,
                 intent,
-                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            pendingIntent?.let { alarmManager.cancel(it) }
+            alarmManager.cancel(pendingIntent)
+            pendingIntent.cancel()
         }
 
         prefs.edit().clear().apply()

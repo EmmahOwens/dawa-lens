@@ -122,21 +122,121 @@ export default function DawaGPT() {
       const reminderCount = reminders?.length || 0;
       const nextReminder = reminders?.[0];
 
-      // Variety & Time-aware Greeting
+      // Variety & Time-aware Greeting (45+ creative options)
       const hour = new Date().getHours();
-      const timeGreeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+      const day = new Date().getDay();
+      const greetingName = userProfile?.name || "there";
 
-      const openers = [
-        "How are you feeling today?",
-        "I hope you're having a healthy day!",
-        "Ready to manage your wellness together?",
-        "Always here to help with your medications.",
-        "How can I support your health journey today?",
-        "I hope you're feeling strong today!"
+      // Day-specific creative greetings
+      const dayGreetings: Record<number, string[]> = {
+        0: [
+          `Sunday vibes, ${greetingName}! ☀️ Let's set a peaceful, healthy tone for the upcoming week.`,
+          `Happy Sunday, ${greetingName}! Time to recharge and relax your body and mind. 🍃`,
+        ],
+        1: [
+          `Monday motivation time, ${greetingName}! 💪 Let's set the bar high for our health this week.`,
+          `Happy Monday, ${greetingName}! A fresh week to smash those wellness goals. Let's do this!`,
+        ],
+        2: [
+          `Happy Tuesday, ${greetingName}! Hope your week is flowin' beautifully. How are we doing? 🌊`,
+          `Tuesday checkout, ${greetingName}! Let's make sure our health habits are keeping pace with the week.`,
+        ],
+        3: [
+          `Happy Wednesday, ${greetingName}! You're officially over the hump. Keep up that health momentum! 🌟`,
+          `Mid-week check-in, ${greetingName}! Let's take a quick breather and check on your wellness stats.`,
+        ],
+        4: [
+          `Happy Thursday, ${greetingName}! Weekend is in sight, let's keep our wellness routine sharp.`,
+          `Thursday check, ${greetingName}! Almost there—let's finish the week strong and healthy!`,
+        ],
+        5: [
+          `Happy Friday, ${greetingName}! 🎉 Let's wrap up the week with healthy choices.`,
+          `Friday feels, ${greetingName}! Let's make sure your health routine is fully set for the weekend.`,
+        ],
+        6: [
+          `Happy Saturday, ${greetingName}! 🍃 Time to rest, recover, and focus on your peace of mind.`,
+          `Saturday check, ${greetingName}! Wishing you a peaceful, recharging weekend. How's the body feeling?`,
+        ],
+      };
+
+      // Time-of-day specific creative greetings
+      const morningGreetings = [
+        `Coffee and DawaGPT time, ${greetingName}? ☕ Let's check in on your health routine.`,
+        `Rise and shine, ${greetingName}! 🌅 What's the first healthy decision we're making today?`,
+        `Good morning, ${greetingName}! Ready to conquer your health checklist today? 🎯`,
       ];
-      const randomOpener = openers[Math.floor(Math.random() * openers.length)];
+      const afternoonGreetings = [
+        `Mid-day energy check, ${greetingName}! 🔋 Need a quick stretch or a glass of water?`,
+        `Good afternoon, ${greetingName}! 🍱 A perfect moment to check on your wellness reminders.`,
+        `Hope you're having a productive, health-conscious afternoon, ${greetingName}! ☀️`,
+      ];
+      const eveningGreetings = [
+        `Evening wind-down, ${greetingName}! 🌙 Let's review the highlights of your day.`,
+        `The sun is setting, ${greetingName}! 🌇 Did we check off all our healthy habits today?`,
+        `Good evening, ${greetingName}! Time to relax and take a moment just for yourself. ✨`,
+      ];
+      const nightGreetings = [
+        `Late night, ${greetingName}? 🌌 Don't forget that restful sleep is the ultimate medicine.`,
+        `Before you drift off, ${greetingName}... 🧘‍♂️ Let's make sure you're all set for tomorrow.`,
+        `Late-night wellness check, ${greetingName}. I'm always here if you need to log something. 🦉`,
+      ];
 
-      let opening = `${timeGreeting}, ${userProfile?.name || "there"}! I'm Dawa-GPT, your health companion. ${randomOpener}`;
+      const timeGreetings =
+        hour < 5
+          ? nightGreetings
+          : hour < 12
+          ? morningGreetings
+          : hour < 17
+          ? afternoonGreetings
+          : hour < 22
+          ? eveningGreetings
+          : nightGreetings;
+
+      // General creative, intriguing & fun greetings
+      const generalGreetings = [
+        `Ah, the human behind the health goals! How's your battery level today, ${greetingName}? 🔋`,
+        `Welcome back, ${greetingName}! Ready to check in on the most important person in your life (that's you)? ✨`,
+        `Time for a quick wellness tune-up, ${greetingName}. What's the body saying today? 🩺`,
+        `Hey ${greetingName}! Remember: drinking water is the cheapest form of self-care. Did you get your sips in? 💧`,
+        `Step away from the screen for a second, ${greetingName}... Deep breath in, deep breath out. Now, how are we feeling? 🧘`,
+        `Did you know consistency beats intensity every time? Let's check your reminders, ${greetingName}! 🗓️`,
+        `A brand new moment to treat your body like the temple it is. How can DawaGPT help today, ${greetingName}? 🏛️`,
+        `Fuel check! 🍎 Did you feed your brain and body something good today, ${greetingName}?`,
+        `If your body could send you a text message right now, what would it say, ${greetingName}? 💬`,
+        `Let's write today's wellness chapter together, ${greetingName}. Where should we start? 📖`,
+        `Small steps, giant leaps! 🚀 What's one healthy thing you've done today, ${greetingName}?`,
+        `Hey ${greetingName}, your wellness companion is officially on duty! How are we doing? 🫡`,
+        `Checking in on your vitality, ${greetingName}. On a scale of sleepy to superstar, where are we at? 🌟`,
+        `Health is a journey, not a sprint. Let's make sure we're on the right path today, ${greetingName}. 🛤️`,
+        `Your heart has beat about 100,000 times already today. Let's thank it by checking on our wellness, ${greetingName}! ❤️`,
+        `Hey ${greetingName}! I'm here to take the friction out of your health routine. What are we tackling? 🛠️`,
+        `A healthy mind starts with a checked-off wellness list. Let's look at your schedule, ${greetingName}! ✔️`,
+        `No judgment, just progress. 🤝 How is your day going so far, ${greetingName}?`,
+        `They say health is wealth, so let's check your wellness balance sheet, ${greetingName}! 💰`,
+        `Ready to turn healthy habits into automatic reflexes, ${greetingName}? Let's do this! 🧠`,
+        `Hey ${greetingName}, just a gentle nudge to make sure you're looking after number one today. 🥇`,
+        `Wellness isn't a chore, it's a choice. Thanks for making the right choice today, ${greetingName}! 🙌`,
+        `Hey ${greetingName}, did you take a moment to stretch today? Go on, do a quick reach! 🙆`,
+        `A little self-care goes a long way. Let's keep that momentum going, ${greetingName}! 🏎️`,
+        `Your health assistant has entered the chat! 💬 Let's get those reminders sorted, ${greetingName}.`,
+        `Welcome to your personal wellness zone, ${greetingName}. How's the vibe today? 🌈`,
+        `Sending you a boost of healthy energy, ${greetingName}! What's on your mind today? ⚡`,
+        `Hey ${greetingName}! Let's make today another day your future self will thank you for. ☀️`,
+        `How's the posture, ${greetingName}? Unclench that jaw, relax those shoulders, and let's check in! 🧘‍♀️`,
+        `Checking in on your physical and mental stats, ${greetingName}. Leveling up today? 🎮`,
+        `Ready to keep the streaks alive, ${greetingName}? Let's see what's on the menu today. 📈`,
+        `Hey ${greetingName}, just your friendly neighborhood health assistant stopping by. How can I help? 🦸‍♂️`,
+        `Unclench your shoulders and take a slow breath. Okay, now let's talk health, ${greetingName}! 🌬️`
+      ];
+
+      // Pool all valid greetings for this exact moment
+      const currentDayGreetings = dayGreetings[day] || [];
+      const greetingPool = [...currentDayGreetings, ...timeGreetings, ...generalGreetings];
+
+      // Pick one randomly
+      const randomGreeting = greetingPool[Math.floor(Math.random() * greetingPool.length)];
+
+      let opening = `${randomGreeting} I'm Dawa-GPT, your health companion.`;
 
       if (reminderCount > 0 && nextReminder) {
         const reminderPhrases = [

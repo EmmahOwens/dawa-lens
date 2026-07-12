@@ -11,6 +11,8 @@ import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 
+import org.json.JSONArray
+
 class AlarmReceiver : BroadcastReceiver() {
 
     companion object {
@@ -24,6 +26,34 @@ class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra("notificationId", 0)
+
+        // Validation guard: check if the notification is still in the active schedule
+        val prefs = context.getSharedPreferences("dawa_alarms", Context.MODE_PRIVATE)
+        val scheduleJson = prefs.getString("dawa_alarm_schedule", null)
+        if (scheduleJson == null) {
+            // No active schedule at all (e.g. all reminders deleted or disabled)
+            return
+        }
+
+        try {
+            val array = JSONArray(scheduleJson)
+            var reminderExists = false
+            for (i in 0 until array.length()) {
+                val item = array.getJSONObject(i)
+                if (item.getInt("id") == notificationId) {
+                    reminderExists = true
+                    break
+                }
+            }
+            if (!reminderExists) {
+                // Silent return: reminder was deleted or rescheduled
+                return
+            }
+        } catch (e: Exception) {
+            // Default to showing the notification if parsing fails (fail-safe)
+            e.printStackTrace()
+        }
+
         val title = intent.getStringExtra("title") ?: "Dawa Lens"
         val body = intent.getStringExtra("body") ?: "Time to take your medicine"
 
