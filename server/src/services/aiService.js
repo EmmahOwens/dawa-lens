@@ -1034,7 +1034,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     Actions:
     - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, dosagePerDose?, patientId? }
     - UPDATE_MEDICINE: { id, name?, dosage?, notes? }
-    - ADD_REMINDER: { medicineName, dose, time (HH:mm), repeatSchedule, patientId?, medicineId? }
+    - ADD_REMINDER: { medicineName, dose, time (comma-separated HH:mm strings, e.g. "08:00" for once daily, or "08:00,20:00" for twice daily. NEVER use words like "morning" or "twice a day"), repeatSchedule ("daily" | "weekly" | "once" | "custom"), patientId?, medicineId? }
     - UPDATE_REMINDER: { id, enabled?, time?, dose? }
     - REMOVE_REMINDER: { id }
     - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action, patientId? }
@@ -1066,7 +1066,11 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
          - '/scan' or '/scan-medicine' (Scan Medicine page)
          - '/search' or '/medication-info' (Search / Medication Info page)
     7. WELLNESS LOGGING: If the user mentions how they are feeling, their mood, energy level, or symptoms, proactively ask if they want to log it or log it immediately. When logging a symptom check-in, set type to 'symptom' and include mood (1-5), energy (1-5), and/or symptoms (array of strings, e.g. ["Headache", "Fatigue"]) in the data object. If the user mentions what they ate or logs a meal, set type to 'food' and include meal (string, e.g., "Matooke & G-nut sauce") in the data object. You can generate the aiReflection yourself inside data (with reflection, affirmation, and tip), or leave it to the server.
-    8. SUGGESTIONS (CRITICAL — READ CAREFULLY):
+    8. REMINDER FREQUENCY & TIME FORMATS (CRITICAL):
+       - If a medication requires multiple doses a day (e.g. twice daily, three times daily, or every 8 hours), you MUST specify all times as a single comma-separated string of HH:mm format times in the "time" field (e.g., "08:00,20:00" for twice daily, or "08:00,14:00,20:00" for three times daily).
+       - NEVER use text descriptions (like "morning", "twice a day", "night") in the "time" field.
+       - Ensure "repeatSchedule" is set to "custom" if multiple time slots are provided, or "daily" for once-a-day schedules.
+    9. SUGGESTIONS (CRITICAL — READ CAREFULLY):
        - You MUST provide EXACTLY 3 short, context-aware follow-up suggestions in the 'suggestions' field.
        - Suggestions must be NATURAL CONTINUATIONS of the current conversation — what the user would logically ask or do NEXT based on YOUR response.
        - Suggestions must be from the USER's perspective (e.g., "Log my dose", NOT "You should log your dose").

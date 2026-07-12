@@ -4,8 +4,23 @@ import { AIAction } from "@/services/aiAssistantService";
 import { RiveMoji } from "@/components/rive/RiveMoji";
 import React from "react";
 
-function normalizeTimeStr(timeStr: string): string {
-  return timeStr
+export function normalizeTimeStr(timeStr: string): string {
+  if (!timeStr) return "08:00";
+  
+  const cleanStr = timeStr.toLowerCase().trim();
+
+  // If the whole string is a frequency/descriptive phrase, parse it first
+  if (cleanStr.includes("twice") || cleanStr.includes("two times") || cleanStr.includes("2 times") || cleanStr.includes("2x")) {
+    return "08:00,20:00";
+  }
+  if (cleanStr.includes("three times") || cleanStr.includes("thrice") || cleanStr.includes("3 times") || cleanStr.includes("3x")) {
+    return "08:00,14:00,20:00";
+  }
+  if (cleanStr.includes("four times") || cleanStr.includes("4 times") || cleanStr.includes("4x")) {
+    return "08:00,12:00,16:00,20:00";
+  }
+
+  return cleanStr
     .split(",")
     .map((t) => {
       const trimmed = t.trim();
@@ -34,7 +49,22 @@ function normalizeTimeStr(timeStr: string): string {
         }
       }
 
-      return trimmed;
+      // Check for time of day keywords
+      if (trimmed.includes("morning") || trimmed.includes("breakfast")) {
+        return "08:00";
+      }
+      if (trimmed.includes("noon") || trimmed.includes("lunch") || trimmed.includes("afternoon")) {
+        return "13:00";
+      }
+      if (trimmed.includes("evening") || trimmed.includes("dinner")) {
+        return "18:00";
+      }
+      if (trimmed.includes("night") || trimmed.includes("bedtime")) {
+        return "21:00";
+      }
+
+      // Default fallback for unparseable token: "08:00"
+      return "08:00";
     })
     .join(",");
 }
@@ -94,12 +124,41 @@ export function useAIActions() {
             }
           }
 
+          const normalizedTime = payload.time ? normalizeTimeStr(payload.time) : "";
+          let repeatSchedule = payload.repeatSchedule;
+
+          if (typeof repeatSchedule === "string") {
+            const lowerRepeat = repeatSchedule.toLowerCase().trim();
+            if (lowerRepeat === "daily" || lowerRepeat === "weekly" || lowerRepeat === "once" || lowerRepeat === "custom") {
+              repeatSchedule = lowerRepeat;
+            } else if (lowerRepeat.includes("day") || lowerRepeat.includes("daily") || lowerRepeat.includes("every")) {
+              repeatSchedule = "daily";
+            } else if (lowerRepeat.includes("week") || lowerRepeat.includes("weekly")) {
+              repeatSchedule = "weekly";
+            } else if (lowerRepeat.includes("once") || lowerRepeat.includes("one")) {
+              repeatSchedule = "once";
+            } else {
+              repeatSchedule = "daily";
+            }
+          }
+
+          // If multiple times are set, use "custom" repeatSchedule to match AddReminderPage behavior
+          if (normalizedTime.includes(",")) {
+            if (repeatSchedule !== "custom" && repeatSchedule !== "daily") {
+              repeatSchedule = "custom";
+            }
+          }
+
+          if (!repeatSchedule) {
+            repeatSchedule = normalizedTime.includes(",") ? "custom" : "daily";
+          }
+
           await addReminder({
             medicineId: medicineId || undefined,
             medicineName: payload.medicineName,
             dose: payload.dose,
-            time: payload.time ? normalizeTimeStr(payload.time) : "",
-            repeatSchedule: payload.repeatSchedule || "daily",
+            time: normalizedTime,
+            repeatSchedule: repeatSchedule,
             repeatDays: payload.repeatDays || undefined,
             notes: payload.notes || "",
             enabled: true,
@@ -110,7 +169,7 @@ export function useAIActions() {
           });
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Reminder added</span>,
-            description: action.confirmMessage || `Scheduled ${payload.medicineName} for ${payload.time}.`,
+            description: action.confirmMessage || `Scheduled ${payload.medicineName} for ${normalizedTime}.`,
           });
           break;
         }
@@ -133,6 +192,25 @@ export function useAIActions() {
           const reminderUpdates = { ...payload };
           if (reminderUpdates.time) {
             reminderUpdates.time = normalizeTimeStr(reminderUpdates.time);
+          }
+          if (reminderUpdates.repeatSchedule && typeof reminderUpdates.repeatSchedule === "string") {
+            const lowerRepeat = reminderUpdates.repeatSchedule.toLowerCase().trim();
+            if (lowerRepeat === "daily" || lowerRepeat === "weekly" || lowerRepeat === "once" || lowerRepeat === "custom") {
+              reminderUpdates.repeatSchedule = lowerRepeat;
+            } else if (lowerRepeat.includes("day") || lowerRepeat.includes("daily") || lowerRepeat.includes("every")) {
+              reminderUpdates.repeatSchedule = "daily";
+            } else if (lowerRepeat.includes("week") || lowerRepeat.includes("weekly")) {
+              reminderUpdates.repeatSchedule = "weekly";
+            } else if (lowerRepeat.includes("once") || lowerRepeat.includes("one")) {
+              reminderUpdates.repeatSchedule = "once";
+            } else {
+              reminderUpdates.repeatSchedule = "daily";
+            }
+          }
+          if (reminderUpdates.time && reminderUpdates.time.includes(",")) {
+            if (reminderUpdates.repeatSchedule !== "custom" && reminderUpdates.repeatSchedule !== "daily") {
+              reminderUpdates.repeatSchedule = "custom";
+            }
           }
 
           await updateReminder(targetId, {
