@@ -501,6 +501,7 @@ export default function FamilyHubPage() {
 
         {patients.length === 0 ? (
           <motion.div
+            key="empty"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="p-10 rounded-[2.5rem] border-2 border-dashed border-border/60 bg-secondary/20 text-center"
@@ -524,6 +525,7 @@ export default function FamilyHubPage() {
           </motion.div>
         ) : (
           <motion.div
+            key="list"
             variants={container}
             initial="hidden"
             animate="show"
