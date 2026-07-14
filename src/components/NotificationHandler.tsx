@@ -5,9 +5,11 @@ import { useApp } from "@/contexts/AppContext";
 import { registerNotificationActions, migrateNotificationChannels } from "@/services/reminderService";
 import { toast } from "sonner";
 import { addMinutes } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 export const NotificationHandler = () => {
-  const { logDose, reminders } = useApp();
+  const navigate = useNavigate();
+  const { logDose, reminders, setSelectedPatientId } = useApp();
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -35,7 +37,7 @@ export const NotificationHandler = () => {
         'localNotificationActionPerformed',
         async (action: ActionPerformed) => {
           const { notification, actionId } = action;
-          const { reminderId, medicineName, dose, scheduledTime } = notification.extra;
+          const { reminderId, medicineName, dose, scheduledTime } = notification.extra || {};
 
           console.log('Action performed:', actionId, notification);
 
@@ -120,8 +122,32 @@ export const NotificationHandler = () => {
             toast.info(`Snoozed ${medicineName} for 15 minutes.`);
           } else {
             // Default action (tap on notification body)
-            // Navigation is handled by the router if we wanted, 
-            // but for now, opening the app is enough.
+            const extra = notification.extra || {};
+            
+            // 1. Sync the active patient context if patientId is provided
+            if ('patientId' in extra) {
+              setSelectedPatientId(extra.patientId);
+            }
+
+            // 2. Navigate to the target route if specified
+            if (extra.route) {
+              navigate(extra.route);
+            } else if (extra.type === 'low_stock' || extra.type === 'refill') {
+              navigate('/medvault');
+            } else if (extra.type === 'missed_alert') {
+              if (extra.patientId) {
+                navigate('/family');
+              } else {
+                navigate('/history');
+              }
+            } else if (extra.reminderId) {
+              // It's a standard reminder
+              if (extra.patientId) {
+                navigate('/family');
+              } else {
+                navigate('/');
+              }
+            }
           }
         }
       );

@@ -1328,6 +1328,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
                           id: Math.floor(Math.random() * 1000000),
                           channelId: reminder.patientId ? `dawa_patient_v2_${reminder.patientId}` : "dawa_owner_v2",
                           sound: "default",
+                          extra: {
+                            type: "schedule_adjusted",
+                            reminderId: reminder.id,
+                            patientId: reminder.patientId ?? null,
+                            route: reminder.patientId ? "/family" : "/reminders",
+                          },
                         }
                       ]
                     });

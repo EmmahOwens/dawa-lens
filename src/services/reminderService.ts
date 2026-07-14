@@ -266,6 +266,7 @@ export const checkMissedDoses = async (
                   extra: {
                     type: "missed_alert",
                     patientId: r.patientId ?? null,
+                    route: "/history",
                   },
                 },
               ],
@@ -590,7 +591,7 @@ export const scheduleRefillNotifications = async (
         schedule: { at: new Date(Date.now() + 3000), allowWhileIdle: true }, // fire after 3s
         channelId: CHANNEL_REFILL,
         sound: "default",
-        extra: { type: "low_stock", medicineId: med.id, route: "/medvault" },
+        extra: { type: "low_stock", medicineId: med.id, patientId: med.patientId ?? null, route: "/medvault" },
       });
 
       localStorage.setItem(sentKey, "1");
@@ -700,7 +701,12 @@ export const scheduleReminders = async (
               ? patientChannelId(r.patientId)
               : CHANNEL_OWNER,
             sound: "default",
-            extra: { type: "refill", medicineId: r.medicineId },
+            extra: {
+              type: "refill",
+              medicineId: r.medicineId,
+              patientId: r.patientId ?? null,
+              route: "/medvault",
+            },
           });
           alarmNotifications.push({
             id: stringToHash(r.id + "refill"),
@@ -733,8 +739,10 @@ export const scheduleReminders = async (
             reminderId: r.id,
             medicineName: r.medicineName,
             patientName: r.patientName || null,
+            patientId: r.patientId ?? null,
             dose: r.dose,
             scheduledTime: next.toISOString(),
+            route: "/",
           },
         });
         alarmNotifications.push({
