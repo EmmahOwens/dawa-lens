@@ -1,0 +1,45 @@
+cargo:rerun-if-changed=sqlite3/sqlite3.c
+cargo:rerun-if-changed=sqlite3/wasm32-wasi-vfs.c
+cargo:rerun-if-env-changed=SQLITE_MAX_VARIABLE_NUMBER
+cargo:rerun-if-env-changed=SQLITE_MAX_EXPR_DEPTH
+cargo:rerun-if-env-changed=LIBSQLITE3_FLAGS
+cargo:rerun-if-env-changed=CC_FORCE_DISABLE
+CC_FORCE_DISABLE = None
+cargo:rerun-if-env-changed=CC_armv7-linux-androideabi
+CC_armv7-linux-androideabi = Some(/home/iammbayo/Android/Sdk/ndk/26.3.11579264/toolchains/llvm/prebuilt/linux-x86_64/bin/clang)
+cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+cargo:rerun-if-env-changed=CFLAGS
+CFLAGS = None
+cargo:rerun-if-env-changed=TARGET_CFLAGS
+TARGET_CFLAGS = None
+cargo:rerun-if-env-changed=CFLAGS_armv7_linux_androideabi
+CFLAGS_armv7_linux_androideabi = None
+cargo:rerun-if-env-changed=CFLAGS_armv7-linux-androideabi
+CFLAGS_armv7-linux-androideabi = Some(--target=armv7a-linux-androideabi24)
+cargo:rerun-if-env-changed=CC_SHELL_ESCAPED_FLAGS
+CC_SHELL_ESCAPED_FLAGS = None
+cargo:rerun-if-env-changed=AR_armv7-linux-androideabi
+AR_armv7-linux-androideabi = Some(/home/iammbayo/Android/Sdk/ndk/26.3.11579264/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar)
+cargo:rerun-if-env-changed=ARFLAGS
+ARFLAGS = None
+cargo:rerun-if-env-changed=TARGET_ARFLAGS
+TARGET_ARFLAGS = None
+cargo:rerun-if-env-changed=ARFLAGS_armv7_linux_androideabi
+ARFLAGS_armv7_linux_androideabi = None
+cargo:rerun-if-env-changed=ARFLAGS_armv7-linux-androideabi
+ARFLAGS_armv7-linux-androideabi = None
+cargo:rerun-if-env-changed=AR_armv7-linux-androideabi
+AR_armv7-linux-androideabi = Some(/home/iammbayo/Android/Sdk/ndk/26.3.11579264/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-ar)
+cargo:rerun-if-env-changed=ARFLAGS
+ARFLAGS = None
+cargo:rerun-if-env-changed=TARGET_ARFLAGS
+TARGET_ARFLAGS = None
+cargo:rerun-if-env-changed=ARFLAGS_armv7_linux_androideabi
+ARFLAGS_armv7_linux_androideabi = None
+cargo:rerun-if-env-changed=ARFLAGS_armv7-linux-androideabi
+ARFLAGS_armv7-linux-androideabi = None
+cargo:rustc-link-lib=static=sqlite3
+cargo:rustc-link-search=native=/home/iammbayo/Documents/Projects/dawa-lens/rust/target/armv7-linux-androideabi/release/build/libsqlite3-sys-1e6bc953be21a76c/out
+cargo:lib_dir=/home/iammbayo/Documents/Projects/dawa-lens/rust/target/armv7-linux-androideabi/release/build/libsqlite3-sys-1e6bc953be21a76c/out

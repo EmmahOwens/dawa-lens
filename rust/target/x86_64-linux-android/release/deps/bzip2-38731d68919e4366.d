@@ -1,0 +1,11 @@
+/home/iammbayo/Documents/Projects/dawa-lens/rust/target/x86_64-linux-android/release/deps/bzip2-38731d68919e4366.d: /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/lib.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/mem.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/bufread.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/read.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/write.rs
+
+/home/iammbayo/Documents/Projects/dawa-lens/rust/target/x86_64-linux-android/release/deps/libbzip2-38731d68919e4366.rlib: /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/lib.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/mem.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/bufread.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/read.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/write.rs
+
+/home/iammbayo/Documents/Projects/dawa-lens/rust/target/x86_64-linux-android/release/deps/libbzip2-38731d68919e4366.rmeta: /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/lib.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/mem.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/bufread.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/read.rs /home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/write.rs
+
+/home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/lib.rs:
+/home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/mem.rs:
+/home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/bufread.rs:
+/home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/read.rs:
+/home/iammbayo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bzip2-0.4.4/src/write.rs:

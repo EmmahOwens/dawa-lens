@@ -57,13 +57,13 @@ export const localPersistence = {
       return storage.getItem<Medicine[]>(LOCAL_MEDS_KEY, []);
     },
     create: async (
-      data: Omit<Medicine, "id" | "addedAt">
+      data: Omit<Medicine, "id" | "addedAt"> & { id?: string; addedAt?: string }
     ): Promise<Medicine> => {
       if (Capacitor.isNativePlatform() && sqliteReady) {
-        const id = `local-${Date.now()}-${Math.random()
+        const id = data.id || `local-${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 11)}`;
-        const addedAt = new Date().toISOString();
+        const addedAt = data.addedAt || new Date().toISOString();
         await NativeSqlite.execute({
           sql: `INSERT INTO medicines (id,name,generic_name,dosage,form,current_quantity,dosage_per_dose,color,icon,patient_id,user_id,added_at,updated_at,is_conflict,image_url,notes)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -92,10 +92,10 @@ export const localPersistence = {
       const all = await storage.getItem<Medicine[]>(LOCAL_MEDS_KEY, []);
       const newItem: Medicine = {
         ...data,
-        id: `local-${Date.now()}-${Math.random()
+        id: data.id || `local-${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 11)}`,
-        addedAt: new Date().toISOString(),
+        addedAt: data.addedAt || new Date().toISOString(),
       };
       all.push(newItem);
       await storage.setItem(LOCAL_MEDS_KEY, all);
@@ -176,11 +176,11 @@ export const localPersistence = {
       return storage.getItem<Reminder[]>(LOCAL_REMS_KEY, []);
     },
     create: async (
-      data: Omit<Reminder, "id" | "createdAt">
+      data: Omit<Reminder, "id" | "createdAt"> & { id?: string; createdAt?: string }
     ): Promise<Reminder> => {
       if (Capacitor.isNativePlatform() && sqliteReady) {
-        const id = `lrem-${Date.now()}`;
-        const createdAt = new Date().toISOString();
+        const id = data.id || `lrem-${Date.now()}`;
+        const createdAt = data.createdAt || new Date().toISOString();
         await NativeSqlite.execute({
           sql: `INSERT INTO reminders (id,medicine_id,medicine_name,dose,time,repeat_schedule,repeat_days,notes,enabled,created_at,patient_id)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
@@ -204,8 +204,8 @@ export const localPersistence = {
       const all = await storage.getItem<Reminder[]>(LOCAL_REMS_KEY, []);
       const newItem: Reminder = {
         ...data,
-        id: `lrem-${Date.now()}`,
-        createdAt: new Date().toISOString(),
+        id: data.id || `lrem-${Date.now()}`,
+        createdAt: data.createdAt || new Date().toISOString(),
       };
       all.push(newItem);
       await storage.setItem(LOCAL_REMS_KEY, all);
@@ -276,11 +276,11 @@ export const localPersistence = {
       return storage.getItem<DoseLog[]>(LOCAL_LOGS_KEY, []);
     },
     create: async (
-      data: Omit<DoseLog, "id" | "actionTime">
+      data: Omit<DoseLog, "id" | "actionTime"> & { id?: string; actionTime?: string }
     ): Promise<DoseLog> => {
       if (Capacitor.isNativePlatform() && sqliteReady) {
-        const id = `llog-${Date.now()}`;
-        const actionTime = new Date().toISOString();
+        const id = data.id || `llog-${Date.now()}`;
+        const actionTime = data.actionTime || new Date().toISOString();
         await NativeSqlite.execute({
           sql: `INSERT INTO dose_logs (id,reminder_id,medicine_name,dose,scheduled_time,action_time,action,is_snoozed,snooze_until,patient_id)
                 VALUES (?,?,?,?,?,?,?,?,?,?)`,
@@ -302,8 +302,8 @@ export const localPersistence = {
       const all = await storage.getItem<DoseLog[]>(LOCAL_LOGS_KEY, []);
       const newItem: DoseLog = {
         ...data,
-        id: `llog-${Date.now()}`,
-        actionTime: new Date().toISOString(),
+        id: data.id || `llog-${Date.now()}`,
+        actionTime: data.actionTime || new Date().toISOString(),
       };
       all.push(newItem);
       await storage.setItem(LOCAL_LOGS_KEY, all);
@@ -371,13 +371,14 @@ export const localPersistence = {
       return storage.getItem<Patient[]>(LOCAL_PATIENTS_KEY, []);
     },
     create: async (
-      data: Omit<Patient, "id" | "createdAt" | "managedBy">
+      data: Omit<Patient, "id" | "createdAt" | "managedBy"> & { id?: string; createdAt?: string; managedBy?: string }
     ): Promise<Patient> => {
       if (Capacitor.isNativePlatform() && sqliteReady) {
-        const id = `local-patient-${Date.now()}-${Math.random()
+        const id = data.id || `local-patient-${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 11)}`;
-        const createdAt = new Date().toISOString();
+        const createdAt = data.createdAt || new Date().toISOString();
+        const managedBy = data.managedBy || "local-user";
         await NativeSqlite.execute({
           sql: `INSERT INTO patients (id,name,age,gender,relation,managed_by,created_at)
                 VALUES (?,?,?,?,?,?,?)`,
@@ -387,20 +388,20 @@ export const localPersistence = {
             data.age ?? null,
             data.gender ?? null,
             data.relation ?? null,
-            "local-user",
+            managedBy,
             createdAt,
           ],
         });
-        return { ...data, id, managedBy: "local-user", createdAt } as Patient;
+        return { ...data, id, managedBy, createdAt } as Patient;
       }
       const all = await storage.getItem<Patient[]>(LOCAL_PATIENTS_KEY, []);
       const newItem: Patient = {
         ...data,
-        id: `local-patient-${Date.now()}-${Math.random()
+        id: data.id || `local-patient-${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 11)}`,
-        managedBy: "local-user",
-        createdAt: new Date().toISOString(),
+        managedBy: data.managedBy || "local-user",
+        createdAt: data.createdAt || new Date().toISOString(),
       };
       all.push(newItem);
       await storage.setItem(LOCAL_PATIENTS_KEY, all);
@@ -462,11 +463,11 @@ export const localPersistence = {
       return storage.getItem<WellnessLog[]>(LOCAL_WELLNESS_KEY, []);
     },
     create: async (
-      data: Omit<WellnessLog, "id" | "timestamp" | "userId">
+      data: Omit<WellnessLog, "id" | "timestamp" | "userId"> & { id?: string; timestamp?: string; userId?: string }
     ): Promise<WellnessLog> => {
-      const id = `lwell-${Date.now()}`;
-      const timestamp = new Date().toISOString();
-      const userId = "local";
+      const id = data.id || `lwell-${Date.now()}`;
+      const timestamp = data.timestamp || new Date().toISOString();
+      const userId = data.userId || "local";
 
       if (Capacitor.isNativePlatform() && sqliteReady) {
         await NativeSqlite.execute({

@@ -29,7 +29,7 @@ cargo ndk \
     -- build --release --features android
 
 # Copy .so files to the Android jniLibs directory
-ANDROID_JNILIBS="../../android/app/src/main/jniLibs"
+ANDROID_JNILIBS="../android/app/src/main/jniLibs"
 mkdir -p \
     "$ANDROID_JNILIBS/arm64-v8a" \
     "$ANDROID_JNILIBS/armeabi-v7a" \

@@ -578,6 +578,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return unsub;
   }, [currentUserId, storageMode]);
 
+  // Initial check & flush on mount/login
+  useEffect(() => {
+    if (currentUserId && storageMode === "cloud" && hasNetwork()) {
+      console.log("[AppContext] Initial network sync — flushing offline queue…");
+      flushQueue(db)
+        .then((flushed) => {
+          if (flushed > 0) {
+            setPendingOfflineOps(getPendingCount());
+            toast({
+              title: "Synced!",
+              description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
+            });
+          }
+        })
+        .catch((err) => console.warn("[AppContext] Initial queue flush failed:", err));
+    }
+  }, [currentUserId, storageMode]);
+
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
     setIsLoggedIn(true);
@@ -926,10 +944,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addReminder = async (rem: Omit<Reminder, "id" | "createdAt">) => {
-    let newReminder: Reminder;
-
     if (storageMode === "local") {
-      newReminder = await localPersistence.reminders.create(rem);
+      const newReminder = await localPersistence.reminders.create(rem);
       setReminders((p) => [...p, newReminder]);
       return;
     }
@@ -940,29 +956,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
       rem.patientId !== undefined ? rem.patientId : selectedPatientId;
     const createdAt = new Date().toISOString();
 
-    if (!isOnline) {
-      // ── Offline path: generate a local ID, persist + queue ──
-      const localId = `offline-rem-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 9)}`;
-      const remData = sanitizeFirestoreData({
-        ...rem,
-        medicineId: rem.medicineId || null,
-        userId: currentUserId,
-        patientId: effectivePatientId || null,
-        createdAt,
-      });
-      newReminder = { ...remData, id: localId } as Reminder;
+    const localId = `lrem-${Date.now()}`;
+    const remData = sanitizeFirestoreData({
+      ...rem,
+      medicineId: rem.medicineId || null,
+      userId: currentUserId,
+      patientId: effectivePatientId || null,
+      createdAt,
+    });
+    const newReminder = { ...remData, id: localId } as Reminder;
 
-      // Persist locally for crash-survival
-      await localPersistence.reminders.create({ ...rem, id: localId, createdAt } as any);
+    // 1. Save locally instantly
+    await localPersistence.reminders.create({ ...rem, id: localId, createdAt } as any);
 
-      // Optimistic UI update
-      setReminders((p) => [...p, newReminder]);
-      // Update local cache so scheduleReminders works immediately
-      storage.setItem(CLOUD_CACHE_REMS_KEY, [...reminders, newReminder]);
+    // 2. Optimistic UI update
+    setReminders((p) => [...p, newReminder]);
+    storage.setItem(CLOUD_CACHE_REMS_KEY, [...reminders, newReminder]);
 
-      // Queue for Firestore sync on reconnect
+    // 3. Sync to Firestore in background
+    if (isOnline) {
+      try {
+        const docRef = doc(db, "reminders", localId);
+        await setDoc(docRef, remData);
+      } catch (err) {
+        console.warn("[AppContext] Failed to sync new reminder, enqueuing:", err);
+        enqueueOp({
+          type: "add-reminder",
+          collection: "reminders",
+          docId: localId,
+          data: remData,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
+      }
+    } else {
       enqueueOp({
         type: "add-reminder",
         collection: "reminders",
@@ -971,19 +998,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         userId: currentUserId,
       });
       setPendingOfflineOps(getPendingCount());
-      return;
     }
-
-    // ── Online path: write to Firestore directly ──
-    const remData = sanitizeFirestoreData({
-      ...rem,
-      medicineId: rem.medicineId || null,
-      userId: currentUserId,
-      patientId: effectivePatientId || null,
-      createdAt,
-    });
-    const docRef = await addDoc(collection(db, "reminders"), remData);
-    newReminder = { ...remData, id: docRef.id } as Reminder;
   };
 
   const updateReminder = async (id: string, updates: Partial<Reminder>) => {
@@ -995,22 +1010,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Optimistic local state update regardless of connectivity
+    // 1. Save locally instantly
+    try {
+      await localPersistence.reminders.update(id, updates);
+    } catch (e) {
+      console.warn("[AppContext] Failed to update reminder locally:", e);
+    }
+
+    // 2. Optimistic UI update
     setReminders((p) =>
       p.map((r) => (r.id === id ? { ...r, ...updates } : r))
     );
+    const current = reminders.find((r) => r.id === id);
+    if (current) {
+      const updated = { ...current, ...updates };
+      storage.setItem(
+        CLOUD_CACHE_REMS_KEY,
+        reminders.map((r) => (r.id === id ? updated : r))
+      );
+    }
 
-    if (!isOnline) {
-      // Persist to local cache so updates survive a crash/reload
-      const current = reminders.find((r) => r.id === id);
-      if (current) {
-        const updated = { ...current, ...updates };
-        await localPersistence.reminders.update(id, updates).catch(() => {});
-        storage.setItem(
-          CLOUD_CACHE_REMS_KEY,
-          reminders.map((r) => (r.id === id ? updated : r))
-        );
+    // 3. Sync update to Firestore in background
+    if (isOnline) {
+      try {
+        const docRef = doc(db, "reminders", id);
+        await updateDoc(docRef, sanitizeFirestoreData(updates));
+      } catch (err) {
+        console.warn("[AppContext] Failed to sync reminder update, enqueuing:", err);
+        if (currentUserId) {
+          enqueueOp({
+            type: "update-reminder",
+            collection: "reminders",
+            docId: id,
+            data: sanitizeFirestoreData(updates),
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
+        }
       }
+    } else {
       if (currentUserId) {
         enqueueOp({
           type: "update-reminder",
@@ -1021,11 +1059,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         setPendingOfflineOps(getPendingCount());
       }
-      return;
     }
-
-    const docRef = doc(db, "reminders", id);
-    await updateDoc(docRef, sanitizeFirestoreData(updates));
   };
 
   const deleteReminder = async (id: string) => {
@@ -1035,16 +1069,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Optimistic local removal
+    // 1. Save locally instantly
+    try {
+      await localPersistence.reminders.remove(id);
+    } catch (e) {
+      console.warn("[AppContext] Failed to remove reminder locally:", e);
+    }
+
+    // 2. Optimistic UI update
     setReminders((p) => p.filter((r) => r.id !== id));
     storage.setItem(
       CLOUD_CACHE_REMS_KEY,
       reminders.filter((r) => r.id !== id)
     );
 
-    if (!isOnline) {
-      // Remove from local cache and queue the Firestore delete
-      await localPersistence.reminders.remove(id).catch(() => {});
+    // 3. Sync delete to Firestore in background
+    if (isOnline) {
+      try {
+        const docRef = doc(db, "reminders", id);
+        await deleteDoc(docRef);
+      } catch (err) {
+        console.warn("[AppContext] Failed to sync reminder delete, enqueuing:", err);
+        if (currentUserId) {
+          enqueueOp({
+            type: "delete-reminder",
+            collection: "reminders",
+            docId: id,
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
+        }
+      }
+    } else {
       if (currentUserId) {
         enqueueOp({
           type: "delete-reminder",
@@ -1054,11 +1110,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         setPendingOfflineOps(getPendingCount());
       }
-      return;
     }
-
-    const docRef = doc(db, "reminders", id);
-    await deleteDoc(docRef);
   };
 
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
@@ -1077,32 +1129,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       if (!currentUserId) throw new Error("Not logged in");
       const actionTime = new Date().toISOString();
+      const localId = `llog-${Date.now()}`;
 
-      if (!isOnline) {
-        // ── Offline path: generate a local ID, persist + queue ──
-        const localId = `offline-log-${Date.now()}-${Math.random()
-          .toString(36)
-          .substring(2, 9)}`;
-        const logData = sanitizeFirestoreData({
-          ...log,
-          userId: currentUserId,
-          patientId: effectivePatientId,
-          actionTime,
-        });
-        newLog = { ...logData, id: localId } as DoseLog;
+      const logData = sanitizeFirestoreData({
+        ...log,
+        userId: currentUserId,
+        patientId: effectivePatientId,
+        actionTime,
+      });
+      newLog = { ...logData, id: localId } as DoseLog;
 
-        // Persist locally
-        await localPersistence.doseLogs.create({
-          ...log,
-          patientId: effectivePatientId,
-          userId: currentUserId,
-        });
+      // 1. Save locally instantly
+      await localPersistence.doseLogs.create({
+        ...log,
+        id: localId,
+        actionTime,
+        patientId: effectivePatientId,
+        userId: currentUserId,
+      });
 
-        // Optimistic UI update
-        setDoseLogs((p) => [...p, newLog]);
-        storage.setItem(CLOUD_CACHE_LOGS_KEY, [...doseLogs, newLog]);
+      // 2. Optimistic UI update
+      setDoseLogs((p) => [...p, newLog]);
+      storage.setItem(CLOUD_CACHE_LOGS_KEY, [...doseLogs, newLog]);
 
-        // Queue for Firestore sync
+      // 3. Sync log to Firestore in background
+      if (isOnline) {
+        try {
+          const docRef = doc(db, "doseLogs", localId);
+          await setDoc(docRef, logData);
+        } catch (err) {
+          console.warn("[AppContext] Failed to sync dose log, enqueuing:", err);
+          enqueueOp({
+            type: "add-dose-log",
+            collection: "doseLogs",
+            docId: localId,
+            data: logData,
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
+        }
+      } else {
         enqueueOp({
           type: "add-dose-log",
           collection: "doseLogs",
@@ -1111,16 +1177,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           userId: currentUserId,
         });
         setPendingOfflineOps(getPendingCount());
-      } else {
-        // ── Online path ──
-        const logData = sanitizeFirestoreData({
-          ...log,
-          userId: currentUserId,
-          patientId: effectivePatientId,
-          actionTime,
-        });
-        const docRef = await addDoc(collection(db, "doseLogs"), logData);
-        newLog = { ...logData, id: docRef.id } as DoseLog;
       }
     }
 
@@ -1270,27 +1326,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
               newScheduledISO.setMilliseconds(0);
               const newScheduledTime = newScheduledISO.toISOString();
 
-              if (storageMode === "local") {
+              // Always save update locally instantly
+              try {
                 await localPersistence.doseLogs.update(newLog.id, {
                   scheduledTime: newScheduledTime,
                 });
-              } else if (isOnline) {
-                const logDocRef = doc(db, "doseLogs", newLog.id);
-                await updateDoc(logDocRef, { scheduledTime: newScheduledTime });
-              } else {
-                // Offline: queue the scheduledTime update
-                await localPersistence.doseLogs.update(newLog.id, {
-                  scheduledTime: newScheduledTime,
-                }).catch(() => {});
-                if (currentUserId) {
-                  enqueueOp({
-                    type: "update-dose-log",
-                    collection: "doseLogs",
-                    docId: newLog.id,
-                    data: { scheduledTime: newScheduledTime },
-                    userId: currentUserId,
-                  });
-                  setPendingOfflineOps(getPendingCount());
+              } catch (e) {
+                console.warn("[AppContext] Failed to update dose log locally:", e);
+              }
+
+              if (storageMode === "cloud") {
+                if (isOnline) {
+                  try {
+                    const logDocRef = doc(db, "doseLogs", newLog.id);
+                    await updateDoc(logDocRef, { scheduledTime: newScheduledTime });
+                  } catch (err) {
+                    console.warn("[AppContext] Failed to sync dose log schedule shift, enqueuing:", err);
+                    if (currentUserId) {
+                      enqueueOp({
+                        type: "update-dose-log",
+                        collection: "doseLogs",
+                        docId: newLog.id,
+                        data: { scheduledTime: newScheduledTime },
+                        userId: currentUserId,
+                      });
+                      setPendingOfflineOps(getPendingCount());
+                    }
+                  }
+                } else {
+                  if (currentUserId) {
+                    enqueueOp({
+                      type: "update-dose-log",
+                      collection: "doseLogs",
+                      docId: newLog.id,
+                      data: { scheduledTime: newScheduledTime },
+                      userId: currentUserId,
+                    });
+                    setPendingOfflineOps(getPendingCount());
+                  }
                 }
               }
 

@@ -5,12 +5,18 @@ mod parsing;
 mod crypto;
 mod file_ops;
 mod network;
+mod db;
 
 pub use search::{fuzzy_search, DrugEntry};
 
 /// Returns 1 — confirms the native library loaded and is functional.
 #[no_mangle]
 pub extern "C" fn dawa_core_is_available() -> i32 {
+    1
+}
+
+#[no_mangle]
+pub extern "C" fn dawa_search_is_available() -> i32 {
     1
 }
 
@@ -25,6 +31,7 @@ mod jni_bindings {
     use crate::scheduler;
     use crate::parsing;
     use crate::crypto;
+    use crate::db;
 
     /// Called by NativeSearchPlugin.kt: nativeFuzzySearch(query, limit)
     #[no_mangle]
@@ -106,6 +113,78 @@ mod jni_bindings {
         let hashed = crypto::hash_data(&input);
         env.byte_array_from_slice(&hashed)
             .expect("failed to create byte array")
+            .into_raw()
+    }
+
+    #[no_mangle]
+    pub extern "C" fn Java_com_dawainnovation_lens_NativeSqlitePlugin_nativeInitialize(
+        mut env: JNIEnv,
+        _class: JClass,
+        path: JString,
+    ) -> jint {
+        let path_str: String = env.get_string(&path).map(Into::into).unwrap_or_default();
+        match crate::db::db_initialize(&path_str) {
+            Ok(_) => 1,
+            Err(e) => {
+                let _ = env.throw_new("java/lang/Exception", e);
+                0
+            }
+        }
+    }
+
+    #[no_mangle]
+    pub extern "C" fn Java_com_dawainnovation_lens_NativeSqlitePlugin_nativeExecute(
+        mut env: JNIEnv,
+        _class: JClass,
+        sql: JString,
+        params_json: JString,
+    ) -> jstring {
+        let sql_str: String = env.get_string(&sql).map(Into::into).unwrap_or_default();
+        let params_str: String = env.get_string(&params_json).map(Into::into).unwrap_or_default();
+        match crate::db::db_execute(&sql_str, &params_str) {
+            Ok((rows_affected, last_insert_id)) => {
+                let res_json = format!(
+                    "{{\"rowsAffected\":{},\"lastInsertId\":{}}}",
+                    rows_affected, last_insert_id
+                );
+                env.new_string(res_json).expect("failed to create jstring").into_raw()
+            }
+            Err(e) => {
+                let _ = env.throw_new("java/lang/Exception", e);
+                std::ptr::null_mut()
+            }
+        }
+    }
+
+    #[no_mangle]
+    pub extern "C" fn Java_com_dawainnovation_lens_NativeSqlitePlugin_nativeQuery(
+        mut env: JNIEnv,
+        _class: JClass,
+        sql: JString,
+        params_json: JString,
+    ) -> jstring {
+        let sql_str: String = env.get_string(&sql).map(Into::into).unwrap_or_default();
+        let params_str: String = env.get_string(&params_json).map(Into::into).unwrap_or_default();
+        match crate::db::db_query(&sql_str, &params_str) {
+            Ok(json_res) => {
+                env.new_string(json_res).expect("failed to create jstring").into_raw()
+            }
+            Err(e) => {
+                let _ = env.throw_new("java/lang/Exception", e);
+                std::ptr::null_mut()
+            }
+        }
+    }
+
+    #[no_mangle]
+    pub extern "C" fn Java_com_dawainnovation_lens_NativeSqlitePlugin_nativeClose(
+        _env: JNIEnv,
+        _class: JClass,
+    ) -> jint {
+        match crate::db::db_close() {
+            Ok(_) => 1,
+            Err(_) => 0,
+        }
     }
 }
 
@@ -152,4 +231,122 @@ pub extern "C" fn dawa_search_fuzzy(
         *out_buf.add(to_copy) = 0; // null-terminate
     }
     results.len() as i32
+}
+
+#[no_mangle]
+pub extern "C" fn dawa_db_initialize(
+    path_ptr: *const u8,
+    path_len: usize,
+) -> i32 {
+    if path_ptr.is_null() || path_len == 0 {
+        return -1;
+    }
+    let path = unsafe {
+        match std::str::from_utf8(std::slice::from_raw_parts(path_ptr, path_len)) {
+            Ok(s) => s,
+            Err(_) => return -1,
+        }
+    };
+    match db::db_initialize(path) {
+        Ok(_) => 1,
+        Err(_) => -2,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn dawa_db_execute(
+    sql_ptr: *const u8,
+    sql_len: usize,
+    params_ptr: *const u8,
+    params_len: usize,
+    out_buf: *mut u8,
+    out_buf_len: usize,
+) -> i32 {
+    if sql_ptr.is_null() || out_buf.is_null() || out_buf_len == 0 {
+        return -1;
+    }
+    let sql = unsafe {
+        match std::str::from_utf8(std::slice::from_raw_parts(sql_ptr, sql_len)) {
+            Ok(s) => s,
+            Err(_) => return -1,
+        }
+    };
+    let params_json = if params_ptr.is_null() || params_len == 0 {
+        "[]"
+    } else {
+        unsafe {
+            match std::str::from_utf8(std::slice::from_raw_parts(params_ptr, params_len)) {
+                Ok(s) => s,
+                Err(_) => "[]",
+            }
+        }
+    };
+    
+    match db::db_execute(sql, params_json) {
+        Ok((rows_affected, last_insert_id)) => {
+            let res_json = format!(
+                "{{\"rowsAffected\":{},\"lastInsertId\":{}}}",
+                rows_affected, last_insert_id
+            );
+            let bytes = res_json.as_bytes();
+            let to_copy = bytes.len().min(out_buf_len - 1);
+            unsafe {
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out_buf, to_copy);
+                *out_buf.add(to_copy) = 0; // null-terminate
+            }
+            rows_affected as i32
+        }
+        Err(_) => -2,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn dawa_db_query(
+    sql_ptr: *const u8,
+    sql_len: usize,
+    params_ptr: *const u8,
+    params_len: usize,
+    out_buf: *mut u8,
+    out_buf_len: usize,
+) -> i32 {
+    if sql_ptr.is_null() || out_buf.is_null() || out_buf_len == 0 {
+        return -1;
+    }
+    let sql = unsafe {
+        match std::str::from_utf8(std::slice::from_raw_parts(sql_ptr, sql_len)) {
+            Ok(s) => s,
+            Err(_) => return -1,
+        }
+    };
+    let params_json = if params_ptr.is_null() || params_len == 0 {
+        "[]"
+    } else {
+        unsafe {
+            match std::str::from_utf8(std::slice::from_raw_parts(params_ptr, params_len)) {
+                Ok(s) => s,
+                Err(_) => "[]",
+            }
+        }
+    };
+    
+    match db::db_query(sql, params_json) {
+        Ok(json_res) => {
+            let bytes = json_res.as_bytes();
+            let to_copy = bytes.len().min(out_buf_len - 1);
+            unsafe {
+                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out_buf, to_copy);
+                *out_buf.add(to_copy) = 0; // null-terminate
+            }
+            1
+        }
+        Err(_) => -2,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn dawa_db_close() -> i32 {
+    match db::db_close() {
+        Ok(_) => 1,
+        Err(_) => -1,
+    }
 }

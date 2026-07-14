@@ -23,12 +23,11 @@ rustup target add aarch64-apple-ios x86_64-apple-ios 2>/dev/null || true
 
 cargo lipo --release
 
-DEST="../../ios/App/App/RustBridge"
+DEST="../ios/App/App/RustBridge"
 mkdir -p "$DEST"
 cp target/universal/release/libdawa_search.a "$DEST/"
 
-# Generate the C bridging header only if it does not already exist.
-if [ ! -f "$DEST/dawa_search.h" ]; then
+# Generate the C bridging header
 cat > "$DEST/dawa_search.h" << 'HEADER'
 #ifndef DAWA_SEARCH_H
 #define DAWA_SEARCH_H
@@ -38,21 +37,11 @@ cat > "$DEST/dawa_search.h" << 'HEADER'
 /**
  * Returns 1 to confirm the Rust library is linked and functional.
  */
+int32_t dawa_core_is_available(void);
 int32_t dawa_search_is_available(void);
 
 /**
  * Fuzzy-searches the embedded drug index.
- *
- * @param query_ptr  Pointer to UTF-8 query bytes (not null-terminated).
- * @param query_len  Byte length of the query.
- * @param limit      Maximum number of results to return (clamped to 1–20).
- * @param out_buf    Output buffer to receive null-terminated UTF-8 results.
- * @param out_buf_len Size of out_buf in bytes (must be >= 1).
- *
- * Output format: records separated by ASCII RS (0x1E), fields by ASCII US (0x1F).
- * Each record: "name\x1Fscore\x1Frxcui"
- *
- * @returns Number of results written (>= 0), or -1 on error.
  */
 int32_t dawa_search_fuzzy(
     const uint8_t *query_ptr,
@@ -62,9 +51,24 @@ int32_t dawa_search_fuzzy(
     size_t         out_buf_len
 );
 
+/**
+ * Database Functions
+ */
+int32_t dawa_db_initialize(const uint8_t *path_ptr, size_t path_len);
+int32_t dawa_db_execute(
+    const uint8_t *sql_ptr, size_t sql_len,
+    const uint8_t *params_ptr, size_t params_len,
+    uint8_t *out_buf, size_t out_buf_len
+);
+int32_t dawa_db_query(
+    const uint8_t *sql_ptr, size_t sql_len,
+    const uint8_t *params_ptr, size_t params_len,
+    uint8_t *out_buf, size_t out_buf_len
+);
+int32_t dawa_db_close(void);
+
 #endif /* DAWA_SEARCH_H */
 HEADER
 echo "==> Generated $DEST/dawa_search.h"
-fi
 
 echo "==> Done. Static library + header at $DEST"
