@@ -36,7 +36,8 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import {
   syncReminderToGoogleCalendar,
   deleteReminderFromGoogleCalendar,
-  deleteEventFromGoogleCalendar
+  deleteEventFromGoogleCalendar,
+  refreshGoogleAccessToken,
 } from "../services/googleCalendarService";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
@@ -343,6 +344,9 @@ type AppContextType = {
   googleCalendarTokenExpiry: number | null;
   setGoogleCalendarTokenExpiry: (v: number | null) => void;
   isGoogleCalendarTokenValid: () => boolean;
+  /** Silently refreshes the Google Calendar access token via the backend.
+   *  Returns true if a fresh token was obtained, false if reconnection is needed. */
+  refreshGoogleCalendarToken: () => Promise<boolean>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -558,6 +562,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!googleCalendarToken || !googleCalendarTokenExpiry) return false;
     return Date.now() < googleCalendarTokenExpiry - 60 * 1000;
   }, [googleCalendarToken, googleCalendarTokenExpiry]);
+
+  /**
+   * Calls the backend /api/v1/google/refresh endpoint to silently obtain a
+   * fresh access token using the server-side stored refresh token.
+   * Updates local state and localStorage. Returns true on success.
+   */
+  const refreshGoogleCalendarToken = useCallback(async (): Promise<boolean> => {
+    try {
+      const result = await refreshGoogleAccessToken();
+      if (!result) {
+        // No refresh token stored server-side — user must reconnect
+        setGoogleCalendarToken(null);
+        setGoogleCalendarTokenExpiry(null);
+        setGoogleCalendarEnabled(false);
+        return false;
+      }
+      setGoogleCalendarToken(result.accessToken);
+      setGoogleCalendarTokenExpiry(Date.now() + result.expiresIn * 1000);
+      return true;
+    } catch (err) {
+      console.warn("[AppContext] Silent Google Calendar token refresh failed:", err);
+      return false;
+    }
+  }, []);
 
   useEffect(() => {
     if (selectedPatientId === null) {
@@ -2294,6 +2322,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         googleCalendarTokenExpiry,
         setGoogleCalendarTokenExpiry,
         isGoogleCalendarTokenValid,
+        refreshGoogleCalendarToken,
       }}
     >
       {children}

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, Shield, Trash2, Moon, Lock, Globe, Users, 
   ArrowRight, User, Mail, Database, Clock, CheckCircle2,
-  Calendar
+  Calendar, RefreshCw
 } from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { formatDistanceToNow } from "date-fns";
 import pkg from "../../package.json";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
-import { requestGoogleAccess } from "@/services/googleCalendarService";
+import { requestGoogleAccessGIS, disconnectGoogleCalendar } from "@/services/googleCalendarService";
 import { auth } from "@/lib/firebase";
 
 export default function SettingsPage() {
@@ -29,7 +29,8 @@ export default function SettingsPage() {
     googleClientId,
     googleCalendarToken, setGoogleCalendarToken,
     googleCalendarTokenExpiry, setGoogleCalendarTokenExpiry,
-    isGoogleCalendarTokenValid
+    isGoogleCalendarTokenValid,
+    refreshGoogleCalendarToken,
   } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
@@ -41,16 +42,16 @@ export default function SettingsPage() {
     if (!googleClientId) {
       toast({
         title: "Missing Google Client ID",
-        description: "Set VITE_GOOGLE_CLIENT_ID in your .env.local file, then restart the dev server. See .env.example for instructions.",
+        description: "Set VITE_GOOGLE_CLIENT_ID in your .env.local file, then restart the dev server.",
         variant: "destructive"
       });
       return;
     }
 
-    if (!googleCalendarEmail) {
+    if (!isLoggedIn) {
       toast({
-        title: "Email Required",
-        description: "Please enter your Google email address to connect.",
+        title: "Sign In Required",
+        description: "Please sign in to your Dawa Lens account before connecting Google Calendar.",
         variant: "destructive"
       });
       return;
@@ -59,16 +60,15 @@ export default function SettingsPage() {
     try {
       toast({
         title: "Connecting...",
-        description: "Please complete the Google authentication in the popup window."
+        description: "Complete the Google sign-in in the popup window."
       });
-      const authResult = await requestGoogleAccess(googleClientId, googleCalendarEmail);
+      const authResult = await requestGoogleAccessGIS(googleClientId, googleCalendarEmail || undefined);
       setGoogleCalendarToken(authResult.accessToken);
       setGoogleCalendarTokenExpiry(Date.now() + authResult.expiresIn * 1000);
       setGoogleCalendarEnabled(true);
-      
       toast({
         title: "Google Calendar Connected!",
-        description: "Your reminders will now automatically sync."
+        description: "Reminders will now sync automatically. Tokens refresh silently — no more reconnecting."
       });
     } catch (err: any) {
       console.error(err);
@@ -80,14 +80,33 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDisconnectCalendar = () => {
+  const handleDisconnectCalendar = async () => {
+    try {
+      await disconnectGoogleCalendar();
+    } catch (err) {
+      console.warn("[SettingsPage] Backend disconnect failed (non-fatal):", err);
+    }
     setGoogleCalendarToken(null);
     setGoogleCalendarTokenExpiry(null);
     setGoogleCalendarEnabled(false);
     toast({
       title: "Google Calendar Disconnected",
-      description: "Local reminders will no longer sync to Google Calendar."
+      description: "Reminders will no longer sync to Google Calendar."
     });
+  };
+
+  const handleRefreshCalendarToken = async () => {
+    toast({ title: "Refreshing token...", description: "Contacting server for a fresh access token." });
+    const ok = await refreshGoogleCalendarToken();
+    if (ok) {
+      toast({ title: "Token Refreshed", description: "Google Calendar is now active again." });
+    } else {
+      toast({
+        title: "Reconnection Required",
+        description: "Could not refresh silently. Please click Connect to re-authorise.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleStorageModeChange = async (mode: "local" | "cloud") => {
@@ -385,9 +404,13 @@ export default function SettingsPage() {
                         Active Connection
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500">
-                        Token Expired
-                      </span>
+                      <button
+                        onClick={handleRefreshCalendarToken}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 transition-colors"
+                      >
+                        <RefreshCw size={10} />
+                        Token Expired — Tap to Refresh
+                      </button>
                     )
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground">

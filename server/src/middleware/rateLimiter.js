@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 // Global limiter (IP-based)
 export const globalLimiter = rateLimit({
@@ -30,12 +30,12 @@ export const authLimiter = rateLimit({
   }
 });
 
-// AI endpoints limiter (User-based with IP fallback)
+// AI endpoints limiter (User-based with IPv6-safe IP fallback)
 export const aiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 30, // limit to 30 AI requests per hour
   keyGenerator: (req) => {
-    return req.user?.uid || req.ip;
+    return req.user?.uid || ipKeyGenerator(req);
   },
   message: {
     status: 'fail',
@@ -48,13 +48,13 @@ export const aiLimiter = rateLimit({
   }
 });
 
-// Vision / Heavy AI endpoints limiter (User-based with IP fallback)
+// Vision / Heavy AI endpoints limiter (User-based with IPv6-safe IP fallback)
 // Image processing is more expensive (TPM/RPD)
 export const visionLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // limit to 5 vision requests per 15 minutes
   keyGenerator: (req) => {
-    return req.user?.uid || req.ip;
+    return req.user?.uid || ipKeyGenerator(req);
   },
   message: {
     status: 'fail',
@@ -67,12 +67,12 @@ export const visionLimiter = rateLimit({
   }
 });
 
-// Heavy AI endpoints limiter (User-based with IP fallback)
+// Heavy AI endpoints limiter (User-based with IPv6-safe IP fallback)
 export const heavyAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 15, // limit to 15 heavy requests per 15 minutes
   keyGenerator: (req) => {
-    return req.user?.uid || req.ip;
+    return req.user?.uid || ipKeyGenerator(req);
   },
   message: {
     status: 'fail',
