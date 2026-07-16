@@ -727,8 +727,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       for (const rem of reminders) {
         const hasEvents = rem.googleEventIds && Object.keys(rem.googleEventIds).length > 0;
         const needsSync = rem.enabled
-          ? (!hasEvents || rem.googleCalendarNeedsSync)
-          : (hasEvents || rem.googleCalendarNeedsSync);
+          ? (!hasEvents || !!rem.googleCalendarNeedsSync)
+          : (!!hasEvents || !!rem.googleCalendarNeedsSync);
 
         if (needsSync) {
           try {

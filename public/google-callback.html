@@ -43,34 +43,77 @@
     <p style="font-size: 12px; color: #94a3b8;">This window will close automatically.</p>
   </div>
   <script>
+    // Safety net: close and signal failure after 10 s if nothing else fires
+    var safetyTimer = setTimeout(function () {
+      try {
+        if (window.opener) {
+          window.opener.postMessage({
+            type: "GOOGLE_AUTH_FAILURE",
+            error: "Authentication timed out. Please try again."
+          }, window.location.origin);
+        }
+      } catch (e) {
+        console.error("Safety-timer postMessage failed:", e);
+      }
+      window.close();
+    }, 10000);
+
+    function finalize() {
+      clearTimeout(safetyTimer);
+    }
+
     try {
-      const hash = window.location.hash;
-      if (hash) {
-        const params = new URLSearchParams(hash.substring(1));
-        const accessToken = params.get("access_token");
-        const expiresIn = params.get("expires_in");
+      var hash = window.location.hash;
+      if (hash && hash.length > 1) {
+        // Implicit-grant response: tokens come back in the fragment
+        var params = new URLSearchParams(hash.substring(1));
+        var accessToken = params.get("access_token");
+        var expiresIn = params.get("expires_in");
         if (accessToken) {
           window.opener.postMessage({
             type: "GOOGLE_AUTH_SUCCESS",
-            accessToken,
+            accessToken: accessToken,
             expiresIn: expiresIn ? parseInt(expiresIn, 10) : 3600
           }, window.location.origin);
+          finalize();
+          window.close();
+        } else {
+          // Hash present but no token — extract any error description
+          var hashError = params.get("error") || params.get("error_description") || "No access token returned";
+          window.opener.postMessage({
+            type: "GOOGLE_AUTH_FAILURE",
+            error: hashError
+          }, window.location.origin);
+          finalize();
           window.close();
         }
       } else {
-        const search = window.location.search;
-        const params = new URLSearchParams(search);
-        const error = params.get("error");
+        // No fragment — check query string for OAuth error
+        var search = window.location.search;
+        var qParams = new URLSearchParams(search);
+        var error = qParams.get("error") || qParams.get("error_description");
         if (error) {
           window.opener.postMessage({
             type: "GOOGLE_AUTH_FAILURE",
-            error
+            error: error
           }, window.location.origin);
+          finalize();
           window.close();
         }
+        // If neither hash nor error: let the safetyTimer handle it
       }
     } catch (e) {
-      console.error("Error in callback:", e);
+      console.error("Error in Google OAuth callback:", e);
+      try {
+        if (window.opener) {
+          window.opener.postMessage({
+            type: "GOOGLE_AUTH_FAILURE",
+            error: "An unexpected error occurred during authentication."
+          }, window.location.origin);
+        }
+      } catch (_) {}
+      finalize();
+      window.close();
     }
   </script>
 </body>
