@@ -221,3 +221,15 @@ export async function deleteReminderFromGoogleCalendar(
     }
   }
 }
+
+export async function deleteEventFromGoogleCalendar(
+  eventId: string,
+  token: string
+): Promise<void> {
+  await fetchCalendar(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
+    "DELETE",
+    token
+  );
+}
+

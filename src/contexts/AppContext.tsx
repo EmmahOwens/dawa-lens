@@ -35,7 +35,8 @@ import { computeShiftOffset } from "../services/reminderService";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import {
   syncReminderToGoogleCalendar,
-  deleteReminderFromGoogleCalendar
+  deleteReminderFromGoogleCalendar,
+  deleteEventFromGoogleCalendar
 } from "../services/googleCalendarService";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
@@ -188,6 +189,8 @@ export type Reminder = {
   patientName?: string | null;
   /** Google Calendar Event IDs mapping daily reminder times to calendar event IDs */
   googleEventIds?: Record<string, string>;
+  /** Tracks whether offline changes to this reminder need Google Calendar synchronization */
+  googleCalendarNeedsSync?: boolean;
 };
 
 export type DoseLog = {
@@ -399,6 +402,63 @@ function sanitizeFirestoreData(data: Record<string, unknown>) {
     }
   });
   return sanitized;
+}
+
+const CALENDAR_RELEVANT_KEYS: (keyof Reminder)[] = [
+  "medicineName",
+  "dose",
+  "time",
+  "repeatSchedule",
+  "repeatDays",
+  "notes",
+  "enabled",
+  "patientName"
+];
+
+function hasCalendarRelevantChanges(updates: Partial<Reminder>): boolean {
+  return CALENDAR_RELEVANT_KEYS.some((key) => key in updates);
+}
+
+const PENDING_DELETES_KEY = "dawa_gcal_pending_deletes";
+
+function queuePendingDelete(eventIds: Record<string, string>) {
+  try {
+    const raw = localStorage.getItem(PENDING_DELETES_KEY);
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    list.push(...Object.values(eventIds));
+    localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.warn("[AppContext] Failed to queue Google Calendar pending delete:", e);
+  }
+}
+
+async function processPendingDeletes(token: string) {
+  try {
+    const raw = localStorage.getItem(PENDING_DELETES_KEY);
+    if (!raw) return;
+    const list: string[] = JSON.parse(raw);
+    if (list.length === 0) return;
+
+    console.log(`[AppContext] Deleting ${list.length} pending events from Google Calendar...`);
+    const remaining: string[] = [];
+    for (const eventId of list) {
+      try {
+        await deleteEventFromGoogleCalendar(eventId, token);
+      } catch (err: any) {
+        const isGone = err?.message && (err.message.includes("404") || err.message.includes("410"));
+        if (!isGone) {
+          remaining.push(eventId);
+        }
+      }
+    }
+    if (remaining.length > 0) {
+      localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify(remaining));
+    } else {
+      localStorage.removeItem(PENDING_DELETES_KEY);
+    }
+  } catch (e) {
+    console.warn("[AppContext] Failed to process Google Calendar pending deletes:", e);
+  }
 }
 
 function applyPendingOps<T extends { id: string }>(
@@ -644,12 +704,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const syncUnsyncedRemindersToGoogleCalendar = useCallback(async () => {
     if (googleCalendarEnabled && isGoogleCalendarTokenValid() && googleCalendarToken) {
-      console.log("[AppContext] Syncing unsynced reminders to Google Calendar...");
+      // 1. Process pending deletes first
+      await processPendingDeletes(googleCalendarToken);
+
+      // 2. Sync unsynced or updated reminders
+      console.log("[AppContext] Syncing unsynced/updated reminders to Google Calendar...");
       for (const rem of reminders) {
-        if (rem.enabled && (!rem.googleEventIds || Object.keys(rem.googleEventIds).length === 0)) {
+        const needsSync =
+          !rem.googleEventIds ||
+          Object.keys(rem.googleEventIds).length === 0 ||
+          rem.googleCalendarNeedsSync;
+        if (rem.enabled && needsSync) {
           try {
             const eventIds = await syncReminderToGoogleCalendar(rem, googleCalendarToken);
-            await updateReminder(rem.id, { googleEventIds: eventIds });
+            await updateReminder(rem.id, { googleEventIds: eventIds, googleCalendarNeedsSync: false });
           } catch (err) {
             console.warn(`[AppContext] Failed to sync reminder ${rem.id} to Google Calendar:`, err);
           }
@@ -674,10 +742,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
               title: "Synced!",
               description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
             });
-            await syncUnsyncedRemindersToGoogleCalendar();
           }
         } catch (err) {
           console.warn("[AppContext] Queue flush error:", err);
+        }
+
+        try {
+          await syncUnsyncedRemindersToGoogleCalendar();
+        } catch (err) {
+          console.warn("[AppContext] Google Calendar sync on reconnect failed:", err);
         }
       }
     });
@@ -696,12 +769,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
               title: "Synced!",
               description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
             });
-            await syncUnsyncedRemindersToGoogleCalendar();
           }
+          await syncUnsyncedRemindersToGoogleCalendar();
         })
-        .catch((err) => console.warn("[AppContext] Initial queue flush failed:", err));
+        .catch(async (err) => {
+          console.warn("[AppContext] Initial queue flush failed:", err);
+          await syncUnsyncedRemindersToGoogleCalendar();
+        });
     }
   }, [currentUserId, storageMode, syncUnsyncedRemindersToGoogleCalendar]);
+
+  // Auto-sync when Google Calendar becomes enabled or valid while online
+  useEffect(() => {
+    if (googleCalendarEnabled && isGoogleCalendarTokenValid() && googleCalendarToken && isOnline) {
+      syncUnsyncedRemindersToGoogleCalendar().catch((err) =>
+        console.warn("[AppContext] Auto-sync on calendar activation failed:", err)
+      );
+    }
+  }, [
+    googleCalendarEnabled,
+    isGoogleCalendarTokenValid,
+    googleCalendarToken,
+    isOnline,
+    syncUnsyncedRemindersToGoogleCalendar
+  ]);
 
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
@@ -1126,12 +1217,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let updatedNewReminder = newReminder;
     let finalRemData = remData;
     if (googleCalendarEnabled && isGoogleCalendarTokenValid() && googleCalendarToken) {
-      try {
-        const eventIds = await syncReminderToGoogleCalendar(newReminder, googleCalendarToken);
-        updatedNewReminder = { ...newReminder, googleEventIds: eventIds };
-        finalRemData = { ...remData, googleEventIds: eventIds };
-      } catch (err) {
-        console.warn("[AppContext] Failed to sync new reminder to Google Calendar:", err);
+      if (isOnline) {
+        try {
+          const eventIds = await syncReminderToGoogleCalendar(newReminder, googleCalendarToken);
+          updatedNewReminder = { ...newReminder, googleEventIds: eventIds, googleCalendarNeedsSync: false };
+          finalRemData = { ...remData, googleEventIds: eventIds, googleCalendarNeedsSync: false };
+        } catch (err) {
+          console.warn("[AppContext] Failed to sync new reminder to Google Calendar:", err);
+          updatedNewReminder = { ...newReminder, googleCalendarNeedsSync: true };
+          finalRemData = { ...remData, googleCalendarNeedsSync: true };
+        }
+      } else {
+        updatedNewReminder = { ...newReminder, googleCalendarNeedsSync: true };
+        finalRemData = { ...remData, googleCalendarNeedsSync: true };
       }
     }
 
@@ -1183,12 +1281,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let finalUpdates = { ...updates };
 
     if (current && googleCalendarEnabled && isGoogleCalendarTokenValid() && googleCalendarToken) {
-      try {
-        const tempMerged = { ...current, ...updates };
-        const eventIds = await syncReminderToGoogleCalendar(tempMerged, googleCalendarToken);
-        finalUpdates = { ...updates, googleEventIds: eventIds };
-      } catch (err) {
-        console.warn("[AppContext] Failed to sync updated reminder to Google Calendar:", err);
+      if (hasCalendarRelevantChanges(updates)) {
+        if (isOnline) {
+          try {
+            const tempMerged = { ...current, ...updates };
+            const eventIds = await syncReminderToGoogleCalendar(tempMerged, googleCalendarToken);
+            finalUpdates = { ...updates, googleEventIds: eventIds, googleCalendarNeedsSync: false };
+          } catch (err) {
+            console.warn("[AppContext] Failed to sync updated reminder to Google Calendar:", err);
+            finalUpdates = { ...updates, googleCalendarNeedsSync: true };
+          }
+        } else {
+          finalUpdates = { ...updates, googleCalendarNeedsSync: true };
+        }
       }
     }
 
@@ -1253,10 +1358,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const current = reminders.find((r) => r.id === id);
     if (current && googleCalendarEnabled && isGoogleCalendarTokenValid() && googleCalendarToken) {
-      try {
-        await deleteReminderFromGoogleCalendar(current, googleCalendarToken);
-      } catch (err) {
-        console.warn("[AppContext] Failed to delete reminder from Google Calendar:", err);
+      if (isOnline) {
+        try {
+          await deleteReminderFromGoogleCalendar(current, googleCalendarToken);
+        } catch (err) {
+          console.warn("[AppContext] Failed to delete reminder from Google Calendar:", err);
+          if (current.googleEventIds && Object.keys(current.googleEventIds).length > 0) {
+            queuePendingDelete(current.googleEventIds);
+          }
+        }
+      } else {
+        if (current.googleEventIds && Object.keys(current.googleEventIds).length > 0) {
+          queuePendingDelete(current.googleEventIds);
+        }
       }
     }
 
