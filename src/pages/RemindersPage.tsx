@@ -18,6 +18,7 @@ import {
   UserRound,
   RefreshCw,
   WifiOff,
+  Calendar,
 } from "@/lib/icons";
 import { useApp, Reminder } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
@@ -28,6 +29,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { DailyTimeline } from "@/components/dashboard/DailyTimeline";
+import { requestGoogleAccess } from "@/services/googleCalendarService";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -130,12 +132,48 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 export default function RemindersPage() {
   const navigate = useNavigate();
-  const { updateReminder, deleteReminder, isInitializing, pendingOfflineOps, logDose } = useApp();
+  const { 
+    updateReminder, deleteReminder, isInitializing, pendingOfflineOps, logDose,
+    googleCalendarEnabled, googleCalendarToken, googleCalendarTokenExpiry,
+    isGoogleCalendarTokenValid, googleClientId, setGoogleCalendarToken, setGoogleCalendarTokenExpiry
+  } = useApp();
   const { isOnline } = useNetworkStatus();
   const { toast } = useToast();
   const { t } = useTranslation();
 
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const handleReconnectCalendar = async () => {
+    if (!googleClientId) {
+      toast({
+        title: "Configuration Required",
+        description: "Please enter your Google Client ID in Settings first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: "Connecting...",
+        description: "Please complete Google authentication in the popup window."
+      });
+      const authResult = await requestGoogleAccess(googleClientId);
+      setGoogleCalendarToken(authResult.accessToken);
+      setGoogleCalendarTokenExpiry(Date.now() + authResult.expiresIn * 1000);
+      toast({
+        title: "Google Calendar Reconnected!",
+        description: "Syncing will now resume."
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Reconnection Failed",
+        description: err.message || "Failed to authenticate with Google.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const { resolvedPatient, scopedReminders, scopedDoseLogs } =
     usePatientScope();
@@ -301,6 +339,44 @@ export default function RemindersPage() {
                   {pendingOfflineOps} pending
                 </span>
               )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Google Calendar Alert Banner */}
+      <AnimatePresence>
+        {googleCalendarEnabled && !isGoogleCalendarTokenValid() && (
+          <motion.div
+            key="calendar-alert-banner"
+            initial={{ opacity: 0, y: -8, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -8, height: 0 }}
+            transition={{ duration: 0.25 }}
+            className="mb-4 overflow-hidden"
+          >
+            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-destructive/10 border border-destructive/20">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-destructive/15 flex items-center justify-center">
+                  <Calendar size={14} className="text-destructive" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-destructive">
+                    Google Calendar Sync Paused
+                  </p>
+                  <p className="text-[10px] text-destructive/70 leading-snug">
+                    Your Google session has expired. Reconnect to resume sync.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReconnectCalendar}
+                className="flex-shrink-0 rounded-xl text-[9px] font-black uppercase tracking-widest px-3 h-8 border-destructive/30 hover:bg-destructive/10 hover:text-destructive text-destructive bg-transparent"
+              >
+                Reconnect
+              </Button>
             </div>
           </motion.div>
         )}

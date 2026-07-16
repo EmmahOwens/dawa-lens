@@ -33,6 +33,10 @@ import { localPersistence } from "../services/localPersistence";
 import { scheduleReminders } from "../services/reminderService";
 import { computeShiftOffset } from "../services/reminderService";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import {
+  syncReminderToGoogleCalendar,
+  deleteReminderFromGoogleCalendar
+} from "../services/googleCalendarService";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -44,6 +48,8 @@ import {
   flushQueue,
   clearQueue,
   getPendingCount,
+  getPendingOps,
+  type OfflineOp,
 } from "../services/offlineQueue";
 import { onNetworkChange, hasNetwork } from "../lib/appLifecycle";
 import { notify } from "../lib/notifications";
@@ -180,6 +186,8 @@ export type Reminder = {
   patientId?: string | null;
   /** Display name of the patient, stored at creation time for easy labelling */
   patientName?: string | null;
+  /** Google Calendar Event IDs mapping daily reminder times to calendar event IDs */
+  googleEventIds?: Record<string, string>;
 };
 
 export type DoseLog = {
@@ -321,6 +329,15 @@ type AppContextType = {
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
   rememberMe: boolean;
   setRememberMe: (v: boolean) => void;
+  googleCalendarEnabled: boolean;
+  setGoogleCalendarEnabled: (v: boolean) => void;
+  googleClientId: string;
+  setGoogleClientId: (v: string) => void;
+  googleCalendarToken: string | null;
+  setGoogleCalendarToken: (v: string | null) => void;
+  googleCalendarTokenExpiry: number | null;
+  setGoogleCalendarTokenExpiry: (v: number | null) => void;
+  isGoogleCalendarTokenValid: () => boolean;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -384,6 +401,35 @@ function sanitizeFirestoreData(data: Record<string, unknown>) {
   return sanitized;
 }
 
+function applyPendingOps<T extends { id: string }>(
+  data: T[],
+  collectionName: string,
+  pendingOps: OfflineOp[]
+): T[] {
+  let result = [...data];
+  const ops = pendingOps.filter((op) => op.collection === collectionName);
+
+  for (const op of ops) {
+    if (op.type.startsWith("add-")) {
+      const idx = result.findIndex((item) => item.id === op.docId);
+      if (idx === -1 && op.data) {
+        result.push({ id: op.docId, ...op.data } as unknown as T);
+      }
+    } else if (op.type.startsWith("update-")) {
+      result = result.map((item) => {
+        if (item.id === op.docId && op.data) {
+          return { ...item, ...op.data };
+        }
+        return item;
+      });
+    } else if (op.type.startsWith("delete-")) {
+      result = result.filter((item) => item.id !== op.docId);
+    }
+  }
+
+  return result;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [isOnline, setIsOnline] = useState(() => hasNetwork());
@@ -400,6 +446,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     () => loadLocal("med_selected_patient_id", null)
   );
+
+  const [googleCalendarEnabled, setGoogleCalendarEnabled] = useState<boolean>(() => {
+    return localStorage.getItem("google_calendar_enabled") === "true";
+  });
+  const [googleClientId, setGoogleClientId] = useState<string>(() => {
+    return localStorage.getItem("google_client_id") || "";
+  });
+  const [googleCalendarToken, setGoogleCalendarToken] = useState<string | null>(() => {
+    return localStorage.getItem("google_calendar_token");
+  });
+  const [googleCalendarTokenExpiry, setGoogleCalendarTokenExpiry] = useState<number | null>(() => {
+    const raw = localStorage.getItem("google_calendar_token_expiry");
+    return raw ? parseInt(raw, 10) : null;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("google_calendar_enabled", googleCalendarEnabled.toString());
+  }, [googleCalendarEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("google_client_id", googleClientId);
+  }, [googleClientId]);
+
+  useEffect(() => {
+    if (googleCalendarToken) {
+      localStorage.setItem("google_calendar_token", googleCalendarToken);
+    } else {
+      localStorage.removeItem("google_calendar_token");
+    }
+  }, [googleCalendarToken]);
+
+  useEffect(() => {
+    if (googleCalendarTokenExpiry !== null) {
+      localStorage.setItem("google_calendar_token_expiry", googleCalendarTokenExpiry.toString());
+    } else {
+      localStorage.removeItem("google_calendar_token_expiry");
+    }
+  }, [googleCalendarTokenExpiry]);
+
+  const isGoogleCalendarTokenValid = useCallback(() => {
+    if (!googleCalendarToken || !googleCalendarTokenExpiry) return false;
+    return Date.now() < googleCalendarTokenExpiry - 60 * 1000;
+  }, [googleCalendarToken, googleCalendarTokenExpiry]);
 
   useEffect(() => {
     if (selectedPatientId === null) {
@@ -553,6 +642,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     scheduleReminders(reminders, doseLogs, medicines);
   }, [reminders, doseLogs, medicines]);
 
+  const syncUnsyncedRemindersToGoogleCalendar = useCallback(async () => {
+    if (googleCalendarEnabled && isGoogleCalendarTokenValid() && googleCalendarToken) {
+      console.log("[AppContext] Syncing unsynced reminders to Google Calendar...");
+      for (const rem of reminders) {
+        if (rem.enabled && (!rem.googleEventIds || Object.keys(rem.googleEventIds).length === 0)) {
+          try {
+            const eventIds = await syncReminderToGoogleCalendar(rem, googleCalendarToken);
+            await updateReminder(rem.id, { googleEventIds: eventIds });
+          } catch (err) {
+            console.warn(`[AppContext] Failed to sync reminder ${rem.id} to Google Calendar:`, err);
+          }
+        }
+      }
+    }
+  }, [googleCalendarEnabled, isGoogleCalendarTokenValid, googleCalendarToken, reminders]);
+
   // ─── Network status + offline queue flush ──────────────────────────────────
   // Listen for connectivity changes. When the device comes back online, flush
   // any reminder/dose ops that were queued while offline.
@@ -569,6 +674,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               title: "Synced!",
               description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
             });
+            await syncUnsyncedRemindersToGoogleCalendar();
           }
         } catch (err) {
           console.warn("[AppContext] Queue flush error:", err);
@@ -576,25 +682,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     });
     return unsub;
-  }, [currentUserId, storageMode]);
+  }, [currentUserId, storageMode, syncUnsyncedRemindersToGoogleCalendar]);
 
   // Initial check & flush on mount/login
   useEffect(() => {
     if (currentUserId && storageMode === "cloud" && hasNetwork()) {
       console.log("[AppContext] Initial network sync — flushing offline queue…");
       flushQueue(db)
-        .then((flushed) => {
+        .then(async (flushed) => {
           if (flushed > 0) {
             setPendingOfflineOps(getPendingCount());
             toast({
               title: "Synced!",
               description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
             });
+            await syncUnsyncedRemindersToGoogleCalendar();
           }
         })
         .catch((err) => console.warn("[AppContext] Initial queue flush failed:", err));
     }
-  }, [currentUserId, storageMode]);
+  }, [currentUserId, storageMode, syncUnsyncedRemindersToGoogleCalendar]);
 
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
@@ -781,8 +888,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as Medicine)
         );
-        setMedicines(data);
-        storage.setItem(CLOUD_CACHE_MEDS_KEY, data);
+        const merged = applyPendingOps(data, "medicines", getPendingOps());
+        setMedicines(merged);
+        storage.setItem(CLOUD_CACHE_MEDS_KEY, merged);
       },
       (err) => console.error("Medicines listener error:", err)
     );
@@ -793,8 +901,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as Reminder)
         );
-        setReminders(data);
-        storage.setItem(CLOUD_CACHE_REMS_KEY, data);
+        const merged = applyPendingOps(data, "reminders", getPendingOps());
+        setReminders(merged);
+        storage.setItem(CLOUD_CACHE_REMS_KEY, merged);
       },
       (err) => console.error("Reminders listener error:", err)
     );
@@ -805,8 +914,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as DoseLog)
         );
-        setDoseLogs(data);
-        storage.setItem(CLOUD_CACHE_LOGS_KEY, data);
+        const merged = applyPendingOps(data, "doseLogs", getPendingOps());
+        setDoseLogs(merged);
+        storage.setItem(CLOUD_CACHE_LOGS_KEY, merged);
       },
       (err) => console.error("DoseLogs listener error:", err)
     );
@@ -927,9 +1037,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMedicines((p) =>
         p.map((m) => (m.id === id ? { ...m, ...updates } : m))
       );
+      return;
+    }
+
+    // 1. Save locally instantly
+    try {
+      await localPersistence.medicines.update(id, updates);
+    } catch (e) {
+      console.warn("[AppContext] Failed to update medicine locally:", e);
+    }
+
+    // 2. Optimistic UI update
+    setMedicines((p) =>
+      p.map((m) => (m.id === id ? { ...m, ...updates } : m))
+    );
+    const current = medicines.find((m) => m.id === id);
+    if (current) {
+      const updated = { ...current, ...updates };
+      const nextMeds = medicines.map((m) => (m.id === id ? updated : m));
+      storage.setItem(CLOUD_CACHE_MEDS_KEY, nextMeds);
+    }
+
+    // 3. Sync update to Firestore in background
+    if (isOnline) {
+      try {
+        const docRef = doc(db, "medicines", id);
+        await updateDoc(docRef, sanitizeFirestoreData(updates));
+      } catch (err) {
+        console.warn("[AppContext] Failed to sync medicine update, enqueuing:", err);
+        if (currentUserId) {
+          enqueueOp({
+            type: "update-medicine",
+            collection: "medicines",
+            docId: id,
+            data: sanitizeFirestoreData(updates),
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
+        }
+      }
     } else {
-      const docRef = doc(db, "medicines", id);
-      await updateDoc(docRef, sanitizeFirestoreData(updates));
+      if (currentUserId) {
+        enqueueOp({
+          type: "update-medicine",
+          collection: "medicines",
+          docId: id,
+          data: sanitizeFirestoreData(updates),
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
+      }
     }
   };
 
@@ -966,25 +1123,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     const newReminder = { ...remData, id: localId } as Reminder;
 
+    let updatedNewReminder = newReminder;
+    let finalRemData = remData;
+    if (googleCalendarEnabled && isGoogleCalendarTokenValid() && googleCalendarToken) {
+      try {
+        const eventIds = await syncReminderToGoogleCalendar(newReminder, googleCalendarToken);
+        updatedNewReminder = { ...newReminder, googleEventIds: eventIds };
+        finalRemData = { ...remData, googleEventIds: eventIds };
+      } catch (err) {
+        console.warn("[AppContext] Failed to sync new reminder to Google Calendar:", err);
+      }
+    }
+
     // 1. Save locally instantly
-    await localPersistence.reminders.create({ ...rem, id: localId, createdAt } as any);
+    await localPersistence.reminders.create(updatedNewReminder as any);
 
     // 2. Optimistic UI update
-    setReminders((p) => [...p, newReminder]);
-    storage.setItem(CLOUD_CACHE_REMS_KEY, [...reminders, newReminder]);
+    setReminders((p) => [...p, updatedNewReminder]);
+    storage.setItem(CLOUD_CACHE_REMS_KEY, [...reminders, updatedNewReminder]);
 
     // 3. Sync to Firestore in background
     if (isOnline) {
       try {
         const docRef = doc(db, "reminders", localId);
-        await setDoc(docRef, remData);
+        await setDoc(docRef, finalRemData);
       } catch (err) {
         console.warn("[AppContext] Failed to sync new reminder, enqueuing:", err);
         enqueueOp({
           type: "add-reminder",
           collection: "reminders",
           docId: localId,
-          data: remData,
+          data: finalRemData,
           userId: currentUserId,
         });
         setPendingOfflineOps(getPendingCount());
@@ -994,7 +1163,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         type: "add-reminder",
         collection: "reminders",
         docId: localId,
-        data: remData,
+        data: finalRemData,
         userId: currentUserId,
       });
       setPendingOfflineOps(getPendingCount());
@@ -1010,20 +1179,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const current = reminders.find((r) => r.id === id);
+    let finalUpdates = { ...updates };
+
+    if (current && googleCalendarEnabled && isGoogleCalendarTokenValid() && googleCalendarToken) {
+      try {
+        const tempMerged = { ...current, ...updates };
+        const eventIds = await syncReminderToGoogleCalendar(tempMerged, googleCalendarToken);
+        finalUpdates = { ...updates, googleEventIds: eventIds };
+      } catch (err) {
+        console.warn("[AppContext] Failed to sync updated reminder to Google Calendar:", err);
+      }
+    }
+
     // 1. Save locally instantly
     try {
-      await localPersistence.reminders.update(id, updates);
+      await localPersistence.reminders.update(id, finalUpdates);
     } catch (e) {
       console.warn("[AppContext] Failed to update reminder locally:", e);
     }
 
     // 2. Optimistic UI update
     setReminders((p) =>
-      p.map((r) => (r.id === id ? { ...r, ...updates } : r))
+      p.map((r) => (r.id === id ? { ...r, ...finalUpdates } : r))
     );
-    const current = reminders.find((r) => r.id === id);
     if (current) {
-      const updated = { ...current, ...updates };
+      const updated = { ...current, ...finalUpdates };
       storage.setItem(
         CLOUD_CACHE_REMS_KEY,
         reminders.map((r) => (r.id === id ? updated : r))
@@ -1031,10 +1212,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     // 3. Sync update to Firestore in background
+    const sanitizedUpdates = sanitizeFirestoreData(finalUpdates);
     if (isOnline) {
       try {
         const docRef = doc(db, "reminders", id);
-        await updateDoc(docRef, sanitizeFirestoreData(updates));
+        await updateDoc(docRef, sanitizedUpdates);
       } catch (err) {
         console.warn("[AppContext] Failed to sync reminder update, enqueuing:", err);
         if (currentUserId) {
@@ -1042,7 +1224,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             type: "update-reminder",
             collection: "reminders",
             docId: id,
-            data: sanitizeFirestoreData(updates),
+            data: sanitizedUpdates,
             userId: currentUserId,
           });
           setPendingOfflineOps(getPendingCount());
@@ -1054,7 +1236,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           type: "update-reminder",
           collection: "reminders",
           docId: id,
-          data: sanitizeFirestoreData(updates),
+          data: sanitizedUpdates,
           userId: currentUserId,
         });
         setPendingOfflineOps(getPendingCount());
@@ -1067,6 +1249,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await localPersistence.reminders.remove(id);
       setReminders((p) => p.filter((r) => r.id !== id));
       return;
+    }
+
+    const current = reminders.find((r) => r.id === id);
+    if (current && googleCalendarEnabled && isGoogleCalendarTokenValid() && googleCalendarToken) {
+      try {
+        await deleteReminderFromGoogleCalendar(current, googleCalendarToken);
+      } catch (err) {
+        console.warn("[AppContext] Failed to delete reminder from Google Calendar:", err);
+      }
     }
 
     // 1. Save locally instantly
@@ -1898,6 +2089,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLastSyncTimestamp(null);
     setIsLoggedIn(false);
     setCurrentUserId(null);
+    // Clear Google Calendar storage
+    localStorage.removeItem("google_calendar_enabled");
+    localStorage.removeItem("google_client_id");
+    localStorage.removeItem("google_calendar_token");
+    localStorage.removeItem("google_calendar_token_expiry");
+    setGoogleCalendarEnabled(false);
+    setGoogleClientId("");
+    setGoogleCalendarToken(null);
+    setGoogleCalendarTokenExpiry(null);
+
     // Clear offline queue — all pending ops belong to the cleared user
     clearQueue();
     setPendingOfflineOps(0);
@@ -1956,6 +2157,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateUserProfile,
         rememberMe,
         setRememberMe,
+        googleCalendarEnabled,
+        setGoogleCalendarEnabled,
+        googleClientId,
+        setGoogleClientId,
+        googleCalendarToken,
+        setGoogleCalendarToken,
+        googleCalendarTokenExpiry,
+        setGoogleCalendarTokenExpiry,
+        isGoogleCalendarTokenValid,
       }}
     >
       {children}

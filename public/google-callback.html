@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Google Authentication Callback</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #0f172a;
+      color: #f1f5f9;
+      text-align: center;
+    }
+    .container {
+      padding: 2rem;
+      border-radius: 1rem;
+      background-color: #1e293b;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    .spinner {
+      border: 3px solid #334155;
+      border-top: 3px solid #3b82f6;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="spinner"></div>
+    <p>Connecting your Google Calendar to Dawa Lens...</p>
+    <p style="font-size: 12px; color: #94a3b8;">This window will close automatically.</p>
+  </div>
+  <script>
+    try {
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        const expiresIn = params.get("expires_in");
+        if (accessToken) {
+          window.opener.postMessage({
+            type: "GOOGLE_AUTH_SUCCESS",
+            accessToken,
+            expiresIn: expiresIn ? parseInt(expiresIn, 10) : 3600
+          }, window.location.origin);
+          window.close();
+        }
+      } else {
+        const search = window.location.search;
+        const params = new URLSearchParams(search);
+        const error = params.get("error");
+        if (error) {
+          window.opener.postMessage({
+            type: "GOOGLE_AUTH_FAILURE",
+            error
+          }, window.location.origin);
+          window.close();
+        }
+      }
+    } catch (e) {
+      console.error("Error in callback:", e);
+    }
+  </script>
+</body>
+</html>
