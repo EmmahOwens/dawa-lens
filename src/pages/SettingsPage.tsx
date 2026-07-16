@@ -40,8 +40,8 @@ export default function SettingsPage() {
   const handleConnectCalendar = async () => {
     if (!googleClientId) {
       toast({
-        title: "Integration Not Configured",
-        description: "Google Calendar integration is not configured on this server. Please contact your administrator.",
+        title: "Missing Google Client ID",
+        description: "Set VITE_GOOGLE_CLIENT_ID in your .env.local file, then restart the dev server. See .env.example for instructions.",
         variant: "destructive"
       });
       return;
@@ -338,7 +338,7 @@ export default function SettingsPage() {
                 id="google-calendar-switch"
                 aria-label="Google Calendar Sync Toggle"
                 checked={googleCalendarEnabled}
-                disabled={!googleCalendarToken}
+                disabled={!isGoogleCalendarTokenValid()}
                 onCheckedChange={(v) => {
                   setGoogleCalendarEnabled(v);
                   toast({
@@ -372,7 +372,7 @@ export default function SettingsPage() {
                 </p>
                 {!googleClientId && (
                   <p className="text-[10px] text-destructive/80 font-bold mt-1.5">
-                    ⚠️ Google Calendar integration is not configured on this server. Please contact your administrator.
+                    ⚠️ Google Calendar integration is not configured. Set <code className="font-mono bg-muted px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> in your environment file to enable this feature.
                   </p>
                 )}
               </div>
@@ -410,7 +410,7 @@ export default function SettingsPage() {
                   <Button 
                     variant={googleCalendarToken ? "outline" : "default"}
                     size="sm" 
-                    disabled={!googleClientId || !googleCalendarEmail}
+                    disabled={!googleCalendarEmail}
                     onClick={handleConnectCalendar}
                     className="rounded-xl text-[10px] font-black uppercase tracking-widest px-4 h-9"
                   >
