@@ -135,7 +135,7 @@ export default function RemindersPage() {
   const { 
     updateReminder, deleteReminder, isInitializing, pendingOfflineOps, logDose,
     googleCalendarEnabled, googleCalendarToken, googleCalendarTokenExpiry,
-    isGoogleCalendarTokenValid, googleClientId, setGoogleCalendarToken, setGoogleCalendarTokenExpiry
+    isGoogleCalendarTokenValid, googleClientId, googleCalendarEmail, setGoogleCalendarToken, setGoogleCalendarTokenExpiry
   } = useApp();
   const { isOnline } = useNetworkStatus();
   const { toast } = useToast();
@@ -146,8 +146,8 @@ export default function RemindersPage() {
   const handleReconnectCalendar = async () => {
     if (!googleClientId) {
       toast({
-        title: "Configuration Required",
-        description: "Please enter your Google Client ID in Settings first.",
+        title: "Integration Not Configured",
+        description: "Google Calendar integration is not configured on this server. Please contact your administrator.",
         variant: "destructive"
       });
       return;
@@ -158,7 +158,7 @@ export default function RemindersPage() {
         title: "Connecting...",
         description: "Please complete Google authentication in the popup window."
       });
-      const authResult = await requestGoogleAccess(googleClientId);
+      const authResult = await requestGoogleAccess(googleClientId, googleCalendarEmail || undefined);
       setGoogleCalendarToken(authResult.accessToken);
       setGoogleCalendarTokenExpiry(Date.now() + authResult.expiresIn * 1000);
       toast({

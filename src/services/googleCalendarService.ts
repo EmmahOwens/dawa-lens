@@ -39,11 +39,18 @@ export function getRecurrenceRule(reminder: Reminder): string[] | undefined {
   return [`RRULE:${rule}`];
 }
 
-export function requestGoogleAccess(clientId: string): Promise<{ accessToken: string; expiresIn: number }> {
+export function requestGoogleAccess(
+  clientId: string,
+  loginHint?: string
+): Promise<{ accessToken: string; expiresIn: number }> {
   return new Promise((resolve, reject) => {
     const redirectUri = encodeURIComponent(`${window.location.origin}/google-callback.html`);
     const scope = encodeURIComponent("https://www.googleapis.com/auth/calendar.events");
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}&prompt=consent`;
+    let authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}&prompt=consent`;
+
+    if (loginHint) {
+      authUrl += `&login_hint=${encodeURIComponent(loginHint)}`;
+    }
 
     const width = 500;
     const height = 600;

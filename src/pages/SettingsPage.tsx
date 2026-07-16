@@ -16,6 +16,7 @@ import { formatDistanceToNow } from "date-fns";
 import pkg from "../../package.json";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { requestGoogleAccess } from "@/services/googleCalendarService";
+import { auth } from "@/lib/firebase";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -24,7 +25,8 @@ export default function SettingsPage() {
     userProfile, syncLocalToCloud, isProfessionalMode, setIsProfessionalMode,
     lastSyncTimestamp, updateUserProfile, rememberMe, setRememberMe,
     googleCalendarEnabled, setGoogleCalendarEnabled,
-    googleClientId, setGoogleClientId,
+    googleCalendarEmail, setGoogleCalendarEmail,
+    googleClientId,
     googleCalendarToken, setGoogleCalendarToken,
     googleCalendarTokenExpiry, setGoogleCalendarTokenExpiry,
     isGoogleCalendarTokenValid
@@ -33,11 +35,22 @@ export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
+  const isGoogleSignedIn = auth.currentUser?.providerData.some(p => p.providerId === "google.com") || false;
+
   const handleConnectCalendar = async () => {
     if (!googleClientId) {
       toast({
-        title: "Client ID Required",
-        description: "Please enter your Google Client ID to connect.",
+        title: "Integration Not Configured",
+        description: "Google Calendar integration is not configured on this server. Please contact your administrator.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!googleCalendarEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your Google email address to connect.",
         variant: "destructive"
       });
       return;
@@ -48,7 +61,7 @@ export default function SettingsPage() {
         title: "Connecting...",
         description: "Please complete the Google authentication in the popup window."
       });
-      const authResult = await requestGoogleAccess(googleClientId);
+      const authResult = await requestGoogleAccess(googleClientId, googleCalendarEmail);
       setGoogleCalendarToken(authResult.accessToken);
       setGoogleCalendarTokenExpiry(Date.now() + authResult.expiresIn * 1000);
       setGoogleCalendarEnabled(true);
@@ -342,17 +355,26 @@ export default function SettingsPage() {
 
             <div className="space-y-4 pt-4 border-t border-border/50">
               <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Google Client ID</label>
+                <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Google Email for Calendar</label>
                 <input 
-                  type="text" 
-                  value={googleClientId}
-                  onChange={(e) => setGoogleClientId(e.target.value)}
-                  placeholder="your-client-id.apps.googleusercontent.com"
-                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
+                  type="email" 
+                  value={googleCalendarEmail || ""}
+                  onChange={(e) => setGoogleCalendarEmail(e.target.value)}
+                  disabled={isGoogleSignedIn}
+                  placeholder="your-email@gmail.com"
+                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                 />
                 <p className="text-[9px] text-muted-foreground leading-snug">
-                  Setup a Web Application OAuth Client ID on Google Cloud Console. Set Authorized Redirect URI to match your host domain + <code className="bg-muted px-1 py-0.5 rounded text-[8px]">/google-callback.html</code>.
+                  {isGoogleSignedIn 
+                    ? "Pre-filled with the Google account you used to sign up."
+                    : "Enter the Gmail address where you want to sync your medication reminders."
+                  }
                 </p>
+                {!googleClientId && (
+                  <p className="text-[10px] text-destructive/80 font-bold mt-1.5">
+                    ⚠️ Google Calendar integration is not configured on this server. Please contact your administrator.
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between pt-2">
@@ -388,7 +410,7 @@ export default function SettingsPage() {
                   <Button 
                     variant={googleCalendarToken ? "outline" : "default"}
                     size="sm" 
-                    disabled={!googleClientId}
+                    disabled={!googleClientId || !googleCalendarEmail}
                     onClick={handleConnectCalendar}
                     className="rounded-xl text-[10px] font-black uppercase tracking-widest px-4 h-9"
                   >

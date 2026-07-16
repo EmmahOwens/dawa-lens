@@ -232,6 +232,7 @@ export type ScheduleAuditLog = {
 export type UserProfile = {
   id: string;
   name: string;
+  email?: string | null;
   dateOfBirth: string | null;
   gender: "male" | "female" | null;
   isProfessional?: boolean; // CHW Mode
@@ -334,8 +335,9 @@ type AppContextType = {
   setRememberMe: (v: boolean) => void;
   googleCalendarEnabled: boolean;
   setGoogleCalendarEnabled: (v: boolean) => void;
+  googleCalendarEmail: string | null;
+  setGoogleCalendarEmail: (v: string | null) => void;
   googleClientId: string;
-  setGoogleClientId: (v: string) => void;
   googleCalendarToken: string | null;
   setGoogleCalendarToken: (v: string | null) => void;
   googleCalendarTokenExpiry: number | null;
@@ -511,9 +513,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const val = localStorage.getItem("google_calendar_enabled");
     return val === null ? true : val === "true";
   });
-  const [googleClientId, setGoogleClientId] = useState<string>(() => {
-    return localStorage.getItem("google_client_id") || "";
+  const [googleCalendarEmail, setGoogleCalendarEmail] = useState<string | null>(() => {
+    return localStorage.getItem("google_calendar_email");
   });
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string) || "";
+
   const [googleCalendarToken, setGoogleCalendarToken] = useState<string | null>(() => {
     return localStorage.getItem("google_calendar_token");
   });
@@ -527,8 +531,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [googleCalendarEnabled]);
 
   useEffect(() => {
-    localStorage.setItem("google_client_id", googleClientId);
-  }, [googleClientId]);
+    if (googleCalendarEmail) {
+      localStorage.setItem("google_calendar_email", googleCalendarEmail);
+    } else {
+      localStorage.removeItem("google_calendar_email");
+    }
+  }, [googleCalendarEmail]);
 
   useEffect(() => {
     if (googleCalendarToken) {
@@ -688,10 +696,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (user && user.emailVerified) {
         setCurrentUserId(user.uid);
         setIsLoggedIn(true);
+        // Pre-fill Google Calendar Email if signed in with Google
+        const isGoogleUser = user.providerData.some((p) => p.providerId === "google.com");
+        if (isGoogleUser && user.email) {
+          setGoogleCalendarEmail(user.email);
+        }
       } else {
         setCurrentUserId(null);
         setIsLoggedIn(false);
         setUserProfile(null);
+        setGoogleCalendarEmail(null);
       }
       setIsAuthLoading(false);
     });
@@ -2271,8 +2285,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setRememberMe,
         googleCalendarEnabled,
         setGoogleCalendarEnabled,
+        googleCalendarEmail,
+        setGoogleCalendarEmail,
         googleClientId,
-        setGoogleClientId,
         googleCalendarToken,
         setGoogleCalendarToken,
         googleCalendarTokenExpiry,

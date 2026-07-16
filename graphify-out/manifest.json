@@ -1165,8 +1165,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1784216744.3710635,
-    "ast_hash": "dfc7230cda39f6702c4a456777da3d13",
+    "mtime": 1784217926.7009513,
+    "ast_hash": "dcfdd4d562bfaeaf58a0f4ced380c6f6",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1335,8 +1335,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/RemindersPage.tsx": {
-    "mtime": 1784214066.1907232,
-    "ast_hash": "bc17b535136368f01ab1665d468d747d",
+    "mtime": 1784218017.185248,
+    "ast_hash": "fa2ff6ea6d77f2e9098a0e334dac2b20",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ReportPage.tsx": {
@@ -1370,8 +1370,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.tsx": {
-    "mtime": 1784214006.954917,
-    "ast_hash": "bdfb52c95604341441e2cd5c8217f9bd",
+    "mtime": 1784217996.4601774,
+    "ast_hash": "54273a15392a61384ef97e3521b51b7a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
@@ -3010,8 +3010,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/googleCalendarService.ts": {
-    "mtime": 1784215041.2441087,
-    "ast_hash": "0ab0df463f5c2b502a7f4cfe5de4c352",
+    "mtime": 1784217821.6416528,
+    "ast_hash": "108e9e8312374029e1a7a159aa75c213",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/google-callback.html": {
