@@ -2218,10 +2218,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Clear Google Calendar storage
     localStorage.removeItem("google_calendar_enabled");
     localStorage.removeItem("google_client_id");
+    localStorage.removeItem("google_calendar_email");
     localStorage.removeItem("google_calendar_token");
     localStorage.removeItem("google_calendar_token_expiry");
     setGoogleCalendarEnabled(false);
-    setGoogleClientId("");
+    setGoogleCalendarEmail(null);
     setGoogleCalendarToken(null);
     setGoogleCalendarTokenExpiry(null);
 
