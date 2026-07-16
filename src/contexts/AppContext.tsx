@@ -33,12 +33,6 @@ import { localPersistence } from "../services/localPersistence";
 import { scheduleReminders } from "../services/reminderService";
 import { computeShiftOffset } from "../services/reminderService";
 import { LocalNotifications } from "@capacitor/local-notifications";
-import {
-  syncReminderToGoogleCalendar,
-  deleteReminderFromGoogleCalendar,
-  deleteEventFromGoogleCalendar,
-  refreshGoogleAccessToken,
-} from "../services/googleCalendarService";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -188,10 +182,6 @@ export type Reminder = {
   patientId?: string | null;
   /** Display name of the patient, stored at creation time for easy labelling */
   patientName?: string | null;
-  /** Google Calendar Event IDs mapping daily reminder times to calendar event IDs */
-  googleEventIds?: Record<string, string>;
-  /** Tracks whether offline changes to this reminder need Google Calendar synchronization */
-  googleCalendarNeedsSync?: boolean;
 };
 
 export type DoseLog = {
@@ -334,19 +324,6 @@ type AppContextType = {
   updateUserProfile: (updates: Partial<UserProfile>) => Promise<void>;
   rememberMe: boolean;
   setRememberMe: (v: boolean) => void;
-  googleCalendarEnabled: boolean;
-  setGoogleCalendarEnabled: (v: boolean) => void;
-  googleCalendarEmail: string | null;
-  setGoogleCalendarEmail: (v: string | null) => void;
-  googleClientId: string;
-  googleCalendarToken: string | null;
-  setGoogleCalendarToken: (v: string | null) => void;
-  googleCalendarTokenExpiry: number | null;
-  setGoogleCalendarTokenExpiry: (v: number | null) => void;
-  isGoogleCalendarTokenValid: () => boolean;
-  /** Silently refreshes the Google Calendar access token via the backend.
-   *  Returns true if a fresh token was obtained, false if reconnection is needed. */
-  refreshGoogleCalendarToken: () => Promise<boolean>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -410,62 +387,6 @@ function sanitizeFirestoreData(data: Record<string, unknown>) {
   return sanitized;
 }
 
-const CALENDAR_RELEVANT_KEYS: (keyof Reminder)[] = [
-  "medicineName",
-  "dose",
-  "time",
-  "repeatSchedule",
-  "repeatDays",
-  "notes",
-  "enabled",
-  "patientName"
-];
-
-function hasCalendarRelevantChanges(updates: Partial<Reminder>): boolean {
-  return CALENDAR_RELEVANT_KEYS.some((key) => key in updates);
-}
-
-const PENDING_DELETES_KEY = "dawa_gcal_pending_deletes";
-
-function queuePendingDelete(eventIds: Record<string, string>) {
-  try {
-    const raw = localStorage.getItem(PENDING_DELETES_KEY);
-    const list: string[] = raw ? JSON.parse(raw) : [];
-    list.push(...Object.values(eventIds));
-    localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.warn("[AppContext] Failed to queue Google Calendar pending delete:", e);
-  }
-}
-
-async function processPendingDeletes(token: string) {
-  try {
-    const raw = localStorage.getItem(PENDING_DELETES_KEY);
-    if (!raw) return;
-    const list: string[] = JSON.parse(raw);
-    if (list.length === 0) return;
-
-    console.log(`[AppContext] Deleting ${list.length} pending events from Google Calendar...`);
-    const remaining: string[] = [];
-    for (const eventId of list) {
-      try {
-        await deleteEventFromGoogleCalendar(eventId, token);
-      } catch (err: any) {
-        const isGone = err?.message && (err.message.includes("404") || err.message.includes("410"));
-        if (!isGone) {
-          remaining.push(eventId);
-        }
-      }
-    }
-    if (remaining.length > 0) {
-      localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify(remaining));
-    } else {
-      localStorage.removeItem(PENDING_DELETES_KEY);
-    }
-  } catch (e) {
-    console.warn("[AppContext] Failed to process Google Calendar pending deletes:", e);
-  }
-}
 
 function applyPendingOps<T extends { id: string }>(
   data: T[],
@@ -513,79 +434,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => loadLocal("med_selected_patient_id", null)
   );
 
-  const [googleCalendarEnabled, setGoogleCalendarEnabled] = useState<boolean>(() => {
-    const val = localStorage.getItem("google_calendar_enabled");
-    return val === null ? true : val === "true";
-  });
-  const [googleCalendarEmail, setGoogleCalendarEmail] = useState<string | null>(() => {
-    return localStorage.getItem("google_calendar_email");
-  });
-  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string) || "";
-
-  const [googleCalendarToken, setGoogleCalendarToken] = useState<string | null>(() => {
-    return localStorage.getItem("google_calendar_token");
-  });
-  const [googleCalendarTokenExpiry, setGoogleCalendarTokenExpiry] = useState<number | null>(() => {
-    const raw = localStorage.getItem("google_calendar_token_expiry");
-    return raw ? parseInt(raw, 10) : null;
-  });
-
-  useEffect(() => {
-    localStorage.setItem("google_calendar_enabled", googleCalendarEnabled.toString());
-  }, [googleCalendarEnabled]);
-
-  useEffect(() => {
-    if (googleCalendarEmail) {
-      localStorage.setItem("google_calendar_email", googleCalendarEmail);
-    } else {
-      localStorage.removeItem("google_calendar_email");
-    }
-  }, [googleCalendarEmail]);
-
-  useEffect(() => {
-    if (googleCalendarToken) {
-      localStorage.setItem("google_calendar_token", googleCalendarToken);
-    } else {
-      localStorage.removeItem("google_calendar_token");
-    }
-  }, [googleCalendarToken]);
-
-  useEffect(() => {
-    if (googleCalendarTokenExpiry !== null) {
-      localStorage.setItem("google_calendar_token_expiry", googleCalendarTokenExpiry.toString());
-    } else {
-      localStorage.removeItem("google_calendar_token_expiry");
-    }
-  }, [googleCalendarTokenExpiry]);
-
-  const isGoogleCalendarTokenValid = useCallback(() => {
-    if (!googleCalendarToken || !googleCalendarTokenExpiry) return false;
-    return Date.now() < googleCalendarTokenExpiry - 60 * 1000;
-  }, [googleCalendarToken, googleCalendarTokenExpiry]);
-
-  /**
-   * Calls the backend /api/v1/google/refresh endpoint to silently obtain a
-   * fresh access token using the server-side stored refresh token.
-   * Updates local state and localStorage. Returns true on success.
-   */
-  const refreshGoogleCalendarToken = useCallback(async (): Promise<boolean> => {
-    try {
-      const result = await refreshGoogleAccessToken();
-      if (!result) {
-        // No refresh token stored server-side — user must reconnect
-        setGoogleCalendarToken(null);
-        setGoogleCalendarTokenExpiry(null);
-        setGoogleCalendarEnabled(false);
-        return false;
-      }
-      setGoogleCalendarToken(result.accessToken);
-      setGoogleCalendarTokenExpiry(Date.now() + result.expiresIn * 1000);
-      return true;
-    } catch (err) {
-      console.warn("[AppContext] Silent Google Calendar token refresh failed:", err);
-      return false;
-    }
-  }, []);
 
   useEffect(() => {
     if (selectedPatientId === null) {
@@ -724,16 +572,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (user && user.emailVerified) {
         setCurrentUserId(user.uid);
         setIsLoggedIn(true);
-        // Pre-fill Google Calendar Email if signed in with Google
-        const isGoogleUser = user.providerData.some((p) => p.providerId === "google.com");
-        if (isGoogleUser && user.email) {
-          setGoogleCalendarEmail(user.email);
-        }
       } else {
         setCurrentUserId(null);
         setIsLoggedIn(false);
         setUserProfile(null);
-        setGoogleCalendarEmail(null);
       }
       setIsAuthLoading(false);
     });
@@ -744,31 +586,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     scheduleReminders(reminders, doseLogs, medicines);
   }, [reminders, doseLogs, medicines]);
-
-  const syncUnsyncedRemindersToGoogleCalendar = useCallback(async () => {
-    if (isGoogleCalendarTokenValid() && googleCalendarToken) {
-      // 1. Process pending deletes first
-      await processPendingDeletes(googleCalendarToken);
-
-      // 2. Sync unsynced or updated reminders
-      console.log("[AppContext] Syncing unsynced/updated reminders to Google Calendar...");
-      for (const rem of reminders) {
-        const hasEvents = rem.googleEventIds && Object.keys(rem.googleEventIds).length > 0;
-        const needsSync = rem.enabled
-          ? (!hasEvents || !!rem.googleCalendarNeedsSync)
-          : (!!hasEvents || !!rem.googleCalendarNeedsSync);
-
-        if (needsSync) {
-          try {
-            const eventIds = await syncReminderToGoogleCalendar(rem, googleCalendarToken);
-            await updateReminder(rem.id, { googleEventIds: eventIds, googleCalendarNeedsSync: false });
-          } catch (err) {
-            console.warn(`[AppContext] Failed to sync reminder ${rem.id} to Google Calendar:`, err);
-          }
-        }
-      }
-    }
-  }, [isGoogleCalendarTokenValid, googleCalendarToken, reminders]);
 
   // ─── Network status + offline queue flush ──────────────────────────────────
   // Listen for connectivity changes. When the device comes back online, flush
@@ -790,23 +607,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } catch (err) {
           console.warn("[AppContext] Queue flush error:", err);
         }
-
-        try {
-          await syncUnsyncedRemindersToGoogleCalendar();
-        } catch (err) {
-          console.warn("[AppContext] Google Calendar sync on reconnect failed:", err);
-        }
       }
     });
     return unsub;
-  }, [currentUserId, storageMode, syncUnsyncedRemindersToGoogleCalendar]);
+  }, [currentUserId, storageMode]);
 
   // Initial check & flush on mount/login
   useEffect(() => {
     if (currentUserId && storageMode === "cloud" && hasNetwork()) {
       console.log("[AppContext] Initial network sync — flushing offline queue…");
       flushQueue(db)
-        .then(async (flushed) => {
+        .then((flushed) => {
           if (flushed > 0) {
             setPendingOfflineOps(getPendingCount());
             toast({
@@ -814,28 +625,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
               description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
             });
           }
-          await syncUnsyncedRemindersToGoogleCalendar();
         })
-        .catch(async (err) => {
+        .catch((err) => {
           console.warn("[AppContext] Initial queue flush failed:", err);
-          await syncUnsyncedRemindersToGoogleCalendar();
         });
     }
-  }, [currentUserId, storageMode, syncUnsyncedRemindersToGoogleCalendar]);
-
-  // Auto-sync when Google Calendar token becomes valid while online
-  useEffect(() => {
-    if (isGoogleCalendarTokenValid() && googleCalendarToken && isOnline) {
-      syncUnsyncedRemindersToGoogleCalendar().catch((err) =>
-        console.warn("[AppContext] Auto-sync on calendar activation failed:", err)
-      );
-    }
-  }, [
-    isGoogleCalendarTokenValid,
-    googleCalendarToken,
-    isOnline,
-    syncUnsyncedRemindersToGoogleCalendar
-  ]);
+  }, [currentUserId, storageMode]);
 
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
@@ -1248,26 +1043,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createdAt,
     } as Reminder;
 
-    let updatedNewReminder = newReminder;
-    if (isGoogleCalendarTokenValid() && googleCalendarToken) {
-      if (isOnline) {
-        try {
-          const eventIds = await syncReminderToGoogleCalendar(newReminder, googleCalendarToken);
-          updatedNewReminder = { ...newReminder, googleEventIds: eventIds, googleCalendarNeedsSync: false };
-        } catch (err) {
-          console.warn("[AppContext] Failed to sync new reminder to Google Calendar:", err);
-          updatedNewReminder = { ...newReminder, googleCalendarNeedsSync: true };
-        }
-      } else {
-        updatedNewReminder = { ...newReminder, googleCalendarNeedsSync: true };
-      }
-    }
-
     // 1. Save locally instantly
-    await localPersistence.reminders.create(updatedNewReminder);
+    await localPersistence.reminders.create(newReminder);
 
     // 2. Optimistic UI update
-    setReminders((p) => [...p, updatedNewReminder]);
+    setReminders((p) => [...p, newReminder]);
 
     if (storageMode === "local") {
       return;
@@ -1277,11 +1057,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!currentUserId) throw new Error("Not logged in");
 
     const remData = sanitizeFirestoreData({
-      ...updatedNewReminder,
+      ...newReminder,
       userId: currentUserId,
     });
 
-    storage.setItem(CLOUD_CACHE_REMS_KEY, [...reminders, updatedNewReminder]);
+    storage.setItem(CLOUD_CACHE_REMS_KEY, [...reminders, newReminder]);
 
     // 3. Sync to Firestore in background
     if (isOnline) {
@@ -1315,24 +1095,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const current = reminders.find((r) => r.id === id);
     if (!current) return;
 
-    let finalUpdates = { ...updates };
-
-    if (isGoogleCalendarTokenValid() && googleCalendarToken) {
-      if (hasCalendarRelevantChanges(updates)) {
-        if (isOnline) {
-          try {
-            const tempMerged = { ...current, ...updates };
-            const eventIds = await syncReminderToGoogleCalendar(tempMerged, googleCalendarToken);
-            finalUpdates = { ...updates, googleEventIds: eventIds, googleCalendarNeedsSync: false };
-          } catch (err) {
-            console.warn("[AppContext] Failed to sync updated reminder to Google Calendar:", err);
-            finalUpdates = { ...updates, googleCalendarNeedsSync: true };
-          }
-        } else {
-          finalUpdates = { ...updates, googleCalendarNeedsSync: true };
-        }
-      }
-    }
+    const finalUpdates = { ...updates };
 
     // 1. Save locally instantly
     try {
@@ -1394,19 +1157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const current = reminders.find((r) => r.id === id);
     if (!current) return;
 
-    const hasEvents = current.googleEventIds && Object.keys(current.googleEventIds).length > 0;
-    if (hasEvents) {
-      if (isOnline && isGoogleCalendarTokenValid() && googleCalendarToken) {
-        try {
-          await deleteReminderFromGoogleCalendar(current, googleCalendarToken);
-        } catch (err) {
-          console.warn("[AppContext] Failed to delete reminder from Google Calendar:", err);
-          queuePendingDelete(current.googleEventIds!);
-        }
-      } else {
-        queuePendingDelete(current.googleEventIds!);
-      }
-    }
+
 
     // 1. Save locally instantly
     try {
@@ -2243,16 +1994,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLastSyncTimestamp(null);
     setIsLoggedIn(false);
     setCurrentUserId(null);
-    // Clear Google Calendar storage
-    localStorage.removeItem("google_calendar_enabled");
-    localStorage.removeItem("google_client_id");
-    localStorage.removeItem("google_calendar_email");
-    localStorage.removeItem("google_calendar_token");
-    localStorage.removeItem("google_calendar_token_expiry");
-    setGoogleCalendarEnabled(false);
-    setGoogleCalendarEmail(null);
-    setGoogleCalendarToken(null);
-    setGoogleCalendarTokenExpiry(null);
+
 
     // Clear offline queue — all pending ops belong to the cleared user
     clearQueue();
@@ -2312,17 +2054,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateUserProfile,
         rememberMe,
         setRememberMe,
-        googleCalendarEnabled,
-        setGoogleCalendarEnabled,
-        googleCalendarEmail,
-        setGoogleCalendarEmail,
-        googleClientId,
-        googleCalendarToken,
-        setGoogleCalendarToken,
-        googleCalendarTokenExpiry,
-        setGoogleCalendarTokenExpiry,
-        isGoogleCalendarTokenValid,
-        refreshGoogleCalendarToken,
       }}
     >
       {children}

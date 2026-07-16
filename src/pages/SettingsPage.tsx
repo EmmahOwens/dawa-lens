@@ -3,8 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, Shield, Trash2, Moon, Lock, Globe, Users, 
-  ArrowRight, User, Mail, Database, Clock, CheckCircle2,
-  Calendar, RefreshCw
+  ArrowRight, User, Mail, Database, Clock, CheckCircle2
 } from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -15,8 +14,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { formatDistanceToNow } from "date-fns";
 import pkg from "../../package.json";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
-import { requestGoogleAccessGIS, disconnectGoogleCalendar } from "@/services/googleCalendarService";
-import { auth } from "@/lib/firebase";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -24,90 +21,11 @@ export default function SettingsPage() {
     storageMode, setStorageMode, clearAllData, isLoggedIn, logoutUser, 
     userProfile, syncLocalToCloud, isProfessionalMode, setIsProfessionalMode,
     lastSyncTimestamp, updateUserProfile, rememberMe, setRememberMe,
-    googleCalendarEnabled, setGoogleCalendarEnabled,
-    googleCalendarEmail, setGoogleCalendarEmail,
-    googleClientId,
-    googleCalendarToken, setGoogleCalendarToken,
-    googleCalendarTokenExpiry, setGoogleCalendarTokenExpiry,
-    isGoogleCalendarTokenValid,
-    refreshGoogleCalendarToken,
   } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
-  const isGoogleSignedIn = auth.currentUser?.providerData.some(p => p.providerId === "google.com") || false;
-
-  const handleConnectCalendar = async () => {
-    if (!googleClientId) {
-      toast({
-        title: "Missing Google Client ID",
-        description: "Set VITE_GOOGLE_CLIENT_ID in your .env.local file, then restart the dev server.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!isLoggedIn) {
-      toast({
-        title: "Sign In Required",
-        description: "Please sign in to your Dawa Lens account before connecting Google Calendar.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      toast({
-        title: "Connecting...",
-        description: "Complete the Google sign-in in the popup window."
-      });
-      const authResult = await requestGoogleAccessGIS(googleClientId, googleCalendarEmail || undefined);
-      setGoogleCalendarToken(authResult.accessToken);
-      setGoogleCalendarTokenExpiry(Date.now() + authResult.expiresIn * 1000);
-      setGoogleCalendarEnabled(true);
-      toast({
-        title: "Google Calendar Connected!",
-        description: "Reminders will now sync automatically. Tokens refresh silently — no more reconnecting."
-      });
-    } catch (err: any) {
-      console.error(err);
-      toast({
-        title: "Connection Failed",
-        description: err.message || "Failed to authenticate with Google.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDisconnectCalendar = async () => {
-    try {
-      await disconnectGoogleCalendar();
-    } catch (err) {
-      console.warn("[SettingsPage] Backend disconnect failed (non-fatal):", err);
-    }
-    setGoogleCalendarToken(null);
-    setGoogleCalendarTokenExpiry(null);
-    setGoogleCalendarEnabled(false);
-    toast({
-      title: "Google Calendar Disconnected",
-      description: "Reminders will no longer sync to Google Calendar."
-    });
-  };
-
-  const handleRefreshCalendarToken = async () => {
-    toast({ title: "Refreshing token...", description: "Contacting server for a fresh access token." });
-    const ok = await refreshGoogleCalendarToken();
-    if (ok) {
-      toast({ title: "Token Refreshed", description: "Google Calendar is now active again." });
-    } else {
-      toast({
-        title: "Reconnection Required",
-        description: "Could not refresh silently. Please click Connect to re-authorise.",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handleStorageModeChange = async (mode: "local" | "cloud") => {
     if (mode === "cloud" && !isLoggedIn) {
@@ -341,108 +259,6 @@ export default function SettingsPage() {
             <ThemeToggle id="theme-toggle" />
           </motion.div>
 
-          {/* Google Calendar Sync Settings */}
-          <motion.div variants={itemVariants} className="premium-card">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
-                  <Calendar size={18} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-foreground">Google Calendar Sync</h3>
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight opacity-70">Notification Sync</p>
-                </div>
-              </div>
-              <Switch 
-                id="google-calendar-switch"
-                aria-label="Google Calendar Sync Toggle"
-                checked={googleCalendarEnabled}
-                disabled={!isGoogleCalendarTokenValid()}
-                onCheckedChange={(v) => {
-                  setGoogleCalendarEnabled(v);
-                  toast({
-                    title: v ? "Google Calendar Sync Enabled" : "Google Calendar Sync Disabled",
-                    description: v ? "Reminders will be pushed to Google Calendar." : "Syncing paused."
-                  });
-                }}
-              />
-            </div>
-
-            <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-              Link your medication schedules as recurring events on Google Calendar. This enables Google notifications across all your devices.
-            </p>
-
-            <div className="space-y-4 pt-4 border-t border-border/50">
-              <div className="space-y-2">
-                <label className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Google Email for Calendar</label>
-                <input 
-                  type="email" 
-                  value={googleCalendarEmail || ""}
-                  onChange={(e) => setGoogleCalendarEmail(e.target.value)}
-                  disabled={isGoogleSignedIn}
-                  placeholder="your-email@gmail.com"
-                  className="w-full px-4 py-2.5 rounded-xl border border-border bg-background text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary disabled:opacity-60 disabled:cursor-not-allowed transition-all"
-                />
-                <p className="text-[9px] text-muted-foreground leading-snug">
-                  {isGoogleSignedIn 
-                    ? "Pre-filled with the Google account you used to sign up."
-                    : "Enter the Gmail address where you want to sync your medication reminders."
-                  }
-                </p>
-                {!googleClientId && (
-                  <p className="text-[10px] text-destructive/80 font-bold mt-1.5">
-                    ⚠️ Google Calendar integration is not configured. Set <code className="font-mono bg-muted px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> in your environment file to enable this feature.
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between pt-2">
-                <div>
-                  {googleCalendarToken ? (
-                    isGoogleCalendarTokenValid() ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500">
-                        Active Connection
-                      </span>
-                    ) : (
-                      <button
-                        onClick={handleRefreshCalendarToken}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500 hover:bg-amber-500/25 transition-colors"
-                      >
-                        <RefreshCw size={10} />
-                        Token Expired — Tap to Refresh
-                      </button>
-                    )
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-muted text-muted-foreground">
-                      Not Connected
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  {googleCalendarToken && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleDisconnectCalendar}
-                      className="rounded-xl text-[10px] font-black uppercase tracking-widest px-4 h-9 border-border/80 text-destructive hover:bg-destructive/5 hover:text-destructive"
-                    >
-                      Disconnect
-                    </Button>
-                  )}
-                  <Button 
-                    variant={googleCalendarToken ? "outline" : "default"}
-                    size="sm" 
-                    disabled={!googleCalendarEmail}
-                    onClick={handleConnectCalendar}
-                    className="rounded-xl text-[10px] font-black uppercase tracking-widest px-4 h-9"
-                  >
-                    {googleCalendarToken ? "Reconnect" : "Connect"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
         </div>
 
         {/* 4. Security & Cloud */}

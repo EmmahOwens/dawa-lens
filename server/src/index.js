@@ -14,7 +14,6 @@ import visionRouter from './routes/vision.js';
 import aiRouter from './routes/ai.js';
 import patientsRouter from './routes/patients.js';
 import wellnessRouter from './routes/wellness.js';
-import googleCalendarRouter from './routes/googleCalendar.js';
 
 import errorMiddleware from './middleware/errorMiddleware.js';
 import { globalLimiter, aiLimiter, authLimiter, visionLimiter } from './middleware/rateLimiter.js';
@@ -79,7 +78,6 @@ v1Router.use('/vision', visionLimiter, visionRouter);
 v1Router.use('/ai', aiLimiter, aiRouter);
 v1Router.use('/patients', patientsRouter);
 v1Router.use('/wellness', wellnessRouter);
-v1Router.use('/google', authLimiter, googleCalendarRouter);
 
 app.use('/api/v1', v1Router);
 
