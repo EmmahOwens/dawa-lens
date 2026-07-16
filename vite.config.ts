@@ -11,6 +11,11 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    watch: {
+      // Exclude the Rust build artifacts directory — it has tens of thousands of
+      // files and exhausts the system's inotify watcher limit (ENOSPC).
+      ignored: ["**/rust/target/**", "**/target/**"],
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
