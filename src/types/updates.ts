@@ -13,4 +13,4 @@ interface UpdatesResponse {
     total: number;
 }
 
-export { Update, UpdatesResponse };
+export type { Update, UpdatesResponse };

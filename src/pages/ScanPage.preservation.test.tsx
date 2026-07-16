@@ -133,7 +133,7 @@ const mockStream = {
   getVideoTracks: mockGetVideoTracks,
 } as unknown as MediaStream;
 
-const mockGetUserMedia = vi.fn(() => Promise.resolve(mockStream));
+const mockGetUserMedia = vi.fn((_constraints?: MediaStreamConstraints) => Promise.resolve(mockStream));
 
 Object.defineProperty(globalThis.navigator, "mediaDevices", {
   writable: true,

@@ -47,10 +47,10 @@ function ensureWorker(): Promise<void> {
 }
 
 function post(msg: OutMsg): void {
-  (self as unknown as DedicatedWorkerGlobalScope).postMessage(msg);
+  (self as any).postMessage(msg);
 }
 
-(self as unknown as DedicatedWorkerGlobalScope).addEventListener(
+(self as any).addEventListener(
   'message',
   async (evt: MessageEvent<InMsg>) => {
     const msg = evt.data;

@@ -208,7 +208,10 @@ export const aiApi = {
     }),
 
   getNutritionalGuidance: (data: { medicines: Medicine[] }) =>
-    request<unknown>("/ai/nutritional-guidance", {
+    request<{
+      warnings?: { explanation: string }[];
+      recommendations?: { food: string; benefit: string }[];
+    }>("/ai/nutritional-guidance", {
       method: "POST",
       body: JSON.stringify({
         ...data,

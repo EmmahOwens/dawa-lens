@@ -64,8 +64,8 @@ describe("ConfirmationDialog — unit tests", () => {
 
   it("clicking Confirm closes dialog first then calls onConfirm", async () => {
     const callOrder: string[] = [];
-    const onOpenChange = vi.fn(() => callOrder.push("onOpenChange"));
-    const onConfirm = vi.fn(() => callOrder.push("onConfirm"));
+    const onOpenChange = vi.fn((_open?: boolean) => { callOrder.push("onOpenChange"); });
+    const onConfirm = vi.fn(() => { callOrder.push("onConfirm"); });
     renderDialog({ onOpenChange, onConfirm });
 
     fireEvent.click(screen.getByRole("button", { name: /^confirm$/i }));
