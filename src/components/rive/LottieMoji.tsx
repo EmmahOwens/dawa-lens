@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useEffect } from "react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import type { DotLottie } from "@lottiefiles/dotlottie-react";
 import { motion } from "framer-motion";
@@ -89,7 +89,11 @@ export const LottieMoji: React.FC<LottieMojiProps> = ({
 
   const handleDotLottieRef = useCallback((instance: DotLottie | null) => {
     dotLottieRef.current = instance;
-  }, []);
+    // Player just initialised — start playing immediately if already active.
+    if (instance && active && !prefersReducedMotion) {
+      instance.play();
+    }
+  }, [active, prefersReducedMotion]);
 
   /** Restart the animation when the user taps an already-active emoji */
   const handleReplay = useCallback(() => {
@@ -98,6 +102,22 @@ export const LottieMoji: React.FC<LottieMojiProps> = ({
       dotLottieRef.current.play();
     }
   }, [active]);
+
+  // ── Imperative play/pause when active changes ─────────────────────────────
+  // DotLottieReact reads `autoplay` only on initial mount — prop changes are
+  // ignored. We must imperatively drive the player via its instance API.
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+    const player = dotLottieRef.current;
+    if (!player) return;
+    if (active) {
+      player.setFrame(0);
+      player.play();
+    } else {
+      player.pause();
+      player.setFrame(0);
+    }
+  }, [active, prefersReducedMotion]);
 
   // ── Fallback: emoji not in the Noto map ──────────────────────────────────
   if (!src) {
