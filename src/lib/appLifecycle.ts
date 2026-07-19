@@ -12,7 +12,12 @@ import { Capacitor } from '@capacitor/core';
 type LifecycleCallback = () => void;
 
 let foreground = true;
-let networkStatus: ConnectionStatus = { connected: true, connectionType: 'unknown' };
+// Default to navigator.onLine on web so hasNetwork() is accurate before
+// initLifecycle() is called. On native, getStatus() will correct this promptly.
+let networkStatus: ConnectionStatus = {
+  connected: typeof navigator !== 'undefined' ? navigator.onLine : true,
+  connectionType: 'unknown',
+};
 
 const onForegroundCallbacks: LifecycleCallback[] = [];
 const onBackgroundCallbacks: LifecycleCallback[] = [];

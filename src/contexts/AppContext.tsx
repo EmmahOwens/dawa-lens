@@ -597,8 +597,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.log("[AppContext] Connectivity restored — flushing offline queue…");
         try {
           const flushed = await flushQueue(db);
+          // Always refresh the pending count after a flush attempt so the
+          // badge reflects any ops that still failed and remain in the queue.
+          setPendingOfflineOps(getPendingCount());
           if (flushed > 0) {
-            setPendingOfflineOps(getPendingCount());
             toast({
               title: "Synced!",
               description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
@@ -606,6 +608,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         } catch (err) {
           console.warn("[AppContext] Queue flush error:", err);
+          setPendingOfflineOps(getPendingCount());
         }
       }
     });
@@ -926,15 +929,55 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       if (!currentUserId) throw new Error("Not logged in");
 
+      // Use a client-generated ID so the medicine is stable across offline → online
+      // transitions. addDoc would only work when online; setDoc with a local ID works
+      // both online and as an offline-queue replay target.
+      const localMedId = `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const medData = sanitizeFirestoreData({
         ...med,
         userId: currentUserId,
         patientId: effectivePatientId || null,
         addedAt: new Date().toISOString(),
       });
+      newMed = { ...medData, id: localMedId } as Medicine;
 
-      const docRef = await addDoc(collection(db, "medicines"), medData);
-      newMed = { ...medData, id: docRef.id } as Medicine;
+      // 1. Save locally instantly
+      try {
+        await localPersistence.medicines.create({ ...(medData as Omit<Medicine, "id" | "addedAt"> & { addedAt?: string }), id: localMedId });
+      } catch (e) {
+        console.warn("[AppContext] Failed to save medicine locally:", e);
+      }
+
+      // 2. Optimistic UI update
+      setMedicines((p) => [...p, newMed]);
+      storage.setItem(CLOUD_CACHE_MEDS_KEY, [...medicines, newMed]);
+
+      // 3. Sync to Firestore in background
+      if (isOnline) {
+        try {
+          const docRef = doc(db, "medicines", localMedId);
+          await setDoc(docRef, medData);
+        } catch (err) {
+          console.warn("[AppContext] Failed to sync new medicine, enqueuing:", err);
+          enqueueOp({
+            type: "add-medicine",
+            collection: "medicines",
+            docId: localMedId,
+            data: medData,
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
+        }
+      } else {
+        enqueueOp({
+          type: "add-medicine",
+          collection: "medicines",
+          docId: localMedId,
+          data: medData,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
+      }
     }
 
     // Fetch RxCUI in background
@@ -1023,9 +1066,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (storageMode === "local") {
       await localPersistence.medicines.remove(id);
       setMedicines((p) => p.filter((m) => m.id !== id));
+      return;
+    }
+
+    // --- Cloud mode ---
+
+    // 1. Remove locally instantly
+    try {
+      await localPersistence.medicines.remove(id);
+    } catch (e) {
+      console.warn("[AppContext] Failed to remove medicine locally:", e);
+    }
+
+    // 2. Optimistic UI update
+    setMedicines((p) => p.filter((m) => m.id !== id));
+    storage.setItem(CLOUD_CACHE_MEDS_KEY, medicines.filter((m) => m.id !== id));
+
+    // 3. Sync delete to Firestore in background
+    if (isOnline) {
+      try {
+        const docRef = doc(db, "medicines", id);
+        await deleteDoc(docRef);
+      } catch (err) {
+        console.warn("[AppContext] Failed to sync medicine delete, enqueuing:", err);
+        if (currentUserId) {
+          enqueueOp({
+            type: "delete-medicine",
+            collection: "medicines",
+            docId: id,
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
+        }
+      }
     } else {
-      const docRef = doc(db, "medicines", id);
-      await deleteDoc(docRef);
+      if (currentUserId) {
+        enqueueOp({
+          type: "delete-medicine",
+          collection: "medicines",
+          docId: id,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
+      }
     }
   };
 
@@ -1120,7 +1203,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       reminders.map((r) => (r.id === id ? updated : r))
     );
 
-    // 3. Sync update to Firestore in background
+    // 3. Sync update to Firestore in background.
+    // Enqueue the FULL merged reminder (not just the changed fields) so that if
+    // the companion add-reminder op hasn't flushed yet, the setDoc merge upsert
+    // will produce a complete document rather than a partial one.
+    const fullUpdatedPayload = sanitizeFirestoreData({
+      ...updated,
+      userId: currentUserId,
+    });
     const sanitizedUpdates = sanitizeFirestoreData(finalUpdates);
     if (isOnline) {
       try {
@@ -1133,7 +1223,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             type: "update-reminder",
             collection: "reminders",
             docId: id,
-            data: sanitizedUpdates,
+            data: fullUpdatedPayload,
             userId: currentUserId,
           });
           setPendingOfflineOps(getPendingCount());
@@ -1145,7 +1235,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           type: "update-reminder",
           collection: "reminders",
           docId: id,
-          data: sanitizedUpdates,
+          data: fullUpdatedPayload,
           userId: currentUserId,
         });
         setPendingOfflineOps(getPendingCount());

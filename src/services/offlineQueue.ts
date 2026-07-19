@@ -28,7 +28,9 @@ export type OfflineOpType =
   | "delete-reminder"
   | "add-dose-log"
   | "update-dose-log"
-  | "update-medicine";
+  | "add-medicine"
+  | "update-medicine"
+  | "delete-medicine";
 
 export interface OfflineOp {
   /** A stable client-side ID so we don't replay the same op twice. */
@@ -171,7 +173,8 @@ async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
 
   switch (op.type) {
     case "add-reminder":
-    case "add-dose-log": {
+    case "add-dose-log":
+    case "add-medicine": {
       // Use setDoc with the locally generated ID so the entity stays stable
       // across offline → online transitions. addDoc would create a new ID.
       if (!op.data) throw new Error("Missing data for add op");
@@ -189,7 +192,8 @@ async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
       break;
     }
 
-    case "delete-reminder": {
+    case "delete-reminder":
+    case "delete-medicine": {
       try {
         await deleteDoc(docRef);
       } catch (e: any) {
