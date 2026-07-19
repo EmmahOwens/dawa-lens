@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from "react";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import type { DotLottie } from "@lottiefiles/dotlottie-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface LottieMojiProps {
   /** The emoji character, e.g. "😔". Must exist in MOOD_LOTTIE_MAP or a static fallback is shown. */
@@ -39,6 +39,21 @@ const EMOJI_LABELS: Record<string, string> = {
   "🤩": "Star-struck face – Great mood",
 };
 
+// ── Eager prefetch on module load ─────────────────────────────────────────────
+// Kick off a fetch for every known Lottie JSON as soon as this module is
+// imported. The browser caches the response, so by the time the user taps an
+// emoji the JSON is already in memory — zero network wait, no blurry frame.
+if (typeof window !== "undefined") {
+  Object.values(MOOD_LOTTIE_MAP).forEach((url) => {
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.as = "fetch";
+    link.crossOrigin = "anonymous";
+    link.href = url;
+    document.head.appendChild(link);
+  });
+}
+
 /**
  * LottieMoji
  *
@@ -51,6 +66,11 @@ const EMOJI_LABELS: Record<string, string> = {
  *  - active=true  → spring pop-in entrance, plays and loops
  *  - Tap while active → animation restarts from frame 0
  *  - Respects prefers-reduced-motion
+ *
+ * Performance:
+ *  - All Lottie JSONs are prefetched via <link rel="prefetch"> on module load
+ *  - A crisp static emoji is shown instantly while the player initialises,
+ *    eliminating the blurry-placeholder frame
  */
 export const LottieMoji: React.FC<LottieMojiProps> = ({
   emoji,
@@ -95,40 +115,57 @@ export const LottieMoji: React.FC<LottieMojiProps> = ({
 
   // ── Lottie player ────────────────────────────────────────────────────────
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={`lottie-${emoji}-${active}`}
-        role="img"
-        aria-label={label}
-        className={`flex items-center justify-center cursor-pointer select-none ${className ?? ""}`}
-        style={{ width: size, height: size }}
-        // Spring pop-in only when transitioning to active
-        initial={active ? { scale: 0, opacity: 0 } : false}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={
-          active
-            ? { type: "spring", stiffness: 420, damping: 18, mass: 0.8 }
-            : { duration: 0 }
-        }
-        onClick={handleReplay}
+    <motion.div
+      role="img"
+      aria-label={label}
+      className={`relative flex items-center justify-center cursor-pointer select-none ${className ?? ""}`}
+      style={{ width: size, height: size }}
+      // Spring pop-in only when transitioning to active
+      animate={active ? { scale: [0.85, 1.08, 1] } : { scale: 1 }}
+      transition={
+        active
+          ? { type: "spring", stiffness: 420, damping: 18, mass: 0.8, duration: 0.35 }
+          : { duration: 0 }
+      }
+      onClick={handleReplay}
+    >
+      {/*
+        Instant crisp static emoji shown underneath while the Lottie player
+        initialises. The DotLottieReact canvas appears on top once ready,
+        so the user never sees a blurry/empty frame.
+      */}
+      <span
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          fontSize: size * 0.72,
+          lineHeight: 1,
+          filter: active ? "none" : "grayscale(1)",
+          opacity: active ? 1 : 0.45,
+          transition: "filter 0.25s ease, opacity 0.25s ease",
+          userSelect: "none",
+          pointerEvents: "none",
+        }}
       >
-        <DotLottieReact
-          dotLottieRefCallback={handleDotLottieRef}
-          src={src}
-          // Active: autoplay + loop. Inactive: freeze on frame 0.
-          autoplay={active && !prefersReducedMotion}
-          loop={active && !prefersReducedMotion}
-          style={{
-            width: "100%",
-            height: "100%",
-            // Greyscale + opacity when inactive — matches existing inactive card CSS
-            filter: active ? "none" : "grayscale(1)",
-            opacity: active ? 1 : 0.45,
-            transition: "filter 0.25s ease, opacity 0.25s ease",
-          }}
-        />
-      </motion.div>
-    </AnimatePresence>
+        {emoji}
+      </span>
+
+      {/* Lottie canvas — renders on top of the static emoji once loaded */}
+      <DotLottieReact
+        dotLottieRefCallback={handleDotLottieRef}
+        src={src}
+        autoplay={active && !prefersReducedMotion}
+        loop={active && !prefersReducedMotion}
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          filter: active ? "none" : "grayscale(1)",
+          opacity: active ? 1 : 0.45,
+          transition: "filter 0.25s ease, opacity 0.25s ease",
+        }}
+      />
+    </motion.div>
   );
 };
 
