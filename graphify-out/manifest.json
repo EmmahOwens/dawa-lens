@@ -1165,8 +1165,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1784233910.9355233,
-    "ast_hash": "ad9f937fbb313675560412b61ec53656",
+    "mtime": 1784488439.7615058,
+    "ast_hash": "20ab536d86dc9447e1adfb0727a857cf",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1215,8 +1215,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/appLifecycle.ts": {
-    "mtime": 1783771256.0085351,
-    "ast_hash": "370dbf86f7bfca91032b9bc04edfac27",
+    "mtime": 1784488202.9080908,
+    "ast_hash": "d84e7aaaa3cdd6a4a4e3ec356edc5b87",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/firebase.ts": {
@@ -2675,8 +2675,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/offlineQueue.ts": {
-    "mtime": 1783657078.8107884,
-    "ast_hash": "511602df20fb32fb702d7b76c3d555bc",
+    "mtime": 1784488189.8207216,
+    "ast_hash": "79c24eede1c81dee45a297bbd5bb69e0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useSwipeToDismiss.ts": {
