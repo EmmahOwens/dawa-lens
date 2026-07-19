@@ -285,7 +285,7 @@ export default function WellnessPage() {
                       <button
                         key={m.val}
                         onClick={() => setMood(m.val)}
-                        className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl transition-all duration-300 ${mood === m.val ? "bg-success text-success-foreground scale-110 shadow-lg shadow-success/20 -translate-y-1" : "bg-muted/30 grayscale opacity-40 hover:opacity-100 hover:grayscale-0"}`}
+                        className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl transition-all duration-300 ${mood === m.val ? "bg-success text-success-foreground scale-110 shadow-lg shadow-success/20 -translate-y-1" : "bg-muted/30 hover:bg-muted/50"}`}
                       >
                           <LottieMoji emoji={m.emoji} size={32} className="mb-1" active={mood === m.val} />
                         <span className={`text-[8px] font-black uppercase tracking-tighter ${mood === m.val ? "opacity-100" : "opacity-0"}`}>{m.label}</span>
