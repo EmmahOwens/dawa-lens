@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Smile, Meh, Frown, Loader2 } from "@/lib/icons";
+import { LottieMoji } from "../rive/LottieMoji";
 import { RiveMoji } from "../rive/RiveMoji";
 import { WellnessLog } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
@@ -16,7 +17,7 @@ const MOOD_OPTIONS = [
   { value: 2, icon: Frown, emoji: "😕", color: "text-orange-400", bg: "bg-orange-400/10", label: "Meh" },
   { value: 3, icon: Meh, emoji: "😐", color: "text-warning", bg: "bg-warning/10", label: "Okay" },
   { value: 4, icon: Smile, emoji: "🙂", color: "text-emerald-400", bg: "bg-emerald-400/10", label: "Good" },
-  { value: 5, icon: Smile, emoji: "💎", color: "text-success", bg: "bg-success/10", label: "Great" },
+  { value: 5, icon: Smile, emoji: "🤩", color: "text-success", bg: "bg-success/10", label: "Great" },
 ];
 
 const getMoodLabel = (value: number) => {
@@ -90,7 +91,7 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
             }`}
           >
             {activeMoodCfg ? (
-              <RiveMoji emoji={activeMoodCfg.emoji} size={24} />
+              <LottieMoji emoji={activeMoodCfg.emoji} size={24} active={true} />
             ) : (
               <Smile size={18} className="text-indigo-500" />
             )}
@@ -131,19 +132,7 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
                 {isLoading ? (
                   <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <motion.div
-                    animate={isActive ? {
-                      y: [0, -4, 0],
-                      scale: [1, 1.05, 1],
-                    } : {}}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  >
-                    <RiveMoji emoji={mood.emoji} size={20} active={isActive} />
-                  </motion.div>
+                  <LottieMoji emoji={mood.emoji} size={20} active={isActive} />
                 )}
               </motion.button>
             );
