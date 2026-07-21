@@ -1247,16 +1247,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const current = reminders.find((r) => r.id === id);
     if (!current) return;
 
-
-
-    // 1. Save locally instantly
+    // 1. Save locally instantly (SQLite row removed before any notification logic)
     try {
       await localPersistence.reminders.remove(id);
     } catch (e) {
       console.warn("[AppContext] Failed to remove reminder locally:", e);
     }
 
-    // 2. Optimistic UI update
+    // 2. Eagerly cancel & reschedule OS-level notifications so pending alarms
+    //    for this reminder are cleared immediately — before the useEffect has a
+    //    chance to fire on the next render cycle.
+    if (Capacitor.isNativePlatform()) {
+      const updatedReminders = reminders.filter((r) => r.id !== id);
+      scheduleReminders(updatedReminders, doseLogs, medicines).catch((err) =>
+        console.warn("[AppContext] Failed to reschedule notifications after delete:", err)
+      );
+    }
+
+    // 3. Optimistic UI update
     setReminders((p) => p.filter((r) => r.id !== id));
 
     if (storageMode === "local") {

@@ -74,7 +74,18 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
                 // Only act on alarms that fired between 2 h and 24 h ago
                 if (elapsed < twoHoursMs || elapsed > oneDayMs) continue
 
-                // ── 4. Check dose_logs for a taken/snoozed action ─────────────
+                // ── 4. Guard: skip if reminder was deleted ────────────────────
+                // If the reminder no longer exists in the local DB, do not fire
+                // a "Missed Dose" notification — the user deliberately removed it.
+                val reminderCursor = db.rawQuery(
+                    "SELECT id FROM reminders WHERE id = ? LIMIT 1",
+                    arrayOf(reminderId)
+                )
+                val reminderExists = reminderCursor.moveToFirst()
+                reminderCursor.close()
+                if (!reminderExists) continue
+
+                // ── 5. Check dose_logs for a taken/snoozed action ─────────────
                 val cursor = db.rawQuery(
                     """SELECT id FROM dose_logs
                        WHERE reminder_id = ?
@@ -86,7 +97,7 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
                 val alreadyLogged = cursor.moveToFirst()
                 cursor.close()
 
-                // ── 5. Post notification if no log found ──────────────────────
+                // ── 6. Post notification if no log found ──────────────────────
                 if (!alreadyLogged) {
                     // Stable, unique notification ID derived from reminder + time
                     val notifId = (reminderId + scheduledTimeStr).hashCode()
