@@ -8,8 +8,8 @@ import type { FeedEvent } from '../types';
 function docToFeedEvent(doc: DocumentData & { id: string }): FeedEvent {
   const data = doc.data();
   const status: string = data.status || data.action || 'unknown';
-  const med = data.medicineName || data.name || 'medication';
-  const rawDate = data.actionTime || data.createdAt;
+  const med = data.medicineName || data.name || data.medicine || 'medication';
+  const rawDate = data.actionTime || data.createdAt || data.timestamp || data.loggedAt || data.time;
   let ts = new Date().toISOString();
   if (rawDate) {
     if (typeof rawDate.toDate === 'function') {
@@ -51,12 +51,12 @@ function docToFeedEvent(doc: DocumentData & { id: string }): FeedEvent {
 export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnected: boolean } {
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
-  const seenIds = useRef<Set<string>>(new Set());
   const fallbackActive = useRef(false);
 
   useEffect(() => {
     let mounted = true;
     let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let unsubscribe = () => {};
 
     const startFallbackPolling = () => {
       if (fallbackActive.current) return;
@@ -65,23 +65,21 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
       const fetchRecent = async () => {
         try {
           const res = await api.doseLogs.recent(maxEvents);
-          if (mounted && res.data) {
+          if (mounted && res?.data) {
             setEvents(res.data);
             setIsConnected(true);
           }
-        } catch {
-          // If REST API fails as well, report connection issue
-          if (mounted && events.length === 0) {
+        } catch (err) {
+          console.warn('[useRealtimeFeed] REST fallback error:', err);
+          if (mounted) {
             setIsConnected(false);
           }
         }
       };
 
       fetchRecent();
-      pollInterval = setInterval(fetchRecent, 15_000);
+      pollInterval = setInterval(fetchRecent, 10_000);
     };
-
-    let unsubscribe = () => {};
 
     try {
       const q = query(
@@ -100,10 +98,9 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
           });
           newEvents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           setEvents(newEvents.slice(0, maxEvents));
-          seenIds.current = new Set(newEvents.map(e => e.id));
         },
         (error) => {
-          console.warn('[useRealtimeFeed] Firestore listener warning/fallback:', error.message);
+          console.warn('[useRealtimeFeed] Firestore listener fallback:', error.message);
           startFallbackPolling();
         }
       );
@@ -111,12 +108,12 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
       startFallbackPolling();
     }
 
-    // Safety timer: If Firestore onSnapshot hasn't received data after 2.5s, trigger REST API fetch
+    // Safety timer: If Firestore onSnapshot hasn't connected or received data after 2 seconds, trigger REST fallback
     const timeout = setTimeout(() => {
-      if (mounted && !isConnected) {
+      if (mounted) {
         startFallbackPolling();
       }
-    }, 2500);
+    }, 2000);
 
     return () => {
       mounted = false;

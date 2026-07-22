@@ -10,11 +10,20 @@ interface AdminLineChartProps {
   color?: string;
   label?: string;
   suffix?: string;
+  connectNulls?: boolean;
 }
 
 const TICK_STYLE = { fontSize: 10, fill: 'hsl(220 8% 55%)' };
 
-export function AdminLineChart({ data, xKey, yKey, color = 'hsl(142 71% 45%)', label = '', suffix = '' }: AdminLineChartProps) {
+export function AdminLineChart({
+  data,
+  xKey,
+  yKey,
+  color = 'hsl(142 71% 45%)',
+  label = '',
+  suffix = '',
+  connectNulls = true,
+}: AdminLineChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ReLineChart data={data} margin={{ top: 8, right: 4, left: -10, bottom: 0 }}>
@@ -28,7 +37,7 @@ export function AdminLineChart({ data, xKey, yKey, color = 'hsl(142 71% 45%)', l
           formatter={(v: number) => [v != null ? `${v}${suffix}` : '–', label]}
         />
         <Line type="monotone" dataKey={yKey} stroke={color} strokeWidth={2}
-          dot={false} activeDot={{ r: 4, fill: color }} connectNulls={false} />
+          dot={false} activeDot={{ r: 4, fill: color }} connectNulls={connectNulls} />
       </ReLineChart>
     </ResponsiveContainer>
   );

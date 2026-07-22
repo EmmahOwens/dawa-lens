@@ -3,7 +3,7 @@ import AppError from '../../utils/AppError.js';
 
 function parseLogDate(docData) {
   if (!docData) return null;
-  const raw = docData.actionTime || docData.createdAt;
+  const raw = docData.actionTime || docData.createdAt || docData.timestamp || docData.loggedAt || docData.time || docData.date;
   if (!raw) return null;
   if (typeof raw.toDate === 'function') return raw.toDate();
   const d = new Date(raw);
@@ -27,7 +27,7 @@ export const getRecentDoseLogs = async (req, res, next) => {
     const events = snap.docs.map(doc => {
       const data = doc.data();
       const status = parseLogStatus(data);
-      const med = data.medicineName || data.name || 'medication';
+      const med = data.medicineName || data.name || data.medicine || 'Medication';
       const dateObj = parseLogDate(data) || new Date();
       const ts = dateObj.toISOString();
 
