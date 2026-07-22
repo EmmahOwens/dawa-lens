@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Always-dark admin theme ─────────────────────────────────────────────── */
+:root,
+.dark {
+  --background: 222 20% 7%;
+  --foreground: 220 14% 96%;
+
+  --card: 222 16% 10%;
+  --card-foreground: 220 14% 96%;
+
+  --popover: 222 16% 10%;
+  --popover-foreground: 220 14% 96%;
+
+  --primary: 210 100% 52%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 222 14% 16%;
+  --secondary-foreground: 220 14% 96%;
+
+  --muted: 222 14% 14%;
+  --muted-foreground: 220 8% 55%;
+
+  --accent: 222 14% 16%;
+  --accent-foreground: 210 100% 52%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 100%;
+
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 10%;
+
+  --border: 222 14% 18%;
+  --input: 222 14% 18%;
+  --ring: 210 100% 52%;
+
+  --radius: 0.875rem;
+
+  --sidebar-bg: 222 20% 5%;
+  --sidebar-border: 222 14% 13%;
+}
+
+@layer base {
+  * { @apply border-border; }
+
+  html, body {
+    @apply bg-background text-foreground font-sans antialiased;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  #root { height: 100%; }
+}
+
+@layer utilities {
+  /* Premium card used throughout the dashboard */
+  .admin-card {
+    @apply rounded-2xl border border-border/60 bg-card p-5 transition-all duration-200;
+  }
+
+  .admin-card-hover {
+    @apply hover:border-primary/25 hover:shadow-lg hover:shadow-primary/5;
+  }
+
+  /* Glass sidebar */
+  .glass-sidebar {
+    background: hsl(var(--sidebar-bg));
+    border-right: 1px solid hsl(var(--sidebar-border));
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+  }
+
+  /* Live indicator pulse */
+  .live-dot {
+    @apply inline-block w-2 h-2 rounded-full bg-success;
+    animation: live-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* Activity feed event slide-in */
+  .feed-item-enter {
+    animation: feed-enter 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  @keyframes feed-enter {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Page transition */
+  .page-enter {
+    animation: page-slide 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  @keyframes page-slide {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Subtle grid background for login page */
+  .admin-grid-bg {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}

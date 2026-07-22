@@ -8,6 +8,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Check if the caller has the admin custom claim set server-side
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -44,41 +49,46 @@ service cloud.firestore {
 
     // User profiles — only the profile owner can read/write
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if isOwner(userId) || isAdmin();
     }
 
     // Medication inventory
     // Allow read/write only if the userId field matches the authenticated user
     match /medicines/{medicineId} {
-      allow read, delete: if isDataOwner();
+      allow read, delete: if isDataOwner() || isAdmin();
       allow create, update: if isDataOwner() && isValidPatientRef();
     }
 
     // Medication reminders/schedules
     // Allow read/write only if the userId field matches the authenticated user
     match /reminders/{reminderId} {
-      allow read, delete: if isDataOwner();
+      allow read, delete: if isDataOwner() || isAdmin();
       allow create, update: if isDataOwner() && isValidPatientRef();
     }
 
     // Dose logs — history of doses taken/skipped/missed
     // Allow read/write/delete if the userId field matches the authenticated user
     match /doseLogs/{logId} {
-      allow read, delete: if isDataOwner();
+      allow read, delete: if isDataOwner() || isAdmin();
       allow create, update: if isDataOwner() && isValidPatientRef();
     }
 
     // Wellness journals (Food, Symptoms, Mood)
     match /wellnessLogs/{logId} {
-      allow read, delete: if isDataOwner();
+      allow read, delete: if isDataOwner() || isAdmin();
       allow create, update: if isDataOwner() && isValidPatientRef();
     }
 
     // Family members or professional clients
-    // Only the managing user can create/read/update/delete patient profiles
     match /patients/{patientId} {
-      allow read, write: if isPatientManager();
-      allow delete: if isPatientManager();
+      allow read, write: if isPatientManager() || isAdmin();
+      allow delete: if isPatientManager() || isAdmin();
+    }
+
+    // Admin audit log — only writable via Admin SDK on the backend
+    match /adminAuditLog/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
   }
 }

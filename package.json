@@ -14,7 +14,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy:web": "vite build && firebase deploy --only hosting",
+    "deploy:web": "vite build && firebase deploy --only hosting:app",
+    "deploy:admin": "cd admin && npm run build && cd .. && firebase deploy --only hosting:admin",
+    "deploy:all": "vite build && cd admin && npm run build && cd .. && firebase deploy --only hosting",
     "cap:sync": "vite build && npx cap sync"
   },
   "dependencies": {
