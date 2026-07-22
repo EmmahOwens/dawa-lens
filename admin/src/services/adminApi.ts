@@ -44,6 +44,8 @@ export const api = {
 
   // ── Dose Logs ────────────────────────────────────────────────────────────────
   doseLogs: {
+    recent: (limit = 25) =>
+      request<ApiResponse<import('../types').FeedEvent[]>>(`/admin/dose-logs/recent?limit=${limit}`),
     aggregate: (days = 30) =>
       request<ApiResponse<{
         heatmap: import('../types').HeatmapCell[];

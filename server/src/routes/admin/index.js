@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getOverviewStats, getGrowthStats, getAdherenceTrend } from './stats.js';
 import { listUsers, getUser, updateUser, deleteUser } from './users.js';
-import { getAggregateStats } from './doseLogs.js';
+import { getAggregateStats, getRecentDoseLogs } from './doseLogs.js';
 import { getTopMedications } from './medications.js';
 import { getAuditLog, getSystemHealth } from './system.js';
 import { broadcastNotification, getNotificationHistory } from './notifications.js';
@@ -21,6 +21,7 @@ router.patch('/users/:uid', updateUser);
 router.delete('/users/:uid', deleteUser);
 
 // Dose logs
+router.get('/dose-logs/recent', getRecentDoseLogs);
 router.get('/dose-logs/aggregate', getAggregateStats);
 
 // Medications

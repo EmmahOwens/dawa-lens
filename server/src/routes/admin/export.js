@@ -1,6 +1,20 @@
 import { db, authAdmin } from '../../db.js';
 import AppError from '../../utils/AppError.js';
 
+function parseLogDate(docData) {
+  if (!docData) return null;
+  const raw = docData.actionTime || docData.createdAt;
+  if (!raw) return null;
+  if (typeof raw.toDate === 'function') return raw.toDate();
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function parseLogStatus(docData) {
+  if (!docData) return 'unknown';
+  return docData.action || docData.status || 'unknown';
+}
+
 /**
  * GET /api/v1/admin/export/users.csv
  * Streams user list as a CSV download.
@@ -45,10 +59,7 @@ export const exportAdherenceCSV = async (req, res, next) => {
     const since = new Date();
     since.setDate(since.getDate() - days);
 
-    const snap = await db.collection('doseLogs')
-      .where('createdAt', '>=', since)
-      .limit(5000)
-      .get();
+    const snap = await db.collection('doseLogs').limit(5000).get().catch(() => ({ docs: [] }));
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="dawa-lens-adherence.csv"');
@@ -57,10 +68,14 @@ export const exportAdherenceCSV = async (req, res, next) => {
 
     snap.docs.forEach(doc => {
       const d = doc.data();
-      const date = d.createdAt?.toDate?.()?.toISOString().split('T')[0] || '';
+      const dateObj = parseLogDate(d);
+      if (!dateObj || dateObj < since) return;
+
+      const dateStr = dateObj.toISOString().split('T')[0];
+      const status = parseLogStatus(d);
       const row = [
-        date,
-        d.status || '',
+        dateStr,
+        status,
         d.userId || '',
         `"${(d.medicineName || '').replace(/"/g, '""')}"`,
       ].join(',');
@@ -82,7 +97,6 @@ export const exportReportPDF = async (req, res, next) => {
   try {
     const { default: PDFDocument } = await import('pdfkit');
 
-    // Gather data
     const now = new Date();
     const since30 = new Date(now);
     since30.setDate(since30.getDate() - 30);
@@ -90,21 +104,27 @@ export const exportReportPDF = async (req, res, next) => {
     const [
       usersResult,
       medCount,
-      takenCount,
-      missedCount,
-      skippedCount,
+      doseLogsSnap,
     ] = await Promise.all([
       authAdmin.listUsers(1000),
-      db.collection('medicines').count().get(),
-      db.collection('doseLogs').where('createdAt', '>=', since30).where('status', '==', 'taken').count().get(),
-      db.collection('doseLogs').where('createdAt', '>=', since30).where('status', '==', 'missed').count().get(),
-      db.collection('doseLogs').where('createdAt', '>=', since30).where('status', '==', 'skipped').count().get(),
+      db.collection('medicines').count().get().catch(() => ({ data: () => ({ count: 0 }) })),
+      db.collection('doseLogs').limit(5000).get().catch(() => ({ docs: [] })),
     ]);
 
     const totalUsers = usersResult.users.length;
-    const taken = takenCount.data().count;
-    const missed = missedCount.data().count;
-    const skipped = skippedCount.data().count;
+    const totalMeds = medCount.data().count;
+
+    let taken = 0, missed = 0, skipped = 0;
+    doseLogsSnap.docs.forEach(d => {
+      const data = d.data();
+      const date = parseLogDate(data);
+      if (!date || date < since30) return;
+      const status = parseLogStatus(data);
+      if (status === 'taken') taken++;
+      else if (status === 'missed') missed++;
+      else if (status === 'skipped') skipped++;
+    });
+
     const totalDoses = taken + missed + skipped;
     const adherence = totalDoses > 0 ? Math.round((taken / totalDoses) * 100) : 0;
 
@@ -127,7 +147,7 @@ export const exportReportPDF = async (req, res, next) => {
 
     const stats = [
       ['Total Registered Users', totalUsers.toString()],
-      ['Total Medications Tracked', medCount.data().count.toString()],
+      ['Total Medications Tracked', totalMeds.toString()],
       ['30-Day Adherence Rate', `${adherence}%`],
     ];
 
