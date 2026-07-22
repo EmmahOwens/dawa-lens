@@ -6,7 +6,6 @@
   "hosting": [
     {
       "target": "app",
-      "site": "dawalens",
       "public": "dist",
       "ignore": [
         "firebase.json",
@@ -42,7 +41,6 @@
     },
     {
       "target": "admin",
-      "site": "dawalens-admin",
       "public": "admin/dist",
       "ignore": [
         "firebase.json",
