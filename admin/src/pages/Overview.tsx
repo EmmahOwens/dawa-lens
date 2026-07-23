@@ -23,12 +23,12 @@ export function Overview() {
   // Format x-axis dates to short form (Jul 21)
   const growth = (growthData || []).map(p => ({
     ...p,
-    date: new Date(p.date).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+    date: new Date(p.date.includes('T') ? p.date : `${p.date}T00:00:00`).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
   }));
 
   const adherence = (adherenceData || []).map(p => ({
     ...p,
-    date: new Date(p.date).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+    date: new Date(p.date.includes('T') ? p.date : `${p.date}T00:00:00`).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
   }));
 
   return (

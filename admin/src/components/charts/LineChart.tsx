@@ -37,7 +37,7 @@ export function AdminLineChart({
           formatter={(v: number) => [v != null ? `${v}${suffix}` : '–', label]}
         />
         <Line type="monotone" dataKey={yKey} stroke={color} strokeWidth={2}
-          dot={false} activeDot={{ r: 4, fill: color }} connectNulls={connectNulls} />
+          dot={{ r: 3, fill: color, strokeWidth: 1, stroke: color }} activeDot={{ r: 5, fill: color }} connectNulls={connectNulls} />
       </ReLineChart>
     </ResponsiveContainer>
   );

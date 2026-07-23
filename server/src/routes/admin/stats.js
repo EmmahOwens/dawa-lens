@@ -145,6 +145,7 @@ export const getAdherenceTrend = async (req, res, next) => {
     const snap = await db.collection('doseLogs').limit(5000).get().catch(() => ({ docs: [] }));
     const logs = snap.docs.map(d => ({ data: d.data(), date: parseLogDate(d.data()), status: parseLogStatus(d.data()) }));
 
+    let lastKnownRate = null;
     const points = [];
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
@@ -162,7 +163,12 @@ export const getAdherenceTrend = async (req, res, next) => {
         if (['taken', 'missed', 'skipped'].includes(l.status)) total++;
       });
 
-      const rate = total > 0 ? Math.round((taken / total) * 100) : null;
+      let rate = total > 0 ? Math.round((taken / total) * 100) : null;
+      if (rate !== null) {
+        lastKnownRate = rate;
+      } else if (lastKnownRate !== null) {
+        rate = lastKnownRate;
+      }
 
       points.push({
         date: dayStart.toISOString().split('T')[0],

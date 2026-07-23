@@ -52,6 +52,7 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const fallbackActive = useRef(false);
+  const firestoreConnected = useRef(false);
 
   useEffect(() => {
     let mounted = true;
@@ -59,7 +60,7 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
     let unsubscribe = () => {};
 
     const startFallbackPolling = () => {
-      if (fallbackActive.current) return;
+      if (fallbackActive.current || firestoreConnected.current) return;
       fallbackActive.current = true;
 
       const fetchRecent = async () => {
@@ -71,7 +72,7 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
           }
         } catch (err) {
           console.warn('[useRealtimeFeed] REST fallback error:', err);
-          if (mounted) {
+          if (mounted && !firestoreConnected.current && events.length === 0) {
             setIsConnected(false);
           }
         }
@@ -91,6 +92,7 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
         q,
         (snap: QuerySnapshot) => {
           if (!mounted) return;
+          firestoreConnected.current = true;
           setIsConnected(true);
           const newEvents: FeedEvent[] = [];
           snap.docs.forEach(doc => {
@@ -101,6 +103,7 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
         },
         (error) => {
           console.warn('[useRealtimeFeed] Firestore listener fallback:', error.message);
+          firestoreConnected.current = false;
           startFallbackPolling();
         }
       );
@@ -110,8 +113,10 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
 
     // Safety timer: If Firestore onSnapshot hasn't connected or received data after 2 seconds, trigger REST fallback
     const timeout = setTimeout(() => {
-      if (mounted) {
+      if (mounted && !firestoreConnected.current) {
         startFallbackPolling();
+      } else if (mounted) {
+        setIsConnected(true);
       }
     }, 2000);
 
