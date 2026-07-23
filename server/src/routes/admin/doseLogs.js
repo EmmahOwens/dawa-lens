@@ -22,7 +22,20 @@ function parseLogStatus(docData) {
 export const getRecentDoseLogs = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit || '25', 10);
-    const snap = await db.collection('doseLogs').limit(300).get().catch(() => ({ docs: [] }));
+    // Try to order by actionTime (preferred) or createdAt, fallback to unordered
+    let snap;
+    try {
+      snap = await db.collection('doseLogs').orderBy('actionTime', 'desc').limit(300).get();
+    } catch (err) {
+      console.warn('[getRecentDoseLogs] Failed to order by actionTime, trying unordered:', err.message);
+      try {
+        snap = await db.collection('doseLogs').orderBy('createdAt', 'desc').limit(300).get();
+      } catch (err2) {
+        console.warn('[getRecentDoseLogs] Failed to order by createdAt, using unordered:', err2.message);
+        snap = await db.collection('doseLogs').limit(300).get();
+      }
+    }
+    snap = snap || { docs: [] };
 
     const events = snap.docs.map(doc => {
       const data = doc.data();

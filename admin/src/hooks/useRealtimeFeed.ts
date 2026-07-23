@@ -60,7 +60,7 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
     let unsubscribe = () => {};
 
     const startFallbackPolling = () => {
-      if (fallbackActive.current || firestoreConnected.current) return;
+      if (fallbackActive.current) return; // Don't start multiple fallbacks
       fallbackActive.current = true;
 
       const fetchRecent = async () => {
@@ -72,9 +72,6 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
           }
         } catch (err) {
           console.warn('[useRealtimeFeed] REST fallback error:', err);
-          if (mounted && !firestoreConnected.current && events.length === 0) {
-            setIsConnected(false);
-          }
         }
       };
 
@@ -102,21 +99,20 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
           setEvents(newEvents.slice(0, maxEvents));
         },
         (error) => {
-          console.warn('[useRealtimeFeed] Firestore listener fallback:', error.message);
+          console.warn('[useRealtimeFeed] Firestore listener error, starting fallback:', error.message);
           firestoreConnected.current = false;
           startFallbackPolling();
         }
       );
-    } catch {
+    } catch (err) {
+      console.warn('[useRealtimeFeed] Firestore init error, starting fallback:', err);
       startFallbackPolling();
     }
 
-    // Safety timer: If Firestore onSnapshot hasn't connected or received data after 2 seconds, trigger REST fallback
+    // Safety timer: If Firestore onSnapshot hasn't connected after 2 seconds, trigger REST fallback
     const timeout = setTimeout(() => {
       if (mounted && !firestoreConnected.current) {
         startFallbackPolling();
-      } else if (mounted) {
-        setIsConnected(true);
       }
     }, 2000);
 
