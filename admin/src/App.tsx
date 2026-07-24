@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useAdminAuth } from './hooks/useAdminAuth';
+import { ConnectionProvider } from './hooks/useConnectionStatus';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { DesktopGuard } from './components/DesktopGuard';
 import { AdminLogin } from './pages/AdminLogin';
@@ -40,21 +41,23 @@ function App() {
 
   return (
     <DesktopGuard>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AdminLayout user={user} />}>
-            <Route index element={<Overview />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/medications" element={<Medications />} />
-            <Route path="/adherence" element={<Adherence />} />
-            <Route path="/ai-activity" element={<AIActivity />} />
-            <Route path="/system" element={<SystemHealth />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-        <Toaster theme="dark" position="top-right" richColors />
-      </BrowserRouter>
+      <ConnectionProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<AdminLayout user={user} />}>
+              <Route index element={<Overview />} />
+              <Route path="/users" element={<Users />} />
+              <Route path="/medications" element={<Medications />} />
+              <Route path="/adherence" element={<Adherence />} />
+              <Route path="/ai-activity" element={<AIActivity />} />
+              <Route path="/system" element={<SystemHealth />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+          <Toaster theme="dark" position="top-right" richColors />
+        </BrowserRouter>
+      </ConnectionProvider>
     </DesktopGuard>
   );
 }

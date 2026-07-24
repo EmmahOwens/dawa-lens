@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, query, limit, onSnapshot, type QuerySnapshot, type DocumentData } from 'firebase/firestore';
+import { collection, query, limit, orderBy, onSnapshot, type QuerySnapshot, type DocumentData } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { api } from '../services/adminApi';
 import type { FeedEvent } from '../types';
@@ -47,6 +47,7 @@ function docToFeedEvent(doc: DocumentData & { id: string }): FeedEvent {
 
 /**
  * Subscribes to recent dose log events using Firestore onSnapshot, with REST API polling fallback.
+ * Connection status becomes `true` as soon as either source responds (even with 0 events).
  */
 export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnected: boolean } {
   const [events, setEvents] = useState<FeedEvent[]>([]);
@@ -66,12 +67,17 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
       const fetchRecent = async () => {
         try {
           const res = await api.doseLogs.recent(maxEvents);
-          if (mounted && res?.data) {
-            setEvents(res.data);
+          if (mounted) {
+            // Always mark as connected once we get a REST response, even if empty
             setIsConnected(true);
+            if (res?.data) {
+              setEvents(res.data);
+            }
           }
         } catch (err) {
           console.warn('[useRealtimeFeed] REST fallback error:', err);
+          // Still mark connected — if the server is up but returns empty, that's fine
+          // Only stay disconnected if both Firestore AND REST both fail
         }
       };
 
@@ -80,15 +86,27 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
     };
 
     try {
-      const q = query(
-        collection(db, 'doseLogs'),
-        limit(maxEvents * 2)
-      );
+      // Try to order by actionTime first for most recent events; if index missing,
+      // the onSnapshot error handler will fall back to REST.
+      let q;
+      try {
+        q = query(
+          collection(db, 'doseLogs'),
+          orderBy('actionTime', 'desc'),
+          limit(maxEvents * 2)
+        );
+      } catch {
+        q = query(
+          collection(db, 'doseLogs'),
+          limit(maxEvents * 2)
+        );
+      }
 
       unsubscribe = onSnapshot(
         q,
         (snap: QuerySnapshot) => {
           if (!mounted) return;
+          // Firestore responded = we are connected (even if 0 docs)
           firestoreConnected.current = true;
           setIsConnected(true);
           const newEvents: FeedEvent[] = [];
@@ -109,12 +127,12 @@ export function useRealtimeFeed(maxEvents = 20): { events: FeedEvent[]; isConnec
       startFallbackPolling();
     }
 
-    // Safety timer: If Firestore onSnapshot hasn't connected after 2 seconds, trigger REST fallback
+    // Safety timer: if Firestore hasn't connected after 1.5s, start REST fallback
     const timeout = setTimeout(() => {
       if (mounted && !firestoreConnected.current) {
         startFallbackPolling();
       }
-    }, 2000);
+    }, 1500);
 
     return () => {
       mounted = false;

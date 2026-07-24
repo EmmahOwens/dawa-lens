@@ -1,16 +1,23 @@
-import { useCallback } from 'react';
-import { Users, Pill, CheckCircle, Bot, TrendingUp, Activity } from 'lucide-react';
+import { useCallback, useEffect } from 'react';
+import { Users, Pill, CheckCircle, TrendingUp, Activity } from 'lucide-react';
 import { StatCard } from '../components/ui/StatCard';
 import { LiveFeed } from '../components/ui/LiveFeed';
 import { LiveCounter } from '../components/ui/LiveCounter';
 import { AdminAreaChart } from '../components/charts/AreaChart';
 import { AdminLineChart } from '../components/charts/LineChart';
 import { useRealtimeFeed, usePolledStats } from '../hooks/useRealtimeFeed';
+import { useSetConnectionStatus } from '../hooks/useConnectionStatus';
 import { api } from '../services/adminApi';
 import { adherenceBg, formatNumber } from '../lib/utils';
 
 export function Overview() {
   const { events, isConnected } = useRealtimeFeed(25);
+
+  // Propagate this page's real connection state up to the shared topbar badge
+  const setConnected = useSetConnectionStatus();
+  useEffect(() => {
+    setConnected(isConnected);
+  }, [isConnected, setConnected]);
 
   const fetchOverview = useCallback(() => api.stats.overview().then(r => r.data), []);
   const fetchGrowth = useCallback(() => api.stats.growth(30).then(r => r.data), []);
@@ -121,7 +128,7 @@ export function Overview() {
 
         {/* Live feed column */}
         <div className="col-span-1 min-h-0">
-          <LiveFeed events={events} isConnected={isConnected} />
+          <LiveFeed events={events} isConnected={isConnected} stats={stats} />
         </div>
       </div>
     </div>

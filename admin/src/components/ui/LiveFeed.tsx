@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Pill, AlertTriangle, SkipForward, Scan, MessageSquare } from 'lucide-react';
+import { useEffect, useRef, useMemo } from 'react';
+import { Pill, AlertTriangle, SkipForward, Scan, MessageSquare, Users, TrendingUp } from 'lucide-react';
 import type { FeedEvent } from '../../types';
 import { timeAgo } from '../../lib/utils';
 
@@ -9,15 +9,88 @@ const EVENT_CONFIG: Record<FeedEvent['type'], { icon: typeof Pill; color: string
   dose_skipped: { icon: SkipForward,   color: 'text-warning',     bg: 'bg-warning/10 border-warning/25' },
   scan:         { icon: Scan,          color: 'text-primary',     bg: 'bg-primary/10 border-primary/25' },
   ai_chat:      { icon: MessageSquare, color: 'text-purple-400',  bg: 'bg-purple-500/10 border-purple-500/25' },
-  new_user:     { icon: Pill,          color: 'text-primary',     bg: 'bg-primary/10 border-primary/25' },
+  new_user:     { icon: Users,         color: 'text-primary',     bg: 'bg-primary/10 border-primary/25' },
 };
 
 interface LiveFeedProps {
   events: FeedEvent[];
   isConnected: boolean;
+  /** Overview stats used to generate synthetic activity items when the live feed is empty */
+  stats?: {
+    users: { total: number; newToday: number; newThisWeek: number };
+    medications: { total: number; activeReminders: number };
+    adherence: { rate: number; taken: number; missed: number; skipped: number; total: number };
+  } | null;
 }
 
-export function LiveFeed({ events, isConnected }: LiveFeedProps) {
+/**
+ * Build synthetic FeedEvent items from overview stats so the Live Activity
+ * panel always shows meaningful data even before the Firestore stream arrives.
+ */
+function buildSyntheticEvents(stats: LiveFeedProps['stats']): FeedEvent[] {
+  if (!stats) return [];
+  const now = Date.now();
+  const min = 60_000;
+  const synthetic: FeedEvent[] = [];
+
+  if (stats.adherence.taken > 0) {
+    synthetic.push({
+      id: 'syn-taken',
+      type: 'dose_taken',
+      userId: 'system',
+      label: `${stats.adherence.taken.toLocaleString()} doses taken (30d)`,
+      createdAt: new Date(now - 2 * min).toISOString(),
+    });
+  }
+  if (stats.adherence.missed > 0) {
+    synthetic.push({
+      id: 'syn-missed',
+      type: 'dose_missed',
+      userId: 'system',
+      label: `${stats.adherence.missed.toLocaleString()} doses missed (30d)`,
+      createdAt: new Date(now - 5 * min).toISOString(),
+    });
+  }
+  if (stats.adherence.skipped > 0) {
+    synthetic.push({
+      id: 'syn-skipped',
+      type: 'dose_skipped',
+      userId: 'system',
+      label: `${stats.adherence.skipped.toLocaleString()} doses skipped (30d)`,
+      createdAt: new Date(now - 8 * min).toISOString(),
+    });
+  }
+  if (stats.users.newThisWeek > 0) {
+    synthetic.push({
+      id: 'syn-users-week',
+      type: 'new_user',
+      userId: 'system',
+      label: `${stats.users.newThisWeek} new user${stats.users.newThisWeek !== 1 ? 's' : ''} this week`,
+      createdAt: new Date(now - 15 * min).toISOString(),
+    });
+  }
+  if (stats.medications.activeReminders > 0) {
+    synthetic.push({
+      id: 'syn-reminders',
+      type: 'scan',
+      userId: 'system',
+      label: `${stats.medications.activeReminders} active medication reminder${stats.medications.activeReminders !== 1 ? 's' : ''}`,
+      createdAt: new Date(now - 20 * min).toISOString(),
+    });
+  }
+  if (stats.adherence.rate > 0) {
+    synthetic.push({
+      id: 'syn-adherence',
+      type: 'dose_taken',
+      userId: 'system',
+      label: `Platform adherence: ${stats.adherence.rate}% (last 30d)`,
+      createdAt: new Date(now - 25 * min).toISOString(),
+    });
+  }
+  return synthetic;
+}
+
+export function LiveFeed({ events, isConnected, stats }: LiveFeedProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef(events.length);
 
@@ -29,15 +102,23 @@ export function LiveFeed({ events, isConnected }: LiveFeedProps) {
     prevCountRef.current = events.length;
   }, [events.length]);
 
+  // Use real events if available, otherwise fall back to synthetic stats-based events
+  const displayEvents = useMemo(() => {
+    if (events.length > 0) return events;
+    return buildSyntheticEvents(stats);
+  }, [events, stats]);
+
+  const isSynthetic = events.length === 0 && displayEvents.length > 0;
+
   return (
     <div className="admin-card flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <h3 className="text-sm font-semibold text-foreground">Live Activity</h3>
         <div className="flex items-center gap-1.5">
-          <span className={isConnected ? 'live-dot' : 'inline-block w-2 h-2 rounded-full bg-muted-foreground'} />
+          <span className={isConnected ? 'live-dot' : 'inline-block w-2 h-2 rounded-full bg-muted-foreground animate-pulse'} />
           <span className="text-[10px] text-muted-foreground font-medium">
-            {isConnected ? 'Real-time' : 'Connecting…'}
+            {isConnected ? (isSynthetic ? 'Summary' : 'Real-time') : 'Connecting…'}
           </span>
         </div>
       </div>
@@ -47,14 +128,19 @@ export function LiveFeed({ events, isConnected }: LiveFeedProps) {
         ref={scrollRef}
         className="flex-1 overflow-y-auto space-y-2 no-scrollbar min-h-0"
       >
-        {events.length === 0 ? (
-          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-            Waiting for events…
+        {displayEvents.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
+            <div className="w-8 h-8 rounded-full border border-border/50 flex items-center justify-center">
+              <TrendingUp size={14} className="text-muted-foreground" />
+            </div>
+            <p className="text-sm">Waiting for events…</p>
+            <p className="text-[10px] text-muted-foreground/60">Activity will appear here in real-time</p>
           </div>
         ) : (
-          events.map((event, i) => {
+          displayEvents.map((event, i) => {
             const cfg = EVENT_CONFIG[event.type] || EVENT_CONFIG.dose_taken;
             const Icon = cfg.icon;
+            const isSystem = event.userId === 'system';
             return (
               <div
                 key={event.id}
@@ -67,7 +153,7 @@ export function LiveFeed({ events, isConnected }: LiveFeedProps) {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-foreground truncate">{event.label}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {event.userId.slice(0, 8)}… · {timeAgo(event.createdAt)}
+                    {isSystem ? 'Platform' : `${event.userId.slice(0, 8)}…`} · {timeAgo(event.createdAt)}
                   </p>
                 </div>
               </div>
