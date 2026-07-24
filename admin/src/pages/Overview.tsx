@@ -11,13 +11,7 @@ import { api } from '../services/adminApi';
 import { adherenceBg, formatNumber } from '../lib/utils';
 
 export function Overview() {
-  const { events, isConnected } = useRealtimeFeed(25);
-
-  // Propagate this page's real connection state up to the shared topbar badge
-  const setConnected = useSetConnectionStatus();
-  useEffect(() => {
-    setConnected(isConnected);
-  }, [isConnected, setConnected]);
+  const { events, isConnected: feedConnected } = useRealtimeFeed(25);
 
   const fetchOverview = useCallback(() => api.stats.overview().then(r => r.data), []);
   const fetchGrowth = useCallback(() => api.stats.growth(30).then(r => r.data), []);
@@ -26,6 +20,15 @@ export function Overview() {
   const { data: stats, isLoading: statsLoading } = usePolledStats(fetchOverview, 30_000);
   const { data: growthData } = usePolledStats(fetchGrowth, 120_000);
   const { data: adherenceData } = usePolledStats(fetchAdherence, 120_000);
+
+  // Connected = either the feed responded OR the stats API responded (whichever is first)
+  const isConnected = feedConnected || (stats !== null);
+
+  // Propagate real connection state up to the shared topbar badge
+  const setConnected = useSetConnectionStatus();
+  useEffect(() => {
+    setConnected(isConnected);
+  }, [isConnected, setConnected]);
 
   // Format x-axis dates to short form (Jul 21)
   const growth = (growthData || []).map(p => ({

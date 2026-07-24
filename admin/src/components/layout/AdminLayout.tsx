@@ -2,32 +2,15 @@ import { Outlet } from 'react-router-dom';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminTopbar } from './AdminTopbar';
 import type { User } from 'firebase/auth';
-import { useConnectionStatus, useSetConnectionStatus } from '../../hooks/useConnectionStatus';
-import { useEffect } from 'react';
-import { api } from '../../services/adminApi';
+import { useConnectionStatus } from '../../hooks/useConnectionStatus';
 
 interface AdminLayoutProps { user: User | null }
 
 export function AdminLayout({ user }: AdminLayoutProps) {
+  // Read connection state set by whichever page is currently active.
+  // Overview sets this via useRealtimeFeed + usePolledStats success.
+  // Once set to true it persists while navigating between pages.
   const isConnected = useConnectionStatus();
-  const setConnected = useSetConnectionStatus();
-
-  // Perform an initial health check so the topbar shows "Live" once the server
-  // responds — this ensures all pages (not just Overview) show the correct status.
-  useEffect(() => {
-    let mounted = true;
-    const check = async () => {
-      try {
-        await api.system.health();
-        if (mounted) setConnected(true);
-      } catch {
-        // Server unreachable — keep as disconnected; Overview's feed will retry
-      }
-    };
-    check();
-    return () => { mounted = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
