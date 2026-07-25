@@ -29,6 +29,15 @@ export const api = {
     adherenceTrend: (days = 30) => request<ApiResponse<import('../types').AdherencePoint[]>>(`/admin/stats/adherence-trend?days=${days}`),
   },
 
+  // ── AI Assistant (Render Backend using GEMINI_API_KEY) ──────────────────────
+  ai: {
+    query: (prompt: string) =>
+      request<{ status: string; text: string }>('/admin/ai/query', {
+        method: 'POST',
+        body: JSON.stringify({ prompt }),
+      }),
+  },
+
   // ── Users ───────────────────────────────────────────────────────────────────
   users: {
     list: (page = 1, search = '') =>

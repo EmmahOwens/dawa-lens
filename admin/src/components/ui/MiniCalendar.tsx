@@ -37,16 +37,17 @@ export function MiniCalendar({ statValue, statLabel = 'This Month', statTrend }:
     ...Array(startOffset).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-  // Pad to full 6-row grid if needed
+  // Pad to full grid rows (5 or 6 rows)
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div className="admin-card flex flex-col h-full">
+    <div className="admin-card flex flex-col h-full overflow-hidden p-4 sm:p-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 shrink-0">
+      <div className="flex items-center justify-between mb-3 shrink-0">
         <button
           onClick={prevMonth}
           className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+          title="Previous Month"
         >
           <ChevronLeft size={14} />
         </button>
@@ -58,6 +59,7 @@ export function MiniCalendar({ statValue, statLabel = 'This Month', statTrend }:
         <button
           onClick={nextMonth}
           className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+          title="Next Month"
         >
           <ChevronRight size={14} />
         </button>
@@ -66,21 +68,21 @@ export function MiniCalendar({ statValue, statLabel = 'This Month', statTrend }:
       {/* Day labels */}
       <div className="grid grid-cols-7 mb-1 shrink-0">
         {DAYS.map((d, i) => (
-          <div key={i} className="text-center text-[10px] font-semibold text-muted-foreground/60 py-1">
+          <div key={i} className="text-center text-[10px] font-semibold text-muted-foreground/60 py-0.5">
             {d}
           </div>
         ))}
       </div>
 
       {/* Day cells */}
-      <div className="grid grid-cols-7 gap-y-0.5 flex-1">
+      <div className="grid grid-cols-7 gap-1 flex-1 min-h-0 items-center">
         {cells.map((day, i) => (
           <div
             key={i}
             className={`
-              flex items-center justify-center aspect-square rounded-lg text-xs font-medium cursor-pointer
+              flex items-center justify-center h-7 rounded-lg text-xs font-medium cursor-pointer
               transition-colors duration-100
-              ${day === null ? '' :
+              ${day === null ? 'invisible' :
                 isToday(day!)
                   ? 'bg-primary text-white shadow-md shadow-primary/30 font-bold'
                   : 'text-foreground hover:bg-secondary/80'}
@@ -93,16 +95,16 @@ export function MiniCalendar({ statValue, statLabel = 'This Month', statTrend }:
 
       {/* Stat display */}
       {statValue && (
-        <div className="mt-4 pt-4 border-t border-border/40 flex items-center justify-between shrink-0">
+        <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-primary/15 flex items-center justify-center">
+            <div className="w-6 h-6 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" />
                 <line x1="6" y1="20" x2="6" y2="14" />
               </svg>
             </div>
             <div>
-              <p className="text-lg font-bold text-foreground tabular-nums leading-none">{statValue}</p>
+              <p className="text-base font-bold text-foreground tabular-nums leading-none">{statValue}</p>
               <p className="text-[10px] text-muted-foreground">{statLabel}</p>
             </div>
           </div>
@@ -116,3 +118,4 @@ export function MiniCalendar({ statValue, statLabel = 'This Month', statTrend }:
     </div>
   );
 }
+

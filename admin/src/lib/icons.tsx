@@ -159,6 +159,7 @@ export const MessageSquare = iconly(IChat);
 export const Lock = iconly(ILock);
 export const Eye = iconly(IShow);
 export const EyeOff = iconly(IHide);
+export const Key = iconly(ILock);
 export const Shield = iconly(IShieldDone);
 export const ShieldCheck = iconly(IShieldDone);
 export const ShieldAlert = iconly(IShieldFail);

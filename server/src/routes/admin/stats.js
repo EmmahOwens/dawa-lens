@@ -184,3 +184,51 @@ export const getAdherenceTrend = async (req, res, next) => {
     next(new AppError('Failed to fetch adherence trend', 500));
   }
 };
+
+/**
+ * POST /api/v1/admin/ai/query
+ * Query Gemini 2.0 Flash model using the Render backend's GEMINI_API_KEY.
+ */
+export const queryAdminAi = async (req, res, next) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      throw new AppError('Prompt is required', 400);
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2;
+    if (!apiKey) {
+      throw new AppError('GEMINI_API_KEY is not configured on backend server.', 500);
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        systemInstruction: {
+          parts: [{
+            text: 'You are Dawa-Lens AI, an intelligent administrative and clinical analytics companion for the Dawa-Lens platform. Provide concise, clear, accurate, and professional answers for health, medication adherence, platform analytics, and user growth queries. Keep responses structured, helpful, and under 150 words.'
+          }]
+        }
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new AppError(data?.error?.message || `Gemini API HTTP ${response.status}`, response.status);
+    }
+
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new AppError('Gemini API returned an empty response.', 502);
+    }
+
+    res.json({ status: 'success', text });
+  } catch (error) {
+    console.error('[AdminAI] queryAdminAi error:', error);
+    next(error.isOperational ? error : new AppError(error.message || 'Failed to query Gemini AI', 500));
+  }
+};
+

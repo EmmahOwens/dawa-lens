@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getOverviewStats, getGrowthStats, getAdherenceTrend } from './stats.js';
+import { getOverviewStats, getGrowthStats, getAdherenceTrend, queryAdminAi } from './stats.js';
 import { listUsers, getUser, updateUser, deleteUser } from './users.js';
 import { getAggregateStats, getRecentDoseLogs } from './doseLogs.js';
 import { getTopMedications } from './medications.js';
@@ -9,10 +9,12 @@ import { exportUsersCSV, exportAdherenceCSV, exportReportPDF } from './export.js
 
 const router = Router();
 
-// Stats
+// Stats & AI
 router.get('/stats/overview', getOverviewStats);
 router.get('/stats/growth', getGrowthStats);
 router.get('/stats/adherence-trend', getAdherenceTrend);
+router.post('/ai/query', queryAdminAi);
+
 
 // Users
 router.get('/users', listUsers);
