@@ -12,9 +12,10 @@ import { Adherence } from './pages/Adherence';
 import { AIActivity } from './pages/AIActivity';
 import { SystemHealth } from './pages/SystemHealth';
 import { Notifications } from './pages/Notifications';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from './lib/icons';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useThemeContext } from './contexts/ThemeContext';
+import { SidebarProvider } from './contexts/SidebarContext';
 
 function AppShell() {
   const { user, isAdmin, isLoading } = useAdminAuth();
@@ -47,23 +48,25 @@ function AppShell() {
 
   return (
     <DesktopGuard>
-      <ConnectionProvider>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Routes>
-            <Route element={<AdminLayout user={user} />}>
-              <Route index element={<Overview />} />
-              <Route path="/users" element={<Users />} />
-              <Route path="/medications" element={<Medications />} />
-              <Route path="/adherence" element={<Adherence />} />
-              <Route path="/ai-activity" element={<AIActivity />} />
-              <Route path="/system" element={<SystemHealth />} />
-              <Route path="/notifications" element={<Notifications />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          </Routes>
-          <Toaster theme={toasterTheme} position="top-right" richColors />
-        </BrowserRouter>
-      </ConnectionProvider>
+      <SidebarProvider>
+        <ConnectionProvider>
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
+              <Route element={<AdminLayout user={user} />}>
+                <Route index element={<Overview />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/medications" element={<Medications />} />
+                <Route path="/adherence" element={<Adherence />} />
+                <Route path="/ai-activity" element={<AIActivity />} />
+                <Route path="/system" element={<SystemHealth />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Route>
+            </Routes>
+            <Toaster theme={toasterTheme} position="top-right" richColors />
+          </BrowserRouter>
+        </ConnectionProvider>
+      </SidebarProvider>
     </DesktopGuard>
   );
 }

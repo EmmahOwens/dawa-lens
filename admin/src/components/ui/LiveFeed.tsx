@@ -1,5 +1,5 @@
 import { useEffect, useRef, useMemo } from 'react';
-import { Pill, AlertTriangle, SkipForward, Scan, MessageSquare, Users, TrendingUp } from 'lucide-react';
+import { Pill, AlertTriangle, SkipForward, Scan, MessageSquare, Users, TrendingUp } from '../../lib/icons';
 import type { FeedEvent } from '../../types';
 import { timeAgo } from '../../lib/utils';
 

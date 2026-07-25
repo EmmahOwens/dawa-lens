@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download, FileText, BarChart3 } from 'lucide-react';
+import { Download, FileText, BarChart3, CheckCircle, AlertCircle, Activity } from '../lib/icons';
 import { HeatmapGrid } from '../components/charts/HeatmapGrid';
 import { AdminPieChart } from '../components/charts/PieChart';
 import { api } from '../services/adminApi';
@@ -21,8 +21,8 @@ export function Adherence() {
   }, [days]);
 
   const pieData = data ? [
-    { name: 'Taken', value: data.breakdown.taken },
-    { name: 'Missed', value: data.breakdown.missed },
+    { name: 'Taken',   value: data.breakdown.taken },
+    { name: 'Missed',  value: data.breakdown.missed },
     { name: 'Skipped', value: data.breakdown.skipped },
   ].filter(d => d.value > 0) : [];
 
@@ -41,19 +41,24 @@ export function Adherence() {
   };
 
   return (
-    <div className="page-enter space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Adherence Tracker</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Platform-wide dose adherence patterns</p>
+    <div className="page-enter flex flex-col gap-4 h-full">
+
+      {/* Page header */}
+      <div className="flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-success/15 flex items-center justify-center shadow-inner">
+            <Activity size={18} className="text-success" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-foreground leading-tight">Adherence Tracker</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Platform-wide dose adherence patterns</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Period selector */}
           <select
             value={days}
             onChange={e => setDays(Number(e.target.value))}
-            className="text-xs bg-card border border-border/60 rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="text-xs bg-card border border-border/60 rounded-xl px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
           >
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
@@ -63,7 +68,7 @@ export function Adherence() {
             id="adherence-export-csv"
             onClick={handleExportCSV}
             disabled={!!exporting}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-secondary border border-border/60 text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all"
           >
             <Download size={12} /> {exporting === 'csv' ? 'Exporting…' : 'CSV'}
           </button>
@@ -71,7 +76,7 @@ export function Adherence() {
             id="adherence-export-pdf"
             onClick={handleExportPDF}
             disabled={!!exporting}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-secondary border border-border/60 text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all"
           >
             <FileText size={12} /> {exporting === 'pdf' ? 'Generating…' : 'PDF Report'}
           </button>
@@ -79,48 +84,89 @@ export function Adherence() {
       </div>
 
       {/* Stats row */}
-      {data && (
-        <div className="grid grid-cols-4 gap-4">
-          <div className={`admin-card text-center ${adherenceBg(data.adherenceRate)}`}>
-            <p className="text-2xl font-bold">{data.adherenceRate}%</p>
-            <p className="text-xs mt-0.5">Overall Adherence</p>
-          </div>
-          {[
-            { label: 'Taken', value: data.breakdown.taken, color: 'text-success' },
-            { label: 'Missed', value: data.breakdown.missed, color: 'text-destructive' },
-            { label: 'Skipped', value: data.breakdown.skipped, color: 'text-warning' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="admin-card text-center">
-              <p className={`text-2xl font-bold ${color}`}>{value.toLocaleString()}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+      <div className="grid grid-cols-4 gap-3 shrink-0">
+        {/* Adherence rate */}
+        <div className={`admin-card admin-card-hover text-center relative overflow-hidden ${data ? adherenceBg(data.adherenceRate) : ''}`}>
+          <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-success/10 blur-xl pointer-events-none" />
+          {loading ? (
+            <div className="skeleton h-8 w-20 mx-auto rounded mb-2" />
+          ) : (
+            <p className="text-3xl font-bold text-success tabular-nums">{data?.adherenceRate ?? 0}%</p>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">Overall Adherence</p>
+          {data && (
+            <div className="mt-2 h-1.5 rounded-full bg-secondary overflow-hidden">
+              <div className="h-full bg-success rounded-full transition-all duration-700" style={{ width: `${data.adherenceRate}%` }} />
             </div>
-          ))}
+          )}
         </div>
-      )}
 
-      {/* Main: heatmap + pie */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 admin-card">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 size={14} className="text-primary" />
-            <h3 className="text-sm font-semibold">Dose Activity Heatmap</h3>
+        {[
+          { label: 'Doses Taken',   value: data?.breakdown.taken,   color: 'text-success',     bg: 'bg-success/10',     icon: CheckCircle },
+          { label: 'Doses Missed',  value: data?.breakdown.missed,  color: 'text-destructive', bg: 'bg-destructive/10', icon: AlertCircle },
+          { label: 'Doses Skipped', value: data?.breakdown.skipped, color: 'text-warning',     bg: 'bg-warning/10',     icon: Activity    },
+        ].map(({ label, value, color, bg, icon: Icon }) => (
+          <div key={label} className="admin-card admin-card-hover flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
+              <Icon size={17} className={color} />
+            </div>
+            <div>
+              {loading
+                ? <div className="skeleton h-7 w-16 rounded" />
+                : <p className={`text-2xl font-bold tabular-nums leading-none ${color}`}>{(value ?? 0).toLocaleString()}</p>
+              }
+              <p className="text-[11px] text-muted-foreground mt-1">{label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Main content: heatmap + pie */}
+      <div className="grid grid-cols-3 gap-4 flex-1 min-h-0">
+        <div className="col-span-2 admin-card flex flex-col min-h-0">
+          <div className="flex items-center gap-2 mb-4 shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <BarChart3 size={14} className="text-primary" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Dose Activity Heatmap</h3>
             <span className="text-xs text-muted-foreground ml-auto">Day × Hour density</span>
           </div>
-          {loading ? (
-            <div className="h-48 flex items-center justify-center text-muted-foreground text-sm">Building heatmap…</div>
-          ) : data ? (
-            <HeatmapGrid data={data.heatmap} />
-          ) : null}
+          <div className="flex-1 min-h-0 overflow-auto">
+            {loading ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="space-y-2 w-full">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} className="flex gap-1">
+                      {Array.from({ length: 24 }).map((_, j) => (
+                        <div key={j} className="skeleton h-5 flex-1 rounded" />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : data ? (
+              <HeatmapGrid data={data.heatmap} />
+            ) : null}
+          </div>
         </div>
 
-        <div className="admin-card flex flex-col">
-          <h3 className="text-sm font-semibold mb-4">Dose Breakdown</h3>
-          <div className="flex-1" style={{ height: 220 }}>
+        <div className="admin-card flex flex-col min-h-0">
+          <div className="flex items-center gap-2 mb-4 shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center">
+              <Activity size={14} className="text-violet-400" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Dose Breakdown</h3>
+          </div>
+          <div className="flex-1 min-h-0" style={{ minHeight: 180 }}>
             {!loading && pieData.length > 0 ? (
               <AdminPieChart data={pieData} />
             ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                {loading ? 'Loading…' : 'No data'}
+              <div className="h-full flex items-center justify-center">
+                {loading ? (
+                  <div className="w-32 h-32 rounded-full skeleton" />
+                ) : (
+                  <p className="text-sm text-muted-foreground">No data</p>
+                )}
               </div>
             )}
           </div>

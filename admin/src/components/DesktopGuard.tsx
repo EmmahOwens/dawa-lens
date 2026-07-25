@@ -1,4 +1,4 @@
-import { Monitor } from 'lucide-react';
+import { Monitor } from '../lib/icons';
 
 export function DesktopGuard({ children }: { children: React.ReactNode }) {
   return (

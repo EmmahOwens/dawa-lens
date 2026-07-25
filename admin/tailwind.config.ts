@@ -53,12 +53,16 @@ export default {
         '2xl': 'calc(var(--radius) + 8px)',
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       },
       keyframes: {
         'slide-in': {
           from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'slide-in-right': {
+          from: { opacity: '0', transform: 'translateX(8px)' },
+          to: { opacity: '1', transform: 'translateX(0)' },
         },
         'fade-in': {
           from: { opacity: '0' },
@@ -68,11 +72,27 @@ export default {
           from: { opacity: '0', transform: 'translateY(4px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'shimmer': {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
+        },
+        'float': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+        'label-in': {
+          from: { opacity: '0', transform: 'translateX(-6px)', maxWidth: '0' },
+          to:   { opacity: '1', transform: 'translateX(0)',  maxWidth: '160px' },
+        },
       },
       animation: {
-        'slide-in': 'slide-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) both',
-        'fade-in': 'fade-in 0.2s ease both',
-        'count-up': 'count-up 0.3s ease both',
+        'slide-in':       'slide-in 0.25s cubic-bezier(0.4, 0, 0.2, 1) both',
+        'slide-in-right': 'slide-in-right 0.25s cubic-bezier(0.4, 0, 0.2, 1) both',
+        'fade-in':        'fade-in 0.2s ease both',
+        'count-up':       'count-up 0.3s ease both',
+        'shimmer':        'shimmer 1.5s infinite',
+        'float':          'float 3s ease-in-out infinite',
+        'label-in':       'label-in 0.2s cubic-bezier(0.4, 0, 0.2, 1) both',
       },
     },
   },
