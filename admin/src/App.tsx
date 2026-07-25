@@ -48,7 +48,7 @@ function AppShell() {
   return (
     <DesktopGuard>
       <ConnectionProvider>
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             <Route element={<AdminLayout user={user} />}>
               <Route index element={<Overview />} />
