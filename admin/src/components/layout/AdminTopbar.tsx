@@ -3,6 +3,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { LogOut } from 'lucide-react';
 import type { User } from 'firebase/auth';
+import { ThemeToggle } from '../ui/ThemeToggle';
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Overview',
@@ -36,6 +37,9 @@ export function AdminTopbar({ user, isConnected }: AdminTopbarProps) {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Theme toggle */}
+        <ThemeToggle />
+
         {/* Admin info */}
         <div className="text-right hidden sm:block">
           <p className="text-xs font-medium text-foreground leading-none">{user?.displayName || 'Admin'}</p>

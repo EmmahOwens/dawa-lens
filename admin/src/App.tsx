@@ -13,9 +13,15 @@ import { AIActivity } from './pages/AIActivity';
 import { SystemHealth } from './pages/SystemHealth';
 import { Notifications } from './pages/Notifications';
 import { ShieldCheck } from 'lucide-react';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { useThemeContext } from './contexts/ThemeContext';
 
-function App() {
+function AppShell() {
   const { user, isAdmin, isLoading } = useAdminAuth();
+  const { theme } = useThemeContext();
+  const toasterTheme = theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme;
 
   if (isLoading) {
     return (
@@ -34,7 +40,7 @@ function App() {
     return (
       <>
         <AdminLogin />
-        <Toaster theme="dark" position="top-right" richColors />
+        <Toaster theme={toasterTheme} position="top-right" richColors />
       </>
     );
   }
@@ -55,10 +61,18 @@ function App() {
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
-          <Toaster theme="dark" position="top-right" richColors />
+          <Toaster theme={toasterTheme} position="top-right" richColors />
         </BrowserRouter>
       </ConnectionProvider>
     </DesktopGuard>
+  );
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <AppShell />
+    </ThemeProvider>
   );
 }
 
