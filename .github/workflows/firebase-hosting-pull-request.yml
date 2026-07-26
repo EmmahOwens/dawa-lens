@@ -4,8 +4,6 @@
 name: Deploy to Firebase Hosting on PR
 on: pull_request
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 permissions:
   checks: write
   contents: read
@@ -23,9 +21,13 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
-      - run: npm ci && npm run build
+      - name: Install and build main app and admin portal
+        run: |
+          npm ci && npm run build
+          cd admin && npm ci && npm run build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MEDICINE_D3BA2 }}
           projectId: medicine-d3ba2
+
