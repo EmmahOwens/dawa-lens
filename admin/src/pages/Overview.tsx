@@ -112,7 +112,7 @@ export function Overview() {
       {/* ── Row 2: Bar chart (left) + Mini calendar (right) ── */}
       <div className="grid grid-cols-3 gap-4 items-start">
         {/* Bar chart card */}
-        <div className="col-span-2 admin-card flex flex-col" style={{ minHeight: 340 }}>
+        <div className="col-span-2 admin-card flex flex-col min-h-[340px]">
           <div className="flex items-center justify-between mb-4 shrink-0">
             <div>
               <div className="flex items-center gap-2">
@@ -146,14 +146,14 @@ export function Overview() {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
+          <div className="flex-1 min-h-[200px]">
             {growth.length > 0 ? (
               <AdminBarChart data={growth} xKey="date" yKey="count" label="New Users" />
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="space-y-2 w-full px-4">
-                  {[90, 70, 85, 60, 95, 75, 80, 65, 88, 72, 91, 68].map((h, i) => (
-                    <div key={i} className="skeleton h-3 rounded" style={{ width: `${h}%` }} />
+                  {([90, 70, 85, 60, 95, 75, 80, 65, 88, 72, 91, 68] as const).map((w, i) => (
+                    <div key={i} className="skeleton h-3 rounded" style={{ width: `${w}%` }} />
                   ))}
                 </div>
               </div>
@@ -172,7 +172,7 @@ export function Overview() {
       </div>
 
       {/* ── Row 3: AI Assistant + Donut chart + Live Feed ── */}
-      <div className="grid grid-cols-3 gap-4 items-stretch" style={{ minHeight: 260 }}>
+      <div className="grid grid-cols-3 gap-4 items-start min-h-[260px]">
         {/* AI Assistant */}
         <div className="h-full">
           <AIAssistantCard
