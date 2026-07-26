@@ -110,9 +110,9 @@ export function Overview() {
       </div>
 
       {/* ── Row 2: Bar chart (left) + Mini calendar (right) ── */}
-      <div className="grid grid-cols-3 gap-4 items-stretch" style={{ minHeight: 340 }}>
+      <div className="grid grid-cols-3 gap-4 items-start">
         {/* Bar chart card */}
-        <div className="col-span-2 admin-card flex flex-col min-h-0">
+        <div className="col-span-2 admin-card flex flex-col" style={{ minHeight: 340 }}>
           <div className="flex items-center justify-between mb-4 shrink-0">
             <div>
               <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export function Overview() {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
             {growth.length > 0 ? (
               <AdminBarChart data={growth} xKey="date" yKey="count" label="New Users" />
             ) : (
@@ -162,7 +162,7 @@ export function Overview() {
         </div>
 
         {/* Mini Calendar */}
-        <div className="col-span-1 h-full">
+        <div className="col-span-1">
           <MiniCalendar
             statValue={stats ? `${stats.adherence.rate}%` : undefined}
             statLabel="Adherence Rate"
