@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, Download, UserX, UserCheck, Trash2, ChevronLeft, ChevronRight, X, Users as UsersIcon } from '../lib/icons';
 import { api } from '../services/adminApi';
 import type { AdminUser } from '../types';
@@ -33,9 +34,10 @@ function PageHeader({ total, onExport, exporting }: { total: number; onExport: (
 }
 
 export function Users() {
+  const [searchParams] = useSearchParams();
   const [users, setUsers]           = useState<AdminUser[]>([]);
   const [loading, setLoading]       = useState(true);
-  const [search, setSearch]         = useState('');
+  const [search, setSearch]         = useState(() => searchParams.get('search') || '');
   const [page, setPage]             = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal]           = useState(0);

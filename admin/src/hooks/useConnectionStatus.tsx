@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 
 interface ConnectionContextValue {
   isConnected: boolean;
@@ -13,7 +13,7 @@ const ConnectionContext = createContext<ConnectionContextValue>({
 export const useConnectionStatus = () => useContext(ConnectionContext).isConnected;
 export const useSetConnectionStatus = () => useContext(ConnectionContext).setConnected;
 
-export function ConnectionProvider({ children }: { children: React.ReactNode }) {
+export function ConnectionProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const setConnected = useCallback((v: boolean) => setIsConnected(v), []);
   return (

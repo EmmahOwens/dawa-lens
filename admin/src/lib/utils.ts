@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 
 export function cn(...inputs: ClassValue[]) {
-  return inputs.filter(Boolean).join(' ');
+  return clsx(...inputs);
 }
 
 export function formatNumber(n: number): string {

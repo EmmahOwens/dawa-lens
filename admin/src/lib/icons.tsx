@@ -310,32 +310,8 @@ export const WifiOff = svg(
   </>
 );
 
-export const ChevronDown = iconly(
-  // use a custom SVG since react-iconly ChevronDown isn't in the imported list
-  (() => {
-    const C = ({
-      size = 20,
-      className = "",
-      style,
-    }: IconProps) => (
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={`shrink-0 ${className}`}
-        style={style}
-        aria-hidden="true"
-      >
-        <polyline points="6 9 12 15 18 9" />
-      </svg>
-    );
-    return C as React.ComponentType<any>;
-  })()
+export const ChevronDown = svg(
+  <polyline points="6 9 12 15 18 9" />
 );
 
 /** Alias kept for files that use `import { LucideIcon }` as a type */

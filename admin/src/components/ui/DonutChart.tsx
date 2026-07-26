@@ -25,8 +25,12 @@ function CustomTooltip({ active, payload }: any) {
 }
 
 export function DonutChart({ data, totalLabel = 'Total', totalValue, periodLabel }: DonutChartProps) {
-  const total = totalValue ?? data.reduce((s, d) => s + d.value, 0);
-  const displayTotal = typeof total === 'number' ? total.toLocaleString() : total;
+  // BUG-07: Use segment sum for percentage calculation (not the external totalValue)
+  const segmentSum = data.reduce((s, d) => s + d.value, 0);
+  // BUG-19: Use totalValue only for the center display; show '—' when 0
+  const centerValue = totalValue ?? segmentSum;
+  const centerNum = typeof centerValue === 'number' ? centerValue : 0;
+  const displayTotal = centerNum > 0 ? centerNum.toLocaleString() : '—';
 
   return (
     <div className="admin-card flex flex-col h-full overflow-hidden p-4 sm:p-5">
@@ -65,14 +69,15 @@ export function DonutChart({ data, totalLabel = 'Total', totalValue, periodLabel
         {/* Center label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <p className="text-xl font-bold text-foreground tabular-nums leading-none">{displayTotal}</p>
-          <p className="text-[10px] text-muted-foreground mt-1">{totalLabel}</p>
+          <p className="text-[10px] text-muted-foreground mt-1 text-center">{totalLabel}</p>
         </div>
       </div>
 
       {/* Legend / key — always visible below the chart */}
       <div className="mt-3 space-y-1.5 shrink-0">
         {data.map((item) => {
-          const pct = Math.round((item.value / (typeof total === 'number' ? total : data.reduce((s,d) => s+d.value,0))) * 100) || 0;
+          // BUG-07: Always divide by segmentSum so legend %s add to 100%
+          const pct = segmentSum > 0 ? Math.round((item.value / segmentSum) * 100) : 0;
           return (
             <div key={item.name} className="flex items-center justify-between py-0.5">
               <div className="flex items-center gap-2 min-w-0">

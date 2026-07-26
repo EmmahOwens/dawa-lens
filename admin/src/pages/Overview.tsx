@@ -19,9 +19,12 @@ export function Overview() {
   const { events, isConnected: feedConnected } = useRealtimeFeed(25);
   const [period, setPeriod] = useState<Period>('Yearly');
 
+  // Map period label to number of days for API queries
+  const periodDays = period === 'Weekly' ? 7 : period === 'Monthly' ? 30 : 365;
+
   const fetchOverview   = useCallback(() => api.stats.overview().then(r => r.data), []);
-  const fetchGrowth     = useCallback(() => api.stats.growth(30).then(r => r.data), []);
-  const fetchAdherence  = useCallback(() => api.stats.adherenceTrend(30).then(r => r.data), []);
+  const fetchGrowth     = useCallback(() => api.stats.growth(periodDays).then(r => r.data), [periodDays]);
+  const fetchAdherence  = useCallback(() => api.stats.adherenceTrend(periodDays).then(r => r.data), [periodDays]);
 
   const { data: stats, isLoading: statsLoading } = usePolledStats(fetchOverview, 30_000);
   const { data: growthData }    = usePolledStats(fetchGrowth, 120_000);

@@ -18,8 +18,8 @@ const NAV = [
   { to: '/notifications', icon: Bell,            label: 'Notifications' },
 ];
 
-const BOTTOM_NAV = [
-  { to: '/settings', icon: Settings, label: 'Settings' },
+const BOTTOM_NAV: { to: string; icon: typeof Settings; label: string }[] = [
+  // Settings page not yet implemented — remove until route is added
 ];
 
 export function AdminSidebar() {

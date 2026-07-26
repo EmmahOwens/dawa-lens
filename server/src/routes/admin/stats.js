@@ -37,7 +37,9 @@ export const getOverviewStats = async (req, res, next) => {
       authAdmin.listUsers(1000),
       db.collection('medicines').count().get().catch(() => ({ data: () => ({ count: 0 }) })),
       db.collection('reminders').count().get().catch(() => ({ data: () => ({ count: 0 }) })),
-      db.collection('doseLogs').limit(5000).get().catch(() => ({ docs: [] })),
+      db.collection('doseLogs')
+        .where('actionTime', '>=', startOf30Days)
+        .limit(5000).get().catch(() => ({ docs: [] })),
     ]);
 
     const users = allUsersResult.users || [];

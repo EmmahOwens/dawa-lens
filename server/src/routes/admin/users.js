@@ -72,7 +72,7 @@ export const listUsers = async (req, res, next) => {
       );
     }
 
-    users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    users.sort((a, b) => (new Date(b.createdAt).getTime() || 0) - (new Date(a.createdAt).getTime() || 0));
 
     const total = users.length;
     const totalPages = Math.ceil(total / pageSize);

@@ -41,7 +41,7 @@ export function MiniCalendar({ statValue, statLabel = 'This Month', statTrend }:
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div className="admin-card flex flex-col overflow-hidden p-4 sm:p-5">
+    <div className="admin-card flex flex-col h-full overflow-hidden p-4 sm:p-5">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 shrink-0">
         <button

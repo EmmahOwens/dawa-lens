@@ -17,7 +17,7 @@ export function Adherence() {
     setLoading(true);
     api.doseLogs.aggregate(days)
       .then(r => { setData(r.data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(() => { toast.error('Failed to load adherence data'); setLoading(false); });
   }, [days]);
 
   const pieData = data ? [

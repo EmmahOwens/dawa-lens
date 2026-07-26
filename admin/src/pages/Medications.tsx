@@ -3,6 +3,7 @@ import { Pill, BarChart3 } from '../lib/icons';
 import { AdminBarChart } from '../components/charts/BarChart';
 import { AdminPieChart } from '../components/charts/PieChart';
 import { api } from '../services/adminApi';
+import { toast } from 'sonner';
 
 export function Medications() {
   const [data, setData] = useState<{
@@ -15,7 +16,7 @@ export function Medications() {
   useEffect(() => {
     api.medications.top()
       .then(r => { setData(r.data); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch(() => { toast.error('Failed to load medication data'); setLoading(false); });
   }, []);
 
   const barData = (data?.topMedications || []).slice(0, 15).map(m => ({ name: m.name, count: m.count }));

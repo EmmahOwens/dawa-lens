@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 import { LogOut, Search, Bell } from '../../lib/icons';
@@ -30,9 +30,18 @@ interface AdminTopbarProps { user: User | null; isConnected: boolean }
 
 export function AdminTopbar({ user, isConnected }: AdminTopbarProps) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const title = PAGE_TITLES[pathname] || 'Admin';
   const subtitle = PAGE_SUBTITLES[pathname] || '';
   const [search, setSearch] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = search.trim();
+    if (!q) return;
+    navigate(`/users?search=${encodeURIComponent(q)}`);
+    setSearch('');
+  };
 
   const initials = (user?.displayName || user?.email || 'A')
     .split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2);
@@ -49,17 +58,17 @@ export function AdminTopbar({ user, isConnected }: AdminTopbarProps) {
 
       {/* Center: search */}
       <div className="flex-1 max-w-xs hidden md:block">
-        <div className="relative">
+        <form onSubmit={handleSearch} className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <input
             id="topbar-search"
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search…"
+            placeholder="Search users…"
             className="w-full pl-9 pr-4 py-2 text-sm bg-secondary/60 border border-border/50 rounded-xl text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 transition-all"
           />
-        </div>
+        </form>
       </div>
 
       {/* Right: controls */}

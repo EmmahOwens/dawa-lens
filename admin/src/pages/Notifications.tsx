@@ -33,7 +33,7 @@ export function Notifications() {
       setResult(r.data);
       toast.success(`Sent to ${r.data.successCount} users`);
       setTitle(''); setBody('');
-      api.notifications.history().then(r => setHistory(r.data)).catch(() => {});
+      api.notifications.history().then(hist => setHistory(hist.data)).catch(() => {});
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Failed to send notification');
     } finally {

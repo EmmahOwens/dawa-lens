@@ -33,9 +33,12 @@ export function AdminBarChart({
   inactiveColor = 'hsl(224 18% 18%)',
   highlightIndex,
 }: AdminBarChartProps) {
+  // BUG-04: Guard against empty data
+  if (!data.length) return null;
+
   // Default highlight: bar with maximum value
   const autoHighlight = data.reduce(
-    (maxIdx, d, i) => (d[yKey] > data[maxIdx][yKey] ? i : maxIdx), 0
+    (maxIdx, d, i) => ((d[yKey] as number) > (data[maxIdx][yKey] as number) ? i : maxIdx), 0
   );
   const hIdx = highlightIndex ?? autoHighlight;
 
@@ -67,14 +70,22 @@ export function AdminBarChart({
           <LabelList
             dataKey={yKey}
             position="top"
-            content={({ x, y, width, value, index }) => {
+            content={({ x, y, width, index }) => {
               if (index !== hIdx) return null;
+              // BUG-03: Compute real % change vs previous bar
+              const prev = hIdx > 0 ? (data[hIdx - 1][yKey] as number) : null;
+              const curr = data[hIdx][yKey] as number;
+              const pct = prev != null && prev > 0
+                ? `${curr >= prev ? '+' : ''}${Math.round(((curr - prev) / prev) * 100)}%`
+                : null;
+              if (!pct) return null;
+              const labelW = 48;
               return (
                 <g>
                   <rect
-                    x={Number(x) + Number(width) / 2 - 24}
+                    x={Number(x) + Number(width) / 2 - labelW / 2}
                     y={Number(y) - 28}
-                    width={48}
+                    width={labelW}
                     height={20}
                     rx={6}
                     fill={activeColor}
@@ -89,7 +100,7 @@ export function AdminBarChart({
                     fontWeight={700}
                     fontFamily="Inter, sans-serif"
                   >
-                    +12%
+                    {pct}
                   </text>
                 </g>
               );

@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import { Sparkles, Send, Activity, CheckCircle, Key, RefreshCw, X } from '../../lib/icons';
 import { api } from '../../services/adminApi';
 
@@ -25,9 +25,12 @@ export function AIAssistantCard({
   const [keyInput, setKeyInput] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Sync initial summary when prop changes (unless user asked a custom question)
+  // Track whether the user has submitted a custom question
+  const hasCustomQueryRef = useRef(false);
+
+  // Sync initial summary when prop changes, but only if the user hasn't asked something custom
   useEffect(() => {
-    if (!summary || summary === initialSummary) {
+    if (!hasCustomQueryRef.current) {
       setSummary(initialSummary);
     }
   }, [initialSummary]);
@@ -60,6 +63,7 @@ export function AIAssistantCard({
     try {
       const res = await api.ai.query(promptText);
       if (res?.text) {
+        hasCustomQueryRef.current = true;
         setSummary(res.text);
         setInteractions((prev) => prev + 1);
         setQuery('');
@@ -120,6 +124,7 @@ export function AIAssistantCard({
         throw new Error('Gemini returned an empty response.');
       }
 
+      hasCustomQueryRef.current = true;
       setSummary(generatedText);
       setInteractions((prev) => prev + 1);
       setQuery('');

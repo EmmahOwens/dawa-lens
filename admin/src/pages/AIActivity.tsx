@@ -1,5 +1,5 @@
 import { Bot, Scan, MessageSquare, TrendingUp, Activity } from '../lib/icons';
-import { AdminBarChart } from '../components/charts/BarChart';
+import { AdminBarChart } from '../components/charts/AdminBarChart';
 
 // AI Activity page — shows placeholder charts since AI usage logging
 // is tracked at the server level. This page is structured and ready
@@ -82,7 +82,7 @@ export function AIActivity() {
             <span className="text-xs text-muted-foreground ml-auto">14 days</span>
           </div>
           <div className="flex-1 min-h-0">
-            <AdminBarChart data={MOCK_SCAN_DATA} xKey="date" yKey="success" color="hsl(142 71% 45%)" label="Success" />
+            <AdminBarChart data={MOCK_SCAN_DATA} xKey="date" yKey="success" activeColor="hsl(142 71% 45%)" label="Success" />
           </div>
         </div>
       </div>

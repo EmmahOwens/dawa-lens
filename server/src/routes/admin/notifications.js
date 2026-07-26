@@ -75,17 +75,29 @@ export const broadcastNotification = async (req, res, next) => {
  */
 export const getNotificationHistory = async (req, res, next) => {
   try {
-    const snap = await db.collection('adminAuditLog')
-      .where('action', '==', 'BROADCAST_NOTIFICATION')
-      .orderBy('timestamp', 'desc')
-      .limit(20)
-      .get();
+    let snap;
+    try {
+      // Requires a Firestore composite index on (action, timestamp DESC)
+      // See firestore.indexes.json — add { collectionGroup: 'adminAuditLog', fields: [{ action: ASC }, { timestamp: DESC }] }
+      snap = await db.collection('adminAuditLog')
+        .where('action', '==', 'BROADCAST_NOTIFICATION')
+        .orderBy('timestamp', 'desc')
+        .limit(20)
+        .get();
+    } catch (indexErr) {
+      // Fallback: fetch without orderBy if composite index is missing
+      console.warn('[AdminNotifications] getNotificationHistory: composite index missing, falling back to unordered query.', indexErr?.message);
+      snap = await db.collection('adminAuditLog')
+        .where('action', '==', 'BROADCAST_NOTIFICATION')
+        .limit(20)
+        .get();
+    }
 
     const history = snap.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       timestamp: doc.data().timestamp?.toDate?.()?.toISOString() || null,
-    }));
+    })).sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 
     res.json({ status: 'success', data: history });
   } catch (error) {
