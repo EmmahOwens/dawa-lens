@@ -62,6 +62,8 @@ export const api = {
         adherenceRate: number;
         periodDays: number;
       }>>(`/admin/dose-logs/aggregate?days=${days}`),
+    byDate: (date: string) =>
+      request<ApiResponse<import('../types').FeedEvent[]>>(`/admin/dose-logs/by-date?date=${date}`),
   },
 
   // ── Medications ──────────────────────────────────────────────────────────────

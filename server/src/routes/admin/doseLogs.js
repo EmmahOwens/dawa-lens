@@ -153,3 +153,84 @@ export const getAggregateStats = async (req, res, next) => {
     next(new AppError('Failed to fetch dose log stats', 500));
   }
 };
+
+/**
+ * GET /api/v1/admin/dose-logs/by-date?date=YYYY-MM-DD
+ * Returns all dose log events that occurred on the given calendar date (UTC).
+ * Also includes new-user registrations and scan events for that day.
+ */
+export const getEventsByDate = async (req, res, next) => {
+  try {
+    const { date } = req.query;
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return next(new AppError('Query param `date` must be in YYYY-MM-DD format', 400));
+    }
+
+    const dayStart = new Date(`${date}T00:00:00.000Z`);
+    const dayEnd   = new Date(`${date}T23:59:59.999Z`);
+
+    // Fetch all dose logs (no date index — filter in-memory)
+    let snap;
+    try {
+      snap = await db.collection('doseLogs').orderBy('actionTime', 'desc').limit(5000).get();
+    } catch {
+      try {
+        snap = await db.collection('doseLogs').orderBy('createdAt', 'desc').limit(5000).get();
+      } catch {
+        snap = await db.collection('doseLogs').limit(5000).get();
+      }
+    }
+
+    const events = [];
+
+    snap.docs.forEach(doc => {
+      const data = doc.data();
+      const dateObj = parseLogDate(data);
+      if (!dateObj || dateObj < dayStart || dateObj > dayEnd) return;
+
+      const status = parseLogStatus(data);
+      const med = data.medicineName || data.name || data.medicine || 'Medication';
+      const ts = dateObj.toISOString();
+
+      let type = 'dose_taken';
+      let label = `Took ${med}`;
+      if (status === 'missed') { type = 'dose_missed'; label = `Missed ${med}`; }
+      else if (status === 'skipped') { type = 'dose_skipped'; label = `Skipped ${med}`; }
+
+      events.push({
+        id: doc.id,
+        type,
+        userId: data.userId || '',
+        medicineName: med,
+        status,
+        createdAt: ts,
+        label,
+      });
+    });
+
+    // Also pull audit log entries for this date
+    const auditSnap = await db.collection('adminAuditLog').limit(1000).get().catch(() => ({ docs: [] }));
+    auditSnap.docs.forEach(doc => {
+      const data = doc.data();
+      const raw = data.timestamp;
+      if (!raw) return;
+      const d = typeof raw.toDate === 'function' ? raw.toDate() : new Date(raw);
+      if (isNaN(d.getTime()) || d < dayStart || d > dayEnd) return;
+      events.push({
+        id: doc.id,
+        type: 'scan',
+        userId: data.adminUid || 'Admin',
+        status: 'logged',
+        createdAt: d.toISOString(),
+        label: `Admin action: ${data.action || 'activity'}`,
+      });
+    });
+
+    events.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.json({ status: 'success', data: events });
+  } catch (error) {
+    console.error('[AdminDoseLogs] getEventsByDate error:', error);
+    next(new AppError('Failed to fetch events by date', 500));
+  }
+};

@@ -192,6 +192,7 @@ export function Overview() {
               statValue={stats ? `${stats.adherence.rate}%` : undefined}
               statLabel="Adherence Rate"
               statTrend={stats && stats.adherence.rate >= 70 ? `+${Math.max(0, stats.adherence.rate - 70)}%` : undefined}
+              events={events}
             />
           </div>
           <div className="flex-1 min-h-[220px]">
