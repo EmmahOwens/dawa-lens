@@ -111,7 +111,7 @@ export function LiveFeed({ events, isConnected, stats }: LiveFeedProps) {
   const isSynthetic = events.length === 0 && displayEvents.length > 0;
 
   return (
-    <div className="admin-card flex flex-col h-full min-h-0">
+    <div className="admin-card flex flex-col h-full min-h-[360px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <h3 className="text-sm font-semibold text-foreground">Live Activity</h3>
@@ -126,10 +126,10 @@ export function LiveFeed({ events, isConnected, stats }: LiveFeedProps) {
       {/* Feed */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-2 no-scrollbar min-h-0"
+        className="flex-1 overflow-y-auto space-y-2 no-scrollbar min-h-0 flex flex-col"
       >
         {displayEvents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
+          <div className="flex-1 flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
             <div className="w-8 h-8 rounded-full border border-border/50 flex items-center justify-center">
               <TrendingUp size={14} className="text-muted-foreground" />
             </div>

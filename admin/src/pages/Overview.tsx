@@ -110,7 +110,7 @@ export function Overview() {
       </div>
 
       {/* ── Row 2: Bar chart (left) + Mini calendar (right) ── */}
-      <div className="grid grid-cols-3 gap-4 items-start">
+      <div className="grid grid-cols-3 gap-4 items-stretch">
         {/* Bar chart card */}
         <div className="col-span-2 admin-card flex flex-col min-h-[340px]">
           <div className="flex items-center justify-between mb-4 shrink-0">
@@ -172,7 +172,7 @@ export function Overview() {
       </div>
 
       {/* ── Row 3: AI Assistant + Donut chart + Live Feed ── */}
-      <div className="grid grid-cols-3 gap-4 items-start min-h-[260px]">
+      <div className="grid grid-cols-3 gap-4 items-stretch min-h-[360px]">
         {/* AI Assistant */}
         <div className="h-full">
           <AIAssistantCard
