@@ -111,7 +111,7 @@ export function LiveFeed({ events, isConnected, stats }: LiveFeedProps) {
   const isSynthetic = events.length === 0 && displayEvents.length > 0;
 
   return (
-    <div className="admin-card flex flex-col h-full min-h-[360px]">
+    <div className="admin-card flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <h3 className="text-sm font-semibold text-foreground">Live Activity</h3>

@@ -109,94 +109,96 @@ export function Overview() {
         />
       </div>
 
-      {/* ── Row 2: Bar chart (left) + Mini calendar (right) ── */}
+      {/* ── Main Bento Grid Layout ── */}
       <div className="grid grid-cols-3 gap-4 items-stretch">
-        {/* Bar chart card */}
-        <div className="col-span-2 admin-card flex flex-col min-h-[340px]">
-          <div className="flex items-center justify-between mb-4 shrink-0">
-            <div>
-              <div className="flex items-center gap-2">
-                <TrendingUp size={15} className="text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">User Growth</h3>
+        
+        {/* Left 2 Columns: User Growth on top, AI Assistant + Donut Chart below */}
+        <div className="col-span-2 flex flex-col gap-4">
+          {/* User Growth Bar Chart */}
+          <div className="admin-card flex flex-col min-h-[300px]">
+            <div className="flex items-center justify-between mb-4 shrink-0">
+              <div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={15} className="text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">User Growth</h3>
+                  {stats && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/25">
+                      ↑ {stats.users.newThisWeek} this week
+                    </span>
+                  )}
+                </div>
                 {stats && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/25">
-                    ↑ {stats.users.newThisWeek} this week
-                  </span>
+                  <p className="text-2xl font-bold text-foreground tabular-nums mt-0.5 leading-none">
+                    {stats.users.total.toLocaleString()}
+                    <span className="text-sm font-normal text-muted-foreground ml-2">total users</span>
+                  </p>
                 )}
               </div>
-              {stats && (
-                <p className="text-2xl font-bold text-foreground tabular-nums mt-0.5 leading-none">
-                  {stats.users.total.toLocaleString()}
-                  <span className="text-sm font-normal text-muted-foreground ml-2">total users</span>
-                </p>
+
+              {/* Period pills */}
+              <div className="flex items-center gap-1 bg-secondary/60 border border-border/50 rounded-xl p-1">
+                {PERIODS.map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setPeriod(p)}
+                    className={`period-pill ${period === p ? 'period-pill-active' : 'period-pill-inactive'}`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-[200px]">
+              {growth.length > 0 ? (
+                <AdminBarChart data={growth} xKey="date" yKey="count" label="New Users" />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="space-y-2 w-full px-4">
+                    {([90, 70, 85, 60, 95, 75, 80, 65, 88, 72, 91, 68] as const).map((w, i) => (
+                      <div key={i} className="skeleton h-3 rounded" style={{ width: `${w}%` }} />
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
+          </div>
 
-            {/* Period pills */}
-            <div className="flex items-center gap-1 bg-secondary/60 border border-border/50 rounded-xl p-1">
-              {PERIODS.map(p => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={`period-pill ${period === p ? 'period-pill-active' : 'period-pill-inactive'}`}
-                >
-                  {p}
-                </button>
-              ))}
+          {/* AI Assistant + Donut Chart row */}
+          <div className="grid grid-cols-2 gap-4 flex-1 items-stretch">
+            <div className="h-full">
+              <AIAssistantCard
+                summary={aiSummary}
+                spendingTrends={stats?.adherence.taken ?? 0}
+                customerPayments={stats?.medications.activeReminders ?? 0}
+                loading={statsLoading}
+              />
+            </div>
+            <div className="h-full">
+              <DonutChart
+                data={donutData}
+                totalLabel="Total Events"
+                totalValue={stats?.adherence.total}
+                periodLabel="Last 30 Days"
+              />
             </div>
           </div>
+        </div>
 
-          <div className="flex-1 min-h-[200px]">
-            {growth.length > 0 ? (
-              <AdminBarChart data={growth} xKey="date" yKey="count" label="New Users" />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="space-y-2 w-full px-4">
-                  {([90, 70, 85, 60, 95, 75, 80, 65, 88, 72, 91, 68] as const).map((w, i) => (
-                    <div key={i} className="skeleton h-3 rounded" style={{ width: `${w}%` }} />
-                  ))}
-                </div>
-              </div>
-            )}
+        {/* Right Column (Col 3): Mini Calendar on top, Live Activity filling the rest below */}
+        <div className="col-span-1 flex flex-col gap-4 h-full">
+          <div className="shrink-0">
+            <MiniCalendar
+              statValue={stats ? `${stats.adherence.rate}%` : undefined}
+              statLabel="Adherence Rate"
+              statTrend={stats && stats.adherence.rate >= 70 ? `+${Math.max(0, stats.adherence.rate - 70)}%` : undefined}
+            />
+          </div>
+          <div className="flex-1 min-h-[220px]">
+            <LiveFeed events={events} isConnected={isConnected} stats={stats} />
           </div>
         </div>
 
-        {/* Mini Calendar */}
-        <div className="col-span-1">
-          <MiniCalendar
-            statValue={stats ? `${stats.adherence.rate}%` : undefined}
-            statLabel="Adherence Rate"
-            statTrend={stats && stats.adherence.rate >= 70 ? `+${Math.max(0, stats.adherence.rate - 70)}%` : undefined}
-          />
-        </div>
-      </div>
-
-      {/* ── Row 3: AI Assistant + Donut chart + Live Feed ── */}
-      <div className="grid grid-cols-3 gap-4 items-stretch min-h-[360px]">
-        {/* AI Assistant */}
-        <div className="h-full">
-          <AIAssistantCard
-            summary={aiSummary}
-            spendingTrends={stats?.adherence.taken ?? 0}
-            customerPayments={stats?.medications.activeReminders ?? 0}
-            loading={statsLoading}
-          />
-        </div>
-
-        {/* Donut chart */}
-        <div className="h-full">
-          <DonutChart
-            data={donutData}
-            totalLabel="Total Events"
-            totalValue={stats?.adherence.total}
-            periodLabel="Last 30 Days"
-          />
-        </div>
-
-        {/* Live feed */}
-        <div className="h-full">
-          <LiveFeed events={events} isConnected={isConnected} stats={stats} />
-        </div>
       </div>
 
     </div>
