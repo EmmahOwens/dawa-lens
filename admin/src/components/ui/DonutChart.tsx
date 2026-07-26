@@ -29,9 +29,9 @@ export function DonutChart({ data, totalLabel = 'Total', totalValue, periodLabel
   const displayTotal = typeof total === 'number' ? total.toLocaleString() : total;
 
   return (
-    <div className="admin-card flex flex-col h-full overflow-hidden p-4 sm:p-5 min-h-[260px]">
+    <div className="admin-card flex flex-col h-full overflow-hidden p-4 sm:p-5">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2 shrink-0">
+      <div className="flex items-center justify-between mb-3 shrink-0">
         <h3 className="text-sm font-semibold text-foreground">Activity Breakdown</h3>
         {periodLabel && (
           <span className="text-[10px] font-medium px-2 py-0.5 rounded-xl bg-secondary border border-border/60 text-muted-foreground">
@@ -40,16 +40,16 @@ export function DonutChart({ data, totalLabel = 'Total', totalValue, periodLabel
         )}
       </div>
 
-      {/* Chart */}
-      <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 120 }}>
-        <ResponsiveContainer width="100%" height="100%" minHeight={120}>
+      {/* Chart — fixed 160px so legend always shows below */}
+      <div className="relative shrink-0" style={{ height: 160 }}>
+        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius="50%"
-              outerRadius="75%"
+              innerRadius="45%"
+              outerRadius="70%"
               paddingAngle={3}
               dataKey="value"
               strokeWidth={0}
@@ -64,27 +64,33 @@ export function DonutChart({ data, totalLabel = 'Total', totalValue, periodLabel
 
         {/* Center label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <p className="text-lg font-bold text-foreground tabular-nums leading-none">{displayTotal}</p>
-          <p className="text-[9px] text-muted-foreground mt-0.5">{totalLabel}</p>
+          <p className="text-xl font-bold text-foreground tabular-nums leading-none">{displayTotal}</p>
+          <p className="text-[10px] text-muted-foreground mt-1">{totalLabel}</p>
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="mt-2 space-y-1 shrink-0">
-        {data.map((item) => (
-          <div key={item.name} className="flex items-center justify-between py-0.5">
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="text-[11px] text-muted-foreground truncate">{item.name}</span>
+      {/* Legend / key — always visible below the chart */}
+      <div className="mt-3 space-y-1.5 shrink-0">
+        {data.map((item) => {
+          const pct = Math.round((item.value / (typeof total === 'number' ? total : data.reduce((s,d) => s+d.value,0))) * 100) || 0;
+          return (
+            <div key={item.name} className="flex items-center justify-between py-0.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-[11px] text-muted-foreground truncate">{item.name}</span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                <span className="text-[10px] text-muted-foreground/60">{pct}%</span>
+                <span className="text-[11px] font-semibold text-foreground tabular-nums w-6 text-right">
+                  {item.value.toLocaleString()}
+                </span>
+              </div>
             </div>
-            <span className="text-[11px] font-medium text-foreground tabular-nums shrink-0 ml-2">
-              {item.value.toLocaleString()}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
