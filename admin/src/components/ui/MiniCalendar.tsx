@@ -41,7 +41,7 @@ export function MiniCalendar({ statValue, statLabel = 'This Month', statTrend }:
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
-    <div className="admin-card flex flex-col h-full overflow-hidden p-4 sm:p-5">
+    <div className="admin-card flex flex-col h-full overflow-hidden p-4 sm:p-5 min-h-[300px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 shrink-0">
         <button
@@ -75,13 +75,13 @@ export function MiniCalendar({ statValue, statLabel = 'This Month', statTrend }:
       </div>
 
       {/* Day cells */}
-      <div className="grid grid-cols-7 gap-1 flex-1 min-h-0 items-center">
+      <div className="grid grid-cols-7 gap-y-1 gap-x-0.5 flex-1">
         {cells.map((day, i) => (
           <div
             key={i}
             className={`
-              flex items-center justify-center h-7 rounded-lg text-xs font-medium cursor-pointer
-              transition-colors duration-100
+              flex items-center justify-center aspect-square rounded-lg text-xs font-medium cursor-pointer
+              transition-colors duration-100 w-full
               ${day === null ? 'invisible' :
                 isToday(day!)
                   ? 'bg-primary text-white shadow-md shadow-primary/30 font-bold'

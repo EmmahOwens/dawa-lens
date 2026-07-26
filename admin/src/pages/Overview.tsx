@@ -57,7 +57,7 @@ export function Overview() {
     : 'Your financial activity this period remains stable. Revenue shows expected seasonal variation, spending is balanced across key categories. No unusual patterns detected.';
 
   return (
-    <div className="page-enter flex flex-col gap-5 h-full">
+    <div className="page-enter flex flex-col gap-5">
 
       {/* ── Row 1: KPI stat cards ── */}
       <div className="grid grid-cols-4 gap-4 shrink-0">
@@ -107,7 +107,7 @@ export function Overview() {
       </div>
 
       {/* ── Row 2: Bar chart (left) + Mini calendar (right) ── */}
-      <div className="grid grid-cols-3 gap-4 min-h-[340px]">
+      <div className="grid grid-cols-3 gap-4 items-stretch" style={{ minHeight: 340 }}>
         {/* Bar chart card */}
         <div className="col-span-2 admin-card flex flex-col min-h-0">
           <div className="flex items-center justify-between mb-4 shrink-0">
@@ -159,7 +159,7 @@ export function Overview() {
         </div>
 
         {/* Mini Calendar */}
-        <div className="col-span-1 min-h-0">
+        <div className="col-span-1 h-full">
           <MiniCalendar
             statValue={stats ? `${stats.adherence.rate}%` : undefined}
             statLabel="Adherence Rate"
@@ -169,9 +169,9 @@ export function Overview() {
       </div>
 
       {/* ── Row 3: AI Assistant + Donut chart + Live Feed ── */}
-      <div className="grid grid-cols-3 gap-4 flex-1 min-h-[260px]">
+      <div className="grid grid-cols-3 gap-4 items-stretch" style={{ minHeight: 260 }}>
         {/* AI Assistant */}
-        <div className="min-h-0">
+        <div className="h-full">
           <AIAssistantCard
             summary={aiSummary}
             spendingTrends={stats?.adherence.taken ?? 0}
@@ -181,7 +181,7 @@ export function Overview() {
         </div>
 
         {/* Donut chart */}
-        <div className="min-h-0">
+        <div className="h-full">
           <DonutChart
             data={donutData}
             totalLabel="Total Events"
@@ -191,7 +191,7 @@ export function Overview() {
         </div>
 
         {/* Live feed */}
-        <div className="min-h-0">
+        <div className="h-full">
           <LiveFeed events={events} isConnected={isConnected} stats={stats} />
         </div>
       </div>

@@ -29,7 +29,7 @@ export function DonutChart({ data, totalLabel = 'Total', totalValue, periodLabel
   const displayTotal = typeof total === 'number' ? total.toLocaleString() : total;
 
   return (
-    <div className="admin-card flex flex-col h-full overflow-hidden p-4 sm:p-5">
+    <div className="admin-card flex flex-col h-full overflow-hidden p-4 sm:p-5 min-h-[260px]">
       {/* Header */}
       <div className="flex items-center justify-between mb-2 shrink-0">
         <h3 className="text-sm font-semibold text-foreground">Activity Breakdown</h3>
@@ -41,8 +41,8 @@ export function DonutChart({ data, totalLabel = 'Total', totalValue, periodLabel
       </div>
 
       {/* Chart */}
-      <div className="relative flex-1 flex items-center justify-center min-h-[100px] h-[120px]">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 120 }}>
+        <ResponsiveContainer width="100%" height="100%" minHeight={120}>
           <PieChart>
             <Pie
               data={data}
