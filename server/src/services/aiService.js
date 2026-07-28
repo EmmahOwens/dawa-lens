@@ -247,7 +247,17 @@ const callZaiChat = async (messages, responseFormat = { type: 'json_object' }, m
       throw err;
     }
 
-    const result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
+    let result;
+    if (responseFormat?.type === 'json_object') {
+      try {
+        result = JSON.parse(sanitizeJson(text));
+      } catch (parseErr) {
+        result = { text, source: `Z.ai (${modelId})` };
+      }
+    } else {
+      result = text;
+    }
+
     if (typeof result === 'object' && result !== null) result.source = `Z.ai (${modelId})`;
     return result;
   };
