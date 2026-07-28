@@ -1158,3 +1158,65 @@ export const getEmotionReflection = async (mood, energy, symptoms, medicines = [
   try { return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 500, 0.6); }
   catch (err) { handleAiError(err); }
 };
+
+/**
+ * Diagnostic test specifically for Z.ai (GLM-4.7-Flash) provider
+ */
+export const testZaiProvider = async () => {
+  if (!Z_AI_API_KEY) {
+    return {
+      status: 'not_configured',
+      configured: false,
+      message: 'Z_AI_API_KEY environment variable is not set.'
+    };
+  }
+
+  const startTime = Date.now();
+  try {
+    const result = await callZaiChat(
+      [
+        { role: 'system', content: 'You are a test assistant. Respond in JSON.' },
+        { role: 'user', content: 'Return JSON: {"ping": "pong", "provider": "Z.ai"}' }
+      ],
+      { type: 'json_object' },
+      Z_AI_MODEL,
+      'high',
+      60,
+      true,
+      0.5
+    );
+
+    return {
+      status: 'healthy',
+      configured: true,
+      provider: 'Z.ai (GLM-4.7-Flash)',
+      latencyMs: Date.now() - startTime,
+      data: result
+    };
+  } catch (err) {
+    return {
+      status: 'error',
+      configured: true,
+      provider: 'Z.ai (GLM-4.7-Flash)',
+      latencyMs: Date.now() - startTime,
+      error: err.message,
+      details: err.response?.data || null
+    };
+  }
+};
+
+/**
+ * Diagnostic test for all AI providers
+ */
+export const testAllAiProviders = async () => {
+  const zai = await testZaiProvider();
+  return {
+    timestamp: new Date().toISOString(),
+    providers: {
+      zai,
+      cerebras: { configured: !!CEREBRAS_API_KEY },
+      groq: { configured: !!GROQ_API_KEY },
+      gemini: { configured: !!GEMINI_API_KEY }
+    }
+  };
+};

@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/check-env.js": {
-    "mtime": 1782014776.489007,
-    "ast_hash": "1753a8dd56937f6034126f71e89b8ed7",
+    "mtime": 1785222939.098633,
+    "ast_hash": "bd50109d5848738c0bad75aae95cd69f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/debug-ai.js": {
@@ -410,13 +410,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/db.js": {
-    "mtime": 1784736596.6557562,
-    "ast_hash": "dacd8998a26c9d7edd986c2ba1d48a10",
+    "mtime": 1785222878.2953956,
+    "ast_hash": "7a9c531726e68bad9ed1240aed2df7f1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/index.js": {
-    "mtime": 1784737306.5602129,
-    "ast_hash": "426bfa6e250b7806efe8b75e505d806e",
+    "mtime": 1785222923.8085773,
+    "ast_hash": "360967407478ed181b62177bed33da2c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/middleware/authMiddleware.js": {
@@ -440,8 +440,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/routes/ai.js": {
-    "mtime": 1783232164.566101,
-    "ast_hash": "a3cb8a16b86cfdafdcc7c0b51814c866",
+    "mtime": 1785223248.7723188,
+    "ast_hash": "b4445e9aad67905685226f1d0ce21d1f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/routes/doseLogs.js": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1783833642.5859542,
-    "ast_hash": "5aeb9bfcc555d9bc1885dc3fd999111f",
+    "mtime": 1785223213.6202762,
+    "ast_hash": "867bfe9809e28587a09ffaad1483401d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -535,13 +535,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/vectorService.js": {
-    "mtime": 1777614649.8351076,
-    "ast_hash": "20d80f33bf095a717dac11c591a969de",
+    "mtime": 1785222907.0265129,
+    "ast_hash": "0056dcfeeba7a84abd1734bc4b830089",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/visionService.js": {
-    "mtime": 1782014751.6603,
-    "ast_hash": "f121f63ecafef295c83f66109e62a5a7",
+    "mtime": 1785222892.4774547,
+    "ast_hash": "6bcdb9dd03d78b7c3f1e422f4ea91345",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/wellnessService.js": {

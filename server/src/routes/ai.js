@@ -8,6 +8,30 @@ import * as aiValidation from '../validations/aiValidation.js';
 const router = express.Router();
 
 /**
+ * Diagnostic Endpoint: Check Z.ai API Key Status & Test Generation
+ */
+router.get('/test-zai', async (req, res, next) => {
+  try {
+    const testResult = await aiService.testZaiProvider();
+    res.json(testResult);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Diagnostic Endpoint: Overall AI Providers Status Check
+ */
+router.get('/providers-status', async (req, res, next) => {
+  try {
+    const status = await aiService.testAllAiProviders();
+    res.json(status);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * Personalized Wellness Quote
  */
 router.post('/wellness-quote', protect, validate(aiValidation.wellnessQuoteSchema), aiLimiter, async (req, res, next) => {
