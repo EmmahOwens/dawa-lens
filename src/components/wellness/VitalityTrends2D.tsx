@@ -1,5 +1,11 @@
-import React, { useState, useRef, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useId, useMemo } from "react";
+import {
+  AreaChart as ReAreaChart,
+  Area,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { Pill, Zap, Smile, TrendingUp, TrendingDown } from "@/lib/icons";
 
 export interface VitalityTrends2DProps {
   data: {
@@ -9,528 +15,249 @@ export interface VitalityTrends2DProps {
     mood: number | null;
   }[];
 }
-// Dimensions of SVG coordinates (viewBox space)
-const viewWidth = 600;
-const viewHeight = 250;
-const paddingLeft = 50;
-const paddingRight = 50;
-const paddingTop = 30;
-const paddingBottom = 40;
 
-const chartWidth = viewWidth - paddingLeft - paddingRight;
-const chartHeight = viewHeight - paddingTop - paddingBottom;
+interface AreaSparklineProps {
+  data: Array<{ day: string; value: number }>;
+  xKey: string;
+  yKey: string;
+  color: string;
+  label?: string;
+}
 
-export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [visibleLines, setVisibleLines] = useState({ adherence: true, energy: true, mood: true });
+function CustomTooltip({ active, payload, label, color, itemLabel }: any) {
+  if (!active || !payload?.length) return null;
+  const val = payload[0].value;
+  return (
+    <div className="bg-card/95 border border-border/80 dark:bg-[#0F1629]/95 dark:border-white/10 backdrop-blur-md rounded-xl px-3 py-1.5 shadow-xl text-xs z-50">
+      <p className="text-muted-foreground/80 font-medium mb-0.5 text-[10px]">{label}</p>
+      <div className="flex items-center gap-1.5">
+        <span className="w-2.5 h-2.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: color }} />
+        <p className="font-bold text-foreground text-xs tabular-nums">
+          {val != null ? val.toLocaleString() : "0"}{" "}
+          <span className="text-[10px] font-normal text-muted-foreground">{itemLabel}</span>
+        </p>
+      </div>
+    </div>
+  );
+}
 
-  // X coordinate mapper
-  const getX = React.useCallback((idx: number) => {
-    return paddingLeft + idx * (chartWidth / (data.length - 1));
-  }, [data.length]);
+function AreaSparkline({
+  data,
+  xKey,
+  yKey,
+  color = "#3B82F6",
+  label = "",
+}: AreaSparklineProps) {
+  const gradientId = useId().replace(/:/g, "");
 
-  // Y coordinate mappers (Dual-Axis)
-  // Left Axis: Adherence % (0 - 100)
-  const getAdherenceY = React.useCallback((val: number) => {
-    return viewHeight - paddingBottom - (val / 100) * chartHeight;
-  }, []);
-
-  // Right Axis: Wellness rating (mapped from 0-100 to 1-5 scale)
-  const getWellnessY = React.useCallback((val: number | null) => {
-    if (val === null) return 0;
-    // Map 0-100 back to 1-5 for positioning if the parent scales it by 20
-    // If it's already 1-5, we'd use (val-1)/4.
-    // Given ReportPage.tsx: energy = (sumEnergy / dayWellnessLogs.length) * 20;
-    // It seems the value passed is 0-100.
-    const rating = val / 20; // 0-100 -> 0-5
-    const clampedRating = Math.max(1, Math.min(5, rating));
-    return viewHeight - paddingBottom - ((clampedRating - 1) / 4) * chartHeight;
-  }, []);
-
-  // Generate Bezier path string for smooth curves
-  const makeSmoothPath = (points: { x: number; y: number }[]) => {
-    if (points.length === 0) return "";
-    let path = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const curr = points[i];
-      const next = points[i + 1];
-      const controlX1 = curr.x + (next.x - curr.x) * 0.4;
-      const controlY1 = curr.y;
-      const controlX2 = next.x - (next.x - curr.x) * 0.4;
-      const controlY2 = next.y;
-      path += ` C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${next.x} ${next.y}`;
-    }
-    return path;
-  };
-
-  // Data processing
-  const adherencePoints = useMemo(() => {
-    return data.map((d, i) => ({ x: getX(i), y: getAdherenceY(d.adherence) }));
-  }, [data, getX, getAdherenceY]);
-
-  const energyPoints = useMemo(() => {
-    return data
-      .map((d, i) => (d.energy !== null ? { x: getX(i), y: getWellnessY(d.energy) } : null))
-      .filter((p): p is { x: number; y: number } => p !== null);
-  }, [data, getX, getWellnessY]);
-
-  const moodPoints = useMemo(() => {
-    return data
-      .map((d, i) => (d.mood !== null ? { x: getX(i), y: getWellnessY(d.mood) } : null))
-      .filter((p): p is { x: number; y: number } => p !== null);
-  }, [data, getX, getWellnessY]);
-
-  // Generate Adherence Area Path
-  const adherenceAreaPath = useMemo(() => {
-    if (adherencePoints.length === 0) return "";
-    const linePath = makeSmoothPath(adherencePoints);
-    const bottomY = viewHeight - paddingBottom;
-    return `${linePath} L ${adherencePoints[adherencePoints.length - 1].x} ${bottomY} L ${adherencePoints[0].x} ${bottomY} Z`;
-  }, [adherencePoints]);
-
-  const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const clientX = e.clientX - rect.left;
-    const clientY = e.clientY - rect.top;
-    const viewBoxX = (clientX / rect.width) * viewWidth;
-
-    let closestIdx = 0;
-    let minDiff = Infinity;
-    for (let i = 0; i < data.length; i++) {
-      const diff = Math.abs(viewBoxX - getX(i));
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestIdx = i;
-      }
-    }
-
-    setHoveredIdx(closestIdx);
-    const snapX = (getX(closestIdx) / viewWidth) * rect.width;
-    const tooltipY = Math.max(10, clientY - 80);
-    setTooltipPos({ x: snapX, y: tooltipY });
-  };
-
-  const handlePointerLeave = () => {
-    setHoveredIdx(null);
-  };
-
-  const currentHoveredData = hoveredIdx !== null ? data[hoveredIdx] : null;
-
-  // Today's pulse animation details are defined inline for SVG center stability
+  if (!data || !data.length) return null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div
-        ref={containerRef}
-        className="relative w-full aspect-[600/250] min-h-[180px] select-none"
-      >
-        <svg
-          width="100%"
-          height="100%"
-          viewBox={`0 0 ${viewWidth} ${viewHeight}`}
-          preserveAspectRatio="xMidYMid meet"
-          onPointerMove={handlePointerMove}
-          onPointerLeave={handlePointerLeave}
-          className="block cursor-crosshair overflow-visible"
-        >
-          <defs>
-            <linearGradient id="adherenceGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.25} />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.0} />
-            </linearGradient>
+    <ResponsiveContainer width="100%" height="100%">
+      <ReAreaChart data={data} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+        <defs>
+          <linearGradient id={`areaGrad-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.45} />
+            <stop offset="60%" stopColor={color} stopOpacity={0.12} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
 
-            <linearGradient id="shimmerGrad" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="white" stopOpacity="0" />
-              <stop offset="50%" stopColor="white" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="white" stopOpacity="0" />
-              <animateTransform
-                attributeName="transform"
-                type="translate"
-                from="-1 0"
-                to="1 0"
-                dur="3s"
-                repeatCount="indefinite"
-              />
-            </linearGradient>
+          <filter id={`strokeGlow-${gradientId}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
 
-            <mask id="adherenceMask">
-              {adherenceAreaPath && (
-                <path d={adherenceAreaPath} fill="white" />
-              )}
-            </mask>
+        <Tooltip
+          content={<CustomTooltip color={color} itemLabel={label} />}
+          cursor={{ stroke: "rgba(150, 150, 150, 0.2)", strokeDasharray: "4 4" }}
+        />
 
-            <filter id="glow-adherence" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            <filter id="glow-energy" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-            <filter id="glow-mood" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
+        <Area
+          type="monotone"
+          dataKey={yKey}
+          stroke={color}
+          strokeWidth={3}
+          filter={`url(#strokeGlow-${gradientId})`}
+          fill={`url(#areaGrad-${gradientId})`}
+          dot={false}
+          activeDot={{
+            r: 5,
+            fill: color,
+            stroke: "white",
+            strokeWidth: 2,
+          }}
+        />
+      </ReAreaChart>
+    </ResponsiveContainer>
+  );
+}
 
-          {/* Grid Lines */}
-          {[0, 25, 50, 75, 100].map((percent) => {
-            const y = getAdherenceY(percent);
-            return (
-              <g key={percent}>
-                <line
-                  x1={paddingLeft}
-                  y1={y}
-                  x2={viewWidth - paddingRight}
-                  y2={y}
-                  className="stroke-border/40"
-                  strokeWidth={1}
-                  strokeDasharray="4 6"
-                />
-                <text
-                  x={paddingLeft - 10}
-                  y={y + 3}
-                  textAnchor="end"
-                  className="fill-muted-foreground/60 text-[9px] font-bold font-sans"
-                >
-                  {percent}%
-                </text>
-              </g>
-            );
-          })}
+export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
+  // Calculations for Adherence, Energy, and Mood cards
+  const cards = useMemo(() => {
+    if (!data || data.length === 0) return [];
 
-          {[1, 2, 3, 4, 5].map((rating) => {
-            const y = getWellnessY(rating * 20); // Mapping 1-5 to the 0-100 space used in mapper
-            return (
-              <text
-                key={rating}
-                x={viewWidth - paddingRight + 12}
-                y={y + 3}
-                textAnchor="start"
-                className="fill-muted-foreground/60 text-[9px] font-bold font-sans"
-              >
-                {rating}★
-              </text>
-            );
-          })}
+    // 1. ADHERENCE CARD
+    const adherenceValues = data.map((d) => d.adherence);
+    const avgAdherence =
+      adherenceValues.reduce((a, b) => a + b, 0) / (adherenceValues.length || 1);
+    const half = Math.ceil(data.length / 2);
+    const firstHalfAdh = adherenceValues.slice(0, half);
+    const secondHalfAdh = adherenceValues.slice(half);
+    const avg1Adh = firstHalfAdh.reduce((a, b) => a + b, 0) / (firstHalfAdh.length || 1);
+    const avg2Adh = secondHalfAdh.reduce((a, b) => a + b, 0) / (secondHalfAdh.length || 1);
+    const adhDiff = avg2Adh - avg1Adh;
 
-          {/* X-Axis Labels */}
-          {data.map((day, idx) => {
-            const x = getX(idx);
-            const y = viewHeight - paddingBottom + 18;
-            const isToday = idx === data.length - 1;
-            return (
-              <text
-                key={idx}
-                x={x}
-                y={y}
-                textAnchor="middle"
-                className={`text-[9px] font-sans transition-all duration-200 ${
-                  isToday
-                    ? "fill-primary font-black scale-105"
-                    : hoveredIdx === idx
-                    ? "fill-foreground font-bold"
-                    : "fill-muted-foreground font-semibold"
-                }`}
-              >
-                {day.name?.split(" ")[1] || day.name || "Day"}
-              </text>
-            );
-          })}
+    const adherenceData = data.map((d) => ({
+      day: d.name,
+      value: Math.round(d.adherence),
+    }));
 
-          {/* Adherence Area with Shimmer */}
-          <AnimatePresence>
-            {visibleLines.adherence && adherenceAreaPath && (
-              <motion.g
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                <path d={adherenceAreaPath} fill="url(#adherenceGrad)" />
-                <rect
-                  x={paddingLeft}
-                  y={paddingTop}
-                  width={chartWidth}
-                  height={chartHeight}
-                  fill="url(#shimmerGrad)"
-                  mask="url(#adherenceMask)"
-                />
-              </motion.g>
-            )}
-          </AnimatePresence>
+    // 2. ENERGY CARD
+    const validEnergy = data.filter((d) => d.energy !== null);
+    const avgEnergyRaw =
+      validEnergy.length > 0
+        ? validEnergy.reduce((acc, d) => acc + (d.energy ?? 0), 0) / validEnergy.length
+        : null;
 
-          {/* Active Snap Line */}
-          <AnimatePresence>
-            {hoveredIdx !== null && (
-              <motion.line
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                x1={getX(hoveredIdx)}
-                y1={paddingTop - 5}
-                x2={getX(hoveredIdx)}
-                y2={viewHeight - paddingBottom + 5}
-                className="stroke-border/80"
-                strokeWidth={1.5}
-                strokeDasharray="3 3"
-              />
-            )}
-          </AnimatePresence>
+    let energyDiff = 0;
+    if (validEnergy.length > 1) {
+      const eHalf = Math.ceil(validEnergy.length / 2);
+      const eFirst = validEnergy.slice(0, eHalf).reduce((a, b) => a + (b.energy ?? 0), 0) / eHalf;
+      const eSecond = validEnergy.slice(eHalf).reduce((a, b) => a + (b.energy ?? 0), 0) / (validEnergy.length - eHalf || 1);
+      energyDiff = eSecond - eFirst;
+    }
 
-          {/* Trend Lines */}
-          {visibleLines.adherence && adherencePoints.length > 0 && (
-            <path
-              d={makeSmoothPath(adherencePoints)}
-              fill="none"
-              stroke="hsl(var(--primary))"
-              strokeWidth={3}
-              strokeLinecap="round"
-              className="transition-opacity duration-300"
-            />
-          )}
+    const energyData = data.map((d) => ({
+      day: d.name,
+      value: d.energy !== null ? Math.round(d.energy) : Math.round(avgEnergyRaw ?? 75),
+    }));
 
-          {visibleLines.energy && energyPoints.length > 0 && (
-            <path
-              d={makeSmoothPath(energyPoints)}
-              fill="none"
-              stroke="#10b981"
-              strokeWidth={2.5}
-              strokeDasharray="6 4"
-              strokeLinecap="round"
-              className="transition-opacity duration-300"
-            />
-          )}
+    // 3. MOOD CARD
+    const validMood = data.filter((d) => d.mood !== null);
+    const avgMoodRaw =
+      validMood.length > 0
+        ? validMood.reduce((acc, d) => acc + (d.mood ?? 0), 0) / validMood.length
+        : null;
 
-          {visibleLines.mood && moodPoints.length > 0 && (
-            <path
-              d={makeSmoothPath(moodPoints)}
-              fill="none"
-              stroke="#6366f1"
-              strokeWidth={2.5}
-              strokeDasharray="2 4"
-              strokeLinecap="round"
-              className="transition-opacity duration-300"
-            />
-          )}
+    let moodDiff = 0;
+    if (validMood.length > 1) {
+      const mHalf = Math.ceil(validMood.length / 2);
+      const mFirst = validMood.slice(0, mHalf).reduce((a, b) => a + (b.mood ?? 0), 0) / mHalf;
+      const mSecond = validMood.slice(mHalf).reduce((a, b) => a + (b.mood ?? 0), 0) / (validMood.length - mHalf || 1);
+      moodDiff = mSecond - mFirst;
+    }
 
-          {/* Dots and Pulsing Today */}
-          {data.map((day, idx) => {
-            const x = getX(idx);
-            const isHovered = hoveredIdx === idx;
-            const isToday = idx === data.length - 1;
+    const moodData = data.map((d) => ({
+      day: d.name,
+      value: d.mood !== null ? Math.round(d.mood) : Math.round(avgMoodRaw ?? 85),
+    }));
 
-            const adhY = getAdherenceY(day.adherence);
-            const energyY = day.energy !== null ? getWellnessY(day.energy) : null;
-            const moodY = day.mood !== null ? getWellnessY(day.mood) : null;
+    return [
+      {
+        id: "adherence",
+        name: "Adherence Rate",
+        category: "Dose Log Consistency",
+        value: `${avgAdherence.toFixed(1)}%`,
+        change: `${Math.abs(adhDiff).toFixed(1)}%`,
+        isPositive: adhDiff >= 0,
+        color: "#3B82F6", // Electric Cyan Blue
+        iconBg: "bg-blue-500/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400",
+        icon: <Pill size={14} />,
+        label: "% adherence",
+        data: adherenceData,
+      },
+      {
+        id: "energy",
+        name: "Energy Level",
+        category: "Daily Vitality Avg",
+        value: avgEnergyRaw !== null ? `${(avgEnergyRaw / 20).toFixed(1)} / 5` : "4.0 / 5",
+        change: `${Math.abs(energyDiff / 20).toFixed(1)} pts`,
+        isPositive: energyDiff >= 0,
+        color: "#A855F7", // Vibrant Violet
+        iconBg: "bg-purple-500/15 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400",
+        icon: <Zap size={14} />,
+        label: "% vitality",
+        data: energyData,
+      },
+      {
+        id: "mood",
+        name: "Mood Rating",
+        category: "Emotional Wellness",
+        value: avgMoodRaw !== null ? `${(avgMoodRaw / 20).toFixed(1)} / 5` : "4.5 / 5",
+        change: `${Math.abs(moodDiff / 20).toFixed(1)} pts`,
+        isPositive: moodDiff >= 0,
+        color: "#10B981", // Mint Emerald
+        iconBg: "bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400",
+        icon: <Smile size={14} />,
+        label: "% mood",
+        data: moodData,
+      },
+    ];
+  }, [data]);
 
-            return (
-              <g key={idx} className="pointer-events-none">
-                {/* Adherence */}
-                {visibleLines.adherence && (
-                  <g>
-                    {isToday && (
-                      <motion.circle
-                        cx={x}
-                        cy={adhY}
-                        className="fill-primary"
-                        initial={{ r: 3.5, opacity: 0.5 }}
-                        animate={{
-                          r: [3.5, 9, 3.5],
-                          opacity: [0.5, 0, 0.5],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeOut",
-                        }}
-                      />
-                    )}
-                    <circle
-                      cx={x}
-                      cy={adhY}
-                      r={isHovered ? 6 : 3.5}
-                      className="fill-background stroke-primary transition-all duration-200"
-                      strokeWidth={isHovered ? 2.5 : 1.5}
-                    />
-                  </g>
-                )}
+  return (
+    <div className="w-full rounded-2xl bg-card/90 dark:bg-[#0D121F]/90 border border-border/70 dark:border-white/10 p-4 sm:p-5 shadow-md dark:shadow-2xl relative overflow-hidden flex flex-col justify-between backdrop-blur-md">
+      {/* Background ambient glow */}
+      <div className="absolute -top-12 -right-12 w-64 h-64 bg-primary/10 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
-                {/* Energy */}
-                {visibleLines.energy && energyY !== null && (
-                  <g>
-                    {isToday && (
-                      <motion.circle
-                        cx={x}
-                        cy={energyY}
-                        className="fill-emerald-500"
-                        initial={{ r: 3.5, opacity: 0.5 }}
-                        animate={{
-                          r: [3.5, 9, 3.5],
-                          opacity: [0.5, 0, 0.5],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeOut",
-                        }}
-                      />
-                    )}
-                    <circle
-                      cx={x}
-                      cy={energyY}
-                      r={isHovered ? 6 : 3.5}
-                      className="fill-background stroke-emerald-500 transition-all duration-200"
-                      strokeWidth={isHovered ? 2.5 : 1.5}
-                    />
-                  </g>
-                )}
-
-                {/* Mood */}
-                {visibleLines.mood && moodY !== null && (
-                  <g>
-                    {isToday && (
-                      <motion.circle
-                        cx={x}
-                        cy={moodY}
-                        className="fill-indigo-500"
-                        initial={{ r: 3.5, opacity: 0.5 }}
-                        animate={{
-                          r: [3.5, 9, 3.5],
-                          opacity: [0.5, 0, 0.5],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeOut",
-                        }}
-                      />
-                    )}
-                    <circle
-                      cx={x}
-                      cy={moodY}
-                      r={isHovered ? 6 : 3.5}
-                      className="fill-background stroke-indigo-500 transition-all duration-200"
-                      strokeWidth={isHovered ? 2.5 : 1.5}
-                    />
-                  </g>
-                )}
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Hover Tooltip */}
-        <AnimatePresence>
-          {hoveredIdx !== null && currentHoveredData && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              style={{
-                position: "absolute",
-                left: tooltipPos.x,
-                top: tooltipPos.y,
-                transform: "translate(-50%, -100%)",
-                pointerEvents: "none",
-              }}
-              className="z-30 bg-card/90 backdrop-blur-md border border-border px-3 py-2.5 rounded-2xl shadow-xl flex flex-col gap-1 min-w-[130px]"
-            >
-              <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest border-b border-border/50 pb-1 mb-1">
-                {currentHoveredData.name}
-              </p>
-
-              <div className="flex items-center gap-2 justify-between">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2 in-block h-2 rounded-full bg-primary" />
-                  <span className="text-[10px] font-bold text-muted-foreground">Adherence</span>
-                </span>
-                <span className="text-[11px] font-extrabold text-foreground">
-                  {currentHoveredData.adherence}%
-                </span>
+      {/* 3 Column gainer cards matching Overview Page style */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
+        {cards.map((item) => (
+          <div
+            key={item.id}
+            className="flex flex-col justify-between rounded-xl bg-background/80 dark:bg-[#080B13]/70 border border-border/60 dark:border-white/5 p-4 hover:border-primary/30 dark:hover:border-white/15 transition-all duration-300 group shadow-sm hover:shadow-md"
+          >
+            {/* Header info */}
+            <div>
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className={`w-7 h-7 rounded-lg ${item.iconBg} flex items-center justify-center font-bold text-xs shadow-inner`}>
+                  {item.icon}
+                </div>
+                <div className="truncate min-w-0">
+                  <h4 className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                    {item.name}
+                  </h4>
+                  <p className="text-[10px] text-muted-foreground/70 truncate">{item.category}</p>
+                </div>
               </div>
 
-              {currentHoveredData.energy !== null && (
-                <div className="flex items-center gap-2 justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 in-block h-2 rounded-full bg-emerald-500" />
-                    <span className="text-[10px] font-bold text-muted-foreground">Energy</span>
-                  </span>
-                  <span className="text-[11px] font-extrabold text-foreground">
-                    {(currentHoveredData.energy / 20).toFixed(1)}/5
-                  </span>
+              {/* Primary Value & Trend Badge */}
+              <div className="mb-2">
+                <span className="text-xl font-extrabold text-foreground tracking-tight tabular-nums block">
+                  {item.value}
+                </span>
+                <div className="flex items-center gap-1 mt-0.5">
+                  {item.isPositive ? (
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                      <TrendingUp size={10} /> ↑ {item.change}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
+                      <TrendingDown size={10} /> ↓ {item.change}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-muted-foreground/60">vs last week</span>
                 </div>
-              )}
+              </div>
+            </div>
 
-              {currentHoveredData.mood !== null && (
-                <div className="flex items-center gap-2 justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 in-block h-2 rounded-full bg-indigo-500" />
-                    <span className="text-[10px] font-bold text-muted-foreground">Mood</span>
-                  </span>
-                  <span className="text-[11px] font-extrabold text-foreground">
-                    {(currentHoveredData.mood / 20).toFixed(1)}/5
-                  </span>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Interactive Legend */}
-      <div className="flex justify-center gap-4 flex-wrap">
-        <button
-          onClick={() => setVisibleLines(v => ({ ...v, adherence: !v.adherence }))}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${
-            visibleLines.adherence
-              ? "bg-primary/10 border-primary/20"
-              : "bg-accent/50 border-transparent opacity-50"
-          }`}
-        >
-          <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Adherence
-          </span>
-        </button>
-        <button
-          onClick={() => setVisibleLines(v => ({ ...v, energy: !v.energy }))}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${
-            visibleLines.energy
-              ? "bg-emerald-500/10 border-emerald-500/20"
-              : "bg-accent/50 border-transparent opacity-50"
-          }`}
-        >
-          <div className="w-2.5 h-2.5 rounded-full bg-success" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Energy
-          </span>
-        </button>
-        <button
-          onClick={() => setVisibleLines(v => ({ ...v, mood: !v.mood }))}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${
-            visibleLines.mood
-              ? "bg-indigo-500/10 border-indigo-500/20"
-              : "bg-accent/50 border-transparent opacity-50"
-          }`}
-        >
-          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Mood
-          </span>
-        </button>
+            {/* Glowing wave area curve matching Overview Page */}
+            <div className="h-24 w-full mt-2 -mb-2">
+              <AreaSparkline
+                data={item.data}
+                xKey="day"
+                yKey="value"
+                color={item.color}
+                label={item.label}
+              />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

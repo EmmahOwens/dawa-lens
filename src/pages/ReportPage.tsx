@@ -555,30 +555,9 @@ export default function ReportPage() {
             </p>
           </motion.div>
 
-          {/* Charts Section */}
-          <motion.div variants={item} className="premium-card">
-            <h3 className="section-title flex items-center gap-2">
-              <TrendingUp size={14} className="text-primary" /> Vitality Trends
-            </h3>
-            <div className="w-full mt-4 relative">
-              {chartData.every(
-                (d) => d.energy === null && d.adherence === 100
-              ) && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-accent/5 z-10 rounded-2xl border border-dashed border-border/50">
-                  <Activity
-                    size={32}
-                    className="text-muted-foreground/30 mb-3"
-                  />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">
-                    No activity data yet
-                  </p>
-                  <p className="text-[8px] font-bold text-muted-foreground/40 mt-1 uppercase tracking-tighter">
-                    Log your wellness in the Wellness Hub
-                  </p>
-                </div>
-              )}
-              <VitalityTrends2D data={chartData} />
-            </div>
+          {/* Vitality Trends Section */}
+          <motion.div variants={item} className="w-full">
+            <VitalityTrends2D data={chartData} />
           </motion.div>
 
           {/* Emotional Wellness Summary */}
