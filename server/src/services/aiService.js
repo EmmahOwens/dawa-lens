@@ -26,8 +26,8 @@ const CEREBRAS_MODEL = 'llama-3.3-70b';
 const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 const Z_AI_API_KEY = process.env.Z_AI_API_KEY;
-const Z_AI_MODEL = 'glm-4-flash';
-const Z_AI_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
+const Z_AI_MODEL = 'glm-4.7-flash';
+const Z_AI_API_URL = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 
 /**
  * Global AI error handler to ensure all errors returned are "operational" AppErrors.
