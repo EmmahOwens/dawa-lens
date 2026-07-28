@@ -65,8 +65,15 @@ export default function ReportPage() {
     insights?: string[];
     actionItems?: string[];
   }
-  const [insights, setInsights] = useState<WellnessInsight | null>(null);
-  const lastFetchKey = useRef<string>("");
+  const cacheKey = `dawa_clinical_assessment_${selectedPatientId || "default"}`;
+  const [insights, setInsights] = useState<WellnessInsight | null>(() => {
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const {
     resolvedPatient,
@@ -155,6 +162,20 @@ export default function ReportPage() {
   const isNative = Capacitor.isNativePlatform();
 
   const fetchInsights = useCallback(async () => {
+    const cached = (() => {
+      try {
+        const item = sessionStorage.getItem(cacheKey);
+        return item ? JSON.parse(item) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (cached) {
+      setInsights(cached);
+      return;
+    }
+
     if (scopedDoseLogs.length === 0 && scopedMedicines.length === 0) return;
     setLoading(true);
     try {
@@ -171,26 +192,38 @@ export default function ReportPage() {
           allergies: resolvedPatient.allergies,
         },
       });
-      setInsights(res);
+      if (res) {
+        setInsights(res);
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(res));
+        } catch (e) {
+          console.error("Failed to save clinical assessment to sessionStorage", e);
+        }
+      }
     } catch (err) {
       console.error("Insight fetch failed", err);
     } finally {
       setLoading(false);
     }
-  }, [scopedDoseLogs, scopedWellnessLogs, scopedMedicines]);
+  }, [cacheKey, scopedDoseLogs, scopedWellnessLogs, scopedMedicines, resolvedPatient]);
 
   useEffect(() => {
-    const fetchKey = `${selectedPatientId}-${scopedDoseLogs.length}-${scopedMedicines.length}`;
-    if (fetchKey === lastFetchKey.current) return;
-    lastFetchKey.current = fetchKey;
+    const cached = (() => {
+      try {
+        const item = sessionStorage.getItem(cacheKey);
+        return item ? JSON.parse(item) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (cached) {
+      setInsights(cached);
+      return;
+    }
 
     fetchInsights();
-  }, [
-    selectedPatientId,
-    scopedDoseLogs.length,
-    scopedMedicines.length,
-    fetchInsights,
-  ]);
+  }, [cacheKey, fetchInsights]);
 
   const handlePrint = () => {
     window.print();
