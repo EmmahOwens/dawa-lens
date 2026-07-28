@@ -9,6 +9,35 @@ import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
 import { aiApi } from "@/services/api";
 
+const FALLBACK_QUOTES = [
+  (name: string) => `Consistency is your greatest strength, ${name}.`,
+  (name: string) => `Every small step toward your health counts today, ${name}.`,
+  (name: string) => `Your future self will thank you for taking care of yourself today, ${name}.`,
+  (name: string) => `Wellness is a daily journey of small, positive habits, ${name}.`,
+  (name: string) => `Prioritizing your health is the highest form of self-care, ${name}.`,
+  (name: string) => `Small daily improvements over time lead to remarkable results, ${name}.`,
+  (name: string) => `You are doing an incredible job taking care of your health, ${name}.`,
+  (name: string) => `Stay mindful, stay consistent, and keep nourishing your life, ${name}.`,
+  (name: string) => `Health is not a destination, it is a daily commitment, ${name}.`,
+  (name: string) => `Every dose and every log brings you closer to optimal vitality, ${name}.`,
+  (name: string) => `Take a breath and celebrate every step of your wellness journey, ${name}.`,
+  (name: string) => `Building healthy habits is an investment in your best tomorrow, ${name}.`,
+  (name: string) => `Listen to your body, honour your routine, and keep shining, ${name}.`,
+  (name: string) => `Great achievements are built on small, consistent choices, ${name}.`,
+  (name: string) => `Your dedication to your well-being inspires everyone around you, ${name}.`,
+  (name: string) => `Nurture your mind and body with patience and positivity today, ${name}.`,
+  (name: string) => `Progress over perfection: every healthy choice matters, ${name}.`,
+  (name: string) => `You are stronger, healthier, and more resilient every single day, ${name}.`,
+  (name: string) => `Self-care is never selfish—it is your foundation, ${name}.`,
+  (name: string) => `Keep up the momentum, ${name}, your health journey is worth every effort.`,
+  (name: string) => `Rest, recover, and keep moving forward with confidence, ${name}.`
+];
+
+function getRandomFallbackQuote(name: string = "friend"): string {
+  const randomIndex = Math.floor(Math.random() * FALLBACK_QUOTES.length);
+  return FALLBACK_QUOTES[randomIndex](name);
+}
+
 export function DashboardBanner() {
   const navigate = useNavigate();
   const { userProfile } = useApp();
@@ -52,11 +81,13 @@ export function DashboardBanner() {
           } catch (e) {
             console.error("Failed to save quote to sessionStorage", e);
           }
+        } else {
+          throw new Error("No quote returned");
         }
       } catch (err) {
-        console.error("Failed to fetch wellness quote:", err);
-        // Fallback
-        const fallbackQuote = `Consistency is your greatest strength, ${userProfile?.name?.split(" ")[0] || "friend"}.`;
+        console.error("Failed to fetch wellness quote, using fallback:", err);
+        // Fallback with random quote from pool
+        const fallbackQuote = getRandomFallbackQuote(userProfile?.name?.split(" ")[0] || "friend");
         setQuote(fallbackQuote);
         try {
           sessionStorage.setItem("dawa_wellness_quote", fallbackQuote);
