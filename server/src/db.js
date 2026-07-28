@@ -7,13 +7,9 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: resolve(__dirname, '../.env') });
 dotenv.config();
 
-
-// The user has supplied standard FIREBASE_ variables in the .env file
-// Instead of cert, we could construct a credential object or use default.
-// Let's create a credential from env variables.
+// Firebase Admin: initialize using environment variables injected by cloud provider (Render) or environment
 let credential;
 if (process.env.FIREBASE_PRIVATE_KEY) {
   console.log('🔐 Firebase Admin: Initializing with service account credentials from environment variables.');

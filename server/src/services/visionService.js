@@ -9,13 +9,9 @@ dotenv.config();
 const GEMINI_FLASH_MODEL = 'gemini-2.5-flash';
 
 const getGeminiApiKeyForScan = () => {
-  const key = process.env.GEMINI_API_KEY_2;
+  const key = process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY;
   if (!key) {
-    if (process.env.NODE_ENV !== 'production' && process.env.GEMINI_API_KEY) {
-      console.warn('[visionService] ⚠️ GEMINI_API_KEY_2 is not set. Falling back to GEMINI_API_KEY for development.');
-      return process.env.GEMINI_API_KEY;
-    }
-    throw new AppError('Gemini API key for scanning (GEMINI_API_KEY_2) is not configured.', 500, 'GEMINI_KEY_2_MISSING');
+    throw new AppError('Gemini API key for scanning (GEMINI_API_KEY_2 or GEMINI_API_KEY) is not configured in environment.', 500, 'GEMINI_KEY_MISSING');
   }
   return key;
 };

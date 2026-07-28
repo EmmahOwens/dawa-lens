@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const getGeminiApiKey = () => process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2;
 
 /**
  * Retrieves relevant medical knowledge snippets from Firestore Vector Search.
@@ -18,10 +18,13 @@ export const retrieveMedicalKnowledge = async (query, limit = 3) => {
   if (!query || query.length < 3) return [];
   
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn('⚠️ GEMINI_API_KEY not found. Skipping medical knowledge retrieval.');
+    const apiKey = getGeminiApiKey();
+    if (!apiKey) {
+      console.warn('⚠️ GEMINI_API_KEY / GEMINI_API_KEY_2 not found in environment. Skipping medical knowledge retrieval.');
       return [];
     }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
 
     // 1. Generate embedding for the query
     const model = genAI.getGenerativeModel({ model: "text-embedding-004" });

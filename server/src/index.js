@@ -24,12 +24,15 @@ import { initScheduler } from './scheduler.js';
 
 dotenv.config();
 
-// Cerebras API key presence check — logged at startup for visibility in Render logs
-if (process.env.CEREBRAS_API_KEY) {
-  console.log('✅ Cerebras: active');
-} else {
-  console.warn('⚠️  Cerebras: not configured — falling back to Groq');
-}
+// Startup environment status overview — logged for visibility in Render / Cloud deployment logs
+console.log('─── Render Environment Status Check ───');
+console.log('Firebase Admin:', process.env.FIREBASE_PROJECT_ID ? `✅ Active (Project: ${process.env.FIREBASE_PROJECT_ID})` : '⚠️ Missing FIREBASE_PROJECT_ID');
+console.log('Cerebras API:', process.env.CEREBRAS_API_KEY ? '✅ Active (llama-3.3-70b)' : 'ℹ️ Not configured (optional fallback)');
+console.log('Groq API:', process.env.GROQ_API_KEY ? '✅ Active (Primary)' : '⚠️ Missing GROQ_API_KEY');
+console.log('Z.ai API:', process.env.Z_AI_API_KEY ? '✅ Active (GLM-4.7-Flash fallback)' : 'ℹ️ Not configured (optional fallback)');
+console.log('Gemini API:', (process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2) ? '✅ Active' : '⚠️ Missing GEMINI_API_KEY');
+console.log('Cloudflare Vision API:', process.env.CLOUDFLARE_API_KEY ? '✅ Active' : 'ℹ️ Not configured (optional vision provider)');
+console.log('────────────────────────────────────────');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
