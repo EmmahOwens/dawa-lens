@@ -48,12 +48,40 @@ export default function WellnessPage() {
   const [activeTab, setActiveTab] = useState<"journal" | "food">("journal");
   const [loading, setLoading] = useState(false);
   const [reflectionLoading, setReflectionLoading] = useState(false);
-  const [insight, setInsight] = useState<any>(null);
+  const [insight, setInsight] = useState<any>(() => {
+    try {
+      const cached = sessionStorage.getItem("dawa_wellness_page_insight");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [insightLoading, setInsightLoading] = useState(false);
-  const [guidance, setGuidance] = useState<any>(null);
+  const [guidance, setGuidance] = useState<any>(() => {
+    try {
+      const cached = sessionStorage.getItem("dawa_nutritional_guidance");
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [guidanceLoading, setGuidanceLoading] = useState(false);
   
   const fetchWellnessInsight = async () => {
+    const cached = (() => {
+      try {
+        const item = sessionStorage.getItem("dawa_wellness_page_insight");
+        return item ? JSON.parse(item) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (cached) {
+      setInsight(cached);
+      return;
+    }
+
     if (wellnessLogs.length === 0) return;
     setInsightLoading(true);
     try {
@@ -62,7 +90,14 @@ export default function WellnessPage() {
         wellnessLogs,
         medicines
       });
-      setInsight(res);
+      if (res) {
+        setInsight(res);
+        try {
+          sessionStorage.setItem("dawa_wellness_page_insight", JSON.stringify(res));
+        } catch (e) {
+          console.error("Failed to save wellness page insight to sessionStorage", e);
+        }
+      }
     } catch (err) {
       console.error("Failed to fetch wellness insight:", err);
     } finally {
@@ -72,14 +107,35 @@ export default function WellnessPage() {
 
   useEffect(() => {
     fetchWellnessInsight();
-  }, [wellnessLogs.length]); // Re-fetch when logs change
+  }, []);
 
   const fetchNutritionalGuidance = async () => {
+    const cached = (() => {
+      try {
+        const item = sessionStorage.getItem("dawa_nutritional_guidance");
+        return item ? JSON.parse(item) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (cached) {
+      setGuidance(cached);
+      return;
+    }
+
     if (medicines.length === 0) return;
     setGuidanceLoading(true);
     try {
       const res = await aiApi.getNutritionalGuidance({ medicines });
-      setGuidance(res);
+      if (res) {
+        setGuidance(res);
+        try {
+          sessionStorage.setItem("dawa_nutritional_guidance", JSON.stringify(res));
+        } catch (e) {
+          console.error("Failed to save nutritional guidance to sessionStorage", e);
+        }
+      }
     } catch (err) {
       console.error("Failed to fetch nutritional guidance:", err);
     } finally {
@@ -89,7 +145,7 @@ export default function WellnessPage() {
 
   useEffect(() => {
     fetchNutritionalGuidance();
-  }, [medicines.length]);
+  }, []);
   
   // Journal State
   const [mood, setMood] = useState(3); // 1-5

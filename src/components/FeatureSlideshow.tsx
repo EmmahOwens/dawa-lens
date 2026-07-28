@@ -31,18 +31,45 @@ export function FeatureSlideshow() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const fetchTips = async () => {
+    const cachedData = (() => {
       try {
-        const data = await aiApi.getHealthDiscoveries();
-        setSlides(prev => prev.map(slide => {
-          if (slide.id === "tip1") {
+        const item = sessionStorage.getItem("dawa_health_discoveries");
+        return item ? JSON.parse(item) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    const applyTips = (data: { healthTip: string; didYouKnow: string }) => {
+      setSlides((prev) =>
+        prev.map((slide) => {
+          if (slide.id === "tip1" && data.healthTip) {
             return { ...slide, description: data.healthTip };
           }
-          if (slide.id === "tip2") {
+          if (slide.id === "tip2" && data.didYouKnow) {
             return { ...slide, description: data.didYouKnow };
           }
           return slide;
-        }));
+        })
+      );
+    };
+
+    if (cachedData) {
+      applyTips(cachedData);
+      return;
+    }
+
+    const fetchTips = async () => {
+      try {
+        const data = await aiApi.getHealthDiscoveries();
+        if (data) {
+          applyTips(data);
+          try {
+            sessionStorage.setItem("dawa_health_discoveries", JSON.stringify(data));
+          } catch (e) {
+            console.error("Failed to save health tips to sessionStorage", e);
+          }
+        }
       } catch (error) {
         console.error("Failed to fetch health tips:", error);
       }
