@@ -12,8 +12,29 @@ const router = express.Router();
  */
 router.get('/test-zai', async (req, res, next) => {
   try {
+    let availableModels = [];
+    if (process.env.Z_AI_API_KEY) {
+      try {
+        const mResp = await axios.get('https://api.z.ai/api/paas/v4/models', {
+          headers: { 'Authorization': `Bearer ${process.env.Z_AI_API_KEY}` },
+          timeout: 5000
+        });
+        availableModels = mResp.data?.data?.map(m => m.id) || mResp.data;
+      } catch (mErr) {
+        try {
+          const mResp2 = await axios.get('https://open.bigmodel.cn/api/paas/v4/models', {
+            headers: { 'Authorization': `Bearer ${process.env.Z_AI_API_KEY}` },
+            timeout: 5000
+          });
+          availableModels = mResp2.data?.data?.map(m => m.id) || mResp2.data;
+        } catch (e2) {
+          availableModels = mErr.response?.data || mErr.message;
+        }
+      }
+    }
+
     const testResult = await aiService.testZaiProvider();
-    res.json(testResult);
+    res.json({ ...testResult, availableModels });
   } catch (error) {
     next(error);
   }
