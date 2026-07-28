@@ -191,72 +191,67 @@ const callCerebrasChat = async (messages, responseFormat = { type: 'json_object'
   return await rateLimitManager.enqueue(fn, 'cerebras-120b', messages, priority, 3, failFast);
 };
 
-/**
- * Standard chat completion call to Z.ai (GLM-4.7-Flash)
- */
-const Z_AI_MODELS = ['glm-4.7-flash', 'glm-4-flash', 'glm-4', 'glm-4-air'];
+const Z_AI_ENDPOINTS = [
+  'https://api.z.ai/api/coding/paas/v4/chat/completions',
+  'https://api.z.ai/api/paas/v4/chat/completions',
+  'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+];
+
+const Z_AI_MODELS = [
+  'glm-4.7-flash',
+  'glm-4-flash',
+  'glm-4',
+  'glm-4-air',
+  'glm-4.5-air'
+];
+
+let zaiWorkingEndpoint = null;
+let zaiWorkingModel = null;
 
 const callZaiChat = async (messages, responseFormat = { type: 'json_object' }, modelId = Z_AI_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
   if (!Z_AI_API_KEY) {
     throw new AppError('Z.ai API key not configured', 503);
   }
 
-  const modelsToTry = Array.from(new Set([modelId, ...Z_AI_MODELS]));
-
   const fn = async () => {
     let lastErr = null;
     let response = null;
-    let successfulModel = modelId;
+    let successfulModel = zaiWorkingModel || modelId;
 
-    for (const targetModel of modelsToTry) {
-      const payload = {
-        model: targetModel,
-        messages,
-        max_tokens: maxTokens,
-        temperature: temperature
-      };
+    const endpointsToTry = zaiWorkingEndpoint ? [zaiWorkingEndpoint] : Z_AI_ENDPOINTS;
+    const modelsToTry = zaiWorkingModel ? [zaiWorkingModel] : Array.from(new Set([modelId, ...Z_AI_MODELS]));
 
-      try {
-        response = await axios.post(Z_AI_API_URL, payload, {
-          headers: {
-            'Authorization': `Bearer ${Z_AI_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 8000
-        });
-        successfulModel = targetModel;
-        lastErr = null;
-        break; // Success!
-      } catch (err) {
-        lastErr = err;
-        const errCode = String(err.response?.data?.error?.code || '');
-        // If "Unknown Model" (1211), try next model code
-        if (errCode === '1211') {
-          continue;
-        }
-        // If overloaded (1305 / 429), try fallback endpoint
-        if (err.response?.status === 429 || errCode === '1305') {
-          try {
-            const fallbackUrl = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-            response = await axios.post(fallbackUrl, payload, {
-              headers: {
-                'Authorization': `Bearer ${Z_AI_API_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              timeout: 8000
-            });
-            successfulModel = targetModel;
-            lastErr = null;
-            break;
-          } catch (fbErr) {
-            lastErr = fbErr;
-          }
+    for (const url of endpointsToTry) {
+      for (const targetModel of modelsToTry) {
+        const payload = {
+          model: targetModel,
+          messages,
+          max_tokens: maxTokens,
+          temperature: temperature
+        };
+
+        try {
+          response = await axios.post(url, payload, {
+            headers: {
+              'Authorization': `Bearer ${Z_AI_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 8000
+          });
+          zaiWorkingEndpoint = url;
+          zaiWorkingModel = targetModel;
+          successfulModel = targetModel;
+          lastErr = null;
+          break;
+        } catch (err) {
+          lastErr = err;
         }
       }
+      if (response) break;
     }
 
-    if (lastErr || !response) {
-      throw lastErr || new AppError('Z.ai model execution failed.', 502);
+    if (!response) {
+      throw lastErr || new AppError('Z.ai API request failed.', 502);
     }
 
     const choice = response.data?.choices?.[0];
