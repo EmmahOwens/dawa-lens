@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus, Loader2 } from "@/lib/icons";
@@ -36,16 +36,29 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
     };
   }, [wellnessLogs, today]);
 
-  // Live Groq insight state
-  const [groqInsight, setGroqInsight] = useState<string | null>(null);
+  // Live Groq insight state (Cached in sessionStorage per app session)
+  const [groqInsight, setGroqInsight] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem("dawa_ai_health_insight");
+    } catch {
+      return null;
+    }
+  });
   const [insightLoading, setInsightLoading] = useState(false);
-  // Track what data the last fetch was built on to avoid redundant calls
-  const lastFetchKey = useRef<string>("");
 
   useEffect(() => {
-    const fetchKey = `${adherencePercent}-${mood}-${energy}-${doseLogs.length}`;
-    if (fetchKey === lastFetchKey.current) return;
-    lastFetchKey.current = fetchKey;
+    const cachedInsight = (() => {
+      try {
+        return sessionStorage.getItem("dawa_ai_health_insight");
+      } catch {
+        return null;
+      }
+    })();
+
+    if (cachedInsight) {
+      setGroqInsight(cachedInsight);
+      return;
+    }
 
     const fetchInsight = async () => {
       setInsightLoading(true);
@@ -62,7 +75,14 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
           (Array.isArray(data?.insights) && data.insights.length > 0
             ? data.insights[0]
             : null);
-        if (text) setGroqInsight(text);
+        if (text) {
+          setGroqInsight(text);
+          try {
+            sessionStorage.setItem("dawa_ai_health_insight", text);
+          } catch (e) {
+            console.error("Failed to save AI health insight to sessionStorage", e);
+          }
+        }
       } catch (err) {
         console.warn("AIInsightCard Groq call failed:", err);
       } finally {
@@ -71,7 +91,7 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
     };
 
     fetchInsight();
-  }, [adherencePercent, mood, energy, doseLogs.length]);
+  }, []);
 
   // Displayed insight text — prefer live Groq, then saved reflection summary, then nothing
   const displayInsight =
