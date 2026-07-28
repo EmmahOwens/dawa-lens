@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { X, Send, Bot, Sparkles } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
@@ -88,6 +88,7 @@ export default function DawaGPT() {
 
   const { toast } = useToast();
   const { dispatchAIAction } = useAIActions();
+  const dragControls = useDragControls();
   const panelSwipe = useSwipeToDismiss(() => setIsOpen(false), 60);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -420,36 +421,45 @@ export default function DawaGPT() {
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
               drag="y"
+              dragControls={dragControls}
+              dragListener={false}
               dragConstraints={{ top: 0, bottom: 0 }}
               dragElastic={{ top: 0.03, bottom: 0.25 }}
               onDragEnd={(_e, info) => {
-                if (info.offset.y > 60) setIsOpen(false);
+                if (info.offset.y > 60 || info.velocity.y > 500) setIsOpen(false);
               }}
               className="bg-[#f9f8f6] dark:bg-[#1a1a1a] w-full md:max-w-3xl h-[85vh] md:h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl border border-border/40 flex flex-col pointer-events-auto overflow-hidden"
-              {...panelSwipe}
             >
-              {/* Drag handle — only visible on mobile where the panel slides up */}
-              <div className="md:hidden flex justify-center pt-3 pb-1">
-                <div className="w-10 h-1 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 transition-colors" />
-              </div>
-              {/* Header */}
-              <div className="px-6 py-4 border-b border-border/30 bg-background/50 backdrop-blur-md flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex items-center justify-center">
-                    <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-6 h-6 object-contain" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-base tracking-tight text-foreground">
-                      Dawa-GPT
-                    </h3>
-                  </div>
+              {/* Top Drag Header Zone — Only swipes/drags starting from here trigger window dismissal */}
+              <div
+                className="select-none touch-none cursor-grab active:cursor-grabbing shrink-0"
+                onPointerDown={(e) => dragControls.start(e)}
+                {...panelSwipe}
+              >
+                {/* Drag handle — only visible on mobile where the panel slides up */}
+                <div className="md:hidden flex justify-center pt-3 pb-1">
+                  <div className="w-10 h-1 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 transition-colors" />
                 </div>
-                <button 
-                  onClick={() => setIsOpen(false)} 
-                  className="p-2 hover:bg-muted/50 rounded-lg transition-all active:scale-95"
-                >
-                  <X size={18} className="text-muted-foreground hover:text-foreground transition-colors" />
-                </button>
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-border/30 bg-background/50 backdrop-blur-md flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex items-center justify-center">
+                      <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-6 h-6 object-contain" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-base tracking-tight text-foreground">
+                        Dawa-GPT
+                      </h3>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setIsOpen(false)} 
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="p-2 hover:bg-muted/50 rounded-lg transition-all active:scale-95 cursor-pointer"
+                  >
+                    <X size={18} className="text-muted-foreground hover:text-foreground transition-colors" />
+                  </button>
+                </div>
               </div>
 
 
