@@ -26,8 +26,8 @@ const CEREBRAS_MODEL = 'llama-3.3-70b';
 const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 const Z_AI_API_KEY = process.env.Z_AI_API_KEY;
-const Z_AI_MODEL = 'glm-4.7-flash';
-const Z_AI_API_URL = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
+const Z_AI_MODEL = 'glm-4-flash';
+const Z_AI_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
 
 /**
  * Global AI error handler to ensure all errors returned are "operational" AppErrors.
@@ -200,8 +200,6 @@ const callZaiChat = async (messages, responseFormat = { type: 'json_object' }, m
   }
 
   const fn = async () => {
-    // Note: Z.ai (GLM API) does not use OpenAI's response_format parameter.
-    // Including response_format causes GLM-4.7-Flash to return empty choices.
     const payload = {
       model: modelId,
       messages,
@@ -209,13 +207,30 @@ const callZaiChat = async (messages, responseFormat = { type: 'json_object' }, m
       temperature: temperature
     };
 
-    const response = await axios.post(Z_AI_API_URL, payload, {
-      headers: {
-        'Authorization': `Bearer ${Z_AI_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 8000
-    });
+    let response;
+    try {
+      response = await axios.post(Z_AI_API_URL, payload, {
+        headers: {
+          'Authorization': `Bearer ${Z_AI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 8000
+      });
+    } catch (primaryErr) {
+      // If primary endpoint fails (e.g. overloaded 1305 / 429), attempt fallback endpoint
+      if (primaryErr.response?.status === 429 || primaryErr.response?.data?.error?.code === '1305') {
+        const fallbackUrl = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+        response = await axios.post(fallbackUrl, payload, {
+          headers: {
+            'Authorization': `Bearer ${Z_AI_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 8000
+        });
+      } else {
+        throw primaryErr;
+      }
+    }
 
     const choice = response.data?.choices?.[0];
     let text = choice?.message?.content;
@@ -233,7 +248,7 @@ const callZaiChat = async (messages, responseFormat = { type: 'json_object' }, m
     }
 
     const result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
-    if (typeof result === 'object' && result !== null) result.source = "Z.ai (GLM-4.7-Flash)";
+    if (typeof result === 'object' && result !== null) result.source = `Z.ai (${modelId})`;
     return result;
   };
 
