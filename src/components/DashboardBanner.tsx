@@ -15,22 +15,54 @@ export function DashboardBanner() {
   const { scopedDoseLogs } = usePatientScope();
   const { t } = useTranslation();
 
-  const [quote, setQuote] = useState<string | null>(null);
+  const [quote, setQuote] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem("dawa_wellness_quote");
+    } catch {
+      return null;
+    }
+  });
   const [loadingQuote, setLoadingQuote] = useState(false);
 
-  // 1. Fetch Dynamic Quote using GROQ_API_KEY_2 (via backend)
+  // 1. Fetch Dynamic Quote using GROQ_API_KEY_2 (via backend) - Once per session
   useEffect(() => {
+    const cachedQuote = (() => {
+      try {
+        return sessionStorage.getItem("dawa_wellness_quote");
+      } catch {
+        return null;
+      }
+    })();
+
+    if (cachedQuote) {
+      setQuote(cachedQuote);
+      return;
+    }
+
     const fetchQuote = async () => {
       setLoadingQuote(true);
       try {
         const res = await aiApi.getWellnessQuote({
           userName: userProfile?.name?.split(" ")[0]
         });
-        setQuote(res.quote);
+        if (res?.quote) {
+          setQuote(res.quote);
+          try {
+            sessionStorage.setItem("dawa_wellness_quote", res.quote);
+          } catch (e) {
+            console.error("Failed to save quote to sessionStorage", e);
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch wellness quote:", err);
         // Fallback
-        setQuote(`Consistency is your greatest strength, ${userProfile?.name?.split(" ")[0] || "friend"}.`);
+        const fallbackQuote = `Consistency is your greatest strength, ${userProfile?.name?.split(" ")[0] || "friend"}.`;
+        setQuote(fallbackQuote);
+        try {
+          sessionStorage.setItem("dawa_wellness_quote", fallbackQuote);
+        } catch (e) {
+          console.error("Failed to save fallback quote to sessionStorage", e);
+        }
       } finally {
         setLoadingQuote(false);
       }
