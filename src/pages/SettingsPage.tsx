@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, Shield, Trash2, Moon, Lock, Globe, Users, 
-  ArrowRight, User, Mail, Database, Clock, CheckCircle2
+  ArrowRight, User, Mail, Database, CheckCircle2
 } from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { formatDistanceToNow } from "date-fns";
 import pkg from "../../package.json";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 
@@ -19,15 +18,12 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { 
     storageMode, clearAllData, isLoggedIn, logoutUser, 
-    userProfile, syncLocalToCloud, isProfessionalMode, setIsProfessionalMode,
-    lastSyncTimestamp, updateUserProfile, rememberMe, setRememberMe,
+    userProfile, isProfessionalMode, setIsProfessionalMode,
+    updateUserProfile, rememberMe, setRememberMe,
   } = useApp();
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
-
-
-
 
   const handleLanguageChange = async (lang: string) => {
     i18n.changeLanguage(lang);
@@ -257,7 +253,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Remember Account Toggle */}
-          <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/50 mb-6 group transition-all hover:bg-muted/50">
+          <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 border border-border/50 group transition-all hover:bg-muted/50">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform">
                 <Lock size={16} />
@@ -279,25 +275,6 @@ export default function SettingsPage() {
                 });
               }}
             />
-          </div>
-
-
-
-          <div className="flex items-center justify-between pt-4 border-t border-border/50">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock size={14} />
-              <span className="text-[10px] font-bold uppercase tracking-wider">
-                Last Synced: {lastSyncTimestamp ? formatDistanceToNow(new Date(lastSyncTimestamp), { addSuffix: true }) : "Never"}
-              </span>
-            </div>
-            {isLoggedIn && (
-              <button 
-                onClick={() => syncLocalToCloud()}
-                className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline"
-              >
-                Sync Now
-              </button>
-            )}
           </div>
         </motion.div>
 
