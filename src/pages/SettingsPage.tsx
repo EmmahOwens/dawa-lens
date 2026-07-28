@@ -18,7 +18,7 @@ import ConfirmationDialog from "@/components/ConfirmationDialog";
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { 
-    storageMode, setStorageMode, clearAllData, isLoggedIn, logoutUser, 
+    storageMode, clearAllData, isLoggedIn, logoutUser, 
     userProfile, syncLocalToCloud, isProfessionalMode, setIsProfessionalMode,
     lastSyncTimestamp, updateUserProfile, rememberMe, setRememberMe,
   } = useApp();
@@ -27,29 +27,7 @@ export default function SettingsPage() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
 
-  const handleStorageModeChange = async (mode: "local" | "cloud") => {
-    if (mode === "cloud" && !isLoggedIn) {
-      toast({ 
-        title: t("settings.login_required", "Login Required"), 
-        description: t("settings.login_cloud_desc", "Please sign in to enable cloud synchronization."),
-        variant: "destructive"
-      });
-      return;
-    }
 
-    setStorageMode(mode);
-    
-    if (mode === "cloud" && isLoggedIn) {
-      toast({ title: t("settings.sync_start"), description: t("settings.sync_desc") });
-      await syncLocalToCloud();
-      toast({ title: t("settings.sync_complete") });
-    } else {
-      toast({ 
-        title: t("settings.local_mode_active", "Local-Only Mode"), 
-        description: t("settings.local_active_desc", "Data will now be stored only on this device.")
-      });
-    }
-  };
 
   const handleLanguageChange = async (lang: string) => {
     i18n.changeLanguage(lang);
@@ -303,29 +281,7 @@ export default function SettingsPage() {
             />
           </div>
 
-          <div className="space-y-3 mb-6">
-            <button 
-              onClick={() => handleStorageModeChange("local")}
-              className={`w-full p-4 rounded-2xl border text-left transition-all ${storageMode === "local" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-muted/30 hover:border-border"}`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-bold text-foreground">{t("settings.local_only")}</span>
-                {storageMode === "local" && <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />}
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">{t("settings.local_desc")}</p>
-            </button>
 
-            <button 
-              onClick={() => handleStorageModeChange("cloud")}
-              className={`w-full p-4 rounded-2xl border text-left transition-all ${storageMode === "cloud" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border/50 bg-muted/30 hover:border-border"}`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-bold text-foreground">{t("settings.cloud_sync")}</span>
-                {storageMode === "cloud" && <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />}
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-relaxed">{t("settings.cloud_desc")}</p>
-            </button>
-          </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-border/50">
             <div className="flex items-center gap-2 text-muted-foreground">
