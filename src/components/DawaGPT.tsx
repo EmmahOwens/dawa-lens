@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { X, Send, Bot, Sparkles } from "@/lib/icons";
+import { X, Send, Bot, Sparkles, ChevronDown } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
@@ -101,7 +101,30 @@ export default function DawaGPT() {
   });
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const latestMessageRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const isScrolledUp = scrollHeight - scrollTop - clientHeight > 100;
+    setShowScrollBottom(isScrolledUp && messages.length > 0);
+  };
+
+  const scrollToLatestMessage = () => {
+    if (latestMessageRef.current) {
+      latestMessageRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    } else if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: scrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  };
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -114,6 +137,7 @@ export default function DawaGPT() {
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      setShowScrollBottom(false);
     }
   }, [messages, isTyping]);
 
@@ -464,58 +488,86 @@ export default function DawaGPT() {
 
 
               {/* Chat Messages */}
-              <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-10 space-y-10 scroll-smooth bg-transparent">
-                <div className="max-w-2xl mx-auto w-full space-y-10">
-                  {messages.map((m) => (
-                    <motion.div
-                      key={m.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div className={`flex gap-4 max-w-[90%] md:max-w-[85%] min-w-0 ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                        {m.role === "assistant" && (
-                          <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-1">
-                            <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
-                          </div>
-                        )}
-                        <div className={`min-w-0 px-1 py-1 ${
-                          m.role === "user"
-                            ? "bg-[#f0f0f0] dark:bg-[#2a2a2a] text-foreground rounded-2xl px-5 py-3 shadow-sm"
-                            : "text-foreground leading-relaxed"
-                        }`}>
-                          {m.role === "assistant" ? (
-                            <div className="prose prose-sm dark:prose-invert max-w-none min-w-0">
-                              <MessageRenderer
-                                text={m.text}
-                                onNavigate={() => setIsOpen(false)}
-                              />
+              <div className="relative flex-1 min-h-0 flex flex-col">
+                <div
+                  ref={scrollRef}
+                  onScroll={handleScroll}
+                  className="flex-1 overflow-y-auto p-4 md:p-10 space-y-10 scroll-smooth bg-transparent"
+                >
+                  <div className="max-w-2xl mx-auto w-full space-y-10">
+                    {messages.map((m, index) => {
+                      const isLatest = index === messages.length - 1;
+                      return (
+                        <motion.div
+                          key={m.id}
+                          ref={isLatest ? latestMessageRef : null}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                        >
+                          <div className={`flex gap-4 max-w-[90%] md:max-w-[85%] min-w-0 ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                            {m.role === "assistant" && (
+                              <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-1">
+                                <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
+                              </div>
+                            )}
+                            <div className={`min-w-0 px-1 py-1 ${
+                              m.role === "user"
+                                ? "bg-[#f0f0f0] dark:bg-[#2a2a2a] text-foreground rounded-2xl px-5 py-3 shadow-sm"
+                                : "text-foreground leading-relaxed"
+                            }`}>
+                              {m.role === "assistant" ? (
+                                <div className="prose prose-sm dark:prose-invert max-w-none min-w-0">
+                                  <MessageRenderer
+                                    text={m.text}
+                                    onNavigate={() => setIsOpen(false)}
+                                  />
+                                </div>
+                              ) : (
+                                <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                              )}
                             </div>
-                          ) : (
-                            <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.text}</p>
-                          )}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                    {isTyping && (
+                      <div className="flex justify-start gap-4">
+                        <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-1">
+                          <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
+                        </div>
+                        <div className="flex items-center gap-1.5 py-3">
+                          {[0, 0.15, 0.3].map((delay, i) => (
+                            <motion.span
+                              key={i}
+                              animate={{ opacity: [0.3, 1, 0.3] }}
+                              transition={{ duration: 1, repeat: Infinity, delay, ease: "easeInOut" }}
+                              className="block w-1.5 h-1.5 rounded-full bg-muted-foreground/40"
+                            />
+                          ))}
                         </div>
                       </div>
-                    </motion.div>
-                  ))}
-                  {isTyping && (
-                    <div className="flex justify-start gap-4">
-                      <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-1">
-                        <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
-                      </div>
-                      <div className="flex items-center gap-1.5 py-3">
-                        {[0, 0.15, 0.3].map((delay, i) => (
-                          <motion.span
-                            key={i}
-                            animate={{ opacity: [0.3, 1, 0.3] }}
-                            transition={{ duration: 1, repeat: Infinity, delay, ease: "easeInOut" }}
-                            className="block w-1.5 h-1.5 rounded-full bg-muted-foreground/40"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
+
+                {/* Floating Scroll to Latest Message Button */}
+                <AnimatePresence>
+                  {showScrollBottom && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                      transition={{ duration: 0.15 }}
+                      onClick={scrollToLatestMessage}
+                      aria-label="Scroll to latest message"
+                      className="absolute bottom-4 right-6 md:right-10 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/95 dark:bg-card/95 text-foreground border border-border/60 shadow-lg backdrop-blur-md hover:bg-accent text-xs font-medium cursor-pointer transition-all active:scale-95"
+                    >
+                      <ChevronDown className="w-4 h-4 text-primary" />
+                      <span>Latest message</span>
+                    </motion.button>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Footer / Input */}
