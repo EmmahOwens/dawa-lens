@@ -1,6 +1,7 @@
+import { useId } from 'react';
 import {
   LineChart as ReLineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer,
+  Tooltip, ResponsiveContainer, Area,
 } from 'recharts';
 
 interface AdminLineChartProps {
@@ -11,34 +12,97 @@ interface AdminLineChartProps {
   label?: string;
   suffix?: string;
   connectNulls?: boolean;
+  showGrid?: boolean;
+  showAxes?: boolean;
 }
 
-const TICK_STYLE = { fontSize: 10, fill: 'hsl(220 8% 55%)' };
+function CustomTooltip({ active, payload, label, color, itemLabel, suffix }: any) {
+  if (!active || !payload?.length) return null;
+  const val = payload[0].value;
+  return (
+    <div className="bg-[#0F1629]/95 border border-white/10 backdrop-blur-md rounded-xl px-3.5 py-2.5 shadow-2xl shadow-black/60 text-xs">
+      <p className="text-muted-foreground/80 font-medium mb-1">{label}</p>
+      <div className="flex items-center gap-2">
+        <span className="w-2.5 h-2.5 rounded-full animate-pulse shadow-sm" style={{ backgroundColor: color }} />
+        <p className="font-bold text-foreground text-sm tabular-nums">
+          {val != null ? `${val.toLocaleString()}${suffix}` : '–'}{' '}
+          <span className="text-xs font-normal text-muted-foreground">{itemLabel}</span>
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function AdminLineChart({
   data,
   xKey,
   yKey,
-  color = 'hsl(142 71% 45%)',
+  color = '#2563EB',
   label = '',
   suffix = '',
   connectNulls = true,
+  showGrid = true,
+  showAxes = true,
 }: AdminLineChartProps) {
+  const gradientId = useId();
+
+  if (!data || !data.length) return null;
+
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <ReLineChart data={data} margin={{ top: 8, right: 4, left: -10, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(222 14% 18%)" vertical={false} />
-        <XAxis dataKey={xKey} tick={TICK_STYLE} axisLine={false} tickLine={false} />
-        <YAxis tick={TICK_STYLE} axisLine={false} tickLine={false} />
-        <Tooltip
-          contentStyle={{ background: 'hsl(222 16% 10%)', border: '1px solid hsl(222 14% 18%)', borderRadius: 10, fontSize: 12 }}
-          labelStyle={{ color: 'hsl(220 14% 96%)', fontWeight: 600 }}
-          itemStyle={{ color }}
-          formatter={(v: number) => [v != null ? `${v}${suffix}` : '–', label]}
+      <ReLineChart data={data} margin={{ top: 12, right: 8, left: showAxes ? -14 : 0, bottom: 0 }}>
+        <defs>
+          {/* Subtle Ambient Area Fill under Line */}
+          <linearGradient id={`lineGrad-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+
+          {/* Neon Glow Filter */}
+          <filter id={`lineGlow-${gradientId}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {showGrid && <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.05)" vertical={false} />}
+        
+        {showAxes && (
+          <>
+            <XAxis dataKey={xKey} tick={{ fontSize: 10, fill: 'hsl(220 10% 55%)' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: 'hsl(220 10% 55%)' }} axisLine={false} tickLine={false} />
+          </>
+        )}
+
+        <Tooltip content={<CustomTooltip color={color} itemLabel={label} suffix={suffix} />} cursor={{ stroke: 'rgba(255, 255, 255, 0.15)', strokeDasharray: '4 4' }} />
+
+        <Area
+          type="monotone"
+          dataKey={yKey}
+          stroke="none"
+          fill={`url(#lineGrad-${gradientId})`}
         />
-        <Line type="monotone" dataKey={yKey} stroke={color} strokeWidth={2}
-          dot={{ r: 3, fill: color, strokeWidth: 1, stroke: color }} activeDot={{ r: 5, fill: color }} connectNulls={connectNulls} />
+
+        <Line
+          type="monotone"
+          dataKey={yKey}
+          stroke={color}
+          strokeWidth={3}
+          filter={`url(#lineGlow-${gradientId})`}
+          dot={false}
+          activeDot={{
+            r: 6,
+            fill: color,
+            stroke: 'white',
+            strokeWidth: 2.5,
+          }}
+          connectNulls={connectNulls}
+        />
       </ReLineChart>
     </ResponsiveContainer>
   );
 }
+

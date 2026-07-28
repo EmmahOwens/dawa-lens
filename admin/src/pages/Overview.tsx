@@ -12,6 +12,8 @@ import { useSetConnectionStatus } from '../hooks/useConnectionStatus';
 import { api } from '../services/adminApi';
 import { adherenceBg, formatNumber } from '../lib/utils';
 
+import { QuarterlyTopGainers } from '../components/charts/QuarterlyTopGainers';
+
 type Period = 'Weekly' | 'Monthly' | 'Yearly';
 const PERIODS: Period[] = ['Weekly', 'Monthly', 'Yearly'];
 
@@ -43,15 +45,15 @@ export function Overview() {
 
   // Donut data from adherence stats
   const donutData = stats ? [
-    { name: 'Doses Taken',   value: stats.adherence.taken,   color: 'hsl(142 70% 45%)' },
-    { name: 'Doses Missed',  value: stats.adherence.missed,  color: 'hsl(0 72% 51%)' },
-    { name: 'Doses Skipped', value: stats.adherence.skipped, color: 'hsl(38 92% 50%)' },
-    { name: 'Medications',   value: stats.medications.total, color: 'hsl(213 94% 58%)' },
+    { name: 'Doses Taken',   value: stats.adherence.taken,   color: '#10B981' },
+    { name: 'Doses Missed',  value: stats.adherence.missed,  color: '#EF4444' },
+    { name: 'Doses Skipped', value: stats.adherence.skipped, color: '#F59E0B' },
+    { name: 'Medications',   value: stats.medications.total, color: '#3B82F6' },
   ].filter(d => d.value > 0) : [
-    { name: 'Taken',   value: 60, color: 'hsl(142 70% 45%)' },
-    { name: 'Missed',  value: 20, color: 'hsl(0 72% 51%)' },
-    { name: 'Skipped', value: 12, color: 'hsl(38 92% 50%)' },
-    { name: 'Active',  value: 8,  color: 'hsl(213 94% 58%)' },
+    { name: 'Taken',   value: 60, color: '#10B981' },
+    { name: 'Missed',  value: 20, color: '#EF4444' },
+    { name: 'Skipped', value: 12, color: '#F59E0B' },
+    { name: 'Active',  value: 8,  color: '#3B82F6' },
   ];
 
   // AI summary text
@@ -109,8 +111,12 @@ export function Overview() {
         />
       </div>
 
-      {/* ── Main Bento Grid Layout ── */}
+      {/* ── Row 2: Top Gainers Wave Sparklines (Image 1 Style) ── */}
+      <QuarterlyTopGainers />
+
+      {/* ── Row 3: Main Bento Grid Layout ── */}
       <div className="grid grid-cols-3 gap-4 items-stretch">
+
         
         {/* Left 2 Columns: User Growth on top, AI Assistant + Donut Chart below */}
         <div className="col-span-2 flex flex-col gap-4">
