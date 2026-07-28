@@ -200,31 +200,40 @@ const callZaiChat = async (messages, responseFormat = { type: 'json_object' }, m
   }
 
   const fn = async () => {
+    // Note: Z.ai (GLM API) does not use OpenAI's response_format parameter.
+    // Including response_format causes GLM-4.7-Flash to return empty choices.
     const payload = {
       model: modelId,
       messages,
       max_tokens: maxTokens,
       temperature: temperature
     };
-    if (responseFormat) {
-      payload.response_format = responseFormat;
-    }
 
     const response = await axios.post(Z_AI_API_URL, payload, {
       headers: {
         'Authorization': `Bearer ${Z_AI_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 5000 // Reduced timeout for fast fallback
+      timeout: 8000
     });
 
-    const text = response.data?.choices?.[0]?.message?.content;
+    const choice = response.data?.choices?.[0];
+    let text = choice?.message?.content;
+    if (Array.isArray(text)) {
+      text = text.map(part => (typeof part === 'string' ? part : part.text || part.content || '')).join('');
+    }
+    if (!text && choice?.message?.reasoning_content) {
+      text = choice.message.reasoning_content;
+    }
+
     if (!text) {
-      throw new AppError('Z.ai returned an empty response.', 502);
+      const err = new AppError('Z.ai returned an empty response.', 502);
+      err.responseData = response.data;
+      throw err;
     }
 
     const result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
-    if (typeof result === 'object') result.source = "Z.ai (GLM-4.7-Flash)";
+    if (typeof result === 'object' && result !== null) result.source = "Z.ai (GLM-4.7-Flash)";
     return result;
   };
 
@@ -1200,7 +1209,7 @@ export const testZaiProvider = async () => {
       provider: 'Z.ai (GLM-4.7-Flash)',
       latencyMs: Date.now() - startTime,
       error: err.message,
-      details: err.response?.data || null
+      details: err.responseData || err.response?.data || null
     };
   }
 };
