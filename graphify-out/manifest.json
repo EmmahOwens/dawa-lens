@@ -715,8 +715,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/FeatureSlideshow.tsx": {
-    "mtime": 1783235404.0487318,
-    "ast_hash": "16115ed679cd5f31c119512d4b476256",
+    "mtime": 1785221977.1188629,
+    "ast_hash": "6a8e9eb8ee9ee78702bade8f02cb2866",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/IntelligencePanel.tsx": {
@@ -1200,8 +1200,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useIntelligenceContext.ts": {
-    "mtime": 1777100797.7013009,
-    "ast_hash": "9f566ccf79d8c5cc6d8e2f7d6522b369",
+    "mtime": 1785222007.2637758,
+    "ast_hash": "2b2d13db42502492302e2e5f7680095c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/usePatientScope.ts": {
@@ -1390,8 +1390,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx": {
-    "mtime": 1785218407.7852714,
-    "ast_hash": "62f483d69b0c321797828dba88d5e314",
+    "mtime": 1785221990.025826,
+    "ast_hash": "9998430fdad8d96b6dd6e42662bdd822",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/app-updater.ts": {
