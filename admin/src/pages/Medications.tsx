@@ -14,9 +14,31 @@ export function Medications() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.medications.top()
-      .then(r => { setData(r.data); setLoading(false); })
-      .catch(() => { toast.error('Failed to load medication data'); setLoading(false); });
+    let mounted = true;
+
+    const loadData = (isRetry = false) => {
+      api.medications.top()
+        .then(r => {
+          if (mounted) {
+            setData(r.data);
+            setLoading(false);
+          }
+        })
+        .catch(err => {
+          if (!isRetry) {
+            // Silently retry once after 2s for backend cold-starts
+            setTimeout(() => { if (mounted) loadData(true); }, 2000);
+          } else {
+            if (mounted) {
+              toast.error(err.message || 'Failed to load medication data');
+              setLoading(false);
+            }
+          }
+        });
+    };
+
+    loadData();
+    return () => { mounted = false; };
   }, []);
 
   const barData = (data?.topMedications || []).slice(0, 15).map(m => ({ name: m.name, count: m.count }));

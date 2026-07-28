@@ -1,5 +1,9 @@
 import { db } from '../../db.js';
 import AppError from '../../utils/AppError.js';
+import { getCache, setCache, withTimeout } from '../../utils/cache.js';
+
+const CACHE_KEY = 'admin_medications_top';
+const CACHE_TTL = 300; // 5 minutes
 
 /**
  * GET /api/v1/admin/medications/top
@@ -7,7 +11,19 @@ import AppError from '../../utils/AppError.js';
  */
 export const getTopMedications = async (req, res, next) => {
   try {
-    const snap = await db.collection('medicines').limit(2000).get();
+    // 1. Check in-memory TTL cache for instantaneous response
+    const cached = getCache(CACHE_KEY);
+    if (cached) {
+      return res.json({ status: 'success', data: cached });
+    }
+
+    // 2. Fetch from Firestore with timeout protection (max 4 seconds)
+    const snap = await withTimeout(
+      db.collection('medicines').limit(2000).get(),
+      4000,
+      { docs: [], size: 0 }
+    );
+
     const nameCount = {};
     const categoryCount = {};
 
@@ -28,12 +44,20 @@ export const getTopMedications = async (req, res, next) => {
       .sort((a, b) => b[1] - a[1])
       .map(([category, count]) => ({ category, count }));
 
+    const responseData = { topMedications, categoryBreakdown, totalTracked: snap.size };
+
+    // Cache the aggregated response if we got valid documents
+    if (snap.size > 0) {
+      setCache(CACHE_KEY, responseData, CACHE_TTL);
+    }
+
     res.json({
       status: 'success',
-      data: { topMedications, categoryBreakdown, totalTracked: snap.size },
+      data: responseData,
     });
   } catch (error) {
     console.error('[AdminMedications] getTopMedications error:', error);
     next(new AppError('Failed to fetch medication analytics', 500));
   }
 };
+

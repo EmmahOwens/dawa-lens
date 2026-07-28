@@ -1,5 +1,6 @@
 import { db } from '../../db.js';
 import AppError from '../../utils/AppError.js';
+import { getCache, setCache, withTimeout } from '../../utils/cache.js';
 
 function parseLogDate(docData) {
   if (!docData) return null;
@@ -22,17 +23,30 @@ function parseLogStatus(docData) {
 export const getRecentDoseLogs = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit || '25', 10);
-    // Try to order by actionTime (preferred) or createdAt, fallback to unordered
+    const cacheKey = `admin_dose_logs_recent_${limit}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json({ status: 'success', data: cached });
+    }
+
     let snap;
     try {
-      snap = await db.collection('doseLogs').orderBy('actionTime', 'desc').limit(300).get();
-    } catch (err) {
-      console.warn('[getRecentDoseLogs] Failed to order by actionTime, trying unordered:', err.message);
+      snap = await withTimeout(
+        db.collection('doseLogs').orderBy('actionTime', 'desc').limit(200).get(),
+        3000
+      );
+    } catch {
       try {
-        snap = await db.collection('doseLogs').orderBy('createdAt', 'desc').limit(300).get();
-      } catch (err2) {
-        console.warn('[getRecentDoseLogs] Failed to order by createdAt, using unordered:', err2.message);
-        snap = await db.collection('doseLogs').limit(300).get();
+        snap = await withTimeout(
+          db.collection('doseLogs').orderBy('createdAt', 'desc').limit(200).get(),
+          3000
+        );
+      } catch {
+        snap = await withTimeout(
+          db.collection('doseLogs').limit(200).get(),
+          3000,
+          { docs: [] }
+        );
       }
     }
     snap = snap || { docs: [] };
@@ -65,9 +79,12 @@ export const getRecentDoseLogs = async (req, res, next) => {
       };
     });
 
-    // If dose logs are empty, supplement with recent admin audit logs
     if (events.length === 0) {
-      const auditSnap = await db.collection('adminAuditLog').limit(20).get().catch(() => ({ docs: [] }));
+      const auditSnap = await withTimeout(
+        db.collection('adminAuditLog').limit(20).get(),
+        2000,
+        { docs: [] }
+      );
       auditSnap.docs.forEach(doc => {
         const data = doc.data();
         events.push({
@@ -82,10 +99,13 @@ export const getRecentDoseLogs = async (req, res, next) => {
     }
 
     events.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const finalData = events.slice(0, limit);
+
+    setCache(cacheKey, finalData, 30); // 30s TTL
 
     res.json({
       status: 'success',
-      data: events.slice(0, limit),
+      data: finalData,
     });
   } catch (error) {
     console.error('[AdminDoseLogs] getRecentDoseLogs error:', error);
@@ -95,21 +115,26 @@ export const getRecentDoseLogs = async (req, res, next) => {
 
 /**
  * GET /api/v1/admin/dose-logs/aggregate
- * Returns:
- *  - heatmap: 7x24 grid of dose density (dayOfWeek x hourOfDay)
- *  - breakdown: taken/missed/skipped counts
- *  - topMissHours: hours with the highest miss rates
  */
 export const getAggregateStats = async (req, res, next) => {
   try {
     const days = parseInt(req.query.days || '30', 10);
+    const cacheKey = `admin_dose_logs_aggregate_${days}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json({ status: 'success', data: cached });
+    }
+
     const since = new Date();
     since.setDate(since.getDate() - days);
 
-    const snap = await db.collection('doseLogs').limit(5000).get();
+    const snap = await withTimeout(
+      db.collection('doseLogs').limit(3000).get(),
+      4000,
+      { docs: [] }
+    );
     const docs = snap.docs.map(d => d.data());
 
-    // Build heatmap: [dayOfWeek 0-6][hour 0-23] = count
     const heatmap = Array.from({ length: 7 }, () => Array(24).fill(0));
     let taken = 0, missed = 0, skipped = 0;
 
@@ -117,7 +142,7 @@ export const getAggregateStats = async (req, res, next) => {
       const date = parseLogDate(doc);
       if (!date || date < since) return;
 
-      const day = date.getDay(); // 0=Sun, 6=Sat
+      const day = date.getDay();
       const hour = date.getHours();
       heatmap[day][hour]++;
 
@@ -130,7 +155,6 @@ export const getAggregateStats = async (req, res, next) => {
     const total = taken + missed + skipped;
     const adherenceRate = total > 0 ? Math.round((taken / total) * 100) : 0;
 
-    // Flatten heatmap for frontend consumption
     const heatmapFlat = [];
     const days7 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     for (let d = 0; d < 7; d++) {
@@ -139,14 +163,18 @@ export const getAggregateStats = async (req, res, next) => {
       }
     }
 
+    const responseData = {
+      heatmap: heatmapFlat,
+      breakdown: { taken, missed, skipped, total },
+      adherenceRate,
+      periodDays: days,
+    };
+
+    setCache(cacheKey, responseData, 60); // 60s TTL
+
     res.json({
       status: 'success',
-      data: {
-        heatmap: heatmapFlat,
-        breakdown: { taken, missed, skipped, total },
-        adherenceRate,
-        periodDays: days,
-      },
+      data: responseData,
     });
   } catch (error) {
     console.error('[AdminDoseLogs] getAggregateStats error:', error);
@@ -156,8 +184,6 @@ export const getAggregateStats = async (req, res, next) => {
 
 /**
  * GET /api/v1/admin/dose-logs/by-date?date=YYYY-MM-DD
- * Returns all dose log events that occurred on the given calendar date (UTC).
- * Also includes new-user registrations and scan events for that day.
  */
 export const getEventsByDate = async (req, res, next) => {
   try {
@@ -166,20 +192,20 @@ export const getEventsByDate = async (req, res, next) => {
       return next(new AppError('Query param `date` must be in YYYY-MM-DD format', 400));
     }
 
+    const cacheKey = `admin_dose_logs_date_${date}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json({ status: 'success', data: cached });
+    }
+
     const dayStart = new Date(`${date}T00:00:00.000Z`);
     const dayEnd   = new Date(`${date}T23:59:59.999Z`);
 
-    // Fetch all dose logs (no date index — filter in-memory)
-    let snap;
-    try {
-      snap = await db.collection('doseLogs').orderBy('actionTime', 'desc').limit(5000).get();
-    } catch {
-      try {
-        snap = await db.collection('doseLogs').orderBy('createdAt', 'desc').limit(5000).get();
-      } catch {
-        snap = await db.collection('doseLogs').limit(5000).get();
-      }
-    }
+    let snap = await withTimeout(
+      db.collection('doseLogs').limit(2000).get(),
+      3500,
+      { docs: [] }
+    );
 
     const events = [];
 
@@ -208,8 +234,11 @@ export const getEventsByDate = async (req, res, next) => {
       });
     });
 
-    // Also pull audit log entries for this date
-    const auditSnap = await db.collection('adminAuditLog').limit(1000).get().catch(() => ({ docs: [] }));
+    const auditSnap = await withTimeout(
+      db.collection('adminAuditLog').limit(500).get(),
+      2000,
+      { docs: [] }
+    );
     auditSnap.docs.forEach(doc => {
       const data = doc.data();
       const raw = data.timestamp;
@@ -227,6 +256,8 @@ export const getEventsByDate = async (req, res, next) => {
     });
 
     events.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    setCache(cacheKey, events, 120); // 120s TTL
 
     res.json({ status: 'success', data: events });
   } catch (error) {

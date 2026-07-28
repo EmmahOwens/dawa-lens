@@ -4,19 +4,32 @@ const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = await getAdminToken();
-  const res = await fetch(`${BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message || `HTTP ${res.status}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s request timeout
+
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      ...options,
+      signal: options.signal || controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.message || `HTTP ${res.status}`);
+    }
+    return res.json();
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('Backend request timed out. Render server may be warming up.');
+    }
+    throw err;
   }
-  return res.json();
 }
 
 export interface ApiResponse<T> { status: string; data: T }

@@ -1,5 +1,6 @@
 import { db, authAdmin } from '../../db.js';
 import AppError from '../../utils/AppError.js';
+import { getCache, setCache, withTimeout } from '../../utils/cache.js';
 
 function parseLogDate(docData) {
   if (!docData) return null;
@@ -21,6 +22,12 @@ function parseLogStatus(docData) {
  */
 export const getOverviewStats = async (req, res, next) => {
   try {
+    const cacheKey = 'admin_stats_overview';
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json({ status: 'success', data: cached });
+    }
+
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfWeek = new Date(startOfToday);
@@ -34,12 +41,14 @@ export const getOverviewStats = async (req, res, next) => {
       activeRemindersResult,
       doseLogsSnap,
     ] = await Promise.all([
-      authAdmin.listUsers(1000),
-      db.collection('medicines').count().get().catch(() => ({ data: () => ({ count: 0 }) })),
-      db.collection('reminders').count().get().catch(() => ({ data: () => ({ count: 0 }) })),
-      db.collection('doseLogs')
-        .where('actionTime', '>=', startOf30Days)
-        .limit(5000).get().catch(() => ({ docs: [] })),
+      withTimeout(authAdmin.listUsers(1000), 3500, { users: [] }),
+      withTimeout(db.collection('medicines').count().get(), 3500, { data: () => ({ count: 0 }) }),
+      withTimeout(db.collection('reminders').count().get(), 3500, { data: () => ({ count: 0 }) }),
+      withTimeout(
+        db.collection('doseLogs').limit(3000).get(),
+        3500,
+        { docs: [] }
+      ),
     ]);
 
     const users = allUsersResult.users || [];
@@ -55,8 +64,8 @@ export const getOverviewStats = async (req, res, next) => {
       }
     });
 
-    const totalMedicines = medicinesResult.data().count;
-    const activeReminders = activeRemindersResult.data().count;
+    const totalMedicines = medicinesResult?.data?.()?.count ?? 0;
+    const activeReminders = activeRemindersResult?.data?.()?.count ?? 0;
 
     let taken = 0, missed = 0, skipped = 0;
     doseLogsSnap.docs.forEach(d => {
@@ -73,26 +82,30 @@ export const getOverviewStats = async (req, res, next) => {
     const totalLogs = taken + missed + skipped;
     const adherenceRate = totalLogs > 0 ? Math.round((taken / totalLogs) * 100) : 0;
 
+    const responseData = {
+      users: {
+        total: totalUsers,
+        newToday,
+        newThisWeek,
+      },
+      medications: {
+        total: totalMedicines,
+        activeReminders,
+      },
+      adherence: {
+        rate: adherenceRate,
+        taken,
+        missed,
+        skipped,
+        total: totalLogs,
+      },
+    };
+
+    setCache(cacheKey, responseData, 60); // 60s TTL
+
     res.json({
       status: 'success',
-      data: {
-        users: {
-          total: totalUsers,
-          newToday,
-          newThisWeek,
-        },
-        medications: {
-          total: totalMedicines,
-          activeReminders,
-        },
-        adherence: {
-          rate: adherenceRate,
-          taken,
-          missed,
-          skipped,
-          total: totalLogs,
-        },
-      },
+      data: responseData,
     });
   } catch (error) {
     console.error('[AdminStats] getOverviewStats error:', error);
@@ -107,7 +120,13 @@ export const getOverviewStats = async (req, res, next) => {
 export const getGrowthStats = async (req, res, next) => {
   try {
     const days = parseInt(req.query.days || '30', 10);
-    const allUsersResult = await authAdmin.listUsers(1000).catch(() => ({ users: [] }));
+    const cacheKey = `admin_stats_growth_${days}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json({ status: 'success', data: cached });
+    }
+
+    const allUsersResult = await withTimeout(authAdmin.listUsers(1000), 3500, { users: [] });
     const users = allUsersResult.users || [];
 
     const points = [];
@@ -130,6 +149,8 @@ export const getGrowthStats = async (req, res, next) => {
       });
     }
 
+    setCache(cacheKey, points, 120); // 120s TTL
+
     res.json({ status: 'success', data: points });
   } catch (error) {
     console.error('[AdminStats] getGrowthStats error:', error);
@@ -144,7 +165,17 @@ export const getGrowthStats = async (req, res, next) => {
 export const getAdherenceTrend = async (req, res, next) => {
   try {
     const days = parseInt(req.query.days || '30', 10);
-    const snap = await db.collection('doseLogs').limit(5000).get().catch(() => ({ docs: [] }));
+    const cacheKey = `admin_stats_adherence_${days}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json({ status: 'success', data: cached });
+    }
+
+    const snap = await withTimeout(
+      db.collection('doseLogs').limit(3000).get(),
+      3500,
+      { docs: [] }
+    );
     const logs = snap.docs.map(d => ({ data: d.data(), date: parseLogDate(d.data()), status: parseLogStatus(d.data()) }));
 
     let lastKnownRate = null;
@@ -179,6 +210,8 @@ export const getAdherenceTrend = async (req, res, next) => {
         total,
       });
     }
+
+    setCache(cacheKey, points, 120); // 120s TTL
 
     res.json({ status: 'success', data: points });
   } catch (error) {

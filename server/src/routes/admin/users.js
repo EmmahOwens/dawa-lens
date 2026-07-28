@@ -1,5 +1,6 @@
 import { db, authAdmin } from '../../db.js';
 import AppError from '../../utils/AppError.js';
+import { getCache, setCache, withTimeout } from '../../utils/cache.js';
 
 /**
  * POST /api/v1/admin/bootstrap-claim
@@ -52,7 +53,13 @@ export const listUsers = async (req, res, next) => {
     const pageSize = 50;
     const search = (req.query.search || '').toLowerCase();
 
-    const listResult = await authAdmin.listUsers(1000);
+    const cacheKey = `admin_users_list_${page}_${search}`;
+    const cached = getCache(cacheKey);
+    if (cached) {
+      return res.json({ status: 'success', data: cached.data, pagination: cached.pagination });
+    }
+
+    const listResult = await withTimeout(authAdmin.listUsers(1000), 4000, { users: [] });
     let users = listResult.users.map(u => ({
       uid: u.uid,
       email: u.email || '',
@@ -78,30 +85,34 @@ export const listUsers = async (req, res, next) => {
     const totalPages = Math.ceil(total / pageSize);
     const paginated = users.slice((page - 1) * pageSize, page * pageSize);
 
-    const enriched = await Promise.all(paginated.map(async u => {
-      try {
-        const [medCount, doseSnap] = await Promise.all([
-          db.collection('medicines').where('userId', '==', u.uid).count().get(),
-          db.collection('doseLogs')
-            .where('userId', '==', u.uid)
-            .orderBy('createdAt', 'desc')
-            .limit(1)
-            .get(),
-        ]);
-        return {
-          ...u,
-          medicineCount: medCount.data().count,
-          lastActivity: doseSnap.empty ? null : doseSnap.docs[0].data().createdAt?.toDate?.()?.toISOString() || null,
-        };
-      } catch {
-        return { ...u, medicineCount: 0, lastActivity: null };
-      }
-    }));
+    // Fast user enrichment with 2.5s timeout guard
+    const enriched = await withTimeout(
+      Promise.all(paginated.map(async u => {
+        try {
+          const [medCount, doseSnap] = await Promise.all([
+            db.collection('medicines').where('userId', '==', u.uid).count().get().catch(() => ({ data: () => ({ count: 0 }) })),
+            db.collection('doseLogs').where('userId', '==', u.uid).limit(1).get().catch(() => ({ empty: true, docs: [] })),
+          ]);
+          return {
+            ...u,
+            medicineCount: medCount?.data?.()?.count ?? 0,
+            lastActivity: doseSnap.empty ? null : doseSnap.docs[0]?.data()?.createdAt?.toDate?.()?.toISOString() || null,
+          };
+        } catch {
+          return { ...u, medicineCount: 0, lastActivity: null };
+        }
+      })),
+      2500,
+      paginated.map(u => ({ ...u, medicineCount: 0, lastActivity: null }))
+    );
+
+    const pagination = { page, pageSize, total, totalPages };
+    setCache(cacheKey, { data: enriched, pagination }, 30); // 30s TTL
 
     res.json({
       status: 'success',
       data: enriched,
-      pagination: { page, pageSize, total, totalPages },
+      pagination,
     });
   } catch (error) {
     console.error('[AdminUsers] listUsers error:', error);
