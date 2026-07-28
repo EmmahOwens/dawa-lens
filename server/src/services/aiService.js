@@ -29,6 +29,22 @@ const Z_AI_API_KEY = process.env.Z_AI_API_KEY;
 const Z_AI_MODEL = 'glm-4.7-flash';
 const Z_AI_API_URL = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 
+const SAMBANOVA_API_KEY = process.env.SAMBACLOUD_API_KEY || process.env.SAMBANOVA_API_KEY;
+const SAMBANOVA_MODEL = 'Meta-Llama-3.3-70B-Instruct';
+const SAMBANOVA_API_URL = 'https://api.sambanova.ai/v1/chat/completions';
+
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GITHUB_MODELS_KEY;
+const GITHUB_MODEL = 'meta-llama-3.3-70b-instruct';
+const GITHUB_API_URL = 'https://models.inference.ai.azure.com/chat/completions';
+
+const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
+const MISTRAL_MODEL = 'mistral-small-latest';
+const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
+
 /**
  * Global AI error handler to ensure all errors returned are "operational" AppErrors.
  */
@@ -288,6 +304,115 @@ const callZaiChat = async (messages, responseFormat = { type: 'json_object' }, m
 };
 
 /**
+ * Standard chat completion call to SambaNova Cloud (Llama-3.3-70B)
+ */
+const callSambaNovaChat = async (messages, responseFormat = { type: 'json_object' }, modelId = SAMBANOVA_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
+  if (!SAMBANOVA_API_KEY) throw new AppError('SambaNova API key not configured', 503);
+
+  const fn = async () => {
+    const payload = { model: modelId, messages, max_tokens: maxTokens, temperature };
+    if (responseFormat) payload.response_format = responseFormat;
+
+    const response = await axios.post(SAMBANOVA_API_URL, payload, {
+      headers: { 'Authorization': `Bearer ${SAMBANOVA_API_KEY}`, 'Content-Type': 'application/json' },
+      timeout: 6000
+    });
+
+    const text = response.data?.choices?.[0]?.message?.content;
+    if (!text) throw new AppError('SambaNova returned an empty response.', 502);
+
+    let result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
+    if (typeof result === 'object' && result !== null) result.source = `SambaNova (${modelId})`;
+    return result;
+  };
+
+  return await rateLimitManager.enqueue(fn, 'sambanova-70b', messages, priority, 3, failFast);
+};
+
+/**
+ * Standard chat completion call to OpenRouter Free Tier
+ */
+const callOpenRouterChat = async (messages, responseFormat = { type: 'json_object' }, modelId = OPENROUTER_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
+  if (!OPENROUTER_API_KEY) throw new AppError('OpenRouter API key not configured', 503);
+
+  const fn = async () => {
+    const payload = { model: modelId, messages, max_tokens: maxTokens, temperature };
+    if (responseFormat) payload.response_format = responseFormat;
+
+    const response = await axios.post(OPENROUTER_API_URL, payload, {
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://dawalens.web.app',
+        'X-Title': 'Dawa-Lens',
+        'Content-Type': 'application/json'
+      },
+      timeout: 7000
+    });
+
+    const text = response.data?.choices?.[0]?.message?.content;
+    if (!text) throw new AppError('OpenRouter returned an empty response.', 502);
+
+    let result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
+    if (typeof result === 'object' && result !== null) result.source = `OpenRouter (${modelId})`;
+    return result;
+  };
+
+  return await rateLimitManager.enqueue(fn, 'openrouter-free', messages, priority, 3, failFast);
+};
+
+/**
+ * Standard chat completion call to GitHub Models API
+ */
+const callGithubModelsChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GITHUB_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
+  if (!GITHUB_TOKEN) throw new AppError('GitHub Token not configured', 503);
+
+  const fn = async () => {
+    const payload = { model: modelId, messages, max_tokens: maxTokens, temperature };
+    if (responseFormat) payload.response_format = responseFormat;
+
+    const response = await axios.post(GITHUB_API_URL, payload, {
+      headers: { 'Authorization': `Bearer ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+      timeout: 7000
+    });
+
+    const text = response.data?.choices?.[0]?.message?.content;
+    if (!text) throw new AppError('GitHub Models returned an empty response.', 502);
+
+    let result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
+    if (typeof result === 'object' && result !== null) result.source = `GitHub Models (${modelId})`;
+    return result;
+  };
+
+  return await rateLimitManager.enqueue(fn, 'github-models', messages, priority, 3, failFast);
+};
+
+/**
+ * Standard chat completion call to Mistral AI
+ */
+const callMistralChat = async (messages, responseFormat = { type: 'json_object' }, modelId = MISTRAL_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
+  if (!MISTRAL_API_KEY) throw new AppError('Mistral API key not configured', 503);
+
+  const fn = async () => {
+    const payload = { model: modelId, messages, max_tokens: maxTokens, temperature };
+    if (responseFormat) payload.response_format = responseFormat;
+
+    const response = await axios.post(MISTRAL_API_URL, payload, {
+      headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
+      timeout: 7000
+    });
+
+    const text = response.data?.choices?.[0]?.message?.content;
+    if (!text) throw new AppError('Mistral AI returned an empty response.', 502);
+
+    let result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
+    if (typeof result === 'object' && result !== null) result.source = `Mistral AI (${modelId})`;
+    return result;
+  };
+
+  return await rateLimitManager.enqueue(fn, 'mistral-small', messages, priority, 3, failFast);
+};
+
+/**
  * Standard chat completion call to Groq routed via rate limit queue
  */
 const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GROQ_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
@@ -354,9 +479,15 @@ export const callAiWithFallback = async (messages, options = {}) => {
   const isForceGemini = forceModel === 'gemini' || forceModel === GEMINI_MODEL;
   const isForceCerebras = forceModel === 'cerebras' || forceModel === CEREBRAS_MODEL;
   const isForceZai = forceModel === 'zai' || forceModel === Z_AI_MODEL;
+  const isForceSambaNova = forceModel === 'sambanova' || forceModel === SAMBANOVA_MODEL;
+  const isForceGithub = forceModel === 'github' || forceModel === GITHUB_MODEL;
+  const isForceOpenRouter = forceModel === 'openrouter' || forceModel === OPENROUTER_MODEL;
+  const isForceMistral = forceModel === 'mistral' || forceModel === MISTRAL_MODEL;
 
-  // 1. Try Cerebras (Primary, only for complex tasks or if forced)
-  if (CEREBRAS_API_KEY && !isForceGroq70b && !isForceGroqScout && !isForceGroq8b && !isForceGemini && !isForceZai && (isComplex || isForceCerebras)) {
+  const isAnyForced = isForceGroq70b || isForceGroqScout || isForceGroq8b || isForceGemini || isForceCerebras || isForceZai || isForceSambaNova || isForceGithub || isForceOpenRouter || isForceMistral;
+
+  // 1. Try Cerebras (Primary ultra-fast 70B, only for complex tasks or if forced)
+  if (CEREBRAS_API_KEY && (!isAnyForced || isForceCerebras) && (isComplex || isForceCerebras)) {
     try {
       return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
@@ -365,17 +496,52 @@ export const callAiWithFallback = async (messages, options = {}) => {
   }
 
   // 2. Try Groq 70B (only for complex tasks or if forced)
-  if (GROQ_API_KEY && !isForceGroqScout && !isForceGroq8b && !isForceGemini && !isForceZai && !isForceCerebras && (isComplex || isForceGroq70b)) {
+  if (GROQ_API_KEY && (!isAnyForced || isForceGroq70b) && (isComplex || isForceGroq70b)) {
     try {
-      const modelId = GROQ_MODEL;
-      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true, temperature);
+      return await callGroqChat(messages, responseFormat, GROQ_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
-      console.warn("Fallback: Groq 70B failed, trying Groq Scout...", err.message);
+      console.warn("Fallback: Groq 70B failed, trying SambaNova 70B...", err.message);
     }
   }
 
-  // 2.5 Try Groq Scout (only for complex tasks or if forced)
-  if (GROQ_API_KEY && !isForceGroq70b && !isForceGroq8b && !isForceGemini && !isForceZai && !isForceCerebras && (isComplex || isForceGroqScout)) {
+  // 3. Try SambaNova Cloud (Ultra-fast 70B, for complex tasks or if forced)
+  if (SAMBANOVA_API_KEY && (!isAnyForced || isForceSambaNova) && (isComplex || isForceSambaNova)) {
+    try {
+      return await callSambaNovaChat(messages, responseFormat, SAMBANOVA_MODEL, priority, maxTokens, true, temperature);
+    } catch (err) {
+      console.warn("Fallback: SambaNova failed, trying GitHub Models...", err.message);
+    }
+  }
+
+  // 4. Try GitHub Models API (Llama-3.3-70B, for complex tasks or if forced)
+  if (GITHUB_TOKEN && (!isAnyForced || isForceGithub) && (isComplex || isForceGithub)) {
+    try {
+      return await callGithubModelsChat(messages, responseFormat, GITHUB_MODEL, priority, maxTokens, true, temperature);
+    } catch (err) {
+      console.warn("Fallback: GitHub Models failed, trying OpenRouter Free...", err.message);
+    }
+  }
+
+  // 5. Try OpenRouter Free Tier (Llama-3.3-70B:free, for complex tasks or if forced)
+  if (OPENROUTER_API_KEY && (!isAnyForced || isForceOpenRouter) && (isComplex || isForceOpenRouter)) {
+    try {
+      return await callOpenRouterChat(messages, responseFormat, OPENROUTER_MODEL, priority, maxTokens, true, temperature);
+    } catch (err) {
+      console.warn("Fallback: OpenRouter Free failed, trying Mistral AI...", err.message);
+    }
+  }
+
+  // 6. Try Mistral AI (Mistral Small, for complex tasks or if forced)
+  if (MISTRAL_API_KEY && (!isAnyForced || isForceMistral) && (isComplex || isForceMistral)) {
+    try {
+      return await callMistralChat(messages, responseFormat, MISTRAL_MODEL, priority, maxTokens, true, temperature);
+    } catch (err) {
+      console.warn("Fallback: Mistral AI failed, trying Groq Scout...", err.message);
+    }
+  }
+
+  // 7. Try Groq Scout (17B)
+  if (GROQ_API_KEY && (!isAnyForced || isForceGroqScout) && (isComplex || isForceGroqScout)) {
     try {
       return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
@@ -383,18 +549,17 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 3. Try Groq 8B (Secondary key/model, for simple tasks or forced)
-  if ((GROQ_API_KEY_2 || GROQ_API_KEY) && !isForceGemini && !isForceZai && !isForceCerebras && !isForceGroq70b && !isForceGroqScout) {
+  // 8. Try Groq 8B (Secondary key/model, for simple tasks or forced)
+  if ((GROQ_API_KEY_2 || GROQ_API_KEY) && (!isAnyForced || isForceGroq8b)) {
     try {
-      const modelId = GROQ_LIGHT_MODEL;
-      return await callGroqChat(messages, responseFormat, modelId, priority, maxTokens, true, temperature);
+      return await callGroqChat(messages, responseFormat, GROQ_LIGHT_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
       console.warn("Fallback: Groq 8B failed, trying Z.ai...", err.message);
     }
   }
 
-  // 3.5 Try Z.ai (GLM-4.7-Flash)
-  if (Z_AI_API_KEY && !isForceGemini && !isForceCerebras && !isForceGroq70b && !isForceGroqScout && !isForceGroq8b) {
+  // 9. Try Z.ai (GLM-4.7-Flash)
+  if (Z_AI_API_KEY && (!isAnyForced || isForceZai)) {
     try {
       return await callZaiChat(messages, responseFormat, Z_AI_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
@@ -402,7 +567,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 4. Try Gemini (Final fallback)
+  // 10. Try Gemini (Final fallback)
   try {
     return await callGeminiChat(messages, priority, maxTokens, temperature);
   } catch (err) {
@@ -879,6 +1044,71 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
+    if (SAMBANOVA_API_KEY && isComplex) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(SAMBANOVA_API_URL, { model: SAMBANOVA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${SAMBANOVA_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 3000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'sambanova-70b', finalMessages, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: SambaNova failed.", err.message);
+      }
+    }
+
+    if (GITHUB_TOKEN && isComplex) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(GITHUB_API_URL, { model: GITHUB_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 3000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'github-models', finalMessages, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: GitHub Models failed.", err.message);
+      }
+    }
+
+    if (OPENROUTER_API_KEY && isComplex) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(OPENROUTER_API_URL, { model: OPENROUTER_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: {
+              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+              'HTTP-Referer': 'https://dawalens.web.app',
+              'X-Title': 'Dawa-Lens',
+              'Content-Type': 'application/json'
+            },
+            responseType: 'stream', timeout: 3000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'openrouter-free', finalMessages, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: OpenRouter Free failed.", err.message);
+      }
+    }
+
+    if (MISTRAL_API_KEY && isComplex) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(MISTRAL_API_URL, { model: MISTRAL_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 3000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'mistral-small', finalMessages, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: Mistral AI failed.", err.message);
+      }
+    }
+
     if (GROQ_API_KEY_2 || GROQ_API_KEY) {
       try {
         const modelId = GROQ_LIGHT_MODEL;
@@ -1269,10 +1499,14 @@ export const testAllAiProviders = async () => {
   return {
     timestamp: new Date().toISOString(),
     providers: {
+      cerebras: { configured: !!CEREBRAS_API_KEY, model: CEREBRAS_MODEL },
+      groq: { configured: !!GROQ_API_KEY, model: GROQ_MODEL },
+      sambanova: { configured: !!SAMBANOVA_API_KEY, model: SAMBANOVA_MODEL },
+      github_models: { configured: !!GITHUB_TOKEN, model: GITHUB_MODEL },
+      openrouter: { configured: !!OPENROUTER_API_KEY, model: OPENROUTER_MODEL },
+      mistral: { configured: !!MISTRAL_API_KEY, model: MISTRAL_MODEL },
       zai,
-      cerebras: { configured: !!CEREBRAS_API_KEY },
-      groq: { configured: !!GROQ_API_KEY },
-      gemini: { configured: !!GEMINI_API_KEY }
+      gemini: { configured: !!(GEMINI_API_KEY || process.env.GEMINI_API_KEY_2) }
     }
   };
 };

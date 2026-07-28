@@ -56,6 +56,10 @@ class RateLimitManager {
         rpd: 1000,      // 1,000 RPD
         tpd: 1000000,   // 1M tokens/day
       },
+      'sambanova-70b': { rpm: 30, tpm: 100000, rpd: 1000, tpd: 1000000 },
+      'github-models': { rpm: 15, tpm: 100000, rpd: 150, tpd: 500000 },
+      'openrouter-free': { rpm: 20, tpm: 100000, rpd: 200, tpd: 500000 },
+      'mistral-small': { rpm: 30, tpm: 100000, rpd: 1000, tpd: 1000000 },
       'cloudflare-llama-3.2-vision': { rpm: 50,  tpm: 100000, rpd: 1000,  tpd: 1000000  },
     };
 
