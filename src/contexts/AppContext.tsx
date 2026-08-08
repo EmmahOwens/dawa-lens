@@ -30,8 +30,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
-import { scheduleReminders } from "../services/reminderService";
-import { computeShiftOffset } from "../services/reminderService";
+import { scheduleReminders, computeShiftOffset, scheduleAdjustmentNotification } from "../services/reminderService";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
@@ -95,11 +94,21 @@ export function hasOverlapConflict(
 
 /**
  * Helper to check if shifting subsequent doses would schedule them in the past (before now).
+ *
+ * Uses interval-preservation logic: each subsequent slot's new time is computed as
+ * actualTakeTime + (cumulative interval between slots), not a raw time-shift.
+ * This correctly handles BOTH early-dose (negative offset) and late-dose (positive offset)
+ * scenarios for any number of subsequent slots.
+ *
+ * @param reminder      - The reminder whose slots are being validated
+ * @param slotIndex     - Index of the dose that was just taken
+ * @param actualTakeTime - The real clock time at which the dose was taken
+ * @param now           - Current time (used as the "past" boundary)
  */
 export function isShiftIntoPast(
   reminder: Reminder,
   slotIndex: number,
-  shiftOffset: number, // in minutes
+  actualTakeTime: Date,
   now: Date
 ): boolean {
   const times = reminder.time
@@ -111,26 +120,31 @@ export function isShiftIntoPast(
       const [h, m] = parts.map(Number);
       return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
     });
-  
+
+  const toMins = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+
   // We only check subsequent doses (i > slotIndex)
   for (let i = slotIndex + 1; i < times.length; i++) {
-    const [h, m] = times[i].split(":").map(Number);
-    let originalScheduled = new Date(now);
-    originalScheduled.setHours(h, m, 0, 0);
-    
-    // Determine if slot i is today or tomorrow (if slot i was originally chronologically before slotIndex)
-    const [sh, sm] = times[slotIndex].split(":").map(Number);
-    const originalSlotMins = sh * 60 + sm;
-    const currentSlotMins = h * 60 + m;
-    
-    let isTomorrow = currentSlotMins < originalSlotMins;
-    if (isTomorrow) {
-      originalScheduled.setDate(originalScheduled.getDate() + 1);
+    // Compute the cumulative interval (in minutes) between the taken slot and slot i,
+    // wrapping midnight naturally.
+    let cumulativeInterval = 0;
+    for (let s = slotIndex; s < i; s++) {
+      let diff = toMins(times[s + 1]) - toMins(times[s]);
+      if (diff <= 0) diff += 24 * 60; // wrap midnight
+      cumulativeInterval += diff;
     }
-    
-    const shiftedScheduled = new Date(originalScheduled.getTime() + shiftOffset * 60 * 1000);
-    if (shiftedScheduled.getTime() < now.getTime()) {
-      console.warn(`[ShiftValidation] Invalid shift: slot ${times[i]} shifts to ${shiftedScheduled.toISOString()} (past relative to now: ${now.toISOString()})`);
+
+    // The new candidate time for slot i = actualTakeTime + cumulative interval
+    const candidate = new Date(actualTakeTime.getTime() + cumulativeInterval * 60 * 1000);
+
+    if (candidate.getTime() < now.getTime()) {
+      console.warn(
+        `[ShiftValidation] Invalid shift: slot ${times[i]} would land at ` +
+        `${candidate.toISOString()} which is in the past (now: ${now.toISOString()})`
+      );
       return true;
     }
   }
@@ -1465,12 +1479,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         if (slotIndex !== -1) {
-          const timesInMinutes = times.map(t => {
+          const toMins = (t: string) => {
             const [h, m] = t.split(":").map(Number);
             return h * 60 + m;
-          });
-          const actualMins = actualDate.getHours() * 60 + actualDate.getMinutes();
+          };
+          const fmtTime = (totalMins: number) => {
+            const normalized = ((totalMins % 1440) + 1440) % 1440;
+            return `${Math.floor(normalized / 60).toString().padStart(2, "0")}:${(normalized % 60).toString().padStart(2, "0")}`;
+          };
 
+          // Build new times using interval-preservation:
+          // - Slots before the taken one are unchanged (already past)
+          // - The taken slot becomes the actual intake time
+          // - Each subsequent slot = actualTakeTime + cumulative inter-slot interval
+          // This preserves equal spacing regardless of whether the dose was early or late.
           const newTimes = times.map((t, i) => {
             if (i < slotIndex) {
               // Past doses remain unchanged
@@ -1478,34 +1500,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
             if (i === slotIndex) {
               // Current dose updated to actual intake time
-              const h = Math.floor(actualMins / 60);
-              const m = Math.floor(actualMins % 60);
-              return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+              return fmtTime(actualDate.getHours() * 60 + actualDate.getMinutes());
             }
-            
-            // Subsequent doses shifted by the exact same offset
-            let totalMins = timesInMinutes[i] + diffMinutes;
-            totalMins = ((totalMins % 1440) + 1440) % 1440;
-            const h = Math.floor(totalMins / 60);
-            const m = Math.floor(totalMins % 60);
-            return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-          });
 
-          // Sort the new times list chronologically
-          const sortedNewTimes = [...newTimes].sort((a, b) => {
-            const [hA, mA] = a.split(":").map(Number);
-            const [hB, mB] = b.split(":").map(Number);
-            return (hA * 60 + mA) - (hB * 60 + mB);
+            // Subsequent dose: actualTakeTime + cumulative interval from taken slot to this slot
+            let cumulativeInterval = 0;
+            for (let s = slotIndex; s < i; s++) {
+              let diff = toMins(times[s + 1]) - toMins(times[s]);
+              if (diff <= 0) diff += 24 * 60; // handle midnight wrap
+              cumulativeInterval += diff;
+            }
+            const newTotalMins = actualDate.getHours() * 60 + actualDate.getMinutes() + cumulativeInterval;
+            return fmtTime(newTotalMins);
           });
+          // NOTE: Do NOT re-sort newTimes — the original slot order must be preserved
+          // so that computeShiftOffset and getNextOccurrence match slots by index correctly.
 
-          // Validation checks
-          const isShiftPast = isShiftIntoPast(reminder, slotIndex, diffMinutes, actualDate);
-          const hasConflict = hasOverlapConflict(sortedNewTimes, reminder.id, reminder.patientId, reminders);
+          // Validation checks — use interval-preservation anchor (actualDate) not raw offset
+          const isShiftPast = isShiftIntoPast(reminder, slotIndex, actualDate, new Date());
+          const hasConflict = hasOverlapConflict(newTimes, reminder.id, reminder.patientId, reminders);
 
           if (!isShiftPast && !hasConflict) {
-            const newTimeStr = sortedNewTimes.join(",");
+            const newTimeStr = newTimes.join(",");
             if (newTimeStr !== reminder.time) {
               const originalTime = reminder.time;
+
+              // Collect only the adjusted subsequent slot times for user-facing messages
+              const adjustedSlots = newTimes
+                .slice(slotIndex + 1)
+                .filter((_, idx) => newTimes[slotIndex + 1 + idx] !== times[slotIndex + 1 + idx]);
+              const adjustedTimesLabel = newTimes.slice(slotIndex + 1).join(", ");
+              const direction = diffMinutes < 0 ? "earlier" : "later";
+              const absDiff = Math.abs(diffMinutes);
+
               console.log(
                 `[DynamicSchedule] Shifting ${reminder.medicineName} from ${originalTime} to ${newTimeStr}`
               );
@@ -1582,39 +1609,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 patientId: reminder.patientId ?? null,
               });
 
-              // 4. Trigger Capacitor Local Notification immediately if native
-              if (Capacitor.isNativePlatform()) {
-                try {
-                  const perm = await LocalNotifications.checkPermissions();
-                  if (perm.display === "granted") {
-                    await LocalNotifications.schedule({
-                      notifications: [
-                        {
-                          title: "Schedule Adjusted",
-                          body: `Shifted reminders for ${reminder.medicineName} to maintain intervals.`,
-                          id: Math.floor(Math.random() * 1000000),
-                          channelId: reminder.patientId ? `dawa_patient_v2_${reminder.patientId}` : "dawa_owner_v2",
-                          sound: "default",
-                          extra: {
-                            type: "schedule_adjusted",
-                            reminderId: reminder.id,
-                            patientId: reminder.patientId ?? null,
-                            route: reminder.patientId ? "/family" : "/reminders",
-                          },
-                        }
-                      ]
-                    });
-                  }
-                } catch (err) {
-                  console.warn("Failed to trigger local notification for schedule shift:", err);
-                }
-              }
+              // 4. Schedule a reliable "Schedule Adjusted" notification via the
+              // same mechanism as regular reminders (allowWhileIdle + NativeAlarm),
+              // so it fires even when the app is backgrounded, killed, or offline.
+              await scheduleAdjustmentNotification({
+                reminderId: reminder.id,
+                medicineName: reminder.medicineName,
+                patientId: reminder.patientId,
+                patientName: reminder.patientName,
+                adjustedTimesLabel,
+                absDiff,
+                direction,
+                hasSubsequentSlots: newTimes.length > slotIndex + 1,
+              });
 
-              const direction = diffMinutes > 0 ? "later" : "earlier";
-              notify.info(
-                "Schedule Adjusted",
-                `Shifted remaining doses of ${reminder.medicineName} by ${Math.abs(diffMinutes)}m ${direction} to preserve spacing.`
-              );
+              // 5. In-app toast with explicit adjusted times
+              const toastBody = newTimes.length > slotIndex + 1
+                ? reminder.patientName
+                  ? `${reminder.patientName} took ${reminder.medicineName} ${absDiff}m ${direction}. ` +
+                    `Next dose${newTimes.length - slotIndex - 1 > 1 ? "s" : ""} adjusted to: ${adjustedTimesLabel}.`
+                  : `Taken ${absDiff}m ${direction}. ` +
+                    `Next dose${newTimes.length - slotIndex - 1 > 1 ? "s" : ""} adjusted to: ${adjustedTimesLabel}.`
+                : `${reminder.medicineName} schedule updated.`;
+              notify.info("⏰ Schedule Adjusted", toastBody);
             }
           } else {
             console.warn(`[DynamicSchedule] Recalculation blocked: shiftIntoPast=${isShiftPast}, overlapConflict=${hasConflict}`);
@@ -1623,13 +1640,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 2. Reschedule notifications immediately so remaining slots fire at the shifted time
+    // 2. Reschedule notifications immediately so remaining slots fire at the shifted time.
+    // IMPORTANT: Build the updatedReminders list here — if updateReminder was called above,
+    // reminder.time was mutated in place, but the `reminders` closure still has the old list
+    // from the previous render cycle. We manually merge to ensure scheduleReminders fires
+    // notifications at the NEW times, not the old ones.
     if (log.action === "taken" && reminder) {
       const freshLogs =
         storageMode === "local"
           ? await localPersistence.doseLogs.getAll()
           : [...doseLogs, newLog];
-      scheduleReminders(reminders, freshLogs, freshMeds);
+      const updatedReminders = reminders.map((r) =>
+        r.id === reminder.id ? { ...r, time: reminder.time } : r
+      );
+      scheduleReminders(updatedReminders, freshLogs, freshMeds);
 
       // 3. Smart Suggest: after 3 consecutive same-direction deviations, suggest updating the time
       const allTakenLogs = freshLogs

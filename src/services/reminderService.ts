@@ -544,6 +544,111 @@ const stringToHash = (str: string): number => {
 };
 
 /**
+ * Fires a "Schedule Adjusted" notification that works identically to a regular
+ * medicine reminder — it will deliver even when:
+ *   • The app is in the background or fully killed
+ *   • The device is in Android Doze / battery-saver mode (allowWhileIdle)
+ *   • The device is completely offline (OS-level alarm, no network needed)
+ *   • The device reboots (NativeAlarm re-registers on boot via BootReceiver)
+ *
+ * The notification fires 2 seconds in the future so the OS has time to register
+ * it before the current JS thread exits, and to avoid immediate-vs-scheduled race
+ * conditions on Android.
+ */
+export const scheduleAdjustmentNotification = async ({
+  reminderId,
+  medicineName,
+  patientId,
+  patientName,
+  adjustedTimesLabel,
+  absDiff,
+  direction,
+  hasSubsequentSlots,
+}: {
+  reminderId: string;
+  medicineName: string;
+  patientId?: string | null;
+  patientName?: string | null;
+  adjustedTimesLabel: string;
+  absDiff: number;
+  direction: "earlier" | "later";
+  hasSubsequentSlots: boolean;
+}): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    const perm = await LocalNotifications.checkPermissions();
+    if (perm.display !== "granted") return;
+
+    const title = patientName
+      ? `⏰ Schedule Adjusted — ${patientName}'s ${medicineName}`
+      : `⏰ Schedule Adjusted — ${medicineName}`;
+
+    const body = hasSubsequentSlots
+      ? patientName
+        ? `${patientName} took ${medicineName} ${absDiff}m ${direction}. Next doses adjusted to: ${adjustedTimesLabel}.`
+        : `Dose taken ${absDiff}m ${direction}. Next doses adjusted to: ${adjustedTimesLabel}.`
+      : `Dose taken ${absDiff}m ${direction}. Schedule updated for ${medicineName}.`;
+
+    // Fire 2 seconds in the future so Android can register it before the
+    // current execution context ends (required for allowWhileIdle to work).
+    const fireAt = new Date(Date.now() + 2000);
+    const notifId = stringToHash(reminderId + "schedule_adjusted" + fireAt.getTime().toString());
+    const channelId = patientId ? `dawa_patient_v2_${patientId}` : CHANNEL_OWNER;
+
+    // ── Path 1: Capacitor LocalNotifications ────────────────────────────────
+    // schedule.at + allowWhileIdle ensures delivery in Doze mode / offline.
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          title,
+          body,
+          id: notifId,
+          schedule: { at: fireAt, allowWhileIdle: true },
+          channelId,
+          sound: "default",
+          extra: {
+            type: "schedule_adjusted",
+            reminderId,
+            patientId: patientId ?? null,
+            route: patientId ? "/family" : "/reminders",
+          },
+        },
+      ],
+    });
+
+    // ── Path 2: NativeAlarm (AlarmManager.setExactAndAllowWhileIdle) ────────
+    // Mirrors to the native AlarmManager so the notification also fires after
+    // a device reboot or when the Capacitor plugin is not responsive.
+    try {
+      await NativeAlarm.scheduleAlarms({
+        notifications: [
+          {
+            id: notifId,
+            title,
+            body,
+            triggerAtMillis: fireAt.getTime(),
+            extra: JSON.stringify({
+              type: "schedule_adjusted",
+              reminderId,
+              patientId: patientId ?? null,
+            }),
+          },
+        ],
+      });
+    } catch (alarmErr) {
+      // NativeAlarm is a best-effort fallback — non-fatal if unavailable.
+      console.warn(
+        "[reminderService] NativeAlarm fallback for adjustment notification failed (non-fatal):",
+        alarmErr
+      );
+    }
+  } catch (err) {
+    console.warn("[reminderService] scheduleAdjustmentNotification failed:", err);
+  }
+};
+
+/**
  * Schedules a one-time native push notification for each medicine that is
  * critically low (≤ CRITICAL_STOCK_THRESHOLD days remaining).
  * Deduped per medicine per day via localStorage so it doesn't spam on every

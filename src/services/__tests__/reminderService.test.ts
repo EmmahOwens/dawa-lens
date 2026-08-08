@@ -167,17 +167,38 @@ describe("AppContext - isShiftIntoPast", () => {
     createdAt: new Date().toISOString(),
   };
 
-  it("should return false if shift does not put subsequent doses in the past", () => {
+  it("should return false if taken on time — subsequent slot is in the future", () => {
     const now = new Date();
     now.setHours(12, 0, 0, 0);
-    expect(isShiftIntoPast(reminder, 0, 0, now)).toBe(false);
+    // Taken at 12:00 exactly. Interval to next slot = 3h. Candidate = 15:00. now = 12:00 → future → ok.
+    const actualTakeTime = new Date(now);
+    expect(isShiftIntoPast(reminder, 0, actualTakeTime, now)).toBe(false);
   });
 
-  it("should return true if positive shift puts subsequent dose in the past relative to now", () => {
+  it("should return false for an early dose — subsequent slot is still in the future", () => {
+    // Taken at 11:55 (5 min early). Interval = 3h. Candidate = 14:55. now = 11:55 → future → ok.
+    const now = new Date();
+    now.setHours(11, 55, 0, 0);
+    const actualTakeTime = new Date(now);
+    expect(isShiftIntoPast(reminder, 0, actualTakeTime, now)).toBe(false);
+  });
+
+  it("should return false for a late dose — subsequent slot still lands in the future", () => {
+    // Taken at 16:00 (4h late). Interval to next slot = 3h. Candidate = 19:00.
+    // now = 16:00, so 19:00 is in the future → false (shift is valid).
     const now = new Date();
     now.setHours(16, 0, 0, 0);
-    // slotIndex = 0 (12:00), shift = +30m. Subsequent slot 15:00 becomes 15:30.
-    // Since now is 16:00, 15:30 is in the past!
-    expect(isShiftIntoPast(reminder, 0, 30, now)).toBe(true);
+    const actualTakeTime = new Date(now);
+    expect(isShiftIntoPast(reminder, 0, actualTakeTime, now)).toBe(false);
+  });
+
+  it("should return true if taken so late that subsequent slot lands in the past", () => {
+    // Taken at 14:30 (slot 0 = 12:00, slot 1 = 15:00, interval = 3h).
+    // Candidate = 14:30 + 3h = 17:30. But now = 18:00 → 17:30 is in the past → true.
+    const now = new Date();
+    now.setHours(18, 0, 0, 0);
+    const actualTakeTime = new Date(now);
+    actualTakeTime.setHours(14, 30, 0, 0);
+    expect(isShiftIntoPast(reminder, 0, actualTakeTime, now)).toBe(true);
   });
 });
