@@ -101,25 +101,30 @@ graph TD
 This diagram illustrates the interactions between the primary actors (Patient, Caregiver) and the system.
 
 ```mermaid
-usecase
-    actor Patient
-    actor Caregiver
-    
-    package "Dawa Lens System" {
-        usecase "Scan Medication" as UC1
-        usecase "Log Dose" as UC2
-        usecase "Chat with AI" as UC3
-        usecase "View Wellness Trends" as UC4
-        usecase "Manage Dependent's Meds" as UC5
-        usecase "Receive Reminders" as UC6
-    }
-    
+flowchart LR
+    %% Define Actors
+    Patient([Patient])
+    Caregiver([Caregiver])
+
+    %% Define System Boundary and Use Cases
+    subgraph Dawa Lens System
+        direction TB
+        UC1([Scan Medication])
+        UC2([Log Dose])
+        UC3([Chat with AI])
+        UC4([View Wellness Trends])
+        UC5([Manage Dependent's Meds])
+        UC6([Receive Reminders])
+    end
+
+    %% Patient Relationships
     Patient --> UC1
     Patient --> UC2
     Patient --> UC3
     Patient --> UC4
     Patient --> UC6
-    
+
+    %% Caregiver Relationships
     Caregiver --> UC5
     Caregiver --> UC4
     Caregiver --> UC6
