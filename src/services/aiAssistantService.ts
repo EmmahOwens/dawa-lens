@@ -289,9 +289,29 @@ export const chatWithDawaGPTStream = async (
       displayText = allText.substring(0, delimIndex).trim();
       rawMetadata = delimMatch[1].trim();
     } else {
-      // Delimiter absent — treat entire text as display text, no metadata
-      displayText = allText.trim();
-      rawMetadata = '';
+      // Delimiter absent — try to extract a trailing JSON block as a secondary fallback.
+      // Some models output valid JSON at the end of their response without the delimiter.
+      const trailingJsonMatch = allText.match(/(\{[\s\S]*\})\s*$/);
+      if (trailingJsonMatch) {
+        try {
+          const candidate = JSON.parse(trailingJsonMatch[1]);
+          // Only use it as metadata if it has the expected shape
+          if (candidate && (candidate.suggestions || candidate.action || candidate.source)) {
+            rawMetadata = trailingJsonMatch[1];
+            displayText = allText.substring(0, allText.lastIndexOf(trailingJsonMatch[1])).trim();
+          } else {
+            displayText = allText.trim();
+            rawMetadata = '';
+          }
+        } catch {
+          displayText = allText.trim();
+          rawMetadata = '';
+        }
+      } else {
+        // No JSON found at all — treat entire text as display text, no metadata
+        displayText = allText.trim();
+        rawMetadata = '';
+      }
     }
 
     const fullText = displayText;

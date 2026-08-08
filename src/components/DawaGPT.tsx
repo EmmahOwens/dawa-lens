@@ -331,16 +331,58 @@ export default function DawaGPT() {
 
       if (response.action) {
         await dispatchAIAction(response.action);
+        // Visually confirm the action was performed in the chat message
+        setMessages(prev => prev.map(msg =>
+          msg.id === botId
+            ? { ...msg, text: msg.text }
+            : msg
+        ));
       } else if (
         response.text &&
-        /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved)\b/i.test(response.text)
+        /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved|refilled)\b/i.test(response.text)
       ) {
-        // AI confirmed an action in past tense but returned no action object.
-        // This is a hallucination — log it so it can be tracked.
+        // AI claimed to perform an action but returned no action object.
+        // Silent retry: re-send with an explicit instruction to include the action.
         console.warn(
-          "[DawaGPT] ⚠️ AI claimed to perform an action but returned no action object. " +
-          "This is likely a model hallucination. Response text:", response.text.slice(0, 200)
+          "[DawaGPT] ⚠️ AI claimed an action but returned no action object. Retrying with explicit instruction...",
+          response.text.slice(0, 200)
         );
+        try {
+          const retryUserMsg: ChatMessage = {
+            id: (Date.now() + 2).toString(),
+            role: "user",
+            text: `[SYSTEM RETRY — ACTION MISSING]: Your previous response claimed to perform an action but did not include a valid action object. ` +
+              `Re-process the original user request and this time you MUST include a populated 'action' field with the correct type and payload. ` +
+              `Do NOT say you're retrying. Just respond naturally with the action included.`
+          };
+          const retryMessages = [...messages, userMsg, response, retryUserMsg];
+          const retryResponse = await chatWithDawaGPTStream(
+            retryMessages,
+            medicines,
+            userProfile,
+            doseLogs,
+            reminders,
+            wellnessLogs,
+            vitalitySummary,
+            [],
+            resolvedPatient.id,
+            (streamedText) => {
+              setMessages(prev => prev.map(msg =>
+                msg.id === botId ? { ...msg, text: streamedText } : msg
+              ));
+            }
+          );
+          setMessages(prev => prev.map(msg =>
+            msg.id === botId ? retryResponse : msg
+          ));
+          if (retryResponse.action) {
+            await dispatchAIAction(retryResponse.action);
+          } else {
+            console.warn("[DawaGPT] ⚠️ Retry also returned no action. Giving up.");
+          }
+        } catch (retryErr) {
+          console.error("[DawaGPT] Retry failed:", retryErr);
+        }
       }
 
     } catch (e) {

@@ -839,11 +839,31 @@ export const isComplexTask = (text) => {
 const isLikelyActionRequest = (text) => {
   if (!text) return false;
   const lower = text.toLowerCase();
+
   // Direct action verbs (broad — catches "add", "log", "refill", "delete", etc.)
   const directVerbs = /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear|refill|reset|enable|disable|snooze|mute)/i;
+
   // Indirect / polite phrasing (e.g. "I need to log", "can you add", "help me set")
   const indirectAction = /(i need|i want|i'd like|i would like|can you|could you|please|help me|let's|let us)\s.{0,30}(add|create|set|remind|log|record|track|update|delete|remove|refill|schedule|register)/i;
-  return directVerbs.test(lower) || indirectAction.test(lower);
+
+  // First-person past-tense dose log ("I took my...", "I missed my...", "I forgot to take", "I skipped")
+  const pastDoseLog = /\b(i took|i've taken|i missed|i forgot|i skipped|i just took|i already took)\b/i;
+
+  // Wellness / mood / energy / symptom logging phrases
+  const wellnessLog = /\b(feeling|feel|mood|energy|tired|fatigue|dizzy|nausea|headache|pain|sick|symptom|log (how|my|a)|wellness|check[- ]?in|log mood|log energy|log symptom|i am feeling|i feel|i'm feeling|i've been feeling)\b/i;
+
+  // Stock / refill phrases
+  const refillPhrase = /\b(refill|restock|top up|topped up|refilled|i have \d+ (pills?|tablets?|capsules?)|set stock|update stock|update quantity|bought|purchased)\b/i;
+
+  // Reminder management phrases (stop, disable, enable, change time, move, snooze)
+  const reminderManage = /\b(stop|disable|turn off|pause|mute|snooze|enable|turn on|change time|move|reschedule|update).{0,20}(reminder|alarm|notification|dose|schedule)/i;
+
+  return directVerbs.test(lower)
+    || indirectAction.test(lower)
+    || pastDoseLog.test(lower)
+    || wellnessLog.test(lower)
+    || refillPhrase.test(lower)
+    || reminderManage.test(lower);
 };
 
 /**
@@ -984,7 +1004,11 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
 
     const isComplex = isComplexTask(lastUserMsg);
 
-    if (isComplex && isLikelyActionRequest(lastUserMsg)) {
+    // Route ALL action-intent requests to JSON mode (chatWithDawaGPT) where the
+    // action object is reliably structured. Raw streaming mode is unreliable for
+    // actions because smaller fallback models often fail to produce valid
+    // ###METADATA### JSON — silently dropping the action object.
+    if (isLikelyActionRequest(lastUserMsg)) {
       try {
         const result = await chatWithDawaGPT(params, priority);
         return createFakeStream(result);
@@ -1324,13 +1348,13 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - UPDATE_REMINDER: { id, enabled?, time?, dose? }
     - REMOVE_REMINDER: { id }
     - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action, patientId? }
-    - LOG_WELLNESS: { type: 'symptom' | 'food', data: { mood?: 1-5, energy?: 1-5, symptoms?: string[], meal?: string }, patientId? }
+    - LOG_WELLNESS: { type: 'symptom' | 'food', data: { mood?: 1-5, energy?: 1-5, symptoms?: string[], meal?: string, aiReflection?: { reflection: string, affirmation: string, tip: string } }, patientId? }
     - ADD_PATIENT: { name, age, gender, relation }
 
     === MANDATORY AGENTIC RULES — READ BEFORE EVERY RESPONSE ===
     1. PERFORM ACTIONS IMMEDIATELY: When the user asks you to add, update, delete, log, or refill ANYTHING — do it NOW by including a valid action object in your response. NEVER say "I can help you with that", "Would you like me to...", "I'll add that for you", or any future-tense phrasing. NEVER describe what you *would* do — just do it.
     2. NEVER LIE ABOUT ACTIONS: You MUST ONLY confirm an action in past tense ("I've added...", "Done! I've logged...", "I've set a reminder...") if your response includes a valid, non-null action object with a populated type and payload. If you do not include an action object, you MUST NOT claim the action was performed. This is a CRITICAL rule — lying about performed actions is a system failure.
-    3. ALWAYS INCLUDE ACTION OBJECT: For ANY request involving: adding medicine, setting reminders, logging doses, logging wellness, updating or deleting anything — your response MUST include a populated 'action' field with a valid type (ADD_MEDICINE, ADD_REMINDER, LOG_DOSE, UPDATE_MEDICINE, UPDATE_REMINDER, REMOVE_MEDICINE, REMOVE_REMINDER, LOG_WELLNESS, ADD_PATIENT) and a complete payload. The action field MUST NEVER be null or omitted for such requests. Omitting the action when one was requested is a CRITICAL failure.
+    3. ALWAYS INCLUDE ACTION OBJECT: For ANY request involving: adding medicine, setting reminders, logging doses, logging wellness (symptoms, mood, energy, meals, feelings), updating or deleting anything — your response MUST include a populated 'action' field with a valid type (ADD_MEDICINE, ADD_REMINDER, LOG_DOSE, UPDATE_MEDICINE, UPDATE_REMINDER, REMOVE_MEDICINE, REMOVE_REMINDER, LOG_WELLNESS, ADD_PATIENT) and a complete payload. The action field MUST NEVER be null or omitted for such requests. Omitting the action when one was requested is a CRITICAL failure.
     4. FIRST ATTEMPT SUCCESS: Execute actions on the user's FIRST request. Do not ask for confirmation unless critical data is genuinely missing (e.g., dose time not specified). If you have enough information to act, ACT.
     5. MEDICINE NAME FORMAT: Whenever you mention any medicine, ALWAYS write the brand name first, followed by the chemical (generic/active ingredient) name in brackets. Example: "Panadol (Paracetamol)", "Augmentin (Amoxicillin/Clavulanate)", "Flagyl (Metronidazole)". Never mention only a generic name without its brand name, and never omit the chemical name in brackets.
     6. NAVIGATION LINKS (CRITICAL):
@@ -1351,12 +1375,34 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
          - '/settings' or '/profile' (Settings / Profile page)
          - '/scan' or '/scan-medicine' (Scan Medicine page)
          - '/search' or '/medication-info' (Search / Medication Info page)
-    7. WELLNESS LOGGING: If the user mentions how they are feeling, their mood, energy level, or symptoms, proactively ask if they want to log it or log it immediately. When logging a symptom check-in, set type to 'symptom' and include mood (1-5), energy (1-5), and/or symptoms (array of strings, e.g. ["Headache", "Fatigue"]) in the data object. If the user mentions what they ate or logs a meal, set type to 'food' and include meal (string, e.g., "Matooke & G-nut sauce") in the data object. You can generate the aiReflection yourself inside data (with reflection, affirmation, and tip), or leave it to the server.
-    8. REMINDER FREQUENCY & TIME FORMATS (CRITICAL):
+    7. WELLNESS LOGGING (CRITICAL — ACT IMMEDIATELY):
+        - If the user mentions how they feel, their mood, energy, a symptom, pain, sickness, tiredness, dizziness, headache, or any physical/emotional state — LOG IT NOW. Do NOT ask for confirmation. Include a LOG_WELLNESS action immediately.
+        - For symptom/feeling check-ins: set type to 'symptom'. Map mood and energy descriptors to 1–5 scale (1=very bad/low, 3=neutral/okay, 5=great/high). Include symptoms as an array of strings (e.g. ["Headache", "Fatigue", "Dizziness"]).
+          * "I feel great / amazing / energetic" → mood: 5, energy: 5
+          * "I feel okay / fine / decent" → mood: 3, energy: 3
+          * "I feel tired / exhausted / drained" → mood: 2, energy: 1, symptoms: ["Fatigue"]
+          * "I feel dizzy" → symptoms: ["Dizziness"], mood: 2, energy: 2
+          * "I have a headache" → symptoms: ["Headache"], mood: 2, energy: 3
+          * "I feel sick / unwell / nauseous" → symptoms: ["Nausea"], mood: 1, energy: 1
+          * "Omutwe gunnuma" (head hurts) → symptoms: ["Headache"]
+          * "Olubuto lunnuma" (stomach hurts) → symptoms: ["Stomach pain"]
+          * "Musujja" (fever) → symptoms: ["Fever"]
+        - For meal/food logging: set type to 'food'. Include meal field: e.g., "Matooke & G-nut sauce", "Posho & beans", "Rice & chicken".
+        - ALWAYS generate a warm aiReflection inside data: { reflection: "...", affirmation: "...", tip: "..." }.
+        - EXAMPLE action for "I feel tired and have a headache":
+          { type: "LOG_WELLNESS", payload: { type: "symptom", data: { mood: 2, energy: 1, symptoms: ["Fatigue", "Headache"], aiReflection: { reflection: "Bambi, sorry you're not feeling well.", affirmation: "Rest is medicine too.", tip: "Drink water and rest if possible." } } } }
+    8. DOSE LOGGING FROM NATURAL SPEECH (CRITICAL):
+        - If the user says "I took my Metformin", "I already took my pills", "I missed my dose", "I forgot to take Panadol" — LOG IT NOW using a LOG_DOSE action.
+        - Use action: "taken" for "I took / already took / just took".
+        - Use action: "skipped" for "I missed / forgot / skipped".
+        - Set scheduledTime to the current time (ISO string).
+        - If you can match the medicine to a reminder in context, include the reminderId.
+        - EXAMPLE: "I took my Metformin this morning" → { type: "LOG_DOSE", payload: { medicineName: "Metformin", dose: "500mg", scheduledTime: "<now>", action: "taken" } }
+    9. REMINDER FREQUENCY & TIME FORMATS (CRITICAL):
        - If a medication requires multiple doses a day (e.g. twice daily, three times daily, or every 8 hours), you MUST specify all times as a single comma-separated string of HH:mm format times in the "time" field (e.g., "08:00,20:00" for twice daily, or "08:00,14:00,20:00" for three times daily).
        - NEVER use text descriptions (like "morning", "twice a day", "night") in the "time" field.
        - Ensure "repeatSchedule" is set to "custom" if multiple time slots are provided, or "daily" for once-a-day schedules.
-    9. SUGGESTIONS (CRITICAL — READ CAREFULLY):
+    10. SUGGESTIONS (CRITICAL — READ CAREFULLY):
        - You MUST provide EXACTLY 3 short, context-aware follow-up suggestions in the 'suggestions' field.
        - Suggestions must be NATURAL CONTINUATIONS of the current conversation — what the user would logically ask or do NEXT based on YOUR response.
        - Suggestions must be from the USER's perspective (e.g., "Log my dose", NOT "You should log your dose").
