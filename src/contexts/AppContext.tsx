@@ -46,7 +46,7 @@ import {
   getPendingOps,
   type OfflineOp,
 } from "../services/offlineQueue";
-import { onNetworkChange, hasNetwork } from "../lib/appLifecycle";
+import { onNetworkChange, hasNetwork, onForeground } from "../lib/appLifecycle";
 import { notify } from "../lib/notifications";
 
 /**
@@ -601,9 +601,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     scheduleReminders(reminders, doseLogs, medicines);
   }, [reminders, doseLogs, medicines]);
 
+  // ─── Post-flush state refresh ─────────────────────────────────────────────
+  // After flushQueue(), the onSnapshot listener *should* re-emit with the
+  // freshly-written Firestore data, but the timing is non-deterministic and
+  // applyPendingOps() inside each snapshot callback may re-apply ops that were
+  // already flushed (race condition). To guarantee correctness and zero UI lag,
+  // we do a one-shot getDocs re-read immediately after a successful flush and
+  // set state directly — bypassing the snapshot/applyPendingOps path entirely.
+  const refreshFromFirestore = useCallback(async () => {
+    if (!currentUserId || storageMode !== "cloud") return;
+    try {
+      const remainingOps = getPendingOps();
+
+      const [remsSnap, logsSnap, medsSnap] = await Promise.all([
+        getDocs(query(collection(db, "reminders"), where("userId", "==", currentUserId))),
+        getDocs(query(collection(db, "doseLogs"), where("userId", "==", currentUserId))),
+        getDocs(query(collection(db, "medicines"), where("userId", "==", currentUserId))),
+      ]);
+
+      const freshRems = remsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Reminder));
+      const freshLogs = logsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as DoseLog));
+      const freshMeds = medsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Medicine));
+
+      // Only apply ops that are still pending (failed to flush)
+      const mergedRems = applyPendingOps(freshRems, "reminders", remainingOps);
+      const mergedLogs = applyPendingOps(freshLogs, "doseLogs", remainingOps);
+      const mergedMeds = applyPendingOps(freshMeds, "medicines", remainingOps);
+
+      setReminders(mergedRems);
+      setDoseLogs(mergedLogs);
+      setMedicines(mergedMeds);
+
+      storage.setItem(CLOUD_CACHE_REMS_KEY, mergedRems);
+      storage.setItem(CLOUD_CACHE_LOGS_KEY, mergedLogs);
+      storage.setItem(CLOUD_CACHE_MEDS_KEY, mergedMeds);
+
+      setPendingOfflineOps(getPendingCount());
+      console.log("[AppContext] refreshFromFirestore: state updated with fresh Firestore data.");
+    } catch (err) {
+      // Non-fatal — onSnapshot will catch up on its own eventually
+      console.warn("[AppContext] refreshFromFirestore failed (non-fatal):", err);
+      setPendingOfflineOps(getPendingCount());
+    }
+  }, [currentUserId, storageMode]);
+
   // ─── Network status + offline queue flush ──────────────────────────────────
   // Listen for connectivity changes. When the device comes back online, flush
-  // any reminder/dose ops that were queued while offline.
+  // any reminder/dose ops that were queued while offline, then immediately
+  // re-read Firestore state so the UI reflects the changes without delay.
   useEffect(() => {
     const unsub = onNetworkChange(async (connected: boolean) => {
       setIsOnline(connected);
@@ -611,9 +656,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.log("[AppContext] Connectivity restored — flushing offline queue…");
         try {
           const flushed = await flushQueue(db);
-          // Always refresh the pending count after a flush attempt so the
-          // badge reflects any ops that still failed and remain in the queue.
-          setPendingOfflineOps(getPendingCount());
+          // Immediately re-read Firestore so the UI reflects the flushed data
+          // without waiting for onSnapshot to re-emit (which has non-deterministic timing).
+          await refreshFromFirestore();
           if (flushed > 0) {
             toast({
               title: "Synced!",
@@ -627,16 +672,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     });
     return unsub;
-  }, [currentUserId, storageMode]);
+  }, [currentUserId, storageMode, refreshFromFirestore]);
 
   // Initial check & flush on mount/login
   useEffect(() => {
     if (currentUserId && storageMode === "cloud" && hasNetwork()) {
       console.log("[AppContext] Initial network sync — flushing offline queue…");
       flushQueue(db)
-        .then((flushed) => {
+        .then(async (flushed) => {
+          // Always re-read Firestore after flush to ensure state is consistent
+          // regardless of whether onSnapshot re-emits in time.
+          await refreshFromFirestore();
           if (flushed > 0) {
-            setPendingOfflineOps(getPendingCount());
             toast({
               title: "Synced!",
               description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
@@ -647,7 +694,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
           console.warn("[AppContext] Initial queue flush failed:", err);
         });
     }
-  }, [currentUserId, storageMode]);
+  }, [currentUserId, storageMode, refreshFromFirestore]);
+
+  // ─── Foreground-resume flush ──────────────────────────────────────────────
+  // If the user made offline edits, backgrounded the app, then came back online,
+  // the network-change event may have fired in the background without triggering
+  // a UI update. Re-check for pending ops whenever the app returns to foreground.
+  useEffect(() => {
+    if (!currentUserId || storageMode !== "cloud") return;
+    const unsub = onForeground(async () => {
+      if (hasNetwork() && getPendingCount() > 0) {
+        console.log("[AppContext] App foregrounded with pending ops — flushing…");
+        try {
+          const flushed = await flushQueue(db);
+          await refreshFromFirestore();
+          if (flushed > 0) {
+            toast({
+              title: "Synced!",
+              description: `${flushed} offline change${flushed !== 1 ? "s" : ""} saved to the cloud.`,
+            });
+          }
+        } catch (err) {
+          console.warn("[AppContext] Foreground flush failed:", err);
+          setPendingOfflineOps(getPendingCount());
+        }
+      }
+    });
+    return unsub;
+  }, [currentUserId, storageMode, refreshFromFirestore]);
 
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
