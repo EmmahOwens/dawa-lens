@@ -10,6 +10,7 @@ import {
   scheduleReminders,
   checkMissedDoses,
 } from "@/services/reminderService";
+import { scheduleEngagementNotifications } from "@/services/quotesService";
 import AppShell from "@/components/AppShell";
 import { preloadOCRModel } from "@/services/visionService";
 import { deferToIdle } from "@/lib/idleCallback";
@@ -88,7 +89,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 }
 
 const AppContent = () => {
-  const { reminders, doseLogs, medicines, logDose, isInitializing } = useApp();
+  const { reminders, doseLogs, medicines, wellnessLogs, logDose, isInitializing } = useApp();
 
   useEffect(() => {
     // Do NOT run until data is fully loaded — prevents false "missed" entries
@@ -97,18 +98,22 @@ const AppContent = () => {
 
     // Run once when data is ready
     checkMissedDoses(reminders, doseLogs, logDose);
-    scheduleReminders(reminders, doseLogs, medicines);
+    // scheduleReminders first (it cancels all pending alarms), then
+    // scheduleEngagementNotifications adds engagement alarms on top.
+    scheduleReminders(reminders, doseLogs, medicines).then(() =>
+      scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
+    );
 
-    // Refresh reminders and check missed doses when app comes to foreground.
-    // Uses the lifecycle manager instead of a raw appStateChange listener
-    // so all foreground callbacks are coordinated in one place.
+    // Refresh reminders and engagement notifications when app comes to foreground.
     const unsubForeground = onForeground(() => {
-      scheduleReminders(reminders, doseLogs, medicines);
+      scheduleReminders(reminders, doseLogs, medicines).then(() =>
+        scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
+      );
       checkMissedDoses(reminders, doseLogs, logDose);
     });
 
     return unsubForeground;
-  }, [reminders, doseLogs, medicines, logDose, isInitializing]);
+  }, [reminders, doseLogs, medicines, wellnessLogs, logDose, isInitializing]);
 
   return null;
 };

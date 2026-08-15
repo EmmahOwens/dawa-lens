@@ -129,24 +129,22 @@ export const NotificationHandler = () => {
               setSelectedPatientId(extra.patientId);
             }
 
-            // 2. Navigate to the target route if specified
+            // 2. Navigate based on explicit route or notification type
+            const notifType = extra.type as string | undefined;
             if (extra.route) {
               navigate(extra.route);
-            } else if (extra.type === 'low_stock' || extra.type === 'refill') {
+            } else if (notifType === 'low_stock' || notifType === 'refill') {
               navigate('/medvault');
-            } else if (extra.type === 'missed_alert') {
-              if (extra.patientId) {
-                navigate('/family');
-              } else {
-                navigate('/history');
-              }
+            } else if (notifType === 'missed_alert') {
+              navigate(extra.patientId ? '/family' : '/history');
+            } else if (notifType === 'daily_quote' || notifType === 'encouragement' || notifType === 'hydration' || notifType === 'evening_checkin') {
+              navigate('/');
+            } else if (notifType === 'weekly_summary' || notifType === 'streak') {
+              navigate('/history');
+            } else if (notifType === 'wellness_nudge') {
+              navigate('/wellness');
             } else if (extra.reminderId) {
-              // It's a standard reminder
-              if (extra.patientId) {
-                navigate('/family');
-              } else {
-                navigate('/');
-              }
+              navigate(extra.patientId ? '/family' : '/');
             }
           }
         }

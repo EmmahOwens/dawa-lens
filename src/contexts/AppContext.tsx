@@ -31,6 +31,7 @@ import {
 } from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
 import { scheduleReminders, computeShiftOffset, scheduleAdjustmentNotification } from "../services/reminderService";
+import { schedulePostDoseEncouragementNotification } from "../services/quotesService";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
@@ -1500,6 +1501,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           });
         }
       }
+
+      // Fire a motivational encouragement notification 3s after the dose is logged
+      // (uses NativeAlarm so it works even when the app is immediately backgrounded)
+      schedulePostDoseEncouragementNotification(log.medicineName).catch(() => {/* non-fatal */});
     }
 
     // 1.5. Dynamic Schedule Adjustment

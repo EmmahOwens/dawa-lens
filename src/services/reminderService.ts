@@ -31,6 +31,7 @@ import { toDate } from "@/lib/utils";
 const CHANNEL_OWNER       = "dawa_owner_v2";
 const CHANNEL_REFILL      = "dawa_refill_alerts_v2";
 const CHANNEL_REMINDERS   = "dawa_reminders_v2";   // used by registerNotificationActions
+const CHANNEL_MISSED      = "dawa_missed_doses_v2"; // dedicated channel for missed-dose alerts
 const patientChannelId    = (id: string) => `dawa_patient_v2_${id}`;
 
 /** Legacy IDs that may already be cached on existing devices (silent — no sound). */
@@ -245,32 +246,73 @@ export const checkMissedDoses = async (
 
           // Notify the user about the missed dose
           if (Capacitor.isNativePlatform()) {
-            await LocalNotifications.schedule({
-              notifications: [
-                {
-                  title: r.patientName
-                    ? `Missed Dose: ${r.patientName}'s ${r.medicineName}`
-                    : `Missed Dose: ${r.medicineName}`,
-                  body: r.patientName
-                    ? `${r.patientName} missed their ${
-                        r.dose
-                      } dose scheduled at ${timeStr.trim()}. Please follow up.`
-                    : `You missed your ${
-                        r.dose
-                      } dose scheduled for ${timeStr.trim()}. Please stay on track!`,
-                  id: stringToHash(r.id + "missed" + scheduledDate.getTime()),
-                  channelId: r.patientId
-                    ? patientChannelId(r.patientId)
-                    : CHANNEL_OWNER,
-                  sound: "default",
-                  extra: {
-                    type: "missed_alert",
-                    patientId: r.patientId ?? null,
-                    route: "/history",
-                  },
-                },
-              ],
-            });
+            try {
+              const missedPerm = await LocalNotifications.checkPermissions();
+              if (missedPerm.display === "granted") {
+                // Ensure the missed-dose channel exists before scheduling
+                if (Capacitor.getPlatform() === "android") {
+                  await LocalNotifications.createChannel({
+                    id: CHANNEL_MISSED,
+                    name: "Missed Dose Alerts",
+                    description: "Alerts when a scheduled dose was not logged",
+                    importance: 4,
+                    vibration: true,
+                    sound: "default",
+                  });
+                  if (r.patientId) {
+                    await LocalNotifications.createChannel({
+                      id: patientChannelId(r.patientId),
+                      name: r.patientName ? `${r.patientName}'s Reminders` : "Family Member Reminders",
+                      description: `Medication reminders for ${r.patientName ?? "a family member"}`,
+                      importance: 5,
+                      visibility: 1,
+                      vibration: true,
+                      sound: "default",
+                    });
+                  }
+                }
+
+                const missedTitle = r.patientName
+                  ? `\u26a0\ufe0f Missed Dose: ${r.patientName}'s ${r.medicineName}`
+                  : `\u26a0\ufe0f Missed Dose: ${r.medicineName}`;
+                const missedBody = r.patientName
+                  ? `${r.patientName} missed their ${r.dose} dose scheduled at ${timeStr.trim()}. Please follow up.`
+                  : `You missed your ${r.dose} dose scheduled for ${timeStr.trim()}. Please stay on track!`;
+                const missedId = stringToHash(r.id + "missed" + scheduledDate.getTime());
+                const missedChannelId = r.patientId ? patientChannelId(r.patientId) : CHANNEL_MISSED;
+                // schedule.at + allowWhileIdle is required for delivery in Doze/offline mode
+                const fireAt = new Date(Date.now() + 2000);
+
+                await LocalNotifications.schedule({
+                  notifications: [{
+                    title: missedTitle,
+                    body: missedBody,
+                    id: missedId,
+                    schedule: { at: fireAt, allowWhileIdle: true },
+                    channelId: missedChannelId,
+                    sound: "default",
+                    extra: { type: "missed_alert", patientId: r.patientId ?? null, route: "/history" },
+                  }],
+                });
+
+                // Mirror to NativeAlarm so it fires after reboot / when app is killed
+                try {
+                  await NativeAlarm.scheduleAlarms({
+                    notifications: [{
+                      id: missedId,
+                      title: missedTitle,
+                      body: missedBody,
+                      triggerAtMillis: fireAt.getTime(),
+                      extra: JSON.stringify({ type: "missed_alert", patientId: r.patientId ?? null }),
+                    }],
+                  });
+                } catch (alarmErr) {
+                  console.warn("[reminderService] NativeAlarm missed-dose fallback failed (non-fatal):", alarmErr);
+                }
+              }
+            } catch (notifErr) {
+              console.warn("[reminderService] Failed to schedule missed-dose notification:", notifErr);
+            }
           }
         }
       }
@@ -704,6 +746,22 @@ export const scheduleRefillNotifications = async (
 
     if (notifications.length > 0) {
       await LocalNotifications.schedule({ notifications });
+
+      // Mirror every refill notification to NativeAlarm so they fire after a
+      // reboot or when the Capacitor plugin is not responsive (Bug fix).
+      try {
+        await NativeAlarm.scheduleAlarms({
+          notifications: notifications.map((n) => ({
+            id: n.id as number,
+            title: n.title ?? "Refill Reminder",
+            body: n.body ?? "",
+            triggerAtMillis: (n.schedule?.at as Date)?.getTime() ?? Date.now() + 3000,
+            extra: JSON.stringify(n.extra ?? {}),
+          })),
+        });
+      } catch (alarmErr) {
+        console.warn("[reminderService] NativeAlarm refill fallback failed (non-fatal):", alarmErr);
+      }
     }
   } catch (err) {
     console.warn("[reminderService] Failed to schedule refill notifications:", err);
