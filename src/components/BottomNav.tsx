@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Camera, Bell, History, Settings, Users } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
@@ -102,11 +102,146 @@ function useSmartHideBottomNav() {
   return isKeyboardVisible || isInputFocused || isDialogOpen || isFormRoute;
 }
 
+/**
+ * Detects whether the device uses Android 3-button / 2-button navigation
+ * (as opposed to gesture navigation).
+ *
+ * On gesture-nav devices, Android sets a non-zero safe-area-inset-bottom so
+ * the home-indicator swipe zone is protected. On button-nav devices that
+ * value is 0 because the system nav bar lives outside the WebView bounds.
+ * We use that difference to distinguish the two modes.
+ */
+function useButtonNavDetection() {
+  const [isButtonNav, setIsButtonNav] = useState(false);
+
+  useEffect(() => {
+    // Only meaningful on Android native
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+
+    // Inject a tiny off-screen element whose height is driven by the CSS env
+    // variable so we can read the resolved pixel value via getComputedStyle.
+    const el = document.createElement("div");
+    el.style.cssText =
+      "position:fixed;visibility:hidden;pointer-events:none;" +
+      "height:env(safe-area-inset-bottom,0px);bottom:0;left:0;";
+    document.body.appendChild(el);
+
+    // Give the browser one frame to resolve the env() value
+    const raf = requestAnimationFrame(() => {
+      const insetPx = parseFloat(getComputedStyle(el).height) || 0;
+      document.body.removeChild(el);
+      // < 10 px means no meaningful gesture inset → button navigation
+      setIsButtonNav(insetPx < 10);
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      if (document.body.contains(el)) document.body.removeChild(el);
+    };
+  }, []);
+
+  return isButtonNav;
+}
+
+const AUTO_HIDE_DELAY_MS = 3000;
+// Swipe must start in the bottom 15% of the screen height
+const SWIPE_TRIGGER_ZONE = 0.85;
+// Minimum upward delta (px) to count as a deliberate reveal gesture
+const SWIPE_MIN_DELTA_Y = 50;
+
+/**
+ * Manages swipe-to-reveal state for button-navigation devices.
+ *
+ * When `enabled` is true the hook listens for an upward swipe that starts
+ * within the bottom trigger zone and exposes it as `isRevealed`. A 3-second
+ * auto-hide timer resets the state after the nav appears.
+ */
+function useSwipeToReveal(enabled: boolean) {
+  const [isRevealed, setIsRevealed] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const scheduleAutoHide = useCallback(() => {
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      setIsRevealed(false);
+    }, AUTO_HIDE_DELAY_MS);
+  }, [clearTimer]);
+
+  // Called by BottomNav when the user taps a nav item so the nav hides right away
+  const hideImmediately = useCallback(() => {
+    clearTimer();
+    setIsRevealed(false);
+  }, [clearTimer]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setIsRevealed(false);
+      clearTimer();
+      return;
+    }
+
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      touchStartRef.current = { x: t.clientX, y: t.clientY };
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      const t = e.changedTouches[0];
+      const deltaY = touchStartRef.current.y - t.clientY; // positive = upward swipe
+      const startedInZone =
+        touchStartRef.current.y > window.innerHeight * SWIPE_TRIGGER_ZONE;
+
+      if (startedInZone && deltaY > SWIPE_MIN_DELTA_Y) {
+        NativeService.haptics.impact(ImpactStyle.Light);
+        setIsRevealed(true);
+        scheduleAutoHide();
+      }
+
+      touchStartRef.current = null;
+    };
+
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchend", onTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
+      clearTimer();
+    };
+  }, [enabled, scheduleAutoHide, clearTimer]);
+
+  return { isRevealed, hideImmediately, scheduleAutoHide };
+}
+
 export default function BottomNav() {
   const location = useLocation();
   const { t } = useTranslation();
   const { reminders, doseLogs, isProfessionalMode } = useApp();
   const shouldHide = useSmartHideBottomNav();
+  const isButtonNav = useButtonNavDetection();
+
+  // Swipe-to-reveal is only active on button-nav devices when smart-hide
+  // isn't already suppressing the nav (keyboard, dialog, form route …).
+  const { isRevealed, hideImmediately, scheduleAutoHide } = useSwipeToReveal(
+    isButtonNav && !shouldHide
+  );
+
+  // On button nav: only show when explicitly revealed via swipe.
+  // On gesture nav / web: show whenever smartHide isn't active (existing behaviour).
+  const shouldShow = shouldHide
+    ? false
+    : isButtonNav
+      ? isRevealed
+      : true;
 
   // Count reminders that haven't been logged today
   const pendingReminderCount = reminders.filter((r) => {
@@ -125,58 +260,120 @@ export default function BottomNav() {
     { to: "/settings", icon: Settings, label: t("nav.settings") },
   ];
 
+  // On button-nav devices, hide the nav shortly after the user taps an item
+  // so it doesn't linger over the new page content.
+  const handleNavItemClick = useCallback(() => {
+    if (isButtonNav) setTimeout(hideImmediately, 400);
+  }, [isButtonNav, hideImmediately]);
+
   return (
-    <AnimatePresence>
-      {!shouldHide && (
-        <motion.nav
-          initial={{ y: 80, opacity: 0, scale: 0.95 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 80, opacity: 0, scale: 0.95 }}
-          transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          className="fixed bottom-4 left-0 right-0 z-50 mx-auto max-w-[22rem] md:hidden px-4"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-        >
-          <div className="flex items-center justify-between rounded-[2rem] bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/10 dark:border-white/5 px-4 py-2.5 relative shadow-2xl">
-            {/* Left Side Items */}
-            <div className="flex flex-1 justify-around items-center">
-              {navItems.slice(0, 2).map((item) => (
-                <NavItem key={item.to} {...item} active={location.pathname === item.to} />
-              ))}
-            </div>
+    <>
+      {/* ── Swipe hint indicator (button-nav only) ─────────────────────
+          A subtle pill at the very bottom edge hints that swiping up
+          will reveal the navigation bar. Only shown when the nav is
+          hidden and smart-hide rules aren't active. */}
+      <AnimatePresence>
+        {isButtonNav && !shouldHide && !isRevealed && (
+          <motion.div
+            key="swipe-hint"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.3 }}
+            className="fixed bottom-1.5 left-0 right-0 z-40 flex justify-center pointer-events-none md:hidden"
+            aria-hidden="true"
+          >
+            <div className="w-10 h-1 rounded-full bg-white/25 dark:bg-white/15 shadow-[0_0_6px_rgba(255,255,255,0.15)]" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {/* Central Scan Button */}
-            <NavLink
-              to="/scan"
-              onClick={() => NativeService.haptics.impact(ImpactStyle.Medium)}
-              className="relative flex h-14 w-14 items-center justify-center -mt-6"
-            >
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="absolute h-full w-full rounded-full bg-primary shadow-[0_4px_14px_rgba(0,122,255,0.4)] flex items-center justify-center text-primary-foreground border-2 border-background gpu-accel"
+      {/* ── Bottom navigation bar ───────────────────────────────────── */}
+      <AnimatePresence>
+        {shouldShow && (
+          <motion.nav
+            key="bottom-nav"
+            initial={{ y: 80, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 80, opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 350, damping: 30 }}
+            className="fixed bottom-4 left-0 right-0 z-50 mx-auto max-w-[22rem] md:hidden px-4"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+            // Reset auto-hide timer when the user interacts with the nav pill
+            onTouchStart={isButtonNav ? scheduleAutoHide : undefined}
+          >
+            <div className="flex items-center justify-between rounded-[2rem] bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/10 dark:border-white/5 px-4 py-2.5 relative shadow-2xl">
+              {/* Left Side Items */}
+              <div className="flex flex-1 justify-around items-center">
+                {navItems.slice(0, 2).map((item) => (
+                  <NavItem
+                    key={item.to}
+                    {...item}
+                    active={location.pathname === item.to}
+                    onClick={handleNavItemClick}
+                  />
+                ))}
+              </div>
+
+              {/* Central Scan Button */}
+              <NavLink
+                to="/scan"
+                onClick={() => {
+                  NativeService.haptics.impact(ImpactStyle.Medium);
+                  if (isButtonNav) setTimeout(hideImmediately, 400);
+                }}
+                className="relative flex h-14 w-14 items-center justify-center -mt-6"
               >
-                <Camera size={24} strokeWidth={2.5} />
-              </motion.div>
-            </NavLink>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="absolute h-full w-full rounded-full bg-primary shadow-[0_4px_14px_rgba(0,122,255,0.4)] flex items-center justify-center text-primary-foreground border-2 border-background gpu-accel"
+                >
+                  <Camera size={24} strokeWidth={2.5} />
+                </motion.div>
+              </NavLink>
 
-            {/* Right Side Items */}
-            <div className="flex flex-1 justify-around items-center">
-              {navItems.slice(2).map((item) => (
-                <NavItem key={item.to} {...item} active={location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to))} />
-              ))}
+              {/* Right Side Items */}
+              <div className="flex flex-1 justify-around items-center">
+                {navItems.slice(2).map((item) => (
+                  <NavItem
+                    key={item.to}
+                    {...item}
+                    active={location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to))}
+                    onClick={handleNavItemClick}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        </motion.nav>
-      )}
-    </AnimatePresence>
+          </motion.nav>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
-function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>, label: string, active: boolean, badge?: boolean }) {
+function NavItem({
+  to,
+  icon: Icon,
+  label,
+  active,
+  badge,
+  onClick,
+}: {
+  to: string;
+  icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+  label: string;
+  active: boolean;
+  badge?: boolean;
+  onClick?: () => void;
+}) {
   return (
     <NavLink
       to={to}
-      onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
+      onClick={() => {
+        NativeService.haptics.impact(ImpactStyle.Light);
+        onClick?.();
+      }}
       className="relative flex flex-col items-center justify-center w-12 h-12 group"
     >
       <motion.div
@@ -189,7 +386,7 @@ function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: R
           className={`relative z-10 transition-colors duration-300 ${active ? "text-primary dark:text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
           strokeWidth={active ? 2.5 : 2}
         />
-        
+
         {badge && (
           <motion.div
             initial={{ scale: 0 }}

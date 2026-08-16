@@ -20,15 +20,35 @@ export const NotificationHandler = () => {
       await migrateNotificationChannels();
       await registerNotificationActions();
 
-      // Handle notification received while app is in foreground
+      // Handle notification received while app is in foreground.
+      // IMPORTANT: Only intercept medication reminders (those carrying a
+      // reminderId) and convert them to an in-app toast so the user can act
+      // without leaving the current screen.
+      //
+      // Engagement notifications (daily quote, hydration, streak, etc.) must
+      // NOT be intercepted here — the OS will display them as proper system
+      // notifications in the notification shade, identical to how they appear
+      // when the app is closed. Intercepting them would downgrade them to
+      // silent in-app toasts.
       const receivedListener = await LocalNotifications.addListener(
         'localNotificationReceived',
         (notification) => {
           console.log('Notification received in foreground:', notification);
-          toast.info(`Reminder: ${notification.title}`, {
-            description: notification.body,
-            duration: 5000,
-          });
+
+          const extra = notification.extra || {};
+          const isReminder = !!extra.reminderId;
+
+          // Only show in-app toast for medication reminders
+          if (isReminder) {
+            toast.info(`Reminder: ${notification.title}`, {
+              description: notification.body,
+              duration: 5000,
+            });
+          }
+          // All other types (daily_quote, encouragement, hydration,
+          // evening_checkin, weekly_summary, streak, wellness_nudge,
+          // missed_alert, low_stock, refill) are intentionally left to the OS
+          // so they appear in the notification shade with full sound/vibration.
         }
       );
 
