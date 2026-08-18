@@ -14,7 +14,7 @@ export interface VitalityTrends2DProps {
 const viewWidth = 600;
 const viewHeight = 250;
 const paddingLeft = 50;
-const paddingRight = 50;
+const paddingRight = 55;
 const paddingTop = 30;
 const paddingBottom = 40;
 
@@ -150,7 +150,7 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
         </span>
       </div>
 
-      <div className="relative w-full aspect-[600/250] min-h-[200px] select-none z-10">
+      <div className="relative w-full select-none z-10" style={{ paddingTop: "41.67%" }}>
         {isNoData && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-accent/5 z-20 rounded-2xl border border-dashed border-border/50 backdrop-blur-xs">
             <Activity size={28} className="text-muted-foreground/40 mb-2" />
@@ -165,13 +165,11 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
 
         <svg
           ref={containerRef as any}
-          width="100%"
-          height="100%"
           viewBox={`0 0 ${viewWidth} ${viewHeight}`}
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio="none"
           onPointerMove={handlePointerMove}
           onPointerLeave={handlePointerLeave}
-          className="block cursor-crosshair overflow-visible"
+          className="absolute inset-0 w-full h-full cursor-crosshair overflow-visible"
         >
           <defs>
             {/* Adherence Neon Gradient */}
