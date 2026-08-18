@@ -90,6 +90,30 @@ export default function ReportPage() {
     return calculateVitalitySummary(scopedDoseLogs, scopedWellnessLogs);
   }, [scopedDoseLogs, scopedWellnessLogs]);
 
+  // Medicines that had at least one dose logged in the past 7 days
+  const medicinesLast7Days = useMemo(() => {
+    const last7 = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), 6 - i));
+    const doseLogsLast7 = scopedDoseLogs.filter((l) => {
+      const d = new Date(l.scheduledTime || l.actionTime);
+      return last7.some((day) => isSameDay(d, day));
+    });
+    const loggedNames = new Set(
+      doseLogsLast7.map((l) => (l.medicineName || "").toLowerCase().trim())
+    );
+    const matched = scopedMedicines.filter((m) =>
+      loggedNames.has((m.name || "").toLowerCase().trim())
+    );
+    // Fallback: derive from logs when no medicines match by name
+    if (matched.length > 0) return matched;
+    return doseLogsLast7.reduce((acc: typeof scopedMedicines, l) => {
+      const name = (l.medicineName || "").trim();
+      if (name && !acc.find((m) => m.name === name)) {
+        acc.push({ id: l.reminderId || name, name, dosage: l.dose || "" } as any);
+      }
+      return acc;
+    }, []);
+  }, [scopedDoseLogs, scopedMedicines]);
+
   const adherenceScore =
     Math.round(chartData.reduce((acc, d) => acc + d.adherence, 0) / 7) || 0;
 
@@ -253,7 +277,7 @@ export default function ReportPage() {
             mood: d.mood ?? null,
             energy: d.energy ?? null,
           })),
-          medicines: scopedMedicines.map((m) => ({
+          medicines: medicinesLast7Days.map((m) => ({
             name: m.name,
             dosage: m.dosage,
             daysRemaining: undefined,
@@ -930,7 +954,7 @@ export default function ReportPage() {
               patientAge={patientAge}
               adherenceScore={adherenceScore}
               doseLogs={scopedDoseLogs}
-              medicines={scopedMedicines}
+              medicines={medicinesLast7Days}
               insights={insights}
               wellnessLogs={scopedWellnessLogs}
             />
@@ -950,7 +974,7 @@ export default function ReportPage() {
           patientAge={patientAge}
           adherenceScore={adherenceScore}
           doseLogs={scopedDoseLogs}
-          medicines={scopedMedicines}
+          medicines={medicinesLast7Days}
           insights={insights}
           wellnessLogs={scopedWellnessLogs}
         />

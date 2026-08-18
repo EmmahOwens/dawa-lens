@@ -69,6 +69,29 @@ export const MedicalReportContent = ({
   const moodLabel = avgMood >= 3.5 ? "Positive" : avgMood >= 2.5 ? "Neutral" : "Low";
   const energyLabel = avgEnergy >= 3.5 ? "High" : avgEnergy >= 2.5 ? "Moderate" : "Low";
 
+  // Derive the set of medicines actually logged in the past 7 days
+  const doseLogsLast7 = doseLogs.filter((l: any) => {
+    const d = new Date(l.scheduledTime || l.actionTime);
+    return last7.some(day => isSameDay(d, day));
+  });
+  const loggedMedicineNames = new Set(
+    doseLogsLast7.map((l: any) => (l.medicineName || "").toLowerCase().trim())
+  );
+  // Filter medicines to those that appear in the last-7-days dose logs
+  const medicinesLogged = medicines.filter((m: any) =>
+    loggedMedicineNames.has((m.name || "").toLowerCase().trim())
+  );
+  // Fallback: if no match found but there are dose logs, derive unique med entries from logs
+  const medicinesForReport: any[] = medicinesLogged.length > 0
+    ? medicinesLogged
+    : doseLogsLast7.reduce((acc: any[], l: any) => {
+        const name = (l.medicineName || "").trim();
+        if (name && !acc.find((m: any) => m.name === name)) {
+          acc.push({ id: l.reminderId || name, name, dosage: l.dose || "" });
+        }
+        return acc;
+      }, []);
+
   return (
     <div id="medical-report-content" className="font-sans text-slate-900 bg-white w-full max-w-4xl mx-auto px-6 sm:px-12 py-10 sm:py-16">
       {/* Report Header */}
@@ -180,19 +203,19 @@ export const MedicalReportContent = ({
         </div>
       </div>
 
-      {/* Active Medications Section */}
-      {medicines && medicines.length > 0 ? (
+      {/* Medications Logged in the Past 7 Days */}
+      {medicinesForReport.length > 0 ? (
         <section className="mb-12">
           <div className="pdf-block flex items-center gap-3 mb-6">
             <div className="bg-amber-50 p-2 rounded-xl border border-amber-100">
               <Pill className="text-amber-600" size={20} />
             </div>
-            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Active Medications</h3>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Medications (Past 7 Days)</h3>
             <div className="h-[2px] flex-1 bg-slate-100 ml-2"></div>
           </div>
 
           <div className="space-y-4">
-            {medicines.map((med) => (
+            {medicinesForReport.map((med: any) => (
               <div key={med.id} className="pdf-block p-5 rounded-3xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="bg-amber-50 p-3 rounded-2xl border border-amber-100 text-amber-600 shrink-0">
@@ -227,11 +250,11 @@ export const MedicalReportContent = ({
             <div className="bg-amber-50 p-2 rounded-xl border border-amber-100">
               <Pill className="text-amber-600" size={20} />
             </div>
-            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Active Medications</h3>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Medications (Past 7 Days)</h3>
             <div className="h-[2px] flex-1 bg-slate-100 ml-2"></div>
           </div>
           <div className="bg-slate-50 rounded-2xl p-6 border-2 border-dashed border-slate-200 text-center">
-            <p className="text-slate-400 font-bold text-sm">No active medications recorded in this period.</p>
+            <p className="text-slate-400 font-bold text-sm">No doses logged in the past 7 days.</p>
           </div>
         </section>
       )}
