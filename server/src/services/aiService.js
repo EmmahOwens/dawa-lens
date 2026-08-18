@@ -16,9 +16,9 @@ dotenv.config();
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODEL = 'qwen/qwen3.6-27b';
 const GROQ_SCOUT_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
-const GROQ_LIGHT_MODEL = 'llama-3.1-8b-instant';
+const GROQ_LIGHT_MODEL = 'openai/gpt-oss-20b';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
@@ -79,7 +79,7 @@ const GROQ_KEYS = [GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3].filter(Boolean)
 let groqKeyIndex = 0;
 
 const getGroqApiKey = (modelId) => {
-  if (modelId && modelId.toLowerCase().includes('llama-3.1-8b')) {
+  if (modelId && modelId.toLowerCase().includes('gpt-oss-20b')) {
     // Independent key for 8B model to avoid 70B limit sharing if possible
     return GROQ_API_KEY_2 || GROQ_API_KEY;
   }
