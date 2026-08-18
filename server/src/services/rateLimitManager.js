@@ -31,9 +31,9 @@ class RateLimitManager {
         rpd: 14400,     // 14,400 RPD
         tpd: 1000000,
       },
-      'groq-scout': {   // Llama 4 Scout
+      'groq-scout': {   // gpt-oss-120b (replaced llama-4-scout deprecated June 2026)
         rpm: 30,
-        tpm: 6000,
+        tpm: 8000,
         rpd: 1000,
         tpd: 500000,
       },

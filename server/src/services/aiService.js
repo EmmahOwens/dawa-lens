@@ -17,7 +17,7 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
 const GROQ_MODEL = 'qwen/qwen3.6-27b';
-const GROQ_SCOUT_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+const GROQ_SCOUT_MODEL = 'openai/gpt-oss-120b'; // was llama-4-scout (deprecated June 2026)
 const GROQ_LIGHT_MODEL = 'openai/gpt-oss-20b';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -80,7 +80,7 @@ let groqKeyIndex = 0;
 
 const getGroqApiKey = (modelId) => {
   if (modelId && modelId.toLowerCase().includes('gpt-oss-20b')) {
-    // Independent key for 8B model to avoid 70B limit sharing if possible
+    // Independent key for the 20B model to avoid 70B limit sharing if possible
     return GROQ_API_KEY_2 || GROQ_API_KEY;
   }
 
@@ -435,6 +435,13 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
     if (responseFormat) {
       payload.response_format = responseFormat;
     }
+    // qwen3.6-27b, openai/gpt-oss-20b, and openai/gpt-oss-120b are all reasoning models.
+    // Their <think> tokens must be hidden when JSON mode is active, otherwise they
+    // corrupt the JSON output or trigger a 400 error from the Groq API.
+    const isReasoningModel = modelId === GROQ_MODEL || modelId === GROQ_LIGHT_MODEL || modelId === GROQ_SCOUT_MODEL;
+    if (isReasoningModel && responseFormat?.type === 'json_object') {
+      payload.reasoning_format = 'hidden';
+    }
 
     const response = await axios.post(GROQ_API_URL, payload, {
       headers: {
@@ -540,7 +547,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 7. Try Groq Scout (17B)
+  // 7. Try Groq Scout (gpt-oss-120b — replaced llama-4-scout deprecated June 2026)
   if (GROQ_API_KEY && (!isAnyForced || isForceGroqScout) && (isComplex || isForceGroqScout)) {
     try {
       return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, true, temperature);
