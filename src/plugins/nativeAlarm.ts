@@ -30,6 +30,8 @@ export interface NativeAlarmPlugin {
   isSupported(): Promise<{ supported: boolean }>;
   /** Request exemption from battery optimization to ensure alarms are reliable. */
   requestIgnoreBatteryOptimization(): Promise<void>;
+  /** Returns whether battery optimizations are currently being ignored for this app. */
+  isBatteryOptimizationIgnored(): Promise<{ ignored: boolean }>;
 }
 
 const NativeAlarm = registerPlugin<NativeAlarmPlugin>('NativeAlarm');

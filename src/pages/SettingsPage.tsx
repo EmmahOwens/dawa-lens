@@ -276,6 +276,32 @@ export default function SettingsPage() {
               }}
             />
           </div>
+
+          {/* Android Battery Optimization Exemption */}
+          <div className="mt-3 p-4 rounded-2xl bg-muted/30 border border-border/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                <Shield size={16} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Battery Optimization</p>
+                <p className="text-[10px] text-muted-foreground leading-tight uppercase font-bold tracking-tighter opacity-70">
+                  Required for exact background alarms
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl h-8 px-3 text-[10px] font-bold border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
+              onClick={async () => {
+                const { NativeService } = await import("@/services/nativeService");
+                await NativeService.requestBatteryOptimizationExemption();
+              }}
+            >
+              Configure
+            </Button>
+          </div>
         </motion.div>
 
         {/* 5. Account Management */}

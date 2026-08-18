@@ -26,6 +26,7 @@ vi.mock("@capacitor/core", () => ({
     isNativePlatform: () => false,
     getPlatform: () => "web",
   },
+  registerPlugin: vi.fn().mockReturnValue({}),
 }));
 
 vi.mock("@capacitor/local-notifications", () => ({
@@ -82,6 +83,7 @@ const mockScheduleReminders = vi.fn();
 vi.mock("../../services/reminderService", () => ({
   scheduleReminders: (rems: any, logs: any, meds: any) => mockScheduleReminders(rems, logs, meds),
   computeShiftOffset: vi.fn().mockReturnValue(0),
+  scheduleAdjustmentNotification: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock storage

@@ -312,14 +312,13 @@ export default function AddReminderPage() {
             : `${medicineName} @ ${times[0]}${times.length > 1 ? ` +${times.length - 1}` : ""}`,
         });
 
-        // Ask for battery optimization exemption on Android after adding first reminder
+        // Verify battery optimization exemption on Android
         if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-          const hasRequested = await NativeService.preferences.get("has_requested_battery_exemption");
-          if (!hasRequested) {
-            await NativeService.preferences.set("has_requested_battery_exemption", "true");
+          const isIgnored = await NativeService.isBatteryOptimizationIgnored();
+          if (!isIgnored) {
             setTimeout(async () => {
               await NativeService.requestBatteryOptimizationExemption();
-            }, 800);
+            }, 600);
           }
         }
       }

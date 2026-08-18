@@ -33,6 +33,7 @@ import StoreUpdateModal from "@/components/StoreUpdateModal";
 import { initLocalPersistence } from "@/services/localPersistence";
 import pkg from "../package.json";
 import { isNewerVersion, fetchLatestRelease } from "@/lib/update";
+import BatteryOptimizationGate from "@/components/BatteryOptimizationGate";
 
 // Lazy load pages for better performance
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -237,232 +238,234 @@ const App = () => {
   }, [CURRENT_VERSION]);
 
   return (
-    <ThemeProvider
-      defaultTheme="system"
-      storageKey="vite-ui-theme"
-      attribute="class"
-    >
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AppProvider>
-            <AppContent />
-            <NotificationHandler />
-            <OfflineOverlay />
-            <Toaster richColors closeButton position="top-center" />
-            <DawaGPT />
-            {showUpdateModal && (
-              <StoreUpdateModal
-                currentVersion={CURRENT_VERSION}
-                newVersion={updateData.newVersion}
-                downloadUrl={updateData.downloadUrl}
-                onClose={() => setShowUpdateModal(false)}
-              />
-            )}
-            <Suspense fallback={<SplashScreen />}>
-              <ErrorBoundary name="AppRoot">
-                <Routes location={location}>
-                  {/* Full-screen pages — no AppShell */}
-                  <Route
-                    path="/scan"
-                    element={
-                      <ProtectedRoute>
+    <BatteryOptimizationGate>
+      <ThemeProvider
+        defaultTheme="system"
+        storageKey="vite-ui-theme"
+        attribute="class"
+      >
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <AppProvider>
+              <AppContent />
+              <NotificationHandler />
+              <OfflineOverlay />
+              <Toaster richColors closeButton position="top-center" />
+              <DawaGPT />
+              {showUpdateModal && (
+                <StoreUpdateModal
+                  currentVersion={CURRENT_VERSION}
+                  newVersion={updateData.newVersion}
+                  downloadUrl={updateData.downloadUrl}
+                  onClose={() => setShowUpdateModal(false)}
+                />
+              )}
+              <Suspense fallback={<SplashScreen />}>
+                <ErrorBoundary name="AppRoot">
+                  <Routes location={location}>
+                    {/* Full-screen pages — no AppShell */}
+                    <Route
+                      path="/scan"
+                      element={
+                        <ProtectedRoute>
+                          <PageTransition>
+                            <ScanPage />
+                          </PageTransition>
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/auth"
+                      element={
                         <PageTransition>
-                          <ScanPage />
+                          <AuthPage />
                         </PageTransition>
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/auth"
-                    element={
-                      <PageTransition>
-                        <AuthPage />
-                      </PageTransition>
-                    }
-                  />
-                  <Route
-                    path="/welcome"
-                    element={
-                      <PageTransition>
-                        <WelcomePage />
-                      </PageTransition>
-                    }
-                  />
-                  <Route
-                    path="/verify-email"
-                    element={
-                      <PageTransition>
-                        <VerifyEmailPage />
-                      </PageTransition>
-                    }
-                  />
-                  <Route
-                    path="/onboarding"
-                    element={
-                      <OnboardingRoute>
+                      }
+                    />
+                    <Route
+                      path="/welcome"
+                      element={
                         <PageTransition>
-                          <OnboardingPage />
+                          <WelcomePage />
                         </PageTransition>
-                      </OnboardingRoute>
-                    }
-                  />
+                      }
+                    />
+                    <Route
+                      path="/verify-email"
+                      element={
+                        <PageTransition>
+                          <VerifyEmailPage />
+                        </PageTransition>
+                      }
+                    />
+                    <Route
+                      path="/onboarding"
+                      element={
+                        <OnboardingRoute>
+                          <PageTransition>
+                            <OnboardingPage />
+                          </PageTransition>
+                        </OnboardingRoute>
+                      }
+                    />
 
-                  {/* All other pages use AppShell with bottom nav */}
-                  <Route
-                    path="*"
-                    element={
-                      <ProtectedRoute>
-                        <AppShell>
-                            <AnimatePresence mode="wait">
-                              <Suspense fallback={<PageLoader />}>
-                                <ErrorBoundary name="ContentArea">
-                                  <Routes
-                                    location={location}
-                                    key={location.pathname}
-                                  >
-                                    <Route
-                                      path="/"
-                                      element={
-                                        <PageTransition>
-                                          <Dashboard />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/results"
-                                      element={
-                                        <PageTransition>
-                                          <ResultsPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/medicine/:name"
-                                      element={
-                                        <PageTransition>
-                                          <MedicineInfoPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/search"
-                                      element={
-                                        <PageTransition>
-                                          <MedicineInfoPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/reminders"
-                                      element={
-                                        <PageTransition>
-                                          <RemindersPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/reminders/new"
-                                      element={
-                                        <PageTransition>
-                                          <AddReminderPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/history"
-                                      element={
-                                        <PageTransition>
-                                          <HistoryPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/interactions"
-                                      element={
-                                        <PageTransition>
-                                          <InteractionsPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/family"
-                                      element={
-                                        <PageTransition>
-                                          <FamilyHubPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/travel"
-                                      element={
-                                        <PageTransition>
-                                          <TravelCompanionPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/wellness"
-                                      element={
-                                        <PageTransition>
-                                          <WellnessPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/report"
-                                      element={
-                                        <PageTransition>
-                                          <ReportPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/settings"
-                                      element={
-                                        <PageTransition>
-                                          <SettingsPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/medvault"
-                                      element={
-                                        <PageTransition>
-                                          <MedVaultPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="/medications"
-                                      element={
-                                        <PageTransition>
-                                          <MedicationsPage />
-                                        </PageTransition>
-                                      }
-                                    />
-                                    <Route
-                                      path="*"
-                                      element={
-                                        <PageTransition>
-                                          <NotFound />
-                                        </PageTransition>
-                                      }
-                                    />
-                                  </Routes>
-                                </ErrorBoundary>
-                              </Suspense>
-                            </AnimatePresence>
-                          </AppShell>
-                      </ProtectedRoute>
-                    }
-                  />
-                </Routes>
-              </ErrorBoundary>
-            </Suspense>
-          </AppProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+                    {/* All other pages use AppShell with bottom nav */}
+                    <Route
+                      path="*"
+                      element={
+                        <ProtectedRoute>
+                          <AppShell>
+                              <AnimatePresence mode="wait">
+                                <Suspense fallback={<PageLoader />}>
+                                  <ErrorBoundary name="ContentArea">
+                                    <Routes
+                                      location={location}
+                                      key={location.pathname}
+                                    >
+                                      <Route
+                                        path="/"
+                                        element={
+                                          <PageTransition>
+                                            <Dashboard />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/results"
+                                        element={
+                                          <PageTransition>
+                                            <ResultsPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/medicine/:name"
+                                        element={
+                                          <PageTransition>
+                                            <MedicineInfoPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/search"
+                                        element={
+                                          <PageTransition>
+                                            <MedicineInfoPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/reminders"
+                                        element={
+                                          <PageTransition>
+                                            <RemindersPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/reminders/new"
+                                        element={
+                                          <PageTransition>
+                                            <AddReminderPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/history"
+                                        element={
+                                          <PageTransition>
+                                            <HistoryPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/interactions"
+                                        element={
+                                          <PageTransition>
+                                            <InteractionsPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/family"
+                                        element={
+                                          <PageTransition>
+                                            <FamilyHubPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/travel"
+                                        element={
+                                          <PageTransition>
+                                            <TravelCompanionPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/wellness"
+                                        element={
+                                          <PageTransition>
+                                            <WellnessPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/report"
+                                        element={
+                                          <PageTransition>
+                                            <ReportPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/settings"
+                                        element={
+                                          <PageTransition>
+                                            <SettingsPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/medvault"
+                                        element={
+                                          <PageTransition>
+                                            <MedVaultPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="/medications"
+                                        element={
+                                          <PageTransition>
+                                            <MedicationsPage />
+                                          </PageTransition>
+                                        }
+                                      />
+                                      <Route
+                                        path="*"
+                                        element={
+                                          <PageTransition>
+                                            <NotFound />
+                                          </PageTransition>
+                                        }
+                                      />
+                                    </Routes>
+                                  </ErrorBoundary>
+                                </Suspense>
+                              </AnimatePresence>
+                            </AppShell>
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Routes>
+                </ErrorBoundary>
+              </Suspense>
+            </AppProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </BatteryOptimizationGate>
   );
 };
 

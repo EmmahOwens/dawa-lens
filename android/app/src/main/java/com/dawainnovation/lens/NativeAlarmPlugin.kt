@@ -140,14 +140,48 @@ class NativeAlarmPlugin : Plugin() {
 
     @PluginMethod
     fun requestIgnoreBatteryOptimization(call: PluginCall) {
-        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
-            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                data = Uri.parse("package:${context.packageName}")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+                if (!pm.isIgnoringBatteryOptimizations(context.packageName)) {
+                    try {
+                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                    } catch (e1: Exception) {
+                        try {
+                            val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            context.startActivity(fallbackIntent)
+                        } catch (e2: Exception) {
+                            val appDetailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.parse("package:${context.packageName}")
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            context.startActivity(appDetailsIntent)
+                        }
+                    }
+                }
             }
-            context.startActivity(intent)
+            call.resolve()
+        } catch (e: Exception) {
+            call.reject("Failed to open battery optimization settings: ${e.message}", e)
         }
-        call.resolve()
+    }
+
+    /** Returns whether the OS is currently ignoring battery optimizations for this app. */
+    @PluginMethod
+    fun isBatteryOptimizationIgnored(call: PluginCall) {
+        val result = JSObject()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            result.put("ignored", pm.isIgnoringBatteryOptimizations(context.packageName))
+        } else {
+            result.put("ignored", true)
+        }
+        call.resolve(result)
     }
 }

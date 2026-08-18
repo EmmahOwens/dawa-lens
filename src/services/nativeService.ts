@@ -119,23 +119,30 @@ export const NativeService = {
   },
 
   /**
-   * Request exemption from battery optimization to ensure alarms are reliable.
+   * Request exemption from battery optimization to ensure alarms and background tasks are reliable.
    */
   requestBatteryOptimizationExemption: async () => {
     if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
     try {
-      const { value: confirmed } = await Dialog.confirm({
-        title: "Reliable Reminders",
-        message: "To ensure you receive medication reminders on time, please exclude Dawa Lens from battery optimization in the next screen.",
-        okButtonTitle: "Exempt",
-        cancelButtonTitle: "Later",
-      });
-      if (confirmed) {
-        const { NativeAlarm } = await import("@/plugins/nativeAlarm");
-        await NativeAlarm.requestIgnoreBatteryOptimization();
-      }
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      await NativeAlarm.requestIgnoreBatteryOptimization();
     } catch (err) {
       console.error("Failed to request battery optimization exemption:", err);
+    }
+  },
+
+  /**
+   * Check whether the app is currently exempt from battery optimization.
+   */
+  isBatteryOptimizationIgnored: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return true;
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      const res = await NativeAlarm.isBatteryOptimizationIgnored();
+      return res?.ignored ?? false;
+    } catch (err) {
+      console.error("Failed to check battery optimization exemption status:", err);
+      return false;
     }
   },
 };
