@@ -6,6 +6,11 @@ export interface PillMatch {
   confidence: number;
   genericName?: string;
   recommendedDosage?: string;
+  boxedWarning?: string | null;
+  indications?: string | null;
+  ndcValidated?: boolean;
+  deaSchedule?: string | null;
+  storageWarning?: string | null;
 }
 
 export interface PillIdResponse {

@@ -15,6 +15,7 @@ import aiRouter from './routes/ai.js';
 import patientsRouter from './routes/patients.js';
 import wellnessRouter from './routes/wellness.js';
 import adminRouter from './routes/admin/index.js';
+import fdaRouter from './routes/fda.js';
 
 import errorMiddleware from './middleware/errorMiddleware.js';
 import { globalLimiter, aiLimiter, authLimiter, visionLimiter } from './middleware/rateLimiter.js';
@@ -27,6 +28,7 @@ dotenv.config();
 // Startup environment status overview — logged for visibility in Render / Cloud deployment logs
 console.log('─── Render Environment Status Check ───');
 console.log('Firebase Admin:', process.env.FIREBASE_PROJECT_ID ? `✅ Active (Project: ${process.env.FIREBASE_PROJECT_ID})` : '⚠️ Missing FIREBASE_PROJECT_ID');
+console.log('openFDA API:', (process.env.OPENFDA_API || process.env.OPENFDA_API_KEY) ? '✅ Active (240 req/min tier)' : 'ℹ️ Free tier (40 req/min)');
 console.log('Cerebras API:', process.env.CEREBRAS_API_KEY ? '✅ Active (llama-3.3-70b)' : 'ℹ️ Not configured (optional fallback)');
 console.log('Groq API:', process.env.GROQ_API_KEY ? '✅ Active (Primary)' : '⚠️ Missing GROQ_API_KEY');
 console.log('SambaNova API:', (process.env.SAMBACLOUD_API_KEY || process.env.SAMBANOVA_API_KEY) ? '✅ Active (Meta-Llama-3.3-70B)' : 'ℹ️ Not configured (optional fallback)');
@@ -92,6 +94,7 @@ v1Router.use('/vision', visionLimiter, visionRouter);
 v1Router.use('/ai', aiLimiter, aiRouter);
 v1Router.use('/patients', patientsRouter);
 v1Router.use('/wellness', wellnessRouter);
+v1Router.use('/fda', aiLimiter, fdaRouter);
 v1Router.use('/admin', verifyAdmin, adminRouter);
 
 app.use('/api/v1', v1Router);

@@ -120,6 +120,7 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
   const [perDose, setPerDose] = useState(medicine.dosagePerDose?.toString() ?? "1");
   const [total, setTotal] = useState(medicine.totalQuantity?.toString() ?? "");
   const [unit, setUnit] = useState(medicine.unit ?? "tablets");
+  const [isSaving, setIsSaving] = useState(false);
   const parsedQty = parseFloat(qty);
   const parsedTotal = parseFloat(total);
   const isOverCapacity =
@@ -373,8 +374,15 @@ function StockCard({ medicine, daysRemaining, dailyDoseTotal, isLow, isWarning, 
         </div>
       </div>
 
-      {/* Refill button */}
-      <div className="mt-4 flex justify-end">
+      {/* Card Actions */}
+      <div className="mt-4 flex items-center justify-between pt-2 border-t border-border/30">
+        <a
+          href={`/medicine/${encodeURIComponent(medicine.name)}`}
+          className="inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Info className="size-3 text-primary" /> FDA Safety & Storage
+        </a>
+
         <button
           onClick={onRefill}
           className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all active:scale-95 ${

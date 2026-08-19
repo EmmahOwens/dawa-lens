@@ -10,6 +10,8 @@ import { getRxCUI, checkInteractions } from "@/services/interactionChecker";
 import { ParsedInteraction } from "@/types/interactions";
 import { useDrugData } from "@/hooks/useDrugData";
 import { useTranslation } from "react-i18next";
+import { getFdaDrugProfile, FdaDrugProfile } from "@/services/openFdaClient";
+import FdaSafetyOverviewCard from "@/components/fda/FdaSafetyOverviewCard";
 
 export default function MedicineInfoPage() {
   const { name } = useParams();
@@ -21,8 +23,35 @@ export default function MedicineInfoPage() {
   const { t } = useTranslation();
   
   const { data: info, isLoading: searching, isError, error } = useDrugData(activeQuery);
-  const { medicines, reminders } = useApp();
+  const { medicines, reminders, userProfile, patients, selectedPatientId } = useApp();
   const [interactions, setInteractions] = useState<ParsedInteraction[]>([]);
+  const [fdaProfile, setFdaProfile] = useState<FdaDrugProfile | null>(null);
+  const [fdaLoading, setFdaLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadFda() {
+      if (!activeQuery || !activeQuery.trim()) {
+        setFdaProfile(null);
+        return;
+      }
+      setFdaLoading(true);
+      try {
+        const currentPatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
+        const profile = await getFdaDrugProfile(activeQuery, {
+          age: currentPatient?.age || undefined,
+          gender: currentPatient?.gender || userProfile?.gender || undefined,
+          conditions: currentPatient?.conditions || [],
+          allergies: currentPatient?.allergies || [],
+        });
+        setFdaProfile(profile);
+      } catch (err) {
+        console.warn('Failed to load FDA profile:', err);
+      } finally {
+        setFdaLoading(false);
+      }
+    }
+    loadFda();
+  }, [activeQuery, selectedPatientId, patients, userProfile]);
 
   useEffect(() => {
     async function checkCurrentDrug() {
@@ -156,6 +185,9 @@ export default function MedicineInfoPage() {
               <ExternalLink size={12} /> {t("medicine_info.source")}: {info.source}
             </p>
           </div>
+
+          {/* openFDA Clinical Safety Overview Card */}
+          <FdaSafetyOverviewCard profile={fdaProfile} isLoading={fdaLoading} />
 
           {sections.map((s) => (
             <div key={s.title} className="rounded-xl border border-border bg-card p-3">

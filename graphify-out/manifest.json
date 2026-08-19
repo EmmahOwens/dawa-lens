@@ -415,8 +415,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/index.js": {
-    "mtime": 1785226342.543841,
-    "ast_hash": "be250cfde82a3b3e2ab04a3746c1e70b",
+    "mtime": 1787137698.3392153,
+    "ast_hash": "2038ad6f702495412dc9d53729ab8614",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/middleware/authMiddleware.js": {
@@ -485,8 +485,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1787131707.7798371,
-    "ast_hash": "cb7a983b6327763949b6a0c9015196c0",
+    "mtime": 1787138241.4464936,
+    "ast_hash": "3b6e23426ed69e9e84483603c22976a1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -540,8 +540,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/visionService.js": {
-    "mtime": 1785222892.4774547,
-    "ast_hash": "6bcdb9dd03d78b7c3f1e422f4ea91345",
+    "mtime": 1787138028.5969841,
+    "ast_hash": "1eaa658dcf7b5d373772750e32ca5620",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/wellnessService.js": {
@@ -1315,13 +1315,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/InteractionsPage.tsx": {
-    "mtime": 1783614938.726907,
-    "ast_hash": "9a8743ccbd37ddeca64b0da8a4ab6b44",
+    "mtime": 1787139908.5128088,
+    "ast_hash": "0850b845d466dbc728a44f65526e9add",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicineInfoPage.tsx": {
-    "mtime": 1778881360.8331413,
-    "ast_hash": "1edef749ef76cf9550ef51d61d246bfd",
+    "mtime": 1787138967.3606763,
+    "ast_hash": "e065afcf370914fcb93bc487ca5d3319",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/NotFound.tsx": {
@@ -1345,8 +1345,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ResultsPage.tsx": {
-    "mtime": 1781009315.0386603,
-    "ast_hash": "bed6ab055add06ffbb4a14bf817dbfaa",
+    "mtime": 1787138801.530217,
+    "ast_hash": "6928d12d2f7ad4aa75603899620c0af5",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ScanPage.bug-condition.test.tsx": {
@@ -1520,8 +1520,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/pillIdService.ts": {
-    "mtime": 1781364131.0886168,
-    "ast_hash": "9674ee680d7de2ecacd376912f0d422f",
+    "mtime": 1787138587.4973123,
+    "ast_hash": "181532d25a15db988066d76685958100",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/refillService.ts": {
@@ -2610,8 +2610,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedVaultPage.tsx": {
-    "mtime": 1787129665.111977,
-    "ast_hash": "d5ea058ee960c5a32d97d8019bed8a69",
+    "mtime": 1787140257.2313416,
+    "ast_hash": "dcd9658c212e5092479e3dfa9ffe94a1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicationsPage.tsx": {
@@ -3387,6 +3387,36 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/lazyWithRetry.ts": {
     "mtime": 1787134390.434349,
     "ast_hash": "86fff7b2e017fe8470f725e687667e06",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/routes/fda.js": {
+    "mtime": 1787137583.950445,
+    "ast_hash": "fbc7a91bec1596a9273036c4e570bb08",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/openFdaService.js": {
+    "mtime": 1787137551.210825,
+    "ast_hash": "02523a6269ed2b493d75fe50c7da54d5",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-openfda.js": {
+    "mtime": 1787138269.79631,
+    "ast_hash": "9bac71162c9a99fef81bcd351f5ce022",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/fda/FdaBoxedWarningBadge.tsx": {
+    "mtime": 1787138550.0951073,
+    "ast_hash": "79f49f22f5b84053651a6062755da072",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/fda/FdaSafetyOverviewCard.tsx": {
+    "mtime": 1787138562.3083155,
+    "ast_hash": "9eb0f02a9da79bb4a25d6635ce88ceea",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/openFdaClient.ts": {
+    "mtime": 1787138316.838707,
+    "ast_hash": "899c337a6c31eb9b4ae85b0d004fb3d0",
     "semantic_hash": ""
   }
 }

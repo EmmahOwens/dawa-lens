@@ -7,9 +7,9 @@ import * as medicineService from './medicineService.js';
 import * as reminderService from './reminderService.js';
 import * as doseLogService from './doseLogService.js';
 import * as patientService from './patientService.js';
-import * as wellnessService from './wellnessService.js';
 import { rateLimitManager } from './rateLimitManager.js';
 import { getFoodKnowledgePrompt, LOCAL_FOODS } from './localFoodService.js';
+import { fetchDrugLabel, checkDuplicateTherapy } from './openFdaService.js';
 
 dotenv.config();
 
@@ -729,10 +729,23 @@ export const getCoachAdvice = async (logs, medicines, userName, priority = 'high
 };
 
 export const checkHolisticSafety = async (medicines, lifestyleFactors, priority = 'high') => {
+  // Fetch FDA labels to ground interaction assertions
+  let fdaInteractionSnippets = [];
+  try {
+    const labelPromises = medicines.slice(0, 4).map(m => fetchDrugLabel(m.name || m.genericName));
+    const labels = await Promise.all(labelPromises);
+    fdaInteractionSnippets = labels
+      .filter(l => l && (l.drugInteractions || l.boxedWarning))
+      .map(l => `[FDA Label: ${l.brandName || l.genericName}]: ${l.drugInteractions ? l.drugInteractions.slice(0, 300) : ''} ${l.boxedWarning ? 'Boxed Warning: ' + l.boxedWarning.slice(0, 200) : ''}`);
+  } catch (fdaErr) {
+    console.warn('[checkHolisticSafety] FDA grounding retrieval skipped:', fdaErr.message);
+  }
+
   const prompt = `
     You are "Dawa-Lens Holistic Safety Engine".
     Medication List: ${JSON.stringify(medicines.map(m => m.name + (m.genericName ? ` (${m.genericName})` : '')))}
     Factors: ${JSON.stringify(lifestyleFactors)}
+    ${fdaInteractionSnippets.length > 0 ? `\n    === FDA GROUNDING DATA ===\n    ${fdaInteractionSnippets.join('\n    ')}\n` : ''}
 
     Task: Identify interactions with food/lifestyle (Alcohol, Caffeine, Grapefruit, Dairy, etc.).
     Include East African context: also check for interactions with local staples (e.g., Mukene, Kalo, Nakati) if mentioned or relevant.

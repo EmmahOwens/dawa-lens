@@ -18,12 +18,14 @@ import { aiApi } from "@/services/api";
 import { toast } from "sonner";
 import { NativeService } from "@/services/nativeService";
 import { ImpactStyle } from "@capacitor/haptics";
+import { checkFdaMultiSafety, FdaMultiSafetyResult } from "@/services/openFdaClient";
+import FdaBoxedWarningBadge from "@/components/fda/FdaBoxedWarningBadge";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
 export default function InteractionsPage() {
-  const { medicines } = useApp();
+  const { medicines, userProfile, patients, selectedPatientId } = useApp();
   const [activeTab, setActiveTab] = useState<"cabinet" | "sandbox">("cabinet");
   const { t } = useTranslation();
 
@@ -31,6 +33,7 @@ export default function InteractionsPage() {
   const [interactions, setInteractions] = useState<ParsedInteraction[]>([]);
   const [loading, setLoading] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
+  const [fdaSafety, setFdaSafety] = useState<FdaMultiSafetyResult | null>(null);
 
   // Sandbox State
   const [sandboxDrugs, setSandboxDrugs] = useState<{ name: string; rxcui: string }[]>([]);
@@ -128,6 +131,23 @@ export default function InteractionsPage() {
     const fetchInteractions = async () => {
       const rxcuis = medicines.map(m => m.rxcui).filter((id): id is string => !!id);
       
+      const currentPatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
+      const patientCtx = {
+        age: currentPatient?.age || undefined,
+        gender: currentPatient?.gender || userProfile?.gender || undefined,
+        conditions: currentPatient?.conditions || [],
+        allergies: currentPatient?.allergies || [],
+      };
+
+      // Always run openFDA multi-safety check if there are medicines
+      if (medicines.length > 0) {
+        checkFdaMultiSafety(medicines, patientCtx)
+          .then(setFdaSafety)
+          .catch(err => console.warn('FDA safety check failed:', err));
+      } else {
+        setFdaSafety(null);
+      }
+
       if (rxcuis.length < 2) {
         setInteractions([]);
         return;
@@ -147,12 +167,29 @@ export default function InteractionsPage() {
     if (activeTab === "cabinet") {
       fetchInteractions();
     }
-  }, [medicines, activeTab]);
+  }, [medicines, activeTab, selectedPatientId, patients, userProfile]);
 
   // Sandbox Safety Fetch
   useEffect(() => {
     const fetchSandboxInteractions = async () => {
       const rxcuis = sandboxDrugs.map(d => d.rxcui);
+
+      const currentPatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
+      const patientCtx = {
+        age: currentPatient?.age || undefined,
+        gender: currentPatient?.gender || userProfile?.gender || undefined,
+        conditions: currentPatient?.conditions || [],
+        allergies: currentPatient?.allergies || [],
+      };
+
+      if (sandboxDrugs.length > 0) {
+        checkFdaMultiSafety(sandboxDrugs.map(d => ({ name: d.name })), patientCtx)
+          .then(setFdaSafety)
+          .catch(err => console.warn('Sandbox FDA safety check failed:', err));
+      } else {
+        setFdaSafety(null);
+      }
+
       if (rxcuis.length < 2) {
         setSandboxInteractions([]);
         return;
@@ -172,7 +209,7 @@ export default function InteractionsPage() {
     if (activeTab === "sandbox") {
       fetchSandboxInteractions();
     }
-  }, [sandboxDrugs, activeTab]);
+  }, [sandboxDrugs, activeTab, selectedPatientId, patients, userProfile]);
 
   // Autocomplete Suggestions Effect
   useEffect(() => {
@@ -469,6 +506,80 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
       {/* TAB 1: CABINET SAFETY */}
       {activeTab === "cabinet" && (
         <div className="space-y-6">
+          {/* FDA Multi-Drug Clinical Safety Alerts (Duplicate Therapy, Boxed Warnings, Contraindications, Allergens) */}
+          {fdaSafety && (fdaSafety.duplicateTherapies?.length > 0 || fdaSafety.boxedWarnings?.length > 0 || fdaSafety.contraindicationAlerts?.length > 0 || fdaSafety.allergenAlerts?.length > 0) && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+              <div className="flex items-center gap-2 pb-1 border-b border-border/40">
+                <ShieldAlert size={16} className="text-red-500" />
+                <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
+                  FDA Clinical Safety Intelligence
+                </h3>
+              </div>
+
+              {/* Duplicate Therapies */}
+              {fdaSafety.duplicateTherapies?.map((dup, i) => (
+                <div key={`dup-${i}`} className="rounded-2xl border-2 border-amber-500/40 bg-amber-500/10 p-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle size={20} className="text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-500 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                          Duplicate Therapy
+                        </span>
+                        <span className="text-xs font-bold text-foreground">
+                          {dup.drug1} + {dup.drug2}
+                        </span>
+                      </div>
+                      <p className="text-xs text-foreground/90 font-medium leading-relaxed mb-1">
+                        {dup.warning}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground font-semibold">
+                        Shared Established Pharmacologic Class (EPC): {dup.sharedClass}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Boxed Warnings */}
+              {fdaSafety.boxedWarnings?.map((bw, i) => (
+                <FdaBoxedWarningBadge key={`bw-${i}`} warning={bw.warning} drugName={bw.drugName} />
+              ))}
+
+              {/* Contraindications */}
+              {fdaSafety.contraindicationAlerts?.map((ca, i) =>
+                ca.conflicts.map((c, j) => (
+                  <div key={`contra-${i}-${j}`} className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3.5 flex items-start gap-3">
+                    <ShieldAlert size={18} className="text-red-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-red-400 bg-red-500/20 px-2 py-0.5 rounded-full border border-red-500/30">
+                        Comorbidity Conflict: {c.condition}
+                      </span>
+                      <p className="text-xs font-bold text-foreground mt-1">{ca.drugName}</p>
+                      <p className="text-xs text-foreground/80 font-medium leading-relaxed">{c.detail}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {/* Allergens */}
+              {fdaSafety.allergenAlerts?.map((aa, i) =>
+                aa.conflicts.map((a, j) => (
+                  <div key={`allergen-${i}-${j}`} className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 flex items-start gap-3">
+                    <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/30">
+                        Inactive Ingredient Allergen: {a.allergy}
+                      </span>
+                      <p className="text-xs font-bold text-foreground mt-1">{aa.drugName}</p>
+                      <p className="text-xs text-foreground/80 font-medium leading-relaxed">{a.detail}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </motion.div>
+          )}
+
           {medicines.length < 2 && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}

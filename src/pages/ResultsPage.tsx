@@ -2,20 +2,16 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, FileText, Loader2, Sparkles, Bell } from "@/lib/icons";
+import { ArrowLeft, Check, Search, AlertTriangle, ThumbsUp, ThumbsDown, FileText, Loader2, Sparkles, Bell, Info } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useApp } from "@/contexts/AppContext";
 import { identifyPill, PillMatch } from "@/services/pillIdService";
 import { ShieldCheck, ShieldAlert, ShieldQuestion, CalendarClock, Flag, Bell as BellIcon } from "@/lib/icons";
 import PremiumLoader from "@/components/PremiumLoader";
+import FdaBoxedWarningBadge from "@/components/fda/FdaBoxedWarningBadge";
 
-type MatchResult = {
-  name: string;
-  genericName?: string;
-  confidence: number;
-  recommendedDosage?: string;
-};
+type MatchResult = PillMatch;
 
 export default function ResultsPage() {
   const { t } = useTranslation();
@@ -248,16 +244,46 @@ export default function ResultsPage() {
                     whileHover={{ y: -5 }}
                     className={`rounded-[2rem] border-2 p-6 transition-all ${confirmed === r.name ? "border-success bg-success/5 shadow-lg" : "border-border bg-card hover:border-primary/30 hover:shadow-xl"}`}
                   >
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="text-xl font-black text-card-foreground leading-tight">{r.name}</h3>
-                        {r.genericName && <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-70">{r.genericName}</p>}
-                        {r.recommendedDosage && <p className="text-xs font-bold text-primary mt-2">Recommended Dose: {r.recommendedDosage}</p>}
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <h3 className="text-xl font-black text-card-foreground leading-tight">{r.name}</h3>
+                          {r.ndcValidated && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                              <Check size={11} /> NDC Verified
+                            </span>
+                          )}
+                          {r.deaSchedule && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                              <ShieldAlert size={11} /> {r.deaSchedule}
+                            </span>
+                          )}
+                        </div>
+                        {r.genericName && <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5 opacity-70">{r.genericName}</p>}
+                        {r.recommendedDosage && <p className="text-xs font-bold text-primary mt-1.5">Recommended Dose: {r.recommendedDosage}</p>}
                       </div>
-                      <div className="bg-success text-success-foreground rounded-full px-3 py-1 text-[11px] font-black shadow-lg">
+                      <div className="bg-success text-success-foreground rounded-full px-3 py-1 text-[11px] font-black shadow-lg shrink-0">
                         {Math.round(r.confidence * 100)}% Match
                       </div>
                     </div>
+
+                    {/* FDA Boxed Warning if present */}
+                    {r.boxedWarning && (
+                      <div className="mb-3">
+                        <FdaBoxedWarningBadge warning={r.boxedWarning} drugName={r.name} />
+                      </div>
+                    )}
+
+                    {/* Indications / Typical Use Confirmation Prompt */}
+                    {r.indications && (
+                      <div className="mb-4 rounded-2xl bg-primary/5 border border-primary/15 p-3 flex items-start gap-2.5">
+                        <Info size={16} className="text-primary shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-[11px] font-bold text-foreground">Typical Clinical Use:</p>
+                          <p className="text-[11px] text-muted-foreground leading-relaxed">{r.indications}</p>
+                        </div>
+                      </div>
+                    )}
                     <div className="flex flex-col gap-2">
                       <div className="flex gap-2">
                         <Button className="rounded-full flex-1 h-12" onClick={() => handleConfirm(r)} disabled={!!confirmed}>

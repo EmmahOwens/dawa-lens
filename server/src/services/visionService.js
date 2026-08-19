@@ -2,6 +2,7 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import AppError from '../utils/AppError.js';
 import { rateLimitManager } from './rateLimitManager.js';
+import { fetchDrugLabel, fetchNdcData } from './openFdaService.js';
 
 dotenv.config();
 
@@ -167,15 +168,52 @@ const identifyWithGeminiText = async (ocrText, patientAge) => {
   } catch {
     throw new Error('AI returned malformed data');
   }
-  
+
+  const rawMatches = normaliseMatches(parsed.matches);
+  const enrichedMatches = await enrichMatchesWithFda(rawMatches);
+
   return {
     success: true,
-    matches: normaliseMatches(parsed.matches),
+    matches: enrichedMatches,
     imprints: parsed.imprints || [],
     labels: parsed.labels || [],
     summary: parsed.summary || '',
     engine: `${GEMINI_FLASH_MODEL}`,
   };
+};
+
+// ── Helper to enrich top matches with openFDA data ──────────
+const enrichMatchesWithFda = async (matches) => {
+  if (!matches || matches.length === 0) return matches;
+
+  const enriched = await Promise.all(
+    matches.map(async (m) => {
+      // Only enrich valid matches (skip inconclusive entries)
+      if (!m.name || m.name === 'Inconclusive Match' || m.confidence < 0.1) {
+        return m;
+      }
+
+      try {
+        const [label, ndc] = await Promise.all([
+          fetchDrugLabel(m.name || m.genericName),
+          fetchNdcData(m.name || m.genericName),
+        ]);
+
+        return {
+          ...m,
+          boxedWarning: label?.boxedWarning || null,
+          indications: label?.indicationsAndUsage ? label.indicationsAndUsage.slice(0, 180) + '...' : null,
+          ndcValidated: !!(ndc?.records && ndc.records.length > 0),
+          deaSchedule: ndc?.deaSchedule || null,
+          storageWarning: label?.storageAndHandling ? label.storageAndHandling.slice(0, 120) + '...' : null,
+        };
+      } catch {
+        return m;
+      }
+    })
+  );
+
+  return enriched;
 };
 
 // ── Public API ────────────────────────────────────────────────────────────────
