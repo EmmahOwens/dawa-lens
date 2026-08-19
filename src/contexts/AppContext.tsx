@@ -815,7 +815,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setReminders(pRems);
         setDoseLogs(pLogs);
         setPatients(pPatients);
-        setWellnessLogs(pWell);
+        setWellnessLogs(
+          [...pWell].sort(
+            (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime()
+          )
+        );
         setScheduleAuditLogs(pAudit);
         setIsDataLoading(false);
       };
@@ -964,6 +968,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       (snap) => {
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as WellnessLog)
+        );
+        data.sort(
+          (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime()
         );
         setWellnessLogs(data);
       },

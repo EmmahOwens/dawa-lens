@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useApp, WellnessLog } from "@/contexts/AppContext";
+import { useApp } from "@/contexts/AppContext";
+import { usePatientScope } from "@/hooks/usePatientScope";
 import { Heart, Utensils, Sparkles, Loader2, Smile, Zap, CheckCircle2, AlertTriangle, ShieldCheck, Brain, Activity, Coffee, Info, Trash2, TrendingUp } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
@@ -15,7 +16,7 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } }
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 // 7-day sparkline data derived from wellness logs
-function useEmotionSparkline(wellnessLogs: ReturnType<typeof useApp>["wellnessLogs"]) {
+function useEmotionSparkline(wellnessLogs: ReturnType<typeof usePatientScope>["scopedWellnessLogs"]) {
   const sparkline = Array.from({ length: 7 }).map((_, i) => {
     const date = subDays(new Date(), 6 - i);
     const dayLogs = wellnessLogs.filter(
@@ -42,7 +43,8 @@ function useEmotionSparkline(wellnessLogs: ReturnType<typeof useApp>["wellnessLo
 }
 
 export default function WellnessPage() {
-  const { wellnessLogs, addWellnessLog, deleteWellnessLog, medicines, doseLogs } = useApp();
+  const { addWellnessLog, deleteWellnessLog } = useApp();
+  const { scopedWellnessLogs, scopedMedicines, scopedDoseLogs } = usePatientScope();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"journal" | "food">("journal");
@@ -66,6 +68,13 @@ export default function WellnessPage() {
     }
   });
   const [guidanceLoading, setGuidanceLoading] = useState(false);
+
+  // Sort reflections by most recent timestamp descending and take the last 10 entries
+  const recentReflections = useMemo(() => {
+    return [...scopedWellnessLogs]
+      .sort((a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime())
+      .slice(0, 10);
+  }, [scopedWellnessLogs]);
   
   const fetchWellnessInsight = async () => {
     const cached = (() => {
@@ -82,13 +91,13 @@ export default function WellnessPage() {
       return;
     }
 
-    if (wellnessLogs.length === 0) return;
+    if (scopedWellnessLogs.length === 0) return;
     setInsightLoading(true);
     try {
       const res = await aiApi.getWellnessInsight({
-        doseLogs,
-        wellnessLogs,
-        medicines
+        doseLogs: scopedDoseLogs,
+        wellnessLogs: scopedWellnessLogs,
+        medicines: scopedMedicines
       });
       if (res) {
         setInsight(res);
@@ -107,7 +116,7 @@ export default function WellnessPage() {
 
   useEffect(() => {
     fetchWellnessInsight();
-  }, []);
+  }, [scopedWellnessLogs, scopedDoseLogs, scopedMedicines]);
 
   const fetchNutritionalGuidance = async () => {
     const cached = (() => {
@@ -124,10 +133,10 @@ export default function WellnessPage() {
       return;
     }
 
-    if (medicines.length === 0) return;
+    if (scopedMedicines.length === 0) return;
     setGuidanceLoading(true);
     try {
-      const res = await aiApi.getNutritionalGuidance({ medicines });
+      const res = await aiApi.getNutritionalGuidance({ medicines: scopedMedicines });
       if (res) {
         setGuidance(res);
         try {
@@ -145,7 +154,7 @@ export default function WellnessPage() {
 
   useEffect(() => {
     fetchNutritionalGuidance();
-  }, []);
+  }, [scopedMedicines]);
   
   // Journal State
   const [mood, setMood] = useState(3); // 1-5
@@ -167,7 +176,7 @@ export default function WellnessPage() {
           mood,
           energy,
           symptoms,
-          medicines,
+          medicines: scopedMedicines,
         });
       } catch (reflectionErr) {
         console.warn("Groq reflection failed, saving log without AI reflection:", reflectionErr);
@@ -210,7 +219,7 @@ export default function WellnessPage() {
     if (!meal) return;
     setLoading(true);
     try {
-      const res = await aiApi.checkMealSafety({ medicines, mealDescription: meal });
+      const res = await aiApi.checkMealSafety({ medicines: scopedMedicines, mealDescription: meal });
       setMealSafety(res);
     } finally {
       setLoading(false);
@@ -259,7 +268,7 @@ export default function WellnessPage() {
     { val: 5, emoji: "🤩", label: "Great" }
   ];
 
-  const sparklineData = useEmotionSparkline(wellnessLogs);
+  const sparklineData = useEmotionSparkline(scopedWellnessLogs);
 
   return (
     <div className="px-4 pt-12 pb-24">
@@ -685,7 +694,7 @@ export default function WellnessPage() {
         </div>
 
         <div className="space-y-3">
-          {wellnessLogs.length === 0 ? (
+          {recentReflections.length === 0 ? (
             <div className="p-12 rounded-3xl border-2 border-dashed border-border/50 flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
                 <Heart size={24} className="text-muted-foreground/30" />
@@ -694,7 +703,7 @@ export default function WellnessPage() {
               <p className="text-[10px] text-muted-foreground/60 mt-1 uppercase tracking-widest">Log your first vibe or meal</p>
             </div>
           ) : (
-            wellnessLogs.slice(0, 10).map((log) => {
+            recentReflections.map((log) => {
               const logMood = log.type === "symptom" ? (log.data?.mood != null ? Number(log.data.mood) : null) : null;
               const logEnergy = log.type === "symptom" ? (log.data?.energy != null ? Number(log.data.energy) : null) : null;
               const logSymptoms = log.type === "symptom" ? (log.data?.symptoms as string[] | undefined) : null;
