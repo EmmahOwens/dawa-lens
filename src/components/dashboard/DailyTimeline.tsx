@@ -67,6 +67,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
     scheduledISO: string;   // ISO datetime to store in the dose log
     offsetMinutes: number;
     log: DoseLog | undefined;
+    isActioned: boolean;
   };
 
   const slots: SlotEntry[] = [];
@@ -183,6 +184,11 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
         return false;
       });
 
+      const isTaken = log?.action === "taken";
+      const isSkipped = log?.action === "skipped";
+      const isMissed = log?.action === "missed";
+      const isActioned = isTaken || isSkipped || isMissed;
+
       slots.push({
         reminder: r,
         slotIndex: idx,
@@ -191,12 +197,23 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
         scheduledISO,
         offsetMinutes: slotOffset,
         log,
+        isActioned,
       });
     });
   });
 
-  // Sort slots by effective display time
-  slots.sort((a, b) => a.displayTime.localeCompare(b.displayTime));
+  // Separate pending vs actioned slots, sorting each chronologically
+  const pendingSlots = slots
+    .filter((s) => !s.isActioned)
+    .sort((a, b) => timeStrToMinutes(a.displayTime) - timeStrToMinutes(b.displayTime));
+
+  const actionedSlots = slots
+    .filter((s) => s.isActioned)
+    .sort((a, b) => timeStrToMinutes(a.displayTime) - timeStrToMinutes(b.displayTime));
+
+  // The next dose is placed on the far left, followed by upcoming doses to the right,
+  // followed by already completed/actioned doses
+  const orderedSlots = [...pendingSlots, ...actionedSlots];
 
   return (
     <div className="mb-8 overflow-hidden">
@@ -211,13 +228,16 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-4 pt-2 -mx-4 px-4 scrollbar-hide snap-x">
-        {slots.map((entry, index) => {
-          const { reminder: r, displayTime, scheduledISO, offsetMinutes, log, slotIndex } = entry;
+        {orderedSlots.map((entry, index) => {
+          const { reminder: r, displayTime, scheduledISO, offsetMinutes, log, slotIndex, isActioned } = entry;
           const isTaken = log?.action === "taken";
           const isSkipped = log?.action === "skipped";
           const isMissed = log?.action === "missed";
-          const isActioned = isTaken || isSkipped || isMissed;
           const hasShift = offsetMinutes !== 0 && entry.slotIndex > -1;
+
+          // Only the earliest pending dose is the active next dose card
+          const isNextDose = !isActioned && pendingSlots.length > 0 && entry === pendingSlots[0];
+          const isUpcoming = !isActioned && !isNextDose;
 
           return (
             <motion.div
@@ -225,35 +245,51 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.04 }}
-              className={`flex-shrink-0 w-40 snap-start rounded-[2rem] p-5 border transition-all ${
-                isTaken
-                  ? "bg-success/5 border-success/20 opacity-60"
-                  : isActioned
-                    ? "bg-muted/50 border-border opacity-50"
-                    : "bg-card border-border shadow-sm"
+              className={`flex-shrink-0 w-44 snap-start rounded-[2rem] p-5 border transition-all relative ${
+                isNextDose
+                  ? "bg-card border-primary/50 ring-1 ring-primary/30 shadow-md"
+                  : isTaken
+                    ? "bg-success/5 border-success/20 opacity-60"
+                    : isActioned
+                      ? "bg-muted/50 border-border opacity-50"
+                      : "bg-card/70 border-border opacity-90 shadow-none"
               }`}
             >
-              <div className="flex flex-col gap-4 h-full justify-between">
+              <div className="flex flex-col gap-3.5 h-full justify-between">
                 <div>
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-3 transition-colors duration-300 ${
-                    isTaken ? "bg-success/20 text-success" : "bg-primary/10 text-primary"
-                  }`}>
-                    <AnimatePresence mode="wait" initial={false}>
-                      <motion.div
-                        key={isTaken ? "check" : "pill"}
-                        initial={{ scale: 0.8, rotate: -45, opacity: 0 }}
-                        animate={{ scale: 1, rotate: 0, opacity: 1 }}
-                        exit={{ scale: 0.8, rotate: 45, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        {isTaken ? <Check size={20} /> : <Pill size={20} />}
-                      </motion.div>
-                    </AnimatePresence>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors duration-300 ${
+                      isTaken
+                        ? "bg-success/20 text-success"
+                        : isNextDose
+                          ? "bg-primary/20 text-primary shadow-sm"
+                          : "bg-muted text-muted-foreground"
+                    }`}>
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.div
+                          key={isTaken ? "check" : "pill"}
+                          initial={{ scale: 0.8, rotate: -45, opacity: 0 }}
+                          animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                          exit={{ scale: 0.8, rotate: 45, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          {isTaken ? <Check size={20} /> : <Pill size={20} />}
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+
+                    {isNextDose && (
+                      <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary text-primary-foreground shadow-sm">
+                        Next Dose
+                      </span>
+                    )}
                   </div>
 
                   {/* Time display with shift badge */}
                   <div className="flex items-center gap-1 flex-wrap mb-0.5">
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none">
+                    <p className={`text-xs font-bold uppercase tracking-widest leading-none ${
+                      isNextDose ? "text-primary font-black" : "text-muted-foreground"
+                    }`}>
                       {displayTime}
                     </p>
                     {hasShift && (
@@ -276,13 +312,15 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                   </p>
                 </div>
 
-                {!isActioned ? (
+                {isNextDose ? (
                   <div className="flex gap-2 pt-2">
                     <motion.button
                       whileHover={{ scale: 1.04 }}
                       whileTap={{ scale: 0.92 }}
                       onClick={(e) => handleActionWithConfetti(e, r, "taken", scheduledISO)}
-                      className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center transition-colors"
+                      className="flex-1 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"
+                      title="Take dose"
+                      aria-label="Take dose"
                     >
                       <Check size={16} strokeWidth={3} />
                     </motion.button>
@@ -290,15 +328,24 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                       whileHover={{ scale: 1.04 }}
                       whileTap={{ scale: 0.92 }}
                       onClick={() => onAction(r, "skipped", scheduledISO)}
-                      className="h-9 w-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                      className="h-9 w-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-colors"
+                      title="Mark missed or skipped"
+                      aria-label="Mark missed or skipped"
                     >
                       <AlertCircle size={16} />
                     </motion.button>
                   </div>
+                ) : isUpcoming ? (
+                  <div className="pt-2">
+                    <div className="h-9 rounded-xl bg-muted/40 border border-border/50 flex items-center justify-center gap-1.5 text-muted-foreground">
+                      <Clock size={11} />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Upcoming</span>
+                    </div>
+                  </div>
                 ) : (
                   <div className="pt-2 text-center">
                     <span className={`text-[10px] font-black uppercase tracking-widest ${
-                      isTaken ? "text-success" : "text-muted-foreground"
+                      isTaken ? "text-success" : isSkipped ? "text-muted-foreground" : "text-destructive"
                     }`}>
                       {isTaken ? "Done" : isSkipped ? "Skipped" : "Missed"}
                     </span>
@@ -314,7 +361,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
           );
         })}
 
-        {slots.length === 0 && (
+        {orderedSlots.length === 0 && (
           <div className="w-full py-8 text-center bg-muted/20 rounded-3xl border border-dashed border-border">
             <p className="text-sm text-muted-foreground">No reminders for today!</p>
           </div>
