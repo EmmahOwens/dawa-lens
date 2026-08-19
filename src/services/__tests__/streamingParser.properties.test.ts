@@ -103,7 +103,7 @@ const validMetadataJsonArb = fc
     suggestions: fc.array(fc.string({ minLength: 1, maxLength: 30 }), {
       maxLength: 3,
     }),
-    source: fc.constantFrom("Dawa-GPT", "Gemini", "Groq"),
+    source: fc.constantFrom("DawaGPT", "Gemini", "Groq"),
     action: fc.option(
       fc.record({
         type: fc.constantFrom(

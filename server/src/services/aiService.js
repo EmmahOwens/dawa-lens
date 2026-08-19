@@ -438,7 +438,7 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
 
   const modelKey = modelId === GROQ_MODEL ? 'groq-70b'
     : modelId === GROQ_SCOUT_MODEL ? 'groq-scout'
-    : 'groq-8b';
+      : 'groq-8b';
 
   const fn = async () => {
     // Ensure sufficient token headroom for reasoning models (reasoning tokens + completion tokens)
@@ -496,10 +496,10 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
  * Attempts preferred model first, then gracefully cascades through all available providers.
  */
 export const callAiWithFallback = async (messages, options = {}) => {
-  const { 
-    isJson = true, 
-    priority = 'high', 
-    maxTokens = 2048, 
+  const {
+    isJson = true,
+    priority = 'high',
+    maxTokens = 2048,
     isComplex = true,
     preferredModel = null,
     forceModel = null,
@@ -785,16 +785,16 @@ export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines, prio
     
     === DATA FOR ANALYSIS ===
     Medicines: ${JSON.stringify(medicines.map(m => m.name))}
-    Medication Logs (last 30 days): ${JSON.stringify(doseLogs.slice(0, 30).map(l => ({ 
-      med: l.medicineName, 
-      time: l.actionTime ? l.actionTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined, 
-      status: l.action 
-    })))}
-    Wellness/Symptom Logs: ${JSON.stringify(wellnessLogs.slice(0, 20).map(l => ({ 
-      time: l.timestamp ? l.timestamp.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined, 
-      type: l.type, 
-      data: l.data 
-    })))}
+    Medication Logs (last 30 days): ${JSON.stringify(doseLogs.slice(0, 30).map(l => ({
+    med: l.medicineName,
+    time: l.actionTime ? l.actionTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined,
+    status: l.action
+  })))}
+    Wellness/Symptom Logs: ${JSON.stringify(wellnessLogs.slice(0, 20).map(l => ({
+    time: l.timestamp ? l.timestamp.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined,
+    type: l.type,
+    data: l.data
+  })))}
     
     === TASK ===
     1. Correlate medication adherence with wellness trends (side effects, energy, mood).
@@ -961,7 +961,7 @@ export const shouldRetrieveMedicalKnowledge = (text) => {
   // Exclude typical app commands/action queries unless they explicitly request safety/medical information
   const isSimpleAction = /^(show|list|delete|remove|cancel|stop|add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust)\s/i.test(lower);
   const asksForMedicalInfo = /(interact|safety|safe|side\s*effect|contraindication|warn|hazard|allergic|allergy|poison|overdose|symptom|pain|sick|hurt|doctor|disease|treat|cure|prevent|work|mechanism)/i.test(lower);
-  
+
   if (isSimpleAction && !asksForMedicalInfo) return false;
 
   // Check for medical keywords or general health topics
@@ -992,10 +992,10 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
     const chatMaxTokens = 2048;
 
     let result = await callAiWithFallback(finalMessages, {
-      isJson: true, 
-      priority, 
-      maxTokens: chatMaxTokens, 
-      isComplex 
+      isJson: true,
+      priority,
+      maxTokens: chatMaxTokens,
+      isComplex
     });
 
     // Action execution is handled client-side by dispatchAIAction (useAIActions.tsx).
@@ -1022,7 +1022,7 @@ async function executeAiAction(action, userId, userMedicines = [], selectedPatie
     case 'UPDATE_MEDICINE': return await medicineService.updateMedicine(payload.id, data);
     case 'ADD_REMINDER':
       if (!data.medicineId && data.medicineName && userMedicines.length > 0) {
-        const match = userMedicines.find(m => 
+        const match = userMedicines.find(m =>
           m.name.toLowerCase() === data.medicineName.toLowerCase() ||
           (m.genericName && m.genericName.toLowerCase() === data.medicineName.toLowerCase())
         );
@@ -1106,7 +1106,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     function createFakeStream(jsonResp) {
       return new Readable({
         read() {
-          const metadata = JSON.stringify({ suggestions: jsonResp.suggestions || [], source: jsonResp.source || "Dawa-GPT", action: jsonResp.action || null });
+          const metadata = JSON.stringify({ suggestions: jsonResp.suggestions || [], source: jsonResp.source || "DawaGPT", action: jsonResp.action || null });
           const data = JSON.stringify({ choices: [{ delta: { content: (jsonResp.text || "") + "\n###METADATA###\n" + metadata } }] });
           this.push(`data: ${data}\n`);
           this.push(`data: [DONE]\n`);
@@ -1294,13 +1294,13 @@ function buildPrimingMessage(reminders, medicines, patients, selectedPatientId) 
   const name = activePatient?.name || 'you';
   const reminderCount = reminders?.length || 0;
   const nextReminder = reminders?.[0];
-  let opening = `Hi! I'm Dawa-GPT.`;
+  let opening = `Hi! I'm DawaGPT.`;
   if (reminderCount > 0 && nextReminder) opening += ` ${name === 'you' ? 'You have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up.`;
   let firstSuggestions = [];
   if (nextReminder) firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
   if (medicines?.length > 0) firstSuggestions.push(`Does ${medicines[0].name} interact with anything?`);
   firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
-  return JSON.stringify({ text: opening, suggestions: firstSuggestions.slice(0, 3), source: 'Dawa-GPT', action: null });
+  return JSON.stringify({ text: opening, suggestions: firstSuggestions.slice(0, 3), source: 'DawaGPT', action: null });
 }
 
 function getActiveAndPastMedicines(medicines, reminders, doseLogs) {
@@ -1357,7 +1357,7 @@ function getActiveAndPastMedicines(medicines, reminders, doseLogs) {
 function userAskedForAllMeds(text) {
   if (!text) return false;
   const lower = text.toLowerCase();
-  
+
   // Specific phrases asking for history/all/past
   const keywords = [
     "all medicine", "all medication", "all med",
@@ -1367,14 +1367,14 @@ function userAskedForAllMeds(text) {
     "history of my medicine", "history of medicine", "medication history",
     "show all", "list all", "view all"
   ];
-  
+
   return keywords.some(keyword => lower.includes(keyword));
 }
 
 async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
   const recentMessages = messages.slice(-5);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
-  const lastAction = recentMessages.find(m => m.role === 'assistant' && (m.action || m.content?.includes('action')) )?.action;
+  const lastAction = recentMessages.find(m => m.role === 'assistant' && (m.action || m.content?.includes('action')))?.action;
   const conversationPhase = messages.length === 0 ? 'opening' : messages.length < 4 ? 'discovery' : lastAction ? 'post-action' : 'ongoing';
   const shouldRetrieve = shouldRetrieveMedicalKnowledge(lastUserMsg);
   const knowledgePromise = shouldRetrieve ? retrieveMedicalKnowledge(lastUserMsg) : Promise.resolve([]);
@@ -1389,24 +1389,24 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const filteredDoseLogs = userRequestedAll
     ? doseLogs
     : (doseLogs || []).filter(log => {
-        return activeMedsList.some(m =>
-          m.name?.toLowerCase() === log.medicineName?.toLowerCase() ||
-          (m.genericName && m.genericName?.toLowerCase() === log.medicineName?.toLowerCase())
-        );
-      });
+      return activeMedsList.some(m =>
+        m.name?.toLowerCase() === log.medicineName?.toLowerCase() ||
+        (m.genericName && m.genericName?.toLowerCase() === log.medicineName?.toLowerCase())
+      );
+    });
 
   const activeMeds = filteredMeds?.length ? filteredMeds.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ') : 'None';
   const safeFormatDate = (val) => typeof val !== 'string' ? val : val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
   const recentLogs = filteredDoseLogs ? JSON.stringify(filteredDoseLogs.slice(0, isComplex ? 5 : 2).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
   const remindersSummary = reminders?.length ? JSON.stringify(reminders.map(r => ({ id: r.id, medicineName: r.medicineName, dose: r.dose, time: r.time, repeat: r.repeatSchedule, enabled: r.enabled })).slice(0, isComplex ? 10 : 3)) : 'No reminders set';
   const wellnessSummary = wellnessLogs?.length ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1).map(l => ({ ...l, timestamp: safeFormatDate(l.timestamp) }))) : 'No wellness logs';
-  const vitalityContext = vitalitySummary?.length ? `Vitality Trends (Last 7 Days): ${JSON.stringify(vitalitySummary.map(d => ({ day: d.name, adherence: `${d.adherence}%`, energy: d.energy ? `${(d.energy/20).toFixed(1)}/5` : 'N/A', mood: d.mood ? `${(d.mood/20).toFixed(1)}/5` : 'N/A' })))}` : 'No vitality trends available';
+  const vitalityContext = vitalitySummary?.length ? `Vitality Trends (Last 7 Days): ${JSON.stringify(vitalitySummary.map(d => ({ day: d.name, adherence: `${d.adherence}%`, energy: d.energy ? `${(d.energy / 20).toFixed(1)}/5` : 'N/A', mood: d.mood ? `${(d.mood / 20).toFixed(1)}/5` : 'N/A' })))}` : 'No vitality trends available';
   const patientsSummary = patients?.length ? JSON.stringify(patients.map(p => ({ id: p.id, name: p.name, relation: p.relation }))) : 'No family profiles';
   const knowledgeSnippets = await knowledgePromise;
   const knowledgeContext = knowledgeSnippets.length > 0 ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n` : "";
 
   const STATIC_SYSTEM_PROMPT = `
-    You are "Dawa-GPT", a warm and caring medical AI assistant integrated into the Dawa-Lens app.
+    You are "DawaGPT", a warm and caring medical AI assistant integrated into the Dawa-Lens app.
     Regional Context: Uganda / East Africa.
 
     ${getFoodKnowledgePrompt()}
@@ -1517,13 +1517,13 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
        - NEVER repeat suggestions from earlier turns. Keep them fresh and relevant.
        - Keep them under 6 words each.
        ${(() => {
-         const lastAssistantMsg = messages.slice().reverse().find(m => m.role === 'assistant');
-         const prevSuggestions = lastAssistantMsg?.suggestions || lastAssistantMsg?.text?.match?.(/suggestions.*?\[(.*?)\]/s);
-         if (lastAssistantMsg?.suggestions?.length) {
-           return `- Previous turn suggestions were: ${JSON.stringify(lastAssistantMsg.suggestions)}. Generate NEW ones that follow the conversation forward.`;
-         }
-         return '';
-       })()}
+      const lastAssistantMsg = messages.slice().reverse().find(m => m.role === 'assistant');
+      const prevSuggestions = lastAssistantMsg?.suggestions || lastAssistantMsg?.text?.match?.(/suggestions.*?\[(.*?)\]/s);
+      if (lastAssistantMsg?.suggestions?.length) {
+        return `- Previous turn suggestions were: ${JSON.stringify(lastAssistantMsg.suggestions)}. Generate NEW ones that follow the conversation forward.`;
+      }
+      return '';
+    })()}
 
     CONVERSATION PHASE: ${conversationPhase}
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===

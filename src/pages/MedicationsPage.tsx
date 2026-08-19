@@ -97,9 +97,15 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
   const [perDose, setPerDose] = useState(medicine?.dosagePerDose?.toString() ?? "1");
   const [total, setTotal] = useState(medicine?.totalQuantity?.toString() ?? "");
   const [unit, setUnit] = useState(medicine?.unit ?? "tablets");
-
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
+
+  const parsedQty = parseFloat(qty);
+  const parsedTotal = parseFloat(total);
+  const isOverCapacity =
+    trackStock && !isNaN(parsedQty) && !isNaN(parsedTotal) && parsedTotal > 0 && parsedQty > parsedTotal;
+  const isNegativeQty = trackStock && !isNaN(parsedQty) && parsedQty < 0;
+  const isStockInvalid = trackStock && (isNaN(parsedQty) || isOverCapacity || isNegativeQty);
 
   const handleSave = async () => {
     if (!name.trim() || !dosage.trim()) {
@@ -111,14 +117,22 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
       return;
     }
 
+    if (trackStock && isOverCapacity) {
+      toast({
+        title: "Invalid Stock",
+        description: "Stock on hand cannot exceed total pack size.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       const stockFields: Record<string, any> = {};
       if (trackStock) {
-        const parsedQty = parseFloat(qty);
-        if (!isNaN(parsedQty)) {
+        if (!isNaN(parsedQty) && parsedQty >= 0) {
           stockFields.currentQuantity = parsedQty;
-          stockFields.totalQuantity = parseFloat(total) || parsedQty;
+          stockFields.totalQuantity = !isNaN(parsedTotal) && parsedTotal > 0 ? parsedTotal : parsedQty;
           stockFields.dosagePerDose = parseFloat(perDose) || 1;
           stockFields.unit = unit;
         }
@@ -385,10 +399,18 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                         value={total}
                         onChange={(e) => setTotal(e.target.value)}
                         placeholder="e.g. 60"
-                        className="h-12 rounded-xl font-bold"
+                        className={`h-12 rounded-xl font-bold ${
+                          isOverCapacity ? "border-destructive focus-visible:ring-destructive" : ""
+                        }`}
                       />
                     </div>
                   </div>
+                  {isOverCapacity && (
+                    <p className="text-xs font-semibold text-destructive flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                      <AlertTriangle className="size-3.5 flex-shrink-0" />
+                      Stock on hand ({parsedQty}) cannot exceed total pack size ({parsedTotal}).
+                    </p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -415,10 +437,10 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || !name.trim() || !dosage.trim() || (trackStock && isStockInvalid)}
             className="flex-1 rounded-xl h-12 font-bold"
           >
-            {isSaving ? "Saving…" : isEditing ? "Save Changes" : "Add Medication"}
+            {isSaving ? "Saving…" : isEditing ? "Update Medication" : "Save Medication"}
           </Button>
         </div>
         </div>{/* end scrollable body */}

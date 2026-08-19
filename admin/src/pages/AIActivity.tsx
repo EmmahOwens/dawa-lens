@@ -16,10 +16,10 @@ const MOCK_SCAN_DATA = Array.from({ length: 14 }, (_, i) => {
 });
 
 const KPI_CARDS = [
-  { label: 'Total Scans (30d)',   value: '1,240', icon: Scan,         color: 'text-primary',     bg: 'bg-primary/15',     glow: 'bg-primary' },
-  { label: 'Success Rate',        value: '87%',   icon: TrendingUp,   color: 'text-success',     bg: 'bg-success/15',     glow: 'bg-success' },
-  { label: 'GPT Conversations',   value: '3,891', icon: MessageSquare, color: 'text-violet-400', bg: 'bg-violet-500/15',  glow: 'bg-violet-500' },
-  { label: 'Avg Response (ms)',   value: '1,240', icon: Bot,          color: 'text-warning',     bg: 'bg-warning/15',     glow: 'bg-warning' },
+  { label: 'Total Scans (30d)', value: '1,240', icon: Scan, color: 'text-primary', bg: 'bg-primary/15', glow: 'bg-primary' },
+  { label: 'Success Rate', value: '87%', icon: TrendingUp, color: 'text-success', bg: 'bg-success/15', glow: 'bg-success' },
+  { label: 'GPT Conversations', value: '3,891', icon: MessageSquare, color: 'text-violet-400', bg: 'bg-violet-500/15', glow: 'bg-violet-500' },
+  { label: 'Avg Response (ms)', value: '1,240', icon: Bot, color: 'text-warning', bg: 'bg-warning/15', glow: 'bg-warning' },
 ];
 
 export function AIActivity() {
@@ -34,7 +34,7 @@ export function AIActivity() {
           </div>
           <div>
             <h2 className="text-base font-bold text-foreground leading-tight">AI Activity</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Pill scan and Dawa-GPT usage analytics</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Pill scan and DawaGPT usage analytics</p>
           </div>
         </div>
         <span className="badge badge-primary text-[10px] px-2.5 py-1 animate-pulse">

@@ -168,7 +168,7 @@ router.post('/emotion-reflection', protect, validate(aiValidation.emotionReflect
 });
 
 /**
- * Conversational AI Assistant (Dawa-GPT)
+ * Conversational AI Assistant (DawaGPT)
  */
 router.post('/chat', protect, validate(aiValidation.chatSchema), heavyAiLimiter, tokenBudgetGuard, async (req, res, next) => {
   try {
@@ -185,7 +185,7 @@ router.post('/chat', protect, validate(aiValidation.chatSchema), heavyAiLimiter,
 router.post('/chat/stream', protect, validate(aiValidation.chatSchema), heavyAiLimiter, tokenBudgetGuard, async (req, res, next) => {
   try {
     const stream = await aiService.streamChatWithDawaGPT(req.body);
-    
+
     // Set headers for SSE (Server-Sent Events) or raw stream
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');

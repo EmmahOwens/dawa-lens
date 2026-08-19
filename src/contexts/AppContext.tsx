@@ -35,6 +35,7 @@ import { schedulePostDoseEncouragementNotification } from "../services/quotesSer
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
+import { calculateRefillStatus } from "../services/refillService";
 import { useTranslation } from "react-i18next";
 import { storage } from "../lib/storage";
 import { toDate } from "../lib/utils";
@@ -1563,13 +1564,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
           m.id === medicine!.id ? { ...m, currentQuantity: newQuantity } : m
         );
 
-        // Trigger refill toast when critically low (≤ 2 days of doses)
-        if (newQuantity <= doseAmount * 2) {
-          toast({
-            title: `⚠️ Refill Soon — ${medicine.name}`,
-            description: `Only ${newQuantity} ${medicine.unit || "units"} left. Open Med Vault to refill.`,
-            variant: "destructive",
-          });
+        // Check refill status accurately derived from daily dosage and remaining stock
+        const updatedMed = { ...medicine, currentQuantity: newQuantity };
+        const status = calculateRefillStatus(updatedMed, reminders);
+        if (status) {
+          if (status.isOutOfStock) {
+            toast({
+              title: `⛔ Out of Stock — ${medicine.name}`,
+              description: `0 ${medicine.unit || "units"} remaining. Open Med Vault to refill now.`,
+              variant: "destructive",
+            });
+          } else if (status.isLow) {
+            toast({
+              title: `🚨 Refill Immediately — ${medicine.name}`,
+              description: `Only ~${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} left (${newQuantity} ${medicine.unit || "units"}). Open Med Vault to refill.`,
+              variant: "destructive",
+            });
+          } else if (status.isWarning) {
+            toast({
+              title: `⚠️ Refill Soon — ${medicine.name}`,
+              description: `Only ~${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} left (${newQuantity} ${medicine.unit || "units"}). Open Med Vault to refill.`,
+            });
+          }
         }
       }
 

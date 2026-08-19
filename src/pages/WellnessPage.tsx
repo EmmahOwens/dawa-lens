@@ -75,7 +75,7 @@ export default function WellnessPage() {
       .sort((a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime())
       .slice(0, 10);
   }, [scopedWellnessLogs]);
-  
+
   const fetchWellnessInsight = async () => {
     const cached = (() => {
       try {
@@ -155,12 +155,12 @@ export default function WellnessPage() {
   useEffect(() => {
     fetchNutritionalGuidance();
   }, [scopedMedicines]);
-  
+
   // Journal State
   const [mood, setMood] = useState(3); // 1-5
   const [energy, setEnergy] = useState(3); // 1-5
   const [symptoms, setSymptoms] = useState<string[]>([]);
-  
+
   // Food State
   const [meal, setMeal] = useState("");
   const [mealSafety, setMealSafety] = useState<any>(null);
@@ -169,7 +169,7 @@ export default function WellnessPage() {
     setLoading(true);
     setReflectionLoading(true);
     try {
-      // Step 1: Fetch personalized AI reflection from Groq (same API key flow as Dawa-GPT)
+      // Step 1: Fetch personalized AI reflection from Groq (same API key flow as DawaGPT)
       let aiReflection: { reflection: string; affirmation: string; tip: string } | null = null;
       try {
         aiReflection = await aiApi.getEmotionReflection({
@@ -294,13 +294,13 @@ export default function WellnessPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-8 p-1 bg-muted/50 rounded-xl border border-border/50">
-        <button 
+        <button
           onClick={() => setActiveTab("journal")}
           className={`flex-1 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${activeTab === "journal" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground/80"}`}
         >
           Daily Journal
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab("food")}
           className={`flex-1 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${activeTab === "food" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground/80"}`}
         >
@@ -327,7 +327,7 @@ export default function WellnessPage() {
                   Check-in
                 </span>
               </div>
-              
+
               <div className="space-y-8">
                 {/* Energy Slider */}
                 <div>
@@ -336,13 +336,13 @@ export default function WellnessPage() {
                     <p className="text-lg font-black text-foreground">{energy * 20}%</p>
                   </div>
                   <div className="relative h-2 w-full bg-muted/50 rounded-full overflow-hidden">
-                    <motion.div 
+                    <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${energy * 20}%` }}
                       className="absolute top-0 left-0 h-full bg-gradient-to-r from-success/40 to-success"
                     />
-                    <input 
-                      type="range" min="1" max="5" value={energy} 
+                    <input
+                      type="range" min="1" max="5" value={energy}
                       onChange={(e) => setEnergy(parseInt(e.target.value))}
                       className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
@@ -363,7 +363,7 @@ export default function WellnessPage() {
                         onClick={() => setMood(m.val)}
                         className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl transition-all duration-300 ${mood === m.val ? "bg-success text-success-foreground scale-110 shadow-lg shadow-success/20 -translate-y-1" : "bg-muted/30 hover:bg-muted/50"}`}
                       >
-                          <LottieMoji emoji={m.emoji} size={32} className="mb-1" active={mood === m.val} />
+                        <LottieMoji emoji={m.emoji} size={32} className="mb-1" active={mood === m.val} />
                         <span className={`text-[8px] font-black uppercase tracking-tighter ${mood === m.val ? "opacity-100" : "opacity-0"}`}>{m.label}</span>
                       </button>
                     ))}
@@ -374,47 +374,47 @@ export default function WellnessPage() {
 
             {/* Symptom Categorization */}
             <div className="premium-card">
-               <div className="flex items-center justify-between mb-6">
-                 <h3 className="section-title flex items-center gap-2 mb-0">
-                   <Activity size={16} className="text-primary" /> Body Scan
-                 </h3>
-               </div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="section-title flex items-center gap-2 mb-0">
+                  <Activity size={16} className="text-primary" /> Body Scan
+                </h3>
+              </div>
 
-               <div className="space-y-6">
-                 {symptomCategories.map((cat) => (
-                   <div key={cat.name}>
-                     <div className="flex items-center gap-2 mb-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
-                       {cat.icon}
-                       <span>{cat.name}</span>
-                     </div>
-                     <div className="flex flex-wrap gap-2">
-                        {cat.options.map(opt => (
-                          <button
-                            key={opt}
-                            onClick={() => setSymptoms(prev => prev.includes(opt) ? prev.filter(s => s !== opt) : [...prev, opt])}
-                            className={`px-3 py-2 rounded-xl text-[10px] font-bold transition-all border ${symptoms.includes(opt) ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/10" : "bg-card border-border/50 text-muted-foreground hover:border-primary/30"}`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                     </div>
-                   </div>
-                 ))}
-               </div>
+              <div className="space-y-6">
+                {symptomCategories.map((cat) => (
+                  <div key={cat.name}>
+                    <div className="flex items-center gap-2 mb-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+                      {cat.icon}
+                      <span>{cat.name}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {cat.options.map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => setSymptoms(prev => prev.includes(opt) ? prev.filter(s => s !== opt) : [...prev, opt])}
+                          className={`px-3 py-2 rounded-xl text-[10px] font-bold transition-all border ${symptoms.includes(opt) ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/10" : "bg-card border-border/50 text-muted-foreground hover:border-primary/30"}`}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-               <Button 
+              <Button
                 onClick={handleLogWellness}
                 disabled={loading || reflectionLoading}
                 className="w-full mt-8 h-14 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
-               >
-                 {reflectionLoading ? (
-                   <><Loader2 className="animate-spin mr-2" size={16} /> Generating Reflection…</>
-                 ) : loading ? (
-                   <><Loader2 className="animate-spin mr-2" size={16} /> Saving…</>
-                 ) : (
-                   <><CheckCircle2 className="mr-2" size={16} /> Secure Daily Reflection</>
-                 )}
-               </Button>
+              >
+                {reflectionLoading ? (
+                  <><Loader2 className="animate-spin mr-2" size={16} /> Generating Reflection…</>
+                ) : loading ? (
+                  <><Loader2 className="animate-spin mr-2" size={16} /> Saving…</>
+                ) : (
+                  <><CheckCircle2 className="mr-2" size={16} /> Secure Daily Reflection</>
+                )}
+              </Button>
             </div>
           </motion.div>
         ) : (
@@ -435,7 +435,7 @@ export default function WellnessPage() {
               </div>
 
               <div className="relative">
-                <textarea 
+                <textarea
                   value={meal}
                   onChange={(e) => setMeal(e.target.value)}
                   placeholder="What's on your plate?"
@@ -462,19 +462,19 @@ export default function WellnessPage() {
                   ))}
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-3 mt-6">
-                <Button 
-                  onClick={checkMeal} 
-                  variant="outline" 
+                <Button
+                  onClick={checkMeal}
+                  variant="outline"
                   disabled={loading || !meal}
                   className="h-12 rounded-xl text-[10px] font-black tracking-widest uppercase border-warning/20 text-warning hover:bg-warning/5"
                 >
                   {loading ? <Loader2 className="animate-spin mr-2" size={14} /> : <ShieldCheck className="mr-2" size={14} />}
                   Safety Check
                 </Button>
-                <Button 
-                  onClick={handleLogFood} 
+                <Button
+                  onClick={handleLogFood}
                   disabled={loading || !meal}
                   className="h-12 rounded-xl text-[10px] font-black tracking-widest uppercase bg-warning text-warning-foreground hover:bg-warning/90 shadow-lg shadow-warning/20"
                 >
@@ -555,7 +555,7 @@ export default function WellnessPage() {
               {/* AI Meal Verdict */}
               <AnimatePresence>
                 {mealSafety && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -572,14 +572,14 @@ export default function WellnessPage() {
                         <h4 className="font-black text-lg leading-tight tracking-tight">{mealSafety.verdict}</h4>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-3 relative z-10">
                       <p className="text-xs font-semibold text-muted-foreground leading-relaxed">
                         {mealSafety.explanation}
                       </p>
-                      
+
                       <div className={`h-1 w-full rounded-full bg-muted/30 overflow-hidden`}>
-                        <motion.div 
+                        <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: mealSafety.risk === "Safe" ? "100%" : mealSafety.risk === "Medium" ? "50%" : "20%" }}
                           className={`h-full ${mealSafety.risk === "Safe" ? "bg-success" : mealSafety.risk === "Medium" ? "bg-warning" : "bg-destructive"}`}
@@ -723,9 +723,8 @@ export default function WellnessPage() {
                   {/* Top row */}
                   <div className="flex items-start gap-4 p-5">
                     <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:scale-110 ${
-                        log.type === "food" ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
-                      }`}
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner transition-transform group-hover:scale-110 ${log.type === "food" ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
+                        }`}
                     >
                       {log.type === "food" ? <Utensils size={20} /> : moodEmoji ? (
                         <LottieMoji emoji={moodEmoji} size={24} active={true} />
@@ -773,10 +772,9 @@ export default function WellnessPage() {
                             <div className="flex items-center gap-1">
                               <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Mood</span>
                               <div className="flex gap-0.5">
-                                {[1,2,3,4,5].map(n => (
-                                  <div key={n} className={`w-2 h-2 rounded-sm ${
-                                    n <= logMood ? "bg-success" : "bg-muted/30"
-                                  }`} />
+                                {[1, 2, 3, 4, 5].map(n => (
+                                  <div key={n} className={`w-2 h-2 rounded-sm ${n <= logMood ? "bg-success" : "bg-muted/30"
+                                    }`} />
                                 ))}
                               </div>
                             </div>
@@ -785,10 +783,9 @@ export default function WellnessPage() {
                             <div className="flex items-center gap-1">
                               <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">Energy</span>
                               <div className="flex gap-0.5">
-                                {[1,2,3,4,5].map(n => (
-                                  <div key={n} className={`w-2 h-2 rounded-sm ${
-                                    n <= logEnergy ? "bg-primary" : "bg-muted/30"
-                                  }`} />
+                                {[1, 2, 3, 4, 5].map(n => (
+                                  <div key={n} className={`w-2 h-2 rounded-sm ${n <= logEnergy ? "bg-primary" : "bg-muted/30"
+                                    }`} />
                                 ))}
                               </div>
                             </div>

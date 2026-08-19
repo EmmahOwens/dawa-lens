@@ -731,16 +731,26 @@ export const scheduleRefillNotifications = async (
     for (const med of medicines) {
       const status = calculateRefillStatus(med, reminders);
       if (!status) continue;
-      if (status.daysRemaining === null || status.daysRemaining <= 0 || status.daysRemaining > CRITICAL_STOCK_THRESHOLD) continue;
+      if (!status.isLow && !status.isWarning) continue;
 
       // Dedupe: only fire once per medicine per calendar day
       const sentKey = `medvault_refill_notif_${med.id}_${todayKey}`;
       const alreadySent = localStorage.getItem(sentKey);
       if (alreadySent) continue;
 
+      const title = status.isOutOfStock
+        ? `⛔ Out of Stock: ${med.name}`
+        : status.isLow
+        ? `🚨 Critical Refill Alert: ${med.name}`
+        : `⚠️ Refill Soon: ${med.name}`;
+
+      const body = status.isOutOfStock
+        ? `You have 0 ${med.unit || "units"} of ${med.name} remaining. Open Med Vault to refill now.`
+        : `Only ~${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} of ${med.name} left (${status.currentQuantity} ${med.unit || "units"}). Open Med Vault to refill.`;
+
       notifications.push({
-        title: `⚠️ Refill Soon: ${med.name}`,
-        body: `Only ~${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} of ${med.name} left (${status.currentQuantity} ${med.unit || "units"}). Open Med Vault to refill.`,
+        title,
+        body,
         id: stringToHash(med.id + "low_stock" + todayKey),
         schedule: { at: new Date(Date.now() + 3000), allowWhileIdle: true }, // fire after 3s
         channelId: CHANNEL_REFILL,

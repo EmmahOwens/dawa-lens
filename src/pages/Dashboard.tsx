@@ -85,7 +85,7 @@ export default function Dashboard() {
   const refillStatuses = useMemo(() => {
     return scopedMedicines
       .map((m) => calculateRefillStatus(m, scopedReminders))
-      .filter((s): s is RefillStatus => s !== null && s.isLow);
+      .filter((s): s is RefillStatus => s !== null && (s.isLow || s.isWarning));
   }, [scopedMedicines, scopedReminders]);
 
   const nextDose = useMemo(() => {
@@ -373,27 +373,37 @@ export default function Dashboard() {
         >
           <h2 className="section-title flex items-center gap-2 text-warning">
             <AlertTriangle size={14} />
-            Critical Refills
+            Stock & Refill Alerts
           </h2>
           {refillStatuses.map((status) => (
             <div
               key={status.medicineId}
-              className="glass-card border-warning/30 bg-warning/5 p-4 flex items-center justify-between"
+              className={`glass-card p-4 flex items-center justify-between ${
+                status.isLow || status.isOutOfStock
+                  ? "border-red-500/30 bg-red-500/5"
+                  : "border-amber-500/30 bg-amber-500/5"
+              }`}
             >
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center text-warning">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  status.isLow || status.isOutOfStock
+                    ? "bg-red-500/20 text-red-500"
+                    : "bg-amber-500/20 text-amber-500"
+                }`}>
                   <Package2 size={20} />
                 </div>
                 <div>
                   <p className="text-sm font-bold text-foreground">
                     {status.medicineName}
                   </p>
-                  <p className="text-[10px] font-bold text-warning uppercase tracking-wider">
+                  <p className={`text-[10px] font-bold uppercase tracking-wider ${
+                    status.isLow || status.isOutOfStock ? "text-red-500" : "text-amber-600 dark:text-amber-400"
+                  }`}>
                     {status.currentQuantity === 0
                       ? "Out of Stock"
                       : status.daysRemaining !== null
-                      ? `${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} remaining`
-                      : `Low stock (${status.currentQuantity} left)`}
+                      ? `${status.isLow ? "🚨 Critical: " : "⚠️ Low stock: "}~${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} left (${status.currentQuantity} remaining)`
+                      : `Low stock (${status.currentQuantity} remaining)`}
                   </p>
                 </div>
               </div>
@@ -401,7 +411,11 @@ export default function Dashboard() {
                 onClick={() =>
                   navigate("/medvault")
                 }
-                className="bg-warning text-warning-foreground text-[10px] font-bold px-4 py-2 rounded-lg uppercase tracking-wider"
+                className={`text-[10px] font-bold px-4 py-2 rounded-lg uppercase tracking-wider ${
+                  status.isLow || status.isOutOfStock
+                    ? "bg-red-500 text-white shadow-sm"
+                    : "bg-amber-500 text-white shadow-sm"
+                }`}
               >
                 Refill
               </button>

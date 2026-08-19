@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound, WifiOff, Package } from "@/lib/icons";
+import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound, WifiOff, Package, AlertTriangle } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,6 +112,12 @@ export default function AddReminderPage() {
   const [stockUnit, setStockUnit] = useState("tablets");  // unit type
   const [stockTotal, setStockTotal] = useState("");      // full pack size
 
+  const parsedStockQty = parseFloat(stockQty);
+  const parsedStockTotal = parseFloat(stockTotal);
+  const isStockOverCapacity =
+    !isNaN(parsedStockQty) && !isNaN(parsedStockTotal) && parsedStockTotal > 0 && parsedStockQty > parsedStockTotal;
+  const isStockNegativeQty = !isNaN(parsedStockQty) && parsedStockQty < 0;
+
   // Keep track of loaded medicine ID to prevent resetting stock inputs while manually typing
   const [prevMedicineId, setPrevMedicineId] = useState<string | undefined>(undefined);
   const [isEditingStock, setIsEditingStock] = useState(false);
@@ -185,6 +191,15 @@ export default function AddReminderPage() {
       return;
     }
 
+    if (isStockOverCapacity) {
+      toast({
+        title: "Invalid Stock",
+        description: "Remaining pills cannot exceed total pack size.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Skip permission gate when offline — the reminder will be saved locally
     // and notifications are scheduled on-device via NativeAlarm regardless.
     if (Capacitor.isNativePlatform() && isOnline) {
@@ -232,9 +247,9 @@ export default function AddReminderPage() {
         try {
           const stockFields: Record<string, unknown> = {};
           const parsedQty = parseFloat(stockQty);
-          if (!isNaN(parsedQty) && parsedQty > 0) {
+          if (!isNaN(parsedQty) && parsedQty >= 0) {
             stockFields.currentQuantity = parsedQty;
-            stockFields.totalQuantity = parseFloat(stockTotal) || parsedQty;
+            stockFields.totalQuantity = !isNaN(parsedStockTotal) && parsedStockTotal > 0 ? parsedStockTotal : parsedQty;
             stockFields.dosagePerDose = parseFloat(stockPerDose) || 1;
             stockFields.unit = stockUnit;
           }
@@ -253,11 +268,11 @@ export default function AddReminderPage() {
       } else if (finalMedId) {
         // Update existing medicine's stock fields if user provided them
         const parsedQty = parseFloat(stockQty);
-        if (!isNaN(parsedQty) && parsedQty > 0) {
+        if (!isNaN(parsedQty) && parsedQty >= 0) {
           try {
             await updateMedicine(finalMedId, {
               currentQuantity: parsedQty,
-              totalQuantity: parseFloat(stockTotal) || parsedQty,
+              totalQuantity: !isNaN(parsedStockTotal) && parsedStockTotal > 0 ? parsedStockTotal : parsedQty,
               dosagePerDose: parseFloat(stockPerDose) || 1,
               unit: stockUnit,
             });
@@ -822,10 +837,18 @@ export default function AddReminderPage() {
                     value={stockTotal}
                     onChange={(e) => setStockTotal(e.target.value)}
                     placeholder="e.g. 30"
-                    className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
+                    className={`h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all ${
+                      isStockOverCapacity ? "border-destructive focus-visible:ring-destructive" : ""
+                    }`}
                   />
                 </div>
               </div>
+              {isStockOverCapacity && (
+                <p className="text-xs font-semibold text-destructive flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
+                  <AlertTriangle className="size-3.5 flex-shrink-0" />
+                  Remaining pills ({parsedStockQty}) cannot exceed total capacity ({parsedStockTotal}).
+                </p>
+              )}
               <p className="text-[10px] text-muted-foreground italic ml-1">
                 Setting a stock count enables Med Vault tracking, which automatically reduces stock as you take doses.
               </p>

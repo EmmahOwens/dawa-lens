@@ -8,7 +8,7 @@
 
 ### 🧠 AI-Powered Medication Intelligence
 - **Pill Identification**: Computer vision-powered medication recognition using Tesseract.js OCR and hybrid AI (Groq/Gemini) for high-accuracy pill identification from photos.
-- **Dawa-GPT**: Context-aware conversational AI assistant powered by Llama 3/4 (Groq) with Gemini fallback, understanding your active medications, dose history, and wellness patterns.
+- **DawaGPT**: Context-aware conversational AI assistant powered by Llama 3/4 (Groq) with Gemini fallback, understanding your active medications, dose history, and wellness patterns.
 - **Drug Interaction Detection**: Real-time analysis of potential drug-drug interactions and food-medication interactions.
 - **Medication Search**: Comprehensive medication database lookup with detailed information about dosages, side effects, and usage patterns.
 

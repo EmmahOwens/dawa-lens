@@ -10,7 +10,7 @@ async function runTest() {
   console.log("🚀 Starting DawaGPT Fix Verification Test (Direct API Calls)...");
 
   const systemInstruction = `
-    You are "Dawa-GPT", a premium medical AI assistant integrated into the Dawa-Lens app.
+    You are "DawaGPT", a premium medical AI assistant integrated into the Dawa-Lens app.
     Regional Context: Uganda / East Africa.
 
     === RESPONSE FORMAT ===
@@ -21,7 +21,7 @@ async function runTest() {
     {
       "text": "Your markdown response here",
       "suggestions": ["suggestion 1", "2", "3"],
-      "source": "Dawa-GPT",
+      "source": "DawaGPT",
       "action": { "type": "...", "payload": {...} } | null
     }
   `;

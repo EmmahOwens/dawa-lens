@@ -210,12 +210,12 @@ export default function DawaGPT() {
         hour < 5
           ? nightGreetings
           : hour < 12
-          ? morningGreetings
-          : hour < 17
-          ? afternoonGreetings
-          : hour < 22
-          ? eveningGreetings
-          : nightGreetings;
+            ? morningGreetings
+            : hour < 17
+              ? afternoonGreetings
+              : hour < 22
+                ? eveningGreetings
+                : nightGreetings;
 
       // General creative, intriguing & fun greetings
       const generalGreetings = [
@@ -261,7 +261,7 @@ export default function DawaGPT() {
       // Pick one randomly
       const randomGreeting = greetingPool[Math.floor(Math.random() * greetingPool.length)];
 
-      let opening = `${randomGreeting} I'm Dawa-GPT, your health companion.`;
+      let opening = `${randomGreeting} I'm DawaGPT, your health companion.`;
 
       if (reminderCount > 0 && nextReminder) {
         const reminderPhrases = [
@@ -299,7 +299,7 @@ export default function DawaGPT() {
     const userMsg: ChatMessage = { id: Date.now().toString(), role: "user", text };
     const botId = (Date.now() + 1).toString();
     const initialBotMsg: ChatMessage = { id: botId, role: "assistant", text: "", source: "Gemini" };
-    
+
     setMessages(prev => [...prev, userMsg, initialBotMsg]);
     setInputValue("");
     if (textareaRef.current) {
@@ -319,13 +319,13 @@ export default function DawaGPT() {
         [], // patients (already handled via scope)
         resolvedPatient.id,
         (streamedText) => {
-          setMessages(prev => prev.map(msg => 
+          setMessages(prev => prev.map(msg =>
             msg.id === botId ? { ...msg, text: streamedText } : msg
           ));
         }
       );
-      
-      setMessages(prev => prev.map(msg => 
+
+      setMessages(prev => prev.map(msg =>
         msg.id === botId ? response : msg
       ));
 
@@ -386,7 +386,7 @@ export default function DawaGPT() {
       }
 
     } catch (e) {
-      setMessages(prev => prev.map(msg => 
+      setMessages(prev => prev.map(msg =>
         msg.id === botId ? {
           ...msg,
           text: "Connection lost. Please check your internet and try again.",
@@ -459,8 +459,8 @@ export default function DawaGPT() {
     messages.length === 0
       ? getSmartFallbacks() // Use smart fallbacks for empty state too
       : (lastMsg?.suggestions && lastMsg.suggestions.length > 0
-          ? lastMsg.suggestions.slice(0, 3)
-          : getSmartFallbacks());
+        ? lastMsg.suggestions.slice(0, 3)
+        : getSmartFallbacks());
 
   return (
     <>
@@ -514,12 +514,12 @@ export default function DawaGPT() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-base tracking-tight text-foreground">
-                        Dawa-GPT
+                        DawaGPT
                       </h3>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setIsOpen(false)} 
+                  <button
+                    onClick={() => setIsOpen(false)}
                     onPointerDown={(e) => e.stopPropagation()}
                     className="p-2 hover:bg-muted/50 rounded-lg transition-all active:scale-95 cursor-pointer"
                   >
@@ -553,11 +553,10 @@ export default function DawaGPT() {
                                 <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
                               </div>
                             )}
-                            <div className={`min-w-0 px-1 py-1 ${
-                              m.role === "user"
+                            <div className={`min-w-0 px-1 py-1 ${m.role === "user"
                                 ? "bg-[#f0f0f0] dark:bg-[#2a2a2a] text-foreground rounded-2xl px-5 py-3 shadow-sm"
                                 : "text-foreground leading-relaxed"
-                            }`}>
+                              }`}>
                               {m.role === "assistant" ? (
                                 <div className="prose prose-sm dark:prose-invert max-w-none min-w-0">
                                   <MessageRenderer
@@ -657,7 +656,7 @@ export default function DawaGPT() {
                     </Button>
                   </div>
                   <p className="text-[10px] text-center text-muted-foreground/60 px-4">
-                    Dawa-GPT can make mistakes. Please verify important medical information.
+                    DawaGPT can make mistakes. Please verify important medical information.
                   </p>
                 </div>
               </div>

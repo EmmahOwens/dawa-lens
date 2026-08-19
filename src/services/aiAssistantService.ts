@@ -1,11 +1,12 @@
 /**
- * Dawa-GPT Service
+ * DawaGPT Service
  * Conversational medical assistant with full system read/write access.
  * Focused on regional (East African) context and user safety.
  */
 
 import { Medicine, Reminder, UserProfile, DoseLog, WellnessLog, Patient } from "../contexts/AppContext";
 import { checkConditionSafety } from "./conditionInteractionService";
+import { calculateRefillStatus, getDailyDoseRate } from "./refillService";
 import { aiApi } from "./api";
 
 export interface AIAction {
@@ -34,7 +35,7 @@ const FAQ_RESPONSE_MAP: Record<string, string> = {
   "can i eat nsenene?": "Yes! Nsenene (grasshoppers) are a great source of protein and healthy fats. Just ensure they are prepared hygienically.",
   "what are the side effects?": "Common side effects for medications in this category include dizziness and nausea. If you experience severe rashes or palpitations, seek medical help immediately.",
   "how do i take this?": "Always follow the dosage on your pill bottle or prescription. For acute cases, consistency is key to recovery.",
-  "oli otya": "Oli otya! I am doing well, ssebo/nyabo. How can Dawa-GPT help you with your health or medicines today?",
+  "oli otya": "Oli otya! I am doing well, ssebo/nyabo. How can DawaGPT help you with your health or medicines today?",
   "wasuze otya": "Wasuze otya! I hope you slept well and are ready for a healthy day. How can I help you today?",
   "osiibye otya": "Osiibye otya! How has your day been? Let's check your evening medication adherence.",
   "gyebaleko": "Gyebaleko! Thank you. I am here to help you manage your health. How are you feeling today?",
@@ -125,18 +126,22 @@ const getMedVaultSystemContext = (medicines: Medicine[], reminders: Reminder[]):
   const stockLines = trackedMeds.map(m => {
     const qty = m.currentQuantity ?? 0;
     const unit = m.unit || "tablets";
-    const medReminders = (reminders || []).filter(r => r && r.medicineId === m.id && r.enabled);
-    let dailyDose = 0;
-    for (const r of medReminders) {
-      const dosesPerDay = (r.time || "").split(",").filter(Boolean).length || 1;
-      dailyDose += (m.dosagePerDose || 1) * dosesPerDay;
-    }
-    const daysRemaining = dailyDose > 0 ? Math.floor(qty / dailyDose) : null;
-    const daysStr = daysRemaining !== null ? `~${daysRemaining} days left` : "no active reminders";
-    return `- ${m.name} (ID: ${m.id}): ${qty} ${unit} remaining (${daysStr}, dosage/dose: ${m.dosagePerDose || 1} ${unit})`;
+    const status = calculateRefillStatus(m, reminders);
+    const dailyDose = getDailyDoseRate(m, reminders);
+    const daysStr = status?.daysRemaining !== null
+      ? `~${status?.daysRemaining} days left (${dailyDose}/day)`
+      : "no active reminders";
+    const alertTag = status?.isOutOfStock
+      ? " [OUT OF STOCK]"
+      : status?.isLow
+        ? " [CRITICAL LOW STOCK]"
+        : status?.isWarning
+          ? " [LOW STOCK]"
+          : "";
+    return `- ${m.name} (ID: ${m.id}): ${qty} ${unit} remaining (${daysStr}, dosage/dose: ${m.dosagePerDose || 1} ${unit})${alertTag}`;
   });
 
-  return `Med Vault (Pill Stock Tracker) Status:\n${stockLines.join("\n")}\n\nInstructions for DawaGPT:\n1. If a medicine has <= 2 days of supply left, proactively alert the user about the low stock and recommend refilling soon.\n2. Recommend the user to open [Med Vault](/medvault) (using exactly that markdown link format) to manage their stock.\n3. If the user asks to refill a medicine (e.g. "I refilled my Coartem to 30 pills"), reply to confirm and append an action block. The action type is UPDATE_MEDICINE and payload is { id: "medicine_id", currentQuantity: new_quantity }.`;
+  return `Med Vault (Pill Stock Tracker) Status:\n${stockLines.join("\n")}\n\nInstructions for DawaGPT:\n1. If a medicine has <= 2 days of supply left (marked as CRITICAL LOW STOCK or OUT OF STOCK), proactively alert the user about the low stock and recommend refilling immediately.\n2. If a medicine has <= 3 days of supply left (marked as LOW STOCK), remind the user that they should consider refilling soon.\n3. Recommend the user to open [Med Vault](/medvault) (using exactly that markdown link format) to manage their stock.\n4. If the user asks to refill a medicine (e.g. "I refilled my Coartem to 30 pills"), reply to confirm and append an action block. The action type is UPDATE_MEDICINE and payload is { id: "medicine_id", currentQuantity: new_quantity }.`;
 };
 
 /**

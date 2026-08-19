@@ -120,14 +120,19 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
   const [perDose, setPerDose] = useState(medicine.dosagePerDose?.toString() ?? "1");
   const [total, setTotal] = useState(medicine.totalQuantity?.toString() ?? "");
   const [unit, setUnit] = useState(medicine.unit ?? "tablets");
-  const [isSaving, setIsSaving] = useState(false);
+  const parsedQty = parseFloat(qty);
+  const parsedTotal = parseFloat(total);
+  const isOverCapacity =
+    !isNaN(parsedQty) && !isNaN(parsedTotal) && parsedTotal > 0 && parsedQty > parsedTotal;
+  const isNegativeQty = !isNaN(parsedQty) && parsedQty < 0;
+  const isInvalid = !qty || isNaN(parsedQty) || isOverCapacity || isNegativeQty;
 
   const handleSave = async () => {
-    const parsedQty = parseFloat(qty);
-    if (isNaN(parsedQty) || parsedQty < 0) return;
+    if (isNaN(parsedQty) || parsedQty < 0 || isOverCapacity) return;
     setIsSaving(true);
     try {
-      await onSave(parsedQty, unit, parseFloat(perDose) || 1, parseFloat(total) || parsedQty);
+      const finalTotal = !isNaN(parsedTotal) && parsedTotal > 0 ? parsedTotal : parsedQty;
+      await onSave(parsedQty, unit, parseFloat(perDose) || 1, finalTotal);
       onClose();
     } finally {
       setIsSaving(false);
@@ -177,9 +182,17 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
               value={qty}
               onChange={(e) => setQty(e.target.value)}
               placeholder="e.g. 30"
-              className="h-12 rounded-xl text-lg font-bold"
+              className={`h-12 rounded-xl text-lg font-bold ${
+                isOverCapacity ? "border-destructive focus-visible:ring-destructive" : ""
+              }`}
               autoFocus
             />
+            {isOverCapacity && (
+              <p className="text-xs font-semibold text-destructive flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1">
+                <AlertTriangle className="size-3.5 flex-shrink-0" />
+                Remaining stock ({parsedQty}) cannot exceed total capacity ({parsedTotal}).
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -234,7 +247,7 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isSaving || !qty}
+            disabled={isSaving || isInvalid}
             className="flex-1 rounded-xl h-12 font-bold"
           >
             {isSaving ? "Saving…" : "Save Stock"}
@@ -251,13 +264,14 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
 interface StockCardProps {
   medicine: Medicine;
   daysRemaining: number | null;
+  dailyDoseTotal?: number;
   isLow: boolean;
   isWarning: boolean;
   isOutOfStock: boolean;
   onRefill: () => void;
 }
 
-function StockCard({ medicine, daysRemaining, isLow, isWarning, isOutOfStock, onRefill }: StockCardProps) {
+function StockCard({ medicine, daysRemaining, dailyDoseTotal, isLow, isWarning, isOutOfStock, onRefill }: StockCardProps) {
   const colors = colorMap[medicine.color || "blue"] || colorMap.blue;
   const IconComp = iconMap[medicine.icon || "pill"] || Pill;
   const total = medicine.totalQuantity || medicine.currentQuantity || 1;
@@ -340,7 +354,7 @@ function StockCard({ medicine, daysRemaining, isLow, isWarning, isOutOfStock, on
 
           {/* Days remaining */}
           {daysRemaining !== null && (
-            <div className="mt-1.5 flex items-center gap-3">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
               <p className={`text-[11px] font-bold ${isLow || isOutOfStock ? "text-red-500" : isWarning ? "text-amber-500" : "text-muted-foreground"}`}>
                 {isOutOfStock
                   ? "⛔ No doses left"
@@ -349,6 +363,9 @@ function StockCard({ medicine, daysRemaining, isLow, isWarning, isOutOfStock, on
               {medicine.dosagePerDose && (
                 <span className="text-[10px] text-muted-foreground/60">
                   · {medicine.dosagePerDose} {medicine.unit || "unit"}/dose
+                  {dailyDoseTotal && dailyDoseTotal > 0 && dailyDoseTotal !== medicine.dosagePerDose
+                    ? ` (${dailyDoseTotal}/day)`
+                    : ""}
                 </span>
               )}
             </div>
@@ -632,6 +649,7 @@ export default function MedVaultPage() {
                           key={medicine.id}
                           medicine={medicine}
                           daysRemaining={days}
+                          dailyDoseTotal={status?.dailyDoseTotal}
                           isLow={isCritical}
                           isWarning={isWarn}
                           isOutOfStock={isOut}
