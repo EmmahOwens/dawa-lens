@@ -1,7 +1,7 @@
 {
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/build.gradle": {
-    "mtime": 1786871781.5602603,
-    "ast_hash": "05e05f36e3b55a9006290a6f4e909c58",
+    "mtime": 1787133509.5300214,
+    "ast_hash": "6a4c697a01c0de0f381f5c0d476b0dc8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/capacitor.build.gradle": {
@@ -315,8 +315,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/package.json": {
-    "mtime": 1786871764.6506758,
-    "ast_hash": "a298da25aefe3b67e301cbdd78d246dd",
+    "mtime": 1787133489.6847813,
+    "ast_hash": "aa2577157e4a32a1808809918c17f562",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/playwright-fixture.ts": {
@@ -660,8 +660,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1787127795.457143,
-    "ast_hash": "cc011b57124ed7bed072f6f41c555cdd",
+    "mtime": 1787135489.6454046,
+    "ast_hash": "25f8ad5b343f36591af77a8cc430fab0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -705,8 +705,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
-    "mtime": 1781365161.729312,
-    "ast_hash": "eda5f836a00e9c1f8c7170902304b07e",
+    "mtime": 1787135626.8911586,
+    "ast_hash": "91043ab708e8e4d203c4ce1df146fcf0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorDialog.tsx": {
@@ -1275,8 +1275,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/main.tsx": {
-    "mtime": 1779918355.2705543,
-    "ast_hash": "1aa8e7ad5096a25d7ddfc3ce14236397",
+    "mtime": 1787134581.5952885,
+    "ast_hash": "dfa4aa97151dd6fd20fbc2beb4c79211",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AddReminderPage.tsx": {
@@ -1610,8 +1610,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/vercel.json": {
-    "mtime": 1775324823.8988085,
-    "ast_hash": "61bd31a2b0ac08f10f13c932b32d6ca1",
+    "mtime": 1787134411.1168432,
+    "ast_hash": "a149fe36d58395e056bdf2063cbd5095",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/vite.config.ts": {
@@ -3382,6 +3382,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/test/crashResilience.test.tsx": {
     "mtime": 1787127623.6670442,
     "ast_hash": "e67100f8e6c5ffa5420d1f69d6f24dad",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/lazyWithRetry.ts": {
+    "mtime": 1787134390.434349,
+    "ast_hash": "86fff7b2e017fe8470f725e687667e06",
     "semantic_hash": ""
   }
 }

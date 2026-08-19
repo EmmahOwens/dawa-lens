@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, Routes, Navigate, useLocation } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { App as CapApp } from "@capacitor/app";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -35,27 +36,27 @@ import pkg from "../package.json";
 import { isNewerVersion, fetchLatestRelease } from "@/lib/update";
 import BatteryOptimizationGate from "@/components/BatteryOptimizationGate";
 
-// Lazy load pages for better performance
-const Dashboard = lazy(() => import("@/pages/Dashboard"));
-const ScanPage = lazy(() => import("@/pages/ScanPage"));
-const ResultsPage = lazy(() => import("@/pages/ResultsPage"));
-const MedicineInfoPage = lazy(() => import("@/pages/MedicineInfoPage"));
-const AddReminderPage = lazy(() => import("@/pages/AddReminderPage"));
-const RemindersPage = lazy(() => import("@/pages/RemindersPage"));
-const HistoryPage = lazy(() => import("@/pages/HistoryPage"));
-const SettingsPage = lazy(() => import("@/pages/SettingsPage"));
-const AuthPage = lazy(() => import("@/pages/AuthPage"));
-const NotFound = lazy(() => import("@/pages/NotFound"));
-const InteractionsPage = lazy(() => import("@/pages/InteractionsPage"));
-const VerifyEmailPage = lazy(() => import("@/pages/VerifyEmailPage"));
-const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
-const WelcomePage = lazy(() => import("@/pages/WelcomePage"));
-const FamilyHubPage = lazy(() => import("@/pages/FamilyHubPage"));
-const TravelCompanionPage = lazy(() => import("@/pages/TravelCompanionPage"));
-const WellnessPage = lazy(() => import("@/pages/WellnessPage"));
-const ReportPage = lazy(() => import("@/pages/ReportPage"));
-const MedVaultPage = lazy(() => import("@/pages/MedVaultPage"));
-const MedicationsPage = lazy(() => import("@/pages/MedicationsPage"));
+// Lazy load pages with automatic retry resilience on deployment changes
+const Dashboard = lazyWithRetry(() => import("@/pages/Dashboard"), "Dashboard");
+const ScanPage = lazyWithRetry(() => import("@/pages/ScanPage"), "ScanPage");
+const ResultsPage = lazyWithRetry(() => import("@/pages/ResultsPage"), "ResultsPage");
+const MedicineInfoPage = lazyWithRetry(() => import("@/pages/MedicineInfoPage"), "MedicineInfoPage");
+const AddReminderPage = lazyWithRetry(() => import("@/pages/AddReminderPage"), "AddReminderPage");
+const RemindersPage = lazyWithRetry(() => import("@/pages/RemindersPage"), "RemindersPage");
+const HistoryPage = lazyWithRetry(() => import("@/pages/HistoryPage"), "HistoryPage");
+const SettingsPage = lazyWithRetry(() => import("@/pages/SettingsPage"), "SettingsPage");
+const AuthPage = lazyWithRetry(() => import("@/pages/AuthPage"), "AuthPage");
+const NotFound = lazyWithRetry(() => import("@/pages/NotFound"), "NotFound");
+const InteractionsPage = lazyWithRetry(() => import("@/pages/InteractionsPage"), "InteractionsPage");
+const VerifyEmailPage = lazyWithRetry(() => import("@/pages/VerifyEmailPage"), "VerifyEmailPage");
+const OnboardingPage = lazyWithRetry(() => import("@/pages/OnboardingPage"), "OnboardingPage");
+const WelcomePage = lazyWithRetry(() => import("@/pages/WelcomePage"), "WelcomePage");
+const FamilyHubPage = lazyWithRetry(() => import("@/pages/FamilyHubPage"), "FamilyHubPage");
+const TravelCompanionPage = lazyWithRetry(() => import("@/pages/TravelCompanionPage"), "TravelCompanionPage");
+const WellnessPage = lazyWithRetry(() => import("@/pages/WellnessPage"), "WellnessPage");
+const ReportPage = lazyWithRetry(() => import("@/pages/ReportPage"), "ReportPage");
+const MedVaultPage = lazyWithRetry(() => import("@/pages/MedVaultPage"), "MedVaultPage");
+const MedicationsPage = lazyWithRetry(() => import("@/pages/MedicationsPage"), "MedicationsPage");
 const queryClient = new QueryClient();
 
 // A wrapper to enforce onboarding redirect
@@ -131,11 +132,6 @@ const App = () => {
   // Initialize app lifecycle manager once on mount.
   // Handles foreground/background events and network tracking.
   useEffect(() => {
-    try {
-      sessionStorage.removeItem("chunk-load-failed-reload");
-    } catch (e) {
-      console.warn("sessionStorage access failed:", e);
-    }
     return initLifecycle();
   }, []);
 

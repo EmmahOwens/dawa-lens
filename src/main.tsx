@@ -7,6 +7,21 @@ import { initTheme } from "./hooks/useTheme";
 import { Capacitor } from "@capacitor/core";
 import { SplashScreen } from "@capacitor/splash-screen";
 
+// Global handler for Vite dynamic import chunk loading failures after new deployments
+if (typeof window !== "undefined") {
+  window.addEventListener("vite:preloadError", (event) => {
+    console.warn("Vite dynamic chunk preload failed. Refreshing for latest version...", event);
+    event.preventDefault();
+    const lastReload = Number(sessionStorage.getItem("vite_preload_reload_ts") || 0);
+    const now = Date.now();
+    // Prevent rapid reload loops (allow at most once every 10 seconds)
+    if (now - lastReload > 10000 && navigator.onLine) {
+      sessionStorage.setItem("vite_preload_reload_ts", String(now));
+      window.location.reload();
+    }
+  });
+}
+
 // Apply persisted theme before React renders to prevent flash
 initTheme();
 
