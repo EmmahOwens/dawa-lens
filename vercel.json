@@ -1,5 +1,4 @@
 {
-  "cleanUrls": true,
   "headers": [
     {
       "source": "/index.html",
@@ -40,8 +39,9 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!assets/|favicon.ico|manifest.json|logo.*|.*\\..*).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
 }
+
