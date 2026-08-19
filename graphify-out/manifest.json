@@ -495,8 +495,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/doseLogService.js": {
-    "mtime": 1780916886.5541499,
-    "ast_hash": "c1b805117b260c8064b70cc7bb4f4244",
+    "mtime": 1787112944.9965441,
+    "ast_hash": "9fff64c55f1dd8e7366c738ea0cd8a70",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/localFoodService.js": {
@@ -815,8 +815,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/dashboard/DailyTimeline.tsx": {
-    "mtime": 1783790621.6222086,
-    "ast_hash": "5b54acef065dccd51edf486201646b16",
+    "mtime": 1787112828.594372,
+    "ast_hash": "6260474f20847f189fde40b69929cd5d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/dashboard/DashboardSearch.tsx": {
@@ -1165,8 +1165,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1786809423.3379352,
-    "ast_hash": "6d215831e9a416eb56f03353faed2328",
+    "mtime": 1787112735.9251359,
+    "ast_hash": "3896ef9204910bdd4639451f0fbaa514",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1335,8 +1335,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/RemindersPage.tsx": {
-    "mtime": 1784234272.2287936,
-    "ast_hash": "7945ff1b4543bafb7733abe9845d57e0",
+    "mtime": 1787112899.2842095,
+    "ast_hash": "601167c1b8123cdc414fa37ab7ff40d5",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ReportPage.tsx": {
@@ -1530,8 +1530,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/reminderService.ts": {
-    "mtime": 1786809373.4056776,
-    "ast_hash": "0983928f3717078b233d97229cf6c401",
+    "mtime": 1787112683.5429175,
+    "ast_hash": "9f7bfea742df243c1fb3aafe7392d7ba",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/visionService.ts": {
@@ -2650,8 +2650,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/reminderService.test.ts": {
-    "mtime": 1786200097.009686,
-    "ast_hash": "656b4cbcd52d61dced2d09b38a500dfe",
+    "mtime": 1787113044.2070959,
+    "ast_hash": "97eb3c571ecfb9b940885809f165e024",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BouncingPillsLoader.tsx": {
@@ -3342,6 +3342,21 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BatteryOptimizationGate.tsx": {
     "mtime": 1787043734.2621624,
     "ast_hash": "de916dd662c411c6cd4ebadbab0a2d56",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/utils/dynamicSchedule.js": {
+    "mtime": 1787112914.3386748,
+    "ast_hash": "6253b9852a34ae8747dcd0c36616cc1e",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/utils/test-dynamicSchedule.js": {
+    "mtime": 1787113090.1149883,
+    "ast_hash": "505db99b221779c59b40d546f229dfc4",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/dynamicSchedule.ts": {
+    "mtime": 1787112621.1075552,
+    "ast_hash": "aa3ca323b7e45ba90bd133b7250805b0",
     "semantic_hash": ""
   }
 }
