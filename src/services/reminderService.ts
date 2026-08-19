@@ -23,6 +23,14 @@ import {
   parseISO,
 } from "date-fns";
 import { toDate } from "@/lib/utils";
+import {
+  parseReminderTimes,
+  findSlotIndexForTime,
+  getInterSlotInterval,
+  calculateDynamicSchedule,
+  isSlotActionedOnDate,
+  timeStrToMinutes,
+} from "@/lib/dynamicSchedule";
 
 // ─── Notification channel IDs ────────────────────────────────────────────────
 // v2 channels carry the correct default sound. The old channels were created
@@ -331,15 +339,9 @@ const getNextOccurrence = (
   fromDate: Date,
   doseLogs: DoseLog[]
 ): Date | null => {
-  const times = reminder.time
-    .split(",")
-    .map((t) => t.trim())
-    .filter((t) => {
-      const parts = t.split(":");
-      if (parts.length !== 2) return false;
-      const [h, m] = parts.map(Number);
-      return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
-    });
+  const times = parseReminderTimes(reminder.time);
+  if (times.length === 0) return null;
+
   const occurrences: Date[] = [];
   const now = new Date();
   const todayStart = startOfDay(now);
@@ -352,26 +354,10 @@ const getNextOccurrence = (
   // Find which slot index was taken today
   let takenSlotIndex = -1;
   if (takenLog) {
-    const scheduledDate = toDate(takenLog.scheduledTime);
-    const hh = scheduledDate.getHours().toString().padStart(2, "0");
-    const mm = scheduledDate.getMinutes().toString().padStart(2, "0");
-    const scheduledTimeStr = `${hh}:${mm}`;
-    takenSlotIndex = times.indexOf(scheduledTimeStr);
-
-    // Fallback: match to nearest base slot by minute proximity
-    if (takenSlotIndex === -1) {
-      const scheduledMins =
-        scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
-      let minDiff = Infinity;
-      times.forEach((t, i) => {
-        const [h, m] = t.split(":").map(Number);
-        const diff = Math.abs(h * 60 + m - scheduledMins);
-        if (diff < minDiff) {
-          minDiff = diff;
-          takenSlotIndex = i;
-        }
-      });
-    }
+    takenSlotIndex = findSlotIndexForTime(
+      times,
+      takenLog.scheduledTime || takenLog.actionTime
+    );
   }
 
   times.forEach((timeStr, index) => {
@@ -386,20 +372,17 @@ const getNextOccurrence = (
       let candidate = addDays(checkDate, i);
       const isToday = startOfDay(candidate).getTime() === todayStart.getTime();
 
-      // --- Interval-preservation model ---
-      // For slots that come AFTER the taken slot today, compute:
-      //   candidate = actualTakeTime + cumulative interval from takenSlot to thisSlot
-      if (
-        isToday &&
-        takenLog &&
-        takenSlotIndex !== -1 &&
-        index > takenSlotIndex
-      ) {
+      // --- Interval-preservation model for today ---
+      if (isToday && takenLog && takenSlotIndex !== -1) {
+        if (index <= takenSlotIndex) {
+          // This slot (or prior) has already been actioned today
+          continue;
+        }
+        // Subsequent slot today: anchor to actual take time + cumulative inter-slot interval
         const actualTakeTime = toDate(takenLog.actionTime);
-        // Sum up intervals from taken slot through to this slot
         let cumulativeInterval = 0;
         for (let s = takenSlotIndex; s < index; s++) {
-          cumulativeInterval += getIntervalMinutes(times, s, s + 1);
+          cumulativeInterval += getInterSlotInterval(times, s, s + 1);
         }
         candidate = addMinutes(actualTakeTime, cumulativeInterval);
       }
@@ -416,13 +399,31 @@ const getNextOccurrence = (
       // 2. Skip past candidates
       if (isBefore(candidate, fromDate)) continue;
 
-      // 3. Check if already handled (taken, skipped, or missed) for this scheduled time
-      const terminalLog = doseLogs.find(
-        (log) =>
-          log.reminderId === reminder.id &&
-          log.scheduledTime === candidate.toISOString() &&
-          ["taken", "skipped", "missed"].includes(log.action)
-      );
+      // 3. Check if already handled (taken, skipped, or missed)
+      const candDayStart = startOfDay(candidate);
+      const candDayEnd = endOfDay(candidate);
+      const candMins = candidate.getHours() * 60 + candidate.getMinutes();
+
+      const terminalLog = doseLogs.find((log) => {
+        if (log.reminderId !== reminder.id) return false;
+        if (!["taken", "skipped", "missed"].includes(log.action)) return false;
+        if (log.scheduledTime === candidate.toISOString()) return true;
+
+        const actionD = toDate(log.actionTime);
+        const schedD = log.scheduledTime ? toDate(log.scheduledTime) : actionD;
+
+        if (
+          (isAfter(actionD, candDayStart) && isBefore(actionD, candDayEnd)) ||
+          (isAfter(schedD, candDayStart) && isBefore(schedD, candDayEnd))
+        ) {
+          const logMins = schedD.getHours() * 60 + schedD.getMinutes();
+          let diff = Math.abs(logMins - candMins);
+          if (diff > 12 * 60) diff = 24 * 60 - diff;
+          if (diff <= 30) return true;
+        }
+        return false;
+      });
+
       if (terminalLog) continue;
 
       // 3.5 Check if currently snoozed
@@ -443,7 +444,6 @@ const getNextOccurrence = (
       }
 
       // 4. Schedule-type filtering
-      // For shifted candidates, check day-of-week against the original unshifted date
       const refDate =
         isToday && offsetMinutes !== 0
           ? addMinutes(candidate, -offsetMinutes)

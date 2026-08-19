@@ -3,6 +3,11 @@ import AppError from '../utils/AppError.js';
 import * as medicineService from './medicineService.js';
 import { sendPushNotification } from './notificationService.js';
 import * as autonomousService from './autonomousService.js';
+import {
+  parseReminderTimes,
+  findSlotIndexForTime,
+  calculateDynamicSchedule,
+} from '../utils/dynamicSchedule.js';
 
 const doseLogsCol = db.collection('doseLogs');
 
@@ -74,6 +79,64 @@ export const createDoseLog = async (data) => {
       }
     } catch (err) {
       console.error("Inventory update failed:", err.message);
+    }
+  }
+
+  // --- DYNAMIC SCHEDULE ADJUSTMENT ---
+  if (data.action === 'taken' && data.reminderId) {
+    try {
+      const reminderDoc = await db.collection('reminders').doc(data.reminderId).get();
+      if (reminderDoc.exists) {
+        const reminder = reminderDoc.data();
+        if (reminder.repeatSchedule !== 'once' && reminder.time) {
+          const scheduledDate = data.scheduledTime ? new Date(data.scheduledTime) : new Date(data.actionTime);
+          const actualDate = new Date(data.actionTime);
+          const diffMinutes = Math.round((actualDate.getTime() - scheduledDate.getTime()) / (1000 * 60));
+
+          if (Math.abs(diffMinutes) >= 1) {
+            const times = parseReminderTimes(reminder.time);
+            const slotIndex = findSlotIndexForTime(times, scheduledDate);
+
+            if (slotIndex !== -1 && times.length > 0) {
+              const { newTimes, newTimeStr, hasChanges } = calculateDynamicSchedule(times, slotIndex, actualDate);
+
+              if (hasChanges) {
+                const originalTime = reminder.time;
+                const updatedAt = new Date().toISOString();
+
+                await db.collection('reminders').doc(data.reminderId).update({
+                  time: newTimeStr,
+                  updatedAt,
+                });
+                console.log(`⏰ [Backend DynamicSchedule] Adjusted ${reminder.medicineName || 'reminder'} from ${originalTime} to ${newTimeStr} (${diffMinutes}m)`);
+
+                // Write to scheduleAuditLogs
+                await db.collection('scheduleAuditLogs').add({
+                  reminderId: data.reminderId,
+                  medicineName: reminder.medicineName || data.medicineName || 'Unknown',
+                  originalTime,
+                  adjustedTime: newTimeStr,
+                  actionTime: data.actionTime,
+                  triggerEvent: diffMinutes < 0 ? 'early-dose' : 'late-dose',
+                  timeOffsetMinutes: diffMinutes,
+                  userId: data.userId,
+                  patientId: data.patientId || reminder.patientId || null,
+                  createdAt: updatedAt,
+                });
+
+                log.adjustedSchedule = {
+                  reminderId: data.reminderId,
+                  originalTime,
+                  adjustedTime: newTimeStr,
+                  timeOffsetMinutes: diffMinutes,
+                };
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Backend DynamicSchedule] Failed to adjust schedule:', err.message);
     }
   }
 

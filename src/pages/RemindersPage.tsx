@@ -22,6 +22,13 @@ import {
 import { useApp, Reminder } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { computeShiftOffset } from "@/services/reminderService";
+import {
+  parseReminderTimes,
+  findSlotIndexForTime,
+  getInterSlotInterval,
+  minutesToTimeStr,
+  timeStrToMinutes,
+} from "@/lib/dynamicSchedule";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -475,62 +482,46 @@ export default function RemindersPage() {
                         reminder,
                         scopedDoseLogs
                       );
-                      const baseTimes = reminder.time
-                        .split(",")
-                        .map((t) => t.trim())
-                        .filter((t) => {
-                          const parts = t.split(":");
-                          if (parts.length !== 2) return false;
-                          const [h, m] = parts.map(Number);
-                          return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
-                        });
-                      // Determine which slots to shift: those after the taken slot index
+                      const baseTimes = parseReminderTimes(reminder.time);
                       let takenSlotIndex = -1;
-                      if (offsetMinutes !== 0) {
-                        const todayLog = [...scopedDoseLogs]
-                          .filter(
-                            (l) =>
-                              l.reminderId === reminder.id &&
-                              l.action === "taken" &&
-                              new Date(l.actionTime).toDateString() ===
-                                new Date().toDateString()
-                          )
-                          .sort(
-                            (a, b) =>
-                              new Date(b.actionTime).getTime() -
-                              new Date(a.actionTime).getTime()
-                          )[0];
-                        if (todayLog) {
-                          const sd = new Date(todayLog.scheduledTime);
-                          const ts = `${sd
-                            .getHours()
-                            .toString()
-                            .padStart(2, "0")}:${sd
-                            .getMinutes()
-                            .toString()
-                            .padStart(2, "0")}`;
-                          takenSlotIndex = baseTimes.indexOf(ts);
-                          if (takenSlotIndex === -1) {
-                            const sm = sd.getHours() * 60 + sd.getMinutes();
-                            let minD = Infinity;
-                            baseTimes.forEach((t, i) => {
-                              const [hh, mm] = t.split(":").map(Number);
-                              const d = Math.abs(hh * 60 + mm - sm);
-                              if (d < minD) {
-                                minD = d;
-                                takenSlotIndex = i;
-                              }
-                            });
-                          }
-                        }
+                      const todayLog = [...scopedDoseLogs]
+                        .filter(
+                          (l) =>
+                            l.reminderId === reminder.id &&
+                            l.action === "taken" &&
+                            new Date(l.actionTime).toDateString() ===
+                              new Date().toDateString()
+                        )
+                        .sort(
+                          (a, b) =>
+                            new Date(b.actionTime).getTime() -
+                            new Date(a.actionTime).getTime()
+                        )[0];
+
+                      if (todayLog) {
+                        takenSlotIndex = findSlotIndexForTime(
+                          baseTimes,
+                          todayLog.scheduledTime || todayLog.actionTime
+                        );
                       }
-                      const displayTimes = baseTimes.map((t, idx) =>
-                        offsetMinutes !== 0 && idx > takenSlotIndex
-                          ? shiftTimeStr(t, offsetMinutes)
-                          : t
-                      );
-                      const hasShift =
-                        offsetMinutes !== 0 && takenSlotIndex !== -1;
+
+                      const displayTimes = baseTimes.map((t, idx) => {
+                        if (todayLog && takenSlotIndex !== -1 && idx > takenSlotIndex) {
+                          let cumulativeInterval = 0;
+                          for (let s = takenSlotIndex; s < idx; s++) {
+                            cumulativeInterval += getInterSlotInterval(baseTimes, s, s + 1);
+                          }
+                          const actualTakeDate = new Date(todayLog.actionTime);
+                          const totalMins =
+                            actualTakeDate.getHours() * 60 +
+                            actualTakeDate.getMinutes() +
+                            cumulativeInterval;
+                          return minutesToTimeStr(totalMins);
+                        }
+                        return t;
+                      });
+
+                      const hasShift = offsetMinutes !== 0 && takenSlotIndex !== -1;
                       return (
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">

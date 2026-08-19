@@ -38,6 +38,11 @@ import { toast } from "../hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { storage } from "../lib/storage";
 import { toDate } from "../lib/utils";
+import {
+  parseReminderTimes,
+  findSlotIndexForTime,
+  calculateDynamicSchedule,
+} from "../lib/dynamicSchedule";
 import { RiveMoji } from "../components/rive/RiveMoji";
 import {
   enqueueOp,
@@ -1523,137 +1528,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // Trigger recalculation for any deviation taken outside originally scheduled time
       if (Math.abs(diffMinutes) >= 1) {
-        const times = reminder.time
-          .split(",")
-          .map((t) => t.trim())
-          .filter((t) => {
-            const parts = t.split(":");
-            if (parts.length !== 2) return false;
-            const [h, m] = parts.map(Number);
-            return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
-          });
+        const times = parseReminderTimes(reminder.time);
+        const slotIndex = findSlotIndexForTime(times, scheduledDate);
 
-        // Find which slot index this log corresponds to
-        const schHHmm = `${scheduledDate
-          .getHours()
-          .toString()
-          .padStart(2, "0")}:${scheduledDate
-          .getMinutes()
-          .toString()
-          .padStart(2, "0")}`;
-        let slotIndex = times.indexOf(schHHmm);
+        if (slotIndex !== -1 && times.length > 0) {
+          const { newTimes, newTimeStr, hasChanges } = calculateDynamicSchedule(
+            times,
+            slotIndex,
+            actualDate
+          );
 
-        if (slotIndex === -1) {
-          const schMins =
-            scheduledDate.getHours() * 60 + scheduledDate.getMinutes();
-          let minDiff = Infinity;
-          times.forEach((t, i) => {
-            const [h, m] = t.split(":").map(Number);
-            const diff = Math.abs(h * 60 + m - schMins);
-            if (diff < minDiff) {
-              minDiff = diff;
-              slotIndex = i;
-            }
-          });
-        }
+          if (hasChanges) {
+            const originalTime = reminder.time;
+            const direction = diffMinutes < 0 ? "earlier" : "later";
+            const absDiff = Math.abs(diffMinutes);
+            const adjustedTimesLabel = newTimes.slice(slotIndex + 1).join(", ");
 
-        if (slotIndex !== -1) {
-          const toMins = (t: string) => {
-            const [h, m] = t.split(":").map(Number);
-            return h * 60 + m;
-          };
-          const fmtTime = (totalMins: number) => {
-            const normalized = ((totalMins % 1440) + 1440) % 1440;
-            return `${Math.floor(normalized / 60).toString().padStart(2, "0")}:${(normalized % 60).toString().padStart(2, "0")}`;
-          };
+            console.log(
+              `[DynamicSchedule] Shifting ${reminder.medicineName} from ${originalTime} to ${newTimeStr} (${absDiff}m ${direction})`
+            );
 
-          // Build new times using interval-preservation:
-          // - Slots before the taken one are unchanged (already past)
-          // - The taken slot becomes the actual intake time
-          // - Each subsequent slot = actualTakeTime + cumulative inter-slot interval
-          // This preserves equal spacing regardless of whether the dose was early or late.
-          const newTimes = times.map((t, i) => {
-            if (i < slotIndex) {
-              // Past doses remain unchanged
-              return t;
-            }
-            if (i === slotIndex) {
-              // Current dose updated to actual intake time
-              return fmtTime(actualDate.getHours() * 60 + actualDate.getMinutes());
+            // 1. Update the reminder itself
+            await updateReminder(reminder.id, { time: newTimeStr });
+            reminder.time = newTimeStr;
+
+            // 2. Update the log's scheduledTime to match the new schedule
+            const newScheduledISO = new Date(actualDate);
+            newScheduledISO.setSeconds(0, 0);
+            newScheduledISO.setMilliseconds(0);
+            const newScheduledTime = newScheduledISO.toISOString();
+
+            // Always save update locally instantly
+            try {
+              await localPersistence.doseLogs.update(newLog.id, {
+                scheduledTime: newScheduledTime,
+              });
+            } catch (e) {
+              console.warn("[AppContext] Failed to update dose log locally:", e);
             }
 
-            // Subsequent dose: actualTakeTime + cumulative interval from taken slot to this slot
-            let cumulativeInterval = 0;
-            for (let s = slotIndex; s < i; s++) {
-              let diff = toMins(times[s + 1]) - toMins(times[s]);
-              if (diff <= 0) diff += 24 * 60; // handle midnight wrap
-              cumulativeInterval += diff;
-            }
-            const newTotalMins = actualDate.getHours() * 60 + actualDate.getMinutes() + cumulativeInterval;
-            return fmtTime(newTotalMins);
-          });
-          // NOTE: Do NOT re-sort newTimes — the original slot order must be preserved
-          // so that computeShiftOffset and getNextOccurrence match slots by index correctly.
-
-          // Validation checks — use interval-preservation anchor (actualDate) not raw offset
-          const isShiftPast = isShiftIntoPast(reminder, slotIndex, actualDate, new Date());
-          const hasConflict = hasOverlapConflict(newTimes, reminder.id, reminder.patientId, reminders);
-
-          if (!isShiftPast && !hasConflict) {
-            const newTimeStr = newTimes.join(",");
-            if (newTimeStr !== reminder.time) {
-              const originalTime = reminder.time;
-
-              // Collect only the adjusted subsequent slot times for user-facing messages
-              const adjustedSlots = newTimes
-                .slice(slotIndex + 1)
-                .filter((_, idx) => newTimes[slotIndex + 1 + idx] !== times[slotIndex + 1 + idx]);
-              const adjustedTimesLabel = newTimes.slice(slotIndex + 1).join(", ");
-              const direction = diffMinutes < 0 ? "earlier" : "later";
-              const absDiff = Math.abs(diffMinutes);
-
-              console.log(
-                `[DynamicSchedule] Shifting ${reminder.medicineName} from ${originalTime} to ${newTimeStr}`
-              );
-
-              // 1. Update the reminder itself
-              await updateReminder(reminder.id, { time: newTimeStr });
-              reminder.time = newTimeStr;
-
-              // 2. Update the log's scheduledTime to match the new schedule
-              const newScheduledISO = new Date(actualDate);
-              newScheduledISO.setSeconds(0, 0);
-              newScheduledISO.setMilliseconds(0);
-              const newScheduledTime = newScheduledISO.toISOString();
-
-              // Always save update locally instantly
-              try {
-                await localPersistence.doseLogs.update(newLog.id, {
-                  scheduledTime: newScheduledTime,
-                });
-              } catch (e) {
-                console.warn("[AppContext] Failed to update dose log locally:", e);
-              }
-
-              if (storageMode === "cloud") {
-                if (isOnline) {
-                  try {
-                    const logDocRef = doc(db, "doseLogs", newLog.id);
-                    await updateDoc(logDocRef, { scheduledTime: newScheduledTime });
-                  } catch (err) {
-                    console.warn("[AppContext] Failed to sync dose log schedule shift, enqueuing:", err);
-                    if (currentUserId) {
-                      enqueueOp({
-                        type: "update-dose-log",
-                        collection: "doseLogs",
-                        docId: newLog.id,
-                        data: { scheduledTime: newScheduledTime },
-                        userId: currentUserId,
-                      });
-                      setPendingOfflineOps(getPendingCount());
-                    }
-                  }
-                } else {
+            if (storageMode === "cloud") {
+              if (isOnline) {
+                try {
+                  const logDocRef = doc(db, "doseLogs", newLog.id);
+                  await updateDoc(logDocRef, { scheduledTime: newScheduledTime });
+                } catch (err) {
+                  console.warn("[AppContext] Failed to sync dose log schedule shift, enqueuing:", err);
                   if (currentUserId) {
                     enqueueOp({
                       type: "update-dose-log",
@@ -1665,55 +1585,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     setPendingOfflineOps(getPendingCount());
                   }
                 }
+              } else {
+                if (currentUserId) {
+                  enqueueOp({
+                    type: "update-dose-log",
+                    collection: "doseLogs",
+                    docId: newLog.id,
+                    data: { scheduledTime: newScheduledTime },
+                    userId: currentUserId,
+                  });
+                  setPendingOfflineOps(getPendingCount());
+                }
               }
-
-              // Update local references for immediate UI consistency
-              newLog.scheduledTime = newScheduledTime;
-              setDoseLogs((prev) =>
-                prev.map((l) =>
-                  l.id === newLog.id ? { ...l, scheduledTime: newScheduledTime } : l
-                )
-              );
-
-              // 3. Write Schedule Audit Log
-              await addScheduleAuditLog({
-                reminderId: reminder.id,
-                medicineName: reminder.medicineName,
-                originalTime,
-                adjustedTime: newTimeStr,
-                actionTime: actualDate.toISOString(),
-                triggerEvent: diffMinutes < 0 ? "early-dose" : "late-dose",
-                timeOffsetMinutes: diffMinutes,
-                userId: storageMode === "local" ? "local" : currentUserId || "local",
-                patientId: reminder.patientId ?? null,
-              });
-
-              // 4. Schedule a reliable "Schedule Adjusted" notification via the
-              // same mechanism as regular reminders (allowWhileIdle + NativeAlarm),
-              // so it fires even when the app is backgrounded, killed, or offline.
-              await scheduleAdjustmentNotification({
-                reminderId: reminder.id,
-                medicineName: reminder.medicineName,
-                patientId: reminder.patientId,
-                patientName: reminder.patientName,
-                adjustedTimesLabel,
-                absDiff,
-                direction,
-                hasSubsequentSlots: newTimes.length > slotIndex + 1,
-              });
-
-              // 5. In-app toast with explicit adjusted times
-              const toastBody = newTimes.length > slotIndex + 1
-                ? reminder.patientName
-                  ? `${reminder.patientName} took ${reminder.medicineName} ${absDiff}m ${direction}. ` +
-                    `Next dose${newTimes.length - slotIndex - 1 > 1 ? "s" : ""} adjusted to: ${adjustedTimesLabel}.`
-                  : `Taken ${absDiff}m ${direction}. ` +
-                    `Next dose${newTimes.length - slotIndex - 1 > 1 ? "s" : ""} adjusted to: ${adjustedTimesLabel}.`
-                : `${reminder.medicineName} schedule updated.`;
-              notify.info("⏰ Schedule Adjusted", toastBody);
             }
-          } else {
-            console.warn(`[DynamicSchedule] Recalculation blocked: shiftIntoPast=${isShiftPast}, overlapConflict=${hasConflict}`);
+
+            // Update local references for immediate UI consistency
+            newLog.scheduledTime = newScheduledTime;
+            setDoseLogs((prev) =>
+              prev.map((l) =>
+                l.id === newLog.id ? { ...l, scheduledTime: newScheduledTime } : l
+              )
+            );
+
+            // 3. Write Schedule Audit Log
+            await addScheduleAuditLog({
+              reminderId: reminder.id,
+              medicineName: reminder.medicineName,
+              originalTime,
+              adjustedTime: newTimeStr,
+              actionTime: actualDate.toISOString(),
+              triggerEvent: diffMinutes < 0 ? "early-dose" : "late-dose",
+              timeOffsetMinutes: diffMinutes,
+              userId: storageMode === "local" ? "local" : currentUserId || "local",
+              patientId: reminder.patientId ?? null,
+            });
+
+            // 4. Schedule a reliable "Schedule Adjusted" notification via the
+            // same mechanism as regular reminders (allowWhileIdle + NativeAlarm),
+            // so it fires even when the app is backgrounded, killed, or offline.
+            await scheduleAdjustmentNotification({
+              reminderId: reminder.id,
+              medicineName: reminder.medicineName,
+              patientId: reminder.patientId,
+              patientName: reminder.patientName,
+              adjustedTimesLabel: adjustedTimesLabel || newTimes[slotIndex],
+              absDiff,
+              direction,
+              hasSubsequentSlots: newTimes.length > slotIndex + 1,
+            });
+
+            // 5. In-app toast with explicit adjusted times
+            const toastBody = newTimes.length > slotIndex + 1
+              ? reminder.patientName
+                ? `${reminder.patientName} took ${reminder.medicineName} ${absDiff}m ${direction}. ` +
+                  `Next dose${newTimes.length - slotIndex - 1 > 1 ? "s" : ""} adjusted to: ${adjustedTimesLabel}.`
+                : `Taken ${absDiff}m ${direction}. ` +
+                  `Next dose${newTimes.length - slotIndex - 1 > 1 ? "s" : ""} adjusted to: ${adjustedTimesLabel}.`
+              : `${reminder.medicineName} schedule updated (${absDiff}m ${direction}).`;
+            notify.info("⏰ Schedule Adjusted", toastBody);
           }
         }
       }

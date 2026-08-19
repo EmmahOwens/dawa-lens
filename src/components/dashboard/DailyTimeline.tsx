@@ -5,19 +5,18 @@ import { Reminder, DoseLog } from "@/contexts/AppContext";
 import { computeShiftOffset } from "@/services/reminderService";
 import confetti from "canvas-confetti";
 import { toDate } from "@/lib/utils";
-
-interface DailyTimelineProps {
-  reminders: Reminder[];
-  doseLogs: DoseLog[];
-  /** scheduledTime is the full ISO datetime for the specific slot being actioned */
-  onAction: (reminder: Reminder, action: "taken" | "skipped", scheduledTime: string) => void;
-}
+import {
+  parseReminderTimes,
+  findSlotIndexForTime,
+  getInterSlotInterval,
+  minutesToTimeStr,
+  timeStrToMinutes,
+} from "@/lib/dynamicSchedule";
 
 /** Shift a "HH:mm" base time by offsetMinutes and return the display string. */
 function shiftHHmm(base: string, offsetMinutes: number): string {
-  const [h, m] = base.split(":").map(Number);
-  const total = ((h * 60 + m + offsetMinutes) % (24 * 60) + 24 * 60) % (24 * 60);
-  return `${Math.floor(total / 60).toString().padStart(2, "0")}:${(total % 60).toString().padStart(2, "0")}`;
+  const total = timeStrToMinutes(base) + offsetMinutes;
+  return minutesToTimeStr(total);
 }
 
 /** Build the ISO datetime for today at HH:mm */
@@ -25,6 +24,13 @@ function todayAt(hhmm: string): Date {
   const [h, m] = hhmm.split(":").map(Number);
   const d = new Date();
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0, 0);
+}
+
+interface DailyTimelineProps {
+  reminders: Reminder[];
+  doseLogs: DoseLog[];
+  /** scheduledTime is the full ISO datetime for the specific slot being actioned */
+  onAction: (reminder: Reminder, action: "taken" | "skipped", scheduledTime: string) => void;
 }
 
 export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelineProps) {
@@ -104,77 +110,83 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
     })
     .sort((a, b) => a.time.localeCompare(b.time));
 
-  activeReminders.forEach(r => {
-    const times = r.time
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => {
-        const parts = t.split(":");
-        if (parts.length !== 2) return false;
-        const [h, m] = parts.map(Number);
-        return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
-      });
+  activeReminders.forEach((r) => {
+    const times = parseReminderTimes(r.time);
     const offsetMinutes = computeShiftOffset(r, doseLogs);
 
     // Determine taken slot index from today's logs
     let takenSlotIndex = -1;
     const todayTakenLog = [...doseLogs]
-      .filter(l =>
-        l.reminderId === r.id &&
-        l.action === "taken" &&
-        new Date(l.actionTime).toDateString() === today
+      .filter(
+        (l) =>
+          l.reminderId === r.id &&
+          l.action === "taken" &&
+          new Date(l.actionTime).toDateString() === today
       )
-      .sort((a, b) => new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime())[0];
+      .sort(
+        (a, b) =>
+          new Date(b.actionTime).getTime() - new Date(a.actionTime).getTime()
+      )[0];
 
-    if (todayTakenLog && offsetMinutes !== 0) {
-      const sd = new Date(todayTakenLog.scheduledTime);
-      const ts = `${sd.getHours().toString().padStart(2, "0")}:${sd.getMinutes().toString().padStart(2, "0")}`;
-      takenSlotIndex = times.indexOf(ts);
-      if (takenSlotIndex === -1) {
-        const sm = sd.getHours() * 60 + sd.getMinutes();
-        let minD = Infinity;
-        times.forEach((t, i) => {
-          const [hh, mm] = t.split(":").map(Number);
-          const d = Math.abs(hh * 60 + mm - sm);
-          if (d < minD) { minD = d; takenSlotIndex = i; }
-        });
-      }
+    if (todayTakenLog) {
+      takenSlotIndex = findSlotIndexForTime(
+        times,
+        todayTakenLog.scheduledTime || todayTakenLog.actionTime
+      );
     }
 
     times.forEach((baseTime, idx) => {
-      // Effective display time: apply offset to slots after the taken one
-      const displayTime =
-        offsetMinutes !== 0 && idx > takenSlotIndex
-          ? shiftHHmm(baseTime, offsetMinutes)
-          : baseTime;
+      let displayTime = baseTime;
+      let slotOffset = 0;
 
-      // Scheduled ISO: for shifted slots use the shifted datetime, for unshifted use base
-      const scheduledISO =
-        offsetMinutes !== 0 && idx > takenSlotIndex
-          ? shiftHHmm(baseTime, offsetMinutes).replace(/(\d{2}):(\d{2})/, (_, h, m) => {
-              const d = new Date();
-              return new Date(d.getFullYear(), d.getMonth(), d.getDate(), +h, +m, 0, 0).toISOString();
-            })
-          : todayAt(baseTime).toISOString();
+      if (todayTakenLog && takenSlotIndex !== -1 && idx > takenSlotIndex) {
+        let cumulativeInterval = 0;
+        for (let s = takenSlotIndex; s < idx; s++) {
+          cumulativeInterval += getInterSlotInterval(times, s, s + 1);
+        }
+        const actualTakeDate = toDate(todayTakenLog.actionTime);
+        const totalMins =
+          actualTakeDate.getHours() * 60 +
+          actualTakeDate.getMinutes() +
+          cumulativeInterval;
+        displayTime = minutesToTimeStr(totalMins);
 
-      // Find if this specific slot has already been logged today
+        let diff = timeStrToMinutes(displayTime) - timeStrToMinutes(baseTime);
+        if (diff > 12 * 60) diff -= 24 * 60;
+        if (diff < -12 * 60) diff += 24 * 60;
+        slotOffset = diff;
+      } else if (todayTakenLog && idx === takenSlotIndex) {
+        slotOffset = offsetMinutes;
+      }
+
+      const scheduledISO = todayAt(displayTime).toISOString();
       const slotISO = todayAt(baseTime).toISOString();
-      // Match against both original AND shifted ISO (handles both first and subsequent logs)
-      const shiftedISO = offsetMinutes !== 0 && idx > takenSlotIndex
-        ? (() => {
-            const [h, m] = displayTime.split(":").map(Number);
-            const d = new Date();
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0, 0).toISOString();
-          })()
-        : slotISO;
 
-      const log = doseLogs.find(l =>
-        l.reminderId === r.id &&
-        new Date(l.actionTime).toDateString() === today &&
-        (l.scheduledTime === slotISO || l.scheduledTime === shiftedISO)
-      );
+      const log = doseLogs.find((l) => {
+        if (l.reminderId !== r.id) return false;
+        if (new Date(l.actionTime).toDateString() !== today) return false;
+        if (l.scheduledTime === slotISO || l.scheduledTime === scheduledISO) return true;
 
-      slots.push({ reminder: r, slotIndex: idx, baseTime, displayTime, scheduledISO: shiftedISO, offsetMinutes, log });
+        if (l.scheduledTime) {
+          const lDate = toDate(l.scheduledTime);
+          const lMins = lDate.getHours() * 60 + lDate.getMinutes();
+          const baseMins = timeStrToMinutes(baseTime);
+          let diff = Math.abs(lMins - baseMins);
+          if (diff > 12 * 60) diff = 24 * 60 - diff;
+          if (diff <= 30) return true;
+        }
+        return false;
+      });
+
+      slots.push({
+        reminder: r,
+        slotIndex: idx,
+        baseTime,
+        displayTime,
+        scheduledISO,
+        offsetMinutes: slotOffset,
+        log,
+      });
     });
   });
 

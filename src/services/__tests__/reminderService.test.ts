@@ -202,3 +202,161 @@ describe("AppContext - isShiftIntoPast", () => {
     expect(isShiftIntoPast(reminder, 0, actualTakeTime, now)).toBe(true);
   });
 });
+
+import {
+  calculateDynamicSchedule,
+  parseReminderTimes,
+  findSlotIndexForTime,
+  getInterSlotInterval,
+} from "@/lib/dynamicSchedule";
+import { calculateNextDose } from "../reminderService";
+
+describe("dynamicSchedule - interval preservation", () => {
+  it("should shift subsequent slots earlier when a morning dose is taken early", () => {
+    const times = ["08:00", "20:00"]; // 12h interval
+    const actualTake = new Date();
+    actualTake.setHours(6, 30, 0, 0); // 90m early
+
+    const result = calculateDynamicSchedule(times, 0, actualTake);
+    expect(result.hasChanges).toBe(true);
+    expect(result.newTimes).toEqual(["06:30", "18:30"]);
+    expect(result.newTimeStr).toBe("06:30,18:30");
+  });
+
+  it("should shift subsequent slots later when a morning dose is taken late", () => {
+    const times = ["08:00", "20:00"]; // 12h interval
+    const actualTake = new Date();
+    actualTake.setHours(9, 30, 0, 0); // 90m late
+
+    const result = calculateDynamicSchedule(times, 0, actualTake);
+    expect(result.hasChanges).toBe(true);
+    expect(result.newTimes).toEqual(["09:30", "21:30"]);
+    expect(result.newTimeStr).toBe("09:30,21:30");
+  });
+
+  it("should preserve 3-dose daily intervals (e.g. 08:00, 14:00, 20:00)", () => {
+    const times = ["08:00", "14:00", "20:00"]; // 6h intervals
+    const actualTake = new Date();
+    actualTake.setHours(9, 0, 0, 0); // 1h late for slot 0
+
+    const result = calculateDynamicSchedule(times, 0, actualTake);
+    expect(result.newTimes).toEqual(["09:00", "15:00", "21:00"]);
+  });
+
+  it("should only adjust subsequent slots when taking second dose", () => {
+    const times = ["08:00", "14:00", "20:00"];
+    const actualTake = new Date();
+    actualTake.setHours(15, 15, 0, 0); // slot 1 taken at 15:15 (75m late)
+
+    const result = calculateDynamicSchedule(times, 1, actualTake);
+    // slot 0 remains 08:00, slot 1 becomes 15:15, slot 2 becomes 21:15 (6h after 15:15)
+    expect(result.newTimes).toEqual(["08:00", "15:15", "21:15"]);
+  });
+});
+
+describe("reminderService - calculateNextDose with dynamic shifts", () => {
+  it("should calculate the shifted next dose today after taking first dose early", () => {
+    const reminder: Reminder = {
+      id: "rem-multi",
+      medicineName: "Amoxicillin",
+      dose: "500mg",
+      time: "08:00,20:00",
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const scheduledDate = new Date();
+    scheduledDate.setHours(8, 0, 0, 0);
+
+    const takenDate = new Date();
+    takenDate.setHours(6, 30, 0, 0);
+
+    const takenLog: DoseLog = {
+      id: "log-1",
+      reminderId: "rem-multi",
+      medicineName: "Amoxicillin",
+      dose: "500mg",
+      scheduledTime: scheduledDate.toISOString(),
+      actionTime: takenDate.toISOString(),
+      action: "taken",
+    };
+
+    const nextDose = calculateNextDose([reminder], [takenLog]);
+    expect(nextDose).not.toBeNull();
+    // Next dose should be slot 1 at 18:30 (12h after 06:30)
+    const scheduledHours = nextDose!.scheduledAt.getHours();
+    const scheduledMins = nextDose!.scheduledAt.getMinutes();
+    expect(`${scheduledHours.toString().padStart(2, "0")}:${scheduledMins.toString().padStart(2, "0")}`).toBe("18:30");
+  });
+
+  it("should calculate the shifted next dose today after taking first dose late", () => {
+    const reminder: Reminder = {
+      id: "rem-multi",
+      medicineName: "Amoxicillin",
+      dose: "500mg",
+      time: "08:00,20:00",
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const scheduledDate = new Date();
+    scheduledDate.setHours(8, 0, 0, 0);
+
+    const takenDate = new Date();
+    takenDate.setHours(9, 30, 0, 0);
+
+    const takenLog: DoseLog = {
+      id: "log-1",
+      reminderId: "rem-multi",
+      medicineName: "Amoxicillin",
+      dose: "500mg",
+      scheduledTime: scheduledDate.toISOString(),
+      actionTime: takenDate.toISOString(),
+      action: "taken",
+    };
+
+    const nextDose = calculateNextDose([reminder], [takenLog]);
+    expect(nextDose).not.toBeNull();
+    // Next dose should be slot 1 at 21:30 (12h after 09:30)
+    const scheduledHours = nextDose!.scheduledAt.getHours();
+    const scheduledMins = nextDose!.scheduledAt.getMinutes();
+    expect(`${scheduledHours.toString().padStart(2, "0")}:${scheduledMins.toString().padStart(2, "0")}`).toBe("21:30");
+  });
+
+  it("should point to tomorrow once daily dose is taken today", () => {
+    const reminder: Reminder = {
+      id: "rem-single",
+      medicineName: "Vitamin D",
+      dose: "1 capsule",
+      time: "08:00",
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const scheduledDate = new Date();
+    scheduledDate.setHours(8, 0, 0, 0);
+
+    const takenDate = new Date();
+    takenDate.setHours(8, 45, 0, 0);
+
+    const takenLog: DoseLog = {
+      id: "log-1",
+      reminderId: "rem-single",
+      medicineName: "Vitamin D",
+      dose: "1 capsule",
+      scheduledTime: scheduledDate.toISOString(),
+      actionTime: takenDate.toISOString(),
+      action: "taken",
+    };
+
+    const nextDose = calculateNextDose([reminder], [takenLog]);
+    expect(nextDose).not.toBeNull();
+    // Tomorrow at 08:00
+    const now = new Date();
+    expect(nextDose!.scheduledAt.getDate()).toBe(new Date(now.getTime() + 24 * 3600 * 1000).getDate());
+  });
+});
+
