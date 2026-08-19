@@ -35,7 +35,7 @@ export function calculateRefillStatus(
       if (rem.repeatSchedule === "daily") {
         dailyDoseTotal += doseVal;
       } else if (rem.repeatSchedule === "custom") {
-        const timesPerDay = rem.time.split(",").length;
+        const timesPerDay = (rem.time || "").split(",").filter(Boolean).length || 1;
         if (rem.repeatDays && rem.repeatDays.length > 0) {
           dailyDoseTotal += (doseVal * timesPerDay * rem.repeatDays.length) / 7;
         } else {

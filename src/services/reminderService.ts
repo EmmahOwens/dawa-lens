@@ -580,14 +580,16 @@ export const registerNotificationActions = async () => {
   }
 };
 
-const stringToHash = (str: string): number => {
+export const stringToHash = (str: string): number => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
-  return Math.abs(hash);
+  // Clamp within positive 32-bit signed int range [1, 2147483646]
+  const val = Math.abs(hash % 2147483647);
+  return val === 0 ? 1 : val;
 };
 
 /**
@@ -773,66 +775,116 @@ export const scheduleRefillNotifications = async (
   }
 };
 
+let isSchedulingReminders = false;
+let queuedScheduleTask: (() => Promise<void>) | null = null;
+
 export const scheduleReminders = async (
   reminders: Reminder[],
   doseLogs: DoseLog[],
   medicines?: Medicine[]
-) => {
+): Promise<void> => {
   if (!Capacitor.isNativePlatform()) return;
 
+  if (isSchedulingReminders) {
+    return new Promise<void>((resolve) => {
+      queuedScheduleTask = async () => {
+        await executeScheduleReminders(reminders, doseLogs, medicines);
+        resolve();
+      };
+    });
+  }
+
+  isSchedulingReminders = true;
   try {
-    const perm = await LocalNotifications.checkPermissions();
-    if (perm.display !== "granted") {
-      await LocalNotifications.requestPermissions();
+    await executeScheduleReminders(reminders, doseLogs, medicines);
+  } finally {
+    isSchedulingReminders = false;
+    if (queuedScheduleTask) {
+      const nextTask = queuedScheduleTask;
+      queuedScheduleTask = null;
+      nextTask().catch((err) =>
+        console.warn("[reminderService] Queued scheduleReminders failed:", err)
+      );
+    }
+  }
+};
+
+const executeScheduleReminders = async (
+  reminders: Reminder[],
+  doseLogs: DoseLog[],
+  medicines?: Medicine[]
+) => {
+  try {
+    try {
+      const perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== "granted") {
+        await LocalNotifications.requestPermissions();
+      }
+    } catch (permErr) {
+      console.warn("[reminderService] Permission check failed:", permErr);
     }
 
     // Schedule low-stock refill notifications for Med Vault
     if (medicines && medicines.length > 0) {
-      await scheduleRefillNotifications(medicines, reminders);
+      try {
+        await scheduleRefillNotifications(medicines, reminders);
+      } catch (refillErr) {
+        console.warn("[reminderService] scheduleRefillNotifications failed:", refillErr);
+      }
     }
 
-    const activeReminders = reminders.filter((r) => r.enabled);
+    const activeReminders = (reminders || []).filter((r) => r && r.enabled);
 
     // Ensure the channel exists before scheduling on Android
     if (Capacitor.getPlatform() === "android") {
-      // Always ensure the owner channel exists
-      await LocalNotifications.createChannel({
-        id: CHANNEL_OWNER,
-        name: "My Reminders",
-        description: "Your personal medication reminders",
-        importance: 5,
-        visibility: 1,
-        vibration: true,
-        sound: "default",
-      });
+      try {
+        // Always ensure the owner channel exists
+        await LocalNotifications.createChannel({
+          id: CHANNEL_OWNER,
+          name: "My Reminders",
+          description: "Your personal medication reminders",
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          sound: "default",
+        });
 
-      // Create one channel per managed patient
-      const seenPatientIds = new Set<string>();
-      for (const r of activeReminders) {
-        if (r.patientId && !seenPatientIds.has(r.patientId)) {
-          seenPatientIds.add(r.patientId);
-          const channelName = r.patientName
-            ? `${r.patientName}'s Reminders`
-            : "Family Member Reminders";
-          await LocalNotifications.createChannel({
-            id: patientChannelId(r.patientId),
-            name: channelName,
-            description: `Medication reminders for ${
-              r.patientName ?? "a family member"
-            }`,
-            importance: 5,
-            visibility: 1,
-            vibration: true,
-            sound: "default",
-          });
+        // Create one channel per managed patient
+        const seenPatientIds = new Set<string>();
+        for (const r of activeReminders) {
+          if (r.patientId && !seenPatientIds.has(r.patientId)) {
+            seenPatientIds.add(r.patientId);
+            const channelName = r.patientName
+              ? `${r.patientName}'s Reminders`
+              : "Family Member Reminders";
+            await LocalNotifications.createChannel({
+              id: patientChannelId(r.patientId),
+              name: channelName,
+              description: `Medication reminders for ${
+                r.patientName ?? "a family member"
+              }`,
+              importance: 5,
+              visibility: 1,
+              vibration: true,
+              sound: "default",
+            });
+          }
         }
+      } catch (channelErr) {
+        console.warn("[reminderService] Channel creation failed:", channelErr);
       }
     }
 
     // Cancel all pending notifications to refresh the schedule
-    const pending = await LocalNotifications.getPending();
-    if (pending.notifications.length > 0) {
-      await LocalNotifications.cancel({ notifications: pending.notifications });
+    try {
+      const pending = await LocalNotifications.getPending();
+      if (pending.notifications && pending.notifications.length > 0) {
+        await LocalNotifications.cancel({
+          notifications: pending.notifications.map((n) => ({ id: n.id })),
+        });
+      }
+    } catch (cancelErr) {
+      console.warn("[reminderService] Failed to cancel pending LocalNotifications:", cancelErr);
     }
 
     // Also cancel all native alarms to ensure ghost notifications are removed
@@ -852,18 +904,18 @@ export const scheduleReminders = async (
       const doseAmount = medicine?.dosagePerDose || 1;
 
       let nextFrom = now;
-      // Schedule next 60 occurrences or up to 30 days — larger window means
-      // fewer reschedule cycles needed if the user is offline for a long period.
+      // Schedule next 60 occurrences or up to 30 days
       for (let i = 0; i < 60; i++) {
         const next = getNextOccurrence(r, nextFrom, doseLogs);
         if (!next || isAfter(next, addDays(now, 30))) break;
 
         // Stop scheduling if we are out of stock
         if (medicine && currentStock < doseAmount) {
+          const refillId = stringToHash(r.id + "refill");
           notifications.push({
             title: `Refill Needed: ${r.medicineName}`,
             body: `You are out of stock. Please refill to continue reminders.`,
-            id: stringToHash(r.id + "refill"),
+            id: refillId,
             schedule: { at: next, allowWhileIdle: true },
             channelId: r.patientId
               ? patientChannelId(r.patientId)
@@ -877,7 +929,7 @@ export const scheduleReminders = async (
             },
           });
           alarmNotifications.push({
-            id: stringToHash(r.id + "refill"),
+            id: refillId,
             title: `Refill Needed: ${r.medicineName}`,
             body: `You are out of stock. Please refill to continue reminders.`,
             triggerAtMillis: next.getTime(),
@@ -893,6 +945,7 @@ export const scheduleReminders = async (
           break;
         }
 
+        const notifId = stringToHash(r.id + next.toISOString());
         notifications.push({
           title: r.patientName
             ? `Time for ${r.patientName}'s ${r.medicineName}`
@@ -900,9 +953,7 @@ export const scheduleReminders = async (
           body: r.patientName
             ? `${r.patientName}'s dose: ${r.dose}. Don't miss it!`
             : `Dose: ${r.dose}. Remember to take your medicine!`,
-          id: stringToHash(r.id + next.toISOString()),
-          // allowWhileIdle: fires even when Android is in Doze/battery-saver mode.
-          // This is the key flag that makes notifications work fully offline.
+          id: notifId,
           schedule: { at: next, allowWhileIdle: true },
           channelId: r.patientId ? patientChannelId(r.patientId) : CHANNEL_OWNER,
           sound: "default",
@@ -918,7 +969,7 @@ export const scheduleReminders = async (
           },
         });
         alarmNotifications.push({
-          id: stringToHash(r.id + next.toISOString()),
+          id: notifId,
           title: r.patientName
             ? `Time for ${r.patientName}'s ${r.medicineName}`
             : `Time for ${r.medicineName}`,
@@ -946,7 +997,11 @@ export const scheduleReminders = async (
 
     if (notifications.length > 0) {
       console.log(`Scheduling ${notifications.length} notifications...`);
-      await LocalNotifications.schedule({ notifications });
+      try {
+        await LocalNotifications.schedule({ notifications });
+      } catch (schedErr) {
+        console.warn("[reminderService] LocalNotifications.schedule failed:", schedErr);
+      }
       // Mirror schedule to native AlarmManager for post-reboot reliability
       if (alarmNotifications.length > 0) {
         try {
@@ -958,12 +1013,6 @@ export const scheduleReminders = async (
             "[reminderService] NativeAlarm fallback failed (non-fatal):",
             alarmErr
           );
-          if (alarmErr?.message === "EXACT_ALARM_PERMISSION_REQUIRED") {
-            notify.warning(
-              "Permission Required",
-              "Please grant exact alarm permission for reliable reminders."
-            );
-          }
         }
       }
     } else {

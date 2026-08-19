@@ -210,17 +210,32 @@ class NativeScanActivity : AppCompatActivity() {
         val capture = imageCapture ?: return
         capture.takePicture(cameraExecutor, object : ImageCapture.OnImageCapturedCallback() {
             override fun onCaptureSuccess(image: ImageProxy) {
-                val bitmap = image.toBitmap()
-                image.close()
-                val processed = preprocessBitmap(bitmap)
-                val out = ByteArrayOutputStream()
-                processed.compress(Bitmap.CompressFormat.JPEG, 85, out)
-                val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
-                val dataUrl = "data:image/jpeg;base64,$base64"
-                runOnUiThread {
-                    val result = Intent().putExtra("IMAGE_DATA", dataUrl)
-                    setResult(Activity.RESULT_OK, result)
-                    finish()
+                try {
+                    val bitmap = image.toBitmap()
+                    image.close()
+                    if (bitmap != null) {
+                        val processed = preprocessBitmap(bitmap)
+                        val out = ByteArrayOutputStream()
+                        processed.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                        val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+                        val dataUrl = "data:image/jpeg;base64,$base64"
+                        runOnUiThread {
+                            val result = Intent().putExtra("IMAGE_DATA", dataUrl)
+                            setResult(Activity.RESULT_OK, result)
+                            finish()
+                        }
+                    } else {
+                        runOnUiThread {
+                            setResult(Activity.RESULT_CANCELED)
+                            finish()
+                        }
+                    }
+                } catch (e: Exception) {
+                    try { image.close() } catch (_: Exception) {}
+                    runOnUiThread {
+                        setResult(Activity.RESULT_CANCELED)
+                        finish()
+                    }
                 }
             }
 

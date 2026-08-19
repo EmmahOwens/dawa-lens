@@ -125,10 +125,10 @@ const getMedVaultSystemContext = (medicines: Medicine[], reminders: Reminder[]):
   const stockLines = trackedMeds.map(m => {
     const qty = m.currentQuantity ?? 0;
     const unit = m.unit || "tablets";
-    const medReminders = reminders.filter(r => r.medicineId === m.id && r.enabled);
+    const medReminders = (reminders || []).filter(r => r && r.medicineId === m.id && r.enabled);
     let dailyDose = 0;
     for (const r of medReminders) {
-      const dosesPerDay = r.time.split(",").length;
+      const dosesPerDay = (r.time || "").split(",").filter(Boolean).length || 1;
       dailyDose += (m.dosagePerDose || 1) * dosesPerDay;
     }
     const daysRemaining = dailyDose > 0 ? Math.floor(qty / dailyDose) : null;

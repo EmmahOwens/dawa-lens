@@ -43,7 +43,9 @@ const stringToHash = (str: string): number => {
     hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
-  return Math.abs(hash);
+  // Clamp within positive 32-bit signed int range [1, 2147483646]
+  const val = Math.abs(hash % 2147483647);
+  return val === 0 ? 1 : val;
 };
 
 function setTime(date: Date, h: number, m: number, s = 0, ms = 0): Date {
@@ -91,10 +93,19 @@ async function scheduleNotif(
   localNotifs: LocalNotificationSchema[],
   alarmNotifs: AlarmNotification[]
 ): Promise<void> {
-  if (localNotifs.length > 0) await LocalNotifications.schedule({ notifications: localNotifs });
+  if (localNotifs.length > 0) {
+    try {
+      await LocalNotifications.schedule({ notifications: localNotifs });
+    } catch (e) {
+      console.warn("[quotesService] LocalNotifications.schedule failed (non-fatal):", e);
+    }
+  }
   if (alarmNotifs.length > 0) {
-    try { await NativeAlarm.scheduleAlarms({ notifications: alarmNotifs }); }
-    catch (e) { console.warn("[quotesService] NativeAlarm failed (non-fatal):", e); }
+    try {
+      await NativeAlarm.scheduleAlarms({ notifications: alarmNotifs });
+    } catch (e) {
+      console.warn("[quotesService] NativeAlarm failed (non-fatal):", e);
+    }
   }
 }
 

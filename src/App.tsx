@@ -247,21 +247,23 @@ const App = () => {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <AppProvider>
-              <AppContent />
-              <NotificationHandler />
-              <OfflineOverlay />
-              <Toaster richColors closeButton position="top-center" />
-              <DawaGPT />
-              {showUpdateModal && (
-                <StoreUpdateModal
-                  currentVersion={CURRENT_VERSION}
-                  newVersion={updateData.newVersion}
-                  downloadUrl={updateData.downloadUrl}
-                  onClose={() => setShowUpdateModal(false)}
-                />
-              )}
-              <Suspense fallback={<SplashScreen />}>
-                <ErrorBoundary name="AppRoot">
+              <ErrorBoundary name="AppRoot">
+                <AppContent />
+                <NotificationHandler />
+                <OfflineOverlay />
+                <Toaster richColors closeButton position="top-center" />
+                <ErrorBoundary name="DawaGPT">
+                  <DawaGPT />
+                </ErrorBoundary>
+                {showUpdateModal && (
+                  <StoreUpdateModal
+                    currentVersion={CURRENT_VERSION}
+                    newVersion={updateData.newVersion}
+                    downloadUrl={updateData.downloadUrl}
+                    onClose={() => setShowUpdateModal(false)}
+                  />
+                )}
+                <Suspense fallback={<SplashScreen />}>
                   <Routes location={location}>
                     {/* Full-screen pages — no AppShell */}
                     <Route
@@ -459,8 +461,8 @@ const App = () => {
                       }
                     />
                   </Routes>
-                </ErrorBoundary>
-              </Suspense>
+                </Suspense>
+              </ErrorBoundary>
             </AppProvider>
           </TooltipProvider>
         </QueryClientProvider>

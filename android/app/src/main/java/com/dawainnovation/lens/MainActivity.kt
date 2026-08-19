@@ -46,18 +46,6 @@ class MainActivity : BridgeActivity() {
         val currentBridge = bridge ?: return
         val webView = currentBridge.webView ?: return
 
-        // Predictive Back support
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
-            }
-        })
-
         // Enqueue the missed-dose background checker (15-minute period).
         try {
             val missedDoseWork = PeriodicWorkRequest.Builder(

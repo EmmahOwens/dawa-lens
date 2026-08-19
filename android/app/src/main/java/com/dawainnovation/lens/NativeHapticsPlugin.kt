@@ -25,38 +25,64 @@ class NativeHapticsPlugin : Plugin() {
 
     @PluginMethod
     fun impact(call: PluginCall) {
-        val style = call.getString("style") ?: "medium"
-        
-        val effect = when (style) {
-            "light" -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
-            "heavy" -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
-            else -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val style = call.getString("style") ?: "medium"
+                val effect = when (style) {
+                    "light" -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK)
+                    "heavy" -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
+                    else -> VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
+                }
+                vibrator.vibrate(effect)
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val duration = when (call.getString("style")) {
+                    "light" -> 20L
+                    "heavy" -> 60L
+                    else -> 40L
+                }
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(40L)
+            }
+        } catch (e: Exception) {
+            // Ignore vibration errors gracefully
         }
-        
-        vibrator.vibrate(effect)
         call.resolve()
     }
 
     @PluginMethod
     fun notification(call: PluginCall) {
-        val type = call.getString("type") ?: "success"
-        
-        when (type) {
-            "success" -> {
-                val timings = longArrayOf(0, 40, 40, 40)
-                val amplitudes = intArrayOf(0, 100, 0, 150)
-                vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+        try {
+            val type = call.getString("type") ?: "success"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                when (type) {
+                    "success" -> {
+                        val timings = longArrayOf(0, 40, 40, 40)
+                        val amplitudes = intArrayOf(0, 100, 0, 150)
+                        vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+                    }
+                    "warning" -> {
+                        val timings = longArrayOf(0, 100, 40, 100)
+                        val amplitudes = intArrayOf(0, 200, 0, 200)
+                        vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+                    }
+                    "error" -> {
+                        val timings = longArrayOf(0, 50, 40, 50, 40, 50, 40, 150)
+                        val amplitudes = intArrayOf(0, 150, 0, 150, 0, 150, 0, 255)
+                        vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
+                    }
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                when (type) {
+                    "success" -> vibrator.vibrate(longArrayOf(0, 40, 40, 40), -1)
+                    "warning" -> vibrator.vibrate(longArrayOf(0, 100, 40, 100), -1)
+                    "error" -> vibrator.vibrate(longArrayOf(0, 50, 40, 50, 40, 50, 40, 150), -1)
+                }
             }
-            "warning" -> {
-                val timings = longArrayOf(0, 100, 40, 100)
-                val amplitudes = intArrayOf(0, 200, 0, 200)
-                vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
-            }
-            "error" -> {
-                val timings = longArrayOf(0, 50, 40, 50, 40, 50, 40, 150)
-                val amplitudes = intArrayOf(0, 150, 0, 150, 0, 150, 0, 255)
-                vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
-            }
+        } catch (e: Exception) {
+            // Ignore vibration errors gracefully
         }
         call.resolve()
     }

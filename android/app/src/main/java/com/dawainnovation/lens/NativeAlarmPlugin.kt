@@ -33,101 +33,131 @@ class NativeAlarmPlugin : Plugin() {
         val ctx = context
         val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
+        var canScheduleExact = true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (!alarmManager.canScheduleExactAlarms()) {
-                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                ctx.startActivity(intent)
-                call.reject("EXACT_ALARM_PERMISSION_REQUIRED")
-                return
+            canScheduleExact = try {
+                alarmManager.canScheduleExactAlarms()
+            } catch (e: Exception) {
+                false
             }
         }
+
         val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val alarmIds = mutableSetOf<String>()
 
         for (i in 0 until notifications.length()) {
-            val item = notifications.getJSONObject(i)
-            val id = item.getInt("id")
-            val title = item.getString("title")
-            val body = item.getString("body")
-            val triggerAtMillis = item.getLong("triggerAtMillis")
-            val extra = if (item.has("extra")) item.getString("extra") else ""
-
-            val intent = Intent(ctx, AlarmReceiver::class.java).apply {
-                putExtra("notificationId", id)
-                putExtra("title", title)
-                putExtra("body", body)
-                putExtra("extra", extra)
-            }
-
-            val pendingIntent = PendingIntent.getBroadcast(
-                ctx,
-                id,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerAtMillis,
-                        pendingIntent
-                    )
-                } else {
-                    alarmManager.setExact(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerAtMillis,
-                        pendingIntent
-                    )
-                }
-            } catch (e: SecurityException) {
-                // Fallback for Android 12+ when SCHEDULE_EXACT_ALARM permission is not granted
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    alarmManager.setAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerAtMillis,
-                        pendingIntent
-                    )
-                } else {
-                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-                }
-            }
+                val item = notifications.getJSONObject(i)
+                val idLong = item.optLong("id", 0L)
+                val id = if (idLong != 0L) (idLong % 2147483647).toInt() else item.optInt("id", 0)
+                val title = item.optString("title", "Dawa Lens")
+                val body = item.optString("body", "Medication reminder")
+                val triggerAtMillis = item.optLong("triggerAtMillis", 0L)
+                val extra = if (item.has("extra")) item.getString("extra") else ""
 
-            alarmIds.add(id.toString())
+                if (triggerAtMillis <= 0L) continue
+
+                val intent = Intent(ctx, AlarmReceiver::class.java).apply {
+                    putExtra("notificationId", id)
+                    putExtra("title", title)
+                    putExtra("body", body)
+                    putExtra("extra", extra)
+                }
+
+                val pendingIntent = PendingIntent.getBroadcast(
+                    ctx,
+                    id,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+                try {
+                    if (canScheduleExact) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            alarmManager.setExactAndAllowWhileIdle(
+                                AlarmManager.RTC_WAKEUP,
+                                triggerAtMillis,
+                                pendingIntent
+                            )
+                        } else {
+                            alarmManager.setExact(
+                                AlarmManager.RTC_WAKEUP,
+                                triggerAtMillis,
+                                pendingIntent
+                            )
+                        }
+                    } else {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            alarmManager.setAndAllowWhileIdle(
+                                AlarmManager.RTC_WAKEUP,
+                                triggerAtMillis,
+                                pendingIntent
+                            )
+                        } else {
+                            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                        }
+                    }
+                } catch (e: SecurityException) {
+                    // Fallback for Android 12+ when exact alarm permission is not available
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        alarmManager.setAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            triggerAtMillis,
+                            pendingIntent
+                        )
+                    } else {
+                        alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                    }
+                }
+
+                alarmIds.add(id.toString())
+            } catch (itemErr: Exception) {
+                // Ignore individual item parse error and continue
+            }
         }
 
-        // Persist both the full schedule (for BootReceiver) and the ID set (for cancellation)
-        prefs.edit()
-            .putString(KEY_SCHEDULE, notifications.toString())
-            .putStringSet(KEY_IDS, alarmIds)
-            .apply()
+        try {
+            // Persist both the full schedule (for BootReceiver) and the ID set (for cancellation)
+            prefs.edit()
+                .putString(KEY_SCHEDULE, notifications.toString())
+                .putStringSet(KEY_IDS, alarmIds)
+                .apply()
+        } catch (prefsErr: Exception) {
+            // Ignore prefs write error
+        }
 
         call.resolve()
     }
 
     @PluginMethod
     fun cancelAllAlarms(call: PluginCall) {
-        val ctx = context
-        val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val alarmIds = prefs.getStringSet(KEY_IDS, emptySet()) ?: emptySet()
+        try {
+            val ctx = context
+            val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val alarmIds = prefs.getStringSet(KEY_IDS, emptySet()) ?: emptySet()
 
-        for (idStr in alarmIds) {
-            val id = idStr.toIntOrNull() ?: continue
-            val intent = Intent(ctx, AlarmReceiver::class.java)
-            val pendingIntent = PendingIntent.getBroadcast(
-                ctx,
-                id,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            alarmManager.cancel(pendingIntent)
-            pendingIntent.cancel()
+            for (idStr in alarmIds) {
+                val id = idStr.toIntOrNull() ?: continue
+                try {
+                    val intent = Intent(ctx, AlarmReceiver::class.java)
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        ctx,
+                        id,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    alarmManager.cancel(pendingIntent)
+                    pendingIntent.cancel()
+                } catch (cancelErr: Exception) {
+                    // ignore individual cancel error
+                }
+            }
+
+            prefs.edit().clear().apply()
+        } catch (e: Exception) {
+            // ignore
         }
-
-        prefs.edit().clear().apply()
         call.resolve()
     }
 

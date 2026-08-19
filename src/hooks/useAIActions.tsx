@@ -84,6 +84,9 @@ export function useAIActions() {
       const payload = action.payload as any; // Temporary cast to fix unknown errors while keeping types clean in logic
       switch (action.type) {
         case "ADD_MEDICINE":
+          if (!payload?.name) {
+            throw new Error("Medicine name is required");
+          }
           await addMedicine(payload);
           toast({ 
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine added</span>,
@@ -91,21 +94,39 @@ export function useAIActions() {
           });
           break;
 
-        case "UPDATE_MEDICINE":
-          await updateMedicine(payload.id, payload);
+        case "UPDATE_MEDICINE": {
+          let targetMedId = payload.id;
+          if (!targetMedId && payload.name && medicines.length > 0) {
+            const match = medicines.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
+            if (match) targetMedId = match.id;
+          }
+          if (!targetMedId) {
+            throw new Error(`Could not find medicine ${payload.name || ""} to update`);
+          }
+          await updateMedicine(targetMedId, payload);
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine updated</span>,
             description: action.confirmMessage || "Changes applied to your medicine.",
           });
           break;
+        }
 
-        case "REMOVE_MEDICINE":
-          await deleteMedicine(payload.id);
+        case "REMOVE_MEDICINE": {
+          let targetMedId = payload.id;
+          if (!targetMedId && payload.name && medicines.length > 0) {
+            const match = medicines.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
+            if (match) targetMedId = match.id;
+          }
+          if (!targetMedId) {
+            throw new Error(`Could not find medicine ${payload.name || ""} to remove`);
+          }
+          await deleteMedicine(targetMedId);
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine removed</span>,
             description: action.confirmMessage || "The medicine has been removed from your cabinet.",
           });
           break;
+        }
 
         case "ADD_REMINDER": {
           let medicineId = payload.medicineId;

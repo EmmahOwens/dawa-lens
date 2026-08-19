@@ -22,8 +22,8 @@ class NativeSqlitePlugin : Plugin() {
 
     // JNI declarations mapping to rust/src/lib.rs
     private external fun nativeInitialize(path: String): Int
-    private external fun nativeExecute(sql: String, paramsJson: String): String
-    private external fun nativeQuery(sql: String, paramsJson: String): String
+    private external fun nativeExecute(sql: String, paramsJson: String): String?
+    private external fun nativeQuery(sql: String, paramsJson: String): String?
     private external fun nativeClose(): Int
 
     @PluginMethod
@@ -56,9 +56,13 @@ class NativeSqlitePlugin : Plugin() {
 
         try {
             val resultJson = nativeExecute(sql, rawParams.toString())
+            if (resultJson == null) {
+                call.reject("Rust database execute returned null")
+                return
+            }
             val obj = JSONObject(resultJson)
             val res = JSObject()
-            res.put("rowsAffected", obj.getInt("rowsAffected"))
+            res.put("rowsAffected", obj.optInt("rowsAffected", 0))
             res.put("lastInsertId", obj.optInt("lastInsertId", 0))
             call.resolve(res)
         } catch (e: Exception) {
@@ -77,6 +81,12 @@ class NativeSqlitePlugin : Plugin() {
 
         try {
             val resultJson = nativeQuery(sql, rawParams.toString())
+            if (resultJson == null) {
+                val res = JSObject()
+                res.put("rows", JSArray())
+                call.resolve(res)
+                return
+            }
             val rows = JSONArray(resultJson)
             val res = JSObject()
             res.put("rows", rows)

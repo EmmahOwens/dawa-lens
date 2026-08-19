@@ -239,7 +239,7 @@ export default function Dashboard() {
   }, [scopedReminders, scopedDoseLogs]);
 
   const expectedDosesToday = useMemo(() => {
-    return todayReminders.reduce((sum, r) => sum + r.time.split(",").length, 0);
+    return todayReminders.reduce((sum, r) => sum + ((r?.time || "").split(",").filter(Boolean).length || 1), 0);
   }, [todayReminders]);
 
   const takenToday = scopedDoseLogs.filter(

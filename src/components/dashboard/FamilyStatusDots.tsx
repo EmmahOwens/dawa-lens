@@ -37,7 +37,7 @@ function getAdherenceStatus(
         if (createdDay !== todayNum) return;
       }
     }
-    expectedDosesToday += r.time.split(",").length;
+    expectedDosesToday += (r.time || "").split(",").filter(Boolean).length || 1;
   });
 
   if (expectedDosesToday === 0) return "grey";
