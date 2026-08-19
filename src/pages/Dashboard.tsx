@@ -201,10 +201,15 @@ export default function Dashboard() {
     return scopedReminders.filter((r) => {
       if (!r.enabled) return false;
 
-      // 1. Filter out 'once' reminders if they are not for today
+      // 1. Filter out 'once' reminders if they were already completed on a previous day
       if (r.repeatSchedule === "once") {
-        const createdDate = r.createdAt ? new Date(r.createdAt) : new Date();
-        if (isNaN(createdDate.getTime()) || createdDate.toDateString() !== todayStr) {
+        const previousDayLog = scopedDoseLogs.some(l => 
+          l.reminderId === r.id && 
+          ["taken", "skipped", "missed"].includes(l.action) &&
+          new Date(l.actionTime).toDateString() !== todayStr &&
+          new Date(l.actionTime).getTime() < new Date().getTime()
+        );
+        if (previousDayLog) {
           const hasTodayLog = scopedDoseLogs.some(l => 
             l.reminderId === r.id && 
             new Date(l.actionTime).toDateString() === todayStr

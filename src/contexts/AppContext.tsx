@@ -163,6 +163,8 @@ const CLOUD_CACHE_MEDS_KEY = "dawa_cloud_cache_medicines";
 const CLOUD_CACHE_LOGS_KEY = "dawa_cloud_cache_doselogs";
 const CLOUD_CACHE_AUDIT_KEY = "dawa_cloud_cache_schedule_audit";
 const CLOUD_CACHE_PATIENTS_KEY = "dawa_cloud_cache_patients";
+const CLOUD_CACHE_PROFILE_KEY = "dawa_cloud_cache_profile";
+const CLOUD_CACHE_WELLNESS_KEY = "dawa_cloud_cache_wellness";
 
 export type Medicine = {
   id: string; // maps to Firestore doc.id
@@ -592,6 +594,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (user && user.emailVerified) {
         setCurrentUserId(user.uid);
         setIsLoggedIn(true);
+      } else if (!hasNetwork() && rememberMe && loadLocal("med_userId", null)) {
+        // Device is offline: retain cached authenticated user ID so offline reminders remain accessible
+        const cachedUid = loadLocal("med_userId", null);
+        if (cachedUid) {
+          setCurrentUserId(cachedUid);
+          setIsLoggedIn(true);
+        }
       } else {
         setCurrentUserId(null);
         setIsLoggedIn(false);
@@ -600,12 +609,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
-  }, []);
-
-  // Sync notifications when reminders change
-  useEffect(() => {
-    scheduleReminders(reminders, doseLogs, medicines);
-  }, [reminders, doseLogs, medicines]);
+  }, [rememberMe]);
 
   // ─── Post-flush state refresh ─────────────────────────────────────────────
   // After flushQueue(), the onSnapshot listener *should* re-emit with the
@@ -833,32 +837,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // 1. Load user profile (one-shot — profile rarely changes across devices)
+    // 1. Load user profile (loads from local cache first for instant offline access)
     const loadProfile = async () => {
+      try {
+        const cachedProf = await storage.getItem<UserProfile | null>(
+          CLOUD_CACHE_PROFILE_KEY,
+          null
+        );
+        if (cachedProf) {
+          setUserProfile(cachedProf);
+          setIsProfessionalModeState(Boolean(cachedProf.isProfessional));
+        }
+      } catch (err) {
+        console.warn("[AppContext] Failed to load cached profile:", err);
+      }
+
+      if (!hasNetwork()) return;
+
       try {
         const docRef = doc(db, "users", currentUserId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const prof = docSnap.data() as Record<string, unknown>;
-          
           const isProfessional = (prof.isProfessional as boolean) || false;
+
+          const resolvedProf: UserProfile = {
+            ...prof,
+            id: currentUserId,
+            isProfessional,
+          } as unknown as UserProfile;
 
           if (!prof.dateOfBirth || !prof.gender) {
             setNeedsOnboarding(true);
-            setUserProfile({
-              ...prof,
-              id: currentUserId,
-              isProfessional
-            } as unknown as UserProfile);
           } else {
             setNeedsOnboarding(false);
-            setUserProfile({
-              ...prof,
-              id: currentUserId,
-              isProfessional
-            } as unknown as UserProfile);
             setIsProfessionalMode(isProfessional);
           }
+          setUserProfile(resolvedProf);
+          await storage.setItem(CLOUD_CACHE_PROFILE_KEY, resolvedProf);
         } else {
           setNeedsOnboarding(true);
         }
@@ -869,18 +885,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // 2. Load cached data for instant display before listeners fire
     const loadCache = async () => {
-      const [cachedMeds, cachedRems, cachedLogs, cachedAudit, cachedPatients] = await Promise.all([
+      const [
+        cachedMeds,
+        cachedRems,
+        cachedLogs,
+        cachedAudit,
+        cachedPatients,
+        cachedWell,
+      ] = await Promise.all([
         storage.getItem<Medicine[]>(CLOUD_CACHE_MEDS_KEY, []),
         storage.getItem<Reminder[]>(CLOUD_CACHE_REMS_KEY, []),
         storage.getItem<DoseLog[]>(CLOUD_CACHE_LOGS_KEY, []),
         storage.getItem<ScheduleAuditLog[]>(CLOUD_CACHE_AUDIT_KEY, []),
         storage.getItem<Patient[]>(CLOUD_CACHE_PATIENTS_KEY, []),
+        storage.getItem<WellnessLog[]>(CLOUD_CACHE_WELLNESS_KEY, []),
       ]);
-      if (cachedMeds.length > 0) setMedicines(cachedMeds);
-      if (cachedRems.length > 0) setReminders(cachedRems);
+
+      let finalRems = cachedRems;
+      if (finalRems.length === 0) {
+        try {
+          const localRems = await localPersistence.reminders.getAll();
+          if (localRems.length > 0) {
+            finalRems = localRems;
+            storage.setItem(CLOUD_CACHE_REMS_KEY, localRems);
+          }
+        } catch (e) {
+          console.warn("[AppContext] Failed to read local persistence reminders:", e);
+        }
+      }
+
+      let finalMeds = cachedMeds;
+      if (finalMeds.length === 0) {
+        try {
+          const localMeds = await localPersistence.medicines.getAll();
+          if (localMeds.length > 0) {
+            finalMeds = localMeds;
+            storage.setItem(CLOUD_CACHE_MEDS_KEY, localMeds);
+          }
+        } catch (e) {
+          console.warn("[AppContext] Failed to read local persistence medicines:", e);
+        }
+      }
+
+      if (finalMeds.length > 0) setMedicines(finalMeds);
+      if (finalRems.length > 0) setReminders(finalRems);
       if (cachedLogs.length > 0) setDoseLogs(cachedLogs);
       if (cachedAudit.length > 0) setScheduleAuditLogs(cachedAudit);
       if (cachedPatients.length > 0) setPatients(cachedPatients);
+      if (cachedWell.length > 0) setWellnessLogs(cachedWell);
     };
 
     loadProfile();
@@ -915,6 +967,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubMeds = onSnapshot(
       medsQuery,
       (snap) => {
+        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as Medicine)
         );
@@ -928,6 +981,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubRems = onSnapshot(
       remsQuery,
       (snap) => {
+        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as Reminder)
         );
@@ -941,6 +995,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubLogs = onSnapshot(
       logsQuery,
       (snap) => {
+        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as DoseLog)
         );
@@ -954,6 +1009,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubPats = onSnapshot(
       patsQuery,
       (snap) => {
+        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as Patient)
         );
@@ -966,6 +1022,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubWell = onSnapshot(
       wellQuery,
       (snap) => {
+        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as WellnessLog)
         );
@@ -973,6 +1030,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime()
         );
         setWellnessLogs(data);
+        storage.setItem(CLOUD_CACHE_WELLNESS_KEY, data);
       },
       (err) => console.error("WellnessLogs listener error:", err)
     );
@@ -980,6 +1038,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubAudit = onSnapshot(
       auditQuery,
       (snap) => {
+        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() } as ScheduleAuditLog)
         );
@@ -1049,9 +1108,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.warn("[AppContext] Failed to save medicine locally:", e);
       }
 
-      // 2. Optimistic UI update
-      setMedicines((p) => [...p, newMed]);
-      storage.setItem(CLOUD_CACHE_MEDS_KEY, [...medicines, newMed]);
+      // 2. Optimistic UI update & cache sync
+      setMedicines((p) => {
+        const next = [...p.filter((m) => m.id !== localMedId), newMed];
+        storage.setItem(CLOUD_CACHE_MEDS_KEY, next);
+        return next;
+      });
 
       // 3. Sync to Firestore in background
       if (isOnline) {
@@ -1120,16 +1182,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.warn("[AppContext] Failed to update medicine locally:", e);
     }
 
-    // 2. Optimistic UI update
-    setMedicines((p) =>
-      p.map((m) => (m.id === id ? { ...m, ...updates } : m))
-    );
-    const current = medicines.find((m) => m.id === id);
-    if (current) {
-      const updated = { ...current, ...updates };
-      const nextMeds = medicines.map((m) => (m.id === id ? updated : m));
-      storage.setItem(CLOUD_CACHE_MEDS_KEY, nextMeds);
-    }
+    // 2. Optimistic UI update & cache sync
+    setMedicines((p) => {
+      const next = p.map((m) => (m.id === id ? { ...m, ...updates } : m));
+      storage.setItem(CLOUD_CACHE_MEDS_KEY, next);
+      return next;
+    });
 
     // 3. Sync update to Firestore in background
     if (isOnline) {
@@ -1179,9 +1237,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.warn("[AppContext] Failed to remove medicine locally:", e);
     }
 
-    // 2. Optimistic UI update
-    setMedicines((p) => p.filter((m) => m.id !== id));
-    storage.setItem(CLOUD_CACHE_MEDS_KEY, medicines.filter((m) => m.id !== id));
+    // 2. Optimistic UI update & cache sync
+    setMedicines((p) => {
+      const next = p.filter((m) => m.id !== id);
+      storage.setItem(CLOUD_CACHE_MEDS_KEY, next);
+      return next;
+    });
 
     // 3. Sync delete to Firestore in background
     if (isOnline) {
@@ -1230,8 +1291,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // 1. Save locally instantly
     await localPersistence.reminders.create(newReminder);
 
-    // 2. Optimistic UI update
-    setReminders((p) => [...p, newReminder]);
+    // 2. Optimistic UI update & cache sync
+    setReminders((p) => {
+      const next = [...p.filter((r) => r.id !== localId), newReminder];
+      storage.setItem(CLOUD_CACHE_REMS_KEY, next);
+      return next;
+    });
 
     if (storageMode === "local") {
       return;
@@ -1244,8 +1309,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...newReminder,
       userId: currentUserId,
     });
-
-    storage.setItem(CLOUD_CACHE_REMS_KEY, [...reminders, newReminder]);
 
     // 3. Sync to Firestore in background
     if (isOnline) {
@@ -1288,10 +1351,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.warn("[AppContext] Failed to update reminder locally:", e);
     }
 
-    // 2. Optimistic UI update
-    setReminders((p) =>
-      p.map((r) => (r.id === id ? { ...r, ...finalUpdates } : r))
-    );
+    // 2. Optimistic UI update & cache sync
+    setReminders((p) => {
+      const next = p.map((r) => (r.id === id ? { ...r, ...finalUpdates } : r));
+      storage.setItem(CLOUD_CACHE_REMS_KEY, next);
+      return next;
+    });
 
     if (storageMode === "local") {
       return;
@@ -1299,15 +1364,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // --- Cloud mode only ---
     const updated = { ...current, ...finalUpdates };
-    storage.setItem(
-      CLOUD_CACHE_REMS_KEY,
-      reminders.map((r) => (r.id === id ? updated : r))
-    );
 
     // 3. Sync update to Firestore in background.
-    // Enqueue the FULL merged reminder (not just the changed fields) so that if
-    // the companion add-reminder op hasn't flushed yet, the setDoc merge upsert
-    // will produce a complete document rather than a partial one.
     const fullUpdatedPayload = sanitizeFirestoreData({
       ...updated,
       userId: currentUserId,
@@ -1365,20 +1423,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
     }
 
-    // 3. Optimistic UI update
-    setReminders((p) => p.filter((r) => r.id !== id));
+    // 3. Optimistic UI update & cache sync
+    setReminders((p) => {
+      const next = p.filter((r) => r.id !== id);
+      storage.setItem(CLOUD_CACHE_REMS_KEY, next);
+      return next;
+    });
 
     if (storageMode === "local") {
       return;
     }
 
-    // --- Cloud mode only ---
-    storage.setItem(
-      CLOUD_CACHE_REMS_KEY,
-      reminders.filter((r) => r.id !== id)
-    );
-
-    // 3. Sync delete to Firestore in background
+    // 4. Sync delete to Firestore in background
     if (isOnline) {
       try {
         const docRef = doc(db, "reminders", id);
@@ -1443,9 +1499,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         userId: currentUserId,
       });
 
-      // 2. Optimistic UI update
-      setDoseLogs((p) => [...p, newLog]);
-      storage.setItem(CLOUD_CACHE_LOGS_KEY, [...doseLogs, newLog]);
+      // 2. Optimistic UI update & cache sync
+      setDoseLogs((p) => {
+        const next = [...p.filter((l) => l.id !== localId), newLog];
+        storage.setItem(CLOUD_CACHE_LOGS_KEY, next);
+        return next;
+      });
 
       // 3. Sync log to Firestore in background
       if (isOnline) {
@@ -1522,6 +1581,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // 1.5. Dynamic Schedule Adjustment
     // If a dose is taken early/late, automatically update the base reminder times
     // to maintain equal intervals starting from the new actual take time.
+    // Applies seamlessly whether online or offline.
     if (
       log.action === "taken" &&
       reminder &&
@@ -1555,7 +1615,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               `[DynamicSchedule] Shifting ${reminder.medicineName} from ${originalTime} to ${newTimeStr} (${absDiff}m ${direction})`
             );
 
-            // 1. Update the reminder itself
+            // 1. Update the reminder itself (persists locally to SQLite/IDB and queues if offline)
             await updateReminder(reminder.id, { time: newTimeStr });
             reminder.time = newTimeStr;
 
@@ -1608,13 +1668,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
             // Update local references for immediate UI consistency
             newLog.scheduledTime = newScheduledTime;
-            setDoseLogs((prev) =>
-              prev.map((l) =>
+            setDoseLogs((prev) => {
+              const next = prev.map((l) =>
                 l.id === newLog.id ? { ...l, scheduledTime: newScheduledTime } : l
-              )
-            );
+              );
+              storage.setItem(CLOUD_CACHE_LOGS_KEY, next);
+              return next;
+            });
 
-            // 3. Write Schedule Audit Log
+            // 3. Write Schedule Audit Log (works fully offline)
             await addScheduleAuditLog({
               reminderId: reminder.id,
               medicineName: reminder.medicineName,
@@ -1763,21 +1825,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addWellnessLog = async (
     log: Omit<WellnessLog, "id" | "timestamp" | "userId">
   ) => {
-    if (storageMode === "local") {
-      const newLog = await localPersistence.wellnessLogs.create({
-        ...log,
-        patientId: selectedPatientId || null,
-      });
-      setWellnessLogs((p) => [newLog, ...p]);
-    } else {
-      if (!currentUserId) throw new Error("Not logged in");
+    const localId = `lwell-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const timestamp = new Date().toISOString();
+    const effectivePatientId = log.patientId ?? selectedPatientId ?? null;
+    const effectiveUserId = storageMode === "local" ? "local" : currentUserId || "local";
+
+    const newLog: WellnessLog = {
+      ...log,
+      id: localId,
+      timestamp,
+      userId: effectiveUserId,
+      patientId: effectivePatientId,
+    };
+
+    // 1. Save locally instantly
+    try {
+      await localPersistence.wellnessLogs.create(newLog);
+    } catch (e) {
+      console.warn("[AppContext] Failed to save wellness log locally:", e);
+    }
+
+    // 2. Optimistic UI update & cache sync
+    setWellnessLogs((p) => {
+      const next = [newLog, ...p.filter((l) => l.id !== localId)].sort(
+        (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime()
+      );
+      storage.setItem(CLOUD_CACHE_WELLNESS_KEY, next);
+      return next;
+    });
+
+    if (storageMode === "local") return;
+
+    if (currentUserId) {
       const logData = sanitizeFirestoreData({
         ...log,
         userId: currentUserId,
-        patientId: selectedPatientId || null,
-        timestamp: new Date().toISOString(),
+        patientId: effectivePatientId,
+        timestamp,
       });
-      await addDoc(collection(db, "wellnessLogs"), logData);
+      if (isOnline) {
+        try {
+          const docRef = doc(db, "wellnessLogs", localId);
+          await setDoc(docRef, logData);
+        } catch (err) {
+          console.warn("[AppContext] Failed to sync wellness log (non-fatal):", err);
+        }
+      }
     }
   };
 
@@ -1795,14 +1888,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addScheduleAuditLog = async (
     log: Omit<ScheduleAuditLog, "id">
   ) => {
-    if (storageMode === "local") {
-      const newLog = await localPersistence.scheduleAuditLogs.create(log);
-      setScheduleAuditLogs((p) => [newLog, ...p]);
-    } else {
-      if (!currentUserId) throw new Error("Not logged in");
-      const logData = sanitizeFirestoreData(log);
-      await addDoc(collection(db, "scheduleAuditLogs"), logData);
-      // onSnapshot listener will auto-update state
+    const localId = `laudit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newLog: ScheduleAuditLog = { ...log, id: localId };
+
+    // 1. Save locally instantly
+    try {
+      await localPersistence.scheduleAuditLogs.create(newLog);
+    } catch (e) {
+      console.warn("[AppContext] Failed to save schedule audit log locally:", e);
+    }
+
+    // 2. Optimistic UI update & cache sync
+    setScheduleAuditLogs((p) => {
+      const next = [newLog, ...p.filter((l) => l.id !== localId)];
+      storage.setItem(CLOUD_CACHE_AUDIT_KEY, next);
+      return next;
+    });
+
+    if (storageMode === "local") return;
+
+    if (currentUserId) {
+      const logData = sanitizeFirestoreData({
+        ...log,
+        userId: currentUserId,
+      });
+      if (isOnline) {
+        try {
+          const docRef = doc(db, "scheduleAuditLogs", localId);
+          await setDoc(docRef, logData);
+        } catch (err) {
+          console.warn("[AppContext] Failed to sync schedule audit log (non-fatal):", err);
+        }
+      }
     }
   };
 

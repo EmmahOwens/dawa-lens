@@ -311,7 +311,12 @@ export const checkMissedDoses = async (
                       title: missedTitle,
                       body: missedBody,
                       triggerAtMillis: fireAt.getTime(),
-                      extra: JSON.stringify({ type: "missed_alert", patientId: r.patientId ?? null }),
+                      extra: JSON.stringify({
+                        type: "missed_alert",
+                        reminderId: r.id,
+                        patientId: r.patientId ?? null,
+                        route: "/history",
+                      }),
                     }],
                   });
                 } catch (alarmErr) {
@@ -877,8 +882,12 @@ export const scheduleReminders = async (
             body: `You are out of stock. Please refill to continue reminders.`,
             triggerAtMillis: next.getTime(),
             extra: JSON.stringify({
+              type: "refill",
               reminderId: r.id,
+              medicineId: r.medicineId,
               medicineName: r.medicineName,
+              patientId: r.patientId ?? null,
+              route: "/medvault",
             }),
           });
           break;
@@ -920,8 +929,11 @@ export const scheduleReminders = async (
           extra: JSON.stringify({
             reminderId: r.id,
             medicineName: r.medicineName,
-            scheduledTime: next.toISOString(),
+            patientName: r.patientName || null,
+            patientId: r.patientId ?? null,
             dose: r.dose,
+            scheduledTime: next.toISOString(),
+            route: "/",
           }),
         });
 
