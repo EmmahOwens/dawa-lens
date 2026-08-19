@@ -19,13 +19,19 @@ async function testGroq(key, model) {
     return;
   }
   try {
-    const res = await axios.post(GROQ_API_URL, {
+    const payload = {
       model: model,
-      messages: [{ role: 'user', content: 'Say hello' }],
-      max_tokens: 10
-    }, {
-      headers: { 'Authorization': `Bearer ${key}` },
-      timeout: 10000
+      messages: [{ role: 'user', content: 'Say hello in JSON: {"greeting": "hello"}' }],
+      max_tokens: 500,
+      response_format: { type: 'json_object' },
+      reasoning_format: 'hidden'
+    };
+    if (model.includes('gpt-oss')) {
+      payload.reasoning_effort = 'low';
+    }
+    const res = await axios.post(GROQ_API_URL, payload, {
+      headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+      timeout: 15000
     });
     console.log(`✅ Groq ${model} success:`, res.data.choices[0].message.content);
   } catch (err) {

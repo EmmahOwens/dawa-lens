@@ -21,21 +21,21 @@ class RateLimitManager {
       },
       'groq-70b': {
         rpm: 30,
-        tpm: 6000,      // 6,000 TPM
+        tpm: 30000,     // 30,000 TPM
         rpd: 1000,
-        tpd: 500000,
+        tpd: 1000000,
       },
       'groq-8b': {
         rpm: 30,
-        tpm: 6000,      // 6,000 TPM
+        tpm: 30000,     // 30,000 TPM (openai/gpt-oss-20b)
         rpd: 14400,     // 14,400 RPD
-        tpd: 1000000,
+        tpd: 2000000,
       },
       'groq-scout': {   // gpt-oss-120b (replaced llama-4-scout deprecated June 2026)
         rpm: 30,
-        tpm: 8000,
+        tpm: 30000,     // 30,000 TPM
         rpd: 1000,
-        tpd: 500000,
+        tpd: 1000000,
       },
       'gemini': {
         rpm: 15,
@@ -441,13 +441,13 @@ class RateLimitManager {
           console.warn(`[RateLimitManager] Authentication error on ${modelKey} (status: ${status}). Bypassing for 1 hour.`);
           this.setCooldown(modelKey, 3600000);
         } else if (isTimeout) {
-          // Timeout: cool down for 1 minute
-          console.warn(`[RateLimitManager] Timeout on ${modelKey}. Bypassing for 1 minute.`);
-          this.setCooldown(modelKey, 60000);
+          // Timeout: short 5s backoff rather than blocking the model for a full minute
+          console.warn(`[RateLimitManager] Timeout on ${modelKey}. Brief 5s backoff.`);
+          this.setCooldown(modelKey, 5000);
         } else if (isNetworkOr5xx) {
-          // Network issue or server error: cool down for 1 minute
-          console.warn(`[RateLimitManager] Network/Server error on ${modelKey} (status: ${status}, code: ${err.code}). Bypassing for 1 minute.`);
-          this.setCooldown(modelKey, 60000);
+          // Network issue or server error: cool down for 10 seconds
+          console.warn(`[RateLimitManager] Network/Server error on ${modelKey} (status: ${status}, code: ${err.code}). Bypassing for 10s.`);
+          this.setCooldown(modelKey, 10000);
         }
 
         reject(err);
