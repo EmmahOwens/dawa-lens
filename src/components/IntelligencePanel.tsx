@@ -1,29 +1,30 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Send, ChevronRight, ChevronLeft, LayoutDashboard, Scan, Heart,
-  History, Settings, Info, Loader2, Sparkles, Bot, Maximize2
+  ChevronRight, ChevronLeft, LayoutDashboard, Scan, Heart,
+  History, Settings, Info, Sparkles, Bot, Maximize2, Send, ArrowRight
 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
-import { Button } from "./ui/button";
-import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
-import { useAIActions } from "@/hooks/useAIActions";
-import MessageRenderer from "@/components/MessageRenderer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { AlertCircle } from "@/lib/icons";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
-import { calculateVitalitySummary } from "@/lib/vitalityUtils";
 
 const SAMPLE_PROMPTS = [
   "Does Panadol interact with Ibuprofen?",
   "Add a medicine reminder for 8:00 AM...",
   "Is it safe to take my pills with milk?",
+  "How many days of meds do I have left?",
   "Log my morning dose of Metformin...",
   "What are the side effects of Amoxicillin?",
-  "I'm feeling dizzy after taking my medicine...",
   "Can you help me build a healthy routine?"
+];
+
+const QUICK_PROMPTS = [
+  { label: "Drug Safety", prompt: "Does Panadol interact with Ibuprofen?" },
+  { label: "Add Reminder", prompt: "Add a medicine reminder" },
+  { label: "Med Stock", prompt: "How many days of meds do I have left?" },
 ];
 
 // Widgets
@@ -43,102 +44,21 @@ export function IntelligencePanel() {
   const { t } = useTranslation();
   const location = useLocation();
   const {
-    medicines, userProfile, doseLogs, reminders, wellnessLogs, patients,
     isIntelligenceCollapsed, setIsIntelligenceCollapsed,
-    isDawaGPTOpen, setIsDawaGPTOpen,
-    selectedPatientId
+    isDawaGPTOpen, openDawaGPTWithPrompt
   } = useApp();
-  const { dispatchAIAction } = useAIActions();
 
-  const [miniChatInput, setMiniChatInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
+  const [inputQuery, setInputQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const placeholder = useTypewriterPlaceholder(SAMPLE_PROMPTS, {
-    isPaused: isFocused || miniChatInput !== "" || isTyping
+    isPaused: isFocused || inputQuery !== ""
   });
 
-  const vitalitySummary = React.useMemo(() => {
-    return calculateVitalitySummary(doseLogs, wellnessLogs);
-  }, [doseLogs, wellnessLogs]);
-
-  useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([{
-        id: "welcome",
-        role: "assistant",
-        text: `Hi ${userProfile?.name || "there"}! I'm DawaGPT. Ask me anything about your health or say "Add a reminder" to get started!`,
-        source: "System",
-      }]);
-    }
-  }, [userProfile?.name, messages.length]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isTyping]);
-
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim() || isTyping) return;
-
-    const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: "user",
-      text
-    };
-
-    const botId = (Date.now() + 1).toString();
-    const initialBotMsg: ChatMessage = {
-      id: botId,
-      role: "assistant",
-      text: "",
-      source: "Gemini"
-    };
-
-    setMessages(prev => [...prev, userMsg, initialBotMsg]);
-    setMiniChatInput("");
-    setIsTyping(true);
-
-    try {
-      const response = await chatWithDawaGPTStream(
-        [...messages, userMsg],
-        medicines,
-        userProfile,
-        doseLogs,
-        reminders,
-        wellnessLogs,
-        vitalitySummary,
-        patients,
-        selectedPatientId,
-        (streamedText) => {
-          setMessages(prev => prev.map(msg =>
-            msg.id === botId ? { ...msg, text: streamedText } : msg
-          ));
-        }
-      );
-
-      setMessages(prev => prev.map(msg =>
-        msg.id === botId ? response : msg
-      ));
-
-      if (response.action) {
-        await dispatchAIAction(response.action);
-      }
-    } catch (err) {
-      console.error("Mini Chat Error:", err);
-      setMessages(prev => prev.map(msg =>
-        msg.id === botId ? {
-          ...msg,
-          text: "I'm having trouble connecting to my medical intelligence core. Please ensure the backend is active.",
-          source: "System"
-        } : msg
-      ));
-    } finally {
-      setIsTyping(false);
-    }
+  const handleLaunch = (prompt?: string) => {
+    const textToPass = (prompt || inputQuery).trim();
+    openDawaGPTWithPrompt(textToPass || undefined);
+    setInputQuery("");
   };
 
   const renderContextualWidget = () => {
@@ -159,26 +79,37 @@ export function IntelligencePanel() {
     return <DashboardWidget />;
   };
 
-  const hideGPTMini = location.pathname === "/scan" || location.pathname === "/settings" || isDawaGPTOpen;
-
   if (isIntelligenceCollapsed) {
     return (
-      <aside className="w-[70px] border-l border-border bg-sidebar-background flex flex-col h-screen sticky top-0 overflow-hidden items-center py-6 transition-all duration-500">
-        <button
-          onClick={() => setIsIntelligenceCollapsed(false)}
-          className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-10 hover:bg-primary/20 transition-colors"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <div className="flex-1 flex flex-col gap-8 opacity-40">
-          <LayoutDashboard size={20} />
-          <Scan size={20} />
-          <Heart size={20} />
-          <History size={20} />
-          <Settings size={20} />
+      <aside className="w-[70px] border-l border-border bg-sidebar-background flex flex-col h-screen sticky top-0 overflow-hidden items-center py-6 transition-all duration-500 justify-between">
+        <div className="flex flex-col items-center">
+          <button
+            onClick={() => setIsIntelligenceCollapsed(false)}
+            aria-label="Expand intelligence panel"
+            className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-8 hover:bg-primary/20 transition-colors active:scale-95"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div className="flex flex-col gap-7 opacity-40">
+            <LayoutDashboard size={20} />
+            <Scan size={20} />
+            <Heart size={20} />
+            <History size={20} />
+            <Settings size={20} />
+          </div>
         </div>
-        <div className="p-4">
-          <Info size={16} className="text-muted-foreground/30" />
+
+        {/* Collapsed quick launch button */}
+        <div className="flex flex-col items-center gap-3">
+          <button
+            onClick={() => handleLaunch()}
+            title="Ask DawaGPT"
+            className="relative group w-11 h-11 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background animate-pulse" />
+            <Bot size={20} className="group-hover:rotate-6 transition-transform" />
+          </button>
+          <Info size={16} className="text-muted-foreground/30 mb-2" />
         </div>
       </aside>
     );
@@ -188,7 +119,7 @@ export function IntelligencePanel() {
     <aside className="w-[360px] border-l border-white/10 bg-background/60 backdrop-blur-3xl backdrop-saturate-[2] flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-right-4 shadow-[-20px_0_40px_rgba(0,0,0,0.04)]">
 
       {/* Header with Collapse Button */}
-      <div className="p-6 pb-4 flex items-center justify-between border-b border-white/5">
+      <div className="p-5 pb-3 flex items-center justify-between border-b border-white/5 shrink-0">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-8 h-8 rounded-lg overflow-hidden shadow-md border border-primary/20 p-0.5 bg-background">
@@ -200,19 +131,20 @@ export function IntelligencePanel() {
           </div>
           <div>
             <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground leading-none">Intelligence</h2>
-            <span className="text-[9px] text-primary/80 font-bold uppercase tracking-widest mt-0.5 block">Active</span>
+            <span className="text-[9px] text-primary/80 font-bold uppercase tracking-widest mt-0.5 block">Live Context</span>
           </div>
         </div>
         <button
           onClick={() => setIsIntelligenceCollapsed(true)}
+          aria-label="Collapse panel"
           className="p-1.5 hover:bg-muted/80 rounded-full text-muted-foreground transition-all active:scale-90"
         >
           <ChevronRight size={18} />
         </button>
       </div>
 
-      <div className="p-6 space-y-8 overflow-y-auto flex-1 no-scrollbar">
-
+      {/* Main Scrollable Contextual Widgets Area */}
+      <div className="p-5 space-y-6 overflow-y-auto flex-1 no-scrollbar">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -233,131 +165,87 @@ export function IntelligencePanel() {
             </ErrorBoundary>
           </motion.div>
         </AnimatePresence>
-
-        {/* Section: DawaGPT Mini (Conditional) */}
-        <AnimatePresence>
-          {!hideGPTMini && (
-            <motion.section
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="flex flex-col min-h-0 pt-6 border-t border-border/50 relative"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-md bg-primary/10 border border-primary/20">
-                    <Bot size={14} className="text-primary" />
-                  </div>
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/60">DawaGPT</h3>
-                </div>
-                <button
-                  onClick={() => setIsDawaGPTOpen(true)}
-                  className="flex items-center gap-1.5 text-[9px] font-black text-primary hover:bg-primary/10 transition-all uppercase tracking-widest border border-primary/30 bg-primary/5 rounded-full px-3 py-1.5 active:scale-95 group shadow-sm"
-                >
-                  <Maximize2 size={10} className="group-hover:scale-110 transition-transform" />
-                  <span>Expand</span>
-                </button>
-              </div>
-
-              <div className="bg-background dark:bg-card/40 rounded-3xl border border-border/60 p-4 flex flex-col h-[380px] relative overflow-hidden group/chat shadow-sm hover:shadow-md transition-all duration-500">
-                {/* Message Stream */}
-                <div ref={scrollRef} className="flex-1 overflow-y-auto mb-3 space-y-5 no-scrollbar z-10 scroll-smooth pr-1 pt-2">
-                  {messages.map((m) => (
-                    <motion.div
-                      key={m.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div className={`flex gap-3 max-w-[90%] ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                        {m.role === "assistant" && (
-                          <div className="w-6 h-6 rounded-md overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-0.5">
-                            <img src="/dawa-gpt.png" alt="AI" className="w-4 h-4 object-contain" />
-                          </div>
-                        )}
-                        <div className={`px-4 py-2.5 text-[12.5px] leading-relaxed ${m.role === "user"
-                            ? "bg-muted/50 text-foreground rounded-2xl shadow-sm border border-border/20"
-                            : "text-foreground font-medium"
-                          }`}>
-                          {m.role === "assistant" ? (
-                            <MessageRenderer
-                              text={m.text}
-                              onNavigate={() => { }}
-                              className="text-[12.5px]"
-                            />
-                          ) : (
-                            <p className="whitespace-pre-wrap">{m.text}</p>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                  {isTyping && (
-                    <div className="flex justify-start gap-3">
-                      <div className="w-6 h-6 rounded-md overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-0.5">
-                        <img src="/dawa-gpt.png" alt="AI" className="w-4 h-4 object-contain" />
-                      </div>
-                      <div className="flex items-center gap-1.5 py-2">
-                        {[0, 0.15, 0.3].map((delay, i) => (
-                          <motion.span
-                            key={i}
-                            animate={{ opacity: [0.3, 1, 0.3] }}
-                            transition={{ duration: 1, repeat: Infinity, delay, ease: "easeInOut" }}
-                            className="block w-1 h-1 rounded-full bg-muted-foreground/40"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Suggestions */}
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar mb-3 pb-1 z-10">
-                  {(messages[messages.length - 1]?.suggestions || [
-                    "Add reminder",
-                    "Check schedule",
-                    "Log dose"
-                  ]).slice(0, 3).map((suggestion, i) => (
-                    <motion.button
-                      key={i}
-                      whileHover={{ scale: 1.02, backgroundColor: "rgba(var(--muted), 0.5)" }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleSendMessage(suggestion)}
-                      className="whitespace-nowrap px-3 py-1.5 rounded-lg bg-muted/30 border border-border/40 text-[10px] font-semibold text-muted-foreground hover:text-foreground transition-all shrink-0 shadow-sm"
-                    >
-                      {suggestion}
-                    </motion.button>
-                  ))}
-                </div>
-
-                {/* Input Area */}
-                <div className="flex gap-2 z-10 bg-background border border-border/60 rounded-2xl p-1.5 shadow-sm focus-within:border-primary/40 transition-all">
-                  <input
-                    type="text"
-                    value={miniChatInput}
-                    onChange={(e) => setMiniChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage(miniChatInput)}
-                    placeholder={placeholder || "Ask anything..."}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
-                    className="flex-1 bg-transparent rounded-xl px-3 py-2 text-[12.5px] outline-none font-medium placeholder:text-muted-foreground/50"
-                  />
-                  <Button
-                    size="icon"
-                    disabled={isTyping || !miniChatInput.trim()}
-                    onClick={() => handleSendMessage(miniChatInput)}
-                    className="rounded-xl w-9 h-9 shrink-0 bg-primary hover:bg-primary/90 active:scale-95 transition-all shadow-sm"
-                  >
-                    {isTyping ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                  </Button>
-                </div>
-              </div>
-            </motion.section>
-          )}
-        </AnimatePresence>
-
       </div>
+
+      {/* Pinned Bottom DawaGPT AI Command Deck */}
+      <div className="p-4 border-t border-border/50 bg-background/80 dark:bg-card/60 backdrop-blur-2xl shrink-0 z-20">
+        <div className="rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/[0.08] to-primary/[0.02] p-3.5 shadow-sm hover:border-primary/35 transition-all duration-300 group">
+          
+          {/* Header Row */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center text-primary shadow-inner">
+                <Bot size={15} />
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-black tracking-wide text-foreground">DawaGPT AI</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                </div>
+                <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">Medical Copilot</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleLaunch()}
+              aria-label="Expand DawaGPT"
+              className="flex items-center gap-1 text-[10px] font-bold text-primary hover:text-primary-foreground hover:bg-primary transition-all duration-200 border border-primary/30 bg-primary/10 rounded-full px-2.5 py-1 active:scale-95 shadow-sm"
+            >
+              <Maximize2 size={10} />
+              <span>Expand</span>
+            </button>
+          </div>
+
+          {/* Interactive Trigger Input Bar */}
+          <div 
+            onClick={() => {
+              if (!inputQuery) handleLaunch();
+            }}
+            className="flex items-center gap-2 bg-background/90 dark:bg-background/60 border border-border/70 rounded-xl p-1.5 pl-3 shadow-inner hover:border-primary/40 focus-within:border-primary/50 transition-all cursor-text"
+          >
+            <Sparkles size={13} className="text-primary/70 shrink-0" />
+            <input
+              type="text"
+              value={inputQuery}
+              onChange={(e) => setInputQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleLaunch(inputQuery);
+                }
+              }}
+              placeholder={placeholder || "Ask DawaGPT anything..."}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              className="flex-1 bg-transparent text-[12px] font-medium outline-none placeholder:text-muted-foreground/60 min-w-0"
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLaunch(inputQuery);
+              }}
+              aria-label="Send prompt"
+              className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all shrink-0 shadow-sm"
+            >
+              {inputQuery.trim() ? <Send size={12} /> : <ArrowRight size={12} />}
+            </button>
+          </div>
+
+          {/* Quick Prompts Chips */}
+          <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar">
+            {QUICK_PROMPTS.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleLaunch(item.prompt)}
+                className="whitespace-nowrap px-2.5 py-1 rounded-lg bg-muted/40 hover:bg-primary/10 border border-border/50 hover:border-primary/30 text-[10px] font-semibold text-muted-foreground hover:text-primary transition-all active:scale-95 shrink-0 shadow-xs"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+        </div>
+      </div>
+
     </aside>
   );
 }
-

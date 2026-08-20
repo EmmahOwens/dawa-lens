@@ -34,6 +34,8 @@ export default function DawaGPT() {
     userProfile,
     isDawaGPTOpen: isOpen,
     setIsDawaGPTOpen: setIsOpen,
+    dawaGPTInitialPrompt,
+    setDawaGPTInitialPrompt,
   } = useApp();
 
   const {
@@ -291,6 +293,24 @@ export default function DawaGPT() {
       }]);
     }
   }, [isOpen, messages.length, reminders.length, userProfile?.name, resolvedPatient, activeMedicines]);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (dawaGPTInitialPrompt) {
+        const promptToSend = dawaGPTInitialPrompt;
+        setDawaGPTInitialPrompt(null);
+        const timer = setTimeout(() => {
+          handleSend(promptToSend);
+        }, 150);
+        return () => clearTimeout(timer);
+      } else {
+        const timer = setTimeout(() => {
+          textareaRef.current?.focus();
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isOpen, dawaGPTInitialPrompt]);
 
 
   const handleSend = async (text: string) => {

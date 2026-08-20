@@ -400,6 +400,9 @@ type AppContextType = {
   isInitializing: boolean;
   isDawaGPTOpen: boolean;
   setIsDawaGPTOpen: (v: boolean) => void;
+  dawaGPTInitialPrompt: string | null;
+  setDawaGPTInitialPrompt: (prompt: string | null) => void;
+  openDawaGPTWithPrompt: (prompt?: string) => void;
   isIntelligenceCollapsed: boolean;
   setIsIntelligenceCollapsed: (v: boolean) => void;
   lastSyncTimestamp: string | null;
@@ -545,6 +548,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadLocal("med_userId", null)
   );
   const [isDawaGPTOpen, setIsDawaGPTOpen] = useState(false);
+  const [dawaGPTInitialPrompt, setDawaGPTInitialPrompt] = useState<string | null>(null);
+
+  const openDawaGPTWithPrompt = useCallback((prompt?: string) => {
+    if (prompt) {
+      setDawaGPTInitialPrompt(prompt);
+    }
+    setIsDawaGPTOpen(true);
+  }, []);
   const [isIntelligenceCollapsed, setIntelligenceCollapsedState] = useState(
     () => loadLocal("med_intelligence_collapsed", false)
   );
@@ -2406,6 +2417,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isInitializing,
         isDawaGPTOpen,
         setIsDawaGPTOpen,
+        dawaGPTInitialPrompt,
+        setDawaGPTInitialPrompt,
+        openDawaGPTWithPrompt,
         isIntelligenceCollapsed,
         setIsIntelligenceCollapsed,
         lastSyncTimestamp,
