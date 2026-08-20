@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { LocalNotifications, ActionPerformed } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "@/contexts/AppContext";
@@ -24,6 +24,18 @@ export const parseNotificationExtra = (rawExtra: unknown): Record<string, any> =
 export const NotificationHandler = () => {
   const navigate = useNavigate();
   const { logDose, reminders, setSelectedPatientId } = useApp();
+
+  // Use refs so the single effect closure always sees the latest values
+  // without needing to re-register Capacitor listeners on every change.
+  const navigateRef = useRef(navigate);
+  const logDoseRef = useRef(logDose);
+  const remindersRef = useRef(reminders);
+  const setSelectedPatientIdRef = useRef(setSelectedPatientId);
+
+  navigateRef.current = navigate;
+  logDoseRef.current = logDose;
+  remindersRef.current = reminders;
+  setSelectedPatientIdRef.current = setSelectedPatientId;
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -77,7 +89,7 @@ export const NotificationHandler = () => {
 
               let targetPatientId = extra.patientId;
               if (targetPatientId === undefined && reminderId) {
-                const matched = reminders.find((r) => r.id === reminderId);
+                const matched = remindersRef.current.find((r) => r.id === reminderId);
                 if (matched) {
                   targetPatientId = matched.patientId ?? null;
                 }
@@ -85,7 +97,7 @@ export const NotificationHandler = () => {
 
               if (actionId === 'TAKE') {
                 try {
-                  await logDose({
+                  await logDoseRef.current({
                     reminderId,
                     medicineName,
                     dose,
@@ -104,7 +116,7 @@ export const NotificationHandler = () => {
                 }
               } else if (actionId === 'SKIP') {
                 try {
-                  await logDose({
+                  await logDoseRef.current({
                     reminderId,
                     medicineName,
                     dose,
@@ -152,7 +164,7 @@ export const NotificationHandler = () => {
                 }
                 
                 try {
-                  await logDose({
+                  await logDoseRef.current({
                     reminderId,
                     medicineName,
                     dose,
@@ -169,24 +181,24 @@ export const NotificationHandler = () => {
                 toast.info(`Snoozed ${medicineName || "medication"} for 15 minutes.`);
               } else {
                 if (targetPatientId !== undefined) {
-                  setSelectedPatientId(targetPatientId);
+                  setSelectedPatientIdRef.current(targetPatientId);
                 }
 
                 const notifType = extra.type as string | undefined;
                 if (extra.route) {
-                  navigate(extra.route);
+                  navigateRef.current(extra.route);
                 } else if (notifType === 'low_stock' || notifType === 'refill') {
-                  navigate('/medvault');
+                  navigateRef.current('/medvault');
                 } else if (notifType === 'missed_alert') {
-                  navigate(targetPatientId ? '/family' : '/history');
+                  navigateRef.current(targetPatientId ? '/family' : '/history');
                 } else if (notifType === 'daily_quote' || notifType === 'encouragement' || notifType === 'hydration' || notifType === 'evening_checkin') {
-                  navigate('/');
+                  navigateRef.current('/');
                 } else if (notifType === 'weekly_summary' || notifType === 'streak') {
-                  navigate('/history');
+                  navigateRef.current('/history');
                 } else if (notifType === 'wellness_nudge') {
-                  navigate('/wellness');
+                  navigateRef.current('/wellness');
                 } else if (reminderId) {
-                  navigate(targetPatientId ? '/family' : '/');
+                  navigateRef.current(targetPatientId ? '/family' : '/');
                 }
               }
             } catch (handlerErr) {
@@ -216,7 +228,7 @@ export const NotificationHandler = () => {
         actionListenerHandle.remove();
       }
     };
-  }, [logDose, reminders, setSelectedPatientId, navigate]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return null;
 };

@@ -7,6 +7,9 @@ interface Props {
   children?: ReactNode;
   fallback?: ReactNode;
   name?: string;
+  /** When this value changes, the error state is automatically cleared.
+   *  Pass `location.pathname` to reset errors on navigation. */
+  resetKey?: string;
 }
 
 interface State {
@@ -35,6 +38,13 @@ class ErrorBoundary extends Component<Props, State> {
         sessionStorage.setItem("error_boundary_chunk_reload_ts", String(now));
         window.location.reload();
       }
+    }
+  }
+
+  public componentDidUpdate(prevProps: Props) {
+    // Auto-clear error state when the resetKey changes (e.g. route navigation)
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, error: null });
     }
   }
 

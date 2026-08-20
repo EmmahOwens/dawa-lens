@@ -77,8 +77,16 @@ function useSmartHideBottomNav() {
     // Initial check
     checkDialogs();
 
+    // Debounce with rAF to coalesce rapid DOM mutations during route
+    // transitions — prevents the observer from firing hundreds of times
+    // and locking the main thread on low-end Android devices.
+    let rafId: number | null = null;
     const observer = new MutationObserver(() => {
-      checkDialogs();
+      if (rafId !== null) return; // already scheduled
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        checkDialogs();
+      });
     });
 
     observer.observe(document.body, {
@@ -90,6 +98,7 @@ function useSmartHideBottomNav() {
 
     return () => {
       observer.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
     };
   }, []);
 
