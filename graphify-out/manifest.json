@@ -845,8 +845,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/RemindersWidget.tsx": {
-    "mtime": 1778881360.8510978,
-    "ast_hash": "196dfc222335a97358bcbbc68fce7f5d",
+    "mtime": 1787196767.8687055,
+    "ast_hash": "f678af556989ad27fb629fe965370265",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/ReportWidget.tsx": {
@@ -1150,8 +1150,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1787129560.7305815,
-    "ast_hash": "27beb24e62a954c6ce54864cbba88ae5",
+    "mtime": 1787196752.2383716,
+    "ast_hash": "a7a0cdfa3b1b9b07d5a77703d24280ac",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1190,8 +1190,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/usePatientScope.ts": {
-    "mtime": 1783835615.188178,
-    "ast_hash": "55ed4c27c7895ba93bda3f8faf0db61c",
+    "mtime": 1787196650.2736943,
+    "ast_hash": "c0d9303ea3e1f2acee3c92a908e7a1ce",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useTheme.ts": {
@@ -1515,8 +1515,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/reminderService.ts": {
-    "mtime": 1787129509.253339,
-    "ast_hash": "b79e46ea4232ff4cf952d98d133c0a83",
+    "mtime": 1787196632.0570855,
+    "ast_hash": "f1bfd873856b6788af8179f32e13c5ac",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/visionService.ts": {
@@ -2635,8 +2635,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/reminderService.test.ts": {
-    "mtime": 1787113044.2070959,
-    "ast_hash": "97eb3c571ecfb9b940885809f165e024",
+    "mtime": 1787196786.571559,
+    "ast_hash": "a7c41f254004b76b6792c7ee182c434e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BouncingPillsLoader.tsx": {
