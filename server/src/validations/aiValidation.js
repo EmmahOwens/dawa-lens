@@ -69,9 +69,9 @@ export const chatSchema = z.object({
   body: z.object({
     messages: z.array(z.object({
       role: z.enum(['user', 'assistant', 'system']),
-      content: z.string().max(2000).optional(),
-      text: z.string().max(2000).optional(),
-    })).max(20),
+      content: z.string().max(20000).optional(),
+      text: z.string().max(20000).optional(),
+    })).max(50),
     medicines: z.array(z.any()).max(50).optional(),
     userProfile: z.any().optional(),
     doseLogs: z.array(z.any()).max(50).optional(),

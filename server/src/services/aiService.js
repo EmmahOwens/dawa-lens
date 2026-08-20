@@ -1408,6 +1408,15 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
       );
     });
 
+  const trackedMeds = medicines?.filter(m => m.currentQuantity !== undefined || m.totalQuantity !== undefined);
+  const medVaultSummary = trackedMeds?.length
+    ? trackedMeds.map(m => {
+        const qty = m.currentQuantity ?? m.totalQuantity ?? 0;
+        const unit = m.unit || 'tablets';
+        const perDose = m.dosagePerDose || 1;
+        return `${m.name} (ID: ${m.id}): ${qty} ${unit} remaining (${perDose}/dose)`;
+      }).join('; ')
+    : 'No tracked stocks';
   const activeMeds = filteredMeds?.length ? filteredMeds.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ') : 'None';
   const safeFormatDate = (val) => typeof val !== 'string' ? val : val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
   const recentLogs = filteredDoseLogs ? JSON.stringify(filteredDoseLogs.slice(0, isComplex ? 5 : 2).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
@@ -1460,8 +1469,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     === CAPABILITIES & ACTIONS ===
     You have FULL READ and WRITE access to the user's medication system.
     Actions:
-    - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, dosagePerDose?, patientId? }
-    - UPDATE_MEDICINE: { id, name?, dosage?, notes? }
+    - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, patientId? }
+    - UPDATE_MEDICINE: { id, name?, dosage?, notes?, currentQuantity?, totalQuantity? }
     - ADD_REMINDER: { medicineName, dose, time (comma-separated HH:mm strings, e.g. "08:00" for once daily, or "08:00,20:00" for twice daily. NEVER use words like "morning" or "twice a day"), repeatSchedule ("daily" | "weekly" | "once" | "custom"), patientId?, medicineId? }
     - UPDATE_REMINDER: { id, enabled?, time?, dose? }
     - REMOVE_REMINDER: { id }
@@ -1477,7 +1486,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     5. MEDICINE NAME FORMAT: Whenever you mention any medicine, ALWAYS write the brand name first, followed by the chemical (generic/active ingredient) name in brackets. Example: "Panadol (Paracetamol)", "Augmentin (Amoxicillin/Clavulanate)", "Flagyl (Metronidazole)". Never mention only a generic name without its brand name, and never omit the chemical name in brackets.
     6. NAVIGATION LINKS (CRITICAL):
        - You can and should include inline markdown links in your response to help the user navigate to other pages in the app.
-       - Format internal links using custom, action-oriented, and context-aware labels based on the conversation (e.g. "Add first client", "Let's add a client", "Log medication", "Add a reminder", "View history").
+       - Format internal links using custom, action-oriented, and context-aware labels based on the conversation (e.g. "Add first client", "Let's add a client", "Log medication", "Add a reminder", "View history", "Open Med Vault").
        - Never use generic link texts like "click here" or raw path names.
        - Whenever the conversation is about adding/managing family members/clients or you suggest doing so, you MUST include a markdown link to '/family' or '/family-hub'. E.g., "Would you like to [add a client](/family-hub)?" or "Let's [add first client](/family) to get started."
        - Use the following routes for navigation:
@@ -1485,6 +1494,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
          - '/dashboard' or '/home' (Dashboard / Home page)
          - '/reminders' or '/medications' (Reminders / Medications list page)
          - '/reminders/new', '/new-reminder', or '/add-reminder' (Add New Reminder page)
+         - '/medvault' or '/vault' (Med Vault / Pill Stock Tracker page)
          - '/history' or '/logs' (Dose History / Logs page)
          - '/interactions' or '/safety' (Drug Interactions & Safety page)
          - '/travel' or '/travel-companion' (Travel Companion page)
@@ -1537,6 +1547,9 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
       }
       return '';
     })()}
+    11. MED VAULT & PILL INVENTORY MANAGEMENT:
+       - If a medicine is running low (<= 3 days left or out of stock), alert the user and recommend refilling or visiting [Med Vault](/medvault).
+       - If the user says they refilled a medicine (e.g., "I refilled my Coartem to 30 pills" or "Restocked Panadol to 20 tablets"), confirm and include an UPDATE_MEDICINE action with { id: "medicine_id", currentQuantity: new_quantity }.
 
     CONVERSATION PHASE: ${conversationPhase}
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
@@ -1559,6 +1572,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'}
     Active Profile: ${selectedPatientId || 'Self'}
     Active Medications: ${activeMeds}
+    Med Vault Inventory: ${medVaultSummary}
     Reminders: ${remindersSummary}
     Recent Dose Logs: ${recentLogs}
     Wellness Logs: ${wellnessSummary}

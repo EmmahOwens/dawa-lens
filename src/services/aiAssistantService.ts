@@ -160,18 +160,8 @@ export const chatWithDawaGPT = async (
   selectedPatientId: string | null = null
 ): Promise<ChatMessage> => {
   try {
-    const lastUserIdx = messages.map(m => m.role).lastIndexOf("user");
-    let enrichedMessages = [...messages];
-    if (lastUserIdx !== -1) {
-      const context = getMedVaultSystemContext(medicines, reminders);
-      enrichedMessages[lastUserIdx] = {
-        ...messages[lastUserIdx],
-        text: `${messages[lastUserIdx].text}\n\n[SYSTEM CONTEXT]\n${context}\n[END SYSTEM CONTEXT]`
-      };
-    }
-
     const response = await aiApi.chat({
-      messages: enrichedMessages,
+      messages,
       medicines,
       userProfile,
       doseLogs: doseLogs.slice(0, 20),
@@ -197,7 +187,11 @@ export const chatWithDawaGPT = async (
     };
   } catch (err: unknown) {
     console.error("DawaGPT Chat Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "I'm having trouble connecting to my medical intelligence core. Please check your connection and try again.";
+    const rawMsg = err instanceof Error ? err.message : "";
+    const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json/i.test(rawMsg);
+    const errorMessage = isTechnicalError
+      ? "I had trouble processing that request. Please try again in a moment."
+      : rawMsg;
     return {
       id: Date.now().toString(),
       role: "assistant",
@@ -223,18 +217,8 @@ export const chatWithDawaGPTStream = async (
   onChunk: (text: string) => void
 ): Promise<ChatMessage> => {
   try {
-    const lastUserIdx = messages.map(m => m.role).lastIndexOf("user");
-    let enrichedMessages = [...messages];
-    if (lastUserIdx !== -1) {
-      const context = getMedVaultSystemContext(medicines, reminders);
-      enrichedMessages[lastUserIdx] = {
-        ...messages[lastUserIdx],
-        text: `${messages[lastUserIdx].text}\n\n[SYSTEM CONTEXT]\n${context}\n[END SYSTEM CONTEXT]`
-      };
-    }
-
     const stream = await aiApi.chatStream({
-      messages: enrichedMessages,
+      messages,
       medicines,
       userProfile,
       doseLogs: doseLogs.slice(0, 20),
@@ -348,7 +332,11 @@ export const chatWithDawaGPTStream = async (
     };
   } catch (err: unknown) {
     console.error("DawaGPT Streaming Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "Connection lost during medical core sync. Please try again.";
+    const rawMsg = err instanceof Error ? err.message : "";
+    const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json/i.test(rawMsg);
+    const errorMessage = isTechnicalError
+      ? "I had trouble processing that request. Please try again in a moment."
+      : rawMsg;
     return {
       id: Date.now().toString(),
       role: "assistant",
