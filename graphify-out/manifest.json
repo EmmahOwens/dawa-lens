@@ -1150,8 +1150,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1787196752.2383716,
-    "ast_hash": "a7a0cdfa3b1b9b07d5a77703d24280ac",
+    "mtime": 1787197910.1036751,
+    "ast_hash": "52e91337247af3a9230ab034c5a0bfad",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1265,8 +1265,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AddReminderPage.tsx": {
-    "mtime": 1787130656.656112,
-    "ast_hash": "87404478005b5ed4d8fa06333043a5e0",
+    "mtime": 1787198482.2779257,
+    "ast_hash": "fc71968f24fc86e1beb5ada2c5c775cb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AuthPage.tsx": {
@@ -1490,8 +1490,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/localPersistence.ts": {
-    "mtime": 1784054590.1665957,
-    "ast_hash": "03ba23c75c6a9031055d8e785b834ec0",
+    "mtime": 1787197934.0656867,
+    "ast_hash": "5e0d660057901b3df2572dbe5dbfdd65",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/mlService.ts": {
@@ -1510,8 +1510,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/refillService.ts": {
-    "mtime": 1787129355.398339,
-    "ast_hash": "bb44bb876e0f04d397890634691ce7c8",
+    "mtime": 1787197973.8683398,
+    "ast_hash": "264b6828a5625312fef905ede3b60250",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/reminderService.ts": {
@@ -2595,13 +2595,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedVaultPage.tsx": {
-    "mtime": 1787140257.2313416,
-    "ast_hash": "dcd9658c212e5092479e3dfa9ffe94a1",
+    "mtime": 1787198311.2625768,
+    "ast_hash": "fe753b84fa69f1009bb154fbd9124f51",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicationsPage.tsx": {
-    "mtime": 1787129985.045368,
-    "ast_hash": "774227df3e90e60675e2d16e7914eaed",
+    "mtime": 1787198130.4506688,
+    "ast_hash": "bd0c0e735221d560fa000bcfbda83a2f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/capacitor-core-BsmU-WDS.js": {
@@ -3185,8 +3185,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/refillService.test.ts": {
-    "mtime": 1787131772.5715816,
-    "ast_hash": "49df0b9c7a95f80ac666861ae27fb615",
+    "mtime": 1787198514.7510386,
+    "ast_hash": "fe316095d4461c9d46b7f68f5187a781",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/test/crashResilience.test.tsx": {
