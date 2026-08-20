@@ -39,6 +39,7 @@ import { FamilyHubWidget } from "./intelligence/FamilyHubWidget";
 import { TravelWidget } from "./intelligence/TravelWidget";
 import { ReportWidget } from "./intelligence/ReportWidget";
 import { SettingsWidget } from "./intelligence/SettingsWidget";
+import { MedVaultWidget } from "./intelligence/MedVaultWidget";
 
 export function IntelligencePanel() {
   const { t } = useTranslation();
@@ -68,6 +69,7 @@ export function IntelligencePanel() {
     if (path === "/wellness") return <WellnessWidget />;
     if (path.startsWith("/medicine/") || path === "/search") return <MedDetailsWidget />;
     if (path === "/reminders" || path === "/reminders/new") return <RemindersWidget />;
+    if (path === "/medvault" || path === "/vault") return <MedVaultWidget />;
     if (path === "/history") return <HistoryWidget />;
     if (path === "/interactions") return <InteractionsWidget />;
     if (path === "/family") return <FamilyHubWidget />;

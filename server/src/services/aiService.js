@@ -1384,6 +1384,167 @@ function userAskedForAllMeds(text) {
   return keywords.some(keyword => lower.includes(keyword));
 }
 
+export const LOW_STOCK_THRESHOLD = 3;     // Days: amber warning (3 days)
+export const CRITICAL_STOCK_THRESHOLD = 2; // Days: red critical alert (<= 2 days)
+
+/**
+ * Calculates total daily units consumed for a medicine based on dosage per dose,
+ * daily frequency, and active scheduled reminders — matching Med Vault's exact formula.
+ */
+export function getServerDailyDoseRate(medicine, reminders = []) {
+  const { id, name, dosagePerDose, frequencyPerDay } = medicine;
+  const doseVal = dosagePerDose && dosagePerDose > 0 ? dosagePerDose : 1;
+  const freqVal = frequencyPerDay && frequencyPerDay > 0 ? frequencyPerDay : 1;
+  const defaultDailyRate = doseVal * freqVal;
+
+  // Find all enabled reminders for this medicine (matching ID or case-insensitive name)
+  const medReminders = (reminders || []).filter(
+    (r) =>
+      r.enabled !== false &&
+      (r.medicineId === id ||
+        (!r.medicineId && r.medicineName?.trim().toLowerCase() === name?.trim().toLowerCase()))
+  );
+
+  if (medReminders.length === 0) {
+    return defaultDailyRate;
+  }
+
+  let dailyDoseSum = 0;
+
+  for (const rem of medReminders) {
+    const parsedRemDose = parseFloat(rem.dose);
+    const slotDose =
+      dosagePerDose && dosagePerDose > 0
+        ? dosagePerDose
+        : !isNaN(parsedRemDose) && parsedRemDose > 0
+        ? parsedRemDose
+        : 1;
+
+    const timesCount = (rem.time || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean).length || 1;
+
+    if (rem.repeatSchedule === "daily") {
+      dailyDoseSum += slotDose * timesCount;
+    } else if (rem.repeatSchedule === "custom") {
+      const daysCount =
+        rem.repeatDays && rem.repeatDays.length > 0 ? rem.repeatDays.length : 7;
+      dailyDoseSum += (slotDose * timesCount * daysCount) / 7;
+    } else if (rem.repeatSchedule === "weekly") {
+      const daysCount =
+        rem.repeatDays && rem.repeatDays.length > 0 ? rem.repeatDays.length : 1;
+      dailyDoseSum += (slotDose * timesCount * daysCount) / 7;
+    } else {
+      dailyDoseSum += slotDose * timesCount;
+    }
+  }
+
+  return dailyDoseSum > 0 ? dailyDoseSum : defaultDailyRate;
+}
+
+/**
+ * Calculates doses remaining and days remaining for a medicine — matching Med Vault's exact logic.
+ */
+export function calculateServerRefillStatus(medicine, reminders = []) {
+  const { id, name, currentQuantity, totalQuantity, dosagePerDose, frequencyPerDay, unit } = medicine;
+  const stockQty = currentQuantity !== undefined ? currentQuantity : totalQuantity;
+
+  if (stockQty === undefined) return null;
+
+  const perDose = dosagePerDose && dosagePerDose > 0 ? dosagePerDose : 1;
+  const dosesRemaining = Math.floor(stockQty / perDose);
+
+  const dailyDoseTotal = getServerDailyDoseRate(medicine, reminders);
+  const daysRemaining =
+    dailyDoseTotal > 0
+      ? Math.floor(stockQty / dailyDoseTotal)
+      : stockQty === 0
+      ? 0
+      : null;
+
+  const isOutOfStock = stockQty === 0;
+  const isLow =
+    isOutOfStock ||
+    (daysRemaining !== null && daysRemaining <= CRITICAL_STOCK_THRESHOLD);
+  const isWarning =
+    !isLow &&
+    daysRemaining !== null &&
+    daysRemaining <= LOW_STOCK_THRESHOLD;
+
+  // Formatted reminder/frequency description
+  const medReminders = (reminders || []).filter(
+    (r) =>
+      r.enabled !== false &&
+      (r.medicineId === id ||
+        (!r.medicineId && r.medicineName?.trim().toLowerCase() === name?.trim().toLowerCase()))
+  );
+
+  let frequencyDescription = "";
+  if (medReminders.length > 0) {
+    const timesList = medReminders.map(r => `${r.time} (${r.repeatSchedule || "daily"})`).join("; ");
+    frequencyDescription = `${timesList}`;
+  } else {
+    const freq = frequencyPerDay && frequencyPerDay > 0 ? frequencyPerDay : 1;
+    frequencyDescription = `${freq} dose${freq !== 1 ? "s" : ""}/day`;
+  }
+
+  return {
+    medicineId: id,
+    medicineName: name,
+    unit: unit || "tablets",
+    currentQuantity: stockQty,
+    totalQuantity: totalQuantity || stockQty,
+    dosagePerDose: perDose,
+    frequencyPerDay: frequencyPerDay && frequencyPerDay > 0 ? frequencyPerDay : 1,
+    frequencyDescription,
+    dailyDoseTotal,
+    dosesRemaining,
+    daysRemaining,
+    isOutOfStock,
+    isLow,
+    isWarning,
+    statusText: isOutOfStock
+      ? "OUT OF STOCK"
+      : isLow
+      ? "CRITICAL LOW STOCK (<= 2 days)"
+      : isWarning
+      ? "LOW STOCK (<= 3 days)"
+      : "IN STOCK (Healthy Supply)"
+  };
+}
+
+/**
+ * Builds rich, unambiguous Med Vault stock summary for DawaGPT context.
+ */
+export function buildMedVaultSummary(medicines = [], reminders = []) {
+  const trackedMeds = (medicines || []).filter(
+    (m) => m.currentQuantity !== undefined || m.totalQuantity !== undefined
+  );
+  if (trackedMeds.length === 0) {
+    return "No tracked stocks in Med Vault. (Inform user they can track pill counts in [Med Vault](/medvault)).";
+  }
+
+  return trackedMeds
+    .map((m) => {
+      const status = calculateServerRefillStatus(m, reminders);
+      if (!status) return null;
+      const daysText = status.daysRemaining !== null
+        ? `~${status.daysRemaining} day${status.daysRemaining !== 1 ? "s" : ""} of supply left`
+        : "No active daily schedule";
+      return `- ${m.name} (ID: ${m.id}):
+  * Stock: ${status.currentQuantity} ${status.unit} left (Max Capacity: ${status.totalQuantity} ${status.unit})
+  * Dosage per Dose: ${status.dosagePerDose} ${status.unit}/dose
+  * Daily Frequency / Schedule: ${status.frequencyDescription}
+  * Daily Consumption Rate: ${status.dailyDoseTotal} ${status.unit}/day
+  * Doses Remaining: ${status.dosesRemaining} dose${status.dosesRemaining !== 1 ? "s" : ""} left (${status.currentQuantity} ÷ ${status.dosagePerDose})
+  * Days Remaining: ${daysText} (${status.currentQuantity} ÷ ${status.dailyDoseTotal}/day)
+  * Refill Status: [${status.statusText}]`;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
 async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
   const recentMessages = messages.slice(-5);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
@@ -1408,15 +1569,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
       );
     });
 
-  const trackedMeds = medicines?.filter(m => m.currentQuantity !== undefined || m.totalQuantity !== undefined);
-  const medVaultSummary = trackedMeds?.length
-    ? trackedMeds.map(m => {
-        const qty = m.currentQuantity ?? m.totalQuantity ?? 0;
-        const unit = m.unit || 'tablets';
-        const perDose = m.dosagePerDose || 1;
-        return `${m.name} (ID: ${m.id}): ${qty} ${unit} remaining (${perDose}/dose)`;
-      }).join('; ')
-    : 'No tracked stocks';
+  const medVaultSummary = buildMedVaultSummary(medicines, reminders);
   const activeMeds = filteredMeds?.length ? filteredMeds.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ') : 'None';
   const safeFormatDate = (val) => typeof val !== 'string' ? val : val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
   const recentLogs = filteredDoseLogs ? JSON.stringify(filteredDoseLogs.slice(0, isComplex ? 5 : 2).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
@@ -1469,8 +1622,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     === CAPABILITIES & ACTIONS ===
     You have FULL READ and WRITE access to the user's medication system.
     Actions:
-    - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, patientId? }
-    - UPDATE_MEDICINE: { id, name?, dosage?, notes?, currentQuantity?, totalQuantity? }
+    - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, frequencyPerDay?, patientId? }
+    - UPDATE_MEDICINE: { id, name?, dosage?, notes?, currentQuantity?, totalQuantity?, dosagePerDose?, frequencyPerDay?, unit? }
     - ADD_REMINDER: { medicineName, dose, time (comma-separated HH:mm strings, e.g. "08:00" for once daily, or "08:00,20:00" for twice daily. NEVER use words like "morning" or "twice a day"), repeatSchedule ("daily" | "weekly" | "once" | "custom"), patientId?, medicineId? }
     - UPDATE_REMINDER: { id, enabled?, time?, dose? }
     - REMOVE_REMINDER: { id }
@@ -1547,9 +1700,32 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
       }
       return '';
     })()}
-    11. MED VAULT & PILL INVENTORY MANAGEMENT:
-       - If a medicine is running low (<= 3 days left or out of stock), alert the user and recommend refilling or visiting [Med Vault](/medvault).
-       - If the user says they refilled a medicine (e.g., "I refilled my Coartem to 30 pills" or "Restocked Panadol to 20 tablets"), confirm and include an UPDATE_MEDICINE action with { id: "medicine_id", currentQuantity: new_quantity }.
+    11. MED VAULT INTELLIGENCE & DOSE VS DAYS CALCULATION RULES (CRITICAL):
+       - You have complete intelligence over the user's Med Vault pill inventory, dosage calculations, and refill status.
+       - YOU MUST NEVER CONFUSE DOSES REMAINING WITH DAYS REMAINING!
+         * "Current Stock / Units": Total physical tablets/capsules/units in vault (e.g. 30 tablets).
+         * "Dosage Per Dose": Units consumed per single intake (e.g. 2 tablets per dose).
+         * "Daily Frequency": Number of times/doses per day the user takes the medicine (e.g. twice daily = 2 doses/day, 3 times daily = 3 doses/day).
+         * "Daily Consumption Rate": Dosage per Dose × Daily Frequency (e.g. 2 tablets/dose × 2 times/day = 4 tablets consumed per day).
+         * "Doses Remaining": Total stock ÷ Dosage per dose (e.g. 30 tablets ÷ 2 tablets/dose = 15 doses remaining).
+         * "Days Remaining (Days of Supply)": Total stock ÷ Daily consumption rate (e.g. 30 tablets ÷ 4 tablets/day = 7 days of supply).
+       - CRITICAL RULE ON FREQUENCY:
+         * If a user takes 2 doses a day and has 10 doses left, that is 5 DAYS of supply, NOT 10 days!
+         * If a user takes 3 doses a day and has 30 tablets with 2 tablets per dose (15 doses left), that is 5 DAYS of supply (6 tablets/day), NOT 15 days!
+         * Whenever quoting remaining medication, ALWAYS accurately read the pre-computed "Doses Remaining", "Days Remaining", and "Daily Frequency" from the Med Vault Inventory section below.
+       - ANSWERING MED VAULT QUESTIONS:
+         * When asked "How many days of meds do I have left?" or "How long will my pills last?": Clearly state the exact days of supply for each medication, mentioning the daily frequency and daily consumption rate so the user understands the math.
+         * When asked "How many doses do I have left?": Clearly state the exact doses remaining and contrast it with the days of supply (e.g., "You have 15 doses left of Panadol, which is about 7 days of supply at 2 doses per day").
+         * When asked "What's in my Med Vault?" or "Check my pill stock": Provide a clean, organized summary of each medication's stock count, dose size, frequency, doses left, days left, and refill status.
+       - LOW STOCK & REFILL ALERTS:
+         * If a medicine has <= 2 days of supply left (or is OUT OF STOCK), proactively alert the user with urgency and advise them to refill immediately.
+         * If a medicine has <= 3 days of supply left (LOW STOCK), remind the user to plan their refill soon.
+         * Recommend the user open [Med Vault](/medvault) (using exactly that markdown link format) to manage or update their stock.
+       - REFILLING ACTIONS (CRITICAL):
+         * If the user says they refilled, restocked, or bought more of a medication (e.g. "I refilled my Coartem to 30 pills", "Restocked Panadol to 60 tablets", "I just got 20 more Metformin"):
+           1) Confirm warmly and clearly state the new stock, doses remaining, and days of supply.
+           2) Include a populated UPDATE_MEDICINE action with { id: "medicine_id", currentQuantity: new_quantity }.
+           3) NEVER omit the action object when a refill is requested.
 
     CONVERSATION PHASE: ${conversationPhase}
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
@@ -1572,7 +1748,8 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'}
     Active Profile: ${selectedPatientId || 'Self'}
     Active Medications: ${activeMeds}
-    Med Vault Inventory: ${medVaultSummary}
+    Med Vault Inventory:
+${medVaultSummary}
     Reminders: ${remindersSummary}
     Recent Dose Logs: ${recentLogs}
     Wellness Logs: ${wellnessSummary}

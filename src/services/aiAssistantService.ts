@@ -50,7 +50,8 @@ export const generateDawaGPTResponse = async (
   activeMedicine: Medicine | null,
   userProfile: UserProfile | null,
   allMedicines: Medicine[] = [],
-  doseLogs: DoseLog[] = []
+  doseLogs: DoseLog[] = [],
+  reminders: Reminder[] = []
 ): Promise<ChatMessage> => {
   const normalizedQuery = query.toLowerCase().trim();
 
@@ -72,7 +73,62 @@ export const generateDawaGPTResponse = async (
     }
   }
 
-  // 2. Behavioral Coaching Analysis (Complex Pattern Detection)
+  // 2. Med Vault / Stock Intelligence (Local / Offline handling)
+  const medVaultKeywords = ["days left", "doses left", "how many days", "how many doses", "med vault", "stock", "vault", "refill", "supply left", "pills left"];
+  const isMedVaultQuery = medVaultKeywords.some(k => normalizedQuery.includes(k));
+
+  if (isMedVaultQuery && allMedicines.length > 0) {
+    const trackedMeds = allMedicines.filter(m => m.currentQuantity !== undefined || m.totalQuantity !== undefined);
+    if (trackedMeds.length === 0) {
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: "You don't have any medication stocks tracked in your Med Vault yet. You can set initial pill quantities for any medication to track your remaining doses and days of supply in [Med Vault](/medvault).",
+        source: "System",
+        suggestions: ["Open my Med Vault", "Add a reminder", "Check interactions"]
+      };
+    }
+
+    const lines = trackedMeds.map(m => {
+      const status = calculateRefillStatus(m, reminders);
+      const qty = m.currentQuantity ?? m.totalQuantity ?? 0;
+      const unit = m.unit || "tablets";
+      const doses = status?.dosesRemaining ?? Math.floor(qty / (m.dosagePerDose || 1));
+      const days = status?.daysRemaining;
+      const freq = status?.frequencyPerDay || m.frequencyPerDay || 1;
+      const perDose = status?.dosagePerDose || m.dosagePerDose || 1;
+      const dailyRate = status?.dailyDoseTotal || (perDose * freq);
+
+      let statusMsg = `• **${m.name}**: ${qty} ${unit} left → **${doses} dose${doses !== 1 ? "s" : ""}**`;
+      if (days !== null && days !== undefined) {
+        statusMsg += ` (~**${days} day${days !== 1 ? "s" : ""}** of supply at ${dailyRate} ${unit}/day, taken ${freq}x/day)`;
+      } else {
+        statusMsg += ` (${perDose} ${unit}/dose)`;
+      }
+
+      if (status?.isOutOfStock) {
+        statusMsg += " ⚠️ **OUT OF STOCK**";
+      } else if (status?.isLow) {
+        statusMsg += " ⚠️ **CRITICAL LOW STOCK** — please refill now!";
+      } else if (status?.isWarning) {
+        statusMsg += " ⚠️ **LOW STOCK** — refill soon";
+      }
+
+      return statusMsg;
+    });
+
+    const summaryText = `Here is your current **Med Vault** stock breakdown:\n\n${lines.join("\n")}\n\nYou can manage or restock your medications anytime in [Med Vault](/medvault).`;
+
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: summaryText,
+      source: "System",
+      suggestions: ["Open my Med Vault", "Refill my stock", "What are my reminders?"]
+    };
+  }
+
+  // 3. Behavioral Coaching Analysis (Complex Pattern Detection)
   const coachingKeywords = ["log", "miss", "pattern", "adherence", "track", "help", "coach", "why"];
   const isCoachingRequest = coachingKeywords.some(k => normalizedQuery.includes(k));
 
@@ -97,7 +153,7 @@ export const generateDawaGPTResponse = async (
     }
   }
 
-  // 3. Common Questions Map (Offline/Fast)
+  // 4. Common Questions Map (Offline/Fast)
   const knownResp = Object.entries(FAQ_RESPONSE_MAP).find(([key]) => normalizedQuery.includes(key));
   if (knownResp) {
     return {
@@ -108,40 +164,49 @@ export const generateDawaGPTResponse = async (
     };
   }
 
-  // 4. Default generic response
+  // 5. Default generic response
   return {
     id: Date.now().toString(),
     role: "assistant",
-    text: "I am your Dawa-Lens assistant. You can ask about your medication logs, patterns in missing doses, or general safety. For urgent medical issues, please contact a professional.",
+    text: "I am your Dawa-Lens assistant. You can ask about your medication logs, patterns in missing doses, Med Vault stock, or general safety. For urgent medical issues, please contact a professional.",
     source: "System"
   };
 };
 
-const getMedVaultSystemContext = (medicines: Medicine[], reminders: Reminder[]): string => {
-  const trackedMeds = medicines.filter(m => m.currentQuantity !== undefined);
+export const getMedVaultSystemContext = (medicines: Medicine[], reminders: Reminder[] = []): string => {
+  const trackedMeds = medicines.filter(m => m.currentQuantity !== undefined || m.totalQuantity !== undefined);
   if (trackedMeds.length === 0) {
     return "Med Vault (Pill Stock Tracker) Status: No medicine stocks are currently tracked. Explain that they can track pill counts by setting a quantity on any medicine. Recommend they open [Med Vault](/medvault).";
   }
 
   const stockLines = trackedMeds.map(m => {
-    const qty = m.currentQuantity ?? 0;
+    const qty = m.currentQuantity ?? m.totalQuantity ?? 0;
     const unit = m.unit || "tablets";
     const status = calculateRefillStatus(m, reminders);
     const dailyDose = getDailyDoseRate(m, reminders);
-    const daysStr = status?.daysRemaining !== null
-      ? `~${status?.daysRemaining} days left (${dailyDose}/day)`
+    const perDose = status?.dosagePerDose || m.dosagePerDose || 1;
+    const dosesRemaining = status?.dosesRemaining ?? Math.floor(qty / perDose);
+    const daysStr = status?.daysRemaining !== null && status?.daysRemaining !== undefined
+      ? `~${status?.daysRemaining} day${status?.daysRemaining !== 1 ? "s" : ""} of supply left (${dailyDose} ${unit}/day)`
       : "no active reminders";
     const alertTag = status?.isOutOfStock
       ? " [OUT OF STOCK]"
       : status?.isLow
-        ? " [CRITICAL LOW STOCK]"
+        ? " [CRITICAL LOW STOCK (<= 2 days)]"
         : status?.isWarning
-          ? " [LOW STOCK]"
-          : "";
-    return `- ${m.name} (ID: ${m.id}): ${qty} ${unit} remaining (${daysStr}, dosage/dose: ${m.dosagePerDose || 1} ${unit})${alertTag}`;
+          ? " [LOW STOCK (<= 3 days)]"
+          : " [IN STOCK]";
+    return `- ${m.name} (ID: ${m.id}):
+  * Stock: ${qty} ${unit} remaining
+  * Dosage: ${perDose} ${unit}/dose
+  * Daily Frequency: ${status?.frequencyPerDay || 1} dose(s)/day
+  * Daily Rate: ${dailyDose} ${unit}/day
+  * Doses Remaining: ${dosesRemaining} doses left (${qty} ÷ ${perDose})
+  * Days Remaining: ${daysStr}
+  * Status:${alertTag}`;
   });
 
-  return `Med Vault (Pill Stock Tracker) Status:\n${stockLines.join("\n")}\n\nInstructions for DawaGPT:\n1. If a medicine has <= 2 days of supply left (marked as CRITICAL LOW STOCK or OUT OF STOCK), proactively alert the user about the low stock and recommend refilling immediately.\n2. If a medicine has <= 3 days of supply left (marked as LOW STOCK), remind the user that they should consider refilling soon.\n3. Recommend the user to open [Med Vault](/medvault) (using exactly that markdown link format) to manage their stock.\n4. If the user asks to refill a medicine (e.g. "I refilled my Coartem to 30 pills"), reply to confirm and append an action block. The action type is UPDATE_MEDICINE and payload is { id: "medicine_id", currentQuantity: new_quantity }.`;
+  return `Med Vault (Pill Stock Tracker) Status:\n${stockLines.join("\n")}\n\nInstructions for DawaGPT:\n1. NEVER confuse doses remaining with days remaining. Doses = Stock ÷ Dose per intake. Days = Stock ÷ Daily consumption rate (Dose × Daily frequency).\n2. If a medicine has <= 2 days of supply left (marked as CRITICAL LOW STOCK or OUT OF STOCK), proactively alert the user about the low stock and recommend refilling immediately.\n3. If a medicine has <= 3 days of supply left (marked as LOW STOCK), remind the user that they should consider refilling soon.\n4. Recommend the user to open [Med Vault](/medvault) (using exactly that markdown link format) to manage their stock.\n5. If the user asks to refill a medicine (e.g. "I refilled my Coartem to 30 pills"), reply to confirm and append an action block. The action type is UPDATE_MEDICINE and payload is { id: "medicine_id", currentQuantity: new_quantity }.`;
 };
 
 /**
