@@ -470,8 +470,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1787200570.0194414,
-    "ast_hash": "7fdfd845f31511b9dd6185571dc087e2",
+    "mtime": 1787229835.4214337,
+    "ast_hash": "dc5355ddb6d5fe2777c2874e423dba3e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -705,8 +705,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/IntelligencePanel.tsx": {
-    "mtime": 1787228559.644304,
-    "ast_hash": "74eb1261dca99704a44b331dedda125e",
+    "mtime": 1787229897.5559998,
+    "ast_hash": "afc3dafc43e32afa1c100d216b377337",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MedicalReportContent.tsx": {
@@ -1425,8 +1425,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1787200639.4116926,
-    "ast_hash": "31fbb8bd25ddc75a2bc1eac1a1e33023",
+    "mtime": 1787229859.6548603,
+    "ast_hash": "20d53b5b491ac89801ef23c6ab1dab69",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -3427,6 +3427,21 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/vendor-aKKEWuI_.js": {
     "mtime": 1787226623.6009173,
     "ast_hash": "c569968ed3185bde42c5f8397af80ea6",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-medvault-intelligence.js": {
+    "mtime": 1787229969.836471,
+    "ast_hash": "e0225ae32f0aeb4008661722efdf5680",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/MedVaultWidget.tsx": {
+    "mtime": 1787229885.8572607,
+    "ast_hash": "ba556fcf2b37de4b61a5f41585ffedcb",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptMedVaultIntelligence.test.ts": {
+    "mtime": 1787229959.849674,
+    "ast_hash": "d93e57ec3d86b2d397f84d6729cbdab2",
     "semantic_hash": ""
   }
 }
