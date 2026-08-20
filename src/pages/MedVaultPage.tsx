@@ -112,17 +112,20 @@ function StockRing({
 interface RefillSheetProps {
   medicine: Medicine;
   onClose: () => void;
-  onSave: (qty: number, unit: string, perDose: number, total: number) => Promise<void>;
+  onSave: (qty: number, unit: string, perDose: number, total: number, frequencyPerDay?: number) => Promise<void>;
 }
 
 function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
   const [qty, setQty] = useState(medicine.currentQuantity?.toString() ?? "");
   const [perDose, setPerDose] = useState(medicine.dosagePerDose?.toString() ?? "1");
+  const [frequencyPerDay, setFrequencyPerDay] = useState(medicine.frequencyPerDay?.toString() ?? "1");
   const [total, setTotal] = useState(medicine.totalQuantity?.toString() ?? "");
   const [unit, setUnit] = useState(medicine.unit ?? "tablets");
   const [isSaving, setIsSaving] = useState(false);
   const parsedQty = parseFloat(qty);
   const parsedTotal = parseFloat(total);
+  const parsedPerDose = parseFloat(perDose) || 1;
+  const parsedFreq = parseFloat(frequencyPerDay) || 1;
   const isOverCapacity =
     !isNaN(parsedQty) && !isNaN(parsedTotal) && parsedTotal > 0 && parsedQty > parsedTotal;
   const isNegativeQty = !isNaN(parsedQty) && parsedQty < 0;
@@ -133,7 +136,7 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
     setIsSaving(true);
     try {
       const finalTotal = !isNaN(parsedTotal) && parsedTotal > 0 ? parsedTotal : parsedQty;
-      await onSave(parsedQty, unit, parseFloat(perDose) || 1, finalTotal);
+      await onSave(parsedQty, unit, parsedPerDose, finalTotal, parsedFreq);
       onClose();
     } finally {
       setIsSaving(false);
@@ -163,11 +166,11 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
         onDragEnd={(_e, info) => {
           if (info.offset.y > 80) onClose();
         }}
-        className="w-full max-w-lg bg-card rounded-t-3xl p-6 pb-10 shadow-2xl border border-border/50 cursor-grab active:cursor-grabbing touch-pan-x"
+        className="w-full max-w-lg bg-card rounded-t-3xl p-6 pb-10 shadow-2xl border border-border/50 max-h-[90vh] overflow-y-auto no-scrollbar cursor-grab active:cursor-grabbing touch-pan-x"
         {...swipe}
       >
         <div className="w-10 h-1 rounded-full bg-muted/70 hover:bg-muted mx-auto mb-6 transition-colors" />
-        <h3 className="text-xl font-black tracking-tight mb-1">Update Stock</h3>
+        <h3 className="text-xl font-black tracking-tight mb-1">Update Stock & Frequency</h3>
         <p className="text-xs text-muted-foreground mb-6">
           {medicine.name} · Current: {medicine.currentQuantity ?? "—"} {medicine.unit ?? "units"}
         </p>
@@ -175,7 +178,7 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
         <div className="space-y-5">
           <div className="space-y-2">
             <Label className="text-xs font-bold text-muted-foreground">
-              Pills you have right now
+              Pills / Units you have right now
             </Label>
             <Input
               type="number"
@@ -227,6 +230,41 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
             </div>
           </div>
 
+          {/* Daily Frequency (Doses per day) */}
+          <div className="space-y-2.5 pt-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold text-muted-foreground">
+                Daily Frequency (Times / Doses taken per day)
+              </Label>
+              <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-md">
+                {parsedFreq} dose{parsedFreq !== 1 ? "s" : ""}/day
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "1x / day", sub: "Once", value: 1 },
+                { label: "2x / day", sub: "Twice", value: 2 },
+                { label: "3x / day", sub: "3 times", value: 3 },
+                { label: "4x / day", sub: "4 times", value: 4 },
+              ].map((preset) => (
+                <button
+                  type="button"
+                  key={preset.value}
+                  onClick={() => setFrequencyPerDay(preset.value.toString())}
+                  className={`p-2 rounded-xl text-center border transition-all ${
+                    parsedFreq === preset.value
+                      ? "bg-teal-600 text-white border-teal-600 shadow-sm"
+                      : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  <span className="block text-xs font-black leading-tight">{preset.label}</span>
+                  <span className="block text-[9px] opacity-80 leading-none mt-0.5">{preset.sub}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label className="text-xs font-bold text-muted-foreground">
               Total when full (original pack size)
@@ -240,6 +278,35 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
               className="h-12 rounded-xl font-bold"
             />
           </div>
+
+          {/* Live Dose vs Day Breakdown Preview */}
+          {!isNaN(parsedQty) && parsedQty >= 0 && (
+            <div className="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-foreground space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-teal-800 dark:text-teal-300">
+                <span>Daily Dosage:</span>
+                <span>
+                  {(parsedPerDose * parsedFreq).toFixed(
+                    Number.isInteger(parsedPerDose * parsedFreq) ? 0 : 1
+                  )}{" "}
+                  {unit}/day ({parsedPerDose} {unit}/dose × {parsedFreq} {parsedFreq === 1 ? "dose" : "doses"}/day)
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-teal-500/20">
+                <div className="bg-background/60 p-2 rounded-xl border border-teal-500/10">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Doses Remaining</p>
+                  <p className="text-base font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                    {Math.floor(parsedQty / parsedPerDose)} <span className="text-xs font-semibold text-muted-foreground">doses</span>
+                  </p>
+                </div>
+                <div className="bg-background/60 p-2 rounded-xl border border-teal-500/10">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Days of Supply</p>
+                  <p className="text-base font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                    ~{Math.floor(parsedQty / (parsedPerDose * parsedFreq))} <span className="text-xs font-semibold text-muted-foreground">days</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 mt-8">
@@ -249,7 +316,7 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
           <Button
             onClick={handleSave}
             disabled={isSaving || isInvalid}
-            className="flex-1 rounded-xl h-12 font-bold"
+            className="flex-1 rounded-xl h-12 font-bold bg-teal-600 hover:bg-teal-700 text-white"
           >
             {isSaving ? "Saving…" : "Save Stock"}
           </Button>
@@ -265,6 +332,7 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
 interface StockCardProps {
   medicine: Medicine;
   daysRemaining: number | null;
+  dosesRemaining: number | null;
   dailyDoseTotal?: number;
   isLow: boolean;
   isWarning: boolean;
@@ -272,7 +340,7 @@ interface StockCardProps {
   onRefill: () => void;
 }
 
-function StockCard({ medicine, daysRemaining, dailyDoseTotal, isLow, isWarning, isOutOfStock, onRefill }: StockCardProps) {
+function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, isLow, isWarning, isOutOfStock, onRefill }: StockCardProps) {
   const colors = colorMap[medicine.color || "blue"] || colorMap.blue;
   const IconComp = iconMap[medicine.icon || "pill"] || Pill;
   const total = medicine.totalQuantity || medicine.currentQuantity || 1;
@@ -342,33 +410,34 @@ function StockCard({ medicine, daysRemaining, dailyDoseTotal, isLow, isWarning, 
             </span>
           </div>
 
-          {/* Pill count */}
-          <div className="mt-2 flex items-baseline gap-1.5">
+          {/* Pill & Dose count */}
+          <div className="mt-2 flex items-baseline gap-2 flex-wrap">
             <span className={`text-3xl font-black leading-none ${isLow || isOutOfStock ? "text-red-500" : isWarning ? "text-amber-500" : "text-foreground"}`}>
               {current}
             </span>
             <span className="text-xs font-bold text-muted-foreground">
               {medicine.unit || "units"} left
             </span>
+            {dosesRemaining !== null && (
+              <span className="text-[11px] font-extrabold text-teal-600 dark:text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-lg">
+                {dosesRemaining} {dosesRemaining === 1 ? "dose" : "doses"}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground/50 ml-0.5">({pct}%)</span>
           </div>
 
-          {/* Days remaining */}
+          {/* Days remaining and frequency subtitle */}
           {daysRemaining !== null && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               <p className={`text-[11px] font-bold ${isLow || isOutOfStock ? "text-red-500" : isWarning ? "text-amber-500" : "text-muted-foreground"}`}>
                 {isOutOfStock
                   ? "⛔ No doses left"
-                  : `~${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} remaining`}
+                  : `~${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} of supply`}
               </p>
-              {medicine.dosagePerDose && (
-                <span className="text-[10px] text-muted-foreground/60">
-                  · {medicine.dosagePerDose} {medicine.unit || "unit"}/dose
-                  {dailyDoseTotal && dailyDoseTotal > 0 && dailyDoseTotal !== medicine.dosagePerDose
-                    ? ` (${dailyDoseTotal}/day)`
-                    : ""}
-                </span>
-              )}
+              <span className="text-[10px] text-muted-foreground/70">
+                · {medicine.frequencyPerDay || 1} dose{(medicine.frequencyPerDay || 1) !== 1 ? "s" : ""}/day ({medicine.dosagePerDose || 1} {medicine.unit || "unit"}/dose
+                {dailyDoseTotal && dailyDoseTotal > 0 ? ` · ${dailyDoseTotal}/day` : ""})
+              </span>
             </div>
           )}
         </div>
@@ -476,7 +545,8 @@ export default function MedVaultPage() {
     qty: number,
     unit: string,
     perDose: number,
-    total: number
+    total: number,
+    frequencyPerDay: number = 1
   ) => {
     if (!refillTarget) return;
     try {
@@ -484,11 +554,13 @@ export default function MedVaultPage() {
         currentQuantity: qty,
         totalQuantity: total,
         dosagePerDose: perDose,
+        frequencyPerDay,
         unit,
       });
+      const doses = Math.floor(qty / perDose);
       toast({
         title: "Stock updated ✅",
-        description: `${refillTarget.name}: ${qty} ${unit} logged.`,
+        description: `${refillTarget.name}: ${qty} ${unit} logged (${doses} dose${doses !== 1 ? "s" : ""}).`,
       });
     } catch {
       toast({
@@ -657,6 +729,7 @@ export default function MedVaultPage() {
                           key={medicine.id}
                           medicine={medicine}
                           daysRemaining={days}
+                          dosesRemaining={status?.dosesRemaining ?? null}
                           dailyDoseTotal={status?.dailyDoseTotal}
                           isLow={isCritical}
                           isWarning={isWarn}

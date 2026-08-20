@@ -7,8 +7,11 @@ export interface RefillStatus {
   medicineId: string;
   medicineName: string;
   daysRemaining: number | null;
+  dosesRemaining: number | null;
   currentQuantity: number;
   dailyDoseTotal?: number;
+  frequencyPerDay?: number;
+  dosagePerDose?: number;
   isOutOfStock?: boolean;
   isLow: boolean;    // true if <= CRITICAL_STOCK_THRESHOLD (red)
   isWarning: boolean; // true if <= LOW_STOCK_THRESHOLD but > critical (amber)
@@ -16,14 +19,16 @@ export interface RefillStatus {
 
 /**
  * Calculates the total daily units consumed for a medicine based on
- * its dosage per dose and active scheduled reminders.
+ * its dosage per dose, daily frequency, and active scheduled reminders.
  */
 export function getDailyDoseRate(
   medicine: Medicine,
   reminders: Reminder[] = []
 ): number {
-  const { id, name, dosagePerDose } = medicine;
-  const defaultDoseVal = dosagePerDose && dosagePerDose > 0 ? dosagePerDose : 1;
+  const { id, name, dosagePerDose, frequencyPerDay } = medicine;
+  const doseVal = dosagePerDose && dosagePerDose > 0 ? dosagePerDose : 1;
+  const freqVal = frequencyPerDay && frequencyPerDay > 0 ? frequencyPerDay : 1;
+  const defaultDailyRate = doseVal * freqVal;
 
   // Find all enabled reminders for this medicine (matching ID or case-insensitive name)
   const medReminders = reminders.filter(
@@ -34,8 +39,8 @@ export function getDailyDoseRate(
   );
 
   if (medReminders.length === 0) {
-    // Fallback baseline: assume 1 dose per day using configured dosagePerDose or 1
-    return defaultDoseVal;
+    // Fallback baseline: dosagePerDose * frequencyPerDay (default 1 dose/day)
+    return defaultDailyRate;
   }
 
   let dailyDoseSum = 0;
@@ -43,7 +48,7 @@ export function getDailyDoseRate(
   for (const rem of medReminders) {
     // Dose per slot: prioritize medicine's dosagePerDose, fallback to numeric parsing from rem.dose
     const parsedRemDose = parseFloat(rem.dose);
-    const doseVal =
+    const slotDose =
       dosagePerDose && dosagePerDose > 0
         ? dosagePerDose
         : !isNaN(parsedRemDose) && parsedRemDose > 0
@@ -56,35 +61,38 @@ export function getDailyDoseRate(
       .filter(Boolean).length || 1;
 
     if (rem.repeatSchedule === "daily") {
-      dailyDoseSum += doseVal * timesCount;
+      dailyDoseSum += slotDose * timesCount;
     } else if (rem.repeatSchedule === "custom") {
       const daysCount =
         rem.repeatDays && rem.repeatDays.length > 0 ? rem.repeatDays.length : 7;
-      dailyDoseSum += (doseVal * timesCount * daysCount) / 7;
+      dailyDoseSum += (slotDose * timesCount * daysCount) / 7;
     } else if (rem.repeatSchedule === "weekly") {
       const daysCount =
         rem.repeatDays && rem.repeatDays.length > 0 ? rem.repeatDays.length : 1;
-      dailyDoseSum += (doseVal * timesCount * daysCount) / 7;
+      dailyDoseSum += (slotDose * timesCount * daysCount) / 7;
     } else {
       // Fallback for once or other schedules
-      dailyDoseSum += doseVal * timesCount;
+      dailyDoseSum += slotDose * timesCount;
     }
   }
 
-  return dailyDoseSum > 0 ? dailyDoseSum : defaultDoseVal;
+  return dailyDoseSum > 0 ? dailyDoseSum : defaultDailyRate;
 }
 
 /**
- * Calculates how many days of medication remain based on current supply
- * and scheduled daily dosage.
+ * Calculates how many doses and days of medication remain based on current supply
+ * and scheduled daily dosage / frequency.
  */
 export function calculateRefillStatus(
   medicine: Medicine,
   reminders: Reminder[] = []
 ): RefillStatus | null {
-  const { id, name, currentQuantity } = medicine;
+  const { id, name, currentQuantity, dosagePerDose, frequencyPerDay } = medicine;
 
   if (currentQuantity === undefined) return null;
+
+  const perDose = dosagePerDose && dosagePerDose > 0 ? dosagePerDose : 1;
+  const dosesRemaining = Math.floor(currentQuantity / perDose);
 
   const dailyDoseTotal = getDailyDoseRate(medicine, reminders);
   const daysRemaining =
@@ -110,8 +118,11 @@ export function calculateRefillStatus(
     medicineId: id,
     medicineName: name,
     daysRemaining,
+    dosesRemaining,
     currentQuantity,
     dailyDoseTotal,
+    frequencyPerDay: frequencyPerDay && frequencyPerDay > 0 ? frequencyPerDay : 1,
+    dosagePerDose: perDose,
     isOutOfStock,
     isLow,
     isWarning,

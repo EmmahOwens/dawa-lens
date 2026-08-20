@@ -42,6 +42,7 @@ export const localPersistence = {
               form: r.form as string | undefined,
               currentQuantity: r.current_quantity as number | undefined,
               dosagePerDose: r.dosage_per_dose as number | undefined,
+              frequencyPerDay: (r.frequency_per_day as number | undefined) || (r.frequencyPerDay as number | undefined),
               color: r.color as string | undefined,
               icon: r.icon as string | undefined,
               patientId: r.patient_id as string | null | undefined,

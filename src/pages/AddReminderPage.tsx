@@ -122,7 +122,7 @@ export default function AddReminderPage() {
   const [prevMedicineId, setPrevMedicineId] = useState<string | undefined>(undefined);
   const [isEditingStock, setIsEditingStock] = useState(false);
 
-  // Sync stock tracking fields when a medicine is selected or during initial load/edit
+  // Sync stock tracking fields and frequency when a medicine is selected or during initial load/edit
   useEffect(() => {
     if (medicineId !== prevMedicineId) {
       setIsEditingStock(false);
@@ -133,6 +133,9 @@ export default function AddReminderPage() {
           setStockPerDose(med.dosagePerDose !== undefined ? med.dosagePerDose.toString() : "1");
           setStockUnit(med.unit || "tablets");
           setStockTotal(med.totalQuantity !== undefined ? med.totalQuantity.toString() : "");
+          if (med.frequencyPerDay && med.frequencyPerDay > 0 && times.length !== med.frequencyPerDay) {
+            setTimes(distributeTimes(times[0] || "08:00", med.frequencyPerDay));
+          }
         }
       } else {
         // Clear stock tracking fields only when switching back to manual entry
@@ -143,7 +146,7 @@ export default function AddReminderPage() {
       }
       setPrevMedicineId(medicineId);
     }
-  }, [medicineId, medicines, prevMedicineId]);
+  }, [medicineId, medicines, prevMedicineId, times]);
 
 
 
@@ -251,6 +254,7 @@ export default function AddReminderPage() {
             stockFields.currentQuantity = parsedQty;
             stockFields.totalQuantity = !isNaN(parsedStockTotal) && parsedStockTotal > 0 ? parsedStockTotal : parsedQty;
             stockFields.dosagePerDose = parseFloat(stockPerDose) || 1;
+            stockFields.frequencyPerDay = times.length || 1;
             stockFields.unit = stockUnit;
           }
           const newMed = await addMedicine({
@@ -258,6 +262,7 @@ export default function AddReminderPage() {
             dosage: dose.trim(),
             icon: icon,
             color: color,
+            frequencyPerDay: times.length || 1,
             ...stockFields,
           }, contextPatientId);
           finalMedId = newMed.id;
@@ -266,19 +271,21 @@ export default function AddReminderPage() {
           // Continue anyway, reminder will just be unlinked
         }
       } else if (finalMedId) {
-        // Update existing medicine's stock fields if user provided them
+        // Update existing medicine's stock fields and frequency
         const parsedQty = parseFloat(stockQty);
-        if (!isNaN(parsedQty) && parsedQty >= 0) {
-          try {
-            await updateMedicine(finalMedId, {
-              currentQuantity: parsedQty,
-              totalQuantity: !isNaN(parsedStockTotal) && parsedStockTotal > 0 ? parsedStockTotal : parsedQty,
-              dosagePerDose: parseFloat(stockPerDose) || 1,
-              unit: stockUnit,
-            });
-          } catch (e) {
-            console.warn("Could not update medicine stock:", e);
+        try {
+          const updates: Record<string, unknown> = {
+            frequencyPerDay: times.length || 1,
+          };
+          if (!isNaN(parsedQty) && parsedQty >= 0) {
+            updates.currentQuantity = parsedQty;
+            updates.totalQuantity = !isNaN(parsedStockTotal) && parsedStockTotal > 0 ? parsedStockTotal : parsedQty;
+            updates.dosagePerDose = parseFloat(stockPerDose) || 1;
+            updates.unit = stockUnit;
           }
+          await updateMedicine(finalMedId, updates);
+        } catch (e) {
+          console.warn("Could not update medicine stock/frequency:", e);
         }
       }
 
@@ -743,7 +750,9 @@ export default function AddReminderPage() {
                   </div>
                   <div className="flex justify-between text-[9px] text-muted-foreground font-semibold">
                     <span>{Math.round(((selectedMedicine.currentQuantity || 0) / selectedMedicine.totalQuantity) * 100)}% remaining</span>
-                    <span>Dose size: {selectedMedicine.dosagePerDose || 1} {selectedMedicine.unit || "units"}</span>
+                    <span>
+                      {Math.floor((selectedMedicine.currentQuantity || 0) / (selectedMedicine.dosagePerDose || 1))} doses (~{Math.floor((selectedMedicine.currentQuantity || 0) / ((selectedMedicine.dosagePerDose || 1) * Math.max(1, times.length)))} days at {times.length}x/day)
+                    </span>
                   </div>
                 </div>
               )}
@@ -843,6 +852,35 @@ export default function AddReminderPage() {
                   />
                 </div>
               </div>
+
+              {/* Live Doses vs Days Breakdown Preview in Add Reminder */}
+              {!isNaN(parsedStockQty) && parsedStockQty >= 0 && (
+                <div className="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-foreground space-y-1.5 mt-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-teal-800 dark:text-teal-300">
+                    <span>Daily Intake:</span>
+                    <span>
+                      {((parseFloat(stockPerDose) || 1) * times.length).toFixed(
+                        Number.isInteger((parseFloat(stockPerDose) || 1) * times.length) ? 0 : 1
+                      )}{" "}
+                      {stockUnit}/day ({parseFloat(stockPerDose) || 1} {stockUnit}/dose × {times.length} {times.length === 1 ? "dose" : "doses"}/day)
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 pt-1 border-t border-teal-500/20">
+                    <div className="bg-background/60 p-2 rounded-xl border border-teal-500/10">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Doses on Hand</p>
+                      <p className="text-base font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                        {Math.floor(parsedStockQty / (parseFloat(stockPerDose) || 1))} <span className="text-xs font-semibold text-muted-foreground">doses</span>
+                      </p>
+                    </div>
+                    <div className="bg-background/60 p-2 rounded-xl border border-teal-500/10">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Days of Supply</p>
+                      <p className="text-base font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                        ~{Math.floor(parsedStockQty / ((parseFloat(stockPerDose) || 1) * Math.max(1, times.length)))} <span className="text-xs font-semibold text-muted-foreground">days</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {isStockOverCapacity && (
                 <p className="text-xs font-semibold text-destructive flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
                   <AlertTriangle className="size-3.5 flex-shrink-0" />

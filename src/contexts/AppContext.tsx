@@ -233,6 +233,7 @@ export type Medicine = {
   totalQuantity?: number; // Starting amount
   currentQuantity?: number; // What's left
   dosagePerDose?: number; // e.g. 1
+  frequencyPerDay?: number; // e.g. 1, 2, 3 (times/doses taken per day)
   unit?: string; // "tablets", "ml", etc.
   imageUrl?: string;
   notes?: string;

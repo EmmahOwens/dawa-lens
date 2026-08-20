@@ -95,6 +95,7 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
   const [trackStock, setTrackStock] = useState(medicine?.currentQuantity !== undefined);
   const [qty, setQty] = useState(medicine?.currentQuantity?.toString() ?? "");
   const [perDose, setPerDose] = useState(medicine?.dosagePerDose?.toString() ?? "1");
+  const [frequencyPerDay, setFrequencyPerDay] = useState(medicine?.frequencyPerDay?.toString() ?? "1");
   const [total, setTotal] = useState(medicine?.totalQuantity?.toString() ?? "");
   const [unit, setUnit] = useState(medicine?.unit ?? "tablets");
   const [isSaving, setIsSaving] = useState(false);
@@ -102,6 +103,8 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
 
   const parsedQty = parseFloat(qty);
   const parsedTotal = parseFloat(total);
+  const parsedPerDose = parseFloat(perDose) || 1;
+  const parsedFreq = parseFloat(frequencyPerDay) || 1;
   const isOverCapacity =
     trackStock && !isNaN(parsedQty) && !isNaN(parsedTotal) && parsedTotal > 0 && parsedQty > parsedTotal;
   const isNegativeQty = trackStock && !isNaN(parsedQty) && parsedQty < 0;
@@ -133,7 +136,8 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
         if (!isNaN(parsedQty) && parsedQty >= 0) {
           stockFields.currentQuantity = parsedQty;
           stockFields.totalQuantity = !isNaN(parsedTotal) && parsedTotal > 0 ? parsedTotal : parsedQty;
-          stockFields.dosagePerDose = parseFloat(perDose) || 1;
+          stockFields.dosagePerDose = parsedPerDose;
+          stockFields.frequencyPerDay = parsedFreq;
           stockFields.unit = unit;
         }
       }
@@ -145,6 +149,7 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
         color,
         icon,
         notes: notes.trim() || undefined,
+        frequencyPerDay: parsedFreq,
         ...stockFields,
         // If trackStock is false, we explicitly set these to undefined so they get filtered out
         ...(!trackStock && {
@@ -270,6 +275,57 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                   {d}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Section: Frequency (Doses per Day) */}
+          <div className="space-y-3 pt-2 border-t border-border/40">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="frequencyPerDay" className="text-xs font-bold text-muted-foreground ml-1">
+                Daily Frequency (Times / Doses Taken per Day)
+              </Label>
+              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                {parsedFreq} dose{parsedFreq !== 1 ? "s" : ""}/day
+              </span>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "1x / day", sub: "Once daily", value: 1 },
+                { label: "2x / day", sub: "Twice daily", value: 2 },
+                { label: "3x / day", sub: "3 times/day", value: 3 },
+                { label: "4x / day", sub: "4 times/day", value: 4 },
+              ].map((preset) => (
+                <button
+                  type="button"
+                  key={preset.value}
+                  onClick={() => setFrequencyPerDay(preset.value.toString())}
+                  className={`p-2 rounded-xl text-center border transition-all ${
+                    parsedFreq === preset.value
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm scale-102"
+                      : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/40"
+                  }`}
+                >
+                  <span className="block text-xs font-black leading-tight">{preset.label}</span>
+                  <span className="block text-[9px] opacity-75 leading-none mt-0.5">{preset.sub}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 pt-1">
+              <span className="text-[11px] text-muted-foreground font-medium flex-shrink-0">Custom times per day:</span>
+              <Input
+                id="frequencyPerDay"
+                type="number"
+                inputMode="numeric"
+                min="1"
+                max="24"
+                value={frequencyPerDay}
+                onChange={(e) => setFrequencyPerDay(e.target.value)}
+                placeholder="e.g. 1"
+                className="h-10 w-24 rounded-xl text-center font-bold"
+              />
+              <span className="text-xs text-muted-foreground">times a day</span>
             </div>
           </div>
 
@@ -405,6 +461,36 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                       />
                     </div>
                   </div>
+
+                  {/* Live Doses vs Days Breakdown Preview */}
+                  {!isNaN(parsedQty) && parsedQty >= 0 && (
+                    <div className="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-foreground space-y-2 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between text-xs font-bold text-teal-800 dark:text-teal-300">
+                        <span>Daily Intake Rate:</span>
+                        <span>
+                          {(parsedPerDose * parsedFreq).toFixed(
+                            Number.isInteger(parsedPerDose * parsedFreq) ? 0 : 1
+                          )}{" "}
+                          {unit}/day ({parsedPerDose} {unit}/dose × {parsedFreq} {parsedFreq === 1 ? "dose" : "doses"}/day)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-teal-500/20">
+                        <div className="bg-background/60 p-2.5 rounded-xl border border-teal-500/10">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Doses in Stock</p>
+                          <p className="text-lg font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                            {Math.floor(parsedQty / parsedPerDose)} <span className="text-xs font-semibold text-muted-foreground">doses</span>
+                          </p>
+                        </div>
+                        <div className="bg-background/60 p-2.5 rounded-xl border border-teal-500/10">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Days of Supply</p>
+                          <p className="text-lg font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                            ~{Math.floor(parsedQty / (parsedPerDose * parsedFreq))} <span className="text-xs font-semibold text-muted-foreground">days</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {isOverCapacity && (
                     <p className="text-xs font-semibold text-destructive flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
                       <AlertTriangle className="size-3.5 flex-shrink-0" />
@@ -754,10 +840,12 @@ export default function MedicationsPage() {
                       </button>
                     ) : refillStatus?.daysRemaining !== null ? (
                       <span className="font-semibold text-muted-foreground/80">
-                        ~{refillStatus.daysRemaining} days of supply remaining
+                        {refillStatus.dosesRemaining !== null ? `${refillStatus.dosesRemaining} doses (` : ""}
+                        ~{refillStatus.daysRemaining} days left
+                        {refillStatus.dosesRemaining !== null ? ")" : ""}
                       </span>
                     ) : (
-                      <span className="text-[9px] italic">No reminders scheduled</span>
+                      <span className="text-[9px] italic">No active doses/schedule</span>
                     )}
                   </div>
 

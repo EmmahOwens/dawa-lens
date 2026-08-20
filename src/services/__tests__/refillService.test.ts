@@ -190,4 +190,54 @@ describe("refillService - getDailyDoseRate and calculateRefillStatus", () => {
     expect(status?.isLow).toBe(false);
     expect(status?.isWarning).toBe(false);
   });
+
+  it("accurately differentiates doses remaining from days remaining using frequencyPerDay without reminders", () => {
+    // 30 tablets, 2 tablets per dose, taken 3 times a day
+    const medicine: Medicine = {
+      id: "med-freq-test",
+      name: "Amoxicillin 500mg",
+      dosage: "500mg",
+      dosagePerDose: 2,
+      frequencyPerDay: 3,
+      currentQuantity: 30,
+      totalQuantity: 60,
+      unit: "tablets",
+      addedAt: new Date().toISOString(),
+    };
+
+    // Daily rate = 2 tablets/dose * 3 times/day = 6 tablets/day
+    const dailyRate = getDailyDoseRate(medicine, []);
+    expect(dailyRate).toBe(6);
+
+    const status = calculateRefillStatus(medicine, []);
+    // Doses remaining = 30 / 2 = 15 doses
+    expect(status?.dosesRemaining).toBe(15);
+    // Days remaining = 30 / (2 * 3) = 5 days
+    expect(status?.daysRemaining).toBe(5);
+    expect(status?.frequencyPerDay).toBe(3);
+    expect(status?.dosagePerDose).toBe(2);
+    expect(status?.isLow).toBe(false);
+    expect(status?.isWarning).toBe(false);
+  });
+
+  it("handles 1 tablet per dose taken 4 times a day (e.g. 20 tablets = 20 doses = 5 days)", () => {
+    const medicine: Medicine = {
+      id: "med-freq-4x",
+      name: "Ibuprofen",
+      dosage: "400mg",
+      dosagePerDose: 1,
+      frequencyPerDay: 4,
+      currentQuantity: 20,
+      totalQuantity: 40,
+      unit: "tablets",
+      addedAt: new Date().toISOString(),
+    };
+
+    const dailyRate = getDailyDoseRate(medicine, []);
+    expect(dailyRate).toBe(4);
+
+    const status = calculateRefillStatus(medicine, []);
+    expect(status?.dosesRemaining).toBe(20);
+    expect(status?.daysRemaining).toBe(5);
+  });
 });
