@@ -59,8 +59,15 @@ export function usePatientScope() {
    */
   const matchPatient = useCallback(
     (pid?: string | null) => {
-      const activeId = selectedPatientId ?? null;
-      const recordId = pid ?? null;
+      const activeId =
+        !selectedPatientId || selectedPatientId === "null" || selectedPatientId === "undefined"
+          ? null
+          : selectedPatientId;
+      const recordId =
+        !pid || pid === "null" || pid === "undefined"
+          ? null
+          : pid;
+
       if (activeId === null) {
         // Owner is active. Owner records can have patientId as null, undefined, or the owner's userId.
         return recordId === null || recordId === userProfile?.id;

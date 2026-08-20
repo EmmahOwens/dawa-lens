@@ -360,3 +360,177 @@ describe("reminderService - calculateNextDose with dynamic shifts", () => {
   });
 });
 
+describe("isReminderScheduledOnDate & checkMissedDoses", () => {
+  it("correctly identifies active schedule days for custom repeatDays", async () => {
+    const { isReminderScheduledOnDate } = await import("../reminderService");
+    const reminder: Reminder = {
+      id: "rem-custom",
+      medicineName: "Custom Med",
+      dose: "1 tab",
+      time: "08:00",
+      repeatSchedule: "custom",
+      repeatDays: [1, 3, 5], // Mon, Wed, Fri
+      enabled: true,
+      createdAt: new Date("2026-08-01T00:00:00Z").toISOString(),
+    };
+
+    // Sunday (0)
+    const sunday = new Date("2026-08-02T10:00:00Z");
+    expect(isReminderScheduledOnDate(reminder, sunday)).toBe(false);
+
+    // Monday (1)
+    const monday = new Date("2026-08-03T10:00:00Z");
+    expect(isReminderScheduledOnDate(reminder, monday)).toBe(true);
+
+    // Tuesday (2)
+    const tuesday = new Date("2026-08-04T10:00:00Z");
+    expect(isReminderScheduledOnDate(reminder, tuesday)).toBe(false);
+
+    // Wednesday (3)
+    const wednesday = new Date("2026-08-05T10:00:00Z");
+    expect(isReminderScheduledOnDate(reminder, wednesday)).toBe(true);
+  });
+
+  it("correctly handles one-time reminders only on creation day", async () => {
+    const { isReminderScheduledOnDate } = await import("../reminderService");
+    const createdDate = new Date("2026-08-10T09:00:00Z");
+    const reminder: Reminder = {
+      id: "rem-once",
+      medicineName: "One Time Med",
+      dose: "1 tab",
+      time: "10:00",
+      repeatSchedule: "once",
+      enabled: true,
+      createdAt: createdDate.toISOString(),
+    };
+
+    // Same day
+    expect(isReminderScheduledOnDate(reminder, new Date("2026-08-10T12:00:00Z"))).toBe(true);
+
+    // Next day
+    expect(isReminderScheduledOnDate(reminder, new Date("2026-08-11T10:00:00Z"))).toBe(false);
+
+    // Same day with existing taken log
+    const takenLog: DoseLog = {
+      id: "log-once",
+      reminderId: "rem-once",
+      medicineName: "One Time Med",
+      dose: "1 tab",
+      scheduledTime: "2026-08-10T10:00:00Z",
+      actionTime: "2026-08-10T10:05:00Z",
+      action: "taken",
+    };
+    expect(isReminderScheduledOnDate(reminder, new Date("2026-08-10T12:00:00Z"), [takenLog])).toBe(false);
+  });
+
+  it("checkMissedDoses does not log missed doses on off-schedule days", async () => {
+    const { checkMissedDoses } = await import("../reminderService");
+
+    const loggedDoses: any[] = [];
+    const mockLogDose = async (log: any) => {
+      loggedDoses.push(log);
+    };
+
+    const now = new Date();
+    // A custom reminder only scheduled for a day of week different from today and yesterday
+    const todayDay = now.getDay();
+    const offDay1 = (todayDay + 2) % 7;
+    const offDay2 = (todayDay + 3) % 7;
+
+    const reminder: Reminder = {
+      id: "rem-offday",
+      medicineName: "Offday Med",
+      dose: "1 tab",
+      time: "01:00", // Scheduled 1 AM (hours ago)
+      repeatSchedule: "custom",
+      repeatDays: [offDay1, offDay2],
+      enabled: true,
+      createdAt: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(),
+      patientId: "patient-123",
+    };
+
+    await checkMissedDoses([reminder], [], mockLogDose);
+    expect(loggedDoses.length).toBe(0);
+  });
+
+  it("checkMissedDoses propagates patientId to logDose when a dose is missed", async () => {
+    const { checkMissedDoses } = await import("../reminderService");
+
+    const loggedDoses: any[] = [];
+    const mockLogDose = async (log: any) => {
+      loggedDoses.push(log);
+    };
+
+    const now = new Date();
+    // Scheduled 3 hours ago today
+    const threeHoursAgo = new Date(now.getTime() - 3 * 3600 * 1000);
+    const timeStr = `${threeHoursAgo.getHours().toString().padStart(2, "0")}:${threeHoursAgo.getMinutes().toString().padStart(2, "0")}`;
+
+    const reminder: Reminder = {
+      id: "rem-daily-missed",
+      medicineName: "Daily Med",
+      dose: "1 tab",
+      time: timeStr,
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date(now.getTime() - 48 * 3600 * 1000).toISOString(),
+      patientId: "patient-abc",
+    };
+
+    await checkMissedDoses([reminder], [], mockLogDose);
+    expect(loggedDoses.length).toBeGreaterThan(0);
+    expect(loggedDoses[0].patientId).toBe("patient-abc");
+    expect(loggedDoses[0].action).toBe("missed");
+  });
+});
+
+describe("filterInvalidMissedLogs (Auto-healing)", () => {
+  it("removes phantom missed logs recorded on off-schedule days", async () => {
+    const { filterInvalidMissedLogs } = await import("@/contexts/AppContext");
+
+    const reminder: Reminder = {
+      id: "rem-custom-heal",
+      medicineName: "Weekly Med",
+      dose: "1 tab",
+      time: "08:00",
+      repeatSchedule: "custom",
+      repeatDays: [1], // Monday only
+      enabled: true,
+      createdAt: "2026-08-01T00:00:00Z",
+    };
+
+    // Tuesday log (day 2) marked as missed
+    const invalidLog: DoseLog = {
+      id: "invalid-missed-1",
+      reminderId: "rem-custom-heal",
+      medicineName: "Weekly Med",
+      dose: "1 tab",
+      scheduledTime: "2026-08-04T08:00:00Z", // Tuesday
+      actionTime: "2026-08-04T10:00:00Z",
+      action: "missed",
+    };
+
+    // Monday log (day 1) marked as missed (valid)
+    const validLog: DoseLog = {
+      id: "valid-missed-2",
+      reminderId: "rem-custom-heal",
+      medicineName: "Weekly Med",
+      dose: "1 tab",
+      scheduledTime: "2026-08-03T08:00:00Z", // Monday
+      actionTime: "2026-08-03T10:00:00Z",
+      action: "missed",
+    };
+
+    const { validLogs, invalidLogIds } = filterInvalidMissedLogs(
+      [invalidLog, validLog],
+      [reminder]
+    );
+
+    expect(invalidLogIds).toContain("invalid-missed-1");
+    expect(invalidLogIds).not.toContain("valid-missed-2");
+    expect(validLogs.length).toBe(1);
+    expect(validLogs[0].id).toBe("valid-missed-2");
+  });
+});
+
+

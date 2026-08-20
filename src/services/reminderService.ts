@@ -21,6 +21,7 @@ import {
   addMinutes,
   subHours,
   parseISO,
+  isSameDay,
 } from "date-fns";
 import { toDate } from "@/lib/utils";
 import {
@@ -158,6 +159,50 @@ function getIntervalMinutes(
 // ... (existing exports)
 
 /**
+ * Helper to determine if a reminder is scheduled to occur on a given calendar date.
+ */
+export function isReminderScheduledOnDate(
+  reminder: Reminder,
+  targetDate: Date,
+  doseLogs: DoseLog[] = []
+): boolean {
+  if (!reminder.enabled) return false;
+
+  const reminderCreatedAt = reminder.createdAt ? parseISO(reminder.createdAt) : targetDate;
+  const targetDayNum = getDay(targetDate);
+
+  // 1. 'once' schedule: only valid on the reminder's creation day (or scheduled date)
+  if (reminder.repeatSchedule === "once") {
+    if (!isSameDay(targetDate, reminderCreatedAt)) {
+      return false;
+    }
+    const alreadyActioned = doseLogs.some(
+      (l) => l.reminderId === reminder.id && ["taken", "skipped", "missed"].includes(l.action)
+    );
+    if (alreadyActioned) {
+      return false;
+    }
+    return true;
+  }
+
+  // 2. Custom schedule with specific repeat days
+  if (reminder.repeatSchedule === "custom" && reminder.repeatDays && reminder.repeatDays.length > 0) {
+    return reminder.repeatDays.includes(targetDayNum);
+  }
+
+  // 3. Weekly schedule
+  if (reminder.repeatSchedule === "weekly") {
+    if (reminder.repeatDays && reminder.repeatDays.length > 0) {
+      return reminder.repeatDays.includes(targetDayNum);
+    }
+    return targetDayNum === getDay(reminderCreatedAt);
+  }
+
+  // 4. Daily or unassigned: runs every day
+  return true;
+}
+
+/**
  * Checks for missed doses in the last 24 hours.
  * A dose is "missed" if it was scheduled more than 2 hours ago and no log exists.
  */
@@ -211,6 +256,11 @@ export const checkMissedDoses = async (
         scheduledDate = setSeconds(scheduledDate, 0);
         scheduledDate = setMilliseconds(scheduledDate, 0);
 
+        // Rule 0: The reminder must be scheduled to repeat on this day of the week / date
+        if (!isReminderScheduledOnDate(r, scheduledDate, doseLogs)) {
+          continue;
+        }
+
         // Rule 1: Must be within the last 24 hours but at least 2 hours old
         if (
           !isAfter(scheduledDate, twentyFourHoursAgo) ||
@@ -250,6 +300,7 @@ export const checkMissedDoses = async (
             dose: r.dose,
             scheduledTime: scheduledDate.toISOString(),
             action: "missed",
+            patientId: r.patientId ?? null,
           });
 
           // Notify the user about the missed dose
@@ -394,6 +445,11 @@ const getNextOccurrence = (
 
       // 1. 'once' schedule
       if (reminder.repeatSchedule === "once") {
+        const createdDate = reminder.createdAt ? parseISO(reminder.createdAt) : candidate;
+        // One-time reminders must not recur on subsequent calendar days
+        if (!isSameDay(candidate, createdDate)) {
+          break;
+        }
         if (!isBefore(candidate, fromDate)) {
           occurrences.push(candidate);
           break;

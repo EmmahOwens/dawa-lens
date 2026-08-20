@@ -158,6 +158,64 @@ export function isShiftIntoPast(
   return false;
 }
 
+import { getDay, startOfDay, isSameDay } from "date-fns";
+
+/**
+ * Auto-healing: removes phantom "missed" dose logs that were created on days
+ * when the reminder was not scheduled to repeat (e.g. weekly / custom off-days, or once-off subsequent days).
+ */
+export function filterInvalidMissedLogs(
+  logs: DoseLog[],
+  allReminders: Reminder[]
+): { validLogs: DoseLog[]; invalidLogIds: string[] } {
+  const invalidLogIds: string[] = [];
+  const validLogs = logs.filter((log) => {
+    if (log.action !== "missed") return true;
+    const reminder = allReminders.find((r) => r.id === log.reminderId);
+    if (!reminder) return true;
+
+    const logDate = toDate(log.scheduledTime || log.actionTime);
+    const scheduledDay = getDay(logDate);
+
+    // Custom repeat days
+    if (reminder.repeatSchedule === "custom" && reminder.repeatDays && reminder.repeatDays.length > 0) {
+      if (!reminder.repeatDays.includes(scheduledDay)) {
+        invalidLogIds.push(log.id);
+        return false;
+      }
+    }
+
+    // Weekly repeat
+    if (reminder.repeatSchedule === "weekly") {
+      if (reminder.repeatDays && reminder.repeatDays.length > 0) {
+        if (!reminder.repeatDays.includes(scheduledDay)) {
+          invalidLogIds.push(log.id);
+          return false;
+        }
+      } else if (reminder.createdAt) {
+        const createdDay = getDay(toDate(reminder.createdAt));
+        if (scheduledDay !== createdDay) {
+          invalidLogIds.push(log.id);
+          return false;
+        }
+      }
+    }
+
+    // Once repeat
+    if (reminder.repeatSchedule === "once" && reminder.createdAt) {
+      const createdDate = toDate(reminder.createdAt);
+      if (!isSameDay(logDate, createdDate)) {
+        invalidLogIds.push(log.id);
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  return { validLogs, invalidLogIds };
+}
+
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const CLOUD_CACHE_REMS_KEY = "dawa_cloud_cache_reminders";
 const CLOUD_CACHE_MEDS_KEY = "dawa_cloud_cache_medicines";
@@ -1062,6 +1120,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [currentUserId, storageMode, isAuthLoading]);
 
+  // Auto-heal: prune historical invalid "missed" dose logs created on non-scheduled days
+  useEffect(() => {
+    if (reminders.length === 0 || doseLogs.length === 0 || isInitializing) return;
+    const { validLogs, invalidLogIds } = filterInvalidMissedLogs(doseLogs, reminders);
+    if (invalidLogIds.length > 0) {
+      console.log(`[AppContext] Auto-healing: Purging ${invalidLogIds.length} phantom missed logs.`);
+      setDoseLogs(validLogs);
+      storage.setItem(CLOUD_CACHE_LOGS_KEY, validLogs);
+      invalidLogIds.forEach((id) => {
+        deleteDoseLog(id).catch((e) => console.warn("[AppContext] Auto-heal log delete failed:", e));
+      });
+    }
+  }, [reminders, doseLogs, isInitializing]);
+
   const completeOnboarding = async (profile: Omit<UserProfile, "id">) => {
     if (!currentUserId) throw new Error("Not logged in");
     const docRef = doc(db, "users", currentUserId);
@@ -1223,6 +1295,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteMedicine = async (id: string) => {
+    // 0. Cascade delete associated reminders so they don't linger as phantom alarms
+    const associatedReminders = reminders.filter((r) => r.medicineId === id);
+    for (const rem of associatedReminders) {
+      await deleteReminder(rem.id);
+    }
+
     if (storageMode === "local") {
       await localPersistence.medicines.remove(id);
       setMedicines((p) => p.filter((m) => m.id !== id));
@@ -1276,8 +1354,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addReminder = async (rem: Omit<Reminder, "id" | "createdAt">) => {
-    const effectivePatientId =
+    const rawPatientId =
       rem.patientId !== undefined ? rem.patientId : selectedPatientId;
+    const effectivePatientId =
+      !rawPatientId || rawPatientId === "null" || rawPatientId === "undefined"
+        ? null
+        : rawPatientId;
     const createdAt = new Date().toISOString();
     const localId = `lrem-${Date.now()}`;
 
@@ -1285,7 +1367,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...rem,
       id: localId,
       medicineId: rem.medicineId || null,
-      patientId: effectivePatientId || null,
+      patientId: effectivePatientId,
       createdAt,
     } as Reminder;
 
@@ -1344,6 +1426,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!current) return;
 
     const finalUpdates = { ...updates };
+    if ("patientId" in finalUpdates) {
+      const p = finalUpdates.patientId;
+      finalUpdates.patientId =
+        !p || p === "null" || p === "undefined" ? null : p;
+    }
 
     // 1. Save locally instantly
     try {

@@ -1,19 +1,38 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { Clock, CheckCircle2, AlertCircle } from "@/lib/icons";
-import { useApp } from "@/contexts/AppContext";
+import { Clock, CheckCircle2 } from "@/lib/icons";
+import { usePatientScope } from "@/hooks/usePatientScope";
+import { isReminderScheduledOnDate } from "@/services/reminderService";
+import { parseReminderTimes } from "@/lib/dynamicSchedule";
 import { useTranslation } from "react-i18next";
 
 export function RemindersWidget() {
   const { t } = useTranslation();
-  const { reminders, doseLogs } = useApp();
+  const { scopedReminders, scopedDoseLogs } = usePatientScope();
 
-  const activeReminders = reminders.filter(r => r.enabled);
-  const nextReminder = activeReminders.sort((a, b) => a.time.localeCompare(b.time))[0];
+  const now = useMemo(() => new Date(), []);
+  const todayStr = now.toDateString();
 
-  const today = new Date().toDateString();
-  const todayLogs = doseLogs.filter(l => l.action === "taken" && new Date(l.actionTime).toDateString() === today);
-  const adherenceRate = activeReminders.length > 0 ? Math.round((todayLogs.length / activeReminders.length) * 100) : 0;
+  const todayReminders = useMemo(() => {
+    return scopedReminders.filter((r) => isReminderScheduledOnDate(r, now, scopedDoseLogs));
+  }, [scopedReminders, scopedDoseLogs, now]);
+
+  const activeReminders = scopedReminders.filter((r) => r.enabled);
+  const nextReminder = todayReminders.sort((a, b) => a.time.localeCompare(b.time))[0];
+
+  const totalPlannedDoses = useMemo(() => {
+    return todayReminders.reduce((acc, r) => acc + parseReminderTimes(r.time).length, 0);
+  }, [todayReminders]);
+
+  const todayLogs = scopedDoseLogs.filter(
+    (l) => l.action === "taken" && new Date(l.actionTime).toDateString() === todayStr
+  );
+  const adherenceRate =
+    totalPlannedDoses > 0
+      ? Math.round((todayLogs.length / totalPlannedDoses) * 100)
+      : todayLogs.length > 0
+      ? 100
+      : 100;
 
   return (
     <div className="space-y-8">
@@ -73,7 +92,7 @@ export function RemindersWidget() {
             </div>
             <div>
               <p className="text-[11px] font-black text-foreground uppercase tracking-tight">Target Met</p>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 mt-1">{todayLogs.length} / {activeReminders.length} Doses Taken</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60 mt-1">{todayLogs.length} / {totalPlannedDoses} Doses Taken</p>
             </div>
           </div>
         </motion.div>
