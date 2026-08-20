@@ -1,21 +1,49 @@
 import express from 'express';
 import * as openFdaService from '../services/openFdaService.js';
+import { resolveRxNormConcept, getSpellingSuggestions } from '../services/rxNormService.js';
 import { aiLimiter } from '../middleware/rateLimiter.js';
 import AppError from '../utils/AppError.js';
 
 const router = express.Router();
 
 /**
- * Diagnostic & Status Endpoint: Check openFDA API Key status
+ * Diagnostic & Status Endpoint: Check openFDA & RxNorm API Key status
  */
 router.get('/status', (req, res) => {
   const hasKey = !!openFdaService.getOpenFdaApiKey();
   res.json({
     status: 'ok',
     hasApiKey: hasKey,
-    provider: 'openFDA',
+    provider: 'openFDA + RxNorm NLM',
     rateLimit: hasKey ? '240 req/min' : '40 req/min (free tier)',
   });
+});
+
+/**
+ * Resolve Medication Concept across RxNorm ontology
+ */
+router.get('/resolve-concept', async (req, res, next) => {
+  try {
+    const { query } = req.query;
+    if (!query || !query.trim()) {
+      throw new AppError('Query parameter "query" is required.', 400);
+    }
+
+    const concept = await resolveRxNormConcept(query);
+    if (!concept) {
+      return res.status(404).json({
+        success: false,
+        message: `Could not resolve RxNorm concept for: ${query}`,
+      });
+    }
+
+    res.json({
+      success: true,
+      concept,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**
@@ -168,7 +196,7 @@ router.post('/check-safety', async (req, res, next) => {
 });
 
 /**
- * Autocomplete / Suggestions
+ * Autocomplete / Suggestions powered by openFDA NDC + RxNorm spelling suggestions
  */
 router.get('/autocomplete', async (req, res, next) => {
   try {
@@ -177,17 +205,30 @@ router.get('/autocomplete', async (req, res, next) => {
       return res.json({ suggestions: [] });
     }
 
-    const ndc = await openFdaService.fetchNdcData(q);
     const suggestions = new Set();
 
-    if (ndc?.records) {
-      ndc.records.forEach((r) => {
-        if (r.brandName) suggestions.add(r.brandName);
-        if (r.genericName) suggestions.add(r.genericName);
-      });
+    // 1. Fetch from RxNorm spelling suggestions
+    try {
+      const rxSpelling = await getSpellingSuggestions(q);
+      rxSpelling.forEach((s) => suggestions.add(s));
+    } catch {
+      // Ignore
     }
 
-    // Also include dictionary synonyms
+    // 2. Fetch from openFDA NDC Directory
+    try {
+      const ndc = await openFdaService.fetchNdcData(q);
+      if (ndc?.records) {
+        ndc.records.forEach((r) => {
+          if (r.brandName) suggestions.add(r.brandName);
+          if (r.genericName) suggestions.add(r.genericName);
+        });
+      }
+    } catch {
+      // Ignore
+    }
+
+    // 3. Also include dictionary synonyms
     const terms = openFdaService.getSearchTerms(q);
     terms.forEach((t) => suggestions.add(t));
 

@@ -21,6 +21,8 @@ const BASE_URL = getBaseUrl();
 
 export interface FdaLabel {
   id?: string;
+  rxcui?: string | null;
+  unii?: string | null;
   brandName?: string;
   genericName?: string;
   brandNames?: string[];
@@ -78,9 +80,14 @@ export interface FdaSafetyAlerts {
 export interface FdaDrugProfile {
   query: string;
   resolvedName: string;
+  rxcui?: string | null;
+  unii?: string | null;
+  activeIngredients?: string[];
+  brandSynonyms?: string[];
   label: FdaLabel | null;
   ndc: {
     matchedTerm?: string;
+    rxcui?: string | null;
     records?: Array<{
       productNdc: string;
       brandName: string;
@@ -108,6 +115,7 @@ export interface FdaDrugProfile {
   };
   adverseEvents: {
     drugName: string;
+    canonicalName?: string;
     totalSampleReports: number;
     topReactions: FdaAdverseReaction[];
     disclaimer?: string;
@@ -136,6 +144,19 @@ export interface PatientContext {
   allergies?: string[];
 }
 
+export interface RxNormConceptResponse {
+  success: boolean;
+  concept?: {
+    rxcui: string;
+    canonicalName: string;
+    rawName: string;
+    unii: string | null;
+    activeIngredients: string[];
+    brandSynonyms: string[];
+    searchTerms: string[];
+  };
+}
+
 const CACHE_PREFIX = 'fda_cache_';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
@@ -145,7 +166,25 @@ interface CacheWrapper<T> {
 }
 
 /**
+ * Resolve a medication query into its canonical RxNorm concept (RxCUI, USAN name, UNII, ingredients).
+ */
+export async function resolveDrugConcept(query: string): Promise<RxNormConceptResponse['concept'] | null> {
+  if (!query || !query.trim()) return null;
+
+  try {
+    const res = await fetch(`${BASE_URL}/fda/resolve-concept?query=${encodeURIComponent(query.trim())}`);
+    if (!res.ok) return null;
+    const data: RxNormConceptResponse = await res.json();
+    return data.concept || null;
+  } catch (err) {
+    console.warn('[openFdaClient] Concept resolution failed:', err);
+    return null;
+  }
+}
+
+/**
  * Fetch comprehensive drug profile from openFDA backend service with IndexedDB caching.
+ * Leverages RxNorm normalization for cross-border accuracy.
  */
 export async function getFdaDrugProfile(
   query: string,
@@ -267,7 +306,7 @@ export async function getFdaAdverseEvents(
 }
 
 /**
- * Autocomplete suggestions using openFDA NDC & substance dictionary.
+ * Autocomplete suggestions using openFDA NDC, RxNorm spelling, & synonym dictionaries.
  */
 export async function getFdaAutocomplete(query: string): Promise<string[]> {
   if (!query || query.trim().length < 2) return [];

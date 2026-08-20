@@ -55,12 +55,12 @@ export default function MedicineInfoPage() {
 
   useEffect(() => {
     async function checkCurrentDrug() {
-      if (!info?.name) {
+      if (!info?.name && !fdaProfile?.resolvedName) {
         setInteractions([]);
         return;
       }
       
-      const targetRxcui = await getRxCUI(info.name);
+      const targetRxcui = fdaProfile?.rxcui || (info?.name ? await getRxCUI(info.name) : null);
       if (!targetRxcui) return;
 
       const savedRxcuis = medicines.map(m => m.rxcui).filter((id): id is string => !!id);
@@ -77,7 +77,7 @@ export default function MedicineInfoPage() {
       setInteractions(newInteractions);
     }
     checkCurrentDrug();
-  }, [info?.name, medicines]);
+  }, [info?.name, fdaProfile?.rxcui, fdaProfile?.resolvedName, medicines]);
 
   const handleSearch = () => {
     if (!searchInput.trim()) return;
