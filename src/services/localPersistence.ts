@@ -176,6 +176,41 @@ export const localPersistence = {
       const filtered = all.filter((m) => m.id !== id);
       await storage.setItem(LOCAL_MEDS_KEY, filtered);
     },
+    replaceAll: async (items: Medicine[]): Promise<void> => {
+      if (Capacitor.isNativePlatform() && sqliteReady) {
+        try {
+          await NativeSqlite.execute({ sql: "DELETE FROM medicines", params: [] });
+          for (const data of items) {
+            await NativeSqlite.execute({
+              sql: `INSERT INTO medicines (id,name,generic_name,dosage,form,current_quantity,dosage_per_dose,color,icon,patient_id,user_id,added_at,updated_at,is_conflict,image_url,notes)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+              params: [
+                data.id,
+                data.name,
+                (data as Medicine & { genericName?: string }).genericName ?? null,
+                data.dosage ?? null,
+                (data as Medicine & { form?: string }).form ?? null,
+                data.currentQuantity ?? 0,
+                data.dosagePerDose ?? 1,
+                (data as Medicine & { color?: string }).color ?? null,
+                (data as Medicine & { icon?: string }).icon ?? null,
+                (data as Medicine & { patientId?: string | null }).patientId ?? null,
+                (data as Medicine & { userId?: string }).userId ?? null,
+                data.addedAt || new Date().toISOString(),
+                data.updatedAt ?? null,
+                data.isConflict ? 1 : 0,
+                data.imageUrl ?? null,
+                data.notes ?? null,
+              ],
+            });
+          }
+          return;
+        } catch (err) {
+          console.warn("[localPersistence] NativeSqlite medicines.replaceAll failed, falling back to storage:", err);
+        }
+      }
+      await storage.setItem(LOCAL_MEDS_KEY, items);
+    },
   },
 
   reminders: {
@@ -293,6 +328,36 @@ export const localPersistence = {
       const all = await storage.getItem<Reminder[]>(LOCAL_REMS_KEY, []);
       const filtered = all.filter((r) => r.id !== id);
       await storage.setItem(LOCAL_REMS_KEY, filtered);
+    },
+    replaceAll: async (items: Reminder[]): Promise<void> => {
+      if (Capacitor.isNativePlatform() && sqliteReady) {
+        try {
+          await NativeSqlite.execute({ sql: "DELETE FROM reminders", params: [] });
+          for (const data of items) {
+            await NativeSqlite.execute({
+              sql: `INSERT INTO reminders (id,medicine_id,medicine_name,dose,time,repeat_schedule,repeat_days,notes,enabled,created_at,patient_id)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+              params: [
+                data.id,
+                data.medicineId ?? null,
+                data.medicineName,
+                data.dose,
+                data.time,
+                data.repeatSchedule,
+                data.repeatDays ? JSON.stringify(data.repeatDays) : null,
+                data.notes ?? null,
+                data.enabled ? 1 : 0,
+                data.createdAt || new Date().toISOString(),
+                (data as Reminder & { patientId?: string | null }).patientId ?? null,
+              ],
+            });
+          }
+          return;
+        } catch (err) {
+          console.warn("[localPersistence] NativeSqlite reminders.replaceAll failed, falling back to storage:", err);
+        }
+      }
+      await storage.setItem(LOCAL_REMS_KEY, items);
     },
   },
 

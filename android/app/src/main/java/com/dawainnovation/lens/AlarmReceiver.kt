@@ -26,11 +26,47 @@ class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra("notificationId", 0)
+        val extraStr = intent.getStringExtra("extra") ?: ""
 
-        // Validation guard: check if the notification is still in the active schedule
+        // 1. SQLite database guard: if this is a medicine reminder, verify it still exists & is enabled
+        if (extraStr.isNotEmpty()) {
+            try {
+                val extraObj = org.json.JSONObject(extraStr)
+                val reminderId = extraObj.optString("reminderId", "")
+                if (reminderId.isNotEmpty()) {
+                    val dbPath = context.getDatabasePath("dawa_lens.db")
+                    if (dbPath.exists()) {
+                        try {
+                            val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                                dbPath.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+                            )
+                            val cursor = db.rawQuery(
+                                "SELECT id, enabled FROM reminders WHERE id = ? LIMIT 1",
+                                arrayOf(reminderId)
+                            )
+                            val exists = cursor.moveToFirst()
+                            val isEnabled = if (exists) cursor.getInt(cursor.getColumnIndexOrThrow("enabled")) == 1 else false
+                            cursor.close()
+                            db.close()
+
+                            if (!exists || !isEnabled) {
+                                // Silent return: reminder was removed or turned off
+                                return
+                            }
+                        } catch (dbErr: Exception) {
+                            // Non-fatal, proceed to schedule check
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Non-fatal JSON parse error
+            }
+        }
+
+        // 2. Validation guard: check if the notification is still in the active schedule
         val prefs = context.getSharedPreferences("dawa_alarms", Context.MODE_PRIVATE)
         val scheduleJson = prefs.getString("dawa_alarm_schedule", null)
-        if (scheduleJson == null) {
+        if (scheduleJson.isNullOrEmpty()) {
             // No active schedule at all (e.g. all reminders deleted or disabled)
             return
         }
@@ -50,8 +86,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 return
             }
         } catch (e: Exception) {
-            // Default to showing the notification if parsing fails (fail-safe)
-            e.printStackTrace()
+            // In case of parsing failure on invalid JSON, do not post ghost notification
+            return
         }
 
         val title = intent.getStringExtra("title") ?: "Dawa Lens"

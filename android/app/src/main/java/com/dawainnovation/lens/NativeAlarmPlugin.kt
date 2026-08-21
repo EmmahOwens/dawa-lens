@@ -43,7 +43,27 @@ class NativeAlarmPlugin : Plugin() {
         }
 
         val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val alarmIds = mutableSetOf<String>()
+        val existingAlarmIds = prefs.getStringSet(KEY_IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
+        val alarmIds = HashSet(existingAlarmIds)
+
+        // Merge schedule JSON array
+        val existingScheduleStr = prefs.getString(KEY_SCHEDULE, null)
+        val scheduleMap = mutableMapOf<Int, org.json.JSONObject>()
+
+        if (!existingScheduleStr.isNullOrEmpty()) {
+            try {
+                val existingArray = org.json.JSONArray(existingScheduleStr)
+                for (j in 0 until existingArray.length()) {
+                    val obj = existingArray.getJSONObject(j)
+                    val objId = obj.optInt("id", 0)
+                    if (objId != 0) {
+                        scheduleMap[objId] = obj
+                    }
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
 
         for (i in 0 until notifications.length()) {
             try {
@@ -111,15 +131,20 @@ class NativeAlarmPlugin : Plugin() {
                 }
 
                 alarmIds.add(id.toString())
+                scheduleMap[id] = item
             } catch (itemErr: Exception) {
                 // Ignore individual item parse error and continue
             }
         }
 
         try {
-            // Persist both the full schedule (for BootReceiver) and the ID set (for cancellation)
+            val mergedScheduleArray = org.json.JSONArray()
+            for (obj in scheduleMap.values) {
+                mergedScheduleArray.put(obj)
+            }
+            // Persist both the full schedule (for BootReceiver) and the merged ID set (for cancellation)
             prefs.edit()
-                .putString(KEY_SCHEDULE, notifications.toString())
+                .putString(KEY_SCHEDULE, mergedScheduleArray.toString())
                 .putStringSet(KEY_IDS, alarmIds)
                 .apply()
         } catch (prefsErr: Exception) {

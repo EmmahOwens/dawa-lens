@@ -89,15 +89,31 @@ export function enqueueOp(
     enqueuedAt: new Date().toISOString(),
   };
 
-  // For update/delete ops: collapse duplicate ops on the same docId to avoid
-  // N redundant writes (keep only the latest update, keep any deletes).
-  const filtered =
-    op.type.startsWith("update") || op.type.startsWith("delete")
-      ? queue.filter(
-          (existing) =>
-            !(existing.docId === op.docId && existing.type === op.type)
-        )
-      : queue;
+  let filtered = queue;
+  if (op.type.startsWith("delete-")) {
+    // If we're deleting a doc, check if it was only added offline and never synced to cloud
+    const hadAddOp = queue.some(
+      (existing) => existing.docId === op.docId && existing.type.startsWith("add-")
+    );
+    // Remove all previous ops (add/update/delete) for this docId
+    filtered = queue.filter(
+      (existing) => !(existing.docId === op.docId && existing.collection === op.collection)
+    );
+    if (hadAddOp) {
+      // It was created offline and deleted offline before ever syncing to cloud:
+      // Nothing needs to be sent to Firestore!
+      saveQueue(filtered);
+      console.log(
+        `[offlineQueue] Cancelled un-synced offline creation for ${op.collection}/${op.docId}. Queue depth: ${filtered.length}`
+      );
+      return newOp;
+    }
+  } else if (op.type.startsWith("update-")) {
+    // Keep only the latest update op for the same docId
+    filtered = queue.filter(
+      (existing) => !(existing.docId === op.docId && existing.type === op.type)
+    );
+  }
 
   filtered.push(newOp);
   saveQueue(filtered);

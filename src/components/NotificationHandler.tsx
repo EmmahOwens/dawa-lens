@@ -63,6 +63,15 @@ export const NotificationHandler = () => {
             const isReminder = !!extra.reminderId;
 
             if (isReminder) {
+              const exists = remindersRef.current.some((r) => r.id === extra.reminderId && r.enabled);
+              if (!exists) {
+                console.log(`[NotificationHandler] Discarding notification for deleted/disabled reminder: ${extra.reminderId}`);
+                if (notification.id) {
+                  LocalNotifications.cancel({ notifications: [{ id: notification.id }] }).catch(console.warn);
+                }
+                return;
+              }
+
               toast.info(`Reminder: ${notification.title}`, {
                 description: notification.body,
                 duration: 5000,
@@ -88,9 +97,16 @@ export const NotificationHandler = () => {
               console.log('Action performed:', actionId, notification, extra);
 
               let targetPatientId = extra.patientId;
-              if (targetPatientId === undefined && reminderId) {
+              if (reminderId) {
                 const matched = remindersRef.current.find((r) => r.id === reminderId);
-                if (matched) {
+                if (!matched) {
+                  console.log(`[NotificationHandler] Ignoring action for deleted reminder: ${reminderId}`);
+                  if (notification.id) {
+                    await LocalNotifications.cancel({ notifications: [{ id: notification.id }] });
+                  }
+                  return;
+                }
+                if (targetPatientId === undefined) {
                   targetPatientId = matched.patientId ?? null;
                 }
               }

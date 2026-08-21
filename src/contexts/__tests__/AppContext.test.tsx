@@ -50,17 +50,19 @@ const mockLocalAuditGetAll = vi.fn().mockResolvedValue([]);
 
 const mockLocalLogCreate = vi.fn();
 const mockLocalRemUpdate = vi.fn();
+const mockLocalRemRemove = vi.fn();
 const mockLocalLogUpdate = vi.fn();
 const mockLocalAuditCreate = vi.fn().mockImplementation((data) => Promise.resolve({ ...data, id: "audit-123" }));
 
 vi.mock("../../services/localPersistence", () => ({
   localPersistence: {
-    medicines: { getAll: () => mockLocalMedsGetAll(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
+    medicines: { getAll: () => mockLocalMedsGetAll(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), replaceAll: vi.fn().mockResolvedValue(undefined) },
     reminders: {
       getAll: () => mockLocalRemsGetAll(),
       create: vi.fn(),
       update: (id: string, updates: any) => mockLocalRemUpdate(id, updates),
-      remove: vi.fn(),
+      remove: (id: string) => mockLocalRemRemove(id),
+      replaceAll: vi.fn().mockResolvedValue(undefined),
     },
     doseLogs: {
       getAll: () => mockLocalLogsGetAll(),
@@ -193,5 +195,36 @@ describe("AppContext - logDose dynamic reminder time shifting", () => {
 
     // Verify the reminder time was updated to 20:50
     expect(mockLocalRemUpdate).toHaveBeenCalledWith("rem-123", { time: "20:50" });
+  });
+
+  it("should remove reminder locally and update state when deleteReminder is called", async () => {
+    const testReminder: Reminder = {
+      id: "rem-delete-test",
+      medicineName: "Delete Med",
+      dose: "1 tablet",
+      time: "08:00",
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    mockLocalRemsGetAll.mockResolvedValue([testReminder]);
+
+    const { result } = renderHook(() => useApp(), {
+      wrapper: AppProvider,
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    expect(result.current.reminders).toHaveLength(1);
+
+    await act(async () => {
+      await result.current.deleteReminder("rem-delete-test");
+    });
+
+    expect(mockLocalRemRemove).toHaveBeenCalledWith("rem-delete-test");
+    expect(result.current.reminders).toHaveLength(0);
   });
 });

@@ -717,6 +717,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       storage.setItem(CLOUD_CACHE_LOGS_KEY, mergedLogs);
       storage.setItem(CLOUD_CACHE_MEDS_KEY, mergedMeds);
 
+      localPersistence.reminders.replaceAll(mergedRems).catch(console.warn);
+      localPersistence.medicines.replaceAll(mergedMeds).catch(console.warn);
+
       setPendingOfflineOps(getPendingCount());
       console.log("[AppContext] refreshFromFirestore: state updated with fresh Firestore data.");
     } catch (err) {
@@ -972,42 +975,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
         storage.getItem<WellnessLog[]>(CLOUD_CACHE_WELLNESS_KEY, []),
       ]);
 
-      let finalRems = cachedRems;
-      if (finalRems.length === 0) {
-        try {
-          const localRems = await localPersistence.reminders.getAll();
-          if (localRems.length > 0) {
-            finalRems = localRems;
-            storage.setItem(CLOUD_CACHE_REMS_KEY, localRems);
-          }
-        } catch (e) {
-          console.warn("[AppContext] Failed to read local persistence reminders:", e);
-        }
-      }
+      const pendingOps = getPendingOps();
+      const finalRems = applyPendingOps(cachedRems, "reminders", pendingOps);
+      const finalMeds = applyPendingOps(cachedMeds, "medicines", pendingOps);
+      const finalLogs = applyPendingOps(cachedLogs, "doseLogs", pendingOps);
 
-      let finalMeds = cachedMeds;
-      if (finalMeds.length === 0) {
-        try {
-          const localMeds = await localPersistence.medicines.getAll();
-          if (localMeds.length > 0) {
-            finalMeds = localMeds;
-            storage.setItem(CLOUD_CACHE_MEDS_KEY, localMeds);
-          }
-        } catch (e) {
-          console.warn("[AppContext] Failed to read local persistence medicines:", e);
-        }
-      }
+      setMedicines(finalMeds);
+      setReminders(finalRems);
+      setDoseLogs(finalLogs);
+      setScheduleAuditLogs(cachedAudit);
+      setPatients(cachedPatients);
+      setWellnessLogs(cachedWell);
 
-      if (finalMeds.length > 0) setMedicines(finalMeds);
-      if (finalRems.length > 0) setReminders(finalRems);
-      if (cachedLogs.length > 0) setDoseLogs(cachedLogs);
-      if (cachedAudit.length > 0) setScheduleAuditLogs(cachedAudit);
-      if (cachedPatients.length > 0) setPatients(cachedPatients);
-      if (cachedWell.length > 0) setWellnessLogs(cachedWell);
+      // Keep SQLite completely aligned with the loaded cache so native background workers don't see ghosts
+      localPersistence.reminders.replaceAll(finalRems).catch(console.warn);
+      localPersistence.medicines.replaceAll(finalMeds).catch(console.warn);
     };
 
-    loadProfile();
-    loadCache();
+    const loadData = async () => {
+      try {
+        await Promise.all([loadProfile(), loadCache()]);
+      } catch (err) {
+        console.warn("[AppContext] Initial loadData warning:", err);
+      } finally {
+        setIsDataLoading(false);
+      }
+    };
+    loadData();
 
     // 3. Set up real-time Firestore listeners — these auto-sync across web + Capacitor
     const medsQuery = query(
@@ -1046,6 +1040,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const merged = applyPendingOps(data, "medicines", getPendingOps());
           setMedicines(merged);
           storage.setItem(CLOUD_CACHE_MEDS_KEY, merged);
+          localPersistence.medicines.replaceAll(merged).catch(console.warn);
         } catch (err) {
           console.warn("[AppContext] Error processing medicines snapshot:", err);
         }
@@ -1057,13 +1052,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       remsQuery,
       (snap) => {
         try {
-          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
+          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) {
+            if (getPendingOps().some((op) => op.collection === "reminders")) return;
+          }
           const data = snap.docs.map(
             (d) => ({ id: d.id, ...d.data() } as Reminder)
           );
           const merged = applyPendingOps(data, "reminders", getPendingOps());
           setReminders(merged);
           storage.setItem(CLOUD_CACHE_REMS_KEY, merged);
+          localPersistence.reminders.replaceAll(merged).catch(console.warn);
         } catch (err) {
           console.warn("[AppContext] Error processing reminders snapshot:", err);
         }
@@ -1142,8 +1140,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
       (err) => console.error("ScheduleAuditLogs listener error:", err)
     );
-
-    setIsDataLoading(false);
 
     // Cleanup listeners on unmount or dependency change
     return () => {
@@ -1527,9 +1523,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteReminder = async (id: string) => {
-    const current = reminders.find((r) => r.id === id);
-    if (!current) return;
-
     // 1. Save locally instantly (SQLite row removed before any notification logic)
     try {
       await localPersistence.reminders.remove(id);
@@ -1537,22 +1530,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.warn("[AppContext] Failed to remove reminder locally:", e);
     }
 
-    // 2. Eagerly cancel & reschedule OS-level notifications so pending alarms
+    // 2. Optimistic UI update & cache sync
+    let nextReminders: Reminder[] = [];
+    setReminders((p) => {
+      nextReminders = p.filter((r) => r.id !== id);
+      storage.setItem(CLOUD_CACHE_REMS_KEY, nextReminders);
+      return nextReminders;
+    });
+
+    // 3. Eagerly cancel & reschedule OS-level notifications so pending alarms
     //    for this reminder are cleared immediately — before the useEffect has a
     //    chance to fire on the next render cycle.
     if (Capacitor.isNativePlatform()) {
-      const updatedReminders = reminders.filter((r) => r.id !== id);
-      scheduleReminders(updatedReminders, doseLogs, medicines).catch((err) =>
+      scheduleReminders(nextReminders, doseLogs, medicines).catch((err) =>
         console.warn("[AppContext] Failed to reschedule notifications after delete:", err)
       );
     }
-
-    // 3. Optimistic UI update & cache sync
-    setReminders((p) => {
-      const next = p.filter((r) => r.id !== id);
-      storage.setItem(CLOUD_CACHE_REMS_KEY, next);
-      return next;
-    });
 
     if (storageMode === "local") {
       return;

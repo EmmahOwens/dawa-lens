@@ -350,7 +350,12 @@ export const checkMissedDoses = async (
                     schedule: { at: fireAt, allowWhileIdle: true },
                     channelId: missedChannelId,
                     sound: "default",
-                    extra: { type: "missed_alert", patientId: r.patientId ?? null, route: "/history" },
+                    extra: {
+                      type: "missed_alert",
+                      reminderId: r.id,
+                      patientId: r.patientId ?? null,
+                      route: "/history",
+                    },
                   }],
                 });
 
@@ -951,6 +956,28 @@ const executeScheduleReminders = async (
       }
     } catch (cancelErr) {
       console.warn("[reminderService] Failed to cancel pending LocalNotifications:", cancelErr);
+    }
+
+    // Dismiss any delivered notifications in the system drawer for reminders that no longer exist
+    try {
+      const delivered = await LocalNotifications.getDeliveredNotifications();
+      if (delivered.notifications && delivered.notifications.length > 0) {
+        const activeIds = new Set(activeReminders.map((r) => r.id));
+        const toRemove = delivered.notifications.filter((n) => {
+          const extra = n.extra || n.data;
+          if (extra && extra.reminderId && !activeIds.has(extra.reminderId)) {
+            return true;
+          }
+          return false;
+        });
+        if (toRemove.length > 0) {
+          await LocalNotifications.removeDeliveredNotifications({
+            notifications: toRemove,
+          });
+        }
+      }
+    } catch (delivErr) {
+      console.warn("[reminderService] Failed to clean delivered notifications:", delivErr);
     }
 
     // Also cancel all native alarms to ensure ghost notifications are removed
