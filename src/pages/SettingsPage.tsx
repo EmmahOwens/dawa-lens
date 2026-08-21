@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft, Shield, Trash2, Moon, Lock, Globe, Users, 
-  ArrowRight, User, Mail, Database, CheckCircle2
+  ArrowRight, User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw
 } from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,9 @@ import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import pkg from "../../package.json";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
+import { Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
+import { NativeService } from "@/services/nativeService";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -24,6 +27,84 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const { t, i18n } = useTranslation();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [batteryExempt, setBatteryExempt] = useState<boolean | null>(null);
+  const [isCheckingBattery, setIsCheckingBattery] = useState(false);
+  const batteryTimersRef = useRef<NodeJS.Timeout[]>([]);
+
+  const checkBatteryStatus = useCallback(async () => {
+    const isIgnored = await NativeService.isBatteryOptimizationIgnored();
+    setBatteryExempt(isIgnored);
+    return isIgnored;
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    checkBatteryStatus();
+
+    let removeListener: (() => void) | undefined;
+    if (Capacitor.isNativePlatform()) {
+      CapApp.addListener("appStateChange", ({ isActive }) => {
+        if (isActive && isMounted) {
+          checkBatteryStatus();
+        }
+      }).then((handle) => {
+        removeListener = () => handle?.remove?.();
+      });
+    }
+
+    const onFocus = () => {
+      if (isMounted) checkBatteryStatus();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
+    return () => {
+      isMounted = false;
+      removeListener?.();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+      batteryTimersRef.current.forEach(clearTimeout);
+    };
+  }, [checkBatteryStatus]);
+
+  const handleConfigureBattery = async () => {
+    setIsCheckingBattery(true);
+    batteryTimersRef.current.forEach(clearTimeout);
+    batteryTimersRef.current = [];
+
+    const isNativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
+    if (isNativeAndroid) {
+      toast({
+        title: "Device Battery Settings",
+        description: "Select 'Unrestricted' or 'No restrictions' for Dawa Lens to ensure timely medication reminders.",
+      });
+
+      await NativeService.openBatteryOptimizationSettings();
+
+      // Poll periodically to catch return from settings or dialog dismissal
+      [800, 1600, 3000, 5000].forEach((delay, idx, arr) => {
+        const timer = setTimeout(async () => {
+          const ignored = await checkBatteryStatus();
+          if (idx === arr.length - 1) {
+            setIsCheckingBattery(false);
+            if (ignored) {
+              toast({
+                title: "Battery Optimization Unrestricted",
+                description: "Background alarms are now fully protected and reliable.",
+              });
+            }
+          }
+        }, delay);
+        batteryTimersRef.current.push(timer);
+      });
+    } else {
+      toast({
+        title: "Battery Optimization (Android)",
+        description: "On Android devices, this opens device settings to allow unrestricted background alarms and reminders.",
+      });
+      setIsCheckingBattery(false);
+    }
+  };
 
   const handleLanguageChange = async (lang: string) => {
     i18n.changeLanguage(lang);
@@ -278,28 +359,56 @@ export default function SettingsPage() {
           </div>
 
           {/* Android Battery Optimization Exemption */}
-          <div className="mt-3 p-4 rounded-2xl bg-muted/30 border border-border/50 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
-                <Shield size={16} />
+          <div className="mt-3 p-4 rounded-2xl bg-muted/30 border border-border/50 flex items-center justify-between gap-3 transition-all hover:bg-muted/50">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`p-2 rounded-xl shrink-0 transition-colors ${
+                batteryExempt
+                  ? "bg-emerald-500/10 text-emerald-500"
+                  : "bg-amber-500/10 text-amber-500"
+              }`}>
+                {batteryExempt ? <ShieldCheck size={18} /> : <ShieldAlert size={18} />}
               </div>
-              <div>
-                <p className="text-sm font-bold text-foreground">Battery Optimization</p>
-                <p className="text-[10px] text-muted-foreground leading-tight uppercase font-bold tracking-tighter opacity-70">
-                  Required for exact background alarms
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-bold text-foreground">Battery Optimization</p>
+                  {batteryExempt !== null && (
+                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      batteryExempt
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                    }`}>
+                      {batteryExempt ? "Exempt" : "Action Required"}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-tight uppercase font-bold tracking-tighter opacity-70 mt-0.5">
+                  {batteryExempt
+                    ? "Unrestricted · Background alarms & reminders active"
+                    : "Required for exact background alarms"}
                 </p>
               </div>
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="rounded-xl h-8 px-3 text-[10px] font-bold border-amber-500/30 text-amber-500 hover:bg-amber-500/10"
-              onClick={async () => {
-                const { NativeService } = await import("@/services/nativeService");
-                await NativeService.requestBatteryOptimizationExemption();
-              }}
+              disabled={isCheckingBattery}
+              className={`rounded-xl h-8 px-3 text-[10px] font-bold shrink-0 transition-colors ${
+                batteryExempt
+                  ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                  : "border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+              }`}
+              onClick={handleConfigureBattery}
             >
-              Configure
+              {isCheckingBattery ? (
+                <span className="flex items-center gap-1.5">
+                  <RefreshCw size={12} className="animate-spin" />
+                  Checking…
+                </span>
+              ) : batteryExempt ? (
+                "Manage"
+              ) : (
+                "Configure"
+              )}
             </Button>
           </div>
         </motion.div>

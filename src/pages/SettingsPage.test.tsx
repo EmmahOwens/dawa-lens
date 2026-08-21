@@ -22,15 +22,45 @@ import {
   cleanup,
   act,
 } from "@testing-library/react";
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as fc from "fast-check";
+import { Capacitor } from "@capacitor/core";
 
 // ─── Shared mock functions ────────────────────────────────────────────────────
 
 const mockClearAllData = vi.fn();
 const mockToast = vi.fn();
+const mockIsBatteryOptimizationIgnored = vi.fn().mockResolvedValue(true);
+const mockOpenBatteryOptimizationSettings = vi.fn().mockResolvedValue(true);
+const mockRequestBatteryOptimizationExemption = vi.fn().mockResolvedValue(undefined);
 
 // ─── Module mocks ─────────────────────────────────────────────────────────────
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: vi.fn().mockReturnValue(false),
+    getPlatform: vi.fn().mockReturnValue("web"),
+  },
+}));
+
+vi.mock("@capacitor/app", () => ({
+  App: {
+    addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
+  },
+}));
+
+vi.mock("@/services/nativeService", () => ({
+  NativeService: {
+    isBatteryOptimizationIgnored: () => mockIsBatteryOptimizationIgnored(),
+    openBatteryOptimizationSettings: () => mockOpenBatteryOptimizationSettings(),
+    requestBatteryOptimizationExemption: () => mockRequestBatteryOptimizationExemption(),
+    preferences: {
+      get: vi.fn(),
+      set: vi.fn(),
+      remove: vi.fn(),
+    },
+  },
+}));
 
 vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
@@ -116,6 +146,10 @@ function renderSettingsPage() {
 }
 
 async function openClearDialog() {
+  await waitFor(() => {
+    expect(screen.getByText(/Battery Optimization/i)).toBeInTheDocument();
+  });
+
   const clearBtn = await screen.findByRole("button", {
     name: /clear (all )?data|settings\.clear_data/i,
   });
@@ -127,6 +161,16 @@ async function openClearDialog() {
 }
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
+
+beforeEach(() => {
+  vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+  vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
+  mockIsBatteryOptimizationIgnored.mockResolvedValue(true);
+  mockOpenBatteryOptimizationSettings.mockResolvedValue(true);
+  mockRequestBatteryOptimizationExemption.mockResolvedValue(undefined);
+  mockClearAllData.mockClear();
+  mockToast.mockClear();
+});
 
 afterEach(() => {
   cleanup();
@@ -186,6 +230,53 @@ describe("SettingsPage — unit tests", () => {
     );
 
     expect(mockClearAllData).not.toHaveBeenCalled();
+  });
+
+  it("renders 'Exempt' badge and 'Manage' button when battery optimization is exempt", async () => {
+    mockIsBatteryOptimizationIgnored.mockResolvedValue(true);
+    renderSettingsPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Battery Optimization/i)).toBeInTheDocument();
+      expect(screen.getByText("Exempt")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /manage/i })).toBeInTheDocument();
+    });
+  });
+
+  it("renders 'Action Required' badge and 'Configure' button when battery optimization is not exempt", async () => {
+    mockIsBatteryOptimizationIgnored.mockResolvedValue(false);
+    renderSettingsPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Battery Optimization/i)).toBeInTheDocument();
+      expect(screen.getByText("Action Required")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /configure/i })).toBeInTheDocument();
+    });
+  });
+
+  it("opens battery optimization settings when configure button is clicked on Android", async () => {
+    const { Capacitor } = await import("@capacitor/core");
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
+    mockIsBatteryOptimizationIgnored.mockResolvedValue(false);
+
+    renderSettingsPage();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /configure/i })).toBeInTheDocument();
+    });
+
+    const configureBtn = screen.getByRole("button", { name: /configure/i });
+    fireEvent.click(configureBtn);
+
+    await waitFor(() => {
+      expect(mockOpenBatteryOptimizationSettings).toHaveBeenCalled();
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Device Battery Settings",
+        })
+      );
+    });
   });
 });
 

@@ -2,6 +2,7 @@ package com.dawainnovation.lens
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -21,6 +22,71 @@ class NativeAlarmPlugin : Plugin() {
         const val PREFS_NAME = "dawa_alarms"
         const val KEY_SCHEDULE = "dawa_alarm_schedule"
         const val KEY_IDS = "alarm_ids"
+    }
+
+    private fun openBatteryOptimizationSettingsInternal(ctx: Context): Boolean {
+        val packageName = ctx.packageName
+
+        // 1. Try ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS (system battery optimization list)
+        try {
+            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            ctx.startActivity(intent)
+            return true
+        } catch (e: Exception) {
+            // continue to fallbacks
+        }
+
+        // 2. Try OEM-specific battery management settings if applicable
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        try {
+            when {
+                manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
+                    val miuiIntent = Intent().apply {
+                        component = ComponentName("com.miui.powerkeeper", "com.miui.powerkeeper.ui.HiddenAppsConfigActivity")
+                        putExtra("package_name", packageName)
+                        putExtra("package_label", "Dawa Lens")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    ctx.startActivity(miuiIntent)
+                    return true
+                }
+                manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
+                    val huaweiIntent = Intent().apply {
+                        component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    ctx.startActivity(huaweiIntent)
+                    return true
+                }
+            }
+        } catch (e: Exception) {
+            // OEM-specific intent not found, fallback to standard App Details
+        }
+
+        // 3. Try ACTION_APPLICATION_DETAILS_SETTINGS (App Info page -> Battery -> Unrestricted)
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:$packageName")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            ctx.startActivity(intent)
+            return true
+        } catch (e: Exception) {
+            // continue to general settings
+        }
+
+        // 4. Final fallback to system Settings
+        return try {
+            val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            ctx.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     @PluginMethod
@@ -205,23 +271,35 @@ class NativeAlarmPlugin : Plugin() {
                             flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         }
                         context.startActivity(intent)
+                        call.resolve()
+                        return
                     } catch (e1: Exception) {
-                        try {
-                            val fallbackIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            }
-                            context.startActivity(fallbackIntent)
-                        } catch (e2: Exception) {
-                            val appDetailsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.parse("package:${context.packageName}")
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            }
-                            context.startActivity(appDetailsIntent)
-                        }
+                        openBatteryOptimizationSettingsInternal(context)
+                        call.resolve()
+                        return
                     }
+                } else {
+                    // Already ignoring Doze optimizations, open settings screen so user can verify/set Unrestricted mode
+                    openBatteryOptimizationSettingsInternal(context)
+                    call.resolve()
+                    return
                 }
             }
             call.resolve()
+        } catch (e: Exception) {
+            call.reject("Failed to open battery optimization settings: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
+    fun openBatteryOptimizationSettings(call: PluginCall) {
+        try {
+            val launched = openBatteryOptimizationSettingsInternal(context)
+            if (launched) {
+                call.resolve()
+            } else {
+                call.reject("Could not open device settings")
+            }
         } catch (e: Exception) {
             call.reject("Failed to open battery optimization settings: ${e.message}", e)
         }

@@ -250,14 +250,40 @@ export const NativeService = {
 
   /**
    * Request exemption from battery optimization to ensure alarms and background tasks are reliable.
+   * If already exempt or if forceOpenSettings is true, opens device battery settings screen directly.
    */
-  requestBatteryOptimizationExemption: async () => {
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+  requestBatteryOptimizationExemption: async (forceOpenSettings = false) => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      console.log("[NativeService] Battery optimization exemption is only applicable on native Android devices.");
+      return;
+    }
     try {
       const { NativeAlarm } = await import("@/plugins/nativeAlarm");
-      await NativeAlarm.requestIgnoreBatteryOptimization();
+      if (forceOpenSettings) {
+        await NativeAlarm.openBatteryOptimizationSettings();
+      } else {
+        await NativeAlarm.requestIgnoreBatteryOptimization();
+      }
     } catch (err) {
       console.error("Failed to request battery optimization exemption:", err);
+    }
+  },
+
+  /**
+   * Directly open device battery optimization settings / App Info battery settings on Android.
+   */
+  openBatteryOptimizationSettings: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      console.log("[NativeService] Open battery settings is only available on native Android devices.");
+      return false;
+    }
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      await NativeAlarm.openBatteryOptimizationSettings();
+      return true;
+    } catch (err) {
+      console.error("Failed to open battery optimization settings:", err);
+      return false;
     }
   },
 
