@@ -3473,5 +3473,10 @@
     "mtime": 1787300149.7554681,
     "ast_hash": "5cda1c0075760117d27e7a046b13f2d8",
     "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/__tests__/TravelCompanionPage.test.tsx": {
+    "mtime": 1787300755.7734582,
+    "ast_hash": "7dced598dc17e52a5b4e9b33851eb78c",
+    "semantic_hash": ""
   }
 }
