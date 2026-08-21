@@ -173,37 +173,8 @@ const App = () => {
       if (Capacitor.isNativePlatform()) {
         try {
           await StatusBar.setStyle({ style: Style.Default });
-
-          // On Android, detect whether the device uses button navigation
-          // (3-button / 2-button) or gesture navigation.
-          //
-          // Gesture-nav devices expose a non-zero safe-area-inset-bottom (the
-          // home-indicator swipe zone). Button-nav devices have 0 px inset
-          // because the system nav bar lives entirely outside the WebView.
-          //
-          // • Gesture nav → keep overlay: true (full edge-to-edge look).
-          // • Button nav  → overlay: false so Android automatically reserves
-          //   the nav-bar height below the WebView, displacing the app upward
-          //   instead of letting the buttons float over the app's content.
-          if (Capacitor.getPlatform() === "android") {
-            const el = document.createElement("div");
-            el.style.cssText =
-              "position:fixed;visibility:hidden;pointer-events:none;" +
-              "height:env(safe-area-inset-bottom,0px);bottom:0;left:0;";
-            document.body.appendChild(el);
-            // One rAF is enough for the browser to resolve the env() value.
-            await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-            const insetPx = parseFloat(getComputedStyle(el).height) || 0;
-            document.body.removeChild(el);
-
-            const isButtonNav = insetPx < 10;
-            await StatusBar.setOverlaysWebView({ overlay: !isButtonNav });
-            // Keep the status bar transparent for edge-to-edge on both modes.
-            await StatusBar.setBackgroundColor({ color: "#00000000" });
-          } else {
-            // iOS always uses gesture nav; keep edge-to-edge.
-            await StatusBar.setOverlaysWebView({ overlay: true });
-          }
+          await StatusBar.setOverlaysWebView({ overlay: true });
+          await StatusBar.setBackgroundColor({ color: "#00000000" });
         } catch (e) {
           console.warn("StatusBar setup ignored:", e);
         }

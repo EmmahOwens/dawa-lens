@@ -5,9 +5,10 @@ import android.util.Log
 import android.view.View
 import android.webkit.WebSettings
 import android.webkit.WebView
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
@@ -41,6 +42,20 @@ class MainActivity : BridgeActivity() {
         registerPlugin(NativeNavigationPlugin::class.java)
         
         super.onCreate(savedInstanceState)
+
+        // Displace the app upward by applying navigation bar insets to the root content view.
+        // This keeps the system button navigation bar separated from the app instead of merging/overlaying.
+        val rootView = findViewById<View>(android.R.id.content)
+        if (rootView != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(rootView) { view, windowInsets ->
+                val insets = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.displayCutout()
+                )
+                view.setPadding(insets.left, 0, insets.right, insets.bottom)
+                windowInsets
+            }
+            ViewCompat.requestApplyInsets(rootView)
+        }
 
         // Defensive check for bridge and webView
         val currentBridge = bridge ?: return
