@@ -867,13 +867,15 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors = [], prio
 };
 
 export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }, priority = 'high') => {
+  const medList = Array.isArray(medicines) ? medicines : [];
   const prompt = `
     You are the "Dawa-Lens Global Travel Companion".
     Travel: ${currentCity || 'Home'} (${homeTimezone}) to ${destination} (${targetTimezone || 'Unknown'}).
-    Medicines: ${JSON.stringify(medicines.map(m => ({ name: m.name, generic: m.genericName, dosage: m.dosage })))}
+    Medicines: ${JSON.stringify(medList.map(m => ({ name: m.name, generic: m.genericName, dosage: m.dosage })))}
     
     Task:
-    1. Find equivalent brand names in ${destination}.
+    1. Find equivalent brand names or local generic formulations in ${destination} for EVERY SINGLE MEDICATION in the Medicines list.
+       CRITICAL: You MUST provide an equivalent entry for EVERY medication provided in the Medicines list above without omitting any. If a medicine is sold under the same brand or generic name in ${destination}, state its local availability/brand (e.g. "Panadol / Paracetamol" or "Available as [Name] in ${destination}").
     2. Timezone shift advice for dosing.
     3. Customs restrictions for these specific meds.
     4. Provide ONLY TWO emergency contact numbers for ${destination}:
@@ -886,7 +888,7 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
     Respond in EXACT JSON format:
     { 
       "equivalents": [
-        { "original": "Original medicine name", "equivalent": "Local equivalent brand name in ${destination}" }
+        { "original": "Original medicine name exactly as in input", "equivalent": "Local equivalent brand name or generic in ${destination}" }
       ],
       "timezoneAdvice": "text (Markdown formatted)",
       "customsNotes": "text (Markdown formatted)",
@@ -897,7 +899,50 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
       "healthRisks": "text (Markdown formatted)"
     }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 1200);
+
+  let rawResult;
+  try {
+    rawResult = await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 1200);
+  } catch (aiErr) {
+    console.error('[getTravelAdvice] AI call failed:', aiErr.message);
+    throw aiErr;
+  }
+
+  const returnedEquivalents = Array.isArray(rawResult?.equivalents) ? rawResult.equivalents : [];
+
+  // Defensive post-processing: Guarantee 100% representation for every medication in the user's list
+  const finalEquivalents = medList.map(med => {
+    const medName = (med.name || '').trim();
+    const medGeneric = (med.genericName || '').trim();
+    const medNameLower = medName.toLowerCase();
+    const medGenericLower = medGeneric.toLowerCase();
+
+    const existing = returnedEquivalents.find(eq => {
+      const orig = String(eq?.original || eq?.medicine || eq?.name || eq?.drug || '').trim().toLowerCase();
+      if (!orig) return false;
+      return orig === medNameLower ||
+             orig.includes(medNameLower) ||
+             medNameLower.includes(orig) ||
+             (medGenericLower && (orig === medGenericLower || orig.includes(medGenericLower) || medGenericLower.includes(orig)));
+    });
+
+    if (existing) {
+      return {
+        original: medName || existing.original || 'Unknown Medicine',
+        equivalent: existing.equivalent || existing.local_name || existing.localEquivalent || existing.brand || existing.alternative || (medGeneric ? `${medGeneric} (Available locally)` : `${medName} (Available locally)`)
+      };
+    }
+
+    return {
+      original: medName,
+      equivalent: medGeneric ? `${medGeneric} (Consult local pharmacist)` : `${medName} (Consult local pharmacist)`
+    };
+  });
+
+  return {
+    ...rawResult,
+    equivalents: finalEquivalents.length > 0 ? finalEquivalents : returnedEquivalents
+  };
 };
 
 export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines, priority = 'high') => {

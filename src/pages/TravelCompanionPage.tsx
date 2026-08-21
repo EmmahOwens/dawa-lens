@@ -60,15 +60,49 @@ export default function TravelCompanionPage() {
         homeTimezone,
       });
 
-      // Normalize equivalents to ensure consistent { original, equivalent } shape
-      if (res && Array.isArray((res as any).equivalents)) {
-        (res as any).equivalents = (res as any).equivalents.map((eq: any) => {
+      // Normalize equivalents to ensure consistent { original, equivalent } shape and 100% coverage of user's medicines
+      if (res) {
+        const rawEquivalents = Array.isArray((res as any).equivalents) ? (res as any).equivalents : [];
+        const parsedEquivalents = rawEquivalents.map((eq: any) => {
           if (typeof eq === 'string') return { original: eq, equivalent: eq };
           return {
-            original: eq.original || eq.medicine || eq.name || eq.drug || 'Unknown',
-            equivalent: eq.equivalent || eq.local_name || eq.localEquivalent || eq.brand || eq.alternative || 'Ask local pharmacist',
+            original: eq?.original || eq?.medicine || eq?.name || eq?.drug || 'Unknown',
+            equivalent: eq?.equivalent || eq?.local_name || eq?.localEquivalent || eq?.brand || eq?.alternative || 'Ask local pharmacist',
           };
         });
+
+        // Map every medication in user's medication list to an equivalent
+        const allEquivalents = medicines.map((med) => {
+          const medName = med.name.trim();
+          const medGeneric = (med.genericName || '').trim();
+          const medNameLower = medName.toLowerCase();
+          const medGenericLower = medGeneric.toLowerCase();
+
+          const match = parsedEquivalents.find((eq: any) => {
+            const origLower = (eq.original || '').toLowerCase().trim();
+            if (!origLower) return false;
+            return (
+              origLower === medNameLower ||
+              origLower.includes(medNameLower) ||
+              medNameLower.includes(origLower) ||
+              (medGenericLower && (origLower === medGenericLower || origLower.includes(medGenericLower) || medGenericLower.includes(origLower)))
+            );
+          });
+
+          if (match) {
+            return {
+              original: medName,
+              equivalent: match.equivalent,
+            };
+          }
+
+          return {
+            original: medName,
+            equivalent: medGeneric ? `${medGeneric} (Ask local pharmacist)` : `${medName} (Ask local pharmacist)`,
+          };
+        });
+
+        (res as any).equivalents = allEquivalents.length > 0 ? allEquivalents : parsedEquivalents;
       }
 
       // Small delay to let animation breathe
@@ -254,8 +288,11 @@ export default function TravelCompanionPage() {
                     {advice.equivalents.map((eq: any, idx: number) => (
                       <div key={idx} className="p-6 rounded-[2rem] bg-card border border-border shadow-sm flex flex-col justify-between group hover:border-primary/30 transition-all hover:shadow-md">
                         <div className="mb-4">
-                          <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest line-through opacity-60 mb-1">{eq.original}</p>
-                          <p className="text-xl font-black text-foreground">{eq.equivalent}</p>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <span className="text-[9px] font-black uppercase text-muted-foreground/70 tracking-widest">Your Med:</span>
+                            <span className="text-xs font-bold text-muted-foreground truncate">{eq.original}</span>
+                          </div>
+                          <p className="text-lg sm:text-xl font-black text-foreground tracking-tight">{eq.equivalent}</p>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
