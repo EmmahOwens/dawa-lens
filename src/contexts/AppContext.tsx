@@ -1038,13 +1038,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubMeds = onSnapshot(
       medsQuery,
       (snap) => {
-        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
-        const data = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() } as Medicine)
-        );
-        const merged = applyPendingOps(data, "medicines", getPendingOps());
-        setMedicines(merged);
-        storage.setItem(CLOUD_CACHE_MEDS_KEY, merged);
+        try {
+          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
+          const data = snap.docs.map(
+            (d) => ({ id: d.id, ...d.data() } as Medicine)
+          );
+          const merged = applyPendingOps(data, "medicines", getPendingOps());
+          setMedicines(merged);
+          storage.setItem(CLOUD_CACHE_MEDS_KEY, merged);
+        } catch (err) {
+          console.warn("[AppContext] Error processing medicines snapshot:", err);
+        }
       },
       (err) => console.error("Medicines listener error:", err)
     );
@@ -1052,13 +1056,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubRems = onSnapshot(
       remsQuery,
       (snap) => {
-        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
-        const data = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() } as Reminder)
-        );
-        const merged = applyPendingOps(data, "reminders", getPendingOps());
-        setReminders(merged);
-        storage.setItem(CLOUD_CACHE_REMS_KEY, merged);
+        try {
+          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
+          const data = snap.docs.map(
+            (d) => ({ id: d.id, ...d.data() } as Reminder)
+          );
+          const merged = applyPendingOps(data, "reminders", getPendingOps());
+          setReminders(merged);
+          storage.setItem(CLOUD_CACHE_REMS_KEY, merged);
+        } catch (err) {
+          console.warn("[AppContext] Error processing reminders snapshot:", err);
+        }
       },
       (err) => console.error("Reminders listener error:", err)
     );
@@ -1066,13 +1074,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubLogs = onSnapshot(
       logsQuery,
       (snap) => {
-        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
-        const data = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() } as DoseLog)
-        );
-        const merged = applyPendingOps(data, "doseLogs", getPendingOps());
-        setDoseLogs(merged);
-        storage.setItem(CLOUD_CACHE_LOGS_KEY, merged);
+        try {
+          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
+          const data = snap.docs.map(
+            (d) => ({ id: d.id, ...d.data() } as DoseLog)
+          );
+          const merged = applyPendingOps(data, "doseLogs", getPendingOps());
+          setDoseLogs(merged);
+          storage.setItem(CLOUD_CACHE_LOGS_KEY, merged);
+        } catch (err) {
+          console.warn("[AppContext] Error processing doseLogs snapshot:", err);
+        }
       },
       (err) => console.error("DoseLogs listener error:", err)
     );
@@ -1080,12 +1092,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubPats = onSnapshot(
       patsQuery,
       (snap) => {
-        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
-        const data = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() } as Patient)
-        );
-        setPatients(data);
-        storage.setItem(CLOUD_CACHE_PATIENTS_KEY, data);
+        try {
+          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
+          const data = snap.docs.map(
+            (d) => ({ id: d.id, ...d.data() } as Patient)
+          );
+          setPatients(data);
+          storage.setItem(CLOUD_CACHE_PATIENTS_KEY, data);
+        } catch (err) {
+          console.warn("[AppContext] Error processing patients snapshot:", err);
+        }
       },
       (err) => console.error("Patients listener error:", err)
     );
@@ -1093,15 +1109,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubWell = onSnapshot(
       wellQuery,
       (snap) => {
-        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
-        const data = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() } as WellnessLog)
-        );
-        data.sort(
-          (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime()
-        );
-        setWellnessLogs(data);
-        storage.setItem(CLOUD_CACHE_WELLNESS_KEY, data);
+        try {
+          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
+          const data = snap.docs.map(
+            (d) => ({ id: d.id, ...d.data() } as WellnessLog)
+          );
+          data.sort(
+            (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime()
+          );
+          setWellnessLogs(data);
+          storage.setItem(CLOUD_CACHE_WELLNESS_KEY, data);
+        } catch (err) {
+          console.warn("[AppContext] Error processing wellnessLogs snapshot:", err);
+        }
       },
       (err) => console.error("WellnessLogs listener error:", err)
     );
@@ -1109,12 +1129,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubAudit = onSnapshot(
       auditQuery,
       (snap) => {
-        if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
-        const data = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() } as ScheduleAuditLog)
-        );
-        setScheduleAuditLogs(data);
-        storage.setItem(CLOUD_CACHE_AUDIT_KEY, data);
+        try {
+          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
+          const data = snap.docs.map(
+            (d) => ({ id: d.id, ...d.data() } as ScheduleAuditLog)
+          );
+          setScheduleAuditLogs(data);
+          storage.setItem(CLOUD_CACHE_AUDIT_KEY, data);
+        } catch (err) {
+          console.warn("[AppContext] Error processing scheduleAuditLogs snapshot:", err);
+        }
       },
       (err) => console.error("ScheduleAuditLogs listener error:", err)
     );

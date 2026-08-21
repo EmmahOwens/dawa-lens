@@ -93,12 +93,22 @@ export function initLifecycle(): () => void {
         try { cb(); } catch (e) { console.warn('[Lifecycle] background callback error:', e); }
       });
     }
+  }).catch((err) => {
+    console.warn('[Lifecycle] App.addListener failed:', err);
+    return null;
   });
-  cleanupFns.push(() => appStatePromise.then(h => h.remove()));
+  cleanupFns.push(() => {
+    appStatePromise.then(h => h?.remove?.()).catch(() => {});
+  });
 
   // Track network status
   if (Capacitor.isNativePlatform()) {
-    Network.getStatus().then(s => { networkStatus = s; });
+    Network.getStatus().then(s => { 
+      networkStatus = s; 
+    }).catch((err) => {
+      console.warn('[Lifecycle] Network.getStatus failed, falling back to navigator:', err);
+      networkStatus = { connected: typeof navigator !== 'undefined' ? navigator.onLine : true, connectionType: 'unknown' };
+    });
 
     const networkPromise = Network.addListener('networkStatusChange', (s) => {
       const wasConnected = networkStatus.connected;
@@ -108,8 +118,13 @@ export function initLifecycle(): () => void {
           try { cb(s.connected); } catch (e) { console.warn('[Lifecycle] network callback error:', e); }
         });
       }
+    }).catch((err) => {
+      console.warn('[Lifecycle] Network.addListener failed:', err);
+      return null;
     });
-    cleanupFns.push(() => networkPromise.then(h => h.remove()));
+    cleanupFns.push(() => {
+      networkPromise.then(h => h?.remove?.()).catch(() => {});
+    });
   } else {
     // Web fallback
     networkStatus = { connected: navigator.onLine, connectionType: 'unknown' };

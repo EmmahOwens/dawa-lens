@@ -20,6 +20,11 @@ if (typeof window !== "undefined") {
       window.location.reload();
     }
   });
+
+  // Global safety net for unhandled promise rejections (e.g. native bridge, network hiccups)
+  window.addEventListener("unhandledrejection", (event) => {
+    console.warn("[GlobalSafety] Unhandled promise rejection intercepted:", event.reason);
+  });
 }
 
 // Apply persisted theme before React renders to prevent flash

@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { WifiOff, RefreshCw } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { Capacitor } from "@capacitor/core";
 import { Network } from "@capacitor/network";
 import { useState } from "react";
 
@@ -33,12 +34,18 @@ export default function OfflineOverlay() {
   const handleRetry = async () => {
     setRetrying(true);
     try {
-      const status = await Network.getStatus();
-      // If we're now connected, the useNetworkStatus hook will update isOnline
-      // automatically via the listener. This button is just a manual nudge.
-      if (!status.connected) {
-        // Still offline — nothing to do, let the listener handle it
+      if (Capacitor.isNativePlatform()) {
+        const status = await Network.getStatus();
+        if (!status.connected) {
+          // Still offline
+        }
+      } else {
+        if (!navigator.onLine) {
+          // Still offline
+        }
       }
+    } catch (err) {
+      console.warn("[OfflineOverlay] Network retry check failed:", err);
     } finally {
       setRetrying(false);
     }

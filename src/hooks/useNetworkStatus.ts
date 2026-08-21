@@ -11,31 +11,61 @@ import { Network } from "@capacitor/network";
 import { Capacitor } from "@capacitor/core";
 
 export function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
 
   useEffect(() => {
     let listenerHandle: Awaited<ReturnType<typeof Network.addListener>> | null =
       null;
+    let isCancelled = false;
 
     const init = async () => {
       if (Capacitor.isNativePlatform()) {
-        // Get initial native status
-        const status = await Network.getStatus();
-        setIsOnline(status.connected);
-
-        // Subscribe to changes
-        listenerHandle = await Network.addListener(
-          "networkStatusChange",
-          (s) => {
-            setIsOnline(s.connected);
+        try {
+          // Get initial native status
+          const status = await Network.getStatus();
+          if (!isCancelled) {
+            setIsOnline(status.connected);
           }
-        );
+
+          // Subscribe to changes
+          const handle = await Network.addListener(
+            "networkStatusChange",
+            (s) => {
+              if (!isCancelled) {
+                setIsOnline(s.connected);
+              }
+            }
+          );
+
+          if (isCancelled) {
+            try {
+              handle.remove();
+            } catch (e) {
+              console.warn("[useNetworkStatus] handle.remove failed:", e);
+            }
+          } else {
+            listenerHandle = handle;
+          }
+        } catch (err) {
+          console.warn("[useNetworkStatus] Native network listener error, using web fallback:", err);
+          if (!isCancelled) {
+            setIsOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
+          }
+        }
       } else {
         // Web fallback — navigator.onLine + browser events
-        setIsOnline(navigator.onLine);
+        if (!isCancelled) {
+          setIsOnline(navigator.onLine);
+        }
 
-        const onOnline = () => setIsOnline(true);
-        const onOffline = () => setIsOnline(false);
+        const onOnline = () => {
+          if (!isCancelled) setIsOnline(true);
+        };
+        const onOffline = () => {
+          if (!isCancelled) setIsOnline(false);
+        };
         window.addEventListener("online", onOnline);
         window.addEventListener("offline", onOffline);
 
@@ -49,12 +79,18 @@ export function useNetworkStatus() {
     const cleanup = init();
 
     return () => {
-      cleanup.then((fn) => fn?.());
+      isCancelled = true;
+      cleanup.then((fn) => fn?.()).catch(() => {});
       if (listenerHandle) {
-        listenerHandle.remove();
+        try {
+          listenerHandle.remove();
+        } catch (e) {
+          console.warn("[useNetworkStatus] listener removal error:", e);
+        }
       }
     };
   }, []);
 
   return { isOnline };
 }
+

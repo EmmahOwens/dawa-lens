@@ -53,8 +53,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   const user = auth.currentUser;
   if (user) {
-    const token = await user.getIdToken();
-    headers["Authorization"] = `Bearer ${token}`;
+    try {
+      const token = await user.getIdToken();
+      headers["Authorization"] = `Bearer ${token}`;
+    } catch (err) {
+      console.warn("[api] Failed to retrieve auth ID token:", err);
+    }
   }
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -65,10 +69,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     },
   });
   if (!res.ok) {
-    const data = await res.json().catch(() => ({ error: "Network error" }));
+    const data = await res.json().catch(() => ({ error: `Request failed with status ${res.status}` }));
     throw new ApiError(data, res.status);
   }
-  return res.json() as Promise<T>;
+  try {
+    return (await res.json()) as T;
+  } catch {
+    return {} as T;
+  }
 }
 
 async function streamRequest(
@@ -81,8 +89,12 @@ async function streamRequest(
 
   const user = auth.currentUser;
   if (user) {
-    const token = await user.getIdToken();
-    headers["Authorization"] = `Bearer ${token}`;
+    try {
+      const token = await user.getIdToken();
+      headers["Authorization"] = `Bearer ${token}`;
+    } catch (err) {
+      console.warn("[api] Failed to retrieve auth ID token for stream:", err);
+    }
   }
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -94,7 +106,7 @@ async function streamRequest(
   });
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({ error: "Network error" }));
+    const data = await res.json().catch(() => ({ error: `Request failed with status ${res.status}` }));
     throw new ApiError(data, res.status);
   }
 

@@ -264,108 +264,134 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
     let fallbackApplied = false;
 
     const initMap = (style: string) => {
-      if (!mapContainerRef.current) return;
+      if (!mapContainerRef.current) return null;
 
-      const map = new maplibregl.Map({
-        container: mapContainerRef.current,
-        style,
-        center: [20, 10],
-        zoom: 1.5,
-        attributionControl: false,
-        dragRotate: false,
-        touchPitch: false,
-        canvasContextAttributes: {
-          failIfMajorPerformanceCaveat: false,
-          antialias: true,
-        },
-      });
+      try {
+        const map = new maplibregl.Map({
+          container: mapContainerRef.current,
+          style,
+          center: [20, 10],
+          zoom: 1.5,
+          attributionControl: false,
+          dragRotate: false,
+          touchPitch: false,
+          canvasContextAttributes: {
+            failIfMajorPerformanceCaveat: false,
+            antialias: true,
+          },
+        });
 
-      // Error handling – swap to fallback style on failure
-      map.on('error', (e) => {
-        console.error('MapLibre error:', e);
-        if (!fallbackApplied) {
-          fallbackApplied = true;
-          console.warn('Primary map style failed, switching to fallback...');
-          map.setStyle(FALLBACK_STYLE);
+        // Error handling – swap to fallback style on failure
+        map.on('error', (e) => {
+          console.error('MapLibre error:', e);
+          if (!fallbackApplied) {
+            fallbackApplied = true;
+            console.warn('Primary map style failed, switching to fallback...');
+            try {
+              map.setStyle(FALLBACK_STYLE);
+            } catch (styleErr) {
+              console.warn('Failed to set fallback style:', styleErr);
+            }
+          }
+        });
+
+        // Compact attribution
+        try {
+          map.addControl(
+            new maplibregl.AttributionControl({ compact: true }),
+            'bottom-left'
+          );
+        } catch (ctrlErr) {
+          console.warn('Failed to add attribution control:', ctrlErr);
         }
-      });
 
-      // Compact attribution
-      map.addControl(
-        new maplibregl.AttributionControl({ compact: true }),
-        'bottom-left'
-      );
+        map.on('load', () => {
+          try {
+            // Force a resize on load to fix blank canvas when the container was
+            // laid out before the map's WebGL canvas had definite dimensions
+            map.resize();
 
-      map.on('load', () => {
-        // Force a resize on load to fix blank canvas when the container was
-        // laid out before the map's WebGL canvas had definite dimensions
-        map.resize();
+            // ── Flight arc source + layer ─────────────────────────────────────────
+            map.addSource('flight-arc', {
+              type: 'geojson',
+              data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
+            });
 
-        // ── Flight arc source + layer ─────────────────────────────────────────
-        map.addSource('flight-arc', {
-          type: 'geojson',
-          data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
+            map.addLayer({
+              id: 'flight-arc-dashes',
+              type: 'line',
+              source: 'flight-arc',
+              paint: {
+                'line-color': '#007AFF',
+                'line-width': 2,
+                'line-dasharray': [4, 4],
+                'line-opacity': 0.5,
+              },
+            });
+
+            map.addLayer({
+              id: 'flight-arc-solid',
+              type: 'line',
+              source: 'flight-arc',
+              paint: {
+                'line-color': '#007AFF',
+                'line-width': 2.5,
+                'line-opacity': 0.9,
+                'line-blur': 0,
+              },
+            });
+
+            // ── Home pulse marker ───────────────────────────────────────────────────
+            const homeEl = document.createElement('div');
+            homeEl.className = 'travel-map-home-marker';
+            homeEl.innerHTML = `
+              <div style="
+                width:16px; height:16px; border-radius:50%;
+                background:#007AFF; border:3px solid #fff;
+                box-shadow:0 0 0 4px rgba(0,122,255,0.3), 0 2px 8px rgba(0,0,0,0.3);
+                position:relative;
+              ">
+                <span style="
+                  position:absolute; inset:-6px; border-radius:50%;
+                  border:2px solid rgba(0,122,255,0.4);
+                  animation:travel-pulse 2s ease-out infinite;
+                "></span>
+              </div>`;
+
+            homeMarkerRef.current = new maplibregl.Marker({ element: homeEl, anchor: 'center' })
+              .setLngLat(homeLngLat)
+              .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML(`<strong>📍 ${userCountry || 'Your Location'}</strong>`))
+              .addTo(map);
+          } catch (loadErr) {
+            console.warn('[TravelMap] Error during map on-load configuration:', loadErr);
+          }
         });
 
-        map.addLayer({
-          id: 'flight-arc-dashes',
-          type: 'line',
-          source: 'flight-arc',
-          paint: {
-            'line-color': '#007AFF',
-            'line-width': 2,
-            'line-dasharray': [4, 4],
-            'line-opacity': 0.5,
-          },
-        });
+        mapRef.current = map;
 
-        map.addLayer({
-          id: 'flight-arc-solid',
-          type: 'line',
-          source: 'flight-arc',
-          paint: {
-            'line-color': '#007AFF',
-            'line-width': 2.5,
-            'line-opacity': 0.9,
-            'line-blur': 0,
-          },
-        });
+        // Handle container resizing
+        let resizeObserver: ResizeObserver | null = null;
+        if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+          resizeObserver = new ResizeObserver(() => {
+            try {
+              map.resize();
+            } catch {}
+          });
+          resizeObserver.observe(mapContainerRef.current);
+        }
 
-        // ── Home pulse marker ───────────────────────────────────────────────────
-        const homeEl = document.createElement('div');
-        homeEl.className = 'travel-map-home-marker';
-        homeEl.innerHTML = `
-          <div style="
-            width:16px; height:16px; border-radius:50%;
-            background:#007AFF; border:3px solid #fff;
-            box-shadow:0 0 0 4px rgba(0,122,255,0.3), 0 2px 8px rgba(0,0,0,0.3);
-            position:relative;
-          ">
-            <span style="
-              position:absolute; inset:-6px; border-radius:50%;
-              border:2px solid rgba(0,122,255,0.4);
-              animation:travel-pulse 2s ease-out infinite;
-            "></span>
-          </div>`;
+        // Also trigger resize after a short delay to handle layout shifts
+        const timer = setTimeout(() => {
+          try {
+            map.resize();
+          } catch {}
+        }, 300);
 
-        homeMarkerRef.current = new maplibregl.Marker({ element: homeEl, anchor: 'center' })
-          .setLngLat(homeLngLat)
-          .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML(`<strong>📍 ${userCountry || 'Your Location'}</strong>`))
-          .addTo(map);
-      });
-
-      mapRef.current = map;
-
-      // Handle container resizing
-      const resizeObserver = new ResizeObserver(() => {
-        map.resize();
-      });
-      resizeObserver.observe(mapContainerRef.current!);
-
-      // Also trigger resize after a short delay to handle layout shifts
-      const timer = setTimeout(() => map.resize(), 300);
-
-      return { map, resizeObserver, timer };
+        return { map, resizeObserver, timer };
+      } catch (err) {
+        console.warn('[TravelMap] Failed to initialize MapLibre GL map:', err);
+        return null;
+      }
     };
 
     const result = initMap(PRIMARY_STYLE);
@@ -373,8 +399,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
     return () => {
       if (result) {
         clearTimeout(result.timer);
-        result.resizeObserver.disconnect();
-        result.map.remove();
+        result.resizeObserver?.disconnect();
+        try {
+          result.map.remove();
+        } catch (removeErr) {
+          console.warn('[TravelMap] Error removing map:', removeErr);
+        }
       }
       mapRef.current = null;
     };

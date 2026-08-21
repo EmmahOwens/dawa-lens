@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import {
   initializeFirestore,
@@ -20,7 +20,21 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const analytics = getAnalytics(app);
+
+let analyticsInstance: Analytics | null = null;
+if (typeof window !== "undefined") {
+  isSupported()
+    .then((supported) => {
+      if (supported) {
+        analyticsInstance = getAnalytics(app);
+      }
+    })
+    .catch((err) => {
+      console.warn("[Firebase] Analytics is not supported in this environment:", err);
+    });
+}
+
+export const analytics = analyticsInstance;
 export const auth = getAuth(app);
 
 // Initialize Firestore with persistent IndexedDB cache for offline support

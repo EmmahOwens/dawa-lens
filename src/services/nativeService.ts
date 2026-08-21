@@ -17,57 +17,93 @@ export const NativeService = {
     // Light tap for button presses and list item selections
     tap: async () => {
       if (Capacitor.isNativePlatform()) {
-        await Haptics.impact({ style: ImpactStyle.Light });
+        try {
+          await Haptics.impact({ style: ImpactStyle.Light });
+        } catch (err) {
+          console.warn("[NativeService] haptics.tap failed:", err);
+        }
       }
     },
     // Medium impact for standard interactions
     impact: async (style: ImpactStyle = ImpactStyle.Medium) => {
       if (Capacitor.isNativePlatform()) {
-        await Haptics.impact({ style });
+        try {
+          await Haptics.impact({ style });
+        } catch (err) {
+          console.warn("[NativeService] haptics.impact failed:", err);
+        }
       }
     },
     // Heavy impact for destructive or high-emphasis actions
     heavy: async () => {
       if (Capacitor.isNativePlatform()) {
-        await Haptics.impact({ style: ImpactStyle.Heavy });
+        try {
+          await Haptics.impact({ style: ImpactStyle.Heavy });
+        } catch (err) {
+          console.warn("[NativeService] haptics.heavy failed:", err);
+        }
       }
     },
     // Success notification for completed actions (scan result, saved, etc.)
     success: async () => {
       if (Capacitor.isNativePlatform()) {
-        await Haptics.notification({ type: NotificationType.Success });
+        try {
+          await Haptics.notification({ type: NotificationType.Success });
+        } catch (err) {
+          console.warn("[NativeService] haptics.success failed:", err);
+        }
       }
     },
     // Warning pattern for cautionary alerts
     warn: async () => {
       if (Capacitor.isNativePlatform()) {
-        await Haptics.notification({ type: NotificationType.Warning });
+        try {
+          await Haptics.notification({ type: NotificationType.Warning });
+        } catch (err) {
+          console.warn("[NativeService] haptics.warn failed:", err);
+        }
       }
     },
     // Error pattern for failures and invalid actions
     error: async () => {
       if (Capacitor.isNativePlatform()) {
-        await Haptics.notification({ type: NotificationType.Error });
+        try {
+          await Haptics.notification({ type: NotificationType.Error });
+        } catch (err) {
+          console.warn("[NativeService] haptics.error failed:", err);
+        }
       }
     },
     // Selection feedback for switches, toggles, and pickers
     selection: async () => {
       if (Capacitor.isNativePlatform()) {
-        await Haptics.selectionStart();
-        await Haptics.selectionChanged();
-        await Haptics.selectionEnd();
+        try {
+          await Haptics.selectionStart();
+          await Haptics.selectionChanged();
+          await Haptics.selectionEnd();
+        } catch (err) {
+          console.warn("[NativeService] haptics.selection failed:", err);
+        }
       }
     },
     // Generic notification (kept for backward compatibility)
     notification: async (type: NotificationType) => {
       if (Capacitor.isNativePlatform()) {
-        await Haptics.notification({ type });
+        try {
+          await Haptics.notification({ type });
+        } catch (err) {
+          console.warn("[NativeService] haptics.notification failed:", err);
+        }
       }
     },
     // Generic vibrate (kept for backward compatibility)
     vibrate: async () => {
       if (Capacitor.isNativePlatform()) {
-        await Haptics.vibrate();
+        try {
+          await Haptics.vibrate();
+        } catch (err) {
+          console.warn("[NativeService] haptics.vibrate failed:", err);
+        }
       }
     },
   },
@@ -77,24 +113,77 @@ export const NativeService = {
    */
   preferences: {
     set: async (key: string, value: any) => {
-      await Preferences.set({
-        key,
-        value: typeof value === "string" ? value : JSON.stringify(value),
-      });
-    },
-    get: async (key: string) => {
-      const { value } = await Preferences.get({ key });
+      const strVal = typeof value === "string" ? value : JSON.stringify(value);
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await Preferences.set({ key, value: strVal });
+          return;
+        } catch (err) {
+          console.warn("[NativeService] Preferences.set failed, using localStorage:", err);
+        }
+      }
       try {
-        return value ? JSON.parse(value) : null;
-      } catch {
-        return value;
+        localStorage.setItem(key, strVal);
+      } catch (err) {
+        console.warn("[NativeService] localStorage.setItem fallback failed:", err);
       }
     },
+    get: async (key: string) => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const { value } = await Preferences.get({ key });
+          if (value !== null && value !== undefined) {
+            try {
+              return JSON.parse(value);
+            } catch {
+              return value;
+            }
+          }
+        } catch (err) {
+          console.warn("[NativeService] Preferences.get failed, falling back to localStorage:", err);
+        }
+      }
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw !== null && raw !== undefined) {
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return raw;
+          }
+        }
+      } catch (err) {
+        console.warn("[NativeService] localStorage.getItem fallback failed:", err);
+      }
+      return null;
+    },
     remove: async (key: string) => {
-      await Preferences.remove({ key });
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await Preferences.remove({ key });
+        } catch (err) {
+          console.warn("[NativeService] Preferences.remove failed:", err);
+        }
+      }
+      try {
+        localStorage.removeItem(key);
+      } catch (err) {
+        console.warn("[NativeService] localStorage.removeItem failed:", err);
+      }
     },
     clear: async () => {
-      await Preferences.clear();
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await Preferences.clear();
+        } catch (err) {
+          console.warn("[NativeService] Preferences.clear failed:", err);
+        }
+      }
+      try {
+        localStorage.clear();
+      } catch (err) {
+        console.warn("[NativeService] localStorage.clear failed:", err);
+      }
     },
   },
 
@@ -102,20 +191,61 @@ export const NativeService = {
    * Device info
    */
   device: {
-    getInfo: () => Device.getInfo(),
-    getBatteryInfo: () => Device.getBatteryInfo(),
-    getLanguageCode: () => Device.getLanguageCode(),
+    getInfo: async () => {
+      try {
+        return await Device.getInfo();
+      } catch (err) {
+        console.warn("[NativeService] Device.getInfo failed:", err);
+        return { platform: "web", operatingSystem: "unknown" } as any;
+      }
+    },
+    getBatteryInfo: async () => {
+      try {
+        return await Device.getBatteryInfo();
+      } catch (err) {
+        console.warn("[NativeService] Device.getBatteryInfo failed:", err);
+        return { batteryLevel: 1, isCharging: true } as any;
+      }
+    },
+    getLanguageCode: async () => {
+      try {
+        return await Device.getLanguageCode();
+      } catch (err) {
+        console.warn("[NativeService] Device.getLanguageCode failed:", err);
+        return { value: "en" } as any;
+      }
+    },
   },
 
   /**
    * Native dialogs
    */
   dialog: {
-    alert: (title: string, message: string) => Dialog.alert({ title, message }),
-    confirm: (title: string, message: string) =>
-      Dialog.confirm({ title, message }),
-    prompt: (title: string, message: string) =>
-      Dialog.prompt({ title, message }),
+    alert: async (title: string, message: string) => {
+      try {
+        return await Dialog.alert({ title, message });
+      } catch (err) {
+        console.warn("[NativeService] Dialog.alert failed:", err);
+        window.alert(`${title}\n\n${message}`);
+      }
+    },
+    confirm: async (title: string, message: string) => {
+      try {
+        return await Dialog.confirm({ title, message });
+      } catch (err) {
+        console.warn("[NativeService] Dialog.confirm failed:", err);
+        return { value: window.confirm(`${title}\n\n${message}`) };
+      }
+    },
+    prompt: async (title: string, message: string) => {
+      try {
+        return await Dialog.prompt({ title, message });
+      } catch (err) {
+        console.warn("[NativeService] Dialog.prompt failed:", err);
+        const res = window.prompt(`${title}\n\n${message}`);
+        return { value: res || "", cancelled: res === null };
+      }
+    },
   },
 
   /**
@@ -146,3 +276,4 @@ export const NativeService = {
     }
   },
 };
+
