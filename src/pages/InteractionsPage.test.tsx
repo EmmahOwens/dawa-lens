@@ -5,7 +5,7 @@ import InteractionsPage from "./InteractionsPage";
 
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
 
-const { mockToast, mockCheckHolisticSafety, testState } = vi.hoisted(() => ({
+const { mockToast, mockCheckHolisticSafety, mockCheckInteractions, mockCheckFdaMultiSafety, testState } = vi.hoisted(() => ({
   mockToast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -13,6 +13,8 @@ const { mockToast, mockCheckHolisticSafety, testState } = vi.hoisted(() => ({
     info: vi.fn(),
   },
   mockCheckHolisticSafety: vi.fn(),
+  mockCheckInteractions: vi.fn().mockResolvedValue([]),
+  mockCheckFdaMultiSafety: vi.fn().mockResolvedValue(null),
   testState: {
     medicines: [
       { id: "med-1", name: "Atorvastatin", genericName: "atorvastatin", rxcui: "83367" },
@@ -66,23 +68,26 @@ vi.mock("framer-motion", () => ({
   ),
 }));
 
+const mockUserProfile = { name: "Test Patient", gender: "male" };
+const mockPatients: any[] = [];
+
 vi.mock("@/contexts/AppContext", () => ({
   useApp: () => ({
     medicines: testState.medicines,
-    userProfile: { name: "Test Patient", gender: "male" },
-    patients: [],
+    userProfile: mockUserProfile,
+    patients: mockPatients,
     selectedPatientId: null,
   }),
 }));
 
 vi.mock("@/services/interactionChecker", () => ({
-  checkInteractions: vi.fn().mockResolvedValue([]),
+  checkInteractions: (...args: any[]) => mockCheckInteractions(...args),
   getRxCUI: vi.fn().mockResolvedValue("12345"),
   getSpellingSuggestions: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("@/services/openFdaClient", () => ({
-  checkFdaMultiSafety: vi.fn().mockResolvedValue(null),
+  checkFdaMultiSafety: (...args: any[]) => mockCheckFdaMultiSafety(...args),
 }));
 
 vi.mock("@/services/api", () => ({
@@ -101,6 +106,79 @@ vi.mock("@/services/nativeService", () => ({
 }));
 
 // ─── Test Suite ───────────────────────────────────────────────────────────────
+
+describe("InteractionsPage - Cabinet Safety & Visibility", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCheckInteractions.mockResolvedValue([]);
+    mockCheckFdaMultiSafety.mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("renders 'safety.no_interactions' when no drug interactions or FDA alerts exist", async () => {
+    mockCheckInteractions.mockResolvedValueOnce([]);
+    mockCheckFdaMultiSafety.mockResolvedValueOnce(null);
+
+    render(<InteractionsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("safety.no_interactions")).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/safety.detected/i)).not.toBeInTheDocument();
+  });
+
+  it("hides 'safety.no_interactions' immediately when medication interactions appear", async () => {
+    mockCheckInteractions.mockResolvedValueOnce([
+      {
+        drug1: "Atorvastatin",
+        drug2: "Lisinopril",
+        severity: "high",
+        description: "Concurrent use may increase adverse risk.",
+      },
+    ]);
+    mockCheckFdaMultiSafety.mockResolvedValueOnce(null);
+
+    render(<InteractionsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/safety.detected/i)).toBeInTheDocument();
+      expect(screen.getByText("Concurrent use may increase adverse risk.")).toBeInTheDocument();
+    });
+
+    // "safety.no_interactions" must NOT be in the document
+    expect(screen.queryByText("safety.no_interactions")).not.toBeInTheDocument();
+  });
+
+  it("hides 'safety.no_interactions' when FDA clinical safety duplicate therapy alerts appear", async () => {
+    mockCheckInteractions.mockResolvedValueOnce([]);
+    mockCheckFdaMultiSafety.mockResolvedValueOnce({
+      duplicateTherapies: [
+        {
+          drug1: "Atorvastatin",
+          drug2: "Simvastatin",
+          sharedClass: "HMG-CoA Reductase Inhibitors",
+          warning: "Duplicate HMG-CoA Reductase Inhibitor therapy detected.",
+        },
+      ],
+      boxedWarnings: [],
+      contraindicationAlerts: [],
+      allergenAlerts: [],
+    });
+
+    render(<InteractionsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("FDA Clinical Safety Intelligence")).toBeInTheDocument();
+      expect(screen.getByText(/Duplicate Therapy/i)).toBeInTheDocument();
+    });
+
+    // "safety.no_interactions" must NOT be in the document
+    expect(screen.queryByText("safety.no_interactions")).not.toBeInTheDocument();
+  });
+});
 
 describe("InteractionsPage - Holistic & Food Safety", () => {
   beforeEach(() => {

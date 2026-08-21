@@ -470,8 +470,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1787229835.4214337,
-    "ast_hash": "dc5355ddb6d5fe2777c2874e423dba3e",
+    "mtime": 1787296553.9540164,
+    "ast_hash": "33d35441c2aa3bbcb236ce412fbdb076",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -1300,8 +1300,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/InteractionsPage.tsx": {
-    "mtime": 1787139908.5128088,
-    "ast_hash": "0850b845d466dbc728a44f65526e9add",
+    "mtime": 1787297047.1678324,
+    "ast_hash": "3d1576195d133558005ba857dfcad648",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicineInfoPage.tsx": {
@@ -1555,8 +1555,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/types/interactions.ts": {
-    "mtime": 1775473582.994715,
-    "ast_hash": "0a94c8b123f8e494d12d7eac1e1cd98a",
+    "mtime": 1787296574.2024114,
+    "ast_hash": "d0b847552425ad908f05194e176cc282",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/types/updates.ts": {
@@ -3462,6 +3462,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/offlineQueue.test.ts": {
     "mtime": 1787289092.4329715,
     "ast_hash": "39d691d21e223813fb0602516497d3b0",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/InteractionsPage.test.tsx": {
+    "mtime": 1787297109.1878498,
+    "ast_hash": "67564bd8afa9cde9c5a6f88bf5f872d9",
     "semantic_hash": ""
   }
 }

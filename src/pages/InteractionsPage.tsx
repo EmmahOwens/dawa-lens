@@ -32,9 +32,18 @@ export default function InteractionsPage() {
 
   // Cabinet State
   const [interactions, setInteractions] = useState<ParsedInteraction[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(medicines.length >= 2);
   const [animationComplete, setAnimationComplete] = useState(false);
   const [fdaSafety, setFdaSafety] = useState<FdaMultiSafetyResult | null>(null);
+
+  const hasFdaAlerts = Boolean(
+    fdaSafety && (
+      (fdaSafety.duplicateTherapies && fdaSafety.duplicateTherapies.length > 0) ||
+      (fdaSafety.boxedWarnings && fdaSafety.boxedWarnings.length > 0) ||
+      (fdaSafety.contraindicationAlerts && fdaSafety.contraindicationAlerts.length > 0) ||
+      (fdaSafety.allergenAlerts && fdaSafety.allergenAlerts.length > 0)
+    )
+  );
 
   // Sandbox State
   const [sandboxDrugs, setSandboxDrugs] = useState<{ name: string; rxcui: string }[]>([]);
@@ -197,9 +206,10 @@ export default function InteractionsPage() {
       setHolisticLoading(false);
     }
   };
-  
+
   // Cabinet Safety Fetch
   useEffect(() => {
+    let isMounted = true;
     const fetchInteractions = async () => {
       const rxcuis = medicines.map(m => m.rxcui).filter((id): id is string => !!id);
       
@@ -211,34 +221,52 @@ export default function InteractionsPage() {
         allergies: currentPatient?.allergies || [],
       };
 
-      // Always run openFDA multi-safety check if there are medicines
-      if (medicines.length > 0) {
-        checkFdaMultiSafety(medicines, patientCtx)
-          .then(setFdaSafety)
-          .catch(err => console.warn('FDA safety check failed:', err));
-      } else {
-        setFdaSafety(null);
-      }
-
-      if (rxcuis.length < 2) {
-        setInteractions([]);
+      if (medicines.length < 2) {
+        if (isMounted) {
+          setInteractions([]);
+          setFdaSafety(null);
+          setLoading(false);
+        }
         return;
       }
       
       setLoading(true);
       try {
-        const results = await checkInteractions(rxcuis);
-        setInteractions(results);
+        const [fdaRes, rxNavRes] = await Promise.allSettled([
+          checkFdaMultiSafety(medicines, patientCtx),
+          rxcuis.length >= 2 ? checkInteractions(rxcuis) : Promise.resolve([] as ParsedInteraction[])
+        ]);
+
+        if (isMounted) {
+          if (fdaRes.status === "fulfilled") {
+            setFdaSafety(fdaRes.value);
+          } else {
+            console.warn('FDA safety check failed:', fdaRes.reason);
+            setFdaSafety(null);
+          }
+
+          if (rxNavRes.status === "fulfilled") {
+            setInteractions(rxNavRes.value);
+          } else {
+            console.error("Failed to load interactions", rxNavRes.reason);
+            setInteractions([]);
+          }
+        }
       } catch (error) {
-        console.error("Failed to load interactions", error);
+        console.error("Failed to load safety data", error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
     if (activeTab === "cabinet") {
       fetchInteractions();
     }
+    return () => {
+      isMounted = false;
+    };
   }, [medicines, activeTab, selectedPatientId, patients, userProfile]);
 
   // Sandbox Safety Fetch
@@ -585,7 +613,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
       {activeTab === "cabinet" && (
         <div className="space-y-6">
           {/* FDA Multi-Drug Clinical Safety Alerts (Duplicate Therapy, Boxed Warnings, Contraindications, Allergens) */}
-          {fdaSafety && (fdaSafety.duplicateTherapies?.length > 0 || fdaSafety.boxedWarnings?.length > 0 || fdaSafety.contraindicationAlerts?.length > 0 || fdaSafety.allergenAlerts?.length > 0) && (
+          {!loading && hasFdaAlerts && fdaSafety && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
               <div className="flex items-center gap-2 pb-1 border-b border-border/40">
                 <ShieldAlert size={16} className="text-red-500" />
@@ -673,14 +701,14 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
             </motion.div>
           )}
 
-          {medicines.length >= 2 && loading && animationComplete && (
+          {medicines.length >= 2 && loading && (
             <div className="space-y-4">
               <Skeleton className="h-[100px] w-full rounded-2xl" />
               <Skeleton className="h-[100px] w-full rounded-2xl" />
             </div>
           )}
 
-          {medicines.length >= 2 && (!loading || animationComplete) && interactions.length === 0 && (
+          {medicines.length >= 2 && !loading && interactions.length === 0 && !hasFdaAlerts && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -691,7 +719,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
             </motion.div>
           )}
 
-          {medicines.length >= 2 && (!loading || animationComplete) && interactions.length > 0 && (
+          {medicines.length >= 2 && !loading && interactions.length > 0 && (
             <motion.div 
               variants={container} 
               initial="hidden" 
