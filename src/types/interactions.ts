@@ -49,3 +49,13 @@ export interface ConditionSafetyCheck {
   warning: string;
   source: string;
 }
+
+export interface HolisticInteraction {
+  factor: string;
+  risk: "High" | "Medium" | "Low" | "Safe";
+  affectedMedicines?: string[];
+  mechanism?: string;
+  explanation: string;
+  advice: string;
+}
+

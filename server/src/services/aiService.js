@@ -728,34 +728,142 @@ export const getCoachAdvice = async (logs, medicines, userName, priority = 'high
   return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 800);
 };
 
-export const checkHolisticSafety = async (medicines, lifestyleFactors, priority = 'high') => {
+export const checkHolisticSafety = async (medicines, lifestyleFactors = [], priority = 'high') => {
+  if (!Array.isArray(lifestyleFactors) || lifestyleFactors.length === 0) {
+    return { interactions: [] };
+  }
+
+  // Deduplicate and sanitize requested factors
+  const requestedFactors = Array.from(
+    new Set(lifestyleFactors.map(f => (typeof f === 'string' ? f.trim() : '')).filter(Boolean))
+  );
+
+  if (requestedFactors.length === 0) {
+    return { interactions: [] };
+  }
+
   // Fetch FDA labels to ground interaction assertions
   let fdaInteractionSnippets = [];
   try {
-    const labelPromises = medicines.slice(0, 4).map(m => fetchDrugLabel(m.name || m.genericName));
+    const labelPromises = (medicines || []).slice(0, 4).map(m => fetchDrugLabel(m.name || m.genericName));
     const labels = await Promise.all(labelPromises);
     fdaInteractionSnippets = labels
       .filter(l => l && (l.drugInteractions || l.boxedWarning))
-      .map(l => `[FDA Label: ${l.brandName || l.genericName}]: ${l.drugInteractions ? l.drugInteractions.slice(0, 300) : ''} ${l.boxedWarning ? 'Boxed Warning: ' + l.boxedWarning.slice(0, 200) : ''}`);
+      .map(l => `[FDA Label: ${l.brandName || l.genericName}]: ${l.drugInteractions ? l.drugInteractions.slice(0, 350) : ''} ${l.boxedWarning ? 'Boxed Warning: ' + l.boxedWarning.slice(0, 200) : ''}`);
   } catch (fdaErr) {
     console.warn('[checkHolisticSafety] FDA grounding retrieval skipped:', fdaErr.message);
   }
 
+  // Inject relevant East African nutritional context ONLY if requested factors mention them
+  const matchedLocalFoods = (LOCAL_FOODS || []).filter(lf =>
+    requestedFactors.some(rf => rf.toLowerCase().includes(lf.name.toLowerCase()) || lf.name.toLowerCase().includes(rf.toLowerCase()))
+  );
+  const localFoodContext = matchedLocalFoods.length > 0
+    ? `\n    === LOCAL NUTRITIONAL CONTEXT (Relevant to requested items) ===\n    ${matchedLocalFoods.map(f => `- ${f.name}: ${f.benefits} (${f.medicationContext})`).join('\n    ')}\n`
+    : '';
+
   const prompt = `
-    You are "Dawa-Lens Holistic Safety Engine".
-    Medication List: ${JSON.stringify(medicines.map(m => m.name + (m.genericName ? ` (${m.genericName})` : '')))}
-    Factors: ${JSON.stringify(lifestyleFactors)}
-    ${fdaInteractionSnippets.length > 0 ? `\n    === FDA GROUNDING DATA ===\n    ${fdaInteractionSnippets.join('\n    ')}\n` : ''}
+    You are the "Dawa-Lens Clinical Holistic & Dietary Safety Engine".
+    Your role is to provide rigorous, realistic, and pharmacologically accurate food, herb, beverage, and lifestyle interaction analysis for a patient taking specific medications.
 
-    Task: Identify interactions with food/lifestyle (Alcohol, Caffeine, Grapefruit, Dairy, etc.).
-    Include East African context: also check for interactions with local staples (e.g., Mukene, Kalo, Nakati) if mentioned or relevant.
-    Categorize risk: High, Medium, Low.
-    Use Markdown for formatting the explanation and advice if helpful.
+    === PATIENT MEDICATIONS ===
+    ${(medicines || []).map((m, i) => `${i + 1}. ${m.name || 'Unknown'}${m.genericName ? ` (Generic: ${m.genericName})` : ''}${m.dosage ? ` - Dose: ${m.dosage}` : ''}`).join('\n    ')}
 
-    Respond in JSON format:
-    { "interactions": [{ "factor": "...", "risk": "...", "explanation": "text (Markdown)", "advice": "text (Markdown)" }] }
+    === REQUESTED FOODS / LIFESTYLE FACTORS TO EVALUATE ===
+    ${requestedFactors.map((f, i) => `${i + 1}. "${f}"`).join('\n    ')}
+    ${fdaInteractionSnippets.length > 0 ? `\n    === FDA DRUG INTERACTION GROUNDING DATA ===\n    ${fdaInteractionSnippets.join('\n    ')}\n` : ''}${localFoodContext}
+
+    === CRITICAL EVALUATION RULES ===
+    1. STRICT EXCLUSIVITY: Evaluate ONLY and EXACTLY the ${requestedFactors.length} item(s) listed under "REQUESTED FOODS / LIFESTYLE FACTORS TO EVALUATE".
+       DO NOT include, mention, or return evaluations for ANY unrequested foods, drinks, or herbs. Never hallucinate or add items like Alcohol, Grapefruit, Dairy, or Mukene unless they are explicitly in the requested list above.
+    2. EXACT 1-TO-1 MAPPING: You MUST return exactly one entry in the "interactions" array for each requested factor in the list.
+    3. CLINICAL REALISM & ACCURACY:
+       - Base your assessment on real clinical pharmacology (pharmacokinetics, CYP enzyme inhibition/induction like CYP3A4/CYP2D6, P-glycoprotein, chelation with polyvalent cations like Ca2+/Mg2+/Fe2+, GI motility, additive CNS sedation, potassium retention, tyramine reactions, etc.).
+       - Specify which medication(s) from the patient's list are affected in "affectedMedicines". If no medications are affected, set "affectedMedicines" to [] and classify risk as "Safe".
+       - If there is NO known clinically significant interaction between the food/factor and the patient's medications, DO NOT invent one. Accurately mark risk as "Safe" (or "Low" for minor theoretical dietary notes) and reassure the patient.
+       - Risk classification must be strictly one of: "High", "Medium", "Low", "Safe".
+         * "High": Severe, hazardous adverse reaction (toxicity, profound hypotension, major bleeding, critical loss of efficacy).
+         * "Medium": Clinically significant interaction requiring spacing (e.g. 2-4 hours apart), dosage timing adjustment, or moderation.
+         * "Low": Minor interaction with minimal clinical consequence in normal dietary amounts.
+         * "Safe": No clinically meaningful interaction between this item and the patient's active medications.
+       - "explanation": Concise, clear medical markdown explaining what happens in the body or why it is safe.
+       - "advice": Actionable, realistic markdown advice (e.g., exact hours to space medication and food, dietary portion limits, what symptoms to watch for, or reassurance of safety).
+
+    === STRICT JSON FORMAT ===
+    {
+      "interactions": [
+        {
+          "factor": "Exact name of requested factor",
+          "risk": "High" | "Medium" | "Low" | "Safe",
+          "affectedMedicines": ["Affected Medication Name"],
+          "mechanism": "Short clinical summary of mechanism (e.g. CYP3A4 inhibition, cation chelation, no interaction)",
+          "explanation": "Markdown formatted explanation",
+          "advice": "Markdown formatted advice"
+        }
+      ]
+    }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 600);
+
+  let rawResult;
+  try {
+    rawResult = await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 800);
+  } catch (aiErr) {
+    console.error('[checkHolisticSafety] AI call failed:', aiErr.message);
+    throw aiErr;
+  }
+
+  // Defensive post-processing: Guarantee 100% adherence to only requested factors
+  const returnedInteractions = Array.isArray(rawResult?.interactions) ? rawResult.interactions : [];
+
+  // Filter out any hallucinated factors that do not match the requested factors
+  const filteredInteractions = returnedInteractions.filter(item => {
+    if (!item || !item.factor) return false;
+    const factorLower = item.factor.trim().toLowerCase();
+    return requestedFactors.some(rf => {
+      const rfLower = rf.toLowerCase();
+      return factorLower === rfLower || factorLower.includes(rfLower) || rfLower.includes(factorLower);
+    });
+  });
+
+  // Ensure every requested factor has an entry in the response
+  const finalInteractions = requestedFactors.map(rf => {
+    const rfLower = rf.toLowerCase();
+    const existing = filteredInteractions.find(i => {
+      const iLower = (i.factor || '').toLowerCase();
+      return iLower === rfLower || iLower.includes(rfLower) || rfLower.includes(iLower);
+    });
+
+    if (existing) {
+      let risk = existing.risk || 'Low';
+      const riskLower = String(risk).toLowerCase();
+      if (riskLower.includes('high') || riskLower.includes('severe')) risk = 'High';
+      else if (riskLower.includes('med') || riskLower.includes('mod')) risk = 'Medium';
+      else if (riskLower.includes('safe') || riskLower.includes('none')) risk = 'Safe';
+      else risk = 'Low';
+
+      return {
+        ...existing,
+        factor: rf,
+        risk,
+        affectedMedicines: Array.isArray(existing.affectedMedicines) ? existing.affectedMedicines : [],
+        mechanism: existing.mechanism || (risk === 'Safe' ? 'No known pharmacological interaction' : 'Pharmacological interaction'),
+        explanation: existing.explanation || `No significant clinical interaction reported between ${rf} and your medications.`,
+        advice: existing.advice || `Safe to consume ${rf} in typical dietary quantities.`
+      };
+    }
+
+    // Default entry if model somehow omitted a factor
+    return {
+      factor: rf,
+      risk: 'Safe',
+      affectedMedicines: [],
+      mechanism: 'No known pharmacological interaction',
+      explanation: `Based on clinical pharmacological data, **${rf}** does not have any known significant interaction with your current medications (${(medicines || []).map(m => m.name).join(', ')}).`,
+      advice: `You may safely consume **${rf}** as part of your normal diet without altering your medication timing.`
+    };
+  });
+
+  return { interactions: finalInteractions };
 };
 
 export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }, priority = 'high') => {

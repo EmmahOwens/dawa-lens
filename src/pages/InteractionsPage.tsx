@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { useApp } from "@/contexts/AppContext";
 import { checkInteractions, getRxCUI, getSpellingSuggestions } from "@/services/interactionChecker";
-import { ParsedInteraction } from "@/types/interactions";
+import { HolisticInteraction, ParsedInteraction } from "@/types/interactions";
 import { 
   ShieldAlert, AlertTriangle, Info, CheckCircle2, 
   Search, Plus, Trash2, Share2, X, Coffee, Wine, 
-  GlassWater, Beef, Salad, Sparkles, Loader2, Brain 
+  GlassWater, Beef, Salad, Sparkles, Loader2, Brain,
+  Utensils
 } from "@/lib/icons";
 import { RiveMoji } from "@/components/rive/RiveMoji";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,7 @@ export default function InteractionsPage() {
   const [customFactor, setCustomFactor] = useState("");
   const [customFactors, setCustomFactors] = useState<string[]>([]);
   const [holisticLoading, setHolisticLoading] = useState(false);
-  const [holisticReport, setHolisticReport] = useState<any[]>([]);
+  const [holisticReport, setHolisticReport] = useState<HolisticInteraction[]>([]);
 
   // AI Translate State
   const [explanations, setExplanations] = useState<Record<string, { loading: boolean; text: string }>>({});
@@ -60,6 +61,19 @@ export default function InteractionsPage() {
     { id: "Dairy", icon: GlassWater },
     { id: "Grapefruit", icon: Salad },
     { id: "High-fat meals", icon: Beef },
+  ];
+
+  const popularSuggestions = [
+    "Sukuma Wiki (Greens)",
+    "Bananas (Potassium)",
+    "Green Tea",
+    "Mukene (Silverfish)",
+    "Matooke",
+    "Garlic",
+    "Iron Supplements",
+    "St. John's Wort",
+    "Citrus / Orange Juice",
+    "Ginger",
   ];
 
   const handleTabChange = (tab: "cabinet" | "sandbox") => {
@@ -75,28 +89,75 @@ export default function InteractionsPage() {
     );
   };
 
-  const handleAddCustomFactor = (e: React.FormEvent) => {
-    e.preventDefault();
+  const toggleSuggestion = (name: string) => {
+    NativeService.haptics.impact(ImpactStyle.Light);
+    if (!customFactors.some(f => f.toLowerCase() === name.toLowerCase()) &&
+        !availableFactors.some(f => f.id.toLowerCase() === name.toLowerCase())) {
+      setCustomFactors(prev => [...prev, name]);
+    }
+    setLifestyleFactors(prev =>
+      prev.includes(name) ? prev.filter(f => f !== name) : [...prev, name]
+    );
+  };
+
+  const handleAddCustomFactor = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const clean = customFactor.trim();
     if (!clean) return;
-    
-    if (customFactors.some(f => f.toLowerCase() === clean.toLowerCase()) || 
-        availableFactors.some(f => f.id.toLowerCase() === clean.toLowerCase())) {
-      toast.warning(`"${clean}" is already added.`);
+
+    NativeService.haptics.impact(ImpactStyle.Medium);
+
+    // If it matches an available factor
+    const matchingAvailable = availableFactors.find(
+      f => f.id.toLowerCase() === clean.toLowerCase()
+    );
+
+    if (matchingAvailable) {
+      if (!lifestyleFactors.includes(matchingAvailable.id)) {
+        setLifestyleFactors(prev => [...prev, matchingAvailable.id]);
+        toast.success(`Selected "${matchingAvailable.id}"`);
+      } else {
+        toast.info(`"${matchingAvailable.id}" is already selected.`);
+      }
+      setCustomFactor("");
       return;
     }
 
-    NativeService.haptics.impact(ImpactStyle.Medium);
+    // If it matches an existing custom factor
+    const matchingCustom = customFactors.find(
+      f => f.toLowerCase() === clean.toLowerCase()
+    );
+
+    if (matchingCustom) {
+      if (!lifestyleFactors.includes(matchingCustom)) {
+        setLifestyleFactors(prev => [...prev, matchingCustom]);
+        toast.success(`Selected "${matchingCustom}"`);
+      } else {
+        toast.info(`"${matchingCustom}" is already selected.`);
+      }
+      setCustomFactor("");
+      return;
+    }
+
+    // Brand new custom food / factor
     setCustomFactors(prev => [...prev, clean]);
     setLifestyleFactors(prev => [...prev, clean]);
     setCustomFactor("");
-    toast.success(`Added lifestyle factor: ${clean}`);
+    toast.success(`Added & selected "${clean}"`);
   };
 
   const removeCustomFactor = (factor: string) => {
     NativeService.haptics.impact(ImpactStyle.Light);
     setCustomFactors(prev => prev.filter(f => f !== factor));
     setLifestyleFactors(prev => prev.filter(f => f !== factor));
+    setHolisticReport(prev => prev.filter(r => r.factor.toLowerCase() !== factor.toLowerCase()));
+  };
+
+  const clearSelectedFactors = () => {
+    NativeService.haptics.impact(ImpactStyle.Medium);
+    setLifestyleFactors([]);
+    setHolisticReport([]);
+    toast.info("Cleared selected factors");
   };
 
   const checkHolistic = async () => {
@@ -105,7 +166,7 @@ export default function InteractionsPage() {
       : sandboxDrugs.map(d => ({ name: d.name, genericName: "" }));
 
     if (activeMeds.length === 0 || lifestyleFactors.length === 0) {
-      toast.error("Please add medications and select lifestyle factors first.");
+      toast.error("Please add medications and select at least one food or lifestyle factor.");
       return;
     }
     
@@ -115,9 +176,20 @@ export default function InteractionsPage() {
       const res = await aiApi.checkHolisticSafety({
         medicines: activeMeds as any[],
         lifestyleFactors
-      }) as any;
-      setHolisticReport(res.interactions || []);
-      toast.success("Holistic safety report ready!");
+      }) as { interactions?: HolisticInteraction[] };
+
+      // Strictly ensure only interactions for selected factors are stored
+      const rawInteractions = res?.interactions || [];
+      const scopedInteractions = rawInteractions.filter(item =>
+        lifestyleFactors.some(lf => {
+          const lfLower = lf.toLowerCase();
+          const itemLower = (item.factor || '').toLowerCase();
+          return lfLower === itemLower || itemLower.includes(lfLower) || lfLower.includes(itemLower);
+        })
+      );
+
+      setHolisticReport(scopedInteractions);
+      toast.success(`Holistic safety analyzed for ${lifestyleFactors.length} item${lifestyleFactors.length > 1 ? 's' : ''}!`);
     } catch (err) {
       console.error("Holistic check failed", err);
       toast.error("Failed to check lifestyle interactions.");
@@ -383,7 +455,13 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
     if (holisticReport.length > 0) {
       reportText += `=== HOLISTIC & LIFESTYLE SAFETY ===\n`;
       holisticReport.forEach(h => {
-        reportText += `[${h.risk} RISK] ${h.factor}\n`;
+        reportText += `[${h.risk.toUpperCase()} RISK] ${h.factor}\n`;
+        if (h.affectedMedicines && h.affectedMedicines.length > 0) {
+          reportText += `Affects: ${h.affectedMedicines.join(", ")}\n`;
+        }
+        if (h.mechanism) {
+          reportText += `Mechanism: ${h.mechanism}\n`;
+        }
         reportText += `Explanation: ${h.explanation.replace(/[*#]/g, "")}\n`;
         reportText += `Advice: ${h.advice.replace(/[*#]/g, "")}\n\n`;
       });
@@ -915,38 +993,60 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
         animate={{ opacity: 1, y: 0 }}
         className="mt-12 pt-12 border-t border-border/50"
       >
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 tracking-tight">
-              <Sparkles size={20} className="text-primary" />
-              Holistic Safety
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 tracking-tight">
+                <Sparkles size={20} className="text-primary" />
+                Holistic & Food Safety
+              </h2>
+              {lifestyleFactors.length > 0 && (
+                <Badge variant="outline" className="text-[10px] font-bold bg-primary/10 text-primary border-primary/20">
+                  {lifestyleFactors.length} selected
+                </Badge>
+              )}
+            </div>
             <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 opacity-80">
-              Check diet, herb & lifestyle safety for {activeTab === "cabinet" ? "cabinet" : "sandbox"} meds
+              Check specific foods, herbs & lifestyle factors for {activeTab === "cabinet" ? "cabinet" : "sandbox"} meds
             </p>
           </div>
-          <button 
-            onClick={checkHolistic}
-            disabled={holisticLoading || lifestyleFactors.length === 0 || (activeTab === "cabinet" ? medicines.length === 0 : sandboxDrugs.length === 0)}
-            className="h-10 px-5 rounded-lg bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-primary/10 disabled:opacity-50 transition-all active:scale-95 flex items-center gap-2"
-          >
-            {holisticLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-            Analyze
-          </button>
+          <div className="flex items-center gap-2">
+            {lifestyleFactors.length > 0 && (
+              <button
+                type="button"
+                onClick={clearSelectedFactors}
+                className="h-10 px-3.5 rounded-lg border border-border/50 text-muted-foreground hover:text-foreground text-[10px] font-bold uppercase tracking-wider transition-all hover:bg-muted/40"
+              >
+                Clear
+              </button>
+            )}
+            <button 
+              onClick={checkHolistic}
+              disabled={holisticLoading || lifestyleFactors.length === 0 || (activeTab === "cabinet" ? medicines.length === 0 : sandboxDrugs.length === 0)}
+              className="h-10 px-5 rounded-lg bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-primary/10 disabled:opacity-50 transition-all active:scale-95 flex items-center gap-2"
+            >
+              {holisticLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              Analyze {lifestyleFactors.length > 0 ? `(${lifestyleFactors.length})` : ""}
+            </button>
+          </div>
         </div>
 
         {/* Custom Factor Form */}
-        <form onSubmit={handleAddCustomFactor} className="flex gap-2 mb-6 w-full max-w-md">
-          <input
-            type="text"
-            placeholder="Add custom factor (e.g. Ginseng, Green Tea, Iron)"
-            value={customFactor}
-            onChange={(e) => setCustomFactor(e.target.value)}
-            className="flex-1 px-4 py-2.5 text-xs rounded-xl bg-card border border-border/50 focus:outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground/60"
-          />
+        <form onSubmit={handleAddCustomFactor} className="flex gap-2 mb-6 w-full max-w-lg">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Add any food, herb, or drink (e.g. Avocado, Sukuma Wiki, Bananas)..."
+              value={customFactor}
+              onChange={(e) => setCustomFactor(e.target.value)}
+              className="w-full px-4 py-2.5 text-xs rounded-xl bg-card border border-border/50 focus:outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground/60 shadow-inner"
+            />
+          </div>
           <button
             type="submit"
-            className="h-9 px-4 rounded-xl bg-muted/40 border border-border/40 hover:bg-muted/70 text-xs font-bold uppercase tracking-wider text-foreground transition-colors"
+            onClick={handleAddCustomFactor}
+            disabled={!customFactor.trim()}
+            className="h-9 px-4 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-40"
           >
             Add
           </button>
@@ -954,110 +1054,232 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
 
         {/* Custom Factors Tag Display */}
         {customFactors.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6">
-            {customFactors.map(factor => {
-              const active = lifestyleFactors.includes(factor);
-              return (
-                <div
-                  key={factor}
-                  onClick={() => toggleFactor(factor)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                    active 
-                      ? "bg-warning/10 border-warning/40 text-amber-800 dark:text-amber-300" 
-                      : "bg-card border-border/30 text-muted-foreground hover:border-warning/20"
-                  }`}
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider">{factor}</span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeCustomFactor(factor);
-                    }}
-                    className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+          <div className="mb-6">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
+              Your Custom Foods & Herbs
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {customFactors.map(factor => {
+                const active = lifestyleFactors.includes(factor);
+                return (
+                  <div
+                    key={factor}
+                    onClick={() => toggleFactor(factor)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none ${
+                      active 
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm ring-1 ring-primary/20" 
+                        : "bg-card border-border/40 text-muted-foreground hover:border-primary/30"
+                    }`}
                   >
-                    <X size={10} />
-                  </button>
-                </div>
-              );
-            })}
+                    <Utensils size={12} className={active ? "text-primary-foreground" : "text-muted-foreground/60"} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{factor}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeCustomFactor(factor);
+                      }}
+                      className={`transition-colors ml-1 p-0.5 rounded ${
+                        active ? "text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/20" : "text-muted-foreground hover:text-destructive"
+                      }`}
+                      aria-label={`Remove ${factor}`}
+                    >
+                      <X size={10} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
         {/* Standard Quick Select Chips */}
-        <div className="flex flex-wrap gap-2 mb-10">
-          {availableFactors.map(({ id, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => toggleFactor(id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
-                lifestyleFactors.includes(id) 
-                  ? "bg-primary border-primary text-primary-foreground shadow-md ring-1 ring-primary/20" 
-                  : "bg-card border-border/50 text-muted-foreground hover:border-primary/20"
-              }`}
-            >
-              <Icon size={14} />
-              <span className="text-[10px] font-bold uppercase tracking-wider">{id}</span>
-            </button>
-          ))}
+        <div className="mb-4">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
+            Common Lifestyle Factors
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {availableFactors.map(({ id, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => toggleFactor(id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all select-none ${
+                  lifestyleFactors.includes(id) 
+                    ? "bg-primary border-primary text-primary-foreground shadow-md ring-1 ring-primary/20 font-bold" 
+                    : "bg-card border-border/50 text-muted-foreground hover:border-primary/20 font-medium"
+                }`}
+              >
+                <Icon size={14} />
+                <span className="text-[10px] uppercase tracking-wider">{id}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Popular Suggestions Pills */}
+        <div className="mb-10">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
+            Popular & Regional Foods
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {popularSuggestions.map(sug => {
+              const active = lifestyleFactors.includes(sug);
+              return (
+                <button
+                  key={sug}
+                  type="button"
+                  onClick={() => toggleSuggestion(sug)}
+                  className={`text-[10px] font-semibold px-3 py-1.5 rounded-lg border transition-all select-none ${
+                    active
+                      ? "bg-secondary text-primary border-primary/40 font-bold"
+                      : "bg-muted/20 hover:bg-muted/40 text-muted-foreground border-border/40 hover:text-foreground"
+                  }`}
+                >
+                  + {sug}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Results display */}
         {holisticReport.length > 0 && (
           <div className="space-y-4">
-            {holisticReport.map((interaction, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="premium-card relative overflow-hidden group"
-              >
-                <div className={`absolute top-0 left-0 w-1 h-full transition-all group-hover:w-1.5 ${
-                  interaction.risk === "High" ? "bg-destructive" : interaction.risk === "Medium" ? "bg-warning" : "bg-primary"
-                }`} />
-                <div className="flex items-center justify-between mb-4">
-                   <h4 className="font-bold text-sm uppercase tracking-wider flex items-center gap-2">
-                     {interaction.factor}
-                   </h4>
-                   <Badge className={`px-2 py-0 text-[10px] font-bold uppercase tracking-widest ${
-                     interaction.risk === "High" ? "bg-destructive text-destructive-foreground" : 
-                     interaction.risk === "Medium" ? "bg-warning text-warning-foreground" : "bg-primary text-primary-foreground"
-                   }`}>
-                     {interaction.risk} Risk
-                   </Badge>
-                </div>
-                <div className="text-xs text-muted-foreground leading-relaxed mb-6 font-medium">
-                  <ReactMarkdown
-                    components={{
-                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                    }}
-                  >
-                    {interaction.explanation}
-                  </ReactMarkdown>
-                </div>
-                <div className="bg-muted/10 p-4 rounded-xl border border-border/50">
-                   <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1.5">Safety Advice</p>
-                   <div className="text-xs font-semibold text-foreground leading-relaxed">
-                     <ReactMarkdown
-                       components={{
-                         p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                       }}
-                     >
-                       {interaction.advice}
-                     </ReactMarkdown>
-                   </div>
-                </div>
-              </motion.div>
-            ))}
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Safety Analysis for {holisticReport.length} selected item{holisticReport.length > 1 ? "s" : ""}
+              </span>
+              <span className="text-[11px] text-muted-foreground/80 font-medium flex items-center gap-1">
+                <Sparkles size={11} className="text-primary" />
+                Grounded with clinical pharmacology
+              </span>
+            </div>
+
+            {holisticReport.map((interaction, idx) => {
+              const isHigh = interaction.risk === "High";
+              const isMedium = interaction.risk === "Medium";
+              const isLow = interaction.risk === "Low";
+              const isSafe = interaction.risk === "Safe";
+
+              const badgeColor = isHigh
+                ? "bg-destructive/15 text-destructive border-destructive/30"
+                : isMedium
+                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                : isLow
+                ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+
+              const accentBorder = isHigh
+                ? "bg-destructive"
+                : isMedium
+                ? "bg-amber-500"
+                : isLow
+                ? "bg-blue-500"
+                : "bg-emerald-500";
+
+              const IconComponent = isHigh
+                ? ShieldAlert
+                : isMedium
+                ? AlertTriangle
+                : isLow
+                ? Info
+                : CheckCircle2;
+
+              return (
+                <motion.div 
+                  key={`${interaction.factor}-${idx}`}
+                  initial={{ opacity: 0, scale: 0.98, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  className="premium-card relative overflow-hidden group border border-border/60 shadow-sm"
+                >
+                  <div className={`absolute top-0 left-0 w-1.5 h-full transition-all group-hover:w-2 ${accentBorder}`} />
+                  
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h4 className="font-bold text-base text-foreground tracking-tight flex items-center gap-2">
+                      <Utensils size={16} className="text-primary opacity-80" />
+                      {interaction.factor}
+                    </h4>
+                    <Badge className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border ${badgeColor}`}>
+                      <IconComponent size={12} />
+                      {isSafe ? "Safe / Compatible" : `${interaction.risk} Risk`}
+                    </Badge>
+                  </div>
+
+                  {/* Affected Medications Tags */}
+                  {interaction.affectedMedicines && interaction.affectedMedicines.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Affects:</span>
+                      {interaction.affectedMedicines.map((med, mIdx) => (
+                        <span 
+                          key={mIdx}
+                          className="px-2 py-0.5 rounded-md bg-secondary/80 text-[10px] font-semibold text-foreground border border-border/40"
+                        >
+                          {med}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 mb-3 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 size={12} />
+                      <span>No known adverse interaction with your active medication regimen</span>
+                    </div>
+                  )}
+
+                  {/* Mechanism Tag if available */}
+                  {interaction.mechanism && (
+                    <div className="mb-3 text-[11px] text-muted-foreground font-medium">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Mechanism: </span>
+                      <span className="text-foreground/90 font-normal">{interaction.mechanism}</span>
+                    </div>
+                  )}
+
+                  {/* Explanation */}
+                  <div className="text-xs text-muted-foreground leading-relaxed mb-4 font-normal">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>
+                      }}
+                    >
+                      {interaction.explanation}
+                    </ReactMarkdown>
+                  </div>
+
+                  {/* Safety Advice Box */}
+                  <div className="bg-muted/30 p-3.5 rounded-xl border border-border/50">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-primary mb-1 flex items-center gap-1.5">
+                      <Sparkles size={11} />
+                      Clinical Safety Advice
+                    </p>
+                    <div className="text-xs font-medium text-foreground leading-relaxed">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
+                          strong: ({ children }) => <strong className="font-bold text-foreground">{children}</strong>
+                        }}
+                      >
+                        {interaction.advice}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         )}
 
         {holisticReport.length === 0 && !holisticLoading && (
-          <div className="p-12 rounded-2xl border border-dashed border-border/50 flex flex-col items-center text-center opacity-60 bg-muted/5">
+          <div className="p-12 rounded-2xl border border-dashed border-border/50 flex flex-col items-center text-center opacity-70 bg-muted/5">
              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4 text-muted-foreground/40">
                <Info size={24} />
              </div>
-             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Select factors and tap Analyze to see holistic feedback</p>
+             <p className="text-xs font-bold uppercase tracking-widest text-foreground mb-1">
+               Select or add any food to check safety
+             </p>
+             <p className="text-[11px] text-muted-foreground max-w-sm">
+               Type any custom food/herb above or tap chips, then tap &quot;Analyze&quot; to see tailored pharmacological interactions.
+             </p>
           </div>
         )}
       </motion.div>
