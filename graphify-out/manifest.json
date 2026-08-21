@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeAlarmPlugin.kt": {
-    "mtime": 1787288914.179587,
-    "ast_hash": "9577f12fb600de7f6aa604b2ebed3752",
+    "mtime": 1787293992.990714,
+    "ast_hash": "a0e53ede0983ddd519696da6a407af88",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeCameraPlugin.kt": {
@@ -1350,13 +1350,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.test.tsx": {
-    "mtime": 1780435268.6153858,
-    "ast_hash": "3ae0c9bec8d65cac8fab1d5bf0d401d1",
+    "mtime": 1787295400.7107847,
+    "ast_hash": "b746d931d32c6c0442a0e873a62f7ff2",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.tsx": {
-    "mtime": 1787043573.3698685,
-    "ast_hash": "e77f7fdb94360877efa72228aa92db04",
+    "mtime": 1787294917.4823694,
+    "ast_hash": "241fbb271f35fdf736eefb010709dc03",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
@@ -1385,8 +1385,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/nativeAlarm.ts": {
-    "mtime": 1787043254.7555962,
-    "ast_hash": "a8c853db7f6cbd1b90eaed985961e523",
+    "mtime": 1787294009.09276,
+    "ast_hash": "a0d40ad6061e9b31803e6579fa37b0cd",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/nativeCamera.ts": {
@@ -1500,8 +1500,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/nativeService.ts": {
-    "mtime": 1787287368.1198456,
-    "ast_hash": "751a786a1ab5d91c9be85307ae2828f5",
+    "mtime": 1787294039.2308197,
+    "ast_hash": "37ed67708e093ee1a8f52429bb2b7a66",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/pillIdService.ts": {
