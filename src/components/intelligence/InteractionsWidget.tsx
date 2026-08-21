@@ -261,7 +261,7 @@ export function InteractionsWidget() {
                   <h5 className="text-xs font-black text-foreground tracking-tight">
                     Severe Medication Conflict
                   </h5>
-                  <p className="text-[11px] text-destructive-foreground/90 font-medium leading-snug mt-1">
+                  <p className="text-[11px] text-foreground/90 font-medium leading-snug mt-1">
                     {boxedWarnings.length > 0
                       ? `FDA Boxed Warning identified for ${boxedWarnings[0].drugName}.`
                       : contraindicationAlerts.length > 0
