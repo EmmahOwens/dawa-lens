@@ -143,8 +143,8 @@ export default function BottomNav() {
           animate={{ y: 0, opacity: 1, scale: 1 }}
           exit={{ y: 80, opacity: 0, scale: 0.95 }}
           transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          className="fixed bottom-4 left-0 right-0 z-50 mx-auto max-w-[22rem] md:hidden px-4"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          className="fixed bottom-2 left-0 right-0 z-50 mx-auto max-w-[22rem] md:hidden px-4"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
         >
           <div className="flex items-center justify-between rounded-[2rem] bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/10 dark:border-white/5 px-4 py-2.5 relative shadow-2xl">
             {/* Left Side Items */}
