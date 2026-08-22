@@ -42,6 +42,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dist-folder
+          path: dist
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
