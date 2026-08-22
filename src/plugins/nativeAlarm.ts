@@ -1,7 +1,7 @@
 /**
  * NativeAlarm — Capacitor plugin bridge for OS-level alarm scheduling.
  *
- * Android: AlarmManager.setExactAndAllowWhileIdle — fires even in Doze mode.
+ * Android: AlarmManager.setAlarmClock — fires even in Doze mode and offline.
  *          Alarms are persisted to SharedPreferences and re-registered on
  *          device reboot via a BootReceiver + WorkManager.
  * iOS:     UNUserNotificationCenter — accurate calendar-based triggers.
@@ -34,6 +34,8 @@ export interface NativeAlarmPlugin {
   requestIgnoreBatteryOptimization(): Promise<void>;
   /** Directly open system battery optimization / app battery restriction settings. */
   openBatteryOptimizationSettings(): Promise<void>;
+  /** Directly open OEM-specific Autostart settings screen (Xiaomi, Tecno, Oppo, Vivo, etc.). */
+  openAutostartSettings(): Promise<void>;
   /** Returns whether battery optimizations are currently being ignored for this app. */
   isBatteryOptimizationIgnored(): Promise<{ ignored: boolean }>;
 }

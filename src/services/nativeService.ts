@@ -288,6 +288,23 @@ export const NativeService = {
   },
 
   /**
+   * Directly open device Autostart settings screen on OEM devices (Xiaomi, Tecno, Oppo, Vivo, etc.).
+   */
+  openAutostartSettings: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      return false;
+    }
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      await NativeAlarm.openAutostartSettings();
+      return true;
+    } catch (err) {
+      console.error("Failed to open autostart settings:", err);
+      return false;
+    }
+  },
+
+  /**
    * Check whether the app is currently exempt from battery optimization.
    */
   isBatteryOptimizationIgnored: async (): Promise<boolean> => {

@@ -4,7 +4,7 @@
  * Renders a fullscreen, non-dismissible overlay on Android until the OS confirms
  * that Dawa Lens is exempt from battery optimization. This is mandatory because
  * Android's Doze mode and per-app battery management can silently suppress
- * AlarmManager alarms, background sync, and offline dose reminders.
+ * AlarmManager alarms, background sync, quotes, and offline dose reminders.
  *
  * Flow:
  *  1. On mount, check if already exempt -> if yes, stay hidden forever.
@@ -22,7 +22,7 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { NativeAlarm } from "@/plugins/nativeAlarm";
 import { NativeService } from "@/services/nativeService";
-import { BatteryCharging, ShieldCheck, Bell, RefreshCw, ChevronDown, HelpCircle, CheckCircle2 } from "lucide-react";
+import { BatteryCharging, ShieldCheck, Bell, RefreshCw, ChevronDown, HelpCircle, Sparkles, ExternalLink } from "lucide-react";
 
 const PREF_KEY = "battery_optimization_exempt";
 
@@ -158,6 +158,15 @@ export default function BatteryOptimizationGate({
     });
   }, []);
 
+  const openAutostartSettings = useCallback(async () => {
+    setChecking(true);
+    try {
+      await NativeService.openAutostartSettings();
+    } finally {
+      setTimeout(() => setChecking(false), 800);
+    }
+  }, []);
+
   const manualRecheck = useCallback(async () => {
     setChecking(true);
     try {
@@ -209,18 +218,18 @@ export default function BatteryOptimizationGate({
                 Mandatory Permission
               </h1>
               <p className="text-xs uppercase font-bold tracking-widest text-amber-500 mb-3">
-                Disable Battery Optimization
+                Disable Battery Optimization & Enable Autostart
               </p>
 
               <p className="text-xs text-muted-foreground leading-relaxed mb-6">
-                To guarantee medication reminders and offline safety checks trigger even when your screen is locked or the app is killed, Android requires battery optimization to be turned off.
+                To guarantee medication reminders, daily wisdom quotes, and offline safety alerts trigger exactly on time even when your screen is locked or the app is killed, Android requires battery optimization to be turned off.
               </p>
 
               {/* Benefits Checklist */}
               <div className="w-full space-y-2 mb-6">
                 {[
-                  { icon: Bell, title: "100% Reliable Reminders", desc: "Never miss scheduled medication doses" },
-                  { icon: ShieldCheck, title: "Offline & Doze Mode Safety", desc: "Alarms fire on time even in deep sleep" },
+                  { icon: Bell, title: "100% Reliable Reminders & Quotes", desc: "Never miss scheduled doses or daily wisdom alerts" },
+                  { icon: ShieldCheck, title: "Offline & Deep Sleep Delivery", desc: "Exact hardware alarms fire on time in Doze mode" },
                 ].map(({ icon: Icon, title, desc }) => (
                   <div
                     key={title}
@@ -278,7 +287,7 @@ export default function BatteryOptimizationGate({
                   className="text-[11px] text-primary hover:underline font-semibold flex items-center justify-center gap-1 mx-auto"
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
-                  <span>Samsung, Xiaomi, or Huawei instructions</span>
+                  <span>Samsung, Xiaomi, Tecno, or Huawei guide</span>
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showOemTips ? "rotate-180" : ""}`} />
                 </button>
 
@@ -288,12 +297,21 @@ export default function BatteryOptimizationGate({
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="mt-2.5 text-left text-[11px] text-muted-foreground bg-muted/60 rounded-xl p-3 space-y-1.5 border border-border/50 overflow-hidden"
+                      className="mt-2.5 text-left text-[11px] text-muted-foreground bg-muted/60 rounded-xl p-3 space-y-2 border border-border/50 overflow-hidden"
                     >
+                      <button
+                        type="button"
+                        onClick={openAutostartSettings}
+                        className="w-full py-2 px-3 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open Phone Manager / Autostart</span>
+                      </button>
                       <p><strong className="text-foreground">Samsung:</strong> Apps &gt; Dawa Lens &gt; Battery &gt; Select <em>Unrestricted</em>.</p>
-                      <p><strong className="text-foreground">Xiaomi/Redmi:</strong> App info &gt; Battery saver &gt; Select <em>No restrictions</em> & enable <em>Autostart</em>.</p>
-                      <p><strong className="text-foreground">Huawei/Honor:</strong> Battery &gt; App launch &gt; Set Dawa Lens to <em>Manage manually</em>.</p>
-                      <p><strong className="text-foreground">Oppo/Vivo:</strong> App info &gt; Battery &gt; Allow <em>Background activity</em> & <em>Auto-launch</em>.</p>
+                      <p><strong className="text-foreground">Xiaomi / Redmi / Poco:</strong> App info &gt; Battery saver &gt; Select <em>No restrictions</em> & enable <em>Autostart</em>.</p>
+                      <p><strong className="text-foreground">Tecno / Infinix:</strong> Phone Master &gt; Auto-start management &gt; Enable <em>Dawa Lens</em>.</p>
+                      <p><strong className="text-foreground">Huawei / Honor:</strong> Battery &gt; App launch &gt; Set Dawa Lens to <em>Manage manually</em>.</p>
+                      <p><strong className="text-foreground">Oppo / Vivo:</strong> App info &gt; Battery &gt; Allow <em>Background activity</em> & <em>Auto-launch</em>.</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -305,4 +323,3 @@ export default function BatteryOptimizationGate({
     </>
   );
 }
-

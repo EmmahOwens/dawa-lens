@@ -26,62 +26,116 @@ class NativeAlarmPlugin : Plugin() {
         const val KEY_IDS = "alarm_ids"
     }
 
+    private fun openAutostartSettingsInternal(ctx: Context): Boolean {
+        val packageName = ctx.packageName
+        val manufacturer = Build.MANUFACTURER.lowercase()
+
+        val intents = mutableListOf<Intent>()
+
+        when {
+            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
+                intents.add(Intent().apply {
+                    component = ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")
+                })
+                intents.add(Intent().apply {
+                    component = ComponentName("com.miui.powerkeeper", "com.miui.powerkeeper.ui.HiddenAppsConfigActivity")
+                    putExtra("package_name", packageName)
+                    putExtra("package_label", "Dawa Lens")
+                })
+            }
+            manufacturer.contains("transsion") || manufacturer.contains("tecno") || manufacturer.contains("infinix") || manufacturer.contains("itel") -> {
+                intents.add(Intent().apply {
+                    component = ComponentName("com.transsion.phonemanager", "com.transsion.phonemanager.shortcut.AutoStartManagementActivity")
+                })
+                intents.add(Intent().apply {
+                    component = ComponentName("com.transsion.phonemanager", "com.transsion.phonemanager.battery.view.BatteryOptimizationActivity")
+                })
+            }
+            manufacturer.contains("oppo") || manufacturer.contains("realme") || manufacturer.contains("oneplus") -> {
+                intents.add(Intent().apply {
+                    component = ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")
+                })
+                intents.add(Intent().apply {
+                    component = ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity")
+                })
+                intents.add(Intent().apply {
+                    component = ComponentName("com.oplus.battery", "com.oplus.battery.BatteryMainActivity")
+                })
+            }
+            manufacturer.contains("vivo") || manufacturer.contains("iqoo") -> {
+                intents.add(Intent().apply {
+                    component = ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")
+                })
+                intents.add(Intent().apply {
+                    component = ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")
+                })
+            }
+            manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
+                intents.add(Intent().apply {
+                    component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
+                })
+                intents.add(Intent().apply {
+                    component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")
+                })
+            }
+            manufacturer.contains("samsung") -> {
+                intents.add(Intent().apply {
+                    component = ComponentName("com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity")
+                })
+                intents.add(Intent().apply {
+                    component = ComponentName("com.samsung.android.sm_cn", "com.samsung.android.sm.ui.battery.BatteryActivity")
+                })
+            }
+        }
+
+        // Generic fallbacks
+        intents.add(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:$packageName")
+        })
+        intents.add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        intents.add(Intent(Settings.ACTION_SETTINGS))
+
+        for (intent in intents) {
+            try {
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                ctx.startActivity(intent)
+                return true
+            } catch (e: Exception) {
+                // Try next intent
+            }
+        }
+        return false
+    }
+
     private fun openBatteryOptimizationSettingsInternal(ctx: Context): Boolean {
         val packageName = ctx.packageName
 
-        // 1. Try ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS (system battery optimization list)
-        try {
-            val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        // 1. Try ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS dialog if not already ignored
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
+                if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                    val reqIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$packageName")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    ctx.startActivity(reqIntent)
+                    return true
+                }
+            } catch (e: Exception) {
+                // proceed
             }
-            ctx.startActivity(intent)
+        }
+
+        // 2. Try OEM Autostart & background power management
+        if (openAutostartSettingsInternal(ctx)) {
             return true
-        } catch (e: Exception) {
-            // continue to fallbacks
         }
 
-        // 2. Try OEM-specific battery management settings if applicable
-        val manufacturer = Build.MANUFACTURER.lowercase()
-        try {
-            when {
-                manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
-                    val miuiIntent = Intent().apply {
-                        component = ComponentName("com.miui.powerkeeper", "com.miui.powerkeeper.ui.HiddenAppsConfigActivity")
-                        putExtra("package_name", packageName)
-                        putExtra("package_label", "Dawa Lens")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    ctx.startActivity(miuiIntent)
-                    return true
-                }
-                manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
-                    val huaweiIntent = Intent().apply {
-                        component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    ctx.startActivity(huaweiIntent)
-                    return true
-                }
-            }
-        } catch (e: Exception) {
-            // OEM-specific intent not found, fallback to standard App Details
-        }
-
-        // 3. Try ACTION_APPLICATION_DETAILS_SETTINGS (App Info page -> Battery -> Unrestricted)
-        try {
+        // 3. Fallback to standard App Details
+        return try {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                 data = Uri.parse("package:$packageName")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            ctx.startActivity(intent)
-            return true
-        } catch (e: Exception) {
-            // continue to general settings
-        }
-
-        // 4. Final fallback to system Settings
-        return try {
-            val intent = Intent(Settings.ACTION_SETTINGS).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
             ctx.startActivity(intent)
@@ -100,15 +154,6 @@ class NativeAlarmPlugin : Plugin() {
 
         val ctx = context
         val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-        var canScheduleExact = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            canScheduleExact = try {
-                alarmManager.canScheduleExactAlarms()
-            } catch (e: Exception) {
-                false
-            }
-        }
 
         val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val existingAlarmIds = prefs.getStringSet(KEY_IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
@@ -161,8 +206,35 @@ class NativeAlarmPlugin : Plugin() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
 
-                try {
-                    if (canScheduleExact) {
+                // Intent to open app when user clicks the alarm clock info in system UI
+                val showIntent = Intent(ctx, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("notification_id", id)
+                    putExtra("notification_extra", extra)
+                }
+                val showPendingIntent = PendingIntent.getActivity(
+                    ctx,
+                    id,
+                    showIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+
+                var scheduledSuccessfully = false
+
+                // 1. Primary Gold Standard: setAlarmClock (wakes from deep Doze, immune to OEM background killers)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    try {
+                        val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent)
+                        alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+                        scheduledSuccessfully = true
+                    } catch (e: Exception) {
+                        // Fall through to fallback
+                    }
+                }
+
+                // 2. Secondary Fallback: setExactAndAllowWhileIdle
+                if (!scheduledSuccessfully) {
+                    try {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                             alarmManager.setExactAndAllowWhileIdle(
                                 AlarmManager.RTC_WAKEUP,
@@ -176,7 +248,15 @@ class NativeAlarmPlugin : Plugin() {
                                 pendingIntent
                             )
                         }
-                    } else {
+                        scheduledSuccessfully = true
+                    } catch (e: Exception) {
+                        // Fall through to inexact fallback
+                    }
+                }
+
+                // 3. Final Inexact Fallback: setAndAllowWhileIdle / set
+                if (!scheduledSuccessfully) {
+                    try {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                             alarmManager.setAndAllowWhileIdle(
                                 AlarmManager.RTC_WAKEUP,
@@ -186,17 +266,8 @@ class NativeAlarmPlugin : Plugin() {
                         } else {
                             alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
                         }
-                    }
-                } catch (e: SecurityException) {
-                    // Fallback for Android 12+ when exact alarm permission is not available
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        alarmManager.setAndAllowWhileIdle(
-                            AlarmManager.RTC_WAKEUP,
-                            triggerAtMillis,
-                            pendingIntent
-                        )
-                    } else {
-                        alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+                    } catch (e: Exception) {
+                        // ignore individual alarm failure
                     }
                 }
 
@@ -244,7 +315,7 @@ class NativeAlarmPlugin : Plugin() {
                         try {
                             val extraObj = JSONObject(extraStr)
                             val type = extraObj.optString("type", "")
-                            if (type in listOf("encouragement", "streak", "missed_alert", "schedule_adjusted", "wellness_nudge")) {
+                            if (type in listOf("encouragement", "streak", "missed_alert", "schedule_adjusted", "wellness_nudge", "hydration", "daily_quote", "evening_checkin", "weekly_summary", "refill", "low_stock")) {
                                 isEvent = true
                             }
                         } catch (e: Exception) {}
@@ -368,6 +439,20 @@ class NativeAlarmPlugin : Plugin() {
             }
         } catch (e: Exception) {
             call.reject("Failed to open battery optimization settings: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
+    fun openAutostartSettings(call: PluginCall) {
+        try {
+            val launched = openAutostartSettingsInternal(context)
+            if (launched) {
+                call.resolve()
+            } else {
+                call.reject("Could not open autostart settings")
+            }
+        } catch (e: Exception) {
+            call.reject("Failed to open autostart settings: ${e.message}", e)
         }
     }
 

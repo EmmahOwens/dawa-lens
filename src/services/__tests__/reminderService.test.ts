@@ -255,6 +255,15 @@ describe("dynamicSchedule - interval preservation", () => {
 });
 
 describe("reminderService - calculateNextDose with dynamic shifts", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 22, 10, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("should calculate the shifted next dose today after taking first dose early", () => {
     const reminder: Reminder = {
       id: "rem-multi",

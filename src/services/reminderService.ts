@@ -230,167 +230,221 @@ export const checkMissedDoses = async (
     return true; // No filter — check all
   });
 
-  for (const r of activeReminders) {
-    // Parse when this reminder was created so we never mark a dose
-    // as missed before the reminder even existed.
-    const reminderCreatedAt = r.createdAt ? parseISO(r.createdAt) : now;
+    const newlyMissed: { reminder: Reminder; timeStr: string; scheduledDate: Date }[] = [];
 
-    const times = r.time
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => {
-        const parts = t.split(":");
-        if (parts.length !== 2) return false;
-        const [h, m] = parts.map(Number);
-        return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
-      });
+    for (const r of activeReminders) {
+      // Parse when this reminder was created so we never mark a dose
+      // as missed before the reminder even existed.
+      const reminderCreatedAt = r.createdAt ? parseISO(r.createdAt) : now;
 
-    for (const timeStr of times) {
-      const [hours, minutes] = timeStr.split(":").map(Number);
+      const times = r.time
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => {
+          const parts = t.split(":");
+          if (parts.length !== 2) return false;
+          const [h, m] = parts.map(Number);
+          return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+        });
 
-      // Check today and yesterday
-      for (let i = -1; i <= 0; i++) {
-        let scheduledDate = addDays(startOfDay(now), i);
-        scheduledDate = setHours(scheduledDate, hours);
-        scheduledDate = setMinutes(scheduledDate, minutes);
-        scheduledDate = setSeconds(scheduledDate, 0);
-        scheduledDate = setMilliseconds(scheduledDate, 0);
+      for (const timeStr of times) {
+        const [hours, minutes] = timeStr.split(":").map(Number);
 
-        // Rule 0: The reminder must be scheduled to repeat on this day of the week / date
-        if (!isReminderScheduledOnDate(r, scheduledDate, doseLogs)) {
-          continue;
-        }
+        // Check today and yesterday
+        for (let i = -1; i <= 0; i++) {
+          let scheduledDate = addDays(startOfDay(now), i);
+          scheduledDate = setHours(scheduledDate, hours);
+          scheduledDate = setMinutes(scheduledDate, minutes);
+          scheduledDate = setSeconds(scheduledDate, 0);
+          scheduledDate = setMilliseconds(scheduledDate, 0);
 
-        // Rule 1: Must be within the last 24 hours but at least 2 hours old
-        if (
-          !isAfter(scheduledDate, twentyFourHoursAgo) ||
-          !isBefore(scheduledDate, twoHoursAgo)
-        ) {
-          continue;
-        }
+          // Rule 0: The reminder must be scheduled to repeat on this day of the week / date
+          if (!isReminderScheduledOnDate(r, scheduledDate, doseLogs)) {
+            continue;
+          }
 
-        // Rule 2: The scheduled slot must be AFTER the reminder was created.
-        // This prevents a reminder added at 11am from marking its 8am slot as missed.
-        if (!isAfter(scheduledDate, reminderCreatedAt)) {
-          continue;
-        }
+          // Rule 1: Must be within the last 24 hours but at least 2 hours old
+          if (
+            !isAfter(scheduledDate, twentyFourHoursAgo) ||
+            !isBefore(scheduledDate, twoHoursAgo)
+          ) {
+            continue;
+          }
 
-        // Rule 3: Check if a log already exists for this reminder at this specific scheduled time.
-        // Also check the shifted time so we don't double-flag a dose taken at the adjusted slot.
-        const shiftedScheduledDate = addMinutes(
-          scheduledDate,
-          computeShiftOffset(r, doseLogs)
-        );
-        const logExists = doseLogs.some(
-          (log) =>
-            log.reminderId === r.id &&
-            (log.scheduledTime === scheduledDate.toISOString() ||
-              log.scheduledTime === shiftedScheduledDate.toISOString())
-        );
+          // Rule 2: The scheduled slot must be AFTER the reminder was created.
+          if (!isAfter(scheduledDate, reminderCreatedAt)) {
+            continue;
+          }
 
-        if (!logExists) {
-          console.log(
-            `Marking missed dose for ${
-              r.medicineName
-            } scheduled at ${scheduledDate.toISOString()}`
+          // Rule 3: Check if a log already exists for this reminder at this specific scheduled time.
+          const shiftedScheduledDate = addMinutes(
+            scheduledDate,
+            computeShiftOffset(r, doseLogs)
           );
-          await logDose({
-            reminderId: r.id,
-            medicineName: r.medicineName,
-            dose: r.dose,
-            scheduledTime: scheduledDate.toISOString(),
-            action: "missed",
-            patientId: r.patientId ?? null,
-          });
+          const logExists = doseLogs.some(
+            (log) =>
+              log.reminderId === r.id &&
+              (log.scheduledTime === scheduledDate.toISOString() ||
+                log.scheduledTime === shiftedScheduledDate.toISOString())
+          );
 
-          const missedTitle = r.patientName
-            ? `⚠️ Missed Dose: ${r.patientName}'s ${r.medicineName}`
-            : `⚠️ Missed Dose: ${r.medicineName}`;
-          const missedBody = r.patientName
-            ? `${r.patientName} missed their ${r.dose} dose scheduled at ${timeStr.trim()}. Please follow up.`
-            : `You missed your ${r.dose} dose scheduled for ${timeStr.trim()}. Please stay on track!`;
+          if (!logExists) {
+            console.log(
+              `Marking missed dose for ${
+                r.medicineName
+              } scheduled at ${scheduledDate.toISOString()}`
+            );
+            await logDose({
+              reminderId: r.id,
+              medicineName: r.medicineName,
+              dose: r.dose,
+              scheduledTime: scheduledDate.toISOString(),
+              action: "missed",
+              patientId: r.patientId ?? null,
+            });
 
-          // Immediate visual toast if app is currently open
-          notify.error(missedTitle, missedBody);
-
-          // Notify the user about the missed dose via system notifications
-          if (Capacitor.isNativePlatform()) {
-            try {
-              const missedPerm = await LocalNotifications.checkPermissions();
-              if (missedPerm.display === "granted") {
-                // Ensure the missed-dose channel exists before scheduling
-                if (Capacitor.getPlatform() === "android") {
-                  await LocalNotifications.createChannel({
-                    id: CHANNEL_MISSED,
-                    name: "Missed Dose Alerts",
-                    description: "Alerts when a scheduled dose was not logged",
-                    importance: 5,
-                    vibration: true,
-                    sound: "default",
-                  });
-                  if (r.patientId) {
-                    await LocalNotifications.createChannel({
-                      id: patientChannelId(r.patientId),
-                      name: r.patientName ? `${r.patientName}'s Reminders` : "Family Member Reminders",
-                      description: `Medication reminders for ${r.patientName ?? "a family member"}`,
-                      importance: 5,
-                      visibility: 1,
-                      vibration: true,
-                      sound: "default",
-                    });
-                  }
-                }
-
-                const missedId = stringToHash(r.id + "missed" + scheduledDate.getTime());
-                const missedChannelId = r.patientId ? patientChannelId(r.patientId) : CHANNEL_MISSED;
-                const fireAt = new Date(Date.now() + 1000);
-
-                await LocalNotifications.schedule({
-                  notifications: [{
-                    title: missedTitle,
-                    body: missedBody,
-                    id: missedId,
-                    schedule: { at: fireAt, allowWhileIdle: true },
-                    channelId: missedChannelId,
-                    sound: "default",
-                    extra: {
-                      type: "missed_alert",
-                      reminderId: r.id,
-                      patientId: r.patientId ?? null,
-                      route: "/history",
-                    },
-                  }],
-                });
-
-                // Mirror to NativeAlarm so it fires after reboot / when app is killed
-                try {
-                  await NativeAlarm.scheduleAlarms({
-                    notifications: [{
-                      id: missedId,
-                      title: missedTitle,
-                      body: missedBody,
-                      triggerAtMillis: fireAt.getTime(),
-                      extra: JSON.stringify({
-                        type: "missed_alert",
-                        reminderId: r.id,
-                        patientId: r.patientId ?? null,
-                        route: "/history",
-                      }),
-                    }],
-                  });
-                } catch (alarmErr) {
-                  console.warn("[reminderService] NativeAlarm missed-dose fallback failed (non-fatal):", alarmErr);
-                }
-              }
-            } catch (notifErr) {
-              console.warn("[reminderService] Failed to schedule missed-dose notification:", notifErr);
-            }
+            newlyMissed.push({ reminder: r, timeStr, scheduledDate });
           }
         }
       }
     }
-  }
-};
+
+    // If no newly missed doses were found, we are done
+    if (newlyMissed.length === 0) return;
+
+    // Send single consolidated alert or specific single alert to avoid notification storm
+    if (newlyMissed.length === 1) {
+      const single = newlyMissed[0];
+      const r = single.reminder;
+      const missedTitle = r.patientName
+        ? `⚠️ Missed Dose: ${r.patientName}'s ${r.medicineName}`
+        : `⚠️ Missed Dose: ${r.medicineName}`;
+      const missedBody = r.patientName
+        ? `${r.patientName} missed their ${r.dose} dose scheduled at ${single.timeStr.trim()}. Please follow up.`
+        : `You missed your ${r.dose} dose scheduled for ${single.timeStr.trim()}. Please stay on track!`;
+
+      notify.error(missedTitle, missedBody);
+
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const missedPerm = await LocalNotifications.checkPermissions();
+          if (missedPerm.display === "granted") {
+            if (Capacitor.getPlatform() === "android") {
+              await LocalNotifications.createChannel({
+                id: CHANNEL_MISSED,
+                name: "Missed Dose Alerts",
+                description: "Alerts when a scheduled dose was not logged",
+                importance: 5,
+                vibration: true,
+                sound: "default",
+              });
+            }
+            const missedId = stringToHash(r.id + "missed" + single.scheduledDate.getTime());
+            const missedChannelId = r.patientId ? patientChannelId(r.patientId) : CHANNEL_MISSED;
+            const fireAt = new Date(Date.now() + 1000);
+
+            await LocalNotifications.schedule({
+              notifications: [{
+                title: missedTitle,
+                body: missedBody,
+                id: missedId,
+                schedule: { at: fireAt, allowWhileIdle: true },
+                channelId: missedChannelId,
+                sound: "default",
+                extra: {
+                  type: "missed_alert",
+                  reminderId: r.id,
+                  patientId: r.patientId ?? null,
+                  route: "/history",
+                },
+              }],
+            });
+
+            try {
+              await NativeAlarm.scheduleAlarms({
+                notifications: [{
+                  id: missedId,
+                  title: missedTitle,
+                  body: missedBody,
+                  triggerAtMillis: fireAt.getTime(),
+                  extra: JSON.stringify({
+                    type: "missed_alert",
+                    reminderId: r.id,
+                    patientId: r.patientId ?? null,
+                    route: "/history",
+                  }),
+                }],
+              });
+            } catch (alarmErr) {
+              console.warn("[reminderService] NativeAlarm missed-dose fallback failed (non-fatal):", alarmErr);
+            }
+          }
+        } catch (notifErr) {
+          console.warn("[reminderService] Failed to schedule missed-dose notification:", notifErr);
+        }
+      }
+    } else {
+      // Bundled / consolidated summary alert for 2+ missed doses
+      const summaryTitle = `⚠️ Missed Doses (${newlyMissed.length} Medicines)`;
+      const summaryBody = `You have ${newlyMissed.length} missed doses from earlier. Tap to review and update your schedule.`;
+
+      notify.error(summaryTitle, summaryBody);
+
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const missedPerm = await LocalNotifications.checkPermissions();
+          if (missedPerm.display === "granted") {
+            if (Capacitor.getPlatform() === "android") {
+              await LocalNotifications.createChannel({
+                id: CHANNEL_MISSED,
+                name: "Missed Dose Alerts",
+                description: "Alerts when scheduled doses were not logged",
+                importance: 5,
+                vibration: true,
+                sound: "default",
+              });
+            }
+            const bundleId = stringToHash("dawa_missed_bundle_" + new Date().toDateString());
+            const fireAt = new Date(Date.now() + 1000);
+
+            await LocalNotifications.schedule({
+              notifications: [{
+                title: summaryTitle,
+                body: summaryBody,
+                id: bundleId,
+                schedule: { at: fireAt, allowWhileIdle: true },
+                channelId: CHANNEL_MISSED,
+                sound: "default",
+                extra: {
+                  type: "missed_alert",
+                  route: "/history",
+                },
+              }],
+            });
+
+            try {
+              await NativeAlarm.scheduleAlarms({
+                notifications: [{
+                  id: bundleId,
+                  title: summaryTitle,
+                  body: summaryBody,
+                  triggerAtMillis: fireAt.getTime(),
+                  extra: JSON.stringify({
+                    type: "missed_alert",
+                    route: "/history",
+                  }),
+                }],
+              });
+            } catch (alarmErr) {
+              console.warn("[reminderService] NativeAlarm missed-dose bundle failed (non-fatal):", alarmErr);
+            }
+          }
+        } catch (notifErr) {
+          console.warn("[reminderService] Failed to schedule bundled missed-dose notification:", notifErr);
+        }
+      }
+    }
+  };
 
 export interface NextDoseInfo {
   reminder: Reminder;
