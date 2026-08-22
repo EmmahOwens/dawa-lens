@@ -20,22 +20,16 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: |
-          npm ci
-          cd admin && npm ci
+        run: npm ci
 
-      - name: Build main app and admin portal
-        run: |
-          npm run build
-          cd admin && npm run build
+      - name: Build main app
+        run: npm run build
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: dist-folder
-          path: |
-            dist
-            admin/dist
+          path: dist
           retention-days: 1
 
   deploy_firebase:

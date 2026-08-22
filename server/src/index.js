@@ -14,12 +14,10 @@ import visionRouter from './routes/vision.js';
 import aiRouter from './routes/ai.js';
 import patientsRouter from './routes/patients.js';
 import wellnessRouter from './routes/wellness.js';
-import adminRouter from './routes/admin/index.js';
 import fdaRouter from './routes/fda.js';
 
 import errorMiddleware from './middleware/errorMiddleware.js';
 import { globalLimiter, aiLimiter, authLimiter, visionLimiter } from './middleware/rateLimiter.js';
-import { verifyAdmin } from './middleware/adminMiddleware.js';
 import AppError from './utils/AppError.js';
 import { initScheduler } from './scheduler.js';
 
@@ -57,7 +55,6 @@ app.use('/api', globalLimiter);
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://localhost:5174',  // admin dev server
   'http://localhost:3000',
   'http://localhost:8080',
   'https://localhost',
@@ -67,7 +64,6 @@ const allowedOrigins = [
   'https://dawalens256.vercel.app',
   'https://dawalens.web.app',
   'https://medicine-d3ba2.web.app',
-  'https://dawalens-admin.web.app',
 ];
 
 if (process.env.ALLOWED_ORIGINS) {
@@ -80,12 +76,9 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' })); // 10mb to allow base64 image uploads
 
-import { bootstrapClaim } from './routes/admin/users.js';
-
 // API Routes (v1)
 const v1Router = express.Router();
 
-v1Router.post('/bootstrap-admin', authLimiter, bootstrapClaim);
 v1Router.use('/users', authLimiter, usersRouter);
 v1Router.use('/medicines', medicinesRouter);
 v1Router.use('/reminders', remindersRouter);
@@ -95,7 +88,6 @@ v1Router.use('/ai', aiLimiter, aiRouter);
 v1Router.use('/patients', patientsRouter);
 v1Router.use('/wellness', wellnessRouter);
 v1Router.use('/fda', aiLimiter, fdaRouter);
-v1Router.use('/admin', verifyAdmin, adminRouter);
 
 app.use('/api/v1', v1Router);
 
