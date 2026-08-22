@@ -116,10 +116,6 @@ const en = {
     },
     settings: {
       title: "Settings",
-      language_preferences: "Language Preferences",
-      language_select: "App Language",
-      english: "English",
-      swahili: "Kiswahili",
       appearance: "Theme & Appearance",
       dark_mode: "Dark Mode",
       theme_desc: "Choose your preferred theme",
@@ -166,179 +162,15 @@ const en = {
   }
 };
 
-const sw = {
-  translation: {
-    common: {
-      back: "Nyuma",
-      save: "Hifadhi",
-      search: "Tafuta",
-      loading: "Inapakia...",
-      error: "Hitilafu",
-      success: "Mafanikio",
-      cancel: "Ghairi",
-      delete: "Futa"
-    },
-    nav: {
-      home: "Nyumbani",
-      scan: "Changanua",
-      history: "Historia",
-      safety: "Usalama",
-      settings: "Mipangilio",
-      remind: "Kumbusha",
-      medvault: "Med Vault",
-      medications: "Dawa Zangu"
-    },
-    dashboard: {
-      title: "Dawa Lens",
-      subtitle: "Msaidizi wako wa akili wa dawa",
-      good_morning: "Habari za asubuhi",
-      good_afternoon: "Habari za mchana",
-      good_evening: "Habari za jioni",
-      greeting_there: "mwenzangu",
-      todays_progress: "Maendeleo ya Leo",
-      doses: "dozi",
-      quick_scan: "Changanua Maandishi",
-      quick_add: "Weka Kikumbusho",
-      quick_history: "Tazama Historia",
-      quick_search: "Tafuta Dawa",
-      upcoming_reminders: "Vikumbusho Vijavyo",
-      no_reminders: "Hakuna vikumbusho bado. Ongeza kimoja ili kuanza!",
-      disclaimer: "Kanusho: Taarifa za dawa zinazotolewa ni kwa kumbukumbu tu. Kila mara thibitisha na daktari wako kabla ya kufanya maamuzi yoyote ya matibabu."
-    },
-    medicine_info: {
-      title: "Maelezo ya Dawa",
-      search_placeholder: "Tafuta jina la dawa...",
-      enter_name: "Andika jina la dawa ili kupata maelezo",
-      failed_load: "Imeshindwa kupata maelezo.",
-      severe_warning: "Tahadhari ya Mwingiliano Hatari!",
-      generic: "Jina la Asili",
-      source: "Chanzo",
-      uses: "Matumizi",
-      dosage: "Dozi",
-      warnings: "Tahadhari",
-      side_effects: "Madhara ya Dawa",
-      not_available: "Haikupatikana"
-    },
-    scan: {
-      pill: "Kidonge",
-      text: "Changanua Maandishi",
-      label: "Maandishi (OCR)",
-      barcode: "Msimbopau",
-      camera_loading: "Kamera inafunguka...",
-      point_barcode: "Elekeza kwenye msimbopau",
-      capture_hint: "Weka lebo ndani ya fremu kisha gusa ili kupiga picha",
-      ai_loading: "AI inatambua dawa yako...",
-      high_confidence: "Uhakika wa Juu",
-      low_confidence: "Inahitaji Uhakiki",
-      verify: "Hakiki",
-      align_scratch_code: "Weka Nambari ya Siri Kwenye Fremu"
-    },
-    history: {
-      title: "Kumbukumbu ya Dawa",
-      export: "Safirisha",
-      import: "Ingiza",
-      quick_log: "Kumbukumbu ya Haraka",
-      no_history: "Hakuna historia ya dozi bado. Anza kuhifadhi!",
-      dose_logged: "Dozi imehifadhiwa",
-      marked_as: "imewekwa kama",
-      taken: "imekunywa",
-      skipped: "imeachwa",
-      snoozed: "imesogezwa",
-      exported: "Imesafirishwa!",
-      exported_desc: "Historia imepakuliwa kama CSV",
-      imported: "Imeingizwa!",
-      imported_desc: "kumbukumbu zimeingizwa"
-    },
-    safety: {
-      title: "Mwingiliano wa Dawa",
-      subtitle: "Uchunguzi wa jinsi dawa zako zinaweza kuingiliana zenyewe.",
-      disclaimer_title: "Kanusho la Matibabu",
-      disclaimer_body: "Taarifa zinazotolewa hapa ni kwa madhumuni ya elimu tu. Inatoka kwa NIH NLM API. Usibadilishe dawa zako bila kushauriana na daktari.",
-      no_medicines: "Ongeza angalau dawa mbili kwenye wasifu wako ili kuangalia mwingiliano.",
-      no_interactions: "Hakuna mwingiliano mkubwa uliopatikana kati ya dawa zako zilizohifadhiwa.",
-      detected: "Mwingiliano Uliopatikana",
-      severe: "Mbaya",
-      warning: "Tahadhari"
-    },
-    reminders: {
-      add_title: "Weka Kikumbusho",
-      med_name: "Jina la Dawa",
-      med_name_placeholder: "mfn. Ibuprofen 200mg",
-      dose: "Kiwango cha Dozi",
-      dose_placeholder: "mfn. kidonge 1, 5ml",
-      time: "Muda",
-      repeat: "Ratiba ya Kurudia",
-      notes: "Maelezo (hiari)",
-      notes_placeholder: "Kunywa baada ya chakula, nk.",
-      save_reminder: "Hifadhi Kikumbusho",
-      once: "Mara moja",
-      daily: "Kila siku",
-      custom: "Masafa",
-      missing_fields: "Sehemu ambazo hazikujazwa",
-      missing_fields_desc: "Tafadhali jaza jina la dawa na dozi.",
-      created: "Kikumbusho kimeundwa!"
-    },
-    settings: {
-      title: "Mipangilio",
-      language_preferences: "Lugha",
-      language_select: "Lugha ya Programu",
-      english: "Kiingereza",
-      swahili: "Kiswahili",
-      appearance: "Mandhari na Mwonekano",
-      dark_mode: "Modi ya Giza",
-      theme_desc: "Chagua mandhari unayopendelea",
-      account: "Akaunti",
-      signed_in: "Umeingia",
-      logout: "Ondoka",
-      login_btn: "Ingia / Jisajili",
-      privacy: "Faragha",
-      storage_privacy: "Hifadhi na Faragha",
-      local_only: "Modi ya Kifaa Pekee",
-      local_desc: "Data inabaki kwenye kifaa hiki pekee. Faragha ya juu zaidi.",
-      cloud_sync: "Wingu Iliyosimbwa (Cloud)",
-      cloud_desc: "Hifadhi salama na usawazishaji kwenye vifaa. Inahitajika kwa walezi.",
-      local_mode: "Modi ya Kifaa Pekee",
-      local_mode_desc: "Data inabaki kwenye kifaa hiki pekee",
-      encrypted: "Hifadhi Iliyosimbwa",
-      encrypted_desc: "Data ya dawa imesimbwa kwa usalama",
-      active: "Inatumika",
-      sync_start: "Inasawazisha Data",
-      sync_desc: "Inaunganisha dawa zako za kifaa na wasifu wako wa wingu...",
-      sync_complete: "Usawazishaji Umekamilika",
-      professional_hub: "Kituo cha Kitaaluma",
-      manage_patients: "Dhibiti Wagonjwa",
-      chw_label: "Mfanyakazi wa Afya ya Jamii (CHW)",
-      chw_desc: "Fungua zana za kitaaluma ili kudhibiti dawa, kufuatilia uzingatiaji, na kuangalia dozi za wateja au wanafamilia wengi.",
-      years_old: "umri wa miaka {{age}}",
-      notifications: "Arifa",
-      push_notifs: "Arifa za Kusukuma",
-      push_desc: "Pokea vikumbusho wakati programu imefungwa",
-      enable: "Washa",
-      danger_zone: "Eneo Hatari",
-      clear_data: "Futa Data Zote",
-      confirm_delete: "Futa data zote za dawa? Hii haiwezi kurejeshwa.",
-      data_cleared: "Data zote zimefutwa"
-    },
-    Intelligence: {
-      snapshot: "Mtazamo wa Afya",
-      adherence: "Uzingatiaji wa Dawa",
-      doses_taken: "doses zilizochukuliwa leo",
-      watchdog: "Mlinzi wa Maingiliano",
-      no_interactions: "Hakuna mwingiliano uliogunduliwa.",
-      active_context: "Muktadha Amilifu",
-    }
-  }
-};
-
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
-      en,
-      sw
+      en
     },
     fallbackLng: 'en',
+    lng: 'en',
     interpolation: {
       escapeValue: false
     }

@@ -244,9 +244,8 @@ https://medicine-d3ba2.web.app
 
 ## 🌍 Localization
 
-Dawa Lens supports multiple languages via i18next:
+Dawa Lens uses i18next for localization:
 - English (default)
-- Swahili (East African markets)
 - Additional languages configurable in i18n config
 
 ---

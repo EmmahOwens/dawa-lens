@@ -60,8 +60,8 @@ const ONBOARDING_STEPS = [
     iconColor: "text-violet-500",
   },
   {
-    title: "Speaks Your Language",
-    subtitle: "Clear medical information available in Swahili and other local languages.",
+    title: "Clear Medical Guidance",
+    subtitle: "Clear, reliable medical information and safety warnings at your fingertips.",
     icon: Globe,
     color: "rgba(16, 185, 129, 0.4)", // Emerald glow
     iconColor: "text-emerald-500",

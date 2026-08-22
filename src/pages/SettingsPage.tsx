@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ArrowLeft, Shield, Trash2, Moon, Lock, Globe, Users, 
+  ArrowLeft, Shield, Trash2, Moon, Lock, Users, 
   ArrowRight, User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw
 } from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
@@ -25,7 +25,7 @@ export default function SettingsPage() {
     updateUserProfile, rememberMe, setRememberMe,
   } = useApp();
   const { toast } = useToast();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [batteryExempt, setBatteryExempt] = useState<boolean | null>(null);
   const [isCheckingBattery, setIsCheckingBattery] = useState(false);
@@ -106,13 +106,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLanguageChange = async (lang: string) => {
-    i18n.changeLanguage(lang);
-    if (isLoggedIn) {
-      await updateUserProfile({ language: lang });
-    }
-    toast({ title: "Language Updated", description: `App language set to ${lang === 'en' ? 'English' : 'Swahili'}` });
-  };
 
   const calculateAge = (dob: string | null) => {
     if (!dob) return null;
@@ -277,29 +270,6 @@ export default function SettingsPage() {
 
         {/* 3. Preferences */}
         <div className="grid grid-cols-1 gap-4">
-          <motion.div variants={itemVariants} className="premium-card">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500">
-                <Globe size={18} />
-              </div>
-              <h3 className="font-bold text-foreground">{t("settings.language_preferences")}</h3>
-            </div>
-            
-            <div className="flex gap-2 p-1 bg-secondary/50 rounded-2xl">
-              <button
-                onClick={() => handleLanguageChange('en')}
-                className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${i18n.language.startsWith('en') ? 'bg-background text-primary shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                {t("settings.english")}
-              </button>
-              <button
-                onClick={() => handleLanguageChange('sw')}
-                className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${i18n.language.startsWith('sw') ? 'bg-background text-primary shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                {t("settings.swahili")}
-              </button>
-            </div>
-          </motion.div>
 
           <motion.div variants={itemVariants} className="premium-card flex items-center justify-between">
             <div className="flex items-center gap-3">
