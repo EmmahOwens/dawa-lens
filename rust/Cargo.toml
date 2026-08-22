@@ -6,12 +6,11 @@ description = "Offline drug name fuzzy search engine for Dawa Lens"
 
 [lib]
 name = "dawa_search"
-crate-type = ["cdylib", "staticlib"]  # cdylib for Android .so, staticlib for iOS .a
+crate-type = ["cdylib"]  # cdylib for Android .so
 
 [features]
 default = []
 android = ["jni"]
-ios = []
 
 [dependencies]
 jni = { version = "0.21", optional = true }

@@ -9,7 +9,6 @@ const config: CapacitorConfig = {
   backgroundColor: "#050505ff",
   server: {
     androidScheme: "https",
-    iosScheme: "https",
     cleartext: false,
   },
   plugins: {
@@ -30,11 +29,6 @@ const config: CapacitorConfig = {
       resize: KeyboardResize.Ionic,
       resizeOnFullScreen: true,
     },
-  },
-  ios: {
-    scheme: "dawalens",
-    // Prevents rubber-band bounce scrolling for a native feel
-    scrollEnabled: false,
   },
   android: {
     // Required to load local assets over the capacitor:// scheme

@@ -1,4 +1,3 @@
-import { Capacitor } from "@capacitor/core";
 import { ReactNode } from "react";
 
 interface PageTransitionProps {
@@ -13,17 +12,12 @@ interface PageTransitionProps {
  * Matches lichobile's approach: only `transform` and `opacity` are
  * animated to avoid layout triggers.
  *
- * iOS gets a horizontal slide (native convention).
- * Android/Web gets a vertical fade-up (Material-style).
+ * Android/Web uses a vertical fade-up (Material-style).
  */
 const PageTransition = ({ children }: PageTransitionProps) => {
-  const isIOS = Capacitor.getPlatform() === "ios";
-
   return (
     <div
-      className={`w-full h-full will-change-transform ${
-        isIOS ? "page-transition-slide" : "page-transition-enter"
-      }`}
+      className="w-full h-full will-change-transform page-transition-enter"
       style={{ transform: "translateZ(0)", backfaceVisibility: "hidden" }}
     >
       {children}

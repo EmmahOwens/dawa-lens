@@ -12,11 +12,11 @@
 - **Drug Interaction Detection**: Real-time analysis of potential drug-drug interactions and food-medication interactions.
 - **Medication Search**: Comprehensive medication database lookup with detailed information about dosages, side effects, and usage patterns.
 
-### 📱 Cross-Platform Native Experience
-- **Unified Codebase**: Single React 18 codebase deployed across Android, iOS, and Web via Capacitor 8.
+### 📱 Cross-Platform Experience
+- **Unified Codebase**: Single React 18 codebase deployed across Android and Web via Capacitor 8.
 - **Native Capabilities**: Full integration with device hardware including camera access, local notifications, haptic feedback, and device storage.
 - **Offline-First Architecture**: Works seamlessly offline with local data synchronization via Firebase Firestore.
-- **Live Updates**: Capgo live update system enables instant app updates without App Store releases.
+- **Live Updates**: Capgo live update system enables instant app updates without store releases.
 
 ### 👨‍👩‍👧 Family & Caregiver Management
 - **Family Hub**: Unified interface for managing medications for dependents and family members.
@@ -51,7 +51,6 @@ dawa-lens/
 │   │   └── index.js       # Express server setup
 │   └── package.json
 ├── android/                 # Capacitor Android Project
-├── ios/                    # Capacitor iOS Project
 ├── firestore.rules         # Secure database access patterns
 ├── capacitor.config.ts     # Native platform configuration
 └── vite.config.ts         # Frontend build configuration
@@ -110,9 +109,7 @@ patients/{patientId}       # Family members and managed patients
 - npm or bun package manager
 - Firebase CLI (for local emulation and deployment)
 - Android Studio (for Android development)
-- Xcode (for iOS development)
 - Java 17+ (Android)
-- CocoaPods (iOS)
 
 ### Installation
 ```bash
@@ -142,13 +139,9 @@ cd server && npm run dev
 ```
 Express server runs on `http://localhost:5000`.
 
-**Open in native platforms:**
+**Open in Android Studio:**
 ```bash
-# Android
 npx cap open android
-
-# iOS
-npx cap open ios
 ```
 
 ### Building for Production
@@ -159,10 +152,10 @@ npm run build
 npm run deploy:web  # Deploy to Firebase Hosting
 ```
 
-**Native (after web build):**
+**Android (after web build):**
 ```bash
-npm run cap:sync  # Sync web assets to native projects
-# Then use Android Studio / Xcode to build and deploy
+npm run cap:sync  # Sync web assets to Android project
+# Then use Android Studio to build and deploy
 ```
 
 ---
@@ -173,7 +166,7 @@ npm run cap:sync  # Sync web assets to native projects
 - **Unit & Integration**: `npm run test` (Vitest runner)
 - **Watch Mode**: `npm run test:watch` for continuous testing
 - **E2E Testing**: `npx playwright test` (Playwright)
-- **Manual Testing**: Emulator/simulator testing for native platforms
+- **Manual Testing**: Emulator testing for Android
 
 ### Code Quality
 - **Linting**: `npm run lint` (ESLint)
@@ -191,7 +184,6 @@ npm run cap:sync  # Sync web assets to native projects
 
 ### Mobile Deployment
 - **Android**: Google Play Console via .aab builds
-- **iOS**: Apple App Store via TestFlight
 - **Live Updates**: Capgo OTA updates for instant patches without app store review
 
 ### Allowed Origins (CORS)

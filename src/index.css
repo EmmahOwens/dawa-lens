@@ -256,13 +256,6 @@
   -webkit-backface-visibility: hidden;
 }
 
-/* iOS: horizontal slide matching the native push transition */
-.page-transition-slide {
-  animation: pageSlideFromRight 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
 @keyframes pageSlideIn {
   from {
     opacity: 0;
@@ -271,17 +264,6 @@
   to {
     opacity: 1;
     transform: translateY(0) translateZ(0);
-  }
-}
-
-@keyframes pageSlideFromRight {
-  from {
-    opacity: 0.9;
-    transform: translateX(100%) translateZ(0);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) translateZ(0);
   }
 }
 

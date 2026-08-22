@@ -6,7 +6,6 @@ Jaro-Winkler similarity. No network required. Ships as:
 | Artifact | Platform | Targets |
 |---|---|---|
 | `libdawa_search.so` | Android | arm64-v8a, armeabi-v7a, x86_64 |
-| `libdawa_search.a` | iOS | aarch64-apple-ios + x86_64-apple-ios (universal) |
 
 ---
 
@@ -30,26 +29,6 @@ chmod +x build-android.sh
 The script copies the `.so` files into the correct `jniLibs/` sub-directories
 so Gradle picks them up automatically.
 
-### iOS
-
-```bash
-# 1. Install cargo-lipo
-cargo install cargo-lipo
-
-# 2. Build + copy .a + generate header
-cd rust
-chmod +x build-ios.sh
-./build-ios.sh
-```
-
-Then in Xcode:
-1. Drag `ios/App/App/RustBridge/libdawa_search.a` into the project navigator
-   (check **Add to target: App**).
-2. Add the header import to `App-Bridging-Header.h`:
-   ```objc
-   #import "RustBridge/dawa_search.h"
-   ```
-
 ---
 
 ## Architecture
@@ -58,30 +37,16 @@ Then in Xcode:
 JS / React (TypeScript)
         │
         ▼  Capacitor Bridge
-NativeSearchPlugin  (Kotlin / Swift)
+NativeSearchPlugin (Kotlin)
         │
-        ▼  JNI (Android) / C FFI (iOS)
-libdawa_search  (Rust)
+        ▼  JNI (Android)
+libdawa_search (Rust)
         │
         ▼
 Jaro-Winkler matching over embedded DRUG_INDEX
 ```
 
-### Wire format (C FFI / iOS)
-
-`dawa_search_fuzzy` writes null-terminated UTF-8 into the caller's buffer:
-
-```
-record₁ \x1E record₂ \x1E …
-```
-
-Each record:
-```
-name \x1F score \x1F rxcui
-```
-
-The Android JNI path returns a JSON string instead, since the JVM string
-bridge is the natural boundary.
+The Android JNI path returns a JSON string directly to the JVM bridge.
 
 ---
 
@@ -104,7 +69,5 @@ full RxNorm RXNCONSO table (~15 000 entries, ~120 KB compressed with zstd):
 | Feature | Effect |
 |---|---|
 | `android` | Compiles the `jni_bindings` module (JNI exports + `jni` crate) |
-| `ios` | No-op — iOS uses the `extern "C"` exports already present in `lib.rs` |
 
-Default build (no features) exposes only the `extern "C"` symbols and the
-public Rust API, suitable for testing on the host with `cargo test`.
+Default build (no features) exposes the public Rust API, suitable for testing on the host with `cargo test`.
