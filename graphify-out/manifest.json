@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1787300678.4638846,
-    "ast_hash": "5690e256e041a8282dccaab5cde27166",
+    "mtime": 1787426959.3534644,
+    "ast_hash": "962519b8f9fd340a6b97b0075f0cf892",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1787378212.2197714,
-    "ast_hash": "5d7d374ae405fbd7ac06599e88d24852",
+    "mtime": 1787427076.254567,
+    "ast_hash": "77f26cdfc2db74e95ad6a72d6ea45957",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useAIActions.tsx": {
-    "mtime": 1787126233.6322122,
-    "ast_hash": "4c9d6367ffcff95d6d2cda0a1b98aaa8",
+    "mtime": 1787427023.149995,
+    "ast_hash": "367fc15c100383190aba3ddd979b4c2e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useDrugData.ts": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1787229859.6548603,
-    "ast_hash": "20d53b5b491ac89801ef23c6ab1dab69",
+    "mtime": 1787427123.6460416,
+    "ast_hash": "43e8d0fe6452c3ce67a9fa71f3c10348",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -2787,6 +2787,16 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/index-Rd3KQXpx.js": {
     "mtime": 1787384760.5797317,
     "ast_hash": "2af5a0b7c9af57f4b24018a3a9562311",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-familyhub-intelligence.js": {
+    "mtime": 1787427101.6346033,
+    "ast_hash": "68dec26df76ac502f5fb04eee54c9772",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptFamilyHubIntelligence.test.ts": {
+    "mtime": 1787427091.921466,
+    "ast_hash": "08fea1d95dd13d5d7cc244e1b87a9f36",
     "semantic_hash": ""
   }
 }
