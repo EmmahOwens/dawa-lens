@@ -10,120 +10,230 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
-
-import org.json.JSONArray
+import org.json.JSONObject
 
 class AlarmReceiver : BroadcastReceiver() {
 
     companion object {
-        // v2: bumped to force Android to create a new channel with sound.
-        // The old "dawa_reminders" channel was silent (no sound was set on it).
-        // Android locks channel settings after first creation, so the only
-        // fix for existing installs is a new channel ID.
-        const val CHANNEL_ID = "dawa_reminders_v2"
+        const val CHANNEL_REMINDERS = "dawa_reminders_v2"
+        const val CHANNEL_MISSED = "dawa_missed_v2"
+        const val CHANNEL_STREAKS = "dawa_streaks_v2"
+        const val CHANNEL_QUOTES = "dawa_quotes_v2"
+        const val CHANNEL_WELLNESS = "dawa_wellness_v2"
+        const val CHANNEL_HYDRATION = "dawa_hydration_v2"
+        const val CHANNEL_REFILL = "dawa_refill_v2"
         private const val LEGACY_CHANNEL_ID = "dawa_reminders"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         val notificationId = intent.getIntExtra("notificationId", 0)
         val extraStr = intent.getStringExtra("extra") ?: ""
+        var notifType = ""
+        var reminderId = ""
+        var scheduledTime = ""
 
-        // 1. SQLite database guard: if this is a medicine reminder, verify it still exists & is enabled
         if (extraStr.isNotEmpty()) {
             try {
-                val extraObj = org.json.JSONObject(extraStr)
-                val reminderId = extraObj.optString("reminderId", "")
-                if (reminderId.isNotEmpty()) {
-                    val dbPath = context.getDatabasePath("dawa_lens.db")
-                    if (dbPath.exists()) {
-                        try {
-                            val db = android.database.sqlite.SQLiteDatabase.openDatabase(
-                                dbPath.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
-                            )
-                            val cursor = db.rawQuery(
-                                "SELECT id, enabled FROM reminders WHERE id = ? LIMIT 1",
-                                arrayOf(reminderId)
-                            )
-                            val exists = cursor.moveToFirst()
-                            val isEnabled = if (exists) cursor.getInt(cursor.getColumnIndexOrThrow("enabled")) == 1 else false
-                            cursor.close()
-                            db.close()
-
-                            if (!exists || !isEnabled) {
-                                // Silent return: reminder was removed or turned off
-                                return
-                            }
-                        } catch (dbErr: Exception) {
-                            // Non-fatal, proceed to schedule check
-                        }
-                    }
-                }
+                val extraObj = JSONObject(extraStr)
+                notifType = extraObj.optString("type", "")
+                reminderId = extraObj.optString("reminderId", "")
+                scheduledTime = extraObj.optString("scheduledTime", "")
             } catch (e: Exception) {
                 // Non-fatal JSON parse error
             }
         }
 
-        // 2. Validation guard: check if the notification is still in the active schedule
-        val prefs = context.getSharedPreferences("dawa_alarms", Context.MODE_PRIVATE)
-        val scheduleJson = prefs.getString("dawa_alarm_schedule", null)
-        if (scheduleJson.isNullOrEmpty()) {
-            // No active schedule at all (e.g. all reminders deleted or disabled)
-            return
-        }
+        val isEventNotification = notifType in listOf(
+            "encouragement",
+            "streak",
+            "missed_alert",
+            "schedule_adjusted",
+            "wellness_nudge",
+            "hydration",
+            "daily_quote",
+            "refill",
+            "low_stock"
+        )
 
-        try {
-            val array = JSONArray(scheduleJson)
-            var reminderExists = false
-            for (i in 0 until array.length()) {
-                val item = array.getJSONObject(i)
-                if (item.getInt("id") == notificationId) {
-                    reminderExists = true
-                    break
+        // 1. If this is a medicine reminder (not a standalone event), verify with SQLite database
+        if (!isEventNotification && reminderId.isNotEmpty()) {
+            val dbPath = context.getDatabasePath("dawa_lens.db")
+            if (dbPath.exists()) {
+                try {
+                    val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                        dbPath.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+                    )
+                    
+                    // Check if reminder still exists and is enabled
+                    val reminderCursor = db.rawQuery(
+                        "SELECT id, enabled FROM reminders WHERE id = ? LIMIT 1",
+                        arrayOf(reminderId)
+                    )
+                    val exists = reminderCursor.moveToFirst()
+                    val isEnabled = if (exists) reminderCursor.getInt(reminderCursor.getColumnIndexOrThrow("enabled")) == 1 else false
+                    reminderCursor.close()
+
+                    if (!exists || !isEnabled) {
+                        db.close()
+                        // Silent return: reminder was deleted or turned off
+                        return
+                    }
+
+                    // Check if dose was already taken early for this scheduled slot
+                    if (scheduledTime.isNotEmpty()) {
+                        val dosePrefix = if (scheduledTime.length >= 16) scheduledTime.substring(0, 16) else scheduledTime
+                        val doseCursor = db.rawQuery(
+                            """SELECT id FROM dose_logs 
+                               WHERE reminder_id = ? 
+                                 AND scheduled_time LIKE ? 
+                                 AND action IN ('taken', 'skipped') 
+                               LIMIT 1""",
+                            arrayOf(reminderId, "$dosePrefix%")
+                        )
+                        val alreadyTaken = doseCursor.moveToFirst()
+                        doseCursor.close()
+
+                        if (alreadyTaken) {
+                            db.close()
+                            // User already took or skipped this dose early; skip alarm
+                            return
+                        }
+                    }
+
+                    db.close()
+                } catch (dbErr: Exception) {
+                    // Non-fatal DB read error — proceed with alarm delivery
                 }
             }
-            if (!reminderExists) {
-                // Silent return: reminder was deleted or rescheduled
-                return
-            }
-        } catch (e: Exception) {
-            // In case of parsing failure on invalid JSON, do not post ghost notification
-            return
         }
 
         val title = intent.getStringExtra("title") ?: "Dawa Lens"
-        val body = intent.getStringExtra("body") ?: "Time to take your medicine"
+        val body = intent.getStringExtra("body") ?: "Medication reminder"
 
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Delete the old silent channel so users aren't left with a dead
-        // "Medicine Reminders" entry in their system notification settings.
-        // deleteNotificationChannel() is a no-op if the channel doesn't exist.
+        // Remove legacy silent channel if present
         notificationManager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
 
-        // Create notification channel on Android O+ (safe to call multiple times; no-op if exists)
+        // Determine target channel
+        val channelId = when (notifType) {
+            "missed_alert" -> CHANNEL_MISSED
+            "streak" -> CHANNEL_STREAKS
+            "encouragement", "daily_quote" -> CHANNEL_QUOTES
+            "wellness_nudge" -> CHANNEL_WELLNESS
+            "hydration" -> CHANNEL_HYDRATION
+            "refill", "low_stock" -> CHANNEL_REFILL
+            else -> CHANNEL_REMINDERS
+        }
+
+        // Create notification channels on Android O+ (safe & idempotent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-            val audioAttributes = AudioAttributes.Builder()
+            val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
+            val alarmAudioAttributes = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .build()
+
+            val notifAudioAttributes = AudioAttributes.Builder()
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .build()
-            val channel = NotificationChannel(
-                CHANNEL_ID,
+
+            // 1. Reminders Channel (High Importance, Alarm Sound, Vibration)
+            val reminderChannel = NotificationChannel(
+                CHANNEL_REMINDERS,
                 "Medicine Reminders",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Notifications for medicine reminder alarms"
+                description = "Critical alarms and reminders to take medication"
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 500, 200, 500)
-                setSound(alarmSound, audioAttributes)
+                setSound(alarmSound, alarmAudioAttributes)
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
             }
-            notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(reminderChannel)
+
+            // 2. Missed Dose Channel (High Importance, Alarm Sound, Vibration)
+            val missedChannel = NotificationChannel(
+                CHANNEL_MISSED,
+                "Missed Dose Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Urgent alerts when a scheduled medication dose was missed"
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 400)
+                setSound(alarmSound, alarmAudioAttributes)
+                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+            }
+            notificationManager.createNotificationChannel(missedChannel)
+
+            // 3. Streaks & Achievements Channel
+            val streakChannel = NotificationChannel(
+                CHANNEL_STREAKS,
+                "Achievements & Streaks",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Medication adherence milestones and celebration alerts"
+                enableVibration(true)
+                setSound(notifSound, notifAudioAttributes)
+            }
+            notificationManager.createNotificationChannel(streakChannel)
+
+            // 4. Quotes & Encouragement Channel
+            val quotesChannel = NotificationChannel(
+                CHANNEL_QUOTES,
+                "Health Quotes & Encouragement",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Motivational quotes and post-dose encouragement"
+                setSound(notifSound, notifAudioAttributes)
+            }
+            notificationManager.createNotificationChannel(quotesChannel)
+
+            // 5. Wellness Channel
+            val wellnessChannel = NotificationChannel(
+                CHANNEL_WELLNESS,
+                "Wellness Check-Ins",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Evening health check-ins and wellness log prompts"
+                setSound(notifSound, notifAudioAttributes)
+            }
+            notificationManager.createNotificationChannel(wellnessChannel)
+
+            // 6. Hydration Channel
+            val hydrationChannel = NotificationChannel(
+                CHANNEL_HYDRATION,
+                "Hydration Reminders",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Periodic hydration breaks and water tracking"
+                setSound(notifSound, notifAudioAttributes)
+            }
+            notificationManager.createNotificationChannel(hydrationChannel)
+
+            // 7. Refill Alerts Channel
+            val refillChannel = NotificationChannel(
+                CHANNEL_REFILL,
+                "Refill Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Low stock medication warnings and refill reminders"
+                enableVibration(true)
+                setSound(notifSound, notifAudioAttributes)
+            }
+            notificationManager.createNotificationChannel(refillChannel)
         }
 
-        // Intent to re-open the app when the notification is tapped
+        // Launch intent when tapped
         val launchIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("notification_extra", extraStr)
+            putExtra("notification_id", notificationId)
         }
         val contentIntent = PendingIntent.getActivity(
             context,
@@ -132,14 +242,20 @@ class AlarmReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // On Android O+ sound is controlled by the channel; setSound() is kept for
-        // pre-O devices (API < 26) which do not use channels.
-        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        val defaultSoundUri = RingtoneManager.getDefaultUri(
+            if (notifType == "missed_alert" || !isEventNotification) RingtoneManager.TYPE_ALARM else RingtoneManager.TYPE_NOTIFICATION
+        ) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
+        val isHighPriority = notifType in listOf("missed_alert", "streak", "refill", "low_stock") || !isEventNotification
+
+        val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle(title)
             .setContentText(body)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(if (isHighPriority) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(if (!isEventNotification || notifType == "missed_alert") NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
             .setVibrate(longArrayOf(0, 500, 200, 500))

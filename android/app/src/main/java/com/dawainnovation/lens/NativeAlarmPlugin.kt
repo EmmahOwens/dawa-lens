@@ -14,6 +14,8 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import org.json.JSONArray
+import org.json.JSONObject
 
 @CapacitorPlugin(name = "NativeAlarm")
 class NativeAlarmPlugin : Plugin() {
@@ -112,17 +114,19 @@ class NativeAlarmPlugin : Plugin() {
         val existingAlarmIds = prefs.getStringSet(KEY_IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
         val alarmIds = HashSet(existingAlarmIds)
 
-        // Merge schedule JSON array
+        // Merge schedule JSON array, keeping active future alarms
         val existingScheduleStr = prefs.getString(KEY_SCHEDULE, null)
-        val scheduleMap = mutableMapOf<Int, org.json.JSONObject>()
+        val scheduleMap = mutableMapOf<Int, JSONObject>()
+        val now = System.currentTimeMillis()
 
         if (!existingScheduleStr.isNullOrEmpty()) {
             try {
-                val existingArray = org.json.JSONArray(existingScheduleStr)
+                val existingArray = JSONArray(existingScheduleStr)
                 for (j in 0 until existingArray.length()) {
                     val obj = existingArray.getJSONObject(j)
                     val objId = obj.optInt("id", 0)
-                    if (objId != 0) {
+                    val triggerAt = obj.optLong("triggerAtMillis", 0L)
+                    if (objId != 0 && triggerAt > now) {
                         scheduleMap[objId] = obj
                     }
                 }
@@ -135,7 +139,7 @@ class NativeAlarmPlugin : Plugin() {
             try {
                 val item = notifications.getJSONObject(i)
                 val idLong = item.optLong("id", 0L)
-                val id = if (idLong != 0L) (idLong % 2147483647).toInt() else item.optInt("id", 0)
+                val id = if (idLong != 0L) (Math.abs(idLong % 2147483647L)).toInt() else item.optInt("id", 0)
                 val title = item.optString("title", "Dawa Lens")
                 val body = item.optString("body", "Medication reminder")
                 val triggerAtMillis = item.optLong("triggerAtMillis", 0L)
@@ -204,11 +208,10 @@ class NativeAlarmPlugin : Plugin() {
         }
 
         try {
-            val mergedScheduleArray = org.json.JSONArray()
+            val mergedScheduleArray = JSONArray()
             for (obj in scheduleMap.values) {
                 mergedScheduleArray.put(obj)
             }
-            // Persist both the full schedule (for BootReceiver) and the merged ID set (for cancellation)
             prefs.edit()
                 .putString(KEY_SCHEDULE, mergedScheduleArray.toString())
                 .putStringSet(KEY_IDS, alarmIds)
@@ -221,7 +224,71 @@ class NativeAlarmPlugin : Plugin() {
     }
 
     @PluginMethod
+    fun cancelReminderAlarms(call: PluginCall) {
+        try {
+            val ctx = context
+            val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val existingScheduleStr = prefs.getString(KEY_SCHEDULE, null)
+            val remainingIds = mutableSetOf<String>()
+            val remainingSchedule = JSONArray()
+
+            if (!existingScheduleStr.isNullOrEmpty()) {
+                val array = JSONArray(existingScheduleStr)
+                for (i in 0 until array.length()) {
+                    val item = array.getJSONObject(i)
+                    val id = item.optInt("id", 0)
+                    val extraStr = item.optString("extra", "")
+                    var isEvent = false
+                    if (extraStr.isNotEmpty()) {
+                        try {
+                            val extraObj = JSONObject(extraStr)
+                            val type = extraObj.optString("type", "")
+                            if (type in listOf("encouragement", "streak", "missed_alert", "schedule_adjusted", "wellness_nudge")) {
+                                isEvent = true
+                            }
+                        } catch (e: Exception) {}
+                    }
+
+                    if (isEvent) {
+                        // Preserve event alarms
+                        remainingIds.add(id.toString())
+                        remainingSchedule.put(item)
+                    } else {
+                        // Cancel reminder alarm
+                        try {
+                            val intent = Intent(ctx, AlarmReceiver::class.java)
+                            val pendingIntent = PendingIntent.getBroadcast(
+                                ctx,
+                                id,
+                                intent,
+                                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                            )
+                            alarmManager.cancel(pendingIntent)
+                            pendingIntent.cancel()
+                        } catch (e: Exception) {}
+                    }
+                }
+            }
+
+            prefs.edit()
+                .putString(KEY_SCHEDULE, remainingSchedule.toString())
+                .putStringSet(KEY_IDS, remainingIds)
+                .apply()
+        } catch (e: Exception) {
+            // ignore
+        }
+        call.resolve()
+    }
+
+    @PluginMethod
     fun cancelAllAlarms(call: PluginCall) {
+        val remindersOnly = call.getBoolean("remindersOnly", false) ?: false
+        if (remindersOnly) {
+            cancelReminderAlarms(call)
+            return
+        }
+
         try {
             val ctx = context
             val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -279,7 +346,6 @@ class NativeAlarmPlugin : Plugin() {
                         return
                     }
                 } else {
-                    // Already ignoring Doze optimizations, open settings screen so user can verify/set Unrestricted mode
                     openBatteryOptimizationSettingsInternal(context)
                     call.resolve()
                     return

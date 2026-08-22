@@ -60,6 +60,28 @@ export const NotificationHandler = () => {
           (notification) => {
             console.log('Notification received in foreground:', notification);
             const extra = parseNotificationExtra(notification.extra);
+            const notifType = extra.type as string | undefined;
+
+            if (notifType === "missed_alert") {
+              toast.error(notification.title || "Missed Dose Alert", {
+                description: notification.body,
+                duration: 6000,
+              });
+              return;
+            } else if (notifType === "streak" || notifType === "encouragement") {
+              toast.success(notification.title || "Health Milestone", {
+                description: notification.body,
+                duration: 5000,
+              });
+              return;
+            } else if (notifType === "schedule_adjusted" || notifType === "daily_quote" || notifType === "wellness_nudge" || notifType === "hydration") {
+              toast.info(notification.title || "Health Reminder", {
+                description: notification.body,
+                duration: 5000,
+              });
+              return;
+            }
+
             const isReminder = !!extra.reminderId;
 
             if (isReminder) {

@@ -303,7 +303,17 @@ export const checkMissedDoses = async (
             patientId: r.patientId ?? null,
           });
 
-          // Notify the user about the missed dose
+          const missedTitle = r.patientName
+            ? `⚠️ Missed Dose: ${r.patientName}'s ${r.medicineName}`
+            : `⚠️ Missed Dose: ${r.medicineName}`;
+          const missedBody = r.patientName
+            ? `${r.patientName} missed their ${r.dose} dose scheduled at ${timeStr.trim()}. Please follow up.`
+            : `You missed your ${r.dose} dose scheduled for ${timeStr.trim()}. Please stay on track!`;
+
+          // Immediate visual toast if app is currently open
+          notify.error(missedTitle, missedBody);
+
+          // Notify the user about the missed dose via system notifications
           if (Capacitor.isNativePlatform()) {
             try {
               const missedPerm = await LocalNotifications.checkPermissions();
@@ -314,7 +324,7 @@ export const checkMissedDoses = async (
                     id: CHANNEL_MISSED,
                     name: "Missed Dose Alerts",
                     description: "Alerts when a scheduled dose was not logged",
-                    importance: 4,
+                    importance: 5,
                     vibration: true,
                     sound: "default",
                   });
@@ -331,16 +341,9 @@ export const checkMissedDoses = async (
                   }
                 }
 
-                const missedTitle = r.patientName
-                  ? `\u26a0\ufe0f Missed Dose: ${r.patientName}'s ${r.medicineName}`
-                  : `\u26a0\ufe0f Missed Dose: ${r.medicineName}`;
-                const missedBody = r.patientName
-                  ? `${r.patientName} missed their ${r.dose} dose scheduled at ${timeStr.trim()}. Please follow up.`
-                  : `You missed your ${r.dose} dose scheduled for ${timeStr.trim()}. Please stay on track!`;
                 const missedId = stringToHash(r.id + "missed" + scheduledDate.getTime());
                 const missedChannelId = r.patientId ? patientChannelId(r.patientId) : CHANNEL_MISSED;
-                // schedule.at + allowWhileIdle is required for delivery in Doze/offline mode
-                const fireAt = new Date(Date.now() + 2000);
+                const fireAt = new Date(Date.now() + 1000);
 
                 await LocalNotifications.schedule({
                   notifications: [{
@@ -946,13 +949,21 @@ const executeScheduleReminders = async (
       }
     }
 
-    // Cancel all pending notifications to refresh the schedule
+    // Cancel pending reminder notifications to refresh the schedule while preserving event notifications
     try {
       const pending = await LocalNotifications.getPending();
       if (pending.notifications && pending.notifications.length > 0) {
-        await LocalNotifications.cancel({
-          notifications: pending.notifications.map((n) => ({ id: n.id })),
+        const toCancel = pending.notifications.filter((n) => {
+          const extra = (n.extra || {}) as Record<string, any>;
+          const type = extra.type;
+          // Only cancel routine medicine reminders, preserving encouragement, streak, missed alert, adjustment
+          return !type || type === "reminder" || !["encouragement", "streak", "missed_alert", "schedule_adjusted"].includes(type);
         });
+        if (toCancel.length > 0) {
+          await LocalNotifications.cancel({
+            notifications: toCancel.map((n) => ({ id: n.id })),
+          });
+        }
       }
     } catch (cancelErr) {
       console.warn("[reminderService] Failed to cancel pending LocalNotifications:", cancelErr);
@@ -980,9 +991,9 @@ const executeScheduleReminders = async (
       console.warn("[reminderService] Failed to clean delivered notifications:", delivErr);
     }
 
-    // Also cancel all native alarms to ensure ghost notifications are removed
+    // Also cancel reminder native alarms (preserving active event alarms)
     try {
-      await NativeAlarm.cancelAllAlarms();
+      await NativeAlarm.cancelAllAlarms({ remindersOnly: true });
     } catch (alarmErr) {
       console.warn("[reminderService] Failed to cancel native alarms:", alarmErr);
     }

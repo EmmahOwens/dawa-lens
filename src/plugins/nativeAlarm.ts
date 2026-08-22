@@ -24,8 +24,10 @@ export interface AlarmNotification {
 export interface NativeAlarmPlugin {
   /** Schedule (or reschedule) a full set of alarms in one call. */
   scheduleAlarms(options: { notifications: AlarmNotification[] }): Promise<void>;
-  /** Cancel every alarm previously registered through this plugin. */
-  cancelAllAlarms(): Promise<void>;
+  /** Cancel alarms. If remindersOnly is true, preserves short-term event alarms. */
+  cancelAllAlarms(options?: { remindersOnly?: boolean }): Promise<void>;
+  /** Cancel only recurring reminder alarms, preserving event and milestone alarms. */
+  cancelReminderAlarms?(): Promise<void>;
   /** Returns whether native alarm scheduling is available on this platform. */
   isSupported(): Promise<{ supported: boolean }>;
   /** Request exemption from battery optimization to ensure alarms are reliable. */

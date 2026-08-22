@@ -31,7 +31,11 @@ import {
 } from "firebase/firestore";
 import { localPersistence } from "../services/localPersistence";
 import { scheduleReminders, computeShiftOffset, scheduleAdjustmentNotification } from "../services/reminderService";
-import { schedulePostDoseEncouragementNotification } from "../services/quotesService";
+import {
+  schedulePostDoseEncouragementNotification,
+  computeCurrentStreak,
+  scheduleStreakNotification,
+} from "../services/quotesService";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
@@ -1705,9 +1709,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Fire a motivational encouragement notification 3s after the dose is logged
-      // (uses NativeAlarm so it works even when the app is immediately backgrounded)
+      // Fire a motivational encouragement notification after the dose is logged
       schedulePostDoseEncouragementNotification(log.medicineName).catch(() => {/* non-fatal */});
+
+      // Check and fire streak milestone notification if achieved
+      const updatedLogs = [newLog, ...doseLogs];
+      const streak = computeCurrentStreak(updatedLogs, reminders);
+      if (streak > 0) {
+        scheduleStreakNotification(streak).catch(() => {/* non-fatal */});
+      }
     }
 
     // 1.5. Dynamic Schedule Adjustment

@@ -9,6 +9,7 @@ import {
   LocalNotificationSchema,
 } from "@capacitor/local-notifications";
 import { NativeAlarm, AlarmNotification } from "@/plugins/nativeAlarm";
+import { notify } from "@/lib/notifications";
 import { Capacitor } from "@capacitor/core";
 import { DoseLog, Reminder, WellnessLog } from "@/contexts/AppContext";
 import {
@@ -1113,18 +1114,46 @@ async function scheduleDailyQuoteNotifications(
 // ─── 2. Post-Dose Encouragement ───────────────────────────────────────────────
 
 export async function schedulePostDoseEncouragementNotification(medicineName: string): Promise<void> {
+  const quote = getEncouragementQuote();
+
+  // 1. Deliver visual in-app toast notification immediately
+  notify.success(`💊 ${medicineName} — Logged!`, quote);
+
+  // 2. Schedule persistent background notification
   if (!Capacitor.isNativePlatform()) return;
   try {
     const perm = await LocalNotifications.checkPermissions();
     if (perm.display !== "granted") return;
     await createEngagementChannels();
-    const quote = getEncouragementQuote();
-    const fireAt = new Date(Date.now() + 3000);
+    const fireAt = new Date(Date.now() + 1000);
     const id = stringToHash("dawa_encouragement_" + medicineName + fireAt.getTime().toString());
-    await LocalNotifications.schedule({ notifications: [{ id, title: `\uD83D\uDC8A ${medicineName} — Logged!`, body: quote, schedule: { at: fireAt, allowWhileIdle: true }, channelId: CHANNEL_QUOTES, sound: "default", extra: { type: "encouragement", route: "/" } }] });
-    try { await NativeAlarm.scheduleAlarms({ notifications: [{ id, title: `\uD83D\uDC8A ${medicineName} — Logged!`, body: quote, triggerAtMillis: fireAt.getTime(), extra: JSON.stringify({ type: "encouragement" }) }] }); }
-    catch (e) { console.warn("[quotesService] NativeAlarm encouragement failed (non-fatal):", e); }
-  } catch (err) { console.warn("[quotesService] schedulePostDoseEncouragementNotification failed:", err); }
+    await LocalNotifications.schedule({
+      notifications: [{
+        id,
+        title: `💊 ${medicineName} — Logged!`,
+        body: quote,
+        schedule: { at: fireAt, allowWhileIdle: true },
+        channelId: CHANNEL_QUOTES,
+        sound: "default",
+        extra: { type: "encouragement", route: "/" }
+      }]
+    });
+    try {
+      await NativeAlarm.scheduleAlarms({
+        notifications: [{
+          id,
+          title: `💊 ${medicineName} — Logged!`,
+          body: quote,
+          triggerAtMillis: fireAt.getTime(),
+          extra: JSON.stringify({ type: "encouragement" })
+        }]
+      });
+    } catch (e) {
+      console.warn("[quotesService] NativeAlarm encouragement failed (non-fatal):", e);
+    }
+  } catch (err) {
+    console.warn("[quotesService] schedulePostDoseEncouragementNotification failed:", err);
+  }
 }
 
 // ─── 3. Evening Check-In ─────────────────────────────────────────────────────
@@ -1143,8 +1172,8 @@ async function scheduleEveningCheckIns(
     const dateKey = startOfDay(addDays(now, i)).toISOString();
     const id = stringToHash("dawa_evening_checkin_" + dateKey);
     const body = "Have you logged all your medications today? A quick check keeps your health on track.";
-    localBatch.push({ id, title: "\uD83C\uDF19 Evening Check-In", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_WELLNESS, sound: "default", extra: { type: "evening_checkin", route: "/" } });
-    alarmBatch.push({ id, title: "\uD83C\uDF19 Evening Check-In", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "evening_checkin" }) });
+    localBatch.push({ id, title: "🌙 Evening Check-In", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_WELLNESS, sound: "default", extra: { type: "evening_checkin", route: "/" } });
+    alarmBatch.push({ id, title: "🌙 Evening Check-In", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "evening_checkin" }) });
     ids.push(id);
   }
 }
@@ -1152,13 +1181,13 @@ async function scheduleEveningCheckIns(
 // ─── 4. Hydration Reminders ──────────────────────────────────────────────────
 
 const HYDRATION_MESSAGES: readonly string[] = [
-  "\uD83D\uDCA7 Time to hydrate! A glass of water now keeps fatigue away.",
-  "\uD83D\uDCA7 Drink up! Staying hydrated supports your medication and your health.",
-  "\uD83D\uDCA7 Water break! Hydration keeps your kidneys happy and your energy high.",
-  "\uD83D\uDCA7 Your body is about 60% water — keep it that way. Drink up!",
-  "\uD83D\uDCA7 Sip some water! It helps your medication absorb better.",
-  "\uD83D\uDCA7 Quick water break! Your brain and body both need it.",
-  "\uD83D\uDCA7 Stay hydrated! Even mild dehydration affects focus and mood.",
+  "💧 Time to hydrate! A glass of water now keeps fatigue away.",
+  "💧 Drink up! Staying hydrated supports your medication and your health.",
+  "💧 Water break! Hydration keeps your kidneys happy and your energy high.",
+  "💧 Your body is about 60% water — keep it that way. Drink up!",
+  "💧 Sip some water! It helps your medication absorb better.",
+  "💧 Quick water break! Your brain and body both need it.",
+  "💧 Stay hydrated! Even mild dehydration affects focus and mood.",
 ];
 
 async function scheduleHydrationReminders(
@@ -1175,8 +1204,8 @@ async function scheduleHydrationReminders(
       const dateKey = `${startOfDay(addDays(now, i)).toISOString()}_${hour}`;
       const id = stringToHash("dawa_hydration_" + dateKey);
       const body = HYDRATION_MESSAGES[Math.floor(Math.random() * HYDRATION_MESSAGES.length)] as string;
-      localBatch.push({ id, title: "\uD83D\uDCA7 Hydration Reminder", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_HYDRATION, sound: "default", extra: { type: "hydration", route: "/" } });
-      alarmBatch.push({ id, title: "\uD83D\uDCA7 Hydration Reminder", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "hydration" }) });
+      localBatch.push({ id, title: "💧 Hydration Reminder", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_HYDRATION, sound: "default", extra: { type: "hydration", route: "/" } });
+      alarmBatch.push({ id, title: "💧 Hydration Reminder", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "hydration" }) });
       ids.push(id);
     }
   }
@@ -1198,8 +1227,8 @@ async function scheduleWeeklyAdherenceSummary(
     const dateKey = startOfDay(addDays(now, daysUntilSunday + week * 7)).toISOString();
     const id = stringToHash("dawa_weekly_summary_" + dateKey);
     const body = "How did you do with your medications this week? Tap to see your adherence report and keep up the momentum!";
-    localBatch.push({ id, title: "\uD83D\uDCCA Your Weekly Health Summary", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_QUOTES, sound: "default", extra: { type: "weekly_summary", route: "/history" } });
-    alarmBatch.push({ id, title: "\uD83D\uDCCA Your Weekly Health Summary", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "weekly_summary" }) });
+    localBatch.push({ id, title: "📊 Your Weekly Health Summary", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_QUOTES, sound: "default", extra: { type: "weekly_summary", route: "/history" } });
+    alarmBatch.push({ id, title: "📊 Your Weekly Health Summary", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "weekly_summary" }) });
     ids.push(id);
   }
 }
@@ -1223,34 +1252,62 @@ export function computeCurrentStreak(doseLogs: DoseLog[], reminders: Reminder[])
 }
 
 export async function scheduleStreakNotification(streak: number): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return;
   const MILESTONES = [3, 7, 14, 30, 60, 90, 180, 365];
   if (!MILESTONES.includes(streak)) return;
   const todayKey = new Date().toDateString();
   const dedupeKey = `dawa_streak_${streak}_${todayKey}`;
   if (localStorage.getItem(dedupeKey)) return;
+
+  const streakMessages: Record<number, string> = {
+    3: `🔥 3-Day Streak! You have taken every dose for 3 days in a row. Keep the momentum going!`,
+    7: `🔥 7-Day Streak! One full week of perfect medication adherence. You are on fire!`,
+    14: `🏆 2-Week Streak! 14 days of consistent medication. This is incredible dedication!`,
+    30: `🌟 30-Day Streak! A full month of perfect adherence! You are a health champion!`,
+    60: `💎 60-Day Streak! Two months of consistent medication — extraordinary commitment!`,
+    90: `👑 90-Day Streak! 3 months of perfect adherence. You are a legend!`,
+    180: `🚀 180-Day Streak! Half a year of consistent health management. Phenomenal!`,
+    365: `🎉 365-Day Streak! One full year of perfect adherence — you are an inspiration!`,
+  };
+  const body = streakMessages[streak] ?? `🔥 ${streak}-Day Streak! Amazing consistency with your medication!`;
+
+  // Visual in-app toast
+  notify.success(`🔥 ${streak}-Day Medication Streak!`, body);
+  localStorage.setItem(dedupeKey, "1");
+
+  if (!Capacitor.isNativePlatform()) return;
   try {
     const perm = await LocalNotifications.checkPermissions();
     if (perm.display !== "granted") return;
     await createEngagementChannels();
-    const streakMessages: Record<number, string> = {
-      3: `\uD83D\uDD25 3-Day Streak! You have taken every dose for 3 days in a row. Keep the momentum going!`,
-      7: `\uD83D\uDD25 7-Day Streak! One full week of perfect medication adherence. You are on fire!`,
-      14: `\uD83C\uDFC6 2-Week Streak! 14 days of consistent medication. This is incredible dedication!`,
-      30: `\uD83C\uDF1F 30-Day Streak! A full month of perfect adherence! You are a health champion!`,
-      60: `\uD83D\uDC8E 60-Day Streak! Two months of consistent medication — extraordinary commitment!`,
-      90: `\uD83D\uDC51 90-Day Streak! 3 months of perfect adherence. You are a legend!`,
-      180: `\uD83D\uDE80 180-Day Streak! Half a year of consistent health management. Phenomenal!`,
-      365: `\uD83C\uDF8A 365-Day Streak! One full year of perfect adherence — you are an inspiration!`,
-    };
-    const body = streakMessages[streak] ?? `\uD83D\uDD25 ${streak}-Day Streak! Amazing consistency with your medication!`;
-    const fireAt = new Date(Date.now() + 2000);
+    const fireAt = new Date(Date.now() + 1000);
     const id = stringToHash("dawa_streak_notif_" + streak + "_" + todayKey);
-    await LocalNotifications.schedule({ notifications: [{ id, title: `\uD83D\uDD25 ${streak}-Day Medication Streak!`, body, schedule: { at: fireAt, allowWhileIdle: true }, channelId: CHANNEL_STREAKS, sound: "default", extra: { type: "streak", streak, route: "/history" } }] });
-    try { await NativeAlarm.scheduleAlarms({ notifications: [{ id, title: `\uD83D\uDD25 ${streak}-Day Medication Streak!`, body, triggerAtMillis: fireAt.getTime(), extra: JSON.stringify({ type: "streak", streak }) }] }); }
-    catch (e) { console.warn("[quotesService] NativeAlarm streak failed (non-fatal):", e); }
-    localStorage.setItem(dedupeKey, "1");
-  } catch (err) { console.warn("[quotesService] scheduleStreakNotification failed:", err); }
+    await LocalNotifications.schedule({
+      notifications: [{
+        id,
+        title: `🔥 ${streak}-Day Medication Streak!`,
+        body,
+        schedule: { at: fireAt, allowWhileIdle: true },
+        channelId: CHANNEL_STREAKS,
+        sound: "default",
+        extra: { type: "streak", streak, route: "/history" }
+      }]
+    });
+    try {
+      await NativeAlarm.scheduleAlarms({
+        notifications: [{
+          id,
+          title: `🔥 ${streak}-Day Medication Streak!`,
+          body,
+          triggerAtMillis: fireAt.getTime(),
+          extra: JSON.stringify({ type: "streak", streak })
+        }]
+      });
+    } catch (e) {
+      console.warn("[quotesService] NativeAlarm streak failed (non-fatal):", e);
+    }
+  } catch (err) {
+    console.warn("[quotesService] scheduleStreakNotification failed:", err);
+  }
 }
 
 // ─── 7. Wellness Log Nudge ───────────────────────────────────────────────────
