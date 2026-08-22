@@ -48,8 +48,19 @@ export default function WellnessPage() {
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"journal" | "food">("journal");
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [loading, setLoading] = useState(false);
   const [reflectionLoading, setReflectionLoading] = useState(false);
+
+  const isToday = isSameDay(selectedDate, new Date());
+
+  const latestDayLog = useMemo(() => {
+    return (
+      scopedWellnessLogs
+        .filter((l) => l.type === "symptom" && isSameDay(toDate(l.timestamp), selectedDate))
+        .sort((a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime())[0] || null
+    );
+  }, [scopedWellnessLogs, selectedDate]);
   const [insight, setInsight] = useState<any>(() => {
     try {
       const cached = sessionStorage.getItem("dawa_wellness_page_insight");
@@ -161,6 +172,22 @@ export default function WellnessPage() {
   const [energy, setEnergy] = useState(3); // 1-5
   const [symptoms, setSymptoms] = useState<string[]>([]);
 
+  // Sync Daily Vibe inputs whenever selectedDayLog or selectedDate changes
+  useEffect(() => {
+    if (latestDayLog) {
+      const recordedMood = Number(latestDayLog.data?.mood);
+      const recordedEnergy = Number(latestDayLog.data?.energy);
+      const recordedSymptoms = latestDayLog.data?.symptoms;
+      setMood(Number.isFinite(recordedMood) && recordedMood >= 1 && recordedMood <= 5 ? recordedMood : 3);
+      setEnergy(Number.isFinite(recordedEnergy) && recordedEnergy >= 1 && recordedEnergy <= 5 ? recordedEnergy : 3);
+      setSymptoms(Array.isArray(recordedSymptoms) ? recordedSymptoms : []);
+    } else {
+      setMood(3);
+      setEnergy(3);
+      setSymptoms([]);
+    }
+  }, [latestDayLog, selectedDate]);
+
   // Food State
   const [meal, setMeal] = useState("");
   const [mealSafety, setMealSafety] = useState<any>(null);
@@ -184,9 +211,11 @@ export default function WellnessPage() {
         setReflectionLoading(false);
       }
 
-      // Step 2: Save wellness log with AI reflection baked into data (so it persists in Recent Reflections)
+      // Step 2: Save wellness log with AI reflection baked into data
+      const timestamp = isToday ? new Date().toISOString() : selectedDate.toISOString();
       await addWellnessLog({
         type: "symptom",
+        timestamp,
         data: {
           mood,
           energy,
@@ -205,7 +234,6 @@ export default function WellnessPage() {
           ? "Your AI-powered reflection is ready."
           : "Your wellness data has been recorded.",
       });
-      setSymptoms([]);
     } catch (err) {
       console.error("Failed to save wellness log:", err);
       toast({ title: "Save Failed", description: "Could not save your reflection. Please try again.", variant: "destructive" });
@@ -320,12 +348,25 @@ export default function WellnessPage() {
             {/* Mood & Energy */}
             <div className="premium-card overflow-hidden">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="section-title flex items-center gap-2 mb-0">
-                  <Smile size={16} className="text-success" /> Daily Vibe
-                </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-success/10 text-success uppercase tracking-wider">
-                  Check-in
-                </span>
+                <div>
+                  <h3 className="section-title flex items-center gap-2 mb-0.5">
+                    <Smile size={16} className="text-success" /> Daily Vibe
+                  </h3>
+                  <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                    {isToday ? "Today" : format(selectedDate, "EEEE")} • {format(selectedDate, "MMM d, yyyy")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {latestDayLog ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-success/15 text-success uppercase tracking-wider border border-success/20">
+                      <CheckCircle2 size={11} /> Recorded
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-muted/70 text-muted-foreground uppercase tracking-wider border border-border/50">
+                      Check-in
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-8">
@@ -411,6 +452,8 @@ export default function WellnessPage() {
                   <><Loader2 className="animate-spin mr-2" size={16} /> Generating Reflection…</>
                 ) : loading ? (
                   <><Loader2 className="animate-spin mr-2" size={16} /> Saving…</>
+                ) : latestDayLog ? (
+                  <><CheckCircle2 className="mr-2" size={16} /> Update Daily Reflection</>
                 ) : (
                   <><CheckCircle2 className="mr-2" size={16} /> Secure Daily Reflection</>
                 )}
@@ -632,13 +675,26 @@ export default function WellnessPage() {
         <div className="grid grid-cols-7 gap-2 sm:gap-4 items-end pt-4 pb-1 min-h-[140px]">
           {sparklineData.map((d, i) => {
             const hasData = d.mood !== null || d.energy !== null;
+            const isSelected = isSameDay(d.date, selectedDate);
+            const isDayToday = isSameDay(d.date, new Date());
+
             // Scale mood (1-5) into green capsule pill height (28px - 58px)
             const moodHeight = d.mood ? Math.max(28, (d.mood / 5) * 58) : 0;
             // Scale energy (1-5) into blue stem height (16px - 44px)
             const energyHeight = d.energy ? Math.max(16, (d.energy / 5) * 44) : 0;
 
             return (
-              <div key={i} className="flex flex-col items-center gap-2 group relative">
+              <button
+                key={i}
+                type="button"
+                onClick={() => setSelectedDate(d.date)}
+                className={`flex flex-col items-center gap-2 group relative py-2 px-1 rounded-2xl transition-all duration-200 cursor-pointer focus:outline-none ${
+                  isSelected
+                    ? "bg-primary/10 ring-2 ring-primary shadow-sm -translate-y-0.5"
+                    : "hover:bg-muted/40"
+                }`}
+                aria-label={`View vibe for ${format(d.date, "MMM d")}`}
+              >
                 {/* Tooltip on hover */}
                 {hasData && (
                   <div className="opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 absolute -top-10 bg-slate-900 text-white text-[10px] py-1 px-2 rounded-lg shadow-lg whitespace-nowrap z-20">
@@ -656,7 +712,9 @@ export default function WellnessPage() {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: `${moodHeight}px`, opacity: 1 }}
                           transition={{ delay: i * 0.05, duration: 0.4, ease: "easeOut" }}
-                          className="w-full max-w-[46px] sm:max-w-[54px] rounded-2xl bg-[#52D696] shadow-sm relative z-10"
+                          className={`w-full max-w-[46px] sm:max-w-[54px] rounded-2xl bg-[#52D696] shadow-sm relative z-10 ${
+                            isSelected ? "ring-2 ring-primary/40 shadow-md" : ""
+                          }`}
                         />
                       )}
 
@@ -672,15 +730,26 @@ export default function WellnessPage() {
                     </div>
                   ) : (
                     /* Baseline dash for empty days */
-                    <div className="w-full h-[2.5px] bg-slate-100 dark:bg-slate-800 rounded-full mb-1" />
+                    <div className={`w-full h-[2.5px] rounded-full mb-1 ${isSelected ? "bg-primary" : "bg-slate-100 dark:bg-slate-800"}`} />
                   )}
                 </div>
 
                 {/* Day Label */}
-                <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                  {format(d.date, "EEE")}
-                </span>
-              </div>
+                <div className="flex flex-col items-center">
+                  <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
+                    isSelected ? "text-primary font-black" : "text-slate-400 dark:text-slate-500"
+                  }`}>
+                    {format(d.date, "EEE")}
+                  </span>
+                  {isDayToday && (
+                    <span className={`text-[8px] font-black uppercase tracking-tighter leading-none mt-0.5 ${
+                      isSelected ? "text-primary" : "text-primary/70"
+                    }`}>
+                      Today
+                    </span>
+                  )}
+                </div>
+              </button>
             );
           })}
         </div>

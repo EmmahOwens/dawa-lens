@@ -1,6 +1,7 @@
 import * as React from "react";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { subDays, format } from "date-fns";
 import type { WellnessLog } from "@/contexts/AppContext";
 
 // ─── Mutable test state accessible inside vi.mock closures ────────────────────
@@ -214,5 +215,71 @@ describe("WellnessPage - Recent Reflections ordering & limits", () => {
     expect(screen.getByText("You are having an energetic and positive day.")).toBeInTheDocument();
     expect(screen.getByText("I am flourishing.")).toBeInTheDocument();
     expect(screen.getByText("Stay hydrated and keep up the momentum.")).toBeInTheDocument();
+  });
+
+  it("dynamically matches Daily Vibe Mood and Energy levels to today's logged values", () => {
+    testState.scopedWellnessLogs = [
+      {
+        id: "today-log-1",
+        type: "symptom",
+        timestamp: new Date().toISOString(),
+        data: {
+          mood: 5,
+          energy: 5,
+          symptoms: ["Happy", "Good Focus"],
+        },
+        userId: "u1",
+      },
+    ];
+
+    render(<WellnessPage />);
+
+    // Should display 100% vitality level for energy = 5
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    // Header should show "Recorded" badge
+    expect(screen.getByText(/Recorded/i)).toBeInTheDocument();
+    // Button should offer to update reflection
+    expect(screen.getByRole("button", { name: /Update Daily Reflection/i })).toBeInTheDocument();
+  });
+
+  it("defaults to 60% vitality and Check-in when today has no recorded check-in", () => {
+    testState.scopedWellnessLogs = [];
+
+    render(<WellnessPage />);
+
+    expect(screen.getByText("60%")).toBeInTheDocument();
+    expect(screen.getByText("Check-in")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Secure Daily Reflection/i })).toBeInTheDocument();
+  });
+
+  it("updates Daily Vibe when switching days via the 7-day emotion trend chart", () => {
+    const twoDaysAgo = subDays(new Date(), 2);
+    testState.scopedWellnessLogs = [
+      {
+        id: "past-log-1",
+        type: "symptom",
+        timestamp: twoDaysAgo.toISOString(),
+        data: {
+          mood: 1,
+          energy: 1,
+          symptoms: ["Fatigue"],
+        },
+        userId: "u1",
+      },
+    ];
+
+    render(<WellnessPage />);
+
+    // Initially on today (no logs today) -> 60%
+    expect(screen.getByText("60%")).toBeInTheDocument();
+
+    // Click on the button for 2 days ago
+    const dayBtn = screen.getByLabelText(`View vibe for ${format(twoDaysAgo, "MMM d")}`);
+    fireEvent.click(dayBtn);
+
+    // After clicking 2 days ago, Vitality Level should update to 20% (energy=1 * 20%)
+    expect(screen.getByText("20%")).toBeInTheDocument();
+    expect(screen.getByText(/Recorded/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Update Daily Reflection/i })).toBeInTheDocument();
   });
 });

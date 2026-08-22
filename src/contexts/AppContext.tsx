@@ -377,7 +377,7 @@ type AppContextType = {
   logDose: (log: Omit<DoseLog, "id" | "actionTime">) => Promise<void>;
   deleteDoseLog: (id: string) => Promise<void>;
   addWellnessLog: (
-    log: Omit<WellnessLog, "id" | "timestamp" | "userId">
+    log: Omit<WellnessLog, "id" | "timestamp" | "userId"> & { timestamp?: string | Date }
   ) => Promise<void>;
   deleteWellnessLog: (id: string) => Promise<void>;
   addScheduleAuditLog: (
@@ -1965,10 +1965,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addWellnessLog = async (
-    log: Omit<WellnessLog, "id" | "timestamp" | "userId">
+    log: Omit<WellnessLog, "id" | "timestamp" | "userId"> & { timestamp?: string | Date }
   ) => {
     const localId = `lwell-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const timestamp = new Date().toISOString();
+    const timestamp = (log as any).timestamp
+      ? toDate((log as any).timestamp).toISOString()
+      : new Date().toISOString();
     const effectivePatientId = log.patientId ?? selectedPatientId ?? null;
     const effectiveUserId = storageMode === "local" ? "local" : currentUserId || "local";
 

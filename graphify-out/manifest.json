@@ -1055,8 +1055,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1787379458.815013,
-    "ast_hash": "e737d15e294c958091fcf92268a7f4fe",
+    "mtime": 1787382110.1696475,
+    "ast_hash": "225cf962fb0d682f59c74987535f3800",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1280,8 +1280,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx": {
-    "mtime": 1787131708.0508528,
-    "ast_hash": "090592dd806e22f3b2b1f559258e79d7",
+    "mtime": 1787382630.8479817,
+    "ast_hash": "92f7c4fa996657c33204cd65908a64dc",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/app-updater.ts": {
@@ -2485,8 +2485,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.test.tsx": {
-    "mtime": 1787115104.0033863,
-    "ast_hash": "67f42d9426a5d62806b2d1685e681b2f",
+    "mtime": 1787382349.381174,
+    "ast_hash": "458b4065b624e115a56bbe9660b0161e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/__tests__/NotificationHandler.test.tsx": {
