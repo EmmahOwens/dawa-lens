@@ -36,6 +36,11 @@ export default function DawaGPT() {
     setIsDawaGPTOpen: setIsOpen,
     dawaGPTInitialPrompt,
     setDawaGPTInitialPrompt,
+    patients,
+    medicines: allMedicines,
+    reminders: allReminders,
+    doseLogs: allDoseLogs,
+    wellnessLogs: allWellnessLogs,
   } = useApp();
 
   const {
@@ -282,7 +287,11 @@ export default function DawaGPT() {
       if (activeMedicines?.length > 0) {
         firstSuggestions.push(`Does ${activeMedicines[0].name} interact with anything?`);
       }
-      firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
+      if (patients?.length > 0) {
+        firstSuggestions.push("Check family medications");
+      } else {
+        firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
+      }
 
       setMessages([{
         id: "welcome",
@@ -292,7 +301,7 @@ export default function DawaGPT() {
         source: "System",
       }]);
     }
-  }, [isOpen, messages.length, reminders.length, userProfile?.name, resolvedPatient, activeMedicines]);
+  }, [isOpen, messages.length, reminders.length, userProfile?.name, resolvedPatient, activeMedicines, patients]);
 
   useEffect(() => {
     if (isOpen) {
@@ -330,13 +339,13 @@ export default function DawaGPT() {
     try {
       const response = await chatWithDawaGPTStream(
         [...messages, userMsg],
-        medicines,
+        allMedicines,
         userProfile,
-        doseLogs,
-        reminders,
-        wellnessLogs,
+        allDoseLogs,
+        allReminders,
+        allWellnessLogs,
         vitalitySummary,
-        [], // patients (already handled via scope)
+        patients,
         resolvedPatient.id,
         (streamedText) => {
           setMessages(prev => prev.map(msg =>
@@ -378,13 +387,13 @@ export default function DawaGPT() {
           const retryMessages = [...messages, userMsg, response, retryUserMsg];
           const retryResponse = await chatWithDawaGPTStream(
             retryMessages,
-            medicines,
+            allMedicines,
             userProfile,
-            doseLogs,
-            reminders,
-            wellnessLogs,
+            allDoseLogs,
+            allReminders,
+            allWellnessLogs,
             vitalitySummary,
-            [],
+            patients,
             resolvedPatient.id,
             (streamedText) => {
               setMessages(prev => prev.map(msg =>

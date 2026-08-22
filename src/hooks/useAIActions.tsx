@@ -87,7 +87,7 @@ export function useAIActions() {
           if (!payload?.name) {
             throw new Error("Medicine name is required");
           }
-          await addMedicine(payload);
+          await addMedicine(payload, payload.patientId);
           toast({ 
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine added</span>,
             description: action.confirmMessage || `${payload.name} added to your cabinet.`,
@@ -301,8 +301,15 @@ export function useAIActions() {
           await addPatient({
             name: payload.name,
             age: payload.age,
+            dateOfBirth: payload.dateOfBirth,
             gender: payload.gender,
-            relation: payload.relation
+            relation: payload.relation,
+            type: payload.type,
+            conditions: payload.conditions,
+            allergies: payload.allergies,
+            bloodType: payload.bloodType,
+            notes: payload.notes,
+            color: payload.color,
           });
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Family member added</span>,

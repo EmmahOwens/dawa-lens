@@ -51,7 +51,9 @@ export const generateDawaGPTResponse = async (
   userProfile: UserProfile | null,
   allMedicines: Medicine[] = [],
   doseLogs: DoseLog[] = [],
-  reminders: Reminder[] = []
+  reminders: Reminder[] = [],
+  patients: Patient[] = [],
+  selectedPatientId: string | null = null
 ): Promise<ChatMessage> => {
   const normalizedQuery = query.toLowerCase().trim();
 
@@ -73,7 +75,120 @@ export const generateDawaGPTResponse = async (
     }
   }
 
-  // 2. Med Vault / Stock Intelligence (Local / Offline handling)
+  // 2. Family Hub & Client Profiles Query (Local / Offline handling)
+  const familyKeywords = ["family", "client", "dependents", "members", "profiles", "hub", "relatives", "patient"];
+  const isFamilyOverviewQuery = familyKeywords.some(k => normalizedQuery.includes(k)) && 
+    (normalizedQuery.includes("who") || normalizedQuery.includes("list") || normalizedQuery.includes("show") || normalizedQuery.includes("what") || normalizedQuery.includes("all") || normalizedQuery.includes("my"));
+
+  // Check if query is asking about a specific patient by name or relation
+  const matchedPatient = patients.find(p => {
+    if (!p.name) return false;
+    const pNameLower = p.name.toLowerCase();
+    if (normalizedQuery.includes(pNameLower)) return true;
+
+    // Check individual name parts (e.g. "Sarah" or "Nalule", length >= 3)
+    const nameParts = pNameLower.split(/\s+/).filter(part => part.length >= 3);
+    if (nameParts.some(part => {
+      const regex = new RegExp(`\\b${part}\\b`, "i");
+      return regex.test(normalizedQuery);
+    })) {
+      return true;
+    }
+
+    // Check relation (e.g. "mother", "mom", "mama", "dad", "father", "son", "daughter")
+    if (p.relation) {
+      const relLower = p.relation.toLowerCase();
+      const regex = new RegExp(`\\b${relLower}\\b`, "i");
+      if (regex.test(normalizedQuery)) return true;
+      if (relLower === "mother" && (/\b(mom|mama|mum)\b/i).test(normalizedQuery)) return true;
+      if (relLower === "father" && (/\b(dad|papa|baba)\b/i).test(normalizedQuery)) return true;
+    }
+
+    return false;
+  });
+
+  if (matchedPatient) {
+    const pMeds = allMedicines.filter(m => m.patientId === matchedPatient.id);
+    const pReminders = reminders.filter(r => r.patientId === matchedPatient.id);
+    const ageStr = matchedPatient.dateOfBirth
+      ? `${new Date().getFullYear() - new Date(matchedPatient.dateOfBirth).getFullYear()} years`
+      : matchedPatient.age !== undefined
+      ? `${matchedPatient.age} years`
+      : "Not specified";
+    const relStr = matchedPatient.relation ? ` (${matchedPatient.relation})` : "";
+    const typeStr = matchedPatient.type === "client" ? "Professional Client" : "Family Member";
+    const condStr = matchedPatient.conditions?.length ? matchedPatient.conditions.join(", ") : "None recorded";
+    const allergyStr = matchedPatient.allergies?.length ? matchedPatient.allergies.join(", ") : "None recorded";
+    
+    let text = `Here is the profile for **${matchedPatient.name}**${relStr}:\n\n` +
+      `• **Type**: ${typeStr}\n` +
+      `• **Age**: ${ageStr} | **Gender**: ${matchedPatient.gender || "Not specified"}\n` +
+      `• **Chronic Conditions**: ${condStr}\n` +
+      `• **Known Allergies**: ${allergyStr}\n`;
+
+    if (matchedPatient.notes) {
+      text += `• **Notes**: ${matchedPatient.notes}\n`;
+    }
+
+    text += `\n**Assigned Medications (${pMeds.length})**:\n`;
+    if (pMeds.length === 0) {
+      text += `No medications currently assigned to ${matchedPatient.name}.\n`;
+    } else {
+      text += pMeds.map(m => `• **${m.name}**${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage || 'Standard'}${m.currentQuantity !== undefined ? ` [${m.currentQuantity} ${m.unit || 'units'} in vault]` : ''}`).join("\n") + "\n";
+    }
+
+    if (pReminders.length > 0) {
+      text += `\n**Active Reminders (${pReminders.length})**:\n`;
+      text += pReminders.map(r => `• ${r.medicineName} (${r.dose}) at ${r.time} [${r.repeatSchedule}]`).join("\n") + "\n";
+    }
+
+    text += `\nYou can manage ${matchedPatient.name}'s details in [Family Hub](/family-hub).`;
+
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text,
+      source: "System",
+      suggestions: [
+        `Add medicine for ${matchedPatient.name}`,
+        `Check ${matchedPatient.name}'s reminders`,
+        "Open Family Hub"
+      ]
+    };
+  }
+
+  if (isFamilyOverviewQuery) {
+    if (patients.length === 0) {
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: "You haven't added any family members or client profiles to your Family Hub yet. You can add dependents or clients to manage their medications, reminders, and health profiles in [Family Hub](/family-hub).",
+        source: "System",
+        suggestions: ["Add a family member", "Add a client", "Open Family Hub"]
+      };
+    }
+
+    const lines = patients.map((p, idx) => {
+      const pMeds = allMedicines.filter(m => m.patientId === p.id);
+      const rel = p.relation ? ` (${p.relation})` : "";
+      const type = p.type === "client" ? "Client" : "Family";
+      const medCount = `${pMeds.length} medicine${pMeds.length !== 1 ? 's' : ''}`;
+      const cond = p.conditions?.length ? ` | Conditions: ${p.conditions.join(', ')}` : '';
+      return `${idx + 1}. **${p.name}**${rel} [${type}] — ${medCount}${cond}`;
+    });
+
+    const summaryText = `You currently manage **${patients.length}** profile${patients.length !== 1 ? 's' : ''} in your **Family Hub**:\n\n${lines.join('\n')}\n\nYou can view detailed profiles, health notes, and schedules in [Family Hub](/family-hub).`;
+
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: summaryText,
+      source: "System",
+      suggestions: ["Open Family Hub", "Add another profile", "Check reminders"]
+    };
+  }
+
+  // 3. Med Vault / Stock Intelligence (Local / Offline handling)
   const medVaultKeywords = ["days left", "doses left", "how many days", "how many doses", "med vault", "stock", "vault", "refill", "supply left", "pills left"];
   const isMedVaultQuery = medVaultKeywords.some(k => normalizedQuery.includes(k));
 
@@ -128,7 +243,7 @@ export const generateDawaGPTResponse = async (
     };
   }
 
-  // 3. Behavioral Coaching Analysis (Complex Pattern Detection)
+  // 4. Behavioral Coaching Analysis (Complex Pattern Detection)
   const coachingKeywords = ["log", "miss", "pattern", "adherence", "track", "help", "coach", "why"];
   const isCoachingRequest = coachingKeywords.some(k => normalizedQuery.includes(k));
 
@@ -153,7 +268,7 @@ export const generateDawaGPTResponse = async (
     }
   }
 
-  // 4. Common Questions Map (Offline/Fast)
+  // 5. Common Questions Map (Offline/Fast)
   const knownResp = Object.entries(FAQ_RESPONSE_MAP).find(([key]) => normalizedQuery.includes(key));
   if (knownResp) {
     return {
@@ -164,11 +279,11 @@ export const generateDawaGPTResponse = async (
     };
   }
 
-  // 5. Default generic response
+  // 6. Default generic response
   return {
     id: Date.now().toString(),
     role: "assistant",
-    text: "I am your Dawa-Lens assistant. You can ask about your medication logs, patterns in missing doses, Med Vault stock, or general safety. For urgent medical issues, please contact a professional.",
+    text: "I am your Dawa-Lens assistant. You can ask about your medication logs, patterns in missing doses, Med Vault stock, family hub profiles, or general safety. For urgent medical issues, please contact a professional.",
     source: "System"
   };
 };

@@ -1465,7 +1465,11 @@ function buildPrimingMessage(reminders, medicines, patients, selectedPatientId) 
   let firstSuggestions = [];
   if (nextReminder) firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
   if (medicines?.length > 0) firstSuggestions.push(`Does ${medicines[0].name} interact with anything?`);
-  firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
+  if (patients?.length > 0) {
+    firstSuggestions.push(`Check family medications`);
+  } else {
+    firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
+  }
   return JSON.stringify({ text: opening, suggestions: firstSuggestions.slice(0, 3), source: 'DawaGPT', action: null });
 }
 
@@ -1698,6 +1702,122 @@ export function buildMedVaultSummary(medicines = [], reminders = []) {
     .join("\n");
 }
 
+/**
+ * Formats comprehensive Family Hub & Client profiles summary for DawaGPT context,
+ * providing full read access to demographics, conditions, allergies, clinical notes,
+ * assigned medications, reminders, and recent adherence.
+ */
+export function buildFamilyHubSummary(
+  patients = [],
+  medicines = [],
+  reminders = [],
+  doseLogs = [],
+  userProfile = null,
+  selectedPatientId = null
+) {
+  const profileBlocks = [];
+
+  // 1. Account Owner / Primary User Profile
+  const ownerId = userProfile?.id || "self";
+  const ownerName = userProfile?.name || "Primary User";
+  const ownerAge = userProfile?.dateOfBirth
+    ? `${new Date().getFullYear() - new Date(userProfile.dateOfBirth).getFullYear()} years (DOB: ${userProfile.dateOfBirth})`
+    : "Not specified";
+  const ownerGender = userProfile?.gender || "Not specified";
+  const isOwnerActive = !selectedPatientId || selectedPatientId === "null" || selectedPatientId === ownerId;
+
+  const ownerMeds = (medicines || []).filter(
+    m => !m.patientId || m.patientId === "null" || m.patientId === ownerId
+  );
+  const ownerReminders = (reminders || []).filter(
+    r => !r.patientId || r.patientId === "null" || r.patientId === ownerId
+  );
+  const ownerLogs = (doseLogs || []).filter(
+    l => !l.patientId || l.patientId === "null" || l.patientId === ownerId
+  );
+
+  const ownerMedList = ownerMeds.length > 0
+    ? ownerMeds.map(m => `    - ${m.name}${m.genericName ? ` (${m.genericName})` : ''} | Dosage: ${m.dosage || 'N/A'}${m.currentQuantity !== undefined ? ` | Stock: ${m.currentQuantity} ${m.unit || 'units'}` : ''}`).join('\n')
+    : "    - No individual medications assigned";
+
+  const ownerRemList = ownerReminders.length > 0
+    ? ownerReminders.map(r => `    - ${r.medicineName} (${r.dose || 'Standard dose'}) at ${r.time} [${r.repeatSchedule || 'daily'}]${r.enabled === false ? ' (Paused)' : ''}`).join('\n')
+    : "    - No active reminders";
+
+  const ownerRecentAdherence = ownerLogs.length > 0
+    ? `    - Recent logs: ${ownerLogs.slice(0, 3).map(l => `${l.medicineName} (${l.action})`).join(', ')}`
+    : "    - No recent logs";
+
+  profileBlocks.push(
+`• [PRIMARY ACCOUNT OWNER] ${ownerName} (ID: ${ownerId})${isOwnerActive ? " << CURRENTLY SELECTED ACTIVE CONTEXT >>" : ""}
+  * Type: Account Owner (Self)
+  * Demographics: Age: ${ownerAge} | Gender: ${ownerGender}
+  * Assigned Medications:
+${ownerMedList}
+  * Scheduled Reminders:
+${ownerRemList}
+  * Adherence / History:
+${ownerRecentAdherence}`
+  );
+
+  // 2. Family Members & Managed Clients
+  if (!patients || patients.length === 0) {
+    profileBlocks.push("• No additional family member or client profiles added yet in Family Hub. (User can add family members or clients at [Family Hub](/family-hub)).");
+  } else {
+    patients.forEach((p, idx) => {
+      const isSelected = selectedPatientId === p.id;
+      const patientType = p.type === "client" ? "Professional Client" : "Family Member";
+      const relation = p.relation ? ` (${p.relation})` : "";
+      const ageStr = p.dateOfBirth
+        ? `${new Date().getFullYear() - new Date(p.dateOfBirth).getFullYear()} years (DOB: ${p.dateOfBirth})`
+        : p.age !== undefined && p.age !== null
+        ? `${p.age} years`
+        : "Not specified";
+      const genderStr = p.gender || "Not specified";
+      const bloodTypeStr = p.bloodType ? ` | Blood Type: ${p.bloodType}` : "";
+      const conditionsStr = p.conditions && p.conditions.length > 0
+        ? p.conditions.join(", ")
+        : "None recorded";
+      const allergiesStr = p.allergies && p.allergies.length > 0
+        ? p.allergies.join(", ")
+        : "None recorded";
+      const notesStr = p.notes ? `\n  * Clinical/Caregiver Notes: ${p.notes}` : "";
+
+      const pMeds = (medicines || []).filter(m => m.patientId === p.id);
+      const pReminders = (reminders || []).filter(r => r.patientId === p.id);
+      const pLogs = (doseLogs || []).filter(l => l.patientId === p.id);
+
+      const pMedList = pMeds.length > 0
+        ? pMeds.map(m => `    - ${m.name}${m.genericName ? ` (${m.genericName})` : ''} | Dosage: ${m.dosage || 'N/A'}${m.currentQuantity !== undefined ? ` | Stock: ${m.currentQuantity} ${m.unit || 'units'}` : ''}`).join('\n')
+        : "    - No individual medications assigned";
+
+      const pRemList = pReminders.length > 0
+        ? pReminders.map(r => `    - ${r.medicineName} (${r.dose || 'Standard dose'}) at ${r.time} [${r.repeatSchedule || 'daily'}]${r.enabled === false ? ' (Paused)' : ''}`).join('\n')
+        : "    - No active reminders";
+
+      const pRecentAdherence = pLogs.length > 0
+        ? `    - Recent logs: ${pLogs.slice(0, 3).map(l => `${l.medicineName} (${l.action})`).join(', ')}`
+        : "    - No recent logs";
+
+      profileBlocks.push(
+`• [PROFILE ${idx + 1}] ${p.name}${relation} (ID: ${p.id})${isSelected ? " << CURRENTLY SELECTED ACTIVE CONTEXT >>" : ""}
+  * Profile Type: ${patientType}
+  * Demographics: Age: ${ageStr} | Gender: ${genderStr}${bloodTypeStr}
+  * Known Chronic Conditions: ${conditionsStr}
+  * Known Allergies: ${allergiesStr}${notesStr}
+  * Assigned Medications:
+${pMedList}
+  * Scheduled Reminders:
+${pRemList}
+  * Adherence / History:
+${pRecentAdherence}`
+      );
+    });
+  }
+
+  return profileBlocks.join("\n\n");
+}
+
 async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isStreaming = false, isComplex = true, selectedPatientId = null }) {
   const recentMessages = messages.slice(-5);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
@@ -1710,10 +1830,11 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const userRequestedAll = userAskedForAllMeds(lastUserMsg);
 
   // If user did not ask for all/past medicines, filter medicines and logs.
-  const filteredMeds = userRequestedAll ? medicines : activeMedsList;
+  // Retain all medicines if family members exist so cross-profile queries can be answered.
+  const filteredMeds = (userRequestedAll || (patients && patients.length > 0)) ? medicines : activeMedsList;
 
   // Filter doseLogs to only include logs for active medicines if user did not ask for all
-  const filteredDoseLogs = userRequestedAll
+  const filteredDoseLogs = (userRequestedAll || (patients && patients.length > 0))
     ? doseLogs
     : (doseLogs || []).filter(log => {
       return activeMedsList.some(m =>
@@ -1726,10 +1847,12 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const activeMeds = filteredMeds?.length ? filteredMeds.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ') : 'None';
   const safeFormatDate = (val) => typeof val !== 'string' ? val : val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
   const recentLogs = filteredDoseLogs ? JSON.stringify(filteredDoseLogs.slice(0, isComplex ? 5 : 2).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
-  const remindersSummary = reminders?.length ? JSON.stringify(reminders.map(r => ({ id: r.id, medicineName: r.medicineName, dose: r.dose, time: r.time, repeat: r.repeatSchedule, enabled: r.enabled })).slice(0, isComplex ? 10 : 3)) : 'No reminders set';
+  const remindersSummary = reminders?.length ? JSON.stringify(reminders.map(r => ({ id: r.id, medicineName: r.medicineName, dose: r.dose, time: r.time, repeat: r.repeatSchedule, enabled: r.enabled, patientId: r.patientId })).slice(0, isComplex ? 10 : 3)) : 'No reminders set';
   const wellnessSummary = wellnessLogs?.length ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 3 : 1).map(l => ({ ...l, timestamp: safeFormatDate(l.timestamp) }))) : 'No wellness logs';
   const vitalityContext = vitalitySummary?.length ? `Vitality Trends (Last 7 Days): ${JSON.stringify(vitalitySummary.map(d => ({ day: d.name, adherence: `${d.adherence}%`, energy: d.energy ? `${(d.energy / 20).toFixed(1)}/5` : 'N/A', mood: d.mood ? `${(d.mood / 20).toFixed(1)}/5` : 'N/A' })))}` : 'No vitality trends available';
-  const patientsSummary = patients?.length ? JSON.stringify(patients.map(p => ({ id: p.id, name: p.name, relation: p.relation }))) : 'No family profiles';
+  
+  // Build full Family Hub summary with complete read access
+  const familyHubSummary = buildFamilyHubSummary(patients, medicines, reminders, doseLogs, userProfile, selectedPatientId);
   const knowledgeSnippets = await knowledgePromise;
   const knowledgeContext = knowledgeSnippets.length > 0 ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n` : "";
 
@@ -1773,7 +1896,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - NO DISCLAIMER OVERLOAD: You already have a UI disclaimer. Focus on being helpful.
 
     === CAPABILITIES & ACTIONS ===
-    You have FULL READ and WRITE access to the user's medication system.
+    You have FULL READ and WRITE access to the user's medication system and all profiles in the Family Hub.
     Actions:
     - ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, frequencyPerDay?, patientId? }
     - UPDATE_MEDICINE: { id, name?, dosage?, notes?, currentQuantity?, totalQuantity?, dosagePerDose?, frequencyPerDay?, unit? }
@@ -1782,7 +1905,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     - REMOVE_REMINDER: { id }
     - LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action, patientId? }
     - LOG_WELLNESS: { type: 'symptom' | 'food', data: { mood?: 1-5, energy?: 1-5, symptoms?: string[], meal?: string, aiReflection?: { reflection: string, affirmation: string, tip: string } }, patientId? }
-    - ADD_PATIENT: { name, age, gender, relation }
+    - ADD_PATIENT: { name, age?, dateOfBirth?, gender?, relation?, type?: 'family' | 'client', conditions?: string[], allergies?: string[], bloodType?: string, notes?: string, color?: string }
 
     === MANDATORY AGENTIC RULES — READ BEFORE EVERY RESPONSE ===
     1. PERFORM ACTIONS IMMEDIATELY: When the user asks you to add, update, delete, log, or refill ANYTHING — do it NOW by including a valid action object in your response. NEVER say "I can help you with that", "Would you like me to...", "I'll add that for you", or any future-tense phrasing. NEVER describe what you *would* do — just do it.
@@ -1880,6 +2003,18 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
            2) Include a populated UPDATE_MEDICINE action with { id: "medicine_id", currentQuantity: new_quantity }.
            3) NEVER omit the action object when a refill is requested.
 
+    12. FAMILY HUB & CLIENT PROFILES INTELLIGENCE (FULL READ ACCESS & CROSS-PROFILE INTELLIGENCE):
+       - You have FULL READ ACCESS to all profiles in the Family Hub, including family members, dependents, and professional clients.
+       - You know every profile's demographics (Age, Gender, Blood Type), recorded Chronic Conditions, known Allergies, Caregiver / Clinical Notes, and their specific assigned medications, dosages, and reminders.
+       - ANSWERING FAMILY & CLIENT QUESTIONS:
+         * When asked "Who is in my Family Hub?", "List all clients", "What family members do I manage?": Provide a warm, organized overview of all profiles, their relations/types, and a concise summary of their medications and health profiles.
+         * When asked about a specific family member or client (e.g., "What medicines is Sarah taking?", "What are Dad's reminders?", "Does Mama have any allergies?", "What conditions does client David have?"): Accurately reference their specific profile from the Family Hub section below, listing their assigned medications, dosages, schedules, chronic conditions, and known allergies.
+         * Cross-Patient Safety & Interactions: If checking medication safety or interactions for a family member or client, ALWAYS cross-reference the proposed medicine against THAT SPECIFIC PATIENT's known conditions and allergies (e.g. if checking for a client with Hypertension or a Penicillin allergy, highlight relevant contraindications and safety advice).
+       - ACTIONS FOR FAMILY MEMBERS & CLIENTS:
+         * When adding or updating a medicine, reminder, dose log, or wellness log for a family member or client, ALWAYS include their patient ID in the action payload as 'patientId': "patient_id".
+         * When adding a new family member or client (e.g., "Add my daughter Sarah, age 8", "Add client John with hypertension"): Include an ADD_PATIENT action with { name, age?, gender?, relation?, type: 'family' | 'client', conditions?: string[], allergies?: string[], bloodType?: string, notes?: string }.
+         * Recommend opening [Family Hub](/family-hub) (or [Family](/family)) whenever discussing managing family members or clients.
+
     CONVERSATION PHASE: ${conversationPhase}
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
     Write your response as normal Markdown text first, then on a new line append EXACTLY:
@@ -1899,7 +2034,7 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const dynamicContextBlock = `
     === CURRENT SESSION CONTEXT ===
     User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'}
-    Active Profile: ${selectedPatientId || 'Self'}
+    Active Profile: ${selectedPatientId || 'Self (Account Owner)'}
     Active Medications: ${activeMeds}
     Med Vault Inventory:
 ${medVaultSummary}
@@ -1907,7 +2042,10 @@ ${medVaultSummary}
     Recent Dose Logs: ${recentLogs}
     Wellness Logs: ${wellnessSummary}
     ${vitalityContext}
-    Family: ${patientsSummary}
+
+    === FAMILY HUB & CLIENT PROFILES (FULL READ ACCESS) ===
+${familyHubSummary}
+
     ${knowledgeContext}
   `;
 
