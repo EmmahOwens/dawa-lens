@@ -26,3 +26,6 @@ dist-ssr
 server/.env
 .capgo.json
 .env.production
+
+# Business & Pitch Documents
+BUSINESS_MODEL.md
