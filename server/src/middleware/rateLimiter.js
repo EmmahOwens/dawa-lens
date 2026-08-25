@@ -1,9 +1,9 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
-// Global limiter (IP-based)
+// Global limiter (IP-based, tuned for SPA hydration & concurrency)
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 600, // limit each IP to 600 requests per windowMs (40 req/min avg)
   message: {
     status: 'fail',
     message: 'Too many requests from this IP, please try again in 15 minutes'
@@ -14,6 +14,7 @@ export const globalLimiter = rateLimit({
     res.status(options.statusCode).json(options.message);
   }
 });
+
 
 // Auth & User sensitive operations limiter
 export const authLimiter = rateLimit({

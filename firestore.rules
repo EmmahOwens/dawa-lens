@@ -12,25 +12,50 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Check if the authenticated user owns the document by its userId field
-    function isDataOwner() {
-      return isAuthenticated() && (
-        (request.resource != null && request.resource.data.userId == request.auth.uid) ||
-        (resource != null && resource.data.userId == request.auth.uid)
-      );
+    // Ownership checks: separate read, create, update, delete to prevent update hijacking
+    function canReadData() {
+      return isAuthenticated() && resource != null && resource.data.userId == request.auth.uid;
     }
 
-    // Check if the user is the manager of the patient profile
-    function isPatientManager() {
-      return isAuthenticated() && (
-        (request.resource != null && request.resource.data.managedBy == request.auth.uid) ||
-        (resource != null && resource.data.managedBy == request.auth.uid)
-      );
+    function canCreateData() {
+      return isAuthenticated() && request.resource != null && request.resource.data.userId == request.auth.uid;
+    }
+
+    // On update: caller must already own the document AND cannot transfer ownership (userId is immutable)
+    function canUpdateData() {
+      return isAuthenticated() && 
+        resource != null && 
+        resource.data.userId == request.auth.uid &&
+        request.resource != null &&
+        request.resource.data.userId == resource.data.userId;
+    }
+
+    function canDeleteData() {
+      return isAuthenticated() && resource != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Patient Manager checks
+    function canReadPatient() {
+      return isAuthenticated() && resource != null && resource.data.managedBy == request.auth.uid;
+    }
+
+    function canCreatePatient() {
+      return isAuthenticated() && request.resource != null && request.resource.data.managedBy == request.auth.uid;
+    }
+
+    function canUpdatePatient() {
+      return isAuthenticated() && 
+        resource != null && 
+        resource.data.managedBy == request.auth.uid &&
+        request.resource != null &&
+        request.resource.data.managedBy == resource.data.managedBy;
+    }
+
+    function canDeletePatient() {
+      return isAuthenticated() && resource != null && resource.data.managedBy == request.auth.uid;
     }
 
     // Verify that the patientId field (if set) references a patient the caller actually manages.
-    // This prevents a malicious actor from writing records under a patient they don't own
-    // even if the userId field is correct.
     function isValidPatientRef() {
       let pid = request.resource.data.get('patientId', null);
       return pid == null ||
@@ -48,36 +73,67 @@ service cloud.firestore {
     }
 
     // Medication inventory
-    // Allow read/write only if the userId field matches the authenticated user
     match /medicines/{medicineId} {
-      allow read, delete: if isDataOwner();
-      allow create, update: if isDataOwner() && isValidPatientRef();
+      allow read: if canReadData();
+      allow delete: if canDeleteData();
+      allow create: if canCreateData() && isValidPatientRef();
+      allow update: if canUpdateData() && isValidPatientRef();
     }
 
     // Medication reminders/schedules
-    // Allow read/write only if the userId field matches the authenticated user
     match /reminders/{reminderId} {
-      allow read, delete: if isDataOwner();
-      allow create, update: if isDataOwner() && isValidPatientRef();
+      allow read: if canReadData();
+      allow delete: if canDeleteData();
+      allow create: if canCreateData() && isValidPatientRef();
+      allow update: if canUpdateData() && isValidPatientRef();
     }
 
     // Dose logs — history of doses taken/skipped/missed
-    // Allow read/write/delete if the userId field matches the authenticated user
     match /doseLogs/{logId} {
-      allow read, delete: if isDataOwner();
-      allow create, update: if isDataOwner() && isValidPatientRef();
+      allow read: if canReadData();
+      allow delete: if canDeleteData();
+      allow create: if canCreateData() && isValidPatientRef();
+      allow update: if canUpdateData() && isValidPatientRef();
     }
 
     // Wellness journals (Food, Symptoms, Mood)
     match /wellnessLogs/{logId} {
-      allow read, delete: if isDataOwner();
-      allow create, update: if isDataOwner() && isValidPatientRef();
+      allow read: if canReadData();
+      allow delete: if canDeleteData();
+      allow create: if canCreateData() && isValidPatientRef();
+      allow update: if canUpdateData() && isValidPatientRef();
+    }
+
+    // Dynamic schedule audit logs
+    match /scheduleAuditLogs/{logId} {
+      allow read: if canReadData();
+      allow delete: if canDeleteData();
+      allow create: if canCreateData() && isValidPatientRef();
+      allow update: if canUpdateData() && isValidPatientRef();
+    }
+
+    // AI generated suggestions & care reports
+    match /suggestions/{suggestionId} {
+      allow read: if canReadData();
+      allow delete: if canDeleteData();
+      allow create: if canCreateData();
+      allow update: if canUpdateData();
+    }
+
+    match /careReports/{reportId} {
+      allow read: if canReadData();
+      allow delete: if canDeleteData();
+      allow create: if canCreateData();
+      allow update: if canUpdateData();
     }
 
     // Family members or professional clients
     match /patients/{patientId} {
-      allow read, write: if isPatientManager();
-      allow delete: if isPatientManager();
+      allow read: if canReadPatient();
+      allow delete: if canDeletePatient();
+      allow create: if canCreatePatient();
+      allow update: if canUpdatePatient();
     }
   }
 }
+

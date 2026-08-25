@@ -41,8 +41,12 @@ console.log('──────────────────────�
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Enable reverse proxy support (Render / Vercel / Cloudflare)
+app.set('trust proxy', 1);
+
 // Security Headers
 app.use(helmet());
+
 
 // Logging
 if (process.env.NODE_ENV === 'development') {

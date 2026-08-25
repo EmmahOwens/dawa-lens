@@ -1,5 +1,6 @@
 import { db } from '../db.js';
 import * as autonomousService from './autonomousService.js';
+import AppError from '../utils/AppError.js';
 
 const wellnessCol = db.collection('wellnessLogs');
 
@@ -35,7 +36,18 @@ export const createWellnessLog = async (data) => {
   return log;
 };
 
-export const deleteWellnessLog = async (id) => {
+export const deleteWellnessLog = async (id, requestingUserId) => {
+  if (requestingUserId) {
+    const docSnap = await wellnessCol.doc(id).get();
+    if (!docSnap.exists) {
+      throw new AppError('Wellness log not found', 404);
+    }
+    if (docSnap.data().userId !== requestingUserId) {
+      throw new AppError('You do not have permission to delete this wellness log', 403);
+    }
+  }
+
   await wellnessCol.doc(id).delete();
   return true;
 };
+

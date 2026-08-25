@@ -30,11 +30,12 @@ router.post('/', protect, validate(logWellnessSchema), restrictToOwner, async (r
 // DELETE a wellness log
 router.delete('/:id', protect, async (req, res, next) => {
   try {
-    await wellnessService.deleteWellnessLog(req.params.id);
+    await wellnessService.deleteWellnessLog(req.params.id, req.user.uid);
     res.json({ message: 'Log deleted' });
   } catch (err) {
     next(err);
   }
 });
+
 
 export default router;

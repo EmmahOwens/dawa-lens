@@ -13,6 +13,7 @@
 import {
   Firestore,
   doc,
+  getDoc,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -184,7 +185,6 @@ export function clearQueue(): void {
 // ─── Internal replay logic ────────────────────────────────────────────────────
 
 async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
-  const colRef = collection(db, op.collection);
   const docRef = doc(db, op.collection, op.docId);
 
   switch (op.type) {
@@ -202,8 +202,26 @@ async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
     case "update-dose-log":
     case "update-medicine": {
       if (!op.data) throw new Error("Missing data for update op");
-      // Use setDoc merge so it acts as an upsert — handles cases where the
-      // doc was added by a previous queue flush but the update is still pending.
+
+      // Timestamp-aware conflict resolution: prevent stale offline update from clobbering newer cloud data
+      try {
+        const cloudSnap = await getDoc(docRef);
+        if (cloudSnap.exists()) {
+          const cloudData = cloudSnap.data();
+          const cloudUpdatedAt = cloudData?.updatedAt ? new Date(cloudData.updatedAt).getTime() : 0;
+          const offlineUpdatedAt = op.data?.updatedAt ? new Date(op.data.updatedAt as string).getTime() : new Date(op.enqueuedAt).getTime();
+
+          if (cloudUpdatedAt > offlineUpdatedAt) {
+            console.warn(
+              `[offlineQueue] Conflict detected on ${op.collection}/${op.docId}. Cloud version is newer (${cloudData.updatedAt} > ${op.data.updatedAt || op.enqueuedAt}). Skipping stale offline overwrite.`
+            );
+            return; // Skip stale overwrite
+          }
+        }
+      } catch (err) {
+        console.warn(`[offlineQueue] Could not verify cloud timestamp for ${op.docId}, proceeding with merge:`, err);
+      }
+
       await setDoc(docRef, op.data, { merge: true });
       break;
     }
@@ -223,3 +241,4 @@ async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
       console.warn("[offlineQueue] Unknown op type:", (op as any).type);
   }
 }
+

@@ -31,9 +31,10 @@ const config: CapacitorConfig = {
     },
   },
   android: {
-    // Required to load local assets over the capacitor:// scheme
-    allowMixedContent: true,
+    // Enforce HTTPS-only content security in Android WebView
+    allowMixedContent: false,
   },
+
 };
 
 export default config;

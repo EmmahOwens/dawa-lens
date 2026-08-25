@@ -1,4 +1,5 @@
 import express from 'express';
+import axios from 'axios';
 import * as aiService from '../services/aiService.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { heavyAiLimiter, aiLimiter, tokenBudgetGuard } from '../middleware/rateLimiter.js';
@@ -10,7 +11,7 @@ const router = express.Router();
 /**
  * Diagnostic Endpoint: Check Z.ai API Key Status & Test Generation
  */
-router.get('/test-zai', async (req, res, next) => {
+router.get('/test-zai', protect, aiLimiter, async (req, res, next) => {
   try {
     let availableModels = [];
     if (process.env.Z_AI_API_KEY) {
@@ -43,7 +44,7 @@ router.get('/test-zai', async (req, res, next) => {
 /**
  * Diagnostic Endpoint: Overall AI Providers Status Check
  */
-router.get('/providers-status', async (req, res, next) => {
+router.get('/providers-status', protect, aiLimiter, async (req, res, next) => {
   try {
     const status = await aiService.testAllAiProviders();
     res.json(status);
@@ -51,6 +52,7 @@ router.get('/providers-status', async (req, res, next) => {
     next(error);
   }
 });
+
 
 /**
  * Personalized Wellness Quote

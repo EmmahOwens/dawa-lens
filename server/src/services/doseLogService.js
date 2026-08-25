@@ -45,50 +45,64 @@ export const getDoseLogs = async (userId, patientId, limit = 300) => {
 };
 
 /**
- * Create a new dose log entry.
+ * Create a new dose log entry with ACID transaction for atomic inventory decrements and dynamic schedules.
  */
 export const createDoseLog = async (data) => {
   if (!data.actionTime) {
     data.actionTime = new Date().toISOString();
   }
 
-  const docRef = await doseLogsCol.add(data);
-  const log = { id: docRef.id, _id: docRef.id, ...data };
+  let lowStockNotification = null;
+  let adjustedScheduleData = null;
 
-  // --- AUTONOMOUS INVENTORY MANAGEMENT ---
-  if (data.action === 'taken' && data.medicineId) {
-    try {
-      const medicine = await medicineService.getMedicineById(data.medicineId);
-      if (medicine && medicine.totalQuantity !== undefined) {
-        const dosagePerDose = medicine.dosagePerDose || 1;
-        const newQuantity = Math.max(0, medicine.totalQuantity - dosagePerDose);
-        
-        await medicineService.updateMedicine(data.medicineId, { totalQuantity: newQuantity });
-        console.log(`📉 Inventory updated for ${medicine.name}: ${medicine.totalQuantity} -> ${newQuantity}`);
+  const logRef = doseLogsCol.doc();
+  const logId = logRef.id;
+  const log = { id: logId, _id: logId, ...data };
 
-        // Check for low stock (threshold: 7 days supply or absolute 5 units)
-        const threshold = (medicine.frequencyPerDay || 1) * 7 || 5;
-        if (newQuantity <= threshold) {
-          console.log(`⚠️ Low stock detected for ${medicine.name} (${newQuantity} remaining)`);
-          await sendPushNotification(data.userId, {
-            title: 'Low Medication Stock',
-            body: `You only have ${newQuantity} left of ${medicine.name}. Remember to get a refill soon!`,
-            data: { type: 'inventory', medicineId: data.medicineId }
+  // Execute critical state mutations inside an atomic transaction
+  await db.runTransaction(async (t) => {
+    // 1. Write the dose log
+    t.set(logRef, data);
+
+    // 2. Atomic Inventory Decrement
+    if (data.action === 'taken' && data.medicineId) {
+      const medRef = db.collection('medicines').doc(data.medicineId);
+      const medDoc = await t.get(medRef);
+
+      if (medDoc.exists) {
+        const medData = medDoc.data();
+        if (medData && medData.totalQuantity !== undefined) {
+          const dosagePerDose = medData.dosagePerDose || 1;
+          const newQuantity = Math.max(0, medData.totalQuantity - dosagePerDose);
+          const updatedAt = new Date().toISOString();
+
+          t.update(medRef, { 
+            totalQuantity: newQuantity,
+            updatedAt
           });
+
+          // Check for low stock notification trigger
+          const threshold = (medData.frequencyPerDay || 1) * 7 || 5;
+          if (newQuantity <= threshold) {
+            lowStockNotification = {
+              userId: data.userId,
+              medicineName: medData.name,
+              medicineId: data.medicineId,
+              newQuantity
+            };
+          }
         }
       }
-    } catch (err) {
-      console.error("Inventory update failed:", err.message);
     }
-  }
 
-  // --- DYNAMIC SCHEDULE ADJUSTMENT ---
-  if (data.action === 'taken' && data.reminderId) {
-    try {
-      const reminderDoc = await db.collection('reminders').doc(data.reminderId).get();
-      if (reminderDoc.exists) {
-        const reminder = reminderDoc.data();
-        if (reminder.repeatSchedule !== 'once' && reminder.time) {
+    // 3. Atomic Dynamic Schedule Adjustment
+    if (data.action === 'taken' && data.reminderId) {
+      const remRef = db.collection('reminders').doc(data.reminderId);
+      const remDoc = await t.get(remRef);
+
+      if (remDoc.exists) {
+        const reminder = remDoc.data();
+        if (reminder && reminder.repeatSchedule !== 'once' && reminder.time) {
           const scheduledDate = data.scheduledTime ? new Date(data.scheduledTime) : new Date(data.actionTime);
           const actualDate = new Date(data.actionTime);
           const diffMinutes = Math.round((actualDate.getTime() - scheduledDate.getTime()) / (1000 * 60));
@@ -98,20 +112,20 @@ export const createDoseLog = async (data) => {
             const slotIndex = findSlotIndexForTime(times, scheduledDate);
 
             if (slotIndex !== -1 && times.length > 0) {
-              const { newTimes, newTimeStr, hasChanges } = calculateDynamicSchedule(times, slotIndex, actualDate);
+              const { newTimeStr, hasChanges } = calculateDynamicSchedule(times, slotIndex, actualDate);
 
               if (hasChanges) {
                 const originalTime = reminder.time;
                 const updatedAt = new Date().toISOString();
 
-                await db.collection('reminders').doc(data.reminderId).update({
+                t.update(remRef, {
                   time: newTimeStr,
                   updatedAt,
                 });
-                console.log(`⏰ [Backend DynamicSchedule] Adjusted ${reminder.medicineName || 'reminder'} from ${originalTime} to ${newTimeStr} (${diffMinutes}m)`);
 
-                // Write to scheduleAuditLogs
-                await db.collection('scheduleAuditLogs').add({
+                // Write schedule audit log inside the same transaction
+                const auditRef = db.collection('scheduleAuditLogs').doc();
+                t.set(auditRef, {
                   reminderId: data.reminderId,
                   medicineName: reminder.medicineName || data.medicineName || 'Unknown',
                   originalTime,
@@ -124,7 +138,7 @@ export const createDoseLog = async (data) => {
                   createdAt: updatedAt,
                 });
 
-                log.adjustedSchedule = {
+                adjustedScheduleData = {
                   reminderId: data.reminderId,
                   originalTime,
                   adjustedTime: newTimeStr,
@@ -135,18 +149,29 @@ export const createDoseLog = async (data) => {
           }
         }
       }
-    } catch (err) {
-      console.error('[Backend DynamicSchedule] Failed to adjust schedule:', err.message);
     }
+  });
+
+  if (adjustedScheduleData) {
+    log.adjustedSchedule = adjustedScheduleData;
   }
 
-  // --- AUTONOMOUS ADHERENCE INTERVENTION ---
+  // Post-transaction asynchronous side effects (Notifications & Interventions)
+  if (lowStockNotification) {
+    sendPushNotification(lowStockNotification.userId, {
+      title: 'Low Medication Stock',
+      body: `You only have ${lowStockNotification.newQuantity} left of ${lowStockNotification.medicineName}. Remember to get a refill soon!`,
+      data: { type: 'inventory', medicineId: lowStockNotification.medicineId }
+    }).catch(err => console.warn('Low stock notification error:', err.message));
+  }
+
   if (data.action === 'skipped' || data.action === 'missed') {
     autonomousService.interceptCriticalAdherence(data.userId, data.patientId, data.medicineId, data.action);
   }
 
   return log;
 };
+
 
 /**
  * Delete a single dose log by ID.
