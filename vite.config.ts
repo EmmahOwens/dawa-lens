@@ -45,6 +45,24 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('maplibre-gl')) {
               return 'maplibre';
             }
+            if (id.includes('three')) {
+              return 'three-bundle';
+            }
+            if (id.includes('tesseract.js')) {
+              return 'tesseract-bundle';
+            }
+            if (id.includes('jspdf') || id.includes('html2canvas')) {
+              return 'pdf-bundle';
+            }
+            if (id.includes('recharts') || id.includes('d3-')) {
+              return 'charts-bundle';
+            }
+            if (id.includes('framer-motion')) {
+              return 'motion-bundle';
+            }
+            if (id.includes('@rive-app') || id.includes('@lottiefiles')) {
+              return 'animation-bundle';
+            }
             return 'vendor';
           }
         }
