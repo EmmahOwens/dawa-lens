@@ -1818,7 +1818,7 @@ ${pRecentAdherence}`
   return profileBlocks.join("\n\n");
 }
 
-async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isStreaming = false, isComplex = true, selectedPatientId = null, currentPage = null }) {
+export async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isStreaming = false, isComplex = true, selectedPatientId = null, currentPage = null }) {
   const recentMessages = messages.slice(-5);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
   const lastAction = recentMessages.find(m => m.role === 'assistant' && (m.action || m.content?.includes('action')))?.action;
@@ -1874,12 +1874,17 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
       * "Osiibye otya" -> "Good afternoon/evening" (literally "How did you spend the day?")
       * "Gyebaleko" -> "Well done" / greeting for someone working or active
       * "Ki kati" -> "What's up? / How is it going?" (informal greeting)
-    - COURTESIES:
+    - COURTESIES & RESPECTFUL SALUTATIONS (CRITICAL GENDER RULES):
+      * "Ssebo" (or "Sebbo") -> "Sir" (respectful address to MEN / MALES ONLY). NEVER call a female/woman "Ssebo".
+      * "Nyabo" -> "Madam" (respectful address to WOMEN / FEMALES ONLY). NEVER call a male/man "Nyabo".
       * "Webale" -> "Thank you"
       * "Webale nnyo" -> "Thank you very much"
       * "Kale" -> "Okay" / "You're welcome"
-      * "Ssebo" -> "Sir" (respectful address to men)
-      * "Nyabo" -> "Madam" (respectful address to women)
+      * MANDATORY GENDER SALUTATION RULES:
+        - Check the active User / Profile Gender in CURRENT SESSION CONTEXT:
+        - If the user/profile is FEMALE: You MUST address them as "Nyabo" whenever using Luganda honorifics/greetings (e.g., "Oli otya Nyabo", "Kale Nyabo", "Webale Nyabo", "Bambi Nyabo"). You MUST NEVER address a female user as "Ssebo" or "Sebbo".
+        - If the user/profile is MALE: You MUST address them as "Ssebo" (or "Sebbo") when using Luganda honorifics (e.g., "Oli otya Ssebo", "Kale Ssebo", "Webale Ssebo").
+        - If gender is NOT SPECIFIED / UNKNOWN: Use their first name or friendly gender-neutral phrasing (e.g., "Oli otya", "Kale", "How can I help you today?") WITHOUT assuming or guessing gender (do NOT default to "Ssebo").
     - EMPATHY & COMFORT:
       * "Bambi" -> "Please" / "Oh dear" / "I'm so sorry" (use this when the user reports pain, sickness, or discomfort to show deep empathy. E.g., "Bambi, sorry about the headache.")
     - MEDICAL/HEALTH REFERENCE:
@@ -2104,12 +2109,17 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
     CRITICAL: If you performed or are performing a system action, 'action' MUST be a fully populated object (not null). Only use null for purely informational responses.`}
   `;
 
+  const activePatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
+  const activeProfileStr = activePatient
+    ? `${activePatient.name} (${activePatient.relation || (activePatient.type === 'client' ? 'Client' : 'Family Member')}, Gender: ${activePatient.gender || 'Not specified'})`
+    : `Self (${userProfile?.name || 'Account Owner'}, Gender: ${userProfile?.gender || 'Not specified'})`;
+
   const dynamicContextBlock = `
     === CURRENT SESSION CONTEXT ===
     Current Active Route: ${currentPage || 'Not specified'}
     ${currentPage ? `Situational Awareness: The user is currently on "${currentPage}". If they ask about the feature on their active page, acknowledge their location naturally and do not redundantly ask them to navigate to it.` : ''}
-    User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'}
-    Active Profile: ${selectedPatientId || 'Self (Account Owner)'}
+    User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'} | Gender: ${userProfile?.gender || 'Not specified'}
+    Active Profile: ${activeProfileStr}
     Active Medications: ${activeMeds}
     Med Vault Inventory:
 ${medVaultSummary}

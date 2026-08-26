@@ -26,6 +26,18 @@ export interface ChatMessage {
   action?: AIAction;
 }
 
+/**
+ * Resolves the culturally respectful Luganda honorific according to user/patient gender.
+ * Female -> "Nyabo" ("Madam")
+ * Male -> "Ssebo" ("Sir")
+ * Unspecified -> "" (Gender-neutral)
+ */
+export const resolveHonorific = (gender?: string | null): string => {
+  if (gender === "female") return "Nyabo";
+  if (gender === "male") return "Ssebo";
+  return "";
+};
+
 const FAQ_RESPONSE_MAP: Record<string, string> = {
   "is this safe for me?": "Checking your health profile... Based on NDA Uganda guidelines, this medication is generally safe for you. However, please consult your doctor directly before making changes.",
   "can i take this with milk?": "For Coartem (Artemether/Lumefantrine), it is recommended to take with a fatty meal or milk to increase absorption. For many other antibiotics, avoid milk as it can hinder absorption. Check your specific prescription.",
@@ -35,7 +47,7 @@ const FAQ_RESPONSE_MAP: Record<string, string> = {
   "can i eat nsenene?": "Yes! Nsenene (grasshoppers) are a great source of protein and healthy fats. Just ensure they are prepared hygienically.",
   "what are the side effects?": "Common side effects for medications in this category include dizziness and nausea. If you experience severe rashes or palpitations, seek medical help immediately.",
   "how do i take this?": "Always follow the dosage on your pill bottle or prescription. For acute cases, consistency is key to recovery.",
-  "oli otya": "Oli otya! I am doing well, ssebo/nyabo. How can DawaGPT help you with your health or medicines today?",
+  "oli otya": "Oli otya! I am doing well{{salutation}}. How can DawaGPT help you with your health or medicines today?",
   "wasuze otya": "Wasuze otya! I hope you slept well and are ready for a healthy day. How can I help you today?",
   "osiibye otya": "Osiibye otya! How has your day been? Let's check your evening medication adherence.",
   "gyebaleko": "Gyebaleko! Thank you. I am here to help you manage your health. How are you feeling today?",
@@ -430,10 +442,17 @@ export const generateDawaGPTResponse = async (
   // 5. Common Questions Map (Offline/Fast)
   const knownResp = Object.entries(FAQ_RESPONSE_MAP).find(([key]) => normalizedQuery.includes(key));
   if (knownResp) {
+    const activeGender = (selectedPatientId && patients.length > 0
+      ? patients.find(p => p.id === selectedPatientId)?.gender
+      : undefined) || userProfile?.gender;
+    const honorific = resolveHonorific(activeGender);
+    const salutationStr = honorific ? `, ${honorific}` : "";
+    const resolvedText = knownResp[1].replace("{{salutation}}", salutationStr);
+
     return {
       id: Date.now().toString(),
       role: "assistant",
-      text: knownResp[1],
+      text: resolvedText,
       source: "WHO"
     };
   }
@@ -494,7 +513,7 @@ export const chatWithDawaGPT = async (
   doseLogs: DoseLog[] = [],
   reminders: Reminder[] = [],
   wellnessLogs: WellnessLog[] = [],
-  vitalitySummary: any[] = [],
+  vitalitySummary: unknown[] = [],
   patients: Patient[] = [],
   selectedPatientId: string | null = null,
   currentPage: string | null = null
@@ -552,7 +571,7 @@ export const chatWithDawaGPTStream = async (
   doseLogs: DoseLog[] = [],
   reminders: Reminder[] = [],
   wellnessLogs: WellnessLog[] = [],
-  vitalitySummary: any[] = [],
+  vitalitySummary: unknown[] = [],
   patients: Patient[] = [],
   selectedPatientId: string | null = null,
   onChunk: (text: string) => void,

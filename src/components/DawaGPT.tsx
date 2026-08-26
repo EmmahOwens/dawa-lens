@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
-import { ChatMessage, chatWithDawaGPTStream } from "@/services/aiAssistantService";
+import { ChatMessage, chatWithDawaGPTStream, resolveHonorific } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { calculateVitalitySummary } from "@/lib/vitalityUtils";
@@ -157,7 +157,13 @@ export default function DawaGPT() {
       // Variety & Time-aware Greeting (45+ creative options)
       const hour = new Date().getHours();
       const day = new Date().getDay();
-      const greetingName = userProfile?.name || "there";
+      const targetGender = resolvedPatient?.gender || userProfile?.gender;
+      const honorific = resolveHonorific(targetGender);
+      const rawName = resolvedPatient?.name || userProfile?.name;
+      const firstName = rawName ? rawName.split(" ")[0] : "";
+      const greetingName = honorific
+        ? (firstName ? `${honorific} ${firstName}` : honorific)
+        : (firstName || "there");
 
       // Day-specific creative greetings
       const dayGreetings: Record<number, string[]> = {
@@ -280,7 +286,7 @@ export default function DawaGPT() {
       }
 
       // Generate first suggestions based on actual state
-      let firstSuggestions: string[] = [];
+      const firstSuggestions: string[] = [];
       if (nextReminder) {
         firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
       }
@@ -301,7 +307,7 @@ export default function DawaGPT() {
         source: "System",
       }]);
     }
-  }, [isOpen, messages.length, reminders.length, userProfile?.name, resolvedPatient, activeMedicines, patients]);
+  }, [isOpen, messages.length, reminders, userProfile?.name, userProfile?.gender, resolvedPatient, activeMedicines, patients]);
 
   useEffect(() => {
     if (isOpen) {

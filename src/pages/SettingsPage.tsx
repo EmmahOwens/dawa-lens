@@ -182,15 +182,37 @@ export default function SettingsPage() {
               <h2 className="text-xl font-bold text-foreground tracking-tight">
                 {userProfile?.name || "Anonymous User"}
               </h2>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5 opacity-70">
-                {calculateAge(userProfile?.dateOfBirth || null) !== null 
-                  ? `${calculateAge(userProfile?.dateOfBirth || null)} ${t("settings.years_old", { age: "" }).trim()}`
-                  : "Age not set"}
-              </p>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-70">
+                  {calculateAge(userProfile?.dateOfBirth || null) !== null 
+                    ? `${calculateAge(userProfile?.dateOfBirth || null)} ${t("settings.years_old", { age: "" }).trim()}`
+                    : "Age not set"}
+                </p>
+                {userProfile?.gender && (
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                    userProfile.gender === "female"
+                      ? "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20"
+                      : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                  }`}>
+                    {userProfile.gender === "female" ? "Female · Nyabo" : "Male · Ssebo"}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="space-y-3 pt-4 border-t border-border/50 relative z-10">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <User size={14} />
+                <span>Gender</span>
+              </div>
+              <span className="font-medium text-foreground opacity-90 capitalize">
+                {userProfile?.gender 
+                  ? `${userProfile.gender} (${userProfile.gender === "female" ? "Addressed as Nyabo" : "Addressed as Ssebo"})`
+                  : "Not specified"}
+              </span>
+            </div>
             {isLoggedIn && (
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
