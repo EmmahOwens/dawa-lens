@@ -351,7 +351,8 @@ export default function DawaGPT() {
           setMessages(prev => prev.map(msg =>
             msg.id === botId ? { ...msg, text: streamedText } : msg
           ));
-        }
+        },
+        location.pathname
       );
 
       setMessages(prev => prev.map(msg =>
@@ -399,7 +400,8 @@ export default function DawaGPT() {
               setMessages(prev => prev.map(msg =>
                 msg.id === botId ? { ...msg, text: streamedText } : msg
               ));
-            }
+            },
+            location.pathname
           );
           setMessages(prev => prev.map(msg =>
             msg.id === botId ? retryResponse : msg

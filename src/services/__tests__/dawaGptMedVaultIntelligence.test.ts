@@ -106,7 +106,7 @@ describe("DawaGPT Med Vault Dose vs Days Intelligence", () => {
     expect(response.text).toContain("Panadol Extra");
     expect(response.text).toContain("10 doses");
     expect(response.text).toContain("5 days");
-    expect(response.text).toContain("[Med Vault](/medvault)");
+    expect(response.text).toContain("](/medvault)");
   });
 
   it("updates getMedVaultSystemContext on frontend to match exact mathematical schema", () => {

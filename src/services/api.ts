@@ -258,6 +258,7 @@ export const aiApi = {
     vitalitySummary?: any[];
     patients?: Patient[];
     selectedPatientId?: string | null;
+    currentPage?: string | null;
   }) =>
     request<{
       text: string;
@@ -282,6 +283,7 @@ export const aiApi = {
     vitalitySummary?: any[];
     patients?: Patient[];
     selectedPatientId?: string | null;
+    currentPage?: string | null;
   }) =>
     streamRequest("/ai/chat/stream", {
       method: "POST",

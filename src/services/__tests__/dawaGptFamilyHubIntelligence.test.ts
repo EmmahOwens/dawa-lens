@@ -118,7 +118,7 @@ describe("DawaGPT Family Hub & Client Profiles Intelligence", () => {
     expect(response.text).toContain("Mother");
     expect(response.text).toContain("David Ochieng");
     expect(response.text).toContain("Client");
-    expect(response.text).toContain("[Family Hub](/family-hub)");
+    expect(response.text).toContain("](/family-hub)");
   });
 
   it("returns full profile, conditions, allergies, and assigned medications when querying a specific patient by name", async () => {
@@ -172,6 +172,6 @@ describe("DawaGPT Family Hub & Client Profiles Intelligence", () => {
     );
 
     expect(response.text).toContain("haven't added any family members or client profiles");
-    expect(response.text).toContain("[Family Hub](/family-hub)");
+    expect(response.text).toContain("](/family-hub)");
   });
 });

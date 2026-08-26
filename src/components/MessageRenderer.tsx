@@ -17,6 +17,8 @@ import {
   ExternalLink,
   LucideIcon,
   Package,
+  Pill,
+  Search,
 } from "@/lib/icons";
 
 /** Maps DawaGPT custom/alias routes to actual application page routes. */
@@ -24,7 +26,10 @@ const GPT_ROUTE_MAP: Record<string, string> = {
   "/dashboard": "/",
   "/home": "/",
   "/reminders": "/reminders",
-  "/medications": "/reminders",
+  "/medications": "/medications",
+  "/meds": "/medications",
+  "/medicine-list": "/medications",
+  "/cabinet": "/medications",
   "/medication-info": "/search",
   "/search": "/search",
   "/reminders/new": "/reminders/new",
@@ -34,8 +39,12 @@ const GPT_ROUTE_MAP: Record<string, string> = {
   "/logs": "/history",
   "/interactions": "/interactions",
   "/safety": "/interactions",
+  "/drug-interactions": "/interactions",
+  "/food-interactions": "/interactions",
+  "/safety-guard": "/interactions",
   "/family": "/family",
   "/family-hub": "/family",
+  "/clients": "/family",
   "/travel": "/travel",
   "/travel-companion": "/travel",
   "/wellness": "/wellness",
@@ -43,12 +52,22 @@ const GPT_ROUTE_MAP: Record<string, string> = {
   "/report": "/report",
   "/reports": "/report",
   "/care-report": "/report",
+  "/doctor-report": "/report",
+  "/doctor-reports": "/report",
+  "/export-report": "/report",
   "/settings": "/settings",
   "/profile": "/settings",
+  "/preferences": "/settings",
   "/scan": "/scan",
   "/scan-medicine": "/scan",
+  "/scanner": "/scan",
+  "/scan-pill": "/scan",
   "/medvault": "/medvault",
   "/med-vault": "/medvault",
+  "/vault": "/medvault",
+  "/stock": "/medvault",
+  "/inventory": "/medvault",
+  "/pill-tracker": "/medvault",
 };
 
 /** Maps known internal routes to an icon for the link chip. */
@@ -56,6 +75,7 @@ const ROUTE_ICONS: Record<string, LucideIcon> = {
   "/": Home,
   "/reminders": Bell,
   "/reminders/new": PlusCircle,
+  "/medications": Pill,
   "/history": History,
   "/interactions": Zap,
   "/family": Users,
@@ -64,6 +84,8 @@ const ROUTE_ICONS: Record<string, LucideIcon> = {
   "/report": FileText,
   "/settings": Settings,
   "/scan": ScanLine,
+  "/search": Search,
+  "/results": Search,
   "/medvault": Package,
 };
 
@@ -79,10 +101,10 @@ function InternalLinkChip({ to, label, onClick }: InternalLinkChipProps) {
     <Link
       to={to}
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-muted border border-border/60 text-foreground text-[12px] font-semibold hover:bg-muted/80 active:scale-95 transition-all mx-0.5 no-underline shadow-sm"
+      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 my-0.5 rounded-md bg-primary/10 hover:bg-primary/20 border border-primary/25 text-primary text-[13px] font-semibold align-baseline active:scale-95 transition-all mx-0.5 no-underline shadow-xs hover:border-primary/40 cursor-pointer"
     >
-      <Icon size={11} className="shrink-0 text-primary/70" />
-      {label}
+      <Icon size={11} className="shrink-0 text-primary" />
+      <span>{label}</span>
     </Link>
   );
 }
@@ -148,6 +170,7 @@ export default function MessageRenderer({ text, onNavigate, className }: Message
                 "/",
                 "/reminders",
                 "/reminders/new",
+                "/medications",
                 "/history",
                 "/interactions",
                 "/family",

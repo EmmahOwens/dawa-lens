@@ -53,11 +53,170 @@ export const generateDawaGPTResponse = async (
   doseLogs: DoseLog[] = [],
   reminders: Reminder[] = [],
   patients: Patient[] = [],
-  selectedPatientId: string | null = null
+  selectedPatientId: string | null = null,
+  currentPage: string | null = null
 ): Promise<ChatMessage> => {
   const normalizedQuery = query.toLowerCase().trim();
 
-  // 1. Check for specific safety issues (local rule-based check)
+  // 1. Direct Page Navigation & Link Intent Resolution
+  const isAskingForPageLink = (
+    normalizedQuery.includes("page") ||
+    normalizedQuery.includes("link") ||
+    normalizedQuery.includes("where") ||
+    normalizedQuery.includes("how do i get to") ||
+    normalizedQuery.includes("how to open") ||
+    normalizedQuery.includes("go to") ||
+    normalizedQuery.includes("open ") ||
+    normalizedQuery.includes("show me") ||
+    normalizedQuery.includes("take me to")
+  );
+
+  // Interactions & Drug-Food Safety Guard
+  if (
+    normalizedQuery.includes("interaction") ||
+    normalizedQuery.includes("safety guard") ||
+    (isAskingForPageLink && (normalizedQuery.includes("safety") || normalizedQuery.includes("food check") || normalizedQuery.includes("compatibility")))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [check your drug & food interactions](/interactions) to verify if your medicines are safe with meals like Matooke, G-nuts, or Waragi, and guard against duplicate therapies.",
+      source: "System",
+      suggestions: ["Check drug interactions", "Is Matooke safe with my meds?", "Open Interactions"]
+    };
+  }
+
+  // Med Vault / Pill Stock Tracker
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("vault") || normalizedQuery.includes("stock") || normalizedQuery.includes("inventory") || normalizedQuery.includes("pill count"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [check your pill stock in Med Vault](/medvault) to see your remaining doses, days of supply, and restock supplies.",
+      source: "System",
+      suggestions: ["Open Med Vault", "How many days of meds left?", "Check reminders"]
+    };
+  }
+
+  // Reminders & Schedule
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("reminder") || normalizedQuery.includes("alarm") || normalizedQuery.includes("schedule") || normalizedQuery.includes("timing"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [manage your active alarms in Medication Reminders](/reminders) or [set up a new reminder](/reminders/new) for your daily dose schedule.",
+      source: "System",
+      suggestions: ["View reminders", "Add a reminder", "Check history"]
+    };
+  }
+
+  // Search & Medication Info (prioritized over general medication keyword)
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("search") || normalizedQuery.includes("lookup") || normalizedQuery.includes("monograph") || normalizedQuery.includes("drug info") || normalizedQuery.includes("information"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [look up clinical drug facts in Search Medications](/search) for verified monographs and NDA dosage guidelines.",
+      source: "System",
+      suggestions: ["Search medicine", "Check interactions", "View medications"]
+    };
+  }
+
+  // Medications Directory
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("medication") || normalizedQuery.includes("medicine list") || normalizedQuery.includes("cabinet") || normalizedQuery.includes("my drug") || normalizedQuery.includes("prescriptions"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [view your active prescriptions in My Medications](/medications) whenever you need to check your doses.",
+      source: "System",
+      suggestions: ["View my medications", "Check Med Vault", "Add a reminder"]
+    };
+  }
+
+  // Dose History & Logs
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("history") || normalizedQuery.includes("log") || normalizedQuery.includes("past dose") || normalizedQuery.includes("adherence"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [review your past logs in Dose History](/history) to track your adherence and streak over time.",
+      source: "System",
+      suggestions: ["View dose history", "What are my reminders?", "Export report"]
+    };
+  }
+
+  // Wellness Hub
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("wellness") || normalizedQuery.includes("mood") || normalizedQuery.includes("symptom") || normalizedQuery.includes("vibe") || normalizedQuery.includes("meal journal"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "Let's [log your symptoms and daily vibe in Wellness Hub](/wellness) to keep a holistic picture of how you feel.",
+      source: "System",
+      suggestions: ["Log my symptoms", "Check daily vibe", "View dose history"]
+    };
+  }
+
+  // Travel Companion
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("travel") || normalizedQuery.includes("flight") || normalizedQuery.includes("trip") || normalizedQuery.includes("timezone"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [calculate your travel medicine supply in Travel Companion](/travel) and adjust your dose timing across time zones.",
+      source: "System",
+      suggestions: ["Open Travel Companion", "Check pill stock", "View reminders"]
+    };
+  }
+
+  // Doctor-Ready Reports
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("report") || normalizedQuery.includes("pdf") || normalizedQuery.includes("doctor") || normalizedQuery.includes("export"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [export an adherence report for your doctor](/report) to share verified logs ahead of your next appointment.",
+      source: "System",
+      suggestions: ["Generate report", "View dose history", "Check adherence"]
+    };
+  }
+
+  // Visual Scanner
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("scan") || normalizedQuery.includes("camera") || normalizedQuery.includes("picture") || normalizedQuery.includes("ocr"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [take a photo to scan your medicine in Visual Scanner](/scan) to identify pills or parse prescription labels.",
+      source: "System",
+      suggestions: ["Open Scanner", "Search medicine", "Check interactions"]
+    };
+  }
+
+  // Settings & Profile
+  if (
+    isAskingForPageLink && (normalizedQuery.includes("setting") || normalizedQuery.includes("profile") || normalizedQuery.includes("account") || normalizedQuery.includes("preference"))
+  ) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "You can [manage your profile and preferences in Settings](/settings) to update emergency contacts and notifications.",
+      source: "System",
+      suggestions: ["Open Settings", "View profile", "Check reminders"]
+    };
+  }
+
+  // 2. Check for specific safety issues (local rule-based check)
   if (activeMedicine && userProfile) {
     const safetyChecks = checkConditionSafety(
       activeMedicine.name,
@@ -75,7 +234,7 @@ export const generateDawaGPTResponse = async (
     }
   }
 
-  // 2. Family Hub & Client Profiles Query (Local / Offline handling)
+  // 3. Family Hub & Client Profiles Query (Local / Offline handling)
   const familyKeywords = ["family", "client", "dependents", "members", "profiles", "hub", "relatives", "patient"];
   const isFamilyOverviewQuery = familyKeywords.some(k => normalizedQuery.includes(k)) && 
     (normalizedQuery.includes("who") || normalizedQuery.includes("list") || normalizedQuery.includes("show") || normalizedQuery.includes("what") || normalizedQuery.includes("all") || normalizedQuery.includes("my"));
@@ -142,7 +301,7 @@ export const generateDawaGPTResponse = async (
       text += pReminders.map(r => `• ${r.medicineName} (${r.dose}) at ${r.time} [${r.repeatSchedule}]`).join("\n") + "\n";
     }
 
-    text += `\nYou can manage ${matchedPatient.name}'s details in [Family Hub](/family-hub).`;
+    text += `\nYou can [manage ${matchedPatient.name}'s profile in Family Hub](/family-hub) to update health notes and reminder schedules.`;
 
     return {
       id: Date.now().toString(),
@@ -162,7 +321,7 @@ export const generateDawaGPTResponse = async (
       return {
         id: Date.now().toString(),
         role: "assistant",
-        text: "You haven't added any family members or client profiles to your Family Hub yet. You can add dependents or clients to manage their medications, reminders, and health profiles in [Family Hub](/family-hub).",
+        text: "You haven't added any family members or client profiles yet. Would you like to [add a family member in Family Hub](/family-hub) to track their medications, reminders, and health profiles together?",
         source: "System",
         suggestions: ["Add a family member", "Add a client", "Open Family Hub"]
       };
@@ -177,7 +336,7 @@ export const generateDawaGPTResponse = async (
       return `${idx + 1}. **${p.name}**${rel} [${type}] — ${medCount}${cond}`;
     });
 
-    const summaryText = `You currently manage **${patients.length}** profile${patients.length !== 1 ? 's' : ''} in your **Family Hub**:\n\n${lines.join('\n')}\n\nYou can view detailed profiles, health notes, and schedules in [Family Hub](/family-hub).`;
+    const summaryText = `You currently manage **${patients.length}** profile${patients.length !== 1 ? 's' : ''} in your Family Hub:\n\n${lines.join('\n')}\n\nYou can [view full profiles in Family Hub](/family-hub) to update clinical notes and schedules.`;
 
     return {
       id: Date.now().toString(),
@@ -188,7 +347,7 @@ export const generateDawaGPTResponse = async (
     };
   }
 
-  // 3. Med Vault / Stock Intelligence (Local / Offline handling)
+  // 4. Med Vault / Stock Intelligence (Local / Offline handling)
   const medVaultKeywords = ["days left", "doses left", "how many days", "how many doses", "med vault", "stock", "vault", "refill", "supply left", "pills left"];
   const isMedVaultQuery = medVaultKeywords.some(k => normalizedQuery.includes(k));
 
@@ -198,7 +357,7 @@ export const generateDawaGPTResponse = async (
       return {
         id: Date.now().toString(),
         role: "assistant",
-        text: "You don't have any medication stocks tracked in your Med Vault yet. You can set initial pill quantities for any medication to track your remaining doses and days of supply in [Med Vault](/medvault).",
+        text: "You don't have any medication stocks tracked in your Med Vault yet. You can [set your initial pill quantities in Med Vault](/medvault) to track your remaining doses and days of supply.",
         source: "System",
         suggestions: ["Open my Med Vault", "Add a reminder", "Check interactions"]
       };
@@ -232,7 +391,7 @@ export const generateDawaGPTResponse = async (
       return statusMsg;
     });
 
-    const summaryText = `Here is your current **Med Vault** stock breakdown:\n\n${lines.join("\n")}\n\nYou can manage or restock your medications anytime in [Med Vault](/medvault).`;
+    const summaryText = `Here is your current **Med Vault** stock breakdown:\n\n${lines.join("\n")}\n\nYou can [manage or restock your medications in Med Vault](/medvault) anytime.`;
 
     return {
       id: Date.now().toString(),
@@ -337,7 +496,8 @@ export const chatWithDawaGPT = async (
   wellnessLogs: WellnessLog[] = [],
   vitalitySummary: any[] = [],
   patients: Patient[] = [],
-  selectedPatientId: string | null = null
+  selectedPatientId: string | null = null,
+  currentPage: string | null = null
 ): Promise<ChatMessage> => {
   try {
     const response = await aiApi.chat({
@@ -350,6 +510,7 @@ export const chatWithDawaGPT = async (
       vitalitySummary,
       patients,
       selectedPatientId,
+      currentPage,
     });
 
     const rawText = response.text || "";
@@ -394,7 +555,8 @@ export const chatWithDawaGPTStream = async (
   vitalitySummary: any[] = [],
   patients: Patient[] = [],
   selectedPatientId: string | null = null,
-  onChunk: (text: string) => void
+  onChunk: (text: string) => void,
+  currentPage: string | null = null
 ): Promise<ChatMessage> => {
   try {
     const stream = await aiApi.chatStream({
@@ -407,6 +569,7 @@ export const chatWithDawaGPTStream = async (
       vitalitySummary,
       patients,
       selectedPatientId,
+      currentPage,
     });
 
     const reader = stream.getReader();

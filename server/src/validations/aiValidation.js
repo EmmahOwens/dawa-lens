@@ -80,5 +80,6 @@ export const chatSchema = z.object({
     vitalitySummary: z.array(z.any()).max(10).optional(),
     patients: z.array(z.any()).max(20).optional(),
     selectedPatientId: z.string().max(100).nullable().optional(),
+    currentPage: z.string().max(200).optional(),
   })
 });
