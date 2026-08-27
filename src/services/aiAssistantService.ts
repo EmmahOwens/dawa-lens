@@ -533,8 +533,11 @@ export const chatWithDawaGPT = async (
     });
 
     const rawText = response.text || "";
-    // Clean up any stray metadata markers if they exist
-    const cleanText = rawText.split(/###METADATA###|---METADATA---/)[0].trim();
+    // Clean up any stray metadata markers or suggestion tags if they exist
+    const cleanText = rawText
+      .split(/###METADATA###|---METADATA---/)[0]
+      .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+      .trim();
 
     return {
       id: Date.now().toString(),
@@ -615,9 +618,10 @@ export const chatWithDawaGPTStream = async (
 
             // Strip metadata delimiter and JSON from visible text (Requirement 2.3)
             const delimIdx = allText.lastIndexOf('###METADATA###');
-            const visibleText = delimIdx !== -1
+            const rawVisibleText = delimIdx !== -1
               ? allText.substring(0, delimIdx)
               : allText;
+            const visibleText = rawVisibleText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '');
             onChunk(visibleText);
           } catch (e) {
             // Ignore parse errors
@@ -637,7 +641,7 @@ export const chatWithDawaGPTStream = async (
     if (delimMatch) {
       const fullMatch = delimMatch[0];
       const delimIndex = fullMatch.lastIndexOf(METADATA_DELIMITER);
-      displayText = allText.substring(0, delimIndex).trim();
+      displayText = allText.substring(0, delimIndex).replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
       rawMetadata = delimMatch[1].trim();
     } else {
       // Delimiter absent — try to extract a trailing JSON block as a secondary fallback.
@@ -649,18 +653,18 @@ export const chatWithDawaGPTStream = async (
           // Only use it as metadata if it has the expected shape
           if (candidate && (candidate.suggestions || candidate.action || candidate.source)) {
             rawMetadata = trailingJsonMatch[1];
-            displayText = allText.substring(0, allText.lastIndexOf(trailingJsonMatch[1])).trim();
+            displayText = allText.substring(0, allText.lastIndexOf(trailingJsonMatch[1])).replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
           } else {
-            displayText = allText.trim();
+            displayText = allText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
             rawMetadata = '';
           }
         } catch {
-          displayText = allText.trim();
+          displayText = allText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
           rawMetadata = '';
         }
       } else {
         // No JSON found at all — treat entire text as display text, no metadata
-        displayText = allText.trim();
+        displayText = allText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
         rawMetadata = '';
       }
     }

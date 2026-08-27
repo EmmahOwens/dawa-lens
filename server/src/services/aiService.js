@@ -1167,8 +1167,8 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
     // Action execution is handled client-side by dispatchAIAction (useAIActions.tsx).
     // The server's role is to generate the action intent and return it in result.action.
     // Executing server-side here caused duplicate writes and error notes in the response.
-    if (result.action && result.action.type) {
-      console.log(`🤖 Agent intent detected: ${result.action.type} — delegating to client.`);
+    if (result && typeof result.text === 'string') {
+      result.text = result.text.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
     }
 
     return result;
@@ -1272,8 +1272,10 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     function createFakeStream(jsonResp) {
       return new Readable({
         read() {
+          const rawText = jsonResp.text || "";
+          const cleanText = rawText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
           const metadata = JSON.stringify({ suggestions: jsonResp.suggestions || [], source: jsonResp.source || "DawaGPT", action: jsonResp.action || null });
-          const data = JSON.stringify({ choices: [{ delta: { content: (jsonResp.text || "") + "\n###METADATA###\n" + metadata } }] });
+          const data = JSON.stringify({ choices: [{ delta: { content: cleanText + "\n###METADATA###\n" + metadata } }] });
           this.push(`data: ${data}\n`);
           this.push(`data: [DONE]\n`);
           this.push(null);
@@ -2046,9 +2048,9 @@ export async function prepareDawaGPTContext({ messages, medicines, userProfile, 
        - If you performed an action, suggest the next logical step.
        - NEVER repeat suggestions from earlier turns. Keep them fresh and relevant.
        - Keep them under 6 words each.
-       ${(() => {
+       - NEVER output suggestions, suggestion lists, or text like '[Previous suggestions offered:...]' inside your message text. Suggestions belong ONLY in the 'suggestions' JSON/metadata field.
+        ${(() => {
       const lastAssistantMsg = messages.slice().reverse().find(m => m.role === 'assistant');
-      const prevSuggestions = lastAssistantMsg?.suggestions || lastAssistantMsg?.text?.match?.(/suggestions.*?\[(.*?)\]/s);
       if (lastAssistantMsg?.suggestions?.length) {
         return `- Previous turn suggestions were: ${JSON.stringify(lastAssistantMsg.suggestions)}. Generate NEW ones that follow the conversation forward.`;
       }
@@ -2135,11 +2137,8 @@ ${familyHubSummary}
   `;
 
   const formattedMessages = recentMessages.map(msg => {
-    const content = msg.text || msg.content || "";
-    // Include suggestions in assistant message content so the LLM knows what follow-ups were previously offered
-    if (msg.role === 'assistant' && msg.suggestions?.length) {
-      return { role: 'assistant', content: content + `\n[Previous suggestions offered: ${msg.suggestions.join(', ')}]` };
-    }
+    const rawContent = msg.text || msg.content || "";
+    const content = rawContent.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
     return { role: msg.role === 'assistant' ? 'assistant' : 'user', content };
   });
   const cleanedMessages = [];

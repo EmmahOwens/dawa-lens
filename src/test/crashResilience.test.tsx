@@ -70,6 +70,17 @@ describe("Crash Resilience Tests", () => {
       expect(screen.getByText("Take your pill now.")).toBeInTheDocument();
       expect(screen.queryByText(/ACTION EXECUTED/)).not.toBeInTheDocument();
     });
+
+    it("strips previous suggestions offered text cleanly from output", () => {
+      render(
+        <BrowserRouter>
+          <MessageRenderer text="Would you like me to help you set a reminder to take your next dose, or plan a refill? [Previous suggestions offered: Set reminders for my medicines, Check my dose history, Plan a refill for Metronidazole]" />
+        </BrowserRouter>
+      );
+      expect(screen.getByText("Would you like me to help you set a reminder to take your next dose, or plan a refill?")).toBeInTheDocument();
+      expect(screen.queryByText(/Previous suggestions offered/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Check my dose history/i)).not.toBeInTheDocument();
+    });
   });
 
   describe("NotificationHandler Extra Parser", () => {

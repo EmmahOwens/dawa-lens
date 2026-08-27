@@ -143,9 +143,12 @@ interface MessageRendererProps {
 }
 
 export default function MessageRenderer({ text, onNavigate, className }: MessageRendererProps) {
-  // Hide internal action execution metadata from the user (Requirement 2.6)
+  // Hide internal action execution metadata and previous suggestions offered from the user
   const safeText = typeof text === "string" ? text : "";
-  const cleanText = safeText.replace(/\[ACTION EXECUTED:.*?\]/g, '').trim();
+  const cleanText = safeText
+    .replace(/\[ACTION EXECUTED:.*?\]/g, '')
+    .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+    .trim();
 
   return (
     <div className={`prose prose-sm dark:prose-invert max-w-none min-w-0 leading-[1.6] font-medium ${className || "text-[15px]"}`}>
