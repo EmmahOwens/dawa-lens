@@ -145,6 +145,15 @@ class NativeAlarmPlugin : Plugin() {
         }
     }
 
+    private fun getDeviceProtectedPrefs(ctx: Context): android.content.SharedPreferences {
+        val storageContext = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            ctx.createDeviceProtectedStorageContext()
+        } else {
+            ctx
+        }
+        return storageContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
     @PluginMethod
     fun scheduleAlarms(call: PluginCall) {
         val notifications = call.getArray("notifications") ?: run {
@@ -156,11 +165,14 @@ class NativeAlarmPlugin : Plugin() {
         val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val dpPrefs = getDeviceProtectedPrefs(ctx)
+
         val existingAlarmIds = prefs.getStringSet(KEY_IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
         val alarmIds = HashSet(existingAlarmIds)
 
         // Merge schedule JSON array, keeping active future alarms
         val existingScheduleStr = prefs.getString(KEY_SCHEDULE, null)
+            ?: dpPrefs.getString(KEY_SCHEDULE, null)
         val scheduleMap = mutableMapOf<Int, JSONObject>()
         val now = System.currentTimeMillis()
 
@@ -283,8 +295,17 @@ class NativeAlarmPlugin : Plugin() {
             for (obj in scheduleMap.values) {
                 mergedScheduleArray.put(obj)
             }
+            val scheduleJsonStr = mergedScheduleArray.toString()
+
+            // Save to standard SharedPreferences
             prefs.edit()
-                .putString(KEY_SCHEDULE, mergedScheduleArray.toString())
+                .putString(KEY_SCHEDULE, scheduleJsonStr)
+                .putStringSet(KEY_IDS, alarmIds)
+                .apply()
+
+            // Save to Device-Protected SharedPreferences for Direct Boot recovery
+            dpPrefs.edit()
+                .putString(KEY_SCHEDULE, scheduleJsonStr)
                 .putStringSet(KEY_IDS, alarmIds)
                 .apply()
         } catch (prefsErr: Exception) {
@@ -300,7 +321,10 @@ class NativeAlarmPlugin : Plugin() {
             val ctx = context
             val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val dpPrefs = getDeviceProtectedPrefs(ctx)
+
             val existingScheduleStr = prefs.getString(KEY_SCHEDULE, null)
+                ?: dpPrefs.getString(KEY_SCHEDULE, null)
             val remainingIds = mutableSetOf<String>()
             val remainingSchedule = JSONArray()
 
@@ -342,8 +366,14 @@ class NativeAlarmPlugin : Plugin() {
                 }
             }
 
+            val remainingStr = remainingSchedule.toString()
             prefs.edit()
-                .putString(KEY_SCHEDULE, remainingSchedule.toString())
+                .putString(KEY_SCHEDULE, remainingStr)
+                .putStringSet(KEY_IDS, remainingIds)
+                .apply()
+
+            dpPrefs.edit()
+                .putString(KEY_SCHEDULE, remainingStr)
                 .putStringSet(KEY_IDS, remainingIds)
                 .apply()
         } catch (e: Exception) {
@@ -364,7 +394,9 @@ class NativeAlarmPlugin : Plugin() {
             val ctx = context
             val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val alarmIds = prefs.getStringSet(KEY_IDS, emptySet()) ?: emptySet()
+            val dpPrefs = getDeviceProtectedPrefs(ctx)
+
+            val alarmIds = prefs.getStringSet(KEY_IDS, emptySet()) ?: dpPrefs.getStringSet(KEY_IDS, emptySet()) ?: emptySet()
 
             for (idStr in alarmIds) {
                 val id = idStr.toIntOrNull() ?: continue
@@ -384,6 +416,7 @@ class NativeAlarmPlugin : Plugin() {
             }
 
             prefs.edit().clear().apply()
+            dpPrefs.edit().clear().apply()
         } catch (e: Exception) {
             // ignore
         }
@@ -394,6 +427,73 @@ class NativeAlarmPlugin : Plugin() {
     fun isSupported(call: PluginCall) {
         val result = JSObject()
         result.put("supported", true)
+        call.resolve(result)
+    }
+
+    @PluginMethod
+    fun canScheduleExactAlarms(call: PluginCall) {
+        val result = JSObject()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            result.put("canSchedule", alarmManager.canScheduleExactAlarms())
+        } else {
+            result.put("canSchedule", true)
+        }
+        call.resolve(result)
+    }
+
+    @PluginMethod
+    fun openExactAlarmSettings(call: PluginCall) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+                call.resolve()
+                return
+            }
+            call.resolve()
+        } catch (e: Exception) {
+            call.reject("Failed to open exact alarm settings: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
+    fun checkAllPermissions(call: PluginCall) {
+        val result = JSObject()
+        val ctx = context
+        
+        // 1. Battery Optimization
+        val isBatteryIgnored = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
+            pm.isIgnoringBatteryOptimizations(ctx.packageName)
+        } else {
+            true
+        }
+        result.put("batteryIgnored", isBatteryIgnored)
+
+        // 2. Exact Alarms
+        val canExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            am.canScheduleExactAlarms()
+        } else {
+            true
+        }
+        result.put("exactAlarmCanSchedule", canExact)
+
+        // 3. Notifications Enabled
+        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val notifsEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            nm.areNotificationsEnabled()
+        } else {
+            true
+        }
+        result.put("notificationsEnabled", notifsEnabled)
+
+        // 4. Overall status
+        result.put("isFullyCompliant", isBatteryIgnored && canExact && notifsEnabled)
         call.resolve(result)
     }
 

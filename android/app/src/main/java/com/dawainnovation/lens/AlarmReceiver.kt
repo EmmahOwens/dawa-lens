@@ -40,14 +40,22 @@ class AlarmReceiver : BroadcastReceiver() {
             val extraStr = intent.getStringExtra("extra") ?: ""
             var notifType = ""
             var reminderId = ""
+            var medicineName = ""
+            var dose = ""
             var scheduledTime = ""
+            var patientId: String? = null
 
             if (extraStr.isNotEmpty()) {
                 try {
                     val extraObj = JSONObject(extraStr)
                     notifType = extraObj.optString("type", "")
                     reminderId = extraObj.optString("reminderId", "")
+                    medicineName = extraObj.optString("medicineName", "")
+                    dose = extraObj.optString("dose", "")
                     scheduledTime = extraObj.optString("scheduledTime", "")
+                    if (extraObj.has("patientId") && !extraObj.isNull("patientId")) {
+                        patientId = extraObj.optString("patientId")
+                    }
                 } catch (e: Exception) {
                     // Non-fatal JSON parse error
                 }
@@ -262,7 +270,7 @@ class AlarmReceiver : BroadcastReceiver() {
 
             val isHighPriority = notifType in listOf("missed_alert", "streak", "refill", "low_stock") || !isEventNotification
 
-            val notification = NotificationCompat.Builder(context, channelId)
+            val builder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_popup_reminder)
                 .setContentTitle(title)
                 .setContentText(body)
@@ -274,9 +282,82 @@ class AlarmReceiver : BroadcastReceiver() {
                 .setAutoCancel(true)
                 .setVibrate(longArrayOf(0, 500, 200, 500))
                 .setSound(defaultSoundUri)
-                .build()
 
-            notificationManager.notify(notificationId, notification)
+            // Attach native action buttons for offline headless execution on routine reminders
+            if (!isEventNotification && reminderId.isNotEmpty()) {
+                val effectiveMedicineName = if (medicineName.isNotEmpty()) medicineName else title.replace("Time for ", "")
+
+                // 1. Take Action
+                val takeIntent = Intent(context, NativeActionReceiver::class.java).apply {
+                    action = NativeActionReceiver.ACTION_TAKE
+                    putExtra("notificationId", notificationId)
+                    putExtra("reminderId", reminderId)
+                    putExtra("medicineName", effectiveMedicineName)
+                    putExtra("dose", dose)
+                    putExtra("scheduledTime", scheduledTime)
+                    if (patientId != null) putExtra("patientId", patientId)
+                    putExtra("extra", extraStr)
+                }
+                val takePendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    notificationId * 10 + 1,
+                    takeIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.addAction(
+                    android.R.drawable.ic_menu_agenda,
+                    "Mark as Taken",
+                    takePendingIntent
+                )
+
+                // 2. Skip Action
+                val skipIntent = Intent(context, NativeActionReceiver::class.java).apply {
+                    action = NativeActionReceiver.ACTION_SKIP
+                    putExtra("notificationId", notificationId)
+                    putExtra("reminderId", reminderId)
+                    putExtra("medicineName", effectiveMedicineName)
+                    putExtra("dose", dose)
+                    putExtra("scheduledTime", scheduledTime)
+                    if (patientId != null) putExtra("patientId", patientId)
+                    putExtra("extra", extraStr)
+                }
+                val skipPendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    notificationId * 10 + 2,
+                    skipIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.addAction(
+                    android.R.drawable.ic_menu_close_clear_cancel,
+                    "Skip Dose",
+                    skipPendingIntent
+                )
+
+                // 3. Snooze Action
+                val snoozeIntent = Intent(context, NativeActionReceiver::class.java).apply {
+                    action = NativeActionReceiver.ACTION_SNOOZE
+                    putExtra("notificationId", notificationId)
+                    putExtra("reminderId", reminderId)
+                    putExtra("medicineName", effectiveMedicineName)
+                    putExtra("dose", dose)
+                    putExtra("scheduledTime", scheduledTime)
+                    if (patientId != null) putExtra("patientId", patientId)
+                    putExtra("extra", extraStr)
+                }
+                val snoozePendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    notificationId * 10 + 3,
+                    snoozeIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.addAction(
+                    android.R.drawable.ic_popup_sync,
+                    "Snooze (15m)",
+                    snoozePendingIntent
+                )
+            }
+
+            notificationManager.notify(notificationId, builder.build())
         } finally {
             if (wakeLock?.isHeld == true) {
                 try {

@@ -318,5 +318,52 @@ export const NativeService = {
       return false;
     }
   },
+
+  /**
+   * Check whether exact alarms are permitted by the OS on Android 12+.
+   */
+  canScheduleExactAlarms: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return true;
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      const res = await NativeAlarm.canScheduleExactAlarms();
+      return res?.canSchedule ?? true;
+    } catch (err) {
+      console.error("Failed to check exact alarm capability:", err);
+      return true;
+    }
+  },
+
+  /**
+   * Directly open the Exact Alarm system settings screen on Android 12+.
+   */
+  openExactAlarmSettings: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return false;
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      await NativeAlarm.openExactAlarmSettings();
+      return true;
+    } catch (err) {
+      console.error("Failed to open exact alarm settings:", err);
+      return false;
+    }
+  },
+
+  /**
+   * Check comprehensive permission compliance across battery, exact alarms, and notification status.
+   */
+  checkAllPermissions: async () => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      return { batteryIgnored: true, exactAlarmCanSchedule: true, notificationsEnabled: true, isFullyCompliant: true };
+    }
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      return await NativeAlarm.checkAllPermissions();
+    } catch (err) {
+      console.error("Failed to check all permissions:", err);
+      return { batteryIgnored: false, exactAlarmCanSchedule: false, notificationsEnabled: false, isFullyCompliant: false };
+    }
+  },
 };
+
 

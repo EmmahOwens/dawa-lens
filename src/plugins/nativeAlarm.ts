@@ -30,14 +30,25 @@ export interface NativeAlarmPlugin {
   cancelReminderAlarms?(): Promise<void>;
   /** Returns whether native alarm scheduling is available on this platform. */
   isSupported(): Promise<{ supported: boolean }>;
+  /** Returns whether the OS is currently ignoring battery optimizations for this app. */
+  isBatteryOptimizationIgnored(): Promise<{ ignored: boolean }>;
   /** Request exemption from battery optimization to ensure alarms are reliable. */
   requestIgnoreBatteryOptimization(): Promise<void>;
   /** Directly open system battery optimization / app battery restriction settings. */
   openBatteryOptimizationSettings(): Promise<void>;
   /** Directly open OEM-specific Autostart settings screen (Xiaomi, Tecno, Oppo, Vivo, etc.). */
   openAutostartSettings(): Promise<void>;
-  /** Returns whether battery optimizations are currently being ignored for this app. */
-  isBatteryOptimizationIgnored(): Promise<{ ignored: boolean }>;
+  /** Check if exact alarm scheduling is allowed by the OS (Android 12+). */
+  canScheduleExactAlarms(): Promise<{ canSchedule: boolean }>;
+  /** Open exact alarm system permission settings (Android 12+). */
+  openExactAlarmSettings(): Promise<void>;
+  /** Returns comprehensive system permission statuses for offline notification resilience. */
+  checkAllPermissions(): Promise<{
+    batteryIgnored: boolean;
+    exactAlarmCanSchedule: boolean;
+    notificationsEnabled: boolean;
+    isFullyCompliant: boolean;
+  }>;
 }
 
 const NativeAlarm = registerPlugin<NativeAlarmPlugin>('NativeAlarm');

@@ -299,14 +299,26 @@ export default function BatteryOptimizationGate({
                       exit={{ opacity: 0, height: 0 }}
                       className="mt-2.5 text-left text-[11px] text-muted-foreground bg-muted/60 rounded-xl p-3 space-y-2 border border-border/50 overflow-hidden"
                     >
-                      <button
-                        type="button"
-                        onClick={openAutostartSettings}
-                        className="w-full py-2 px-3 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Open Phone Manager / Autostart</span>
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={openAutostartSettings}
+                          className="flex-1 py-2 px-2.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Autostart Settings</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try { await NativeService.openExactAlarmSettings(); } catch (e) {}
+                          }}
+                          className="flex-1 py-2 px-2.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Exact Alarms</span>
+                        </button>
+                      </div>
                       <p><strong className="text-foreground">Samsung:</strong> Apps &gt; Dawa Lens &gt; Battery &gt; Select <em>Unrestricted</em>.</p>
                       <p><strong className="text-foreground">Xiaomi / Redmi / Poco:</strong> App info &gt; Battery saver &gt; Select <em>No restrictions</em> & enable <em>Autostart</em>.</p>
                       <p><strong className="text-foreground">Tecno / Infinix:</strong> Phone Master &gt; Auto-start management &gt; Enable <em>Dawa Lens</em>.</p>

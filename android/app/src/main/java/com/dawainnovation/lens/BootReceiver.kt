@@ -25,140 +25,173 @@ class BootReceiver : BroadcastReceiver() {
         val action = intent.action
         if (action != Intent.ACTION_BOOT_COMPLETED &&
             action != "android.intent.action.QUICKBOOT_POWERON" &&
-            action != Intent.ACTION_MY_PACKAGE_REPLACED
+            action != Intent.ACTION_MY_PACKAGE_REPLACED &&
+            action != "android.intent.action.LOCKED_BOOT_COMPLETED"
         ) return
 
-        val now = System.currentTimeMillis()
-        val prefs = context.getSharedPreferences("dawa_alarms", Context.MODE_PRIVATE)
-        val scheduleJson = prefs.getString("dawa_alarm_schedule", null)
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        val wakeLock = powerManager?.newWakeLock(
+            android.os.PowerManager.PARTIAL_WAKE_LOCK,
+            "DawaLens:BootReceiverWakeLock"
+        )
+        wakeLock?.acquire(15000L) // 15 second safety timeout
 
-        var rescheduledCount = 0
-
-        if (!scheduleJson.isNullOrEmpty()) {
-            try {
-                val array = JSONArray(scheduleJson)
-                for (i in 0 until array.length()) {
-                    val item = array.getJSONObject(i)
-                    val id = item.optInt("id", 0)
-                    val title = item.optString("title", "Dawa Lens")
-                    val body = item.optString("body", "Medication reminder")
-                    val triggerAtMillis = item.optLong("triggerAtMillis", 0L)
-                    val extra = if (item.has("extra")) item.getString("extra") else ""
-
-                    if (triggerAtMillis > now && id != 0) {
-                        scheduleOne(context, id, triggerAtMillis, title, body, extra)
-                        rescheduledCount++
-                    }
-                }
-            } catch (e: Exception) {
-                // proceed to fallback
+        try {
+            val now = System.currentTimeMillis()
+            
+            // Read from Device-Protected Context first (available before user enters PIN on cold boot)
+            val dpContext = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                context.createDeviceProtectedStorageContext()
+            } else {
+                context
             }
-        }
+            val dpPrefs = dpContext.getSharedPreferences("dawa_alarms", Context.MODE_PRIVATE)
+            val prefs = context.getSharedPreferences("dawa_alarms", Context.MODE_PRIVATE)
 
-        // Fallback: If no schedule was saved in SharedPreferences, rebuild alarms directly from SQLite database
-        if (rescheduledCount == 0) {
-            val dbPath = context.getDatabasePath("dawa_lens.db")
-            if (dbPath.exists()) {
+            val scheduleJson = dpPrefs.getString("dawa_alarm_schedule", null)
+                ?: prefs.getString("dawa_alarm_schedule", null)
+
+            var rescheduledCount = 0
+
+            if (!scheduleJson.isNullOrEmpty()) {
                 try {
-                    val db = SQLiteDatabase.openDatabase(
-                        dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY
-                    )
-                    val cursor = db.rawQuery(
-                        """SELECT id, medicine_name, dose, time, repeat_schedule, repeat_days, patient_id 
-                           FROM reminders 
-                           WHERE enabled = 1""",
-                        null
-                    )
-                    val fallbackSchedule = JSONArray()
-                    val fallbackIds = mutableSetOf<String>()
+                    val array = JSONArray(scheduleJson)
+                    for (i in 0 until array.length()) {
+                        val item = array.getJSONObject(i)
+                        val id = item.optInt("id", 0)
+                        val title = item.optString("title", "Dawa Lens")
+                        val body = item.optString("body", "Medication reminder")
+                        val triggerAtMillis = item.optLong("triggerAtMillis", 0L)
+                        val extra = if (item.has("extra")) item.getString("extra") else ""
 
-                    val isoUtcFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-                        timeZone = TimeZone.getTimeZone("UTC")
-                    }
-
-                    while (cursor.moveToNext()) {
-                        val reminderId = cursor.getString(cursor.getColumnIndexOrThrow("id"))
-                        val medicineName = cursor.getString(cursor.getColumnIndexOrThrow("medicine_name")) ?: "Medication"
-                        val dose = cursor.getString(cursor.getColumnIndexOrThrow("dose")) ?: ""
-                        val timeStr = cursor.getString(cursor.getColumnIndexOrThrow("time")) ?: ""
-                        val repeatSchedule = cursor.getString(cursor.getColumnIndexOrThrow("repeat_schedule")) ?: "daily"
-                        val repeatDaysJson = cursor.getString(cursor.getColumnIndexOrThrow("repeat_days"))
-                        val patientId = cursor.getString(cursor.getColumnIndexOrThrow("patient_id"))
-
-                        val times = timeStr.split(",").map { it.trim() }.filter { it.contains(":") }
-
-                        for (dayOffset in 0..7) {
-                            for (t in times) {
-                                val parts = t.split(":")
-                                if (parts.size != 2) continue
-                                val hour = parts[0].toIntOrNull() ?: continue
-                                val min = parts[1].toIntOrNull() ?: continue
-
-                                val cal = Calendar.getInstance()
-                                cal.add(Calendar.DAY_OF_YEAR, dayOffset)
-                                cal.set(Calendar.HOUR_OF_DAY, hour)
-                                cal.set(Calendar.MINUTE, min)
-                                cal.set(Calendar.SECOND, 0)
-                                cal.set(Calendar.MILLISECOND, 0)
-
-                                val triggerAt = cal.timeInMillis
-                                if (triggerAt <= now) continue
-
-                                if (repeatSchedule == "specific_days" && !repeatDaysJson.isNullOrEmpty()) {
-                                    try {
-                                        val daysArr = JSONArray(repeatDaysJson)
-                                        val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
-                                        var matches = false
-                                        for (d in 0 until daysArr.length()) {
-                                            if (daysArr.getInt(d) == dayOfWeek) {
-                                                matches = true
-                                                break
-                                            }
-                                        }
-                                        if (!matches) continue
-                                    } catch (e: Exception) {}
-                                }
-
-                                val scheduledIso = isoUtcFormat.format(Date(triggerAt))
-                                val notifId = Math.abs((reminderId + scheduledIso).hashCode() % 2147483640) + 1
-                                val title = "Time for $medicineName"
-                                val body = "Dose: $dose. Remember to take your medicine!"
-                                val extra = JSONObject().apply {
-                                    put("reminderId", reminderId)
-                                    put("medicineName", medicineName)
-                                    put("dose", dose)
-                                    put("scheduledTime", scheduledIso)
-                                    if (patientId != null) put("patientId", patientId)
-                                }.toString()
-
-                                scheduleOne(context, notifId, triggerAt, title, body, extra)
-
-                                val schedObj = JSONObject().apply {
-                                    put("id", notifId)
-                                    put("title", title)
-                                    put("body", body)
-                                    put("triggerAtMillis", triggerAt)
-                                    put("extra", extra)
-                                }
-                                fallbackSchedule.put(schedObj)
-                                fallbackIds.add(notifId.toString())
-
-                                if (repeatSchedule == "once") break
-                            }
+                        if (triggerAtMillis > now && id != 0) {
+                            scheduleOne(context, id, triggerAtMillis, title, body, extra)
+                            rescheduledCount++
                         }
                     }
-                    cursor.close()
-                    db.close()
-
-                    if (fallbackSchedule.length() > 0) {
-                        prefs.edit()
-                            .putString("dawa_alarm_schedule", fallbackSchedule.toString())
-                            .putStringSet("alarm_ids", fallbackIds)
-                            .apply()
-                    }
                 } catch (e: Exception) {
-                    // non-fatal
+                    // proceed to fallback
                 }
+            }
+
+            // Fallback: If no schedule was saved in SharedPreferences, rebuild alarms directly from SQLite database
+            if (rescheduledCount == 0) {
+                val dbPath = context.getDatabasePath("dawa_lens.db")
+                if (dbPath.exists()) {
+                    try {
+                        val db = SQLiteDatabase.openDatabase(
+                            dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY
+                        )
+                        val cursor = db.rawQuery(
+                            """SELECT id, medicine_name, dose, time, repeat_schedule, repeat_days, patient_id 
+                               FROM reminders 
+                               WHERE enabled = 1""",
+                            null
+                        )
+                        val fallbackSchedule = JSONArray()
+                        val fallbackIds = mutableSetOf<String>()
+
+                        val isoUtcFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+                            timeZone = TimeZone.getTimeZone("UTC")
+                        }
+
+                        while (cursor.moveToNext()) {
+                            val reminderId = cursor.getString(cursor.getColumnIndexOrThrow("id"))
+                            val medicineName = cursor.getString(cursor.getColumnIndexOrThrow("medicine_name")) ?: "Medication"
+                            val dose = cursor.getString(cursor.getColumnIndexOrThrow("dose")) ?: ""
+                            val timeStr = cursor.getString(cursor.getColumnIndexOrThrow("time")) ?: ""
+                            val repeatSchedule = cursor.getString(cursor.getColumnIndexOrThrow("repeat_schedule")) ?: "daily"
+                            val repeatDaysJson = cursor.getString(cursor.getColumnIndexOrThrow("repeat_days"))
+                            val patientId = cursor.getString(cursor.getColumnIndexOrThrow("patient_id"))
+
+                            val times = timeStr.split(",").map { it.trim() }.filter { it.contains(":") }
+
+                            for (dayOffset in 0..7) {
+                                for (t in times) {
+                                    val parts = t.split(":")
+                                    if (parts.size != 2) continue
+                                    val hour = parts[0].toIntOrNull() ?: continue
+                                    val min = parts[1].toIntOrNull() ?: continue
+
+                                    val cal = Calendar.getInstance()
+                                    cal.add(Calendar.DAY_OF_YEAR, dayOffset)
+                                    cal.set(Calendar.HOUR_OF_DAY, hour)
+                                    cal.set(Calendar.MINUTE, min)
+                                    cal.set(Calendar.SECOND, 0)
+                                    cal.set(Calendar.MILLISECOND, 0)
+
+                                    val triggerAt = cal.timeInMillis
+                                    if (triggerAt <= now) continue
+
+                                    if (repeatSchedule == "specific_days" && !repeatDaysJson.isNullOrEmpty()) {
+                                        try {
+                                            val daysArr = JSONArray(repeatDaysJson)
+                                            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
+                                            var matches = false
+                                            for (d in 0 until daysArr.length()) {
+                                                if (daysArr.getInt(d) == dayOfWeek) {
+                                                    matches = true
+                                                    break
+                                                }
+                                            }
+                                            if (!matches) continue
+                                        } catch (e: Exception) {}
+                                    }
+
+                                    val scheduledIso = isoUtcFormat.format(Date(triggerAt))
+                                    // Unified modulo matching TypeScript stringToHash exactly
+                                    val notifId = Math.abs((reminderId + scheduledIso).hashCode() % 2147483647).let { if (it == 0) 1 else it }
+                                    val title = "Time for $medicineName"
+                                    val body = "Dose: $dose. Remember to take your medicine!"
+                                    val extra = JSONObject().apply {
+                                        put("reminderId", reminderId)
+                                        put("medicineName", medicineName)
+                                        put("dose", dose)
+                                        put("scheduledTime", scheduledIso)
+                                        if (patientId != null) put("patientId", patientId)
+                                    }.toString()
+
+                                    scheduleOne(context, notifId, triggerAt, title, body, extra)
+
+                                    val schedObj = JSONObject().apply {
+                                        put("id", notifId)
+                                        put("title", title)
+                                        put("body", body)
+                                        put("triggerAtMillis", triggerAt)
+                                        put("extra", extra)
+                                    }
+                                    fallbackSchedule.put(schedObj)
+                                    fallbackIds.add(notifId.toString())
+
+                                    if (repeatSchedule == "once") break
+                                }
+                            }
+                        }
+                        cursor.close()
+                        db.close()
+
+                        if (fallbackSchedule.length() > 0) {
+                            val scheduleStr = fallbackSchedule.toString()
+                            prefs.edit()
+                                .putString("dawa_alarm_schedule", scheduleStr)
+                                .putStringSet("alarm_ids", fallbackIds)
+                                .apply()
+
+                            dpPrefs.edit()
+                                .putString("dawa_alarm_schedule", scheduleStr)
+                                .putStringSet("alarm_ids", fallbackIds)
+                                .apply()
+                        }
+                    } catch (e: Exception) {
+                        // non-fatal
+                    }
+                }
+            }
+        } finally {
+            if (wakeLock?.isHeld == true) {
+                try {
+                    wakeLock.release()
+                } catch (e: Exception) {}
             }
         }
 

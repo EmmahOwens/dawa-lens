@@ -343,40 +343,59 @@ export const checkMissedDoses = async (
             const missedChannelId = r.patientId ? patientChannelId(r.patientId) : CHANNEL_MISSED;
             const fireAt = new Date(Date.now() + 1000);
 
-            await LocalNotifications.schedule({
-              notifications: [{
-                title: missedTitle,
-                body: missedBody,
-                id: missedId,
-                schedule: { at: fireAt, allowWhileIdle: true },
-                channelId: missedChannelId,
-                sound: "default",
-                extra: {
-                  type: "missed_alert",
-                  reminderId: r.id,
-                  patientId: r.patientId ?? null,
-                  route: "/history",
-                },
-              }],
-            });
-
-            try {
-              await NativeAlarm.scheduleAlarms({
+            const isAndroid = Capacitor.getPlatform() === "android";
+            if (isAndroid) {
+              try {
+                await NativeAlarm.scheduleAlarms({
+                  notifications: [{
+                    id: missedId,
+                    title: missedTitle,
+                    body: missedBody,
+                    triggerAtMillis: fireAt.getTime(),
+                    extra: JSON.stringify({
+                      type: "missed_alert",
+                      reminderId: r.id,
+                      patientId: r.patientId ?? null,
+                      route: "/history",
+                    }),
+                  }],
+                });
+              } catch (alarmErr) {
+                console.warn("[reminderService] NativeAlarm missed-dose failed, fallback to LocalNotifications:", alarmErr);
+                await LocalNotifications.schedule({
+                  notifications: [{
+                    title: missedTitle,
+                    body: missedBody,
+                    id: missedId,
+                    schedule: { at: fireAt, allowWhileIdle: true },
+                    channelId: missedChannelId,
+                    sound: "default",
+                    extra: {
+                      type: "missed_alert",
+                      reminderId: r.id,
+                      patientId: r.patientId ?? null,
+                      route: "/history",
+                    },
+                  }],
+                });
+              }
+            } else {
+              await LocalNotifications.schedule({
                 notifications: [{
-                  id: missedId,
                   title: missedTitle,
                   body: missedBody,
-                  triggerAtMillis: fireAt.getTime(),
-                  extra: JSON.stringify({
+                  id: missedId,
+                  schedule: { at: fireAt, allowWhileIdle: true },
+                  channelId: missedChannelId,
+                  sound: "default",
+                  extra: {
                     type: "missed_alert",
                     reminderId: r.id,
                     patientId: r.patientId ?? null,
                     route: "/history",
-                  }),
+                  },
                 }],
               });
-            } catch (alarmErr) {
-              console.warn("[reminderService] NativeAlarm missed-dose fallback failed (non-fatal):", alarmErr);
             }
           }
         } catch (notifErr) {
@@ -407,36 +426,53 @@ export const checkMissedDoses = async (
             const bundleId = stringToHash("dawa_missed_bundle_" + new Date().toDateString());
             const fireAt = new Date(Date.now() + 1000);
 
-            await LocalNotifications.schedule({
-              notifications: [{
-                title: summaryTitle,
-                body: summaryBody,
-                id: bundleId,
-                schedule: { at: fireAt, allowWhileIdle: true },
-                channelId: CHANNEL_MISSED,
-                sound: "default",
-                extra: {
-                  type: "missed_alert",
-                  route: "/history",
-                },
-              }],
-            });
-
-            try {
-              await NativeAlarm.scheduleAlarms({
+            const isAndroid = Capacitor.getPlatform() === "android";
+            if (isAndroid) {
+              try {
+                await NativeAlarm.scheduleAlarms({
+                  notifications: [{
+                    id: bundleId,
+                    title: summaryTitle,
+                    body: summaryBody,
+                    triggerAtMillis: fireAt.getTime(),
+                    extra: JSON.stringify({
+                      type: "missed_alert",
+                      route: "/history",
+                    }),
+                  }],
+                });
+              } catch (alarmErr) {
+                console.warn("[reminderService] NativeAlarm missed-dose bundle failed, fallback to LocalNotifications:", alarmErr);
+                await LocalNotifications.schedule({
+                  notifications: [{
+                    title: summaryTitle,
+                    body: summaryBody,
+                    id: bundleId,
+                    schedule: { at: fireAt, allowWhileIdle: true },
+                    channelId: CHANNEL_MISSED,
+                    sound: "default",
+                    extra: {
+                      type: "missed_alert",
+                      route: "/history",
+                    },
+                  }],
+                });
+              }
+            } else {
+              await LocalNotifications.schedule({
                 notifications: [{
-                  id: bundleId,
                   title: summaryTitle,
                   body: summaryBody,
-                  triggerAtMillis: fireAt.getTime(),
-                  extra: JSON.stringify({
+                  id: bundleId,
+                  schedule: { at: fireAt, allowWhileIdle: true },
+                  channelId: CHANNEL_MISSED,
+                  sound: "default",
+                  extra: {
                     type: "missed_alert",
                     route: "/history",
-                  }),
+                  },
                 }],
               });
-            } catch (alarmErr) {
-              console.warn("[reminderService] NativeAlarm missed-dose bundle failed (non-fatal):", alarmErr);
             }
           }
         } catch (notifErr) {
@@ -763,52 +799,65 @@ export const scheduleAdjustmentNotification = async ({
     const notifId = stringToHash(reminderId + "schedule_adjusted" + fireAt.getTime().toString());
     const channelId = patientId ? `dawa_patient_v2_${patientId}` : CHANNEL_OWNER;
 
-    // ── Path 1: Capacitor LocalNotifications ────────────────────────────────
-    // schedule.at + allowWhileIdle ensures delivery in Doze mode / offline.
-    await LocalNotifications.schedule({
-      notifications: [
-        {
-          title,
-          body,
-          id: notifId,
-          schedule: { at: fireAt, allowWhileIdle: true },
-          channelId,
-          sound: "default",
-          extra: {
-            type: "schedule_adjusted",
-            reminderId,
-            patientId: patientId ?? null,
-            route: patientId ? "/family" : "/reminders",
-          },
-        },
-      ],
-    });
-
-    // ── Path 2: NativeAlarm (AlarmManager.setExactAndAllowWhileIdle) ────────
-    // Mirrors to the native AlarmManager so the notification also fires after
-    // a device reboot or when the Capacitor plugin is not responsive.
-    try {
-      await NativeAlarm.scheduleAlarms({
+    // ── Unified Single Pipeline Routing ──
+    const isAndroid = Capacitor.getPlatform() === "android";
+    if (isAndroid) {
+      try {
+        await NativeAlarm.scheduleAlarms({
+          notifications: [
+            {
+              id: notifId,
+              title,
+              body,
+              triggerAtMillis: fireAt.getTime(),
+              extra: JSON.stringify({
+                type: "schedule_adjusted",
+                reminderId,
+                patientId: patientId ?? null,
+              }),
+            },
+          ],
+        });
+      } catch (alarmErr) {
+        console.warn("[reminderService] NativeAlarm adjustment failed, falling back to LocalNotifications:", alarmErr);
+        await LocalNotifications.schedule({
+          notifications: [
+            {
+              title,
+              body,
+              id: notifId,
+              schedule: { at: fireAt, allowWhileIdle: true },
+              channelId,
+              sound: "default",
+              extra: {
+                type: "schedule_adjusted",
+                reminderId,
+                patientId: patientId ?? null,
+                route: patientId ? "/family" : "/reminders",
+              },
+            },
+          ],
+        });
+      }
+    } else {
+      await LocalNotifications.schedule({
         notifications: [
           {
-            id: notifId,
             title,
             body,
-            triggerAtMillis: fireAt.getTime(),
-            extra: JSON.stringify({
+            id: notifId,
+            schedule: { at: fireAt, allowWhileIdle: true },
+            channelId,
+            sound: "default",
+            extra: {
               type: "schedule_adjusted",
               reminderId,
               patientId: patientId ?? null,
-            }),
+              route: patientId ? "/family" : "/reminders",
+            },
           },
         ],
       });
-    } catch (alarmErr) {
-      // NativeAlarm is a best-effort fallback — non-fatal if unavailable.
-      console.warn(
-        "[reminderService] NativeAlarm fallback for adjustment notification failed (non-fatal):",
-        alarmErr
-      );
     }
   } catch (err) {
     console.warn("[reminderService] scheduleAdjustmentNotification failed:", err);
@@ -880,22 +929,24 @@ export const scheduleRefillNotifications = async (
     }
 
     if (notifications.length > 0) {
-      await LocalNotifications.schedule({ notifications });
-
-      // Mirror every refill notification to NativeAlarm so they fire after a
-      // reboot or when the Capacitor plugin is not responsive (Bug fix).
-      try {
-        await NativeAlarm.scheduleAlarms({
-          notifications: notifications.map((n) => ({
-            id: n.id as number,
-            title: n.title ?? "Refill Reminder",
-            body: n.body ?? "",
-            triggerAtMillis: (n.schedule?.at as Date)?.getTime() ?? Date.now() + 3000,
-            extra: JSON.stringify(n.extra ?? {}),
-          })),
-        });
-      } catch (alarmErr) {
-        console.warn("[reminderService] NativeAlarm refill fallback failed (non-fatal):", alarmErr);
+      const isAndroid = Capacitor.getPlatform() === "android";
+      if (isAndroid) {
+        try {
+          await NativeAlarm.scheduleAlarms({
+            notifications: notifications.map((n) => ({
+              id: n.id as number,
+              title: n.title ?? "Refill Reminder",
+              body: n.body ?? "",
+              triggerAtMillis: (n.schedule?.at as Date)?.getTime() ?? Date.now() + 3000,
+              extra: JSON.stringify(n.extra ?? {}),
+            })),
+          });
+        } catch (alarmErr) {
+          console.warn("[reminderService] NativeAlarm refill failed, fallback to LocalNotifications:", alarmErr);
+          await LocalNotifications.schedule({ notifications });
+        }
+      } else {
+        await LocalNotifications.schedule({ notifications });
       }
     }
   } catch (err) {
@@ -1155,22 +1206,28 @@ const executeScheduleReminders = async (
 
     if (notifications.length > 0) {
       console.log(`Scheduling ${notifications.length} notifications...`);
-      try {
-        await LocalNotifications.schedule({ notifications });
-      } catch (schedErr) {
-        console.warn("[reminderService] LocalNotifications.schedule failed:", schedErr);
-      }
-      // Mirror schedule to native AlarmManager for post-reboot reliability
-      if (alarmNotifications.length > 0) {
+      const isAndroid = Capacitor.getPlatform() === "android";
+      
+      if (isAndroid) {
+        // Primary path on Android: Native AlarmManager (immune to Doze, works across boot, headless tray actions)
         try {
           await NativeAlarm.scheduleAlarms({
             notifications: alarmNotifications,
           });
-        } catch (alarmErr: any) {
-          console.warn(
-            "[reminderService] NativeAlarm fallback failed (non-fatal):",
-            alarmErr
-          );
+        } catch (alarmErr) {
+          console.warn("[reminderService] NativeAlarm schedule failed, falling back to LocalNotifications:", alarmErr);
+          try {
+            await LocalNotifications.schedule({ notifications });
+          } catch (schedErr) {
+            console.warn("[reminderService] LocalNotifications fallback failed:", schedErr);
+          }
+        }
+      } else {
+        // Non-Android (iOS / Web): UNUserNotificationCenter calendar-based triggers
+        try {
+          await LocalNotifications.schedule({ notifications });
+        } catch (schedErr) {
+          console.warn("[reminderService] LocalNotifications.schedule failed:", schedErr);
         }
       }
     } else {
