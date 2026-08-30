@@ -203,7 +203,7 @@ export default function ScanPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-foreground flex flex-col items-center">
+    <div className="relative h-[100dvh] min-h-[100dvh] overflow-hidden bg-foreground flex flex-col items-center">
       {/* Top App Bar with X, Mode Selector, and Flashlight */}
       <div className="absolute top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top,2rem)] px-4 sm:px-6 pb-4 bg-gradient-to-b from-black/80 to-transparent">
         <div className="flex items-center justify-between gap-4 max-w-2xl mx-auto">

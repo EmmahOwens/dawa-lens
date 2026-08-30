@@ -530,7 +530,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
   };
 
   return (
-    <div className="px-4 pt-12 pb-24">
+    <div className="pb-8">
       {activeTab === "cabinet" && medicines.length >= 2 && loading && !animationComplete && (
         <PremiumLoader 
           onComplete={() => setAnimationComplete(true)} 
@@ -546,7 +546,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
       >
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
               {activeTab === "cabinet" ? t("safety.title") : "Safety Sandbox"}
             </h1>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1">

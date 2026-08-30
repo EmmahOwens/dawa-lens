@@ -124,19 +124,20 @@ export default function TravelCompanionPage() {
   };
 
   return (
-    <div className="pt-6 pb-28 w-full min-w-0 max-w-5xl mx-auto">
+    <div className="pb-8 w-full min-w-0 max-w-5xl mx-auto">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
-              <Plane size={28} />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
+              <Plane size={24} className="sm:hidden" />
+              <Plane size={28} className="hidden sm:block" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-foreground">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter text-foreground">
                 Travel Companion
               </h1>
-              <p className="text-[11px] md:text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-80 mt-0.5">
+              <p className="text-[10px] sm:text-[11px] md:text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-80 mt-0.5">
                 Global Health Intelligence
               </p>
             </div>

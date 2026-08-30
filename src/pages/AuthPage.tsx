@@ -217,7 +217,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="h-screen overflow-hidden flex bg-background">
+    <div className="h-[100dvh] min-h-[100dvh] overflow-hidden flex bg-background">
       <AnimatePresence>
         {showSuccess && (
           <SuccessState 
@@ -297,10 +297,10 @@ export default function AuthPage() {
       </div>
 
       {/* Right Panel: Auth Forms */}
-      <div className="flex-1 flex flex-col items-center overflow-y-auto p-8 py-12">
+      <div className="flex-1 flex flex-col items-center overflow-y-auto no-scrollbar px-4 py-8 sm:p-8 lg:py-12">
         <div className="w-full max-w-[400px] space-y-8">
-          <div className="lg:hidden text-center mb-8 transition-transform">
-            <img src={LOGO_BASE64} alt="Logo" className="w-16 h-16 mx-auto mb-4" />
+          <div className="lg:hidden text-center mb-6 transition-transform">
+            <img src={LOGO_BASE64} alt="Logo" className="w-14 h-14 mx-auto mb-3" />
           </div>
 
           <AnimatePresence mode="wait">
@@ -310,10 +310,10 @@ export default function AuthPage() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="glass-card p-8 shadow-2xl shadow-primary/5"
+                className="glass-card p-6 sm:p-8 shadow-2xl shadow-primary/5"
               >
-                <div className="mb-8">
-                  <h2 className="text-3xl font-black tracking-tight mb-2">
+                <div className="mb-6">
+                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">
                     {isLogin ? "Welcome Back" : "Start Journey"}
                   </h2>
                   <p className="text-muted-foreground text-sm">

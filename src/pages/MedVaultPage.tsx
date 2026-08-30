@@ -166,7 +166,7 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
         onDragEnd={(_e, info) => {
           if (info.offset.y > 80) onClose();
         }}
-        className="w-full max-w-lg bg-card rounded-t-3xl p-6 pb-10 shadow-2xl border border-border/50 max-h-[90vh] overflow-y-auto no-scrollbar cursor-grab active:cursor-grabbing touch-pan-x"
+        className="w-full max-w-lg bg-card rounded-t-3xl p-6 pb-10 shadow-2xl border border-border/50 max-h-[90dvh] overflow-y-auto no-scrollbar cursor-grab active:cursor-grabbing touch-pan-x"
         {...swipe}
       >
         <div className="w-10 h-1 rounded-full bg-muted/70 hover:bg-muted mx-auto mb-6 transition-colors" />
@@ -571,7 +571,7 @@ export default function MedVaultPage() {
   };
 
   return (
-    <div className="px-4 pt-8 pb-28">
+    <div className="pb-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

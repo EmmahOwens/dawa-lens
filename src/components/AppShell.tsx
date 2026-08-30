@@ -14,12 +14,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   if (isMobile) {
     return (
-      <div className="h-screen bg-background flex flex-col overscroll-none relative overflow-hidden">
+      <div className="h-[100dvh] min-h-[100dvh] bg-background flex flex-col overscroll-none relative overflow-hidden">
         <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-          {/* Transparent safe-top spacer for edge-to-edge */}
-          <div className="h-[env(safe-area-inset-top,20px)] bg-white/10 dark:bg-black/20 backdrop-blur-xl border-white/10 dark:border-white/5 border-t-0 border-x-0 border-b sticky top-0 z-40 w-full shrink-0" />
+          {/* Safe-top spacer for edge-to-edge screens with notch */}
+          <div className="h-[env(safe-area-inset-top,0px)] bg-white/10 dark:bg-black/20 backdrop-blur-xl border-white/10 dark:border-white/5 border-t-0 border-x-0 border-b sticky top-0 z-40 w-full shrink-0" />
           <PatientContextBanner />
-          <main className="px-3 safe-bottom pb-28">
+          <main className="px-4 sm:px-6 safe-bottom pb-28 pt-2 w-full max-w-2xl mx-auto">
             {children}
           </main>
         </div>
@@ -30,7 +30,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="h-screen flex w-full bg-background overflow-hidden">
+      <div className="h-[100dvh] min-h-[100dvh] flex w-full bg-background overflow-hidden">
         {/* Column 1: Sidebar */}
         <AppSidebar />
 

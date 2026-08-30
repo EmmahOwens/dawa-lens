@@ -59,7 +59,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="px-4 pt-12 pb-10 min-h-screen flex flex-col bg-background relative overflow-y-auto">
+    <div className="px-4 pt-8 pb-10 min-h-[100dvh] flex flex-col bg-background relative overflow-y-auto no-scrollbar">
       {/* Background ambient light */}
       <div className="absolute top-0 left-0 w-full h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -translate-y-1/2" />
       
@@ -77,18 +77,18 @@ export default function OnboardingPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
-          className="flex-1 flex flex-col max-w-md mx-auto w-full mt-10 relative z-10"
+          className="flex-1 flex flex-col max-w-md mx-auto w-full mt-4 sm:mt-8 relative z-10"
         >
-          <div className="bg-card/40 backdrop-blur-xl border border-border/60 shadow-2xl rounded-[2rem] p-8 pb-10">
-            <div className="text-center mb-8">
-              <div className="mb-6 relative">
+          <div className="bg-card/40 backdrop-blur-xl border border-border/60 shadow-2xl rounded-[2rem] p-6 sm:p-8 pb-8 sm:pb-10">
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="mb-4 sm:mb-6 relative">
                 <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-                <img src={LOGO_BASE64} alt="Dawa Lens Logo" className="w-24 h-24 mx-auto object-contain relative z-10 drop-shadow-lg" />
+                <img src={LOGO_BASE64} alt="Dawa Lens Logo" className="w-20 h-20 sm:w-24 sm:h-24 mx-auto object-contain relative z-10 drop-shadow-lg" />
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
                 Complete Your Profile
               </h1>
-              <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+              <p className="text-sm text-muted-foreground mt-2 sm:mt-3 leading-relaxed">
                 We just need a few details to personalize your experience and accurately check for drug interactions.
               </p>
             </div>

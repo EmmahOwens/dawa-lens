@@ -299,11 +299,11 @@ export default function WellnessPage() {
   const sparklineData = useEmotionSparkline(scopedWellnessLogs);
 
   return (
-    <div className="px-4 pt-12 pb-24">
+    <div className="pb-8">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             Wellness Hub
           </h1>
           <div className="w-11 h-11 rounded-xl bg-success/10 flex items-center justify-center text-success shadow-sm">

@@ -97,7 +97,7 @@ export default function WelcomePage() {
   const Icon = step.icon;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background relative overflow-hidden selection:bg-primary/20">
+    <div className="h-[100dvh] min-h-[100dvh] flex flex-col bg-background relative overflow-hidden selection:bg-primary/20">
       {/* Dynamic Background Glow Orbs */}
       <motion.div 
         className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] rounded-full blur-[100px] opacity-50 pointer-events-none"
@@ -111,14 +111,14 @@ export default function WelcomePage() {
       />
 
       {/* Header (Logo & Skip) */}
-      <div className="relative z-20 flex items-center justify-between p-6">
+      <div className="relative z-20 flex items-center justify-between p-4 sm:p-6 shrink-0">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="flex items-center gap-2"
         >
-          <img src={LOGO_BASE64} alt="Dawa Lens Logo" className="w-8 h-8 object-contain" />
-          <span className="font-black text-foreground tracking-tighter text-xl">Dawa Lens</span>
+          <img src={LOGO_BASE64} alt="Dawa Lens Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
+          <span className="font-black text-foreground tracking-tighter text-lg sm:text-xl">Dawa Lens</span>
         </motion.div>
         <Button 
           variant="ghost" 
@@ -142,27 +142,27 @@ export default function WelcomePage() {
           >
             {/* Frosted Glass Icon Container */}
             <motion.div 
-              className="relative w-40 h-40 mb-10 rounded-[2.5rem] bg-card/40 border border-border/50 backdrop-blur-2xl shadow-2xl flex items-center justify-center group"
+              className="relative w-28 h-28 sm:w-36 sm:h-36 mb-6 sm:mb-8 rounded-[2rem] sm:rounded-[2.5rem] bg-card/40 border border-border/50 backdrop-blur-2xl shadow-2xl flex items-center justify-center group"
               initial={{ y: 20 }}
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-[2.5rem] pointer-events-none" />
-              <Icon strokeWidth={1.5} className={`w-20 h-20 ${step.iconColor} drop-shadow-xl`} />
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-[2rem] sm:rounded-[2.5rem] pointer-events-none" />
+              <Icon strokeWidth={1.5} className={`w-14 h-14 sm:w-18 sm:h-18 ${step.iconColor} drop-shadow-xl`} />
               
               {/* Inner Glow corresponding to step color */}
               <motion.div 
-                className="absolute inset-0 rounded-[2.5rem] blur-xl -z-10 opacity-40"
+                className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] blur-xl -z-10 opacity-40"
                 animate={{ backgroundColor: step.color }}
               />
             </motion.div>
 
             {/* Typography */}
-            <div className="text-center space-y-4 w-full">
-              <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tighter leading-tight drop-shadow-sm">
+            <div className="text-center space-y-3 sm:space-y-4 w-full">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground tracking-tighter leading-tight drop-shadow-sm">
                 {step.title}
               </h1>
-              <p className="text-[15px] md:text-base text-muted-foreground/80 font-medium leading-relaxed px-2">
+              <p className="text-sm sm:text-[15px] md:text-base text-muted-foreground/80 font-medium leading-relaxed px-2">
                 {step.subtitle}
               </p>
             </div>
@@ -171,7 +171,7 @@ export default function WelcomePage() {
       </div>
 
       {/* Footer (Navigation & Progress) */}
-      <div className="relative z-20 px-6 pb-12 pt-8 w-full max-w-md mx-auto flex flex-col items-center gap-10">
+      <div className="relative z-20 px-6 pb-8 sm:pb-12 pt-4 sm:pt-6 w-full max-w-md mx-auto flex flex-col items-center gap-6 sm:gap-8 shrink-0">
         
         {/* Segmented Progress Bar */}
         <div className="w-full flex gap-1.5 h-1.5 px-4">

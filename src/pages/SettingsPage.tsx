@@ -136,7 +136,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 pt-4 pb-24">
+    <div className="pb-8">
       {/* Back Button */}
       <motion.button 
         initial={{ opacity: 0, x: -10 }}
@@ -156,7 +156,7 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6"
       >
-        <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-2">
           {t("settings.title")}
         </h1>
         <p className="text-sm text-muted-foreground">

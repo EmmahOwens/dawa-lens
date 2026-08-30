@@ -259,7 +259,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
           <p className="text-sm text-muted-foreground">No reminders for today!</p>
         </div>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4 pt-2 -mx-4 px-4 scrollbar-hide snap-x">
+        <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 pt-1 no-scrollbar snap-x touch-pan-x">
           {slots.map((entry, index) => {
             const { reminder: r, displayTime, scheduledISO, offsetMinutes, log, slotIndex, isActioned } = entry;
             const isTaken = log?.action === "taken";

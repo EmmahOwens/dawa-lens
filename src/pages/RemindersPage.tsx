@@ -226,7 +226,7 @@ export default function RemindersPage() {
   };
 
   return (
-    <div className="px-4 pt-8 pb-28">
+    <div className="pb-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -234,7 +234,7 @@ export default function RemindersPage() {
         className="flex items-center justify-between mb-4"
       >
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             {t("reminders.title", "Reminders")}
           </h1>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">
@@ -314,14 +314,12 @@ export default function RemindersPage() {
         )}
       </AnimatePresence>
 
-
-
       {/* Stats Row */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="grid grid-cols-4 gap-2 mb-6"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6"
       >
         <div className="p-3 rounded-2xl bg-primary/8 border border-primary/15 text-center">
           <p className="text-2xl font-bold text-primary">

@@ -356,7 +356,7 @@ export default function AddReminderPage() {
   };
 
   return (
-    <div className="px-4 pt-6 pb-24 max-w-2xl mx-auto">
+    <div className="pb-8 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigate(-1)}
@@ -401,7 +401,7 @@ export default function AddReminderPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl font-bold text-foreground tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
           {isEditing
             ? t("reminders.edit_title", "Edit Reminder")
             : t("reminders.add_title")}

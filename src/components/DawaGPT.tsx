@@ -532,7 +532,7 @@ export default function DawaGPT() {
               onDragEnd={(_e, info) => {
                 if (info.offset.y > 60 || info.velocity.y > 500) setIsOpen(false);
               }}
-              className="bg-[#f9f8f6] dark:bg-[#1a1a1a] w-full md:max-w-3xl h-[85vh] md:h-[90vh] rounded-t-3xl md:rounded-2xl shadow-2xl border border-border/40 flex flex-col pointer-events-auto overflow-hidden"
+              className="bg-[#f9f8f6] dark:bg-[#1a1a1a] w-full md:max-w-3xl h-[88dvh] md:h-[90dvh] max-h-[100dvh] rounded-t-3xl md:rounded-2xl shadow-2xl border border-border/40 flex flex-col pointer-events-auto overflow-hidden"
             >
               {/* Top Drag Header Zone — Only swipes/drags starting from here trigger window dismissal */}
               <div

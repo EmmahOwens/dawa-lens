@@ -516,7 +516,7 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="pt-6 pb-28 w-full min-w-0 print:p-0 print:m-0 print:bg-white print:text-black">
+    <div className="pb-8 w-full min-w-0 print:p-0 print:m-0 print:bg-white print:text-black">
       {/* -------------------- WEB VIEW -------------------- */}
       <div className="print:hidden">
         {/* Header */}
@@ -903,7 +903,7 @@ export default function ReportPage() {
 
       {/* -------------------- PREVIEW DIALOG -------------------- */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 overflow-hidden flex flex-col gap-0 rounded-2xl border-none shadow-2xl">
+        <DialogContent className="max-w-[96vw] sm:max-w-4xl w-full h-[90dvh] max-h-[92dvh] p-0 overflow-hidden flex flex-col gap-0 rounded-2xl border-none shadow-2xl">
           <DialogHeader className="p-3 sm:p-4 border-b bg-background flex-row items-center justify-between space-y-0">
             <DialogTitle className="text-[10px] sm:text-sm font-bold uppercase tracking-widest opacity-70 truncate mr-2">
               Report Preview

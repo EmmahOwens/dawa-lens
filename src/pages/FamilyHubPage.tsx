@@ -293,7 +293,7 @@ export default function FamilyHubPage() {
   };
 
   return (
-    <div className="px-4 pt-12 pb-24 min-h-screen bg-background">
+    <div className="pb-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -302,7 +302,7 @@ export default function FamilyHubPage() {
       >
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-foreground">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
               {isProfessionalMode ? "Client Hub" : "Family Hub"}
             </h1>
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">
@@ -725,7 +725,7 @@ export default function FamilyHubPage() {
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-[3rem] p-8 h-[85vh] border-none shadow-2xl overflow-y-auto"
+          className="rounded-t-[3rem] p-6 sm:p-8 max-h-[90dvh] border-none shadow-2xl overflow-y-auto no-scrollbar"
           {...sheetSwipe}
         >
           <div className="w-12 h-1.5 rounded-full bg-muted/70 hover:bg-muted mx-auto -mt-2 mb-8 transition-colors" />

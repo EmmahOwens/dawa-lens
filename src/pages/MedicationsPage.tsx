@@ -187,7 +187,7 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="w-full max-w-xl bg-card rounded-t-[2.5rem] shadow-2xl border border-border/50 max-h-[92vh] flex flex-col"
+        className="w-full max-w-xl bg-card rounded-t-[2.5rem] shadow-2xl border border-border/50 max-h-[92dvh] flex flex-col"
       >
         {/* Drag handle — swipe this area to dismiss */}
         <motion.div
@@ -610,7 +610,7 @@ export default function MedicationsPage() {
   };
 
   return (
-    <div className="px-4 pt-8 pb-28">
+    <div className="pb-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -625,7 +625,7 @@ export default function MedicationsPage() {
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-foreground leading-none">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground leading-none">
               Medications
             </h1>
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">

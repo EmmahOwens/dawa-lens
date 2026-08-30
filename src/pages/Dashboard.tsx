@@ -453,12 +453,12 @@ export default function Dashboard() {
           className="grid grid-cols-2 sm:grid-cols-4 gap-3"
         >
 
-          {/* ── HERO TILE: Quick Scan (col-span-2, tall) ── */}
+          {/* ── HERO TILE: Quick Scan (col-span-2) ── */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.97 }}
             onClick={() => navigate(quickActions[0].to)}
-            className="col-span-2 row-span-2 rounded-[2rem] p-5 h-[200px] sm:h-auto flex flex-col justify-between items-start text-left relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-xl shadow-indigo-500/30 hover:scale-[1.01] transition-all duration-300"
+            className="col-span-2 sm:col-span-2 rounded-[2rem] p-5 min-h-[170px] sm:min-h-[200px] flex flex-col justify-between items-start text-left relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 text-white shadow-xl shadow-indigo-500/30 hover:scale-[1.01] transition-all duration-300"
           >
             {/* Animated scanning line */}
             <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300 to-transparent shadow-[0_0_14px_#22d3ee] animate-scanner-line pointer-events-none" />
@@ -489,7 +489,7 @@ export default function Dashboard() {
             {/* Label */}
             <div className="relative z-10">
               <p className="text-[10px] font-black uppercase tracking-widest text-blue-200 mb-0.5">AI Recognition</p>
-              <h3 className="text-2xl font-black leading-tight tracking-tight">Quick Scan</h3>
+              <h3 className="text-xl sm:text-2xl font-black leading-tight tracking-tight">Quick Scan</h3>
               <p className="text-xs text-white/60 mt-1 font-medium">Identify any medicine instantly</p>
             </div>
           </motion.button>
@@ -499,7 +499,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate("/history")}
-            className="col-span-1 rounded-[1.5rem] p-4 h-[95px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-cyan-500/8 to-sky-600/12 dark:from-cyan-950/30 dark:to-sky-900/25 border-cyan-500/20 hover:border-cyan-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-1 rounded-[1.5rem] p-4 min-h-[105px] flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-cyan-500/8 to-sky-600/12 dark:from-cyan-950/30 dark:to-sky-900/25 border-cyan-500/20 hover:border-cyan-400/40 hover-wiggle transition-all duration-200"
           >
             {/* Ambient circle glow */}
             <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-cyan-400/15 rounded-full blur-2xl pointer-events-none" />
@@ -509,7 +509,7 @@ export default function Dashboard() {
                 <History size={15} />
               </div>
               {/* Mini arc */}
-              <svg width="36" height="36" viewBox="0 0 36 36" className="opacity-80">
+              <svg width="34" height="34" viewBox="0 0 36 36" className="opacity-80">
                 <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-cyan-500/15" />
                 <circle
                   cx="18" cy="18" r="14" fill="none"
@@ -523,8 +523,8 @@ export default function Dashboard() {
               </svg>
             </div>
             <div>
-              <p className="text-[18px] font-black leading-none text-foreground">{adherencePercent}<span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 ml-0.5">%</span></p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-400 mt-0.5">Adherence</p>
+              <p className="text-[17px] font-black leading-none text-foreground">{adherencePercent}<span className="text-[11px] font-bold text-cyan-600 dark:text-cyan-400 ml-0.5">%</span></p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-400 mt-1">Adherence</p>
             </div>
           </motion.button>
 
@@ -533,7 +533,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate("/medvault")}
-            className="col-span-1 rounded-[1.5rem] p-4 h-[95px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-teal-500/8 to-emerald-600/12 dark:from-teal-950/30 dark:to-emerald-900/25 border-teal-500/20 hover:border-teal-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-1 rounded-[1.5rem] p-4 min-h-[105px] flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-teal-500/8 to-emerald-600/12 dark:from-teal-950/30 dark:to-emerald-900/25 border-teal-500/20 hover:border-teal-400/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-teal-400/15 rounded-full blur-2xl pointer-events-none" />
 
@@ -542,19 +542,19 @@ export default function Dashboard() {
                 <Package2 size={15} />
               </div>
               {/* Mini bar stack */}
-              <div className="flex items-end gap-[3px] h-6">
+              <div className="flex items-end gap-[3px] h-5">
                 {[0.4, 0.7, 0.55, 0.9, 0.65].map((h, i) => (
                   <div
                     key={i}
-                    className="w-[5px] rounded-sm bg-teal-500 dark:bg-teal-400"
+                    className="w-[4px] rounded-sm bg-teal-500 dark:bg-teal-400"
                     style={{ height: `${h * 100}%`, opacity: 0.4 + h * 0.6 }}
                   />
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-[18px] font-black leading-none text-foreground">{formatCompactNumber(totalPillsCount)}<span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 ml-0.5">pills</span></p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400 mt-0.5">Med Vault</p>
+              <p className="text-[17px] font-black leading-none text-foreground">{formatCompactNumber(totalPillsCount)}<span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 ml-0.5">pills</span></p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400 mt-1">Med Vault</p>
             </div>
           </motion.button>
 
@@ -563,7 +563,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[1].to)}
-            className="col-span-2 sm:col-span-2 rounded-[1.75rem] p-4 h-[80px] sm:h-auto flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-emerald-500/8 via-teal-500/10 to-emerald-500/8 dark:from-emerald-950/25 dark:to-teal-900/25 border-emerald-500/20 hover:border-emerald-500/40 hover-wiggle transition-all duration-200"
+            className="col-span-2 sm:col-span-2 rounded-[1.75rem] p-4 min-h-[80px] flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-emerald-500/8 via-teal-500/10 to-emerald-500/8 dark:from-emerald-950/25 dark:to-teal-900/25 border-emerald-500/20 hover:border-emerald-500/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
             <div className="p-2.5 bg-emerald-500/15 border border-emerald-500/20 rounded-xl text-emerald-600 dark:text-emerald-400 wiggle-icon shrink-0">
@@ -588,56 +588,41 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* ── TALL METRIC TILE: Today's Doses (col-span-1, row-span-2) ── */}
+          {/* ── METRIC TILE: Today's Doses (col-span-1) ── */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate("/reminders")}
-            className="col-span-1 row-span-2 rounded-[1.75rem] p-4 h-full flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-violet-500/8 to-fuchsia-600/12 dark:from-violet-950/30 dark:to-fuchsia-900/25 border-violet-500/20 hover:border-violet-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-1 rounded-[1.5rem] p-4 min-h-[115px] flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-violet-500/8 to-fuchsia-600/12 dark:from-violet-950/30 dark:to-fuchsia-900/25 border-violet-500/20 hover:border-violet-400/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -top-8 -right-8 w-28 h-28 bg-violet-500/15 rounded-full blur-2xl pointer-events-none" />
 
-            <div className="p-2 bg-violet-500/15 border border-violet-500/20 rounded-xl text-violet-600 dark:text-violet-400 wiggle-icon self-start">
-              <Bell size={15} />
-            </div>
-
-            {/* Dose pill dots */}
-            <div className="flex flex-wrap gap-1.5 my-2">
-              {Array.from({ length: Math.min(expectedDosesToday, 8) }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-2.5 h-2.5 rounded-full border ${
-                    i < takenToday
-                      ? "bg-violet-500 border-violet-400"
-                      : "bg-violet-500/15 border-violet-500/30"
-                  }`}
-                />
-              ))}
-              {expectedDosesToday === 0 && (
-                <p className="text-[9px] text-violet-500/60 font-bold uppercase tracking-wider">No doses</p>
-              )}
+            <div className="flex items-center justify-between w-full">
+              <div className="p-2 bg-violet-500/15 border border-violet-500/20 rounded-xl text-violet-600 dark:text-violet-400 wiggle-icon">
+                <Bell size={15} />
+              </div>
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-400">
+                {takenToday}/{expectedDosesToday}
+              </span>
             </div>
 
             <div>
-              <p className="text-[22px] font-black leading-none text-foreground">
-                {takenToday}<span className="text-sm font-bold text-violet-500/70 dark:text-violet-400/70">/{expectedDosesToday}</span>
-              </p>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-400 mt-1">Reminders</p>
-              <p className="text-[8px] text-violet-600/70 dark:text-violet-400/60 font-semibold mt-0.5">
-                {expectedDosesToday - takenToday <= 0 ? "All done ✓" : `${expectedDosesToday - takenToday} left`}
+              <p className="text-sm font-black text-foreground leading-tight">Reminders</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-400 mt-0.5">
+                {expectedDosesToday - takenToday <= 0 ? "All done ✓" : `${expectedDosesToday - takenToday} left today`}
               </p>
             </div>
           </motion.button>
 
-          {/* ── SMALL TILE: Wellness ── */}
+          {/* ── SMALL TILE: Wellness (col-span-1) ── */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate(quickActions[2].to)}
-            className="col-span-1 rounded-[1.5rem] p-4 h-[95px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-rose-500/8 to-pink-600/12 dark:from-rose-950/30 dark:to-pink-900/25 border-rose-500/20 hover:border-rose-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-1 rounded-[1.5rem] p-4 min-h-[115px] flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-rose-500/8 to-pink-600/12 dark:from-rose-950/30 dark:to-pink-900/25 border-rose-500/20 hover:border-rose-400/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -bottom-5 -right-5 w-20 h-20 bg-rose-500/15 rounded-full blur-2xl pointer-events-none" />
-            <div className="p-2 bg-rose-500/15 border border-rose-500/20 rounded-xl text-rose-500 animate-pulse-glow wiggle-icon">
+            <div className="p-2 bg-rose-500/15 border border-rose-500/20 rounded-xl text-rose-500 animate-pulse-glow wiggle-icon self-start">
               <Heart size={15} />
             </div>
             <div>
@@ -646,12 +631,12 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* ── METRIC TILE: Medications Saved (small) ── */}
+          {/* ── METRIC TILE: Medications Saved (col-span-1) ── */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate("/medications")}
-            className="col-span-1 rounded-[1.5rem] p-4 h-[160px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-indigo-500/8 to-purple-600/12 dark:from-indigo-950/30 dark:to-purple-900/25 border-indigo-500/20 hover:border-indigo-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-1 rounded-[1.5rem] p-4 min-h-[105px] flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-indigo-500/8 to-purple-600/12 dark:from-indigo-950/30 dark:to-purple-900/25 border-indigo-500/20 hover:border-indigo-400/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -bottom-5 -right-5 w-20 h-20 bg-indigo-500/15 rounded-full blur-2xl pointer-events-none" />
             <div className="flex items-center justify-between">
@@ -666,15 +651,15 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* ── SMALL TILE: Travel ── */}
+          {/* ── SMALL TILE: Travel (col-span-1) ── */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate(quickActions[3].to)}
-            className="col-span-2 sm:col-span-1 rounded-[1.5rem] p-4 h-[95px] sm:h-auto flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-sky-500/8 to-blue-600/12 dark:from-sky-950/30 dark:to-blue-900/25 border-sky-500/20 hover:border-sky-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-1 rounded-[1.5rem] p-4 min-h-[105px] flex flex-col justify-between relative overflow-hidden text-left border bg-gradient-to-br from-sky-500/8 to-blue-600/12 dark:from-sky-950/30 dark:to-blue-900/25 border-sky-500/20 hover:border-sky-400/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -bottom-5 -right-5 w-20 h-20 bg-sky-500/15 rounded-full blur-2xl pointer-events-none" />
-            <div className="p-2 bg-sky-500/15 border border-sky-500/20 rounded-xl text-sky-500 animate-float-plane wiggle-icon">
+            <div className="p-2 bg-sky-500/15 border border-sky-500/20 rounded-xl text-sky-500 animate-float-plane wiggle-icon self-start">
               <Plane size={15} />
             </div>
             <div>
@@ -683,12 +668,12 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* ── WIDE TILE: Safety Check (col-span-2, sm:col-span-3) ── */}
+          {/* ── WIDE TILE: Safety Check (col-span-2) ── */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[4].to)}
-            className="col-span-2 sm:col-span-3 rounded-[1.75rem] p-4 h-[80px] sm:h-auto flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-amber-500/8 via-orange-500/10 to-amber-500/8 dark:from-amber-950/25 dark:to-orange-950/20 border-amber-500/20 hover:border-amber-500/40 hover-wiggle transition-all duration-200"
+            className="col-span-2 sm:col-span-2 rounded-[1.75rem] p-4 min-h-[80px] flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-amber-500/8 via-orange-500/10 to-amber-500/8 dark:from-amber-950/25 dark:to-orange-950/20 border-amber-500/20 hover:border-amber-500/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
             <div className="p-2.5 bg-amber-500/15 border border-amber-500/20 rounded-xl text-amber-700 dark:text-amber-400 wiggle-icon shrink-0">
@@ -701,12 +686,12 @@ export default function Dashboard() {
             <span className="text-[9px] font-black px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/25 text-amber-800 dark:text-amber-300 uppercase tracking-widest shrink-0">Check</span>
           </motion.button>
 
-          {/* ── WIDE METRIC TILE: Reports with sparkline (col-span-2, sm:col-span-4) ── */}
+          {/* ── WIDE METRIC TILE: Reports (col-span-2, sm:col-span-4) ── */}
           <motion.button
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[7].to)}
-            className="col-span-2 sm:col-span-4 rounded-[1.75rem] p-4 h-[95px] sm:h-auto flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-indigo-500/8 via-purple-500/8 to-indigo-500/8 dark:from-indigo-950/25 dark:to-purple-900/20 border-indigo-500/20 hover:border-indigo-400/40 hover-wiggle transition-all duration-200"
+            className="col-span-2 sm:col-span-4 rounded-[1.75rem] p-4 min-h-[80px] flex items-center gap-4 relative overflow-hidden border bg-gradient-to-br from-indigo-500/8 via-purple-500/8 to-indigo-500/8 dark:from-indigo-950/25 dark:to-purple-900/20 border-indigo-500/20 hover:border-indigo-400/40 hover-wiggle transition-all duration-200"
           >
             <div className="absolute -left-6 -bottom-6 w-28 h-28 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="p-2.5 bg-indigo-500/15 border border-indigo-500/20 rounded-xl text-indigo-600 dark:text-indigo-400 wiggle-icon shrink-0">
