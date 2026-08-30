@@ -14,6 +14,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "scrape:nda": "python3 scripts/scrapeNdaPharmacies.py",
     "deploy:web": "vite build && firebase deploy --only hosting",
     "cap:sync": "vite build && npx cap sync"
   },

@@ -199,6 +199,7 @@ export const PlusCircle = iconly(IPlus);
 export const CopyPlus = iconly(IPaperPlus);
 export const X = iconly(ICloseSquare);
 export const XCircle = iconly(ICloseSquare);
+export const CloseSquare = iconly(ICloseSquare);
 export const Check = iconly(ITickSquare);
 export const CheckCircle = iconly(ITickSquare);
 export const CheckCircle2 = iconly(ITickSquare);
@@ -208,6 +209,7 @@ export const Trophy = iconly(IStar); // closest Iconly match
 export const Plane = iconly(ISend);
 export const ExternalLink = iconly(IDiscovery);
 export const MapPin = iconly(ILocation);
+export const Location = iconly(ILocation);
 export const LogOut = iconly(ILogout);
 export const Save = iconly(IPaperUpload);
 export const Share2 = iconly(IPaperUpload);
@@ -220,6 +222,7 @@ export const TrendingDown = iconly(IGraph);
 export const Info = iconly(IInfoCircle);
 export const AlertCircle = iconly(IDanger);
 export const AlertTriangle = iconly(IDanger);
+export const Filter = iconly(IFilter);
 export const Package = iconly(IBuy);
 export const Package2 = iconly(IBuy);
 export const Flag = iconly(IBookmark);
@@ -630,6 +633,53 @@ export const ToggleRight = svg(
     <circle cx="16" cy="12" r="2" fill="currentColor" />
   </>
 );
+
+/** Compass / navigation direction */
+export const Compass = svg(
+  <>
+    <circle cx="12" cy="12" r="10" />
+    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" fillOpacity="0.2" />
+  </>
+);
+
+/** Car / vehicle */
+export const Car = svg(
+  <>
+    <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C2.1 11.2 2 11.8 2 12.4V16c0 .6.4 1 1 1h2" />
+    <circle cx="7" cy="17" r="2" />
+    <path d="M9 17h6" />
+    <circle cx="17" cy="17" r="2" />
+  </>
+);
+
+/** Crosshair / target locator */
+export const Crosshair = svg(
+  <>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="22" y1="12" x2="18" y2="12" />
+    <line x1="6" y1="12" x2="2" y2="12" />
+    <line x1="12" y1="6" x2="12" y2="2" />
+    <line x1="12" y1="22" x2="12" y2="18" />
+  </>
+);
+
+/** Building */
+export const Building = svg(
+  <>
+    <rect width="16" height="20" x="4" y="2" rx="2" ry="2" />
+    <path d="M9 22v-4h6v4" />
+    <path d="M8 6h.01" />
+    <path d="M16 6h.01" />
+    <path d="M12 6h.01" />
+    <path d="M12 10h.01" />
+    <path d="M12 14h.01" />
+    <path d="M16 10h.01" />
+    <path d="M16 14h.01" />
+    <path d="M8 10h.01" />
+    <path d="M8 14h.01" />
+  </>
+);
+export const Building2 = Building;
 
 // ─── Re-exports / extras ─────────────────────────────────────────────────────
 

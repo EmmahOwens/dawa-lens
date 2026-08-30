@@ -16,10 +16,13 @@ import {
   Tablets,
   ChevronRight,
   Info,
+  Compass,
+  Location,
 } from "@/lib/icons";
 import { useApp, Medicine } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { calculateRefillStatus } from "@/services/refillService";
+import { PharmacyFinderModal } from "@/components/pharmacy/PharmacyFinderModal";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -338,9 +341,10 @@ interface StockCardProps {
   isWarning: boolean;
   isOutOfStock: boolean;
   onRefill: () => void;
+  onFindPharmacy: () => void;
 }
 
-function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, isLow, isWarning, isOutOfStock, onRefill }: StockCardProps) {
+function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, isLow, isWarning, isOutOfStock, onRefill, onFindPharmacy }: StockCardProps) {
   const colors = colorMap[medicine.color || "blue"] || colorMap.blue;
   const IconComp = iconMap[medicine.icon || "pill"] || Pill;
   const total = medicine.totalQuantity || medicine.currentQuantity || 1;
@@ -444,7 +448,7 @@ function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, is
       </div>
 
       {/* Card Actions */}
-      <div className="mt-4 flex items-center justify-between pt-2 border-t border-border/30">
+      <div className="mt-4 flex items-center justify-between pt-2 border-t border-border/30 gap-2 flex-wrap">
         <a
           href={`/medicine/${encodeURIComponent(medicine.name)}`}
           className="inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors"
@@ -452,17 +456,28 @@ function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, is
           <Info className="size-3 text-primary" /> FDA Safety & Storage
         </a>
 
-        <button
-          onClick={onRefill}
-          className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all active:scale-95 ${
-            isLow || isOutOfStock
-              ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20"
-              : "bg-muted/50 text-muted-foreground border-border/50 hover:bg-muted"
-          }`}
-        >
-          <RefreshCw className="size-3" />
-          Refill
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onFindPharmacy}
+            title="Find nearest NDA-licensed pharmacies to refill"
+            className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 transition-all active:scale-95 shadow-sm"
+          >
+            <Compass className="size-3 text-teal-600 dark:text-teal-400" />
+            <span>Find NDA Pharmacy</span>
+          </button>
+
+          <button
+            onClick={onRefill}
+            className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all active:scale-95 ${
+              isLow || isOutOfStock
+                ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20"
+                : "bg-muted/50 text-muted-foreground border-border/50 hover:bg-muted"
+            }`}
+          >
+            <RefreshCw className="size-3" />
+            Refill
+          </button>
+        </div>
       </div>
     </motion.div>
   );
@@ -512,6 +527,7 @@ export default function MedVaultPage() {
   const { toast } = useToast();
 
   const [refillTarget, setRefillTarget] = useState<Medicine | null>(null);
+  const [pharmacyFinderMedicine, setPharmacyFinderMedicine] = useState<Medicine | null | undefined>(undefined);
 
   // Compute refill status for all medicines
   const medicineStatuses = useMemo(() => {
@@ -594,13 +610,22 @@ export default function MedVaultPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => navigate("/medications")}
-          className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary px-3 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
-        >
-          <Pill className="size-3.5" />
-          <span>Medications</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPharmacyFinderMedicine(null)}
+            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 px-3 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
+          >
+            <Compass className="size-3.5 text-teal-600 dark:text-teal-400" />
+            <span>NDA Pharmacies</span>
+          </button>
+          <button
+            onClick={() => navigate("/medications")}
+            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary px-3 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
+          >
+            <Pill className="size-3.5" />
+            <span>Medications</span>
+          </button>
+        </div>
       </motion.div>
 
       {/* Hero Stats */}
@@ -648,11 +673,21 @@ export default function MedVaultPage() {
           </div>
 
           {(criticalCount > 0 || warningCount > 0) && (
-            <div className="mt-4 flex items-center gap-2 text-[11px] font-bold bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/10 w-fit">
-              <AlertTriangle size={12} className={criticalCount > 0 ? "text-red-300" : "text-amber-300"} />
-              {criticalCount > 0
-                ? `${criticalCount} medicine${criticalCount > 1 ? "s" : ""} critically low — refill now!`
-                : `${warningCount} medicine${warningCount > 1 ? "s" : ""} running low`}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-[11px] font-bold bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/10 w-fit">
+                <AlertTriangle size={12} className={criticalCount > 0 ? "text-red-300" : "text-amber-300"} />
+                {criticalCount > 0
+                  ? `${criticalCount} medicine${criticalCount > 1 ? "s" : ""} critically low — refill now!`
+                  : `${warningCount} medicine${warningCount > 1 ? "s" : ""} running low`}
+              </div>
+
+              <button
+                onClick={() => setPharmacyFinderMedicine(null)}
+                className="flex items-center gap-1.5 text-[11px] font-black bg-white text-teal-900 hover:bg-white/90 px-3.5 py-2 rounded-xl shadow-lg transition-all active:scale-95"
+              >
+                <Compass className="size-3.5 text-teal-600" />
+                <span>Top 5 NDA Pharmacies</span>
+              </button>
             </div>
           )}
         </div>
@@ -735,6 +770,7 @@ export default function MedVaultPage() {
                           isWarning={isWarn}
                           isOutOfStock={isOut}
                           onRefill={() => setRefillTarget(medicine)}
+                          onFindPharmacy={() => setPharmacyFinderMedicine(medicine)}
                         />
                       );
                     })}
@@ -790,6 +826,20 @@ export default function MedVaultPage() {
             medicine={refillTarget}
             onClose={() => setRefillTarget(null)}
             onSave={handleRefillSave}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Nearby NDA Licensed Pharmacy Finder Modal */}
+      <AnimatePresence>
+        {pharmacyFinderMedicine !== undefined && (
+          <PharmacyFinderModal
+            medicine={pharmacyFinderMedicine}
+            onClose={() => setPharmacyFinderMedicine(undefined)}
+            onRefillLogged={(med) => {
+              setPharmacyFinderMedicine(undefined);
+              setRefillTarget(med);
+            }}
           />
         )}
       </AnimatePresence>

@@ -59,8 +59,8 @@ export function ScanWidget() {
            <ShieldCheck size={20} className="text-success" />
         </div>
         <div>
-           <p className="text-[10px] text-success/90 font-black uppercase tracking-[0.1em]">ANDA Verified</p>
-           <p className="text-[9px] text-success/60 font-bold uppercase tracking-widest mt-0.5">Secure Scan Protocol</p>
+           <p className="text-[10px] text-success/90 font-black uppercase tracking-[0.1em]">NDA Verified</p>
+           <p className="text-[9px] text-success/60 font-bold uppercase tracking-widest mt-0.5">National Drug Authority Standard</p>
         </div>
       </motion.div>
     </div>

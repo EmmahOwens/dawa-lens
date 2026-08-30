@@ -188,7 +188,7 @@ describe("Offline & Online Resilience Tests", () => {
       await localPersistence.patients.remove(patient.id);
 
       const wellness = await localPersistence.wellnessLogs.create({
-        type: "mood",
+        type: "symptom",
         data: { mood: "happy" },
       });
       expect(wellness.id).toBeDefined();

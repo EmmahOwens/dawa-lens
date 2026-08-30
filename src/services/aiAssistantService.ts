@@ -19,7 +19,7 @@ export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   text: string;
-  source?: "ANDA" | "WHO" | "openFDA" | "System" | "Gemini" | "MoH";
+  source?: "NDA" | "ANDA" | "WHO" | "openFDA" | "System" | "Gemini" | "MoH";
   patterns?: string[];
   score?: number;
   suggestions?: string[];
@@ -240,8 +240,8 @@ export const generateDawaGPTResponse = async (
       return {
         id: Date.now().toString(),
         role: "assistant",
-        text: `Based on your health profile and ANDA guidelines: ${safetyChecks[0].warning}`,
-        source: "ANDA"
+        text: `Based on your health profile and National Drug Authority (NDA) guidelines: ${safetyChecks[0].warning}`,
+        source: "NDA"
       };
     }
   }

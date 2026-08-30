@@ -1,8 +1,7 @@
 import { DrugInformation } from '../../types/api';
 
 /**
- * ANDA (African National Drug Authorities) Mock Database
- * Focused on East Africa (Uganda/Kenya/Tanzania)
+ * NDA (National Drug Authority - Uganda) & Regional Essential Medicines Database
  */
 const AFRICAN_DRUG_DATABASE: DrugInformation[] = [
   {
@@ -16,7 +15,7 @@ const AFRICAN_DRUG_DATABASE: DrugInformation[] = [
     warnings: "Take with food (preferably fatty meal) to increase absorption. Not for prophylaxis.",
     sideEffects: "Dizziness, fatigue, palpitations, abdominal pain.",
     instructions: "Standard 3-day course. Take first dose, then second after 8 hours, then twice daily for next 2 days.",
-    source: "ANDA"
+    source: "NDA"
   },
   {
     id: "UG-NDA-002",
@@ -29,7 +28,7 @@ const AFRICAN_DRUG_DATABASE: DrugInformation[] = [
     warnings: "Do not exceed 4g (8 tablets) in 24 hours. Avoid alcohol.",
     sideEffects: "Rarely, skin rash or allergic reactions.",
     instructions: "1-2 tablets every 4-6 hours as needed.",
-    source: "ANDA"
+    source: "NDA"
   },
   {
     id: "UG-NDA-003",
@@ -42,7 +41,7 @@ const AFRICAN_DRUG_DATABASE: DrugInformation[] = [
     warnings: "Complete the full course even if feeling better. Avoid if allergic to penicillin.",
     sideEffects: "Diarrhea, nausea, skin rash.",
     instructions: "One capsule three times daily for 5-7 days.",
-    source: "ANDA"
+    source: "NDA"
   }
 ];
 
