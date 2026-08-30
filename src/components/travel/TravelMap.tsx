@@ -147,7 +147,7 @@ const FALLBACK_STYLE = 'https://tiles.openfreemap.org/styles/bright';
 function buildArcCoordinates(
   from: [number, number],
   to: [number, number],
-  steps = 80
+  steps = 100
 ): [number, number][] {
   const coords: [number, number][] = [];
   for (let i = 0; i <= steps; i++) {
@@ -155,11 +155,145 @@ function buildArcCoordinates(
     // Simple spherical linear interpolation (good enough for a map arc)
     const lng = from[0] + (to[0] - from[0]) * t;
     const lat = from[1] + (to[1] - from[1]) * t;
-    // Add a vertical bow: raise mid-point latitude by ~10° to look like a flight arc
+    // Add a vertical bow: raise mid-point latitude by ~12° to look like a flight arc
     const arc = Math.sin(Math.PI * t) * 12;
     coords.push([lng, lat + arc]);
   }
   return coords;
+}
+
+/** Interpolate exact coordinate along the precomputed arc at normalized progress t [0, 1] */
+function interpolateArc(arcCoords: [number, number][], t: number): [number, number] {
+  if (!arcCoords || arcCoords.length === 0) return [0, 0];
+  const clampedT = Math.max(0, Math.min(1, t));
+  const total = arcCoords.length - 1;
+  const rawIdx = clampedT * total;
+  const idx = Math.min(Math.floor(rawIdx), total - 1);
+  const subT = rawIdx - idx;
+  const p1 = arcCoords[idx];
+  const p2 = arcCoords[idx + 1];
+  return [
+    p1[0] + (p2[0] - p1[0]) * subT,
+    p1[1] + (p2[1] - p1[1]) * subT,
+  ];
+}
+
+/** Calculate current position and tangent bearing (degrees) along the flight arc */
+function getArcPointAndBearing(
+  map: Map,
+  arcCoords: [number, number][],
+  t: number
+): { coords: [number, number]; bearingDeg: number } {
+  const coords = interpolateArc(arcCoords, t);
+
+  // Central-difference sampling along trajectory for instantaneous tangent
+  const sample1T = Math.max(0, Math.min(t - 0.01, 0.98));
+  const sample2T = sample1T + 0.02;
+  const p1Coords = interpolateArc(arcCoords, sample1T);
+  const p2Coords = interpolateArc(arcCoords, sample2T);
+
+  let bearingDeg = 0;
+  try {
+    const pt1 = map.project(p1Coords);
+    const pt2 = map.project(p2Coords);
+    const dx = pt2.x - pt1.x;
+    const dy = pt2.y - pt1.y;
+    if (Math.abs(dx) > 0.0001 || Math.abs(dy) > 0.0001) {
+      bearingDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+    }
+  } catch {
+    bearingDeg = 0;
+  }
+
+  return { coords, bearingDeg };
+}
+
+/** Create DOM elements for the mini plane marker */
+function createPlaneElement(isBoosting = false): {
+  container: HTMLDivElement;
+  inner: HTMLDivElement;
+  contrail: HTMLDivElement;
+} {
+  const container = document.createElement('div');
+  container.className = 'travel-mini-plane-marker';
+  container.style.cssText = `
+    position: relative;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    will-change: transform;
+    z-index: 10;
+  `;
+
+  const inner = document.createElement('div');
+  inner.className = 'travel-mini-plane-inner';
+  inner.style.cssText = `
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: center center;
+    will-change: transform, opacity;
+  `;
+
+  // Glowing jet contrail behind the aircraft tail
+  const contrail = document.createElement('div');
+  contrail.className = 'travel-plane-contrail';
+  contrail.style.cssText = `
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: ${isBoosting ? '24px' : '16px'};
+    height: ${isBoosting ? '5px' : '3.5px'};
+    background: ${
+      isBoosting
+        ? 'linear-gradient(90deg, rgba(0,122,255,0) 0%, rgba(0,210,255,0.85) 50%, rgba(255,255,255,1) 100%)'
+        : 'linear-gradient(90deg, rgba(0,122,255,0) 0%, rgba(0,198,255,0.7) 60%, rgba(255,255,255,0.95) 100%)'
+    };
+    border-radius: 9999px;
+    filter: blur(0.8px);
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 1;
+    animation: travel-contrail-flicker 0.4s ease-in-out infinite alternate;
+  `;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '24');
+  svg.setAttribute('height', '24');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.style.cssText = `
+    filter: drop-shadow(0 2px 6px ${
+      isBoosting ? 'rgba(0, 198, 255, 0.8)' : 'rgba(0, 122, 255, 0.6)'
+    }) drop-shadow(0 1px 3px rgba(0,0,0,0.35));
+    position: relative;
+    z-index: 2;
+    overflow: visible;
+  `;
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute(
+    'd',
+    'M22 12C22 12 18.5 10.2 14 10.5L9.5 3.5C9.2 3.1 8.6 3.1 8.4 3.5L7.2 5.5C7.0 5.8 7.1 6.3 7.5 6.6L10.8 11.2C9 11.4 6 11.6 4.5 10.8L3.2 8.5C3.0 8.2 2.6 8.1 2.3 8.3L1.5 8.8C1.2 9.0 1.1 9.4 1.3 9.7L2.4 12L1.3 14.3C1.1 14.6 1.2 15.0 1.5 15.2L2.3 15.7C2.6 15.9 3.0 15.8 3.2 15.5L4.5 13.2C6 12.4 9 12.6 10.8 12.8L7.5 17.4C7.1 17.7 7.0 18.2 7.2 18.5L8.4 20.5C8.6 20.9 9.2 20.9 9.5 20.5L14 13.5C18.5 13.8 22 12 22 12Z'
+  );
+  path.setAttribute('fill', '#007AFF');
+  path.setAttribute('stroke', '#FFFFFF');
+  path.setAttribute('stroke-width', '1.2');
+  path.setAttribute('stroke-linejoin', 'round');
+
+  svg.appendChild(path);
+  inner.appendChild(contrail);
+  inner.appendChild(svg);
+  container.appendChild(inner);
+
+  return { container, inner, contrail };
 }
 
 /**
@@ -227,6 +361,11 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
   const mapRef = useRef<Map | null>(null);
   const homeMarkerRef = useRef<Marker | null>(null);
   const destMarkerRef = useRef<Marker | null>(null);
+  const planeMarkerRef = useRef<Marker | null>(null);
+  const planeInnerElRef = useRef<HTMLDivElement | null>(null);
+  const animFrameRef = useRef<number | null>(null);
+
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
 
   // Destination coordinates: try static lookup first, then async geocoding
   const [destCoords, setDestCoords] = useState<[number, number] | null>(null);
@@ -362,6 +501,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
               .setLngLat(homeLngLat)
               .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML(`<strong>📍 ${userCountry || 'Your Location'}</strong>`))
               .addTo(map);
+
+            setIsMapLoaded(true);
           } catch (loadErr) {
             console.warn('[TravelMap] Error during map on-load configuration:', loadErr);
           }
@@ -407,6 +548,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
         }
       }
       mapRef.current = null;
+      setIsMapLoaded(false);
     };
   }, []);
 
@@ -427,16 +569,27 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
   }, [homeLngLat, userCountry]);
 
 
-  // ── Update arc + destination marker when destination changes ───────────────
+  // ── Update arc + destination marker + mini plane flight loop ───────────────
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !map.isStyleLoaded() || !isMapLoaded) return;
 
-    // Remove old destination marker
+    // Cleanup prior destination marker
     if (destMarkerRef.current) {
       destMarkerRef.current.remove();
       destMarkerRef.current = null;
     }
+
+    // Cleanup prior plane marker & animation loop
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (planeMarkerRef.current) {
+      planeMarkerRef.current.remove();
+      planeMarkerRef.current = null;
+    }
+    planeInnerElRef.current = null;
 
     const arcSource = map.getSource('flight-arc') as maplibregl.GeoJSONSource | undefined;
 
@@ -477,7 +630,75 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
     // Also extend to arc peak so it's visible
     arcCoords.forEach(c => bounds.extend(c as LngLatLike));
     map.fitBounds(bounds, { padding: { top: 60, bottom: 60, left: 60, right: 60 }, duration: 1800, maxZoom: 5 });
-  }, [destCoords, isAnimating, destination, homeLngLat]);
+
+    // ── Mini Plane Flight Marker & Loop ──────────────────────────────────────
+    const { container: planeContainer, inner: planeInner } = createPlaneElement(isAnimating);
+    const planeMarker = new maplibregl.Marker({
+      element: planeContainer,
+      anchor: 'center',
+    })
+      .setLngLat(homeLngLat)
+      .addTo(map);
+
+    planeMarkerRef.current = planeMarker;
+    planeInnerElRef.current = planeInner;
+
+    // Flight timing parameters: default 2.0s duration with subtle rest pause
+    const cycleDuration = isAnimating ? 1200 : 2000;
+    const pauseDuration = isAnimating ? 150 : 250;
+    const totalDuration = cycleDuration + pauseDuration;
+    let startTime: number | null = null;
+
+    const animateFlight = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = (timestamp - startTime) % totalDuration;
+
+      if (elapsed <= cycleDuration) {
+        const t = elapsed / cycleDuration;
+        const { coords, bearingDeg } = getArcPointAndBearing(map, arcCoords, t);
+        planeMarker.setLngLat(coords);
+
+        // Smooth takeoff fade-in and touchdown fade-out
+        let opacity = 1;
+        let scale = 1;
+        if (t < 0.08) {
+          const easeIn = t / 0.08;
+          opacity = easeIn;
+          scale = 0.7 + 0.3 * easeIn;
+        } else if (t > 0.92) {
+          const easeOut = (1 - t) / 0.08;
+          opacity = easeOut;
+          scale = 0.7 + 0.3 * easeOut;
+        }
+
+        if (planeInnerElRef.current) {
+          planeInnerElRef.current.style.transform = `rotate(${bearingDeg}deg) scale(${scale})`;
+          planeInnerElRef.current.style.opacity = `${opacity}`;
+        }
+      } else {
+        // Paused at destination before next takeoff cycle
+        if (planeInnerElRef.current) {
+          planeInnerElRef.current.style.opacity = '0';
+        }
+      }
+
+      animFrameRef.current = requestAnimationFrame(animateFlight);
+    };
+
+    animFrameRef.current = requestAnimationFrame(animateFlight);
+
+    return () => {
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      if (planeMarkerRef.current) {
+        planeMarkerRef.current.remove();
+        planeMarkerRef.current = null;
+      }
+      planeInnerElRef.current = null;
+    };
+  }, [destCoords, isAnimating, destination, homeLngLat, isMapLoaded]);
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl border border-primary/15 shadow-2xl"
@@ -492,6 +713,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
         @keyframes travel-dest-pop {
           from { transform: scale(0); opacity: 0; }
           to   { transform: scale(1); opacity: 1; }
+        }
+        @keyframes travel-contrail-flicker {
+          0%, 100% { opacity: 0.8; transform: translateY(-50%) scaleX(1); }
+          50%      { opacity: 1.0; transform: translateY(-50%) scaleX(1.3); }
         }
         .maplibregl-map { border-radius: inherit; }
         .maplibregl-ctrl-attrib { font-size: 9px !important; }
