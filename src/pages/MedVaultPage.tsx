@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+ import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -18,11 +18,14 @@ import {
   Info,
   Compass,
   Location,
+  Navigation,
 } from "@/lib/icons";
 import { useApp, Medicine } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { calculateRefillStatus } from "@/services/refillService";
 import { PharmacyFinderModal } from "@/components/pharmacy/PharmacyFinderModal";
+import PermissionRequest from "@/components/PermissionRequest";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -528,6 +531,19 @@ export default function MedVaultPage() {
 
   const [refillTarget, setRefillTarget] = useState<Medicine | null>(null);
   const [pharmacyFinderMedicine, setPharmacyFinderMedicine] = useState<Medicine | null | undefined>(undefined);
+  const [showLocationPermission, setShowLocationPermission] = useState(false);
+  const [pendingPharmacyMedicine, setPendingPharmacyMedicine] = useState<Medicine | null | undefined>(undefined);
+
+  const { status: geoStatus, requestLocation } = useGeolocation({ autoRequest: false });
+
+  const handleOpenPharmacyFinder = (medicine: Medicine | null = null) => {
+    if (geoStatus === "granted") {
+      setPharmacyFinderMedicine(medicine);
+    } else {
+      setPendingPharmacyMedicine(medicine);
+      setShowLocationPermission(true);
+    }
+  };
 
   // Compute refill status for all medicines
   const medicineStatuses = useMemo(() => {
@@ -612,7 +628,7 @@ export default function MedVaultPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setPharmacyFinderMedicine(null)}
+            onClick={() => handleOpenPharmacyFinder(null)}
             className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 px-3 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
           >
             <Compass className="size-3.5 text-teal-600 dark:text-teal-400" />
@@ -682,7 +698,7 @@ export default function MedVaultPage() {
               </div>
 
               <button
-                onClick={() => setPharmacyFinderMedicine(null)}
+                onClick={() => handleOpenPharmacyFinder(null)}
                 className="flex items-center gap-1.5 text-[11px] font-black bg-white text-teal-900 hover:bg-white/90 px-3.5 py-2 rounded-xl shadow-lg transition-all active:scale-95"
               >
                 <Compass className="size-3.5 text-teal-600" />
@@ -770,7 +786,7 @@ export default function MedVaultPage() {
                           isWarning={isWarn}
                           isOutOfStock={isOut}
                           onRefill={() => setRefillTarget(medicine)}
-                          onFindPharmacy={() => setPharmacyFinderMedicine(medicine)}
+                          onFindPharmacy={() => handleOpenPharmacyFinder(medicine)}
                         />
                       );
                     })}
@@ -843,6 +859,30 @@ export default function MedVaultPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* Location Permission Modal */}
+      <PermissionRequest
+        isOpen={showLocationPermission}
+        onClose={() => {
+          setShowLocationPermission(false);
+          setPendingPharmacyMedicine(undefined);
+        }}
+        onConfirm={async () => {
+          setShowLocationPermission(false);
+          const target = pendingPharmacyMedicine ?? null;
+          setPendingPharmacyMedicine(undefined);
+          try {
+            await requestLocation();
+          } catch (err) {
+            console.warn("Location request failed:", err);
+          }
+          setPharmacyFinderMedicine(target);
+        }}
+        title="Enable Location Services"
+        description="Allow DawaLens to access your device location to discover the nearest NDA-licensed pharmacies in Uganda and display real-time walking and driving routes."
+        icon={Navigation}
+        permissionName="Location"
+      />
     </div>
   );
 }

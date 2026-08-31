@@ -50,11 +50,16 @@ async function reverseGeocode(
   return null;
 }
 
+export interface UseGeolocationOptions {
+  autoRequest?: boolean;
+}
+
 /**
  * Hook that requests location permission and returns the user's current
  * country based on GPS coordinates + reverse geocoding.
  */
-export function useGeolocation() {
+export function useGeolocation(options: UseGeolocationOptions = {}) {
+  const { autoRequest = true } = options;
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [status, setStatus] = useState<LocationStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -140,10 +145,12 @@ export function useGeolocation() {
     }
   }, []);
 
-  // Auto-request on mount
+  // Auto-request on mount if enabled
   useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
+    if (autoRequest) {
+      requestLocation();
+    }
+  }, [autoRequest, requestLocation]);
 
   return { location, status, error, requestLocation };
 }
