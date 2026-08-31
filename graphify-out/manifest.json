@@ -660,8 +660,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PermissionRequest.tsx": {
-    "mtime": 1783705906.1478224,
-    "ast_hash": "c177e52b4b6a8ae4c27d29e900747823",
+    "mtime": 1788174934.2708418,
+    "ast_hash": "d2c352b184af7cee7c12bc6f659d8c31",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PremiumLoader.tsx": {
@@ -1085,8 +1085,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useGeolocation.ts": {
-    "mtime": 1788173676.2634335,
-    "ast_hash": "8140f8df2abe25683b76e9274990a3f9",
+    "mtime": 1788174613.866466,
+    "ast_hash": "e1eb4bbdafdd62bacc15e7dd6b51e6cb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useIntelligenceContext.ts": {

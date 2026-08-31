@@ -1,16 +1,16 @@
 # Graph Report - dawa-lens  (2026-08-31)
 
 ## Corpus Check
-- 490 files · ~1,955,952 words
+- 490 files · ~1,956,018 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 14278 nodes · 35452 edges · 401 communities (334 shown, 67 thin omitted)
+- 14278 nodes · 35452 edges · 400 communities (332 shown, 68 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 141 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9848372c`
+- Built from commit: `4d292fdf`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -296,7 +296,6 @@
 - [[_COMMUNITY_Community 280|Community 280]]
 - [[_COMMUNITY_Community 281|Community 281]]
 - [[_COMMUNITY_Community 282|Community 282]]
-- [[_COMMUNITY_Community 283|Community 283]]
 - [[_COMMUNITY_Community 284|Community 284]]
 - [[_COMMUNITY_Community 285|Community 285]]
 - [[_COMMUNITY_Community 286|Community 286]]
@@ -411,30 +410,30 @@
 - 1-file cycle: `rust/src/interaction.rs -> rust/src/interaction.rs`
 - 1-file cycle: `rust/src/lib.rs -> rust/src/lib.rs`
 - 1-file cycle: `rust/src/parsing.rs -> rust/src/parsing.rs`
-- 3-file cycle: `server/src/services/aiService.js -> server/src/services/doseLogService.js -> server/src/services/autonomousService.js -> server/src/services/aiService.js`
 - 3-file cycle: `server/src/services/aiService.js -> server/src/services/medicineService.js -> server/src/services/autonomousService.js -> server/src/services/aiService.js`
+- 3-file cycle: `server/src/services/aiService.js -> server/src/services/doseLogService.js -> server/src/services/autonomousService.js -> server/src/services/aiService.js`
 - 3-file cycle: `server/src/services/aiService.js -> server/src/services/wellnessService.js -> server/src/services/autonomousService.js -> server/src/services/aiService.js`
 - 4-file cycle: `server/src/services/aiService.js -> server/src/services/doseLogService.js -> server/src/services/medicineService.js -> server/src/services/autonomousService.js -> server/src/services/aiService.js`
 - 4-file cycle: `server/src/services/aiService.js -> server/src/services/patientService.js -> server/src/services/doseLogService.js -> server/src/services/autonomousService.js -> server/src/services/aiService.js`
 - 5-file cycle: `server/src/services/aiService.js -> server/src/services/patientService.js -> server/src/services/doseLogService.js -> server/src/services/medicineService.js -> server/src/services/autonomousService.js -> server/src/services/aiService.js`
 
-## Communities (401 total, 67 thin omitted)
+## Communities (400 total, 68 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
-Nodes (387): ut(), _(), a(), aA(), ab(), ad(), addDetector(), addPostProcessor() (+379 more)
+Nodes (374): ut(), _(), a(), aA(), ab(), ad(), addDetector(), addPostProcessor() (+366 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.02
-Nodes (66): _(), animation_size(), animationSize(), ba(), buffer(), close(), current_frame(), current_loop_count() (+58 more)
+Nodes (74): _(), activeThemeId(), animation_size(), animationSize(), ba(), buffer(), close(), current_frame() (+66 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.01
-Nodes (191): _(), Aa(), addAuthTokenListener(), Al(), assertAuthConfigured(), assertedPersistence(), assertion(), assertionForEnrollment() (+183 more)
+Nodes (157): _(), Al(), assertion(), assertionForEnrollment(), assertionForSignIn(), _assign(), Au(), automaticDataCollectionEnabled() (+149 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.01
-Nodes (175): _(), addControl(), addSprite(), af(), am, angleTo(), angleWith(), angleWithSep() (+167 more)
+Nodes (166): _(), addControl(), addSprite(), addTo(), al(), am, angleWith(), angleWithSep() (+158 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.02
@@ -442,59 +441,55 @@ Nodes (52): _(), bt(), ct(), D(), en(), Eo(), Fs(), Ga() (+44 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.04
-Nodes (132): addNamespaces(), addOpacity(), addParentOpacity(), addResource(), addResourceBundle(), addResources(), addStylesFromStyleDefinition(), adjustChildCoordinates() (+124 more)
+Nodes (147): addNamespaces(), addOpacity(), addParentOpacity(), addResource(), addResourceBundle(), addResources(), addStylesFromStyleDefinition(), adjustChildCoordinates() (+139 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.02
-Nodes (51): add(), addImage(), addSource(), Bn(), ce(), Da(), de(), _diffStyle() (+43 more)
+Nodes (52): addImage(), addSource(), b(), Bn(), cs(), Da(), _diffStyle(), draw() (+44 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.01
-Nodes (30): ba(), br(), Ca(), div(), Ga, getCanvas(), getCanvasContainer(), getContainer() (+22 more)
+Nodes (36): angleTo(), ba(), br(), C(), ch(), co, dh(), dist() (+28 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.01
-Nodes (147): _(), Al(), assertion(), assertionForEnrollment(), assertionForSignIn(), automaticDataCollectionEnabled(), ax(), Bc() (+139 more)
+Cohesion: 0.02
+Nodes (129): _(), Al(), assertion(), assertionForEnrollment(), assertionForSignIn(), automaticDataCollectionEnabled(), ax(), Bc() (+121 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.01
-Nodes (164): _(), addControl(), addSprite(), al(), angleWith(), angleWithSep(), bc(), bm() (+156 more)
+Nodes (143): _(), addControl(), addSprite(), al(), angleWith(), angleWithSep(), bc(), bs() (+135 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.02
-Nodes (58): ai(), bi(), ci(), clear(), cr(), di(), dn, Dr() (+50 more)
+Nodes (54): ai(), bi(), ci(), clear(), cr(), di(), Dr(), ea() (+46 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.04
-Nodes (68): V(), be(), c(), Co(), Cu(), da(), dm(), Ec() (+60 more)
-
-### Community 12 - "Community 12"
-Cohesion: 0.02
-Nodes (3): hf(), If(), tn
+Cohesion: 0.03
+Nodes (113): V(), Aa(), addAuthTokenListener(), assertAuthConfigured(), assertedPersistence(), auth(), c(), Cc() (+105 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.01
-Nodes (10): en(), fn, getBounds(), getMaxBounds(), hf(), ie(), pn, Re (+2 more)
+Nodes (8): en(), fn, getBounds(), getMaxBounds(), pn, Re, setPadding(), tn
 
 ### Community 14 - "Community 14"
-Cohesion: 0.05
-Nodes (53): ag(), bg(), cd(), cg(), cm(), dg(), eg(), emptyPath() (+45 more)
+Cohesion: 0.06
+Nodes (54): ag(), bg(), cd(), cg(), cm(), construct(), dg(), eg() (+46 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.04
-Nodes (125): abort(), addComponent(), addOrOverwriteComponent(), ai(), An(), bn(), ca(), cancel() (+117 more)
+Nodes (124): abort(), ai(), An(), approximateByteSize(), bn(), ca(), cancel(), catch() (+116 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.04
-Nodes (87): Af(), am(), ap(), applyToLocalView(), applyToRemoteDocument(), Bf(), bp(), ch() (+79 more)
+Nodes (82): Af(), am(), ap(), applyToLocalView(), applyToRemoteDocument(), Bf(), bp(), ch() (+74 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.02
-Nodes (26): Ad, ae(), af(), bo, C(), Ca(), D(), Dd() (+18 more)
+Cohesion: 0.03
+Nodes (21): Ad, ae(), af(), C(), Ca(), D(), Dd(), getCanvas() (+13 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.08
-Nodes (7): Ad, ae(), D(), Dd(), sf(), Td(), tf()
+Cohesion: 0.04
+Nodes (19): Ad, ae(), af(), Ca(), D(), Dd(), getCanvas(), getLngLat() (+11 more)
 
 ### Community 19 - "Community 19"
 Cohesion: 0.05
@@ -502,39 +497,39 @@ Nodes (3): ln, project(), Z
 
 ### Community 20 - "Community 20"
 Cohesion: 0.06
-Nodes (67): Ct(), dn(), fn(), Ft(), getItem(), Gt(), Ht(), It() (+59 more)
+Nodes (69): Ct(), dn(), fn(), Ft(), getItem(), Gt(), Ht(), It() (+61 more)
 
 ### Community 21 - "Community 21"
 Cohesion: 0.03
 Nodes (166): we(), i(), R(), $(), Be(), De(), et(), G() (+158 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.03
-Nodes (25): addClassName(), addTo(), _clearWatch(), co, completeTask(), filter(), _focusFirstElement(), _getUIString() (+17 more)
+Cohesion: 0.06
+Nodes (9): bl(), getAnisotropicFilterPitch(), getCurrentTime(), isMoving(), isRotating(), It(), l(), _render() (+1 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.02
-Nodes (19): ap, be(), ce(), de(), e(), fe(), getClusterExpansionZoom(), getPixelRatio() (+11 more)
+Cohesion: 0.03
+Nodes (17): be(), de(), e(), fe(), getClusterExpansionZoom(), getPixelRatio(), ie(), kh() (+9 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.03
-Nodes (127): addFieldIndex(), addMatchingKeys(), addTargetData(), allocateTargetId(), applyChanges(), applyToLocalDocumentSet(), ar(), assertNotApplied() (+119 more)
+Cohesion: 0.02
+Nodes (162): addFieldIndex(), addMatchingKeys(), addTargetData(), allocateTargetId(), applyChanges(), applyToLocalDocumentSet(), assertNotApplied(), bi() (+154 more)
 
 ### Community 26 - "Community 26"
 Cohesion: 0.03
-Nodes (30): aa(), addClassName(), addTo(), _cancelRenderFrame(), co, divByPoint(), filter(), _focusFirstElement() (+22 more)
+Nodes (28): addClassName(), addTo(), _cancelRenderFrame(), _clearWatch(), co, completeTask(), _createButton(), filter() (+20 more)
 
 ### Community 27 - "Community 27"
-Cohesion: 0.07
-Nodes (28): addScope(), ae(), approximateByteSize(), ce(), constructor(), cursor(), doWhile(), g() (+20 more)
+Cohesion: 0.06
+Nodes (8): _down(), Fs, Kn(), Ls(), Ms, n(), Ps, _up()
 
 ### Community 28 - "Community 28"
-Cohesion: 0.03
-Nodes (18): coveringTiles(), Ge(), Je(), Ke(), kf, Me, mn, oe() (+10 more)
+Cohesion: 0.02
+Nodes (21): coveringTiles(), Ge(), getByKey(), Je(), Ke(), kf, Me, mn (+13 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.02
-Nodes (49): addImage(), addSource(), b(), Bn(), Da(), _diffStyle(), Fa(), frameAsync() (+41 more)
+Nodes (50): addImage(), addSource(), b(), Bn(), ce(), Da(), _diffStyle(), draw() (+42 more)
 
 ### Community 30 - "Community 30"
 Cohesion: 0.05
@@ -542,15 +537,15 @@ Nodes (61): bi(), bs(), Bu(), containsKey(), covers(), cr(), dm(), docChanges() 
 
 ### Community 31 - "Community 31"
 Cohesion: 0.02
-Nodes (41): ac(), add(), At(), bf, clear(), dc(), dt(), Et() (+33 more)
+Nodes (39): ac(), as, At(), bd(), bf, bo, clear(), cs() (+31 more)
 
 ### Community 32 - "Community 32"
 Cohesion: 0.08
 Nodes (7): Do, go, ho, ko, resize(), setPixelRatio(), wo
 
 ### Community 33 - "Community 33"
-Cohesion: 0.07
-Nodes (44): addChild(), ae(), Be(), bv(), ce(), createElement(), createTextNode(), cv() (+36 more)
+Cohesion: 0.13
+Nodes (26): addChild(), ae(), ce(), createElement(), createTextNode(), de(), fe(), h() (+18 more)
 
 ### Community 35 - "Community 35"
 Cohesion: 0.02
@@ -558,7 +553,7 @@ Nodes (253): fi(), qr(), zr(), _(), $a(), Aa(), Ac(), Ae() (+245 more)
 
 ### Community 36 - "Community 36"
 Cohesion: 0.03
-Nodes (16): Ge(), getByKey(), Je(), Ke(), kf, Me, oe(), qa (+8 more)
+Nodes (25): add(), Ge(), get(), getAndRemove(), _getAndRemoveByKey(), getByKey(), getGlyphs(), has() (+17 more)
 
 ### Community 37 - "Community 37"
 Cohesion: 0.06
@@ -566,63 +561,63 @@ Nodes (38): AlarmCheck, AlarmClockOff, Baby, MoreVertical, Pencil, ToggleLeft, T
 
 ### Community 38 - "Community 38"
 Cohesion: 0.08
-Nodes (43): as(), Bo(), _buildIdpRequest(), buildRequest(), clearQueryState(), contains(), createWebChannelTransport(), ds() (+35 more)
+Nodes (44): as(), Bo(), _buildIdpRequest(), buildRequest(), clearQueryState(), contains(), createWebChannelTransport(), ds() (+36 more)
 
 ### Community 39 - "Community 39"
 Cohesion: 0.02
 Nodes (163): AchievementOverlayProps, BottomNav(), useButtonNavDetection(), useSmartHideBottomNav(), useSwipeToReveal(), FeatureSlideshow(), SlideItem, SLIDES (+155 more)
 
 ### Community 40 - "Community 40"
-Cohesion: 0.03
-Nodes (84): _a(), addEventListener(), _addListener(), addScope(), ae(), attachListener(), be(), ce() (+76 more)
+Cohesion: 0.05
+Nodes (45): _a(), addScope(), ae(), constructor(), cursor(), Do(), emptySet(), eo() (+37 more)
 
 ### Community 41 - "Community 41"
 Cohesion: 0.02
 Nodes (5): fn, getBounds(), getMaxBounds(), setRenderWorldCopies(), setTransformConstrain()
 
 ### Community 42 - "Community 42"
-Cohesion: 0.07
-Nodes (36): bx(), by(), createDatastore(), createEventManager(), createRemoteStore(), createSyncEngine(), dl(), eb() (+28 more)
+Cohesion: 0.09
+Nodes (31): addComponent(), addOrOverwriteComponent(), Bu(), bx(), by(), createDatastore(), createEventManager(), createRemoteStore() (+23 more)
 
 ### Community 44 - "Community 44"
-Cohesion: 0.04
-Nodes (4): A(), addLayer(), F, zf()
+Cohesion: 0.05
+Nodes (3): A(), addLayer(), F
 
 ### Community 45 - "Community 45"
-Cohesion: 0.03
-Nodes (10): cn, dm, Fr, im, ip, om, Pr(), rm() (+2 more)
+Cohesion: 0.02
+Nodes (34): ap, bm(), bp(), cm(), Cp(), dm, Dp(), em() (+26 more)
 
 ### Community 46 - "Community 46"
 Cohesion: 0.05
-Nodes (83): ab(), addLocalQueryTarget(), addPendingMutation(), Au(), bb(), Bv(), clearQueryState(), collectGarbage() (+75 more)
+Nodes (81): addPendingMutation(), Au(), bb(), bm(), Bv(), cd(), cm(), collectGarbage() (+73 more)
 
 ### Community 47 - "Community 47"
 Cohesion: 0.04
-Nodes (101): addEntry(), addFieldIndex(), addMutationBatch(), addOnCommittedListener(), addReference(), addTargetData(), addToCollectionParentIndex(), ah() (+93 more)
+Nodes (67): addEntry(), addMutationBatch(), addOnCommittedListener(), addToCollectionParentIndex(), ah(), assertNotApplied(), bg(), collectionGroup() (+59 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.06
-Nodes (42): AppShell(), AppSidebar(), Navbar(), NavbarProps, NavLink, NavLinkCompatProps, useIsMobile(), CopyPlus (+34 more)
+Cohesion: 0.09
+Nodes (39): as(), Bo(), _buildIdpRequest(), buildRequest(), contains(), createWebChannelTransport(), ds(), Es() (+31 more)
 
 ### Community 49 - "Community 49"
 Cohesion: 0.12
 Nodes (37): ADHERENCE_QUOTES, ENCOURAGEMENT_QUOTES, HEALTH_QUOTES, INSPIRATION_QUOTES, LIFESTYLE_QUOTES, MINDFULNESS_QUOTES, WELLNESS_QUOTES, ADHERENCE_QUOTES (+29 more)
 
 ### Community 50 - "Community 50"
-Cohesion: 0.06
-Nodes (56): add(), addObserver(), Bg(), build(), clearGcTimeout(), clearTimeout(), createResult(), defaultMutationOptions() (+48 more)
+Cohesion: 0.05
+Nodes (70): add(), addObserver(), Bg(), build(), canRun(), clearGcTimeout(), clearTimeout(), continue() (+62 more)
 
 ### Community 51 - "Community 51"
-Cohesion: 0.16
-Nodes (22): ac(), check(), checkMaxDepth(), colorFlip(), fixUp(), ic(), _isAvailable(), isRed() (+14 more)
+Cohesion: 0.10
+Nodes (31): ac(), check(), checkMaxDepth(), collect(), colorFlip(), fetch(), fixUp(), getCacheSize() (+23 more)
 
 ### Community 52 - "Community 52"
 Cohesion: 0.03
-Nodes (116): Aa(), addAuthTokenListener(), as(), assertAuthConfigured(), assertedPersistence(), _assign(), auth(), ba() (+108 more)
+Nodes (99): Aa(), addAuthTokenListener(), assertAuthConfigured(), assertedPersistence(), _assign(), auth(), ba(), be() (+91 more)
 
 ### Community 53 - "Community 53"
 Cohesion: 0.01
-Nodes (40): angleTo(), ba(), br(), ch(), dh(), dist(), div(), fh() (+32 more)
+Nodes (27): ba(), br(), div(), Ga, getCanvasContainer(), getContainer(), ha, Ir (+19 more)
 
 ### Community 54 - "Community 54"
 Cohesion: 0.07
@@ -633,8 +628,8 @@ Cohesion: 0.02
 Nodes (88): dependencies, canvas-confetti, @capacitor/android, @capacitor/app, @capacitor/browser, @capacitor/camera, @capacitor/core, @capacitor/device (+80 more)
 
 ### Community 56 - "Community 56"
-Cohesion: 0.21
-Nodes (18): ac(), check(), checkMaxDepth(), colorFlip(), fixUp(), _isAvailable(), isRed(), moveRedLeft() (+10 more)
+Cohesion: 0.16
+Nodes (22): ac(), cg(), check(), checkMaxDepth(), colorFlip(), fixUp(), ic(), _isAvailable() (+14 more)
 
 ### Community 57 - "Community 57"
 Cohesion: 0.04
@@ -673,24 +668,20 @@ Cohesion: 0.11
 Nodes (23): Action, ActionType, actionTypes, addToRemoveQueue(), dispatch(), genId(), listeners, memoryState (+15 more)
 
 ### Community 66 - "Community 66"
-Cohesion: 0.02
-Nodes (21): ap, b(), be(), draw(), g(), getClusterExpansionZoom(), getImage(), getImageCanvasContext() (+13 more)
-
-### Community 67 - "Community 67"
-Cohesion: 0.12
-Nodes (26): ai(), _e(), _getAdditionalHeaders(), _getAppCheckToken(), getDocumentsMatchingTarget(), getImmediate(), getMinOffset(), getOptions() (+18 more)
+Cohesion: 0.06
+Nodes (5): be(), getClusterExpansionZoom(), sendAsync(), w(), wf
 
 ### Community 68 - "Community 68"
-Cohesion: 0.06
-Nodes (70): add(), addComponent(), addOrOverwriteComponent(), Ao(), at(), b(), catch(), comparator() (+62 more)
+Cohesion: 0.04
+Nodes (96): ab(), add(), addEventListener(), addFieldIndex(), _addListener(), addLocalQueryTarget(), addReference(), Ao() (+88 more)
 
 ### Community 70 - "Community 70"
 Cohesion: 0.29
 Nodes (7): _buildPhotoMediaResult(), close(), _getBase64FromFile(), _getFileFormat(), _getImageResolution(), removeAllDeliveredNotifications(), removeDeliveredNotifications()
 
 ### Community 72 - "Community 72"
-Cohesion: 0.05
-Nodes (11): Gs, Hl(), Hs(), is, od, pl, ss, Vc() (+3 more)
+Cohesion: 0.04
+Nodes (25): angleTo(), ch(), cr(), dh(), dist(), fh(), Gs, Hl() (+17 more)
 
 ### Community 73 - "Community 73"
 Cohesion: 0.29
@@ -705,16 +696,16 @@ Cohesion: 0.13
 Nodes (19): restrictToOwner(), router, runTests(), testIDOR(), testMiddleware(), testValidation(), chatSchema, coachAdviceSchema (+11 more)
 
 ### Community 76 - "Community 76"
-Cohesion: 0.07
-Nodes (42): bs(), Bu(), containsKey(), covers(), cr(), docChanges(), first(), firstAfterOrEqual() (+34 more)
+Cohesion: 0.09
+Nodes (4): fd, ic(), ql, rc()
 
 ### Community 77 - "Community 77"
 Cohesion: 0.03
-Nodes (130): abort(), am(), An(), apply(), bn(), bp(), c(), calculateTargetCount() (+122 more)
+Nodes (145): abort(), addComponent(), addOrOverwriteComponent(), ai(), An(), apply(), bn(), c() (+137 more)
 
 ### Community 79 - "Community 79"
 Cohesion: 0.04
-Nodes (123): ab(), add(), addEntry(), addLocalQueryTarget(), addMutationBatch(), addOnCommittedListener(), addPendingMutation(), addReference() (+115 more)
+Nodes (131): ab(), add(), addEntry(), addLocalQueryTarget(), addMutationBatch(), addOnCommittedListener(), addPendingMutation(), addReference() (+123 more)
 
 ### Community 80 - "Community 80"
 Cohesion: 0.04
@@ -733,24 +724,24 @@ Cohesion: 0.07
 Nodes (29): 1. Free Tier (User Acquisition Engine), 1. "Refill-as-a-Service" Transaction Commissions (Affiliate Revenue), 1. The Pharmacy "Trojan Horse" Strategy (Zero-CAC Organic Flywheel), 2. Dawa Plus (Individual Power User Tier), 2. Pharmacy Smart CRM & Digital Prescription Portal (B2B SaaS), 2. The Doctor-Ready Clinical PDF Referral Loop, 3. Diaspora Acquisition via Remittance Corridors, 3. Family Hub & Caregiver Tier (Multi-Profile Dependent Care) (+21 more)
 
 ### Community 87 - "Community 87"
-Cohesion: 0.11
-Nodes (4): $s(), vs, Xf, ys()
+Cohesion: 0.07
+Nodes (6): cn, Fr, Pr(), vs, Xf, ys()
 
 ### Community 89 - "Community 89"
-Cohesion: 0.09
+Cohesion: 0.08
 Nodes (3): calculateCameraOptionsFromTo(), setTerrain(), uo
 
 ### Community 91 - "Community 91"
 Cohesion: 0.02
-Nodes (11): Et(), getByKey(), Jt, qa, Rt(), setMaxBounds(), Tt(), v() (+3 more)
+Nodes (11): ao, jo, Jt, Nt(), Rt(), setMaxBounds(), Tt(), v() (+3 more)
 
 ### Community 93 - "Community 93"
-Cohesion: 0.07
-Nodes (56): Ao(), apply(), at(), createAndSchedule(), ct(), d(), de(), Dh() (+48 more)
+Cohesion: 0.03
+Nodes (93): _a(), addEventListener(), _addListener(), addScope(), ae(), Ao(), apply(), ar() (+85 more)
 
 ### Community 95 - "Community 95"
-Cohesion: 0.03
-Nodes (135): Af(), ag(), ap(), applyToLocalView(), applyToRemoteDocument(), approximateByteSize(), Bf(), bg() (+127 more)
+Cohesion: 0.04
+Nodes (96): Af(), ag(), am(), ap(), applyToLocalView(), applyToRemoteDocument(), approximateByteSize(), Bf() (+88 more)
 
 ### Community 96 - "Community 96"
 Cohesion: 0.11
@@ -766,11 +757,11 @@ Nodes (3): PluginCall, NativeHapticsPlugin, Vibrator
 
 ### Community 100 - "Community 100"
 Cohesion: 0.02
-Nodes (49): ai(), bi(), ci(), cr(), di(), dn, Dr(), ea() (+41 more)
+Nodes (38): ai(), bi(), ci(), di(), dn, Dr(), ea(), ei() (+30 more)
 
 ### Community 101 - "Community 101"
-Cohesion: 0.06
-Nodes (47): addMatchingKeys(), applyChanges(), applyToLocalDocumentSet(), child(), computeViews(), convertObject(), convertObjectMap(), Cu() (+39 more)
+Cohesion: 0.03
+Nodes (112): addMatchingKeys(), addTargetData(), allocateTargetId(), applyChanges(), applyToLocalDocumentSet(), ar(), br(), checkEmpty() (+104 more)
 
 ### Community 102 - "Community 102"
 Cohesion: 0.09
@@ -785,8 +776,8 @@ Cohesion: 0.07
 Nodes (7): Do, go, ko, resize(), setPixelRatio(), vo, xo
 
 ### Community 106 - "Community 106"
-Cohesion: 0.05
-Nodes (18): Gd(), gm, Hd(), Id(), il(), Jd(), jl, kd() (+10 more)
+Cohesion: 0.04
+Nodes (19): Gd(), gm, Hd(), Id(), il(), Jd(), jl, kd() (+11 more)
 
 ### Community 107 - "Community 107"
 Cohesion: 0.03
@@ -805,8 +796,8 @@ Cohesion: 0.20
 Nodes (10): buildMedVaultSummary(), calculateServerRefillStatus(), getServerDailyDoseRate(), criticalPanadol, critStatus, panadol, panadolReminder, rate (+2 more)
 
 ### Community 111 - "Community 111"
-Cohesion: 0.03
-Nodes (18): as, bd(), cs(), Ds(), ec(), en(), hi(), ht() (+10 more)
+Cohesion: 0.05
+Nodes (17): aa(), divByPoint(), hi(), li, mag(), matMult(), mult(), multByPoint() (+9 more)
 
 ### Community 113 - "Community 113"
 Cohesion: 0.04
@@ -834,7 +825,11 @@ Nodes (5): Gd(), Hd(), Id(), Ld(), Wd()
 
 ### Community 121 - "Community 121"
 Cohesion: 0.17
-Nodes (12): 12. Security, Privacy, and Clinical Safety Protocols, 13. Comprehensive Risk Assessment & Mitigation Framework, 14. Work Breakdown Structure (WBS) & Implementation Timeline, 15. Detailed Resource Requirements & Budget Analysis, 17. Academic & Technical References, 1. Executive Summary, 2. Introduction, Background & Regional Healthcare Context, 3. Problem Statement & Motivation (+4 more)
+Nodes (11): 12. Security, Privacy, and Clinical Safety Protocols, 13. Comprehensive Risk Assessment & Mitigation Framework, 14. Work Breakdown Structure (WBS) & Implementation Timeline, 15. Detailed Resource Requirements & Budget Analysis, 17. Academic & Technical References, 1. Executive Summary, 2. Introduction, Background & Regional Healthcare Context, 3. Problem Statement & Motivation (+3 more)
+
+### Community 122 - "Community 122"
+Cohesion: 0.03
+Nodes (9): bh(), ce(), de(), fe(), Jf, nc(), redraw(), Se() (+1 more)
 
 ### Community 123 - "Community 123"
 Cohesion: 0.07
@@ -842,19 +837,19 @@ Nodes (27): devDependencies, autoprefixer, @capacitor/assets, @capacitor/cli, es
 
 ### Community 124 - "Community 124"
 Cohesion: 0.02
-Nodes (53): ah, au(), bl(), Bu, ct(), cu(), _down(), du() (+45 more)
+Nodes (58): ah, au(), bl(), Bu, ct(), cu(), _down(), du() (+50 more)
 
 ### Community 125 - "Community 125"
-Cohesion: 0.01
-Nodes (51): ac(), as, At(), bd(), bf, cl(), dc(), Ds() (+43 more)
+Cohesion: 0.02
+Nodes (40): as, At(), bd(), bf, cl(), cn, dc(), dn (+32 more)
 
 ### Community 127 - "Community 127"
 Cohesion: 0.22
 Nodes (9): 11.1 Subsystem 1: Visual Pill & Prescription Scanner, 11.2 Subsystem 2: DawaGPT Context-Aware Clinical AI, 11.3 Subsystem 3: Drug & East African Food Interaction Guard, 11.4 Subsystem 4: Family Hub & Caregiver Network, 11.5 Subsystem 5: Intelligent Reminders & Travel Companion Engine, 11.6 Subsystem 6: Holistic Wellness Journal & Adherence Analytics, 11.7 Subsystem 7: Doctor-Ready Clinical PDF Report Generator, 11.8 Subsystem 8: Offline-First Continuity & Over-The-Air (OTA) Updates (+1 more)
 
 ### Community 129 - "Community 129"
-Cohesion: 0.03
-Nodes (13): A(), addLayer(), an(), ar(), F, In, _isOutOfMapMaxBounds(), jr() (+5 more)
+Cohesion: 0.04
+Nodes (10): A(), addLayer(), an(), ar(), F, he(), In, _isOutOfMapMaxBounds() (+2 more)
 
 ### Community 130 - "Community 130"
 Cohesion: 0.70
@@ -869,12 +864,12 @@ Cohesion: 0.07
 Nodes (26): Advanced Features Reference, Basic Trigger (Node.js), Basic Trigger (Python), Clear All Data, Cloud Functions Integration, Contents, Custom Embeddings, Data Seeding & Bulk Operations (+18 more)
 
 ### Community 133 - "Community 133"
-Cohesion: 0.09
-Nodes (19): Circle, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuRadioItem, ContextMenuSeparator, ContextMenuSubContent (+11 more)
+Cohesion: 0.07
+Nodes (22): SuccessStateProps, Check, Circle, Checkbox, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuItem, ContextMenuLabel (+14 more)
 
 ### Community 134 - "Community 134"
-Cohesion: 0.13
-Nodes (21): _a(), addEventListener(), _addListener(), attachListener(), detachListener(), emptySet(), forAllChangedKeys(), fromInitialDocuments() (+13 more)
+Cohesion: 0.11
+Nodes (4): $s(), vs, Xf, ys()
 
 ### Community 135 - "Community 135"
 Cohesion: 0.14
@@ -893,8 +888,8 @@ Cohesion: 0.08
 Nodes (25): android, allowMixedContent, appId, appName, backgroundColor, ios, scheme, scrollEnabled (+17 more)
 
 ### Community 140 - "Community 140"
-Cohesion: 0.07
-Nodes (4): Bt, fc(), i(), Pc()
+Cohesion: 0.05
+Nodes (8): Bt, fc(), i(), Pc(), Rt(), Tt(), v(), wt()
 
 ### Community 141 - "Community 141"
 Cohesion: 0.17
@@ -909,8 +904,8 @@ Cohesion: 0.08
 Nodes (24): Access Levels, Anti-Patterns, @auth Directive, auth.token Fields, Authorization Data Lookup, Authorization Patterns, Available Bindings, CEL Expressions (+16 more)
 
 ### Community 145 - "Community 145"
-Cohesion: 0.01
-Nodes (40): aa(), al(), an(), ao, ar(), C(), calculateCameraOptionsFromTo(), _cancelRenderFrame() (+32 more)
+Cohesion: 0.02
+Nodes (27): an(), ar(), calculateCameraOptionsFromTo(), _cancelRenderFrame(), e(), getCanvasContainer(), getContainer(), he() (+19 more)
 
 ### Community 147 - "Community 147"
 Cohesion: 0.07
@@ -954,15 +949,15 @@ Nodes (21): compilerOptions, allowImportingTsExtensions, isolatedModules, jsx, l
 
 ### Community 159 - "Community 159"
 Cohesion: 0.02
-Nodes (64): ah, au(), bl(), bs(), Bu, cu(), _down(), du() (+56 more)
+Nodes (70): aa(), ac(), add(), addClassName(), ah, au(), Bu, ct() (+62 more)
 
 ### Community 160 - "Community 160"
 Cohesion: 0.33
 Nodes (6): 🧠 AI-Powered Medication Intelligence, 🌟 Core Features, 📱 Cross-Platform Experience, 📱 Cross-Platform Native Experience, 👨‍👩‍👧 Family & Caregiver Management, 📊 Wellness & Adherence Tracking
 
 ### Community 161 - "Community 161"
-Cohesion: 0.05
-Nodes (9): dm, em(), im, ip, nm(), om, rm(), sm (+1 more)
+Cohesion: 0.02
+Nodes (33): ap, bm(), bp(), cm(), Cp(), dm, Dp(), em() (+25 more)
 
 ### Community 162 - "Community 162"
 Cohesion: 0.13
@@ -973,8 +968,8 @@ Cohesion: 0.10
 Nodes (20): @col, Contents, Core Directives, Customizing Tables, Data Types, @default, Defining Types, Enumerations (+12 more)
 
 ### Community 164 - "Community 164"
-Cohesion: 0.13
-Nodes (10): PluginCall, PluginCall, PluginCall, PluginCall, AppUpdaterPlugin, NativeListPlugin, NativeNavigationPlugin, NativeOcrPlugin (+2 more)
+Cohesion: 0.10
+Nodes (14): PluginCall, Int, Intent, PluginCall, PluginCall, PluginCall, PluginCall, AppUpdaterPlugin (+6 more)
 
 ### Community 165 - "Community 165"
 Cohesion: 0.15
@@ -1018,11 +1013,11 @@ Nodes (5): mockCheckPermissions, mockGetPhoto, mockNavigate, mockRequestPermissi
 
 ### Community 175 - "Community 175"
 Cohesion: 0.15
-Nodes (12): 10. Risk Management, 11. Work Plan and Time Schedule, 12. Detailed Budget, 13. Expected Outcomes, 14. References, 1. Introduction and Background, 2. Motivation, 3. Problem Statement (+4 more)
+Nodes (13): 10. Risk Management, 11. Work Plan and Time Schedule, 12. Detailed Budget, 13. Expected Outcomes, 14. References, 1. Introduction and Background, 2. Motivation, 3. Problem Statement (+5 more)
 
 ### Community 176 - "Community 176"
 Cohesion: 0.08
-Nodes (41): addEventListener(), _animationLoop(), cancelAnimationFrame(), _cleanupCanvas(), _cleanupStateMachineListeners(), de(), delete(), destroy() (+33 more)
+Nodes (40): _animationLoop(), cancelAnimationFrame(), _cleanupCanvas(), _cleanupStateMachineListeners(), de(), destroy(), __destroy_into_raw(), dispatch() (+32 more)
 
 ### Community 177 - "Community 177"
 Cohesion: 0.12
@@ -1074,7 +1069,7 @@ Nodes (4): Android Native Release, 🚢 Deployment & Distribution, Over-The-Air 
 
 ### Community 192 - "Community 192"
 Cohesion: 0.05
-Nodes (42): clear_slot(), get_slot_str(), get_slot_type(), get_state_machine(), getSlot(), getSlotType(), load_animation_from_id(), load_font() (+34 more)
+Nodes (41): clear_slot(), get_slot_str(), get_slot_type(), get_state_machine(), getSlot(), getSlotType(), load_font(), reset_slot() (+33 more)
 
 ### Community 193 - "Community 193"
 Cohesion: 0.50
@@ -1141,8 +1136,8 @@ Cohesion: 0.18
 Nodes (10): `cleanUrls` (Optional), Full Example, `headers` (Optional), Hosting Configuration (`firebase.json`), `ignore` (Optional), Key Attributes, `public` (Required), `redirects` (Optional) (+2 more)
 
 ### Community 209 - "Community 209"
-Cohesion: 0.05
-Nodes (44): ThemeToggle(), analytics, app, auth, db, firebaseConfig, ArrowLeft, Database (+36 more)
+Cohesion: 0.04
+Nodes (48): ConfirmationDialogProps, dialogVariants, springTransition, ThemeToggle(), analytics, app, auth, db (+40 more)
 
 ### Community 211 - "Community 211"
 Cohesion: 0.07
@@ -1153,8 +1148,8 @@ Cohesion: 0.18
 Nodes (10): 1. Define Data Model (`schema/schema.gql`), 2. Define Operations (`connector/queries.gql`, `connector/mutations.gql`), 3. Secure Your App (`connector/` files), 4. Generate & Use SDKs, Deployment & CLI, Development Workflow, Examples, Feature Capability Map (+2 more)
 
 ### Community 213 - "Community 213"
-Cohesion: 0.17
-Nodes (3): cn, cs(), ct()
+Cohesion: 0.10
+Nodes (26): dl(), eb(), getCustomParameters(), _getFrameworks(), getScopes(), gl(), hl(), initAndGetManager() (+18 more)
 
 ### Community 214 - "Community 214"
 Cohesion: 0.18
@@ -1181,8 +1176,8 @@ Cohesion: 0.20
 Nodes (9): background_color, description, display, icons, name, orientation, short_name, start_url (+1 more)
 
 ### Community 221 - "Community 221"
-Cohesion: 0.08
-Nodes (42): A(), activeAnimationId(), activeThemeId(), animation_id(), c(), current_marker(), D(), E() (+34 more)
+Cohesion: 0.10
+Nodes (40): A(), addEventListener(), ae(), c(), current_marker(), D(), delete(), E() (+32 more)
 
 ### Community 222 - "Community 222"
 Cohesion: 0.20
@@ -1198,7 +1193,7 @@ Nodes (4): Rd(), um(), wm, Ym()
 
 ### Community 225 - "Community 225"
 Cohesion: 0.09
-Nodes (42): clear_slots(), clearSlot(), clearSlots(), _discardPlayerEvents(), _drainPlayerEvents(), _draw(), _initializeCanvas(), _initializeObserver() (+34 more)
+Nodes (42): activeAnimationId(), animation_id(), clear_slots(), clearSlot(), clearSlots(), _discardPlayerEvents(), _drainPlayerEvents(), _draw() (+34 more)
 
 ### Community 227 - "Community 227"
 Cohesion: 0.20
@@ -1361,8 +1356,8 @@ Cohesion: 0.22
 Nodes (5): android, Context, PluginCall, Boolean, NativeAlarmPlugin
 
 ### Community 270 - "Community 270"
-Cohesion: 0.10
-Nodes (25): addFrameDataToCanvas(), As(), e(), ee(), G(), gr(), gs(), he() (+17 more)
+Cohesion: 0.11
+Nodes (23): addFrameDataToCanvas(), As(), e(), ee(), gr(), gs(), he(), i() (+15 more)
 
 ### Community 271 - "Community 271"
 Cohesion: 0.19
@@ -1403,10 +1398,6 @@ Nodes (5): Result, String, Vec, encrypt_data(), hash_data()
 ### Community 280 - "Community 280"
 Cohesion: 0.33
 Nodes (5): Result, String, Vec, compress_image_mock(), get_image_dimensions()
-
-### Community 283 - "Community 283"
-Cohesion: 0.38
-Nodes (4): Int, Intent, PluginCall, NativeCameraPlugin
 
 ### Community 284 - "Community 284"
 Cohesion: 0.12
@@ -1549,8 +1540,8 @@ Cohesion: 0.18
 Nodes (9): _(), d(), E(), l(), M(), r(), T(), u() (+1 more)
 
 ### Community 377 - "Community 377"
-Cohesion: 0.18
-Nodes (18): available(), ensureAvailable(), _updateLastWrittenByte(), writeBigInt64(), writeBigUint64(), writeBoolean(), writeByte(), writeBytes() (+10 more)
+Cohesion: 0.15
+Nodes (20): available(), ensureAvailable(), G(), _updateLastWrittenByte(), writeBigInt64(), writeBigUint64(), writeBoolean(), writeByte() (+12 more)
 
 ### Community 378 - "Community 378"
 Cohesion: 0.18
@@ -1562,7 +1553,7 @@ Nodes (15): dirty(), Ds(), fr(), getDefaultTransition(), Gr(), gs(), isAnimating
 
 ### Community 386 - "Community 386"
 Cohesion: 0.02
-Nodes (126): ConfirmationDialogProps, dialogVariants, springTransition, OFFLINE_ALLOWED_ROUTES, OfflineOverlay(), SuccessStateProps, useNetworkStatus(), useSwipeToDismiss() (+118 more)
+Nodes (115): AppShell(), AppSidebar(), Navbar(), NavbarProps, NavLink, NavLinkCompatProps, useIsMobile(), ChevronDown (+107 more)
 
 ### Community 387 - "Community 387"
 Cohesion: 0.18
@@ -1601,12 +1592,12 @@ Cohesion: 0.50
 Nodes (4): buildNotification(), schedule(), sendNotification(), sendPending()
 
 ### Community 398 - "Community 398"
-Cohesion: 0.08
-Nodes (33): DEFAULT_LOCATION, LocationStatus, useGeolocation(), UseGeolocationOptions, UserLocation, DEFAULT_USER_COORDS, useNearbyPharmacies(), Building (+25 more)
+Cohesion: 0.03
+Nodes (79): OFFLINE_ALLOWED_ROUTES, OfflineOverlay(), DEFAULT_LOCATION, LocationStatus, useGeolocation(), UseGeolocationOptions, UserLocation, DEFAULT_USER_COORDS (+71 more)
 
 ### Community 401 - "Community 401"
-Cohesion: 0.18
-Nodes (11): ae(), at(), B(), ce(), ie(), lb(), ne(), se() (+3 more)
+Cohesion: 0.29
+Nodes (7): at(), B(), ce(), se(), set_background(), setBackgroundColor(), Ye()
 
 ### Community 402 - "Community 402"
 Cohesion: 0.29
@@ -1623,22 +1614,22 @@ Nodes (55): FdaBoxedWarningBadgeProps, FdaSafetyOverviewCardProps, useDrugData()
 ## Knowledge Gaps
 - **1523 isolated node(s):** `appId`, `appName`, `webDir`, `backgroundColor`, `androidScheme` (+1518 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **67 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **68 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `_()` connect `Community 9` to `Community 129`, `Community 140`, `Community 12`, `Community 142`, `Community 17`, `Community 19`, `Community 21`, `Community 24`, `Community 26`, `Community 282`, `Community 29`, `Community 31`, `Community 32`, `Community 34`, `Community 36`, `Community 41`, `Community 43`, `Community 45`, `Community 301`, `Community 53`, `Community 190`, `Community 71`, `Community 72`, `Community 78`, `Community 334`, `Community 210`, `Community 83`, `Community 84`, `Community 87`, `Community 88`, `Community 89`, `Community 119`, `Community 96`, `Community 226`, `Community 100`, `Community 106`, `Community 111`, `Community 118`, `Community 254`, `Community 380`, `Community 379`, `Community 124`, `Community 126`?**
+- **Why does `_()` connect `Community 9` to `Community 129`, `Community 140`, `Community 12`, `Community 142`, `Community 17`, `Community 19`, `Community 21`, `Community 24`, `Community 26`, `Community 282`, `Community 29`, `Community 31`, `Community 32`, `Community 34`, `Community 36`, `Community 41`, `Community 43`, `Community 45`, `Community 301`, `Community 53`, `Community 190`, `Community 67`, `Community 71`, `Community 72`, `Community 78`, `Community 334`, `Community 210`, `Community 83`, `Community 84`, `Community 87`, `Community 88`, `Community 89`, `Community 119`, `Community 96`, `Community 226`, `Community 100`, `Community 106`, `Community 111`, `Community 118`, `Community 254`, `Community 380`, `Community 379`, `Community 124`, `Community 126`?**
   _High betweenness centrality (0.308) - this node is a cross-community bridge._
-- **Why does `_()` connect `Community 3` to `Community 6`, `Community 7`, `Community 136`, `Community 263`, `Community 10`, `Community 13`, `Community 145`, `Community 18`, `Community 146`, `Community 149`, `Community 22`, `Community 23`, `Community 21`, `Community 281`, `Community 28`, `Community 159`, `Community 161`, `Community 44`, `Community 54`, `Community 321`, `Community 66`, `Community 69`, `Community 213`, `Community 218`, `Community 91`, `Community 92`, `Community 224`, `Community 104`, `Community 105`, `Community 232`, `Community 116`, `Community 120`, `Community 122`, `Community 125`, `Community 382`, `Community 383`?**
+- **Why does `_()` connect `Community 3` to `Community 6`, `Community 7`, `Community 136`, `Community 263`, `Community 10`, `Community 134`, `Community 13`, `Community 145`, `Community 18`, `Community 146`, `Community 149`, `Community 22`, `Community 23`, `Community 21`, `Community 281`, `Community 27`, `Community 28`, `Community 159`, `Community 161`, `Community 44`, `Community 54`, `Community 321`, `Community 66`, `Community 69`, `Community 76`, `Community 218`, `Community 91`, `Community 92`, `Community 224`, `Community 104`, `Community 105`, `Community 232`, `Community 116`, `Community 120`, `Community 122`, `Community 125`, `Community 382`, `Community 383`?**
   _High betweenness centrality (0.284) - this node is a cross-community bridge._
-- **Why does `_()` connect `Community 0` to `Community 1`, `Community 33`, `Community 35`, `Community 5`, `Community 134`, `Community 107`, `Community 270`, `Community 15`, `Community 50`, `Community 211`, `Community 20`, `Community 21`, `Community 25`, `Community 221`, `Community 62`, `Community 159`?**
+- **Why does `_()` connect `Community 0` to `Community 1`, `Community 33`, `Community 35`, `Community 161`, `Community 5`, `Community 107`, `Community 270`, `Community 15`, `Community 50`, `Community 211`, `Community 20`, `Community 21`, `Community 93`, `Community 25`, `Community 221`, `Community 62`?**
   _High betweenness centrality (0.156) - this node is a cross-community bridge._
 - **What connects `appId`, `appName`, `webDir` to the rest of the system?**
   _1525 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.008707376478775225 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.008896159395649337 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.024242424242424242 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.022788776527560176 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.014030968751746883 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.014049374564396023 - nodes in this community are weakly interconnected._
