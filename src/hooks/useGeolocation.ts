@@ -50,6 +50,9 @@ async function reverseGeocode(
   return null;
 }
 
+let cachedLocation: UserLocation | null = null;
+let cachedStatus: LocationStatus = "idle";
+
 export interface UseGeolocationOptions {
   autoRequest?: boolean;
 }
@@ -60,8 +63,8 @@ export interface UseGeolocationOptions {
  */
 export function useGeolocation(options: UseGeolocationOptions = {}) {
   const { autoRequest = true } = options;
-  const [location, setLocation] = useState<UserLocation | null>(null);
-  const [status, setStatus] = useState<LocationStatus>("idle");
+  const [location, setLocation] = useState<UserLocation | null>(cachedLocation);
+  const [status, setStatus] = useState<LocationStatus>(cachedStatus);
   const [error, setError] = useState<string | null>(null);
 
   const requestLocation = useCallback(async () => {
@@ -72,12 +75,15 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
     if (Capacitor.isNativePlatform()) {
       try {
         const result = await NativeLocation.getCachedCountry();
-        setLocation({
+        const loc: UserLocation = {
           latitude: result.lat,
           longitude: result.lng,
           country: result.country,
           countryCode: result.countryCode,
-        });
+        };
+        cachedLocation = loc;
+        cachedStatus = "granted";
+        setLocation(loc);
         setStatus("granted");
         setError(null);
         return;
@@ -103,6 +109,8 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
           });
         }
         if (perm.location === "denied") {
+          cachedLocation = DEFAULT_LOCATION;
+          cachedStatus = "denied";
           setLocation(DEFAULT_LOCATION);
           setStatus("denied");
           setError("Location permission denied");
@@ -128,17 +136,22 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
         countryCode: geo?.countryCode ?? null,
       };
 
+      cachedLocation = userLoc;
+      cachedStatus = "granted";
       setLocation(userLoc);
       setStatus("granted");
     } catch (err) {
       console.error("Geolocation error:", err);
       // Fall back to Kampala, Uganda
+      cachedLocation = DEFAULT_LOCATION;
       setLocation(DEFAULT_LOCATION);
       const e = err as { code?: number; message?: string };
       if (e?.code === 1 || e?.message?.includes("denied")) {
+        cachedStatus = "denied";
         setStatus("denied");
         setError("Location permission denied");
       } else {
+        cachedStatus = "error";
         setStatus("error");
         setError(e?.message || "Failed to get location");
       }
@@ -147,7 +160,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
 
   // Auto-request on mount if enabled
   useEffect(() => {
-    if (autoRequest) {
+    if (autoRequest && !cachedLocation) {
       requestLocation();
     }
   }, [autoRequest, requestLocation]);
