@@ -81,22 +81,24 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={{ top: 0.05, bottom: 0.3 }}
-          onDragEnd={(_e, info) => {
-            if (info.offset.y > 80) onClose();
-          }}
-          className="w-full max-w-2xl bg-card rounded-t-[2.5rem] shadow-2xl border border-border/50 max-h-[92dvh] overflow-y-auto no-scrollbar touch-pan-x flex flex-col"
-          {...swipe}
+          className="w-full max-w-2xl bg-card rounded-t-[2.5rem] shadow-2xl border border-border/50 max-h-[92dvh] flex flex-col overflow-hidden"
         >
-          {/* Grab Handle */}
-          <div className="pt-3 pb-1">
-            <div className="w-12 h-1.5 rounded-full bg-muted/80 mx-auto transition-colors" />
-          </div>
+          {/* Grab Handle — swipe/drag this area to dismiss */}
+          <motion.div
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.05, bottom: 0.3 }}
+            onDragEnd={(_e, info) => {
+              if (info.offset.y > 80) onClose();
+            }}
+            className="flex-shrink-0 pt-4 pb-2 px-6 cursor-grab active:cursor-grabbing touch-pan-x select-none"
+            {...swipe}
+          >
+            <div className="w-12 h-1.5 rounded-full bg-muted/80 hover:bg-muted mx-auto transition-colors" />
+          </motion.div>
 
           {/* Modal Header */}
-          <div className="p-6 pb-4 border-b border-border/40">
+          <div className="px-6 pb-4 border-b border-border/40 shrink-0">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -181,7 +183,7 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5 flex-1">
+          <div className="p-6 space-y-5 flex-1 overflow-y-auto no-scrollbar touch-auto overscroll-contain">
             {/* Location Status Warning Banner (if location denied / error) */}
             {(geoStatus === "denied" || geoStatus === "error") && (
               <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs">

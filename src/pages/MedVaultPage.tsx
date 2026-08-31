@@ -166,20 +166,28 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0.05, bottom: 0.3 }}
-        onDragEnd={(_e, info) => {
-          if (info.offset.y > 80) onClose();
-        }}
-        className="w-full max-w-lg bg-card rounded-t-3xl p-6 pb-10 shadow-2xl border border-border/50 max-h-[90dvh] overflow-y-auto no-scrollbar cursor-grab active:cursor-grabbing touch-pan-x"
-        {...swipe}
+        className="w-full max-w-lg bg-card rounded-t-3xl shadow-2xl border border-border/50 max-h-[90dvh] flex flex-col overflow-hidden"
       >
-        <div className="w-10 h-1 rounded-full bg-muted/70 hover:bg-muted mx-auto mb-6 transition-colors" />
-        <h3 className="text-xl font-black tracking-tight mb-1">Update Stock & Frequency</h3>
-        <p className="text-xs text-muted-foreground mb-6">
-          {medicine.name} · Current: {medicine.currentQuantity ?? "—"} {medicine.unit ?? "units"}
-        </p>
+        {/* Drag handle — swipe this area to dismiss */}
+        <motion.div
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0.05, bottom: 0.3 }}
+          onDragEnd={(_e, info) => {
+            if (info.offset.y > 80) onClose();
+          }}
+          className="flex-shrink-0 pt-4 pb-2 px-6 cursor-grab active:cursor-grabbing touch-pan-x select-none"
+          {...swipe}
+        >
+          <div className="w-10 h-1 rounded-full bg-muted/70 hover:bg-muted mx-auto transition-colors" />
+        </motion.div>
+
+        {/* Scrollable form body */}
+        <div className="overflow-y-auto no-scrollbar touch-auto overscroll-contain flex-1 px-6 pb-8">
+          <h3 className="text-xl font-black tracking-tight mb-1">Update Stock & Frequency</h3>
+          <p className="text-xs text-muted-foreground mb-6">
+            {medicine.name} · Current: {medicine.currentQuantity ?? "—"} {medicine.unit ?? "units"}
+          </p>
 
         <div className="space-y-5">
           <div className="space-y-2">
@@ -326,6 +334,7 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
           >
             {isSaving ? "Saving…" : "Save Stock"}
           </Button>
+        </div>
         </div>
       </motion.div>
     </motion.div>,
