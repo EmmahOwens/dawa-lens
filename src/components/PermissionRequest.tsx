@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { LucideIcon, X } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
@@ -31,23 +32,23 @@ export default function PermissionRequest({
     onConfirm();
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[100] flex items-center justify-center p-4 pointer-events-auto">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm"
           />
           
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-sm rounded-[2.5rem] border border-border/50 bg-card p-8 shadow-2xl"
+            className="relative w-full max-w-sm rounded-[2.5rem] border border-border/50 bg-card p-8 shadow-2xl z-10"
           >
             <button
               onClick={onClose}
@@ -91,4 +92,8 @@ export default function PermissionRequest({
       )}
     </AnimatePresence>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }
