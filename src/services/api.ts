@@ -293,3 +293,47 @@ export const aiApi = {
       }),
     }),
 };
+
+export const doseLogsApi = {
+  create: (data: {
+    userId: string;
+    medicineName: string;
+    action: "taken" | "skipped" | "missed" | "snoozed";
+    actionTime?: string;
+    dose?: string;
+    medicineId?: string;
+    reminderId?: string;
+    scheduledTime?: string;
+    patientId?: string | null;
+    idempotencyKey?: string;
+    isSnoozed?: boolean;
+    snoozeUntil?: string;
+  }) =>
+    request<{
+      id: string;
+      newQuantity?: number;
+      adjustedSchedule?: {
+        reminderId: string;
+        originalTime: string;
+        adjustedTime: string;
+        timeOffsetMinutes: number;
+      };
+      [key: string]: unknown;
+    }>("/doselogs", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getAll: (userId: string, patientId?: string) =>
+    request<DoseLog[]>(
+      `/doselogs?userId=${encodeURIComponent(userId)}${
+        patientId ? `&patientId=${encodeURIComponent(patientId)}` : ""
+      }`
+    ),
+
+  delete: (id: string) =>
+    request<void>(`/doselogs/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
+};
+

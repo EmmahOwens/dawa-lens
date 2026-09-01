@@ -52,8 +52,22 @@ export const createDoseLog = async (data) => {
     data.actionTime = new Date().toISOString();
   }
 
+  // Check idempotency to prevent double logging or duplicate stock decrements
+  if (data.idempotencyKey) {
+    const existingSnap = await doseLogsCol
+      .where('userId', '==', data.userId)
+      .where('idempotencyKey', '==', data.idempotencyKey)
+      .limit(1)
+      .get();
+    if (!existingSnap.empty) {
+      const existingDoc = existingSnap.docs[0];
+      return { id: existingDoc.id, _id: existingDoc.id, ...existingDoc.data(), isDuplicate: true };
+    }
+  }
+
   let lowStockNotification = null;
   let adjustedScheduleData = null;
+  let updatedMedicineQuantity = null;
 
   const logRef = doseLogsCol.doc();
   const logId = logRef.id;
@@ -62,7 +76,7 @@ export const createDoseLog = async (data) => {
   // Execute critical state mutations inside an atomic transaction
   await db.runTransaction(async (t) => {
     // 1. Write the dose log
-    t.set(logRef, data);
+    t.set(logRef, { ...data, id: logId, _id: logId });
 
     // 2. Atomic Inventory Decrement
     if (data.action === 'taken' && data.medicineId) {
@@ -71,15 +85,22 @@ export const createDoseLog = async (data) => {
 
       if (medDoc.exists) {
         const medData = medDoc.data();
-        if (medData && medData.totalQuantity !== undefined) {
+        const currentStock = medData?.currentQuantity !== undefined 
+          ? medData.currentQuantity 
+          : (medData?.totalQuantity !== undefined ? medData.totalQuantity : null);
+
+        if (currentStock !== null) {
           const dosagePerDose = medData.dosagePerDose || 1;
-          const newQuantity = Math.max(0, medData.totalQuantity - dosagePerDose);
+          const newQuantity = Math.max(0, currentStock - dosagePerDose);
           const updatedAt = new Date().toISOString();
 
           t.update(medRef, { 
+            currentQuantity: newQuantity,
             totalQuantity: newQuantity,
             updatedAt
           });
+
+          updatedMedicineQuantity = newQuantity;
 
           // Check for low stock notification trigger
           const threshold = (medData.frequencyPerDay || 1) * 7 || 5;
@@ -154,6 +175,10 @@ export const createDoseLog = async (data) => {
 
   if (adjustedScheduleData) {
     log.adjustedSchedule = adjustedScheduleData;
+  }
+
+  if (updatedMedicineQuantity !== null) {
+    log.newQuantity = updatedMedicineQuantity;
   }
 
   // Post-transaction asynchronous side effects (Notifications & Interventions)

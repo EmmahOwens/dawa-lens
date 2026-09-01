@@ -1,5 +1,5 @@
 import { Capacitor } from "@capacitor/core";
-import { NativeSqlite } from "@/plugins/nativeSqlite";
+import { NativeSqlite, type SqlParam } from "@/plugins/nativeSqlite";
 import { storage } from "../lib/storage";
 import { Medicine, Reminder, DoseLog, Patient, WellnessLog, ScheduleAuditLog } from "../contexts/AppContext";
 
@@ -11,6 +11,53 @@ const LOCAL_WELLNESS_KEY = "dawa_local_wellness";
 const LOCAL_AUDIT_KEY = "dawa_local_schedule_audit";
 
 let sqliteReady = false;
+let activeUserId: string | null = null;
+
+export function setActiveUserScope(userId: string | null): void {
+  activeUserId = userId;
+}
+
+export function getPartitionKey(baseKey: string): string {
+  return activeUserId ? `${baseKey}_${activeUserId}` : baseKey;
+}
+
+/**
+ * Safely constructs dynamic SQL SET clauses and param arrays for partial updates.
+ * Binds ONLY the fields explicitly present (not undefined) in `updates`.
+ * Completely prevents partial updates from erasing omitted columns with NULL.
+ */
+export function buildDynamicSqlUpdate(
+  tableName: string,
+  id: string,
+  columnMapping: Record<string, string>,
+  updates: Record<string, unknown>,
+  transforms?: Record<string, (val: any) => any>
+): { sql: string; params: SqlParam[] } | null {
+  const setClauses: string[] = [];
+  const params: SqlParam[] = [];
+
+  for (const [prop, col] of Object.entries(columnMapping)) {
+    if (updates[prop] !== undefined) {
+      setClauses.push(`${col} = ?`);
+      const rawVal = updates[prop];
+      const val = transforms && transforms[prop] ? (transforms[prop](rawVal) as SqlParam) : ((rawVal as SqlParam) ?? null);
+      params.push(val);
+    }
+  }
+
+  if (setClauses.length === 0) {
+    return null;
+  }
+
+  if (tableName === "medicines") {
+    setClauses.push("updated_at = ?");
+    params.push(new Date().toISOString());
+  }
+
+  params.push(id);
+  const sql = `UPDATE ${tableName} SET ${setClauses.join(", ")} WHERE id = ?`;
+  return { sql, params };
+}
 
 function safeJsonParse<T>(val: unknown, fallback: T): T {
   if (val === null || val === undefined) return fallback;
@@ -126,38 +173,41 @@ export const localPersistence = {
     update: async (id: string, updates: Partial<Medicine>): Promise<void> => {
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
-          await NativeSqlite.execute({
-            sql: `UPDATE medicines SET name=?,generic_name=?,dosage=?,current_quantity=?,dosage_per_dose=?,
-                  color=?,icon=?,patient_id=?,updated_at=?,is_conflict=?,notes=? WHERE id=?`,
-            params: [
-              updates.name ?? null,
-              (updates as Partial<Medicine> & { genericName?: string })
-                .genericName ?? null,
-              updates.dosage ?? null,
-              updates.currentQuantity ?? null,
-              updates.dosagePerDose ?? null,
-              (updates as Partial<Medicine> & { color?: string }).color ?? null,
-              (updates as Partial<Medicine> & { icon?: string }).icon ?? null,
-              (updates as Partial<Medicine> & { patientId?: string | null })
-                .patientId ?? null,
-              new Date().toISOString(),
-              (updates as Partial<Medicine> & { isConflict?: boolean }).isConflict
-                ? 1
-                : 0,
-              updates.notes ?? null,
-              id,
-            ],
-          });
-          return;
+          const mapping: Record<string, string> = {
+            name: "name",
+            genericName: "generic_name",
+            dosage: "dosage",
+            form: "form",
+            currentQuantity: "current_quantity",
+            dosagePerDose: "dosage_per_dose",
+            frequencyPerDay: "frequency_per_day",
+            color: "color",
+            icon: "icon",
+            patientId: "patient_id",
+            isConflict: "is_conflict",
+            notes: "notes",
+            imageUrl: "image_url",
+          };
+          const transforms: Record<string, (v: unknown) => unknown> = {
+            isConflict: (v) => (v ? 1 : 0),
+          };
+          const queryObj = buildDynamicSqlUpdate("medicines", id, mapping, updates as Record<string, unknown>, transforms);
+          if (queryObj) {
+            await NativeSqlite.execute({
+              sql: queryObj.sql,
+              params: queryObj.params,
+            });
+            return;
+          }
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite medicines.update failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<Medicine[]>(LOCAL_MEDS_KEY, []);
+      const all = await storage.getItem<Medicine[]>(getPartitionKey(LOCAL_MEDS_KEY), []);
       const idx = all.findIndex((m) => m.id === id);
       if (idx !== -1) {
-        all[idx] = { ...all[idx], ...updates };
-        await storage.setItem(LOCAL_MEDS_KEY, all);
+        all[idx] = { ...all[idx], ...updates, updatedAt: new Date().toISOString() };
+        await storage.setItem(getPartitionKey(LOCAL_MEDS_KEY), all);
       }
     },
     remove: async (id: string): Promise<void> => {
@@ -286,31 +336,37 @@ export const localPersistence = {
     update: async (id: string, updates: Partial<Reminder>): Promise<void> => {
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
-          await NativeSqlite.execute({
-            sql: `UPDATE reminders SET medicine_name=?,dose=?,time=?,repeat_schedule=?,repeat_days=?,notes=?,enabled=?,patient_id=? WHERE id=?`,
-            params: [
-              updates.medicineName ?? null,
-              updates.dose ?? null,
-              updates.time ?? null,
-              updates.repeatSchedule ?? null,
-              updates.repeatDays ? JSON.stringify(updates.repeatDays) : null,
-              updates.notes ?? null,
-              updates.enabled !== undefined ? (updates.enabled ? 1 : 0) : null,
-              (updates as Partial<Reminder> & { patientId?: string | null })
-                .patientId ?? null,
-              id,
-            ],
-          });
-          return;
+          const mapping: Record<string, string> = {
+            medicineName: "medicine_name",
+            dose: "dose",
+            time: "time",
+            repeatSchedule: "repeat_schedule",
+            repeatDays: "repeat_days",
+            notes: "notes",
+            enabled: "enabled",
+            patientId: "patient_id",
+          };
+          const transforms: Record<string, (v: unknown) => unknown> = {
+            enabled: (v) => (v ? 1 : 0),
+            repeatDays: (v) => (v ? JSON.stringify(v) : null),
+          };
+          const queryObj = buildDynamicSqlUpdate("reminders", id, mapping, updates as Record<string, unknown>, transforms);
+          if (queryObj) {
+            await NativeSqlite.execute({
+              sql: queryObj.sql,
+              params: queryObj.params,
+            });
+            return;
+          }
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite reminders.update failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<Reminder[]>(LOCAL_REMS_KEY, []);
+      const all = await storage.getItem<Reminder[]>(getPartitionKey(LOCAL_REMS_KEY), []);
       const idx = all.findIndex((r) => r.id === id);
       if (idx !== -1) {
         all[idx] = { ...all[idx], ...updates };
-        await storage.setItem(LOCAL_REMS_KEY, all);
+        await storage.setItem(getPartitionKey(LOCAL_REMS_KEY), all);
       }
     },
     remove: async (id: string): Promise<void> => {
@@ -431,31 +487,37 @@ export const localPersistence = {
     update: async (id: string, updates: Partial<DoseLog>): Promise<void> => {
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
-          await NativeSqlite.execute({
-            sql: `UPDATE dose_logs SET reminder_id=?,medicine_name=?,dose=?,scheduled_time=?,action_time=?,action=?,is_snoozed=?,snooze_until=?,patient_id=? WHERE id=?`,
-            params: [
-              updates.reminderId ?? null,
-              updates.medicineName ?? null,
-              updates.dose ?? null,
-              updates.scheduledTime ?? null,
-              updates.actionTime ?? null,
-              updates.action ?? null,
-              updates.isSnoozed !== undefined ? (updates.isSnoozed ? 1 : 0) : null,
-              updates.snoozeUntil ?? null,
-              updates.patientId ?? null,
-              id,
-            ],
-          });
-          return;
+          const mapping: Record<string, string> = {
+            reminderId: "reminder_id",
+            medicineName: "medicine_name",
+            dose: "dose",
+            scheduledTime: "scheduled_time",
+            actionTime: "action_time",
+            action: "action",
+            isSnoozed: "is_snoozed",
+            snoozeUntil: "snooze_until",
+            patientId: "patient_id",
+          };
+          const transforms: Record<string, (v: unknown) => unknown> = {
+            isSnoozed: (v) => (v ? 1 : 0),
+          };
+          const queryObj = buildDynamicSqlUpdate("dose_logs", id, mapping, updates as Record<string, unknown>, transforms);
+          if (queryObj) {
+            await NativeSqlite.execute({
+              sql: queryObj.sql,
+              params: queryObj.params,
+            });
+            return;
+          }
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite doseLogs.update failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<DoseLog[]>(LOCAL_LOGS_KEY, []);
+      const all = await storage.getItem<DoseLog[]>(getPartitionKey(LOCAL_LOGS_KEY), []);
       const idx = all.findIndex((l) => l.id === id);
       if (idx !== -1) {
         all[idx] = { ...all[idx], ...updates };
-        await storage.setItem(LOCAL_LOGS_KEY, all);
+        await storage.setItem(getPartitionKey(LOCAL_LOGS_KEY), all);
       }
     },
     remove: async (id: string): Promise<void> => {
@@ -544,26 +606,29 @@ export const localPersistence = {
     update: async (id: string, updates: Partial<Patient>): Promise<void> => {
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
-          await NativeSqlite.execute({
-            sql: `UPDATE patients SET name=?,age=?,gender=?,relation=? WHERE id=?`,
-            params: [
-              updates.name ?? null,
-              updates.age ?? null,
-              updates.gender ?? null,
-              updates.relation ?? null,
-              id,
-            ],
-          });
-          return;
+          const mapping: Record<string, string> = {
+            name: "name",
+            age: "age",
+            gender: "gender",
+            relation: "relation",
+          };
+          const queryObj = buildDynamicSqlUpdate("patients", id, mapping, updates as Record<string, unknown>);
+          if (queryObj) {
+            await NativeSqlite.execute({
+              sql: queryObj.sql,
+              params: queryObj.params,
+            });
+            return;
+          }
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite patients.update failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<Patient[]>(LOCAL_PATIENTS_KEY, []);
+      const all = await storage.getItem<Patient[]>(getPartitionKey(LOCAL_PATIENTS_KEY), []);
       const idx = all.findIndex((p) => p.id === id);
       if (idx !== -1) {
         all[idx] = { ...all[idx], ...updates };
-        await storage.setItem(LOCAL_PATIENTS_KEY, all);
+        await storage.setItem(getPartitionKey(LOCAL_PATIENTS_KEY), all);
       }
     },
     remove: async (id: string): Promise<void> => {
@@ -678,4 +743,38 @@ export const localPersistence = {
     },
   },
 };
+
+/**
+ * Completely purges per-user or all cached data from Native SQLite and local storage.
+ * Executed on logout, account switch, or manual privacy wipe.
+ */
+export async function clearAllLocalPersistence(userId?: string): Promise<void> {
+  const targetUser = userId || activeUserId;
+  if (Capacitor.isNativePlatform() && sqliteReady) {
+    try {
+      if (targetUser) {
+        await NativeSqlite.execute({ sql: "DELETE FROM medicines WHERE user_id = ?", params: [targetUser] });
+        await NativeSqlite.execute({ sql: "DELETE FROM wellness_logs WHERE user_id = ?", params: [targetUser] });
+      } else {
+        await NativeSqlite.execute({ sql: "DELETE FROM medicines", params: [] });
+        await NativeSqlite.execute({ sql: "DELETE FROM reminders", params: [] });
+        await NativeSqlite.execute({ sql: "DELETE FROM dose_logs", params: [] });
+        await NativeSqlite.execute({ sql: "DELETE FROM patients", params: [] });
+        await NativeSqlite.execute({ sql: "DELETE FROM wellness_logs", params: [] });
+      }
+    } catch (e) {
+      console.warn("[localPersistence] Failed to wipe SQLite tables:", e);
+    }
+  }
+
+  // Clear unpartitioned & partitioned storage keys
+  const keys = [LOCAL_MEDS_KEY, LOCAL_REMS_KEY, LOCAL_LOGS_KEY, LOCAL_PATIENTS_KEY, LOCAL_WELLNESS_KEY, LOCAL_AUDIT_KEY];
+  for (const k of keys) {
+    storage.removeItem(k);
+    if (targetUser) {
+      storage.removeItem(`${k}_${targetUser}`);
+    }
+  }
+}
+
 

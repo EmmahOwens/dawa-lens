@@ -122,7 +122,11 @@ const AppContent = () => {
 const App = () => {
   const location = useLocation();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [updateData, setUpdateData] = useState({
+  const [updateData, setUpdateData] = useState<{
+    newVersion: string;
+    downloadUrl: string;
+    sha256?: string;
+  }>({
     newVersion: "",
     downloadUrl: "",
   });
@@ -145,13 +149,14 @@ const App = () => {
         const updateInfo = await fetchLatestRelease();
         if (!updateInfo) return;
 
-        const { latestVersion, downloadUrl } = updateInfo;
+        const { latestVersion, downloadUrl, sha256 } = updateInfo;
 
         if (isNewerVersion(latestVersion, CURRENT_VERSION)) {
           setTimeout(() => {
             setUpdateData({
               newVersion: latestVersion,
               downloadUrl: downloadUrl,
+              sha256: sha256,
             });
             setShowUpdateModal(true);
           }, 3000);
@@ -227,6 +232,7 @@ const App = () => {
                     currentVersion={CURRENT_VERSION}
                     newVersion={updateData.newVersion}
                     downloadUrl={updateData.downloadUrl}
+                    sha256={updateData.sha256}
                     onClose={() => setShowUpdateModal(false)}
                   />
                 )}

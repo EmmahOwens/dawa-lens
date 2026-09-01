@@ -162,6 +162,15 @@ function buildArcCoordinates(
   return coords;
 }
 
+/** Safely constructs a DOM popup node to prevent XSS from unescaped user location or destination strings */
+function createSafePopupElement(prefix: string, text: string): HTMLElement {
+  const container = document.createElement('div');
+  const strong = document.createElement('strong');
+  strong.textContent = `${prefix} ${text}`;
+  container.appendChild(strong);
+  return container;
+}
+
 /** Interpolate exact coordinate along the precomputed arc at normalized progress t [0, 1] */
 function interpolateArc(arcCoords: [number, number][], t: number): [number, number] {
   if (!arcCoords || arcCoords.length === 0) return [0, 0];
@@ -499,7 +508,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
 
             homeMarkerRef.current = new maplibregl.Marker({ element: homeEl, anchor: 'center' })
               .setLngLat(homeLngLat)
-              .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML(`<strong>📍 ${userCountry || 'Your Location'}</strong>`))
+              .setPopup(new maplibregl.Popup({ offset: 20 }).setDOMContent(createSafePopupElement('📍', userCountry || 'Your Location')))
               .addTo(map);
 
             setIsMapLoaded(true);
@@ -556,9 +565,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
   useEffect(() => {
     if (homeMarkerRef.current) {
       homeMarkerRef.current.setLngLat(homeLngLat);
-      // Update popup text
+      // Update popup text safely
       homeMarkerRef.current.setPopup(
-        new maplibregl.Popup({ offset: 20 }).setHTML(`<strong>📍 ${userCountry || 'Your Location'}</strong>`)
+        new maplibregl.Popup({ offset: 20 }).setDOMContent(createSafePopupElement('📍', userCountry || 'Your Location'))
       );
     }
     // Re-center map to home if no destination is active
@@ -620,7 +629,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
       "></div>`;
     destMarkerRef.current = new maplibregl.Marker({ element: destEl, anchor: 'center' })
       .setLngLat(destCoords)
-      .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML(`<strong>✈️ ${destination}</strong>`))
+      .setPopup(new maplibregl.Popup({ offset: 20 }).setDOMContent(createSafePopupElement('✈️', destination)))
       .addTo(map);
 
     // Fit map to show both endpoints with padding

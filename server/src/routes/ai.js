@@ -9,9 +9,27 @@ import * as aiValidation from '../validations/aiValidation.js';
 const router = express.Router();
 
 /**
- * Diagnostic Endpoint: Check Z.ai API Key Status & Test Generation
+ * Guard diagnostic endpoints from public exposure in production environments.
+ * Permitted only in development/test or for authenticated administrators.
  */
-router.get('/test-zai', protect, aiLimiter, async (req, res, next) => {
+const restrictToAdminOrDev = (req, res, next) => {
+  if (process.env.NODE_ENV !== 'production') {
+    return next();
+  }
+  if (req.user && (req.user.role === 'admin' || req.user.isAdmin === true)) {
+    return next();
+  }
+  return res.status(403).json({
+    status: 'fail',
+    message: 'Diagnostic endpoints are restricted to system administrators.'
+  });
+};
+
+/**
+ * Diagnostic Endpoint: Check Z.ai API Key Status & Test Generation
+ * Restricted to administrators in production.
+ */
+router.get('/test-zai', protect, restrictToAdminOrDev, aiLimiter, async (req, res, next) => {
   try {
     let availableModels = [];
     if (process.env.Z_AI_API_KEY) {
@@ -43,8 +61,9 @@ router.get('/test-zai', protect, aiLimiter, async (req, res, next) => {
 
 /**
  * Diagnostic Endpoint: Overall AI Providers Status Check
+ * Restricted to administrators in production.
  */
-router.get('/providers-status', protect, aiLimiter, async (req, res, next) => {
+router.get('/providers-status', protect, restrictToAdminOrDev, aiLimiter, async (req, res, next) => {
   try {
     const status = await aiService.testAllAiProviders();
     res.json(status);
@@ -52,7 +71,6 @@ router.get('/providers-status', protect, aiLimiter, async (req, res, next) => {
     next(error);
   }
 });
-
 
 /**
  * Personalized Wellness Quote
@@ -82,7 +100,7 @@ router.post('/health-discoveries', protect, validate(aiValidation.healthDiscover
 /**
  * AI Behavioral Adherence Coach
  */
-router.post('/coach', protect, validate(aiValidation.coachAdviceSchema), aiLimiter, async (req, res, next) => {
+router.post('/coach', protect, tokenBudgetGuard, validate(aiValidation.coachAdviceSchema), aiLimiter, async (req, res, next) => {
   try {
     const { logs, medicines, userName } = req.body;
     const advice = await aiService.getCoachAdvice(logs, medicines, userName);
@@ -95,7 +113,7 @@ router.post('/coach', protect, validate(aiValidation.coachAdviceSchema), aiLimit
 /**
  * Holistic Safety Engine
  */
-router.post('/holistic-safety', protect, validate(aiValidation.holisticSafetySchema), aiLimiter, async (req, res, next) => {
+router.post('/holistic-safety', protect, tokenBudgetGuard, validate(aiValidation.holisticSafetySchema), aiLimiter, async (req, res, next) => {
   try {
     const { medicines, lifestyleFactors } = req.body;
     const safety = await aiService.checkHolisticSafety(medicines, lifestyleFactors);
@@ -108,7 +126,7 @@ router.post('/holistic-safety', protect, validate(aiValidation.holisticSafetySch
 /**
  * Medication Travel Companion
  */
-router.post('/travel', protect, validate(aiValidation.travelAdviceSchema), aiLimiter, async (req, res, next) => {
+router.post('/travel', protect, tokenBudgetGuard, validate(aiValidation.travelAdviceSchema), aiLimiter, async (req, res, next) => {
   try {
     const advice = await aiService.getTravelAdvice(req.body);
     res.json(advice);
@@ -120,7 +138,7 @@ router.post('/travel', protect, validate(aiValidation.travelAdviceSchema), aiLim
 /**
  * Wellness Pattern Insight
  */
-router.post('/wellness-insight', protect, validate(aiValidation.wellnessInsightSchema), aiLimiter, async (req, res, next) => {
+router.post('/wellness-insight', protect, tokenBudgetGuard, validate(aiValidation.wellnessInsightSchema), aiLimiter, async (req, res, next) => {
   try {
     const { doseLogs, wellnessLogs, medicines } = req.body;
     const insight = await aiService.getWellnessInsight(doseLogs, wellnessLogs, medicines);
@@ -133,7 +151,7 @@ router.post('/wellness-insight', protect, validate(aiValidation.wellnessInsightS
 /**
  * Instant Meal Safety Check
  */
-router.post('/meal-check', protect, validate(aiValidation.mealCheckSchema), aiLimiter, async (req, res, next) => {
+router.post('/meal-check', protect, tokenBudgetGuard, validate(aiValidation.mealCheckSchema), aiLimiter, async (req, res, next) => {
   try {
     const { medicines, mealDescription } = req.body;
     const safety = await aiService.checkMealSafety(medicines, mealDescription);
@@ -146,7 +164,7 @@ router.post('/meal-check', protect, validate(aiValidation.mealCheckSchema), aiLi
 /**
  * Proactive Nutritional Guidance
  */
-router.post('/nutritional-guidance', protect, validate(aiValidation.nutritionalGuidanceSchema), aiLimiter, async (req, res, next) => {
+router.post('/nutritional-guidance', protect, tokenBudgetGuard, validate(aiValidation.nutritionalGuidanceSchema), aiLimiter, async (req, res, next) => {
   try {
     const { medicines } = req.body;
     const guidance = await aiService.getNutritionalGuidance(medicines);
@@ -159,7 +177,7 @@ router.post('/nutritional-guidance', protect, validate(aiValidation.nutritionalG
 /**
  * Personalized Emotion Reflection (Wellness Hub – Daily Vibe + Body Scan)
  */
-router.post('/emotion-reflection', protect, validate(aiValidation.emotionReflectionSchema), aiLimiter, async (req, res, next) => {
+router.post('/emotion-reflection', protect, tokenBudgetGuard, validate(aiValidation.emotionReflectionSchema), aiLimiter, async (req, res, next) => {
   try {
     const { mood, energy, symptoms, medicines } = req.body;
     const reflection = await aiService.getEmotionReflection(mood, energy, symptoms, medicines);
@@ -172,7 +190,7 @@ router.post('/emotion-reflection', protect, validate(aiValidation.emotionReflect
 /**
  * Conversational AI Assistant (DawaGPT)
  */
-router.post('/chat', protect, validate(aiValidation.chatSchema), heavyAiLimiter, tokenBudgetGuard, async (req, res, next) => {
+router.post('/chat', protect, tokenBudgetGuard, validate(aiValidation.chatSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const chat = await aiService.chatWithDawaGPT(req.body);
     res.json(chat);
@@ -184,7 +202,7 @@ router.post('/chat', protect, validate(aiValidation.chatSchema), heavyAiLimiter,
 /**
  * Streaming Conversational AI Assistant
  */
-router.post('/chat/stream', protect, validate(aiValidation.chatSchema), heavyAiLimiter, tokenBudgetGuard, async (req, res, next) => {
+router.post('/chat/stream', protect, tokenBudgetGuard, validate(aiValidation.chatSchema), heavyAiLimiter, async (req, res, next) => {
   try {
     const stream = await aiService.streamChatWithDawaGPT(req.body);
 
@@ -199,6 +217,5 @@ router.post('/chat/stream', protect, validate(aiValidation.chatSchema), heavyAiL
     next(error);
   }
 });
-
 
 export default router;

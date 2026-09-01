@@ -1,10 +1,12 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported, type Analytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
+import { Capacitor } from "@capacitor/core";
 import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
+  memoryLocalCache,
 } from "firebase/firestore";
 
 // Your web app's Firebase configuration
@@ -37,9 +39,16 @@ if (typeof window !== "undefined") {
 export const analytics = analyticsInstance;
 export const auth = getAuth(app);
 
-// Initialize Firestore with persistent IndexedDB cache for offline support
+// Audit Recommendation: Default web clients to in-memory Firestore cache to prevent
+// indefinite unencrypted health data persistence in shared browsers.
+// Native apps (sandboxed per-user) and explicitly confirmed trusted devices use persistent cache.
+const isNative = Capacitor.isNativePlatform();
+const isTrustedWebDevice = typeof window !== "undefined" && localStorage.getItem("dawa_trusted_device") === "true";
+
 export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager(),
-  }),
+  localCache: (isNative || isTrustedWebDevice)
+    ? persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      })
+    : memoryLocalCache(),
 });

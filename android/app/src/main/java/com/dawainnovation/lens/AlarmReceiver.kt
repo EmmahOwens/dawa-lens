@@ -270,6 +270,17 @@ class AlarmReceiver : BroadcastReceiver() {
 
             val isHighPriority = notifType in listOf("missed_alert", "streak", "refill", "low_stock") || !isEventNotification
 
+            // Public privacy-preserving version displayed on secure lock screens
+            val publicNotification = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(android.R.drawable.ic_popup_reminder)
+                .setContentTitle("Medication Reminder")
+                .setContentText("You have a scheduled dose to take.")
+                .setPriority(if (isHighPriority) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_DEFAULT)
+                .setCategory(NotificationCompat.CATEGORY_REMINDER)
+                .setContentIntent(contentIntent)
+                .setAutoCancel(true)
+                .build()
+
             val builder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_popup_reminder)
                 .setContentTitle(title)
@@ -277,7 +288,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setPriority(if (isHighPriority) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_DEFAULT)
                 .setCategory(if (!isEventNotification || notifType == "missed_alert") NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+                .setPublicVersion(publicNotification)
                 .setContentIntent(contentIntent)
                 .setAutoCancel(true)
                 .setVibrate(longArrayOf(0, 500, 200, 500))

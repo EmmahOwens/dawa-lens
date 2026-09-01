@@ -12,10 +12,10 @@ export interface AppUpdaterPlugin {
   getDeviceABI(): Promise<{ abi: string }>;
 
   /**
-   * Downloads an APK from the given URL and triggers the system
-   * package installer once the download completes.
+   * Downloads an APK from the given URL, validates its SHA-256 hash if supplied,
+   * and triggers the system package installer once the download completes.
    */
-  downloadAndInstall(options: { url: string }): Promise<void>;
+  downloadAndInstall(options: { url: string; sha256?: string }): Promise<void>;
 
   /**
    * Listen for download progress updates (0–100%).

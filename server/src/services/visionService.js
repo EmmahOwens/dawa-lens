@@ -18,18 +18,18 @@ const getGeminiApiKeyForScan = () => {
 };
 
 // ── Prompt ───────────────────────────────────────────────────────────────────
-const getTextPillIdPrompt = (ocrText, patientAge) => {
-  const ageCtx = patientAge ? `for a patient aged ${patientAge}` : 'for a standard adult';
-
-  return `You are a pharmaceutical identification AI. Identify the medication from the following OCR text extracted from the medication packaging or pill.
+const getTextPillIdPrompt = (ocrText) => {
+  return `You are a pharmaceutical visual identification assistant. Identify candidate medications strictly from the following OCR text extracted from packaging or pill markings.
+CRITICAL CLINICAL SAFETY RULE: NEVER generate dosage instructions, standard doses, or medication schedules. Dosing advice must be determined exclusively by a licensed prescriber, pharmacist, or from verified physical packaging.
 
 OCR Text:
 "${ocrText}"
 
 Analyze the OCR text to extract:
-1. The brand name(s) or generic name(s) of the medication.
-2. Any imprints or labels mentioned in the text.
-3. Formulate exactly 5 matching candidates (ranked by confidence, with the most likely match first). If there are fewer than 5 candidates, fill the rest with inconclusive entries.
+1. The candidate brand name(s) or generic active ingredient(s).
+2. Any imprints or packaging text extracted.
+3. Formulate exactly 5 candidate matches ranked by confidence. If fewer than 5 matches exist, fill the rest with inconclusive entries.
+4. For each match, provide an explicit unverifiedNotice reminding the user to verify against the packaging label or with a pharmacist.
 
 Return ONLY valid JSON matching this schema exactly:
 {
@@ -38,14 +38,13 @@ Return ONLY valid JSON matching this schema exactly:
       "name": "brand name",
       "genericName": "active ingredient(s)",
       "confidence": 0.0, // confidence between 0.0 and 1.0
-      "recommendedDosage": "safe standard dose ${ageCtx}",
-      "draftSchedule": ["HH:MM"],
-      "safetyFlag": "one critical warning or empty string"
+      "safetyFlag": "critical boxed warning or precautionary alert, or empty string",
+      "unverifiedNotice": "Visual match unverified. Confirm dosage and instructions from medication packaging or pharmacist."
     }
   ],
   "imprints": ["text on pill surface extracted from OCR"],
   "labels": ["text on packaging extracted from OCR"],
-  "summary": "2-3 sentence summary: primary use and one safety warning"
+  "summary": "2-3 sentence visual identification summary: primary clinical indication and regulatory safety warning. Do NOT include dosage instructions."
 }`;
 };
 
@@ -63,11 +62,10 @@ const PILL_ID_SCHEMA = {
           name:              { type: 'STRING' },
           genericName:       { type: 'STRING' },
           confidence:        { type: 'NUMBER' },
-          recommendedDosage: { type: 'STRING' },
-          draftSchedule:     { type: 'ARRAY', items: { type: 'STRING' } },
           safetyFlag:        { type: 'STRING' },
+          unverifiedNotice:  { type: 'STRING' },
         },
-        required: ['name', 'confidence', 'genericName', 'recommendedDosage', 'draftSchedule', 'safetyFlag'],
+        required: ['name', 'confidence', 'genericName', 'safetyFlag', 'unverifiedNotice'],
       },
     },
     imprints: { type: 'ARRAY', items: { type: 'STRING' } },
@@ -85,12 +83,11 @@ const PILL_ID_SCHEMA = {
 const normaliseMatches = (raw) => {
   const matches = (raw || [])
     .map((m) => ({
-      name:              String(m.name || 'Unknown'),
-      genericName:       String(m.genericName || ''),
-      confidence:        Math.min(1, Math.max(0, Number(m.confidence || 0))),
-      recommendedDosage: String(m.recommendedDosage || ''),
-      draftSchedule:     m.draftSchedule || [],
-      safetyFlag:        String(m.safetyFlag || ''),
+      name:             String(m.name || 'Unknown'),
+      genericName:      String(m.genericName || ''),
+      confidence:       Math.min(1, Math.max(0, Number(m.confidence || 0))),
+      safetyFlag:       String(m.safetyFlag || ''),
+      unverifiedNotice: String(m.unverifiedNotice || 'Visual match unverified. Confirm dosage from medication packaging or pharmacist.'),
     }))
     .sort((a, b) => b.confidence - a.confidence)
     .slice(0, 5);
@@ -100,9 +97,8 @@ const normaliseMatches = (raw) => {
       name: 'Inconclusive Match', 
       genericName: '', 
       confidence: 0.0, 
-      recommendedDosage: '',
-      draftSchedule: [],
-      safetyFlag: ''
+      safetyFlag: '',
+      unverifiedNotice: 'Inconclusive match. Check packaging or consult a pharmacist.'
     });
   }
   return matches;
@@ -118,7 +114,7 @@ const identifyWithGeminiText = async (ocrText, patientAge) => {
     contents: [
       {
         parts: [
-          { text: getTextPillIdPrompt(ocrText, patientAge) },
+          { text: getTextPillIdPrompt(ocrText) },
         ],
       },
     ],

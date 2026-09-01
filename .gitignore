@@ -29,3 +29,14 @@ server/.env
 
 # Business & Pitch Documents
 BUSINESS_MODEL.md
+
+# Build Artifacts & Caches
+rust/target/
+.firebase/
+lint_results.txt
+*.tsbuildinfo
+firestore-debug.log*
+ui-debug.log*
+coverage/
+.scannerwork/
+

@@ -7,9 +7,13 @@ export const createDoseLogSchema = z.object({
     action: z.enum(['taken', 'skipped', 'missed', 'snoozed'], { required_error: 'Action is required' }),
     actionTime: z.string().max(100).optional(),
     dose: z.string().max(100).optional(),
-    patientId: z.string().nullable().optional(),
-    reminderId: z.string().optional(),
+    medicineId: z.string().max(100).optional(),
+    reminderId: z.string().max(100).optional(),
     scheduledTime: z.string().max(100).optional(),
+    patientId: z.string().nullable().optional(),
+    idempotencyKey: z.string().max(128).optional(),
+    isSnoozed: z.boolean().optional(),
+    snoozeUntil: z.string().max(100).optional(),
   })
 });
 

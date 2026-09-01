@@ -49,6 +49,24 @@ export const aiLimiter = rateLimit({
   }
 });
 
+// FDA & RxNorm proxy limiter (User-based with IPv6-safe IP fallback)
+export const fdaLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // 60 queries per minute per user/IP
+  keyGenerator: (req) => {
+    return req.user?.uid || ipKeyGenerator(req);
+  },
+  message: {
+    status: 'fail',
+    message: 'FDA query rate limit reached. Please wait a moment before searching again.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res, next, options) => {
+    res.status(options.statusCode).json(options.message);
+  }
+});
+
 // Vision / Heavy AI endpoints limiter (User-based with IPv6-safe IP fallback)
 // Image processing is more expensive (TPM/RPD)
 export const visionLimiter = rateLimit({
@@ -87,13 +105,13 @@ export const heavyAiLimiter = rateLimit({
 });
 
 /**
- * Per-user token budget guard.
- * Blocks requests that are too large before they hit the AI service.
+ * Per-user payload & token budget guard.
+ * Blocks oversized clinical and conversational payloads before they hit external AI services.
  */
 export const tokenBudgetGuard = (req, res, next) => {
   const body = req.body || {};
 
-  // Strip imageUrl from medicines in the request body to avoid triggering size limits
+  // Strip imageUrl and heavy binary fields from medicines before estimation
   if (Array.isArray(body.medicines)) {
     body.medicines = body.medicines.map(med => {
       if (med && typeof med === 'object') {
@@ -104,16 +122,30 @@ export const tokenBudgetGuard = (req, res, next) => {
     });
   }
 
-  // Rough token estimate from request body
+  const payloadString = JSON.stringify(body);
+  const byteLength = Buffer.byteLength(payloadString, 'utf8');
+
+  // Hard payload cap (64 KB) to avoid prompt injection or resource exhaustion
+  if (byteLength > 64 * 1024) {
+    return res.status(413).json({
+      status: 'fail',
+      message: 'Payload exceeds maximum permitted size (64KB).'
+    });
+  }
+
+  // Comprehensive token estimate across all clinical and conversational arrays
   const roughEstimate =
     JSON.stringify(body.messages || []).length / 3.7 +
     JSON.stringify(body.medicines || []).length / 3.7 +
-    JSON.stringify(body.doseLogs || []).length / 3.7;
+    JSON.stringify(body.doseLogs || []).length / 3.7 +
+    JSON.stringify(body.wellnessLogs || []).length / 3.7 +
+    JSON.stringify(body.patients || []).length / 3.7 +
+    JSON.stringify(body.reminders || []).length / 3.7;
 
   if (roughEstimate > 8000) {
     return res.status(429).json({
       status: 'fail',
-      message: 'Request context is too large. Please start a new conversation to clear history.'
+      message: 'Request context is too large. Please trim history or simplify query.'
     });
   }
   next();

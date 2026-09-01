@@ -65,43 +65,104 @@ service cloud.firestore {
         );
     }
 
+    // Prevent privilege escalation: users cannot self-assert roles or professional status
+    function isNotSelfPromoting() {
+      let noPrivilegeFieldsOnCreate = !request.resource.data.keys().hasAny(['role', 'isAdmin', 'isProfessional']);
+      let noPrivilegeChangeOnUpdate = resource != null && 
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'isAdmin', 'isProfessional']);
+      
+      return resource == null ? noPrivilegeFieldsOnCreate : noPrivilegeChangeOnUpdate;
+    }
+
+    // Schema validation allowlists
+    function hasValidUserKeys() {
+      return request.resource.data.keys().hasOnly([
+        'name', 'email', 'age', 'gender', 'allergies', 'conditions',
+        'isProfessional', 'role', 'isAdmin', 'createdAt', 'updatedAt',
+        'preferences', 'fcmTokens', 'photoURL', 'displayName'
+      ]);
+    }
+
+    function hasValidMedicineKeys() {
+      return request.resource.data.keys().hasOnly([
+        'id', '_id', 'name', 'genericName', 'dosage', 'form',
+        'currentQuantity', 'totalQuantity', 'dosagePerDose', 'frequencyPerDay',
+        'color', 'icon', 'notes', 'patientId', 'userId', 'addedAt', 'updatedAt',
+        'isConflict', 'imageUrl', 'unit', 'rxcui', 'rxNormConcept'
+      ]);
+    }
+
+    function hasValidReminderKeys() {
+      return request.resource.data.keys().hasOnly([
+        'id', '_id', 'medicineName', 'medicineId', 'dose', 'time',
+        'repeatSchedule', 'repeatDays', 'notes', 'enabled',
+        'patientId', 'userId', 'createdAt', 'updatedAt', 'color', 'icon'
+      ]);
+    }
+
+    function hasValidDoseLogKeys() {
+      return request.resource.data.keys().hasOnly([
+        'id', '_id', 'medicineName', 'medicineId', 'reminderId',
+        'dose', 'scheduledTime', 'actionTime', 'action', 'patientId',
+        'userId', 'idempotencyKey', 'isSnoozed', 'snoozeUntil',
+        'newQuantity', 'adjustedSchedule'
+      ]);
+    }
+
+    function hasValidWellnessKeys() {
+      return request.resource.data.keys().hasOnly([
+        'id', '_id', 'type', 'timestamp', 'date', 'mood', 'energy',
+        'symptoms', 'notes', 'data', 'patientId', 'userId', 'createdAt'
+      ]);
+    }
+
+    function hasValidPatientKeys() {
+      return request.resource.data.keys().hasOnly([
+        'id', '_id', 'name', 'age', 'gender', 'relation',
+        'managedBy', 'createdAt', 'updatedAt', 'notes', 'allergies', 'conditions'
+      ]);
+    }
+
     // --- Collections ---
 
-    // User profiles — only the profile owner can read/write
+    // User profiles — only owner can read/write, privilege escalation blocked
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && hasValidUserKeys() && isNotSelfPromoting();
+      allow update: if isOwner(userId) && hasValidUserKeys() && isNotSelfPromoting();
+      allow delete: if isOwner(userId);
     }
 
     // Medication inventory
     match /medicines/{medicineId} {
       allow read: if canReadData();
       allow delete: if canDeleteData();
-      allow create: if canCreateData() && isValidPatientRef();
-      allow update: if canUpdateData() && isValidPatientRef();
+      allow create: if canCreateData() && isValidPatientRef() && hasValidMedicineKeys();
+      allow update: if canUpdateData() && isValidPatientRef() && hasValidMedicineKeys();
     }
 
     // Medication reminders/schedules
     match /reminders/{reminderId} {
       allow read: if canReadData();
       allow delete: if canDeleteData();
-      allow create: if canCreateData() && isValidPatientRef();
-      allow update: if canUpdateData() && isValidPatientRef();
+      allow create: if canCreateData() && isValidPatientRef() && hasValidReminderKeys();
+      allow update: if canUpdateData() && isValidPatientRef() && hasValidReminderKeys();
     }
 
     // Dose logs — history of doses taken/skipped/missed
     match /doseLogs/{logId} {
       allow read: if canReadData();
       allow delete: if canDeleteData();
-      allow create: if canCreateData() && isValidPatientRef();
-      allow update: if canUpdateData() && isValidPatientRef();
+      allow create: if canCreateData() && isValidPatientRef() && hasValidDoseLogKeys();
+      allow update: if canUpdateData() && isValidPatientRef() && hasValidDoseLogKeys();
     }
 
     // Wellness journals (Food, Symptoms, Mood)
     match /wellnessLogs/{logId} {
       allow read: if canReadData();
       allow delete: if canDeleteData();
-      allow create: if canCreateData() && isValidPatientRef();
-      allow update: if canUpdateData() && isValidPatientRef();
+      allow create: if canCreateData() && isValidPatientRef() && hasValidWellnessKeys();
+      allow update: if canUpdateData() && isValidPatientRef() && hasValidWellnessKeys();
     }
 
     // Dynamic schedule audit logs
@@ -112,28 +173,27 @@ service cloud.firestore {
       allow update: if canUpdateData() && isValidPatientRef();
     }
 
-    // AI generated suggestions & care reports
+    // AI generated suggestions & care reports — validate patient reference & ownership
     match /suggestions/{suggestionId} {
       allow read: if canReadData();
       allow delete: if canDeleteData();
-      allow create: if canCreateData();
-      allow update: if canUpdateData();
+      allow create: if canCreateData() && isValidPatientRef();
+      allow update: if canUpdateData() && isValidPatientRef();
     }
 
     match /careReports/{reportId} {
       allow read: if canReadData();
       allow delete: if canDeleteData();
-      allow create: if canCreateData();
-      allow update: if canUpdateData();
+      allow create: if canCreateData() && isValidPatientRef();
+      allow update: if canUpdateData() && isValidPatientRef();
     }
 
     // Family members or professional clients
     match /patients/{patientId} {
       allow read: if canReadPatient();
       allow delete: if canDeletePatient();
-      allow create: if canCreatePatient();
-      allow update: if canUpdatePatient();
+      allow create: if canCreatePatient() && hasValidPatientKeys();
+      allow update: if canUpdatePatient() && hasValidPatientKeys();
     }
   }
 }
-

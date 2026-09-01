@@ -1,5 +1,6 @@
 import { db } from '../db.js';
 import * as autonomousService from './autonomousService.js';
+import AppError from '../utils/AppError.js';
 
 const medicinesCol = db.collection('medicines');
 

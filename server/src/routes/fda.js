@@ -1,15 +1,40 @@
 import express from 'express';
 import * as openFdaService from '../services/openFdaService.js';
 import { resolveRxNormConcept, getSpellingSuggestions } from '../services/rxNormService.js';
-import { aiLimiter } from '../middleware/rateLimiter.js';
+import { fdaLimiter } from '../middleware/rateLimiter.js';
+import { protect } from '../middleware/authMiddleware.js';
 import AppError from '../utils/AppError.js';
 
 const router = express.Router();
 
+// Simple in-memory LRU/TTL cache for read-only FDA / RxNorm queries (5-minute TTL)
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 500;
+const fdaCache = new Map();
+
+function getCached(key) {
+  const item = fdaCache.get(key);
+  if (!item) return null;
+  if (Date.now() - item.timestamp > CACHE_TTL_MS) {
+    fdaCache.delete(key);
+    return null;
+  }
+  return item.data;
+}
+
+function setCached(key, data) {
+  if (fdaCache.size >= MAX_CACHE_ENTRIES) {
+    // Evict oldest entry
+    const firstKey = fdaCache.keys().next().value;
+    if (firstKey) fdaCache.delete(firstKey);
+  }
+  fdaCache.set(key, { data, timestamp: Date.now() });
+}
+
 /**
  * Diagnostic & Status Endpoint: Check openFDA & RxNorm API Key status
  */
-router.get('/status', (req, res) => {
+router.get('/status', protect, fdaLimiter, (req, res) => {
   const hasKey = !!openFdaService.getOpenFdaApiKey();
   res.json({
     status: 'ok',
@@ -22,11 +47,18 @@ router.get('/status', (req, res) => {
 /**
  * Resolve Medication Concept across RxNorm ontology
  */
-router.get('/resolve-concept', async (req, res, next) => {
+router.get('/resolve-concept', protect, fdaLimiter, async (req, res, next) => {
   try {
-    const { query } = req.query;
-    if (!query || !query.trim()) {
-      throw new AppError('Query parameter "query" is required.', 400);
+    const rawQuery = req.query.query;
+    if (!rawQuery || typeof rawQuery !== 'string' || !rawQuery.trim()) {
+      throw new AppError('Query parameter "query" is required (string, max 100 chars).', 400);
+    }
+    const query = rawQuery.trim().slice(0, 100);
+
+    const cacheKey = `concept:${query.toLowerCase()}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
     const concept = await resolveRxNormConcept(query);
@@ -37,10 +69,9 @@ router.get('/resolve-concept', async (req, res, next) => {
       });
     }
 
-    res.json({
-      success: true,
-      concept,
-    });
+    const responseData = { success: true, concept };
+    setCached(cacheKey, responseData);
+    res.json(responseData);
   } catch (error) {
     next(error);
   }
@@ -49,22 +80,30 @@ router.get('/resolve-concept', async (req, res, next) => {
 /**
  * Get Comprehensive Drug Profile (Label, NDC, Recalls, Approvals, Adverse Events, Allergies & Contraindications)
  */
-router.get('/drug-profile', async (req, res, next) => {
+router.get('/drug-profile', protect, fdaLimiter, async (req, res, next) => {
   try {
-    const { query, age, gender, conditions, allergies } = req.query;
-
-    if (!query || !query.trim()) {
-      throw new AppError('Query parameter "query" is required.', 400);
+    const rawQuery = req.query.query;
+    if (!rawQuery || typeof rawQuery !== 'string' || !rawQuery.trim()) {
+      throw new AppError('Query parameter "query" is required (string, max 100 chars).', 400);
     }
+    const query = rawQuery.trim().slice(0, 100);
+    const { age, gender, conditions, allergies } = req.query;
 
     const patientContext = {
-      age: age ? Number(age) : undefined,
-      gender: gender ? String(gender) : undefined,
-      conditions: conditions ? (Array.isArray(conditions) ? conditions : String(conditions).split(',')) : [],
-      allergies: allergies ? (Array.isArray(allergies) ? allergies : String(allergies).split(',')) : [],
+      age: age && !isNaN(Number(age)) ? Number(age) : undefined,
+      gender: gender ? String(gender).slice(0, 20) : undefined,
+      conditions: conditions ? (Array.isArray(conditions) ? conditions : String(conditions).split(',')).map(c => String(c).slice(0, 100)) : [],
+      allergies: allergies ? (Array.isArray(allergies) ? allergies : String(allergies).split(',')).map(a => String(a).slice(0, 100)) : [],
     };
 
+    const cacheKey = `profile:${query.toLowerCase()}:${JSON.stringify(patientContext)}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const profile = await openFdaService.getComprehensiveDrugProfile(query, patientContext);
+    setCached(cacheKey, profile);
     res.json(profile);
   } catch (error) {
     next(error);
@@ -74,13 +113,22 @@ router.get('/drug-profile', async (req, res, next) => {
 /**
  * Get FDA Recalls for a Drug
  */
-router.get('/recalls', async (req, res, next) => {
+router.get('/recalls', protect, fdaLimiter, async (req, res, next) => {
   try {
-    const { drug } = req.query;
-    if (!drug || !drug.trim()) {
-      throw new AppError('Query parameter "drug" is required.', 400);
+    const rawDrug = req.query.drug;
+    if (!rawDrug || typeof rawDrug !== 'string' || !rawDrug.trim()) {
+      throw new AppError('Query parameter "drug" is required (string, max 100 chars).', 400);
     }
+    const drug = rawDrug.trim().slice(0, 100);
+
+    const cacheKey = `recalls:${drug.toLowerCase()}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const recalls = await openFdaService.fetchDrugRecalls(drug);
+    setCached(cacheKey, recalls);
     res.json(recalls);
   } catch (error) {
     next(error);
@@ -90,20 +138,30 @@ router.get('/recalls', async (req, res, next) => {
 /**
  * Get FAERS Real-World Adverse Event Signals
  */
-router.get('/adverse-events', async (req, res, next) => {
+router.get('/adverse-events', protect, fdaLimiter, async (req, res, next) => {
   try {
-    const { drug, ageGroup, sex } = req.query;
-    if (!drug || !drug.trim()) {
-      throw new AppError('Query parameter "drug" is required.', 400);
+    const rawDrug = req.query.drug;
+    if (!rawDrug || typeof rawDrug !== 'string' || !rawDrug.trim()) {
+      throw new AppError('Query parameter "drug" is required (string, max 100 chars).', 400);
     }
+    const drug = rawDrug.trim().slice(0, 100);
+    const { ageGroup, sex } = req.query;
 
     const options = {
-      ageGroup: ageGroup ? Number(ageGroup) : undefined,
-      sex: sex ? Number(sex) : undefined,
+      ageGroup: ageGroup && !isNaN(Number(ageGroup)) ? Number(ageGroup) : undefined,
+      sex: sex && !isNaN(Number(sex)) ? Number(sex) : undefined,
     };
 
+    const cacheKey = `events:${drug.toLowerCase()}:${JSON.stringify(options)}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
     const events = await openFdaService.fetchAdverseEvents(drug, options);
-    res.json(events || { drugName: drug, totalSampleReports: 0, topReactions: [] });
+    const result = events || { drugName: drug, totalSampleReports: 0, topReactions: [] };
+    setCached(cacheKey, result);
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -111,8 +169,9 @@ router.get('/adverse-events', async (req, res, next) => {
 
 /**
  * Multi-Drug Safety Check: Boxed Warnings, Contraindications, Allergens & Duplicate Therapy
+ * Bounded to a maximum of 15 medications per request.
  */
-router.post('/check-safety', async (req, res, next) => {
+router.post('/check-safety', protect, fdaLimiter, async (req, res, next) => {
   try {
     const { medications, patientContext = {} } = req.body;
 
@@ -127,6 +186,14 @@ router.post('/check-safety', async (req, res, next) => {
       });
     }
 
+    // Strict input bounds: max 15 medications
+    if (medications.length > 15) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'A maximum of 15 medications can be evaluated in a single safety check.',
+      });
+    }
+
     const boxedWarnings = [];
     const contraindicationAlerts = [];
     const allergenAlerts = [];
@@ -135,13 +202,14 @@ router.post('/check-safety', async (req, res, next) => {
     // Evaluate each medication
     for (const med of medications) {
       const medName = med.name || med.genericName;
-      if (!medName) continue;
+      if (!medName || typeof medName !== 'string') continue;
+      const sanitizedName = medName.trim().slice(0, 100);
 
-      const label = await openFdaService.fetchDrugLabel(medName);
+      const label = await openFdaService.fetchDrugLabel(sanitizedName);
       if (label) {
         if (label.boxedWarning) {
           boxedWarnings.push({
-            drugName: medName,
+            drugName: sanitizedName,
             warning: label.boxedWarning,
           });
         }
@@ -149,7 +217,7 @@ router.post('/check-safety', async (req, res, next) => {
         const medAllergens = openFdaService.checkAllergenConflicts(label, patientContext.allergies || []);
         if (medAllergens.length > 0) {
           allergenAlerts.push({
-            drugName: medName,
+            drugName: sanitizedName,
             conflicts: medAllergens,
           });
         }
@@ -157,16 +225,16 @@ router.post('/check-safety', async (req, res, next) => {
         const medContras = openFdaService.checkContraindicationConflicts(label, patientContext.conditions || []);
         if (medContras.length > 0) {
           contraindicationAlerts.push({
-            drugName: medName,
+            drugName: sanitizedName,
             conflicts: medContras,
           });
         }
       }
 
-      const medRecalls = await openFdaService.fetchDrugRecalls(medName);
+      const medRecalls = await openFdaService.fetchDrugRecalls(sanitizedName);
       if (medRecalls?.hasActiveRecalls) {
         recalls.push({
-          drugName: medName,
+          drugName: sanitizedName,
           recalls: medRecalls.recalls,
         });
       }
@@ -198,11 +266,18 @@ router.post('/check-safety', async (req, res, next) => {
 /**
  * Autocomplete / Suggestions powered by openFDA NDC + RxNorm spelling suggestions
  */
-router.get('/autocomplete', async (req, res, next) => {
+router.get('/autocomplete', protect, fdaLimiter, async (req, res, next) => {
   try {
-    const { q } = req.query;
-    if (!q || q.trim().length < 2) {
+    const rawQ = req.query.q;
+    if (!rawQ || typeof rawQ !== 'string' || rawQ.trim().length < 2) {
       return res.json({ suggestions: [] });
+    }
+    const q = rawQ.trim().slice(0, 80);
+
+    const cacheKey = `auto:${q.toLowerCase()}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return res.json(cached);
     }
 
     const suggestions = new Set();
@@ -212,7 +287,7 @@ router.get('/autocomplete', async (req, res, next) => {
       const rxSpelling = await getSpellingSuggestions(q);
       rxSpelling.forEach((s) => suggestions.add(s));
     } catch {
-      // Ignore
+      // Non-fatal
     }
 
     // 2. Fetch from openFDA NDC Directory
@@ -225,14 +300,16 @@ router.get('/autocomplete', async (req, res, next) => {
         });
       }
     } catch {
-      // Ignore
+      // Non-fatal
     }
 
     // 3. Also include dictionary synonyms
     const terms = openFdaService.getSearchTerms(q);
     terms.forEach((t) => suggestions.add(t));
 
-    res.json({ suggestions: Array.from(suggestions).slice(0, 10) });
+    const result = { suggestions: Array.from(suggestions).slice(0, 10) };
+    setCached(cacheKey, result);
+    res.json(result);
   } catch (error) {
     next(error);
   }

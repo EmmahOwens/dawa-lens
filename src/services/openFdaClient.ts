@@ -1,5 +1,22 @@
 import { storage } from '../lib/storage';
 import { Medicine } from '../contexts/AppContext';
+import { auth } from '../lib/firebase';
+
+async function authHeaders(): Promise<HeadersInit> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const token = await user.getIdToken();
+      headers['Authorization'] = `Bearer ${token}`;
+    } catch (e) {
+      console.warn('[openFdaClient] Failed to obtain auth token:', e);
+    }
+  }
+  return headers;
+}
 
 const getBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;
@@ -172,7 +189,9 @@ export async function resolveDrugConcept(query: string): Promise<RxNormConceptRe
   if (!query || !query.trim()) return null;
 
   try {
-    const res = await fetch(`${BASE_URL}/fda/resolve-concept?query=${encodeURIComponent(query.trim())}`);
+    const res = await fetch(`${BASE_URL}/fda/resolve-concept?query=${encodeURIComponent(query.trim())}`, {
+      headers: await authHeaders(),
+    });
     if (!res.ok) return null;
     const data: RxNormConceptResponse = await res.json();
     return data.concept || null;
@@ -206,7 +225,9 @@ export async function getFdaDrugProfile(
     if (patientContext?.conditions?.length) params.append('conditions', patientContext.conditions.join(','));
     if (patientContext?.allergies?.length) params.append('allergies', patientContext.allergies.join(','));
 
-    const res = await fetch(`${BASE_URL}/fda/drug-profile?${params.toString()}`);
+    const res = await fetch(`${BASE_URL}/fda/drug-profile?${params.toString()}`, {
+      headers: await authHeaders(),
+    });
     if (!res.ok) {
       if (res.status === 404) return null;
       throw new Error(`FDA Profile fetch failed: ${res.statusText}`);
@@ -242,7 +263,7 @@ export async function checkFdaMultiSafety(
   try {
     const res = await fetch(`${BASE_URL}/fda/check-safety`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({
         medications: medications.map((m) => ({ name: m.name, genericName: m.genericName })),
         patientContext,
@@ -274,7 +295,9 @@ export async function getFdaRecalls(drugName: string): Promise<{ hasActiveRecall
   if (!drugName) return { hasActiveRecalls: false, recalls: [] };
 
   try {
-    const res = await fetch(`${BASE_URL}/fda/recalls?drug=${encodeURIComponent(drugName)}`);
+    const res = await fetch(`${BASE_URL}/fda/recalls?drug=${encodeURIComponent(drugName)}`, {
+      headers: await authHeaders(),
+    });
     if (!res.ok) return { hasActiveRecalls: false, recalls: [] };
     return await res.json();
   } catch {
@@ -297,7 +320,9 @@ export async function getFdaAdverseEvents(
     if (ageGroup) params.append('ageGroup', ageGroup.toString());
     if (sex) params.append('sex', sex.toString());
 
-    const res = await fetch(`${BASE_URL}/fda/adverse-events?${params.toString()}`);
+    const res = await fetch(`${BASE_URL}/fda/adverse-events?${params.toString()}`, {
+      headers: await authHeaders(),
+    });
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -312,7 +337,9 @@ export async function getFdaAutocomplete(query: string): Promise<string[]> {
   if (!query || query.trim().length < 2) return [];
 
   try {
-    const res = await fetch(`${BASE_URL}/fda/autocomplete?q=${encodeURIComponent(query)}`);
+    const res = await fetch(`${BASE_URL}/fda/autocomplete?q=${encodeURIComponent(query)}`, {
+      headers: await authHeaders(),
+    });
     if (!res.ok) return [];
     const data = await res.json();
     return data.suggestions || [];

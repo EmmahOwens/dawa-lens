@@ -9,12 +9,13 @@ interface StoreUpdateModalProps {
   currentVersion: string;
   newVersion: string;
   downloadUrl: string;
+  sha256?: string;
   onClose: () => void;
 }
 
 type DownloadState = 'idle' | 'downloading' | 'installing' | 'error';
 
-const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, newVersion, downloadUrl, onClose }) => {
+const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, newVersion, downloadUrl, sha256, onClose }) => {
   const [downloadState, setDownloadState] = useState<DownloadState>('idle');
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
@@ -47,8 +48,8 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
         }
       });
 
-      // Start download + install
-      await AppUpdater.downloadAndInstall({ url: downloadUrl });
+      // Start download + install with integrity verification
+      await AppUpdater.downloadAndInstall({ url: downloadUrl, sha256 });
 
       // If we get here, the install intent was launched
       setDownloadState('installing');

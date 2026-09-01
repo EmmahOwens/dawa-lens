@@ -29,7 +29,8 @@ import {
   onSnapshot,
   getDocs,
 } from "firebase/firestore";
-import { localPersistence } from "../services/localPersistence";
+import { localPersistence, setActiveUserScope, clearAllLocalPersistence } from "../services/localPersistence";
+import { doseLogsApi } from "../services/api";
 import { scheduleReminders, computeShiftOffset, scheduleAdjustmentNotification } from "../services/reminderService";
 import {
   schedulePostDoseEncouragementNotification,
@@ -587,18 +588,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       storage.setItem("med_professional_mode", v);
       localStorage.setItem("med_professional_mode", JSON.stringify(v));
 
-      // Sync to cloud if logged in
-      if (storageMode === "cloud" && currentUserId) {
-        try {
-          const docRef = doc(db, "users", currentUserId);
-          await setDoc(docRef, { isProfessional: v }, { merge: true });
-          setUserProfile((p) => (p ? { ...p, isProfessional: v } : null));
-        } catch (err) {
-          console.error("Failed to sync professional mode to cloud:", err);
-        }
-      }
+      // Keep local preference
+      setUserProfile((p) => (p ? { ...p, isProfessional: v } : null));
     },
-    [currentUserId, storageMode]
+    []
   );
 
   const setIsIntelligenceCollapsed = useCallback((v: boolean) => {
@@ -813,6 +806,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const loginUser = useCallback((userId: string, email: string) => {
     setCurrentUserId(userId);
+    setActiveUserScope(userId);
     setIsLoggedIn(true);
     // Flush any ops that were queued while logged out / offline
     if (hasNetwork()) {
@@ -823,12 +817,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logoutUser = useCallback(async () => {
+    const priorUid = currentUserId;
     try {
       await signOut(auth);
     } catch (err) {
       console.error("Logout failed", err);
     }
-    // Clear the offline queue on logout — pending ops belong to this user
+    // Wipe local unencrypted PHI on device upon logout
+    setActiveUserScope(null);
+    clearAllLocalPersistence(priorUid || undefined).catch(console.warn);
     clearQueue();
     setPendingOfflineOps(0);
     setCurrentUserId(null);
@@ -840,7 +837,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDoseLogs([]);
     setPatients([]);
     setWellnessLogs([]);
-  }, []);
+  }, [currentUserId]);
 
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false);
@@ -1627,18 +1624,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return next;
       });
 
-      // 3. Sync log to Firestore in background
+      // 3. Sync log via authoritative server command with idempotency
+      const serverPayload = {
+        ...logData,
+        medicineId: reminder?.medicineId || medicines.find((m) => m.name.toLowerCase() === log.medicineName.toLowerCase())?.id,
+        reminderId: reminder?.id,
+        idempotencyKey: localId,
+      };
+
       if (isOnline) {
         try {
-          const docRef = doc(db, "doseLogs", localId);
-          await setDoc(docRef, logData);
+          const res = await doseLogsApi.create(serverPayload as any);
+          if (res?.newQuantity !== undefined) {
+            setMedicines((prev) =>
+              prev.map((m) =>
+                m.id === serverPayload.medicineId ? { ...m, currentQuantity: res.newQuantity } : m
+              )
+            );
+          }
+          if (res?.adjustedSchedule && reminder) {
+            const adjustedTime = res.adjustedSchedule.adjustedTime;
+            setReminders((prev) =>
+              prev.map((r) =>
+                r.id === reminder.id ? { ...r, time: adjustedTime } : r
+              )
+            );
+          }
         } catch (err) {
-          console.warn("[AppContext] Failed to sync dose log, enqueuing:", err);
+          console.warn("[AppContext] Server doseLogsApi.create failed, queueing offline:", err);
           enqueueOp({
             type: "add-dose-log",
             collection: "doseLogs",
             docId: localId,
-            data: logData,
+            data: serverPayload,
             userId: currentUserId,
           });
           setPendingOfflineOps(getPendingCount());
@@ -1648,7 +1666,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           type: "add-dose-log",
           collection: "doseLogs",
           docId: localId,
-          data: logData,
+          data: serverPayload,
           userId: currentUserId,
         });
         setPendingOfflineOps(getPendingCount());
@@ -2361,13 +2379,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setWellnessLogs([]);
     setSelectedPatientId(null);
 
-    // 2. Wipe IndexedDB local persistence data
-    storage.removeItem("dawa_local_medicines");
-    storage.removeItem("dawa_local_reminders");
-    storage.removeItem("dawa_local_doselogs");
-    storage.removeItem("dawa_local_patients");
-    storage.removeItem("dawa_local_wellness");
-    storage.removeItem(CLOUD_CACHE_PATIENTS_KEY);
+    // 2. Wipe IndexedDB and Native SQLite persistence data
+    await clearAllLocalPersistence();
+    clearQueue();
 
     // 3. Reset UI flags and metadata
     storage.removeItem("med_selected_patient_id");

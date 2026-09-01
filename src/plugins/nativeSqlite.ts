@@ -11,10 +11,12 @@
  */
 import { registerPlugin } from '@capacitor/core';
 
+export type SqlParam = string | number | null;
+
 export interface NativeSqlitePlugin {
   initialize(): Promise<void>;
-  execute(options: { sql: string; params?: (string | number | null)[] }): Promise<{ rowsAffected: number; lastInsertId?: number }>;
-  query(options: { sql: string; params?: (string | number | null)[] }): Promise<{ rows: Record<string, unknown>[] }>;
+  execute(options: { sql: string; params?: SqlParam[] }): Promise<{ rowsAffected: number; lastInsertId?: number }>;
+  query(options: { sql: string; params?: SqlParam[] }): Promise<{ rows: Record<string, unknown>[] }>;
   close(): Promise<void>;
 }
 

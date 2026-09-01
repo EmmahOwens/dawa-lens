@@ -5,7 +5,7 @@ export interface PillMatch {
   name: string;
   confidence: number;
   genericName?: string;
-  recommendedDosage?: string;
+  unverifiedNotice?: string;
   boxedWarning?: string | null;
   indications?: string | null;
   ndcValidated?: boolean;

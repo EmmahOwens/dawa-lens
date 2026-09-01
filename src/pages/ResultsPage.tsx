@@ -88,7 +88,7 @@ export default function ResultsPage() {
     addMedicine({
       name: finalName,
       genericName: result.genericName || "",
-      dosage: result.recommendedDosage || finalName.split(" ").pop() || "",
+      dosage: "", // Dose must be entered and confirmed by user or pharmacist
       imageUrl: imageUrl || undefined,
     });
     setSaved(true);
@@ -260,7 +260,12 @@ export default function ResultsPage() {
                           )}
                         </div>
                         {r.genericName && <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5 opacity-70">{r.genericName}</p>}
-                        {r.recommendedDosage && <p className="text-xs font-bold text-primary mt-1.5">Recommended Dose: {r.recommendedDosage}</p>}
+                        <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2 flex items-start gap-2">
+                          <ShieldAlert size={14} className="text-amber-500 shrink-0 mt-0.5" />
+                          <p className="text-[10.5px] text-amber-600 dark:text-amber-400 leading-tight">
+                            <strong className="font-semibold">Unverified match:</strong> Confirm dosage on physical packaging or with a pharmacist.
+                          </p>
+                        </div>
                       </div>
                       <div className="bg-success text-success-foreground rounded-full px-3 py-1 text-[11px] font-black shadow-lg shrink-0">
                         {Math.round(r.confidence * 100)}% Match
@@ -310,7 +315,7 @@ export default function ResultsPage() {
                                 } 
                               });
                             } else {
-                              navigate("/reminders/new", { state: { medicineName: r.name, dose: r.recommendedDosage || "1 Tablet" } });
+                              navigate("/reminders/new", { state: { medicineName: r.name, dose: "" } });
                             }
                           }}
                         >

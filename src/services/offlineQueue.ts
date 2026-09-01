@@ -20,6 +20,7 @@ import {
   collection,
   setDoc,
 } from "firebase/firestore";
+import { doseLogsApi } from "./api";
 
 // ─── Queue entry shape ───────────────────────────────────────────────────────
 
@@ -188,8 +189,29 @@ async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
   const docRef = doc(db, op.collection, op.docId);
 
   switch (op.type) {
+    case "add-dose-log": {
+      if (!op.data) throw new Error("Missing data for add op");
+      try {
+        await doseLogsApi.create({
+          userId: op.userId,
+          medicineName: (op.data.medicineName as string) || "Unknown",
+          action: (op.data.action as any) || "taken",
+          actionTime: op.data.actionTime as string,
+          dose: op.data.dose as string,
+          medicineId: op.data.medicineId as string,
+          reminderId: op.data.reminderId as string,
+          scheduledTime: op.data.scheduledTime as string,
+          patientId: op.data.patientId as string,
+          idempotencyKey: op.docId,
+        });
+      } catch (apiErr) {
+        console.warn("[offlineQueue] doseLogsApi.create failed during replay, using fallback setDoc:", apiErr);
+        await setDoc(docRef, op.data);
+      }
+      break;
+    }
+
     case "add-reminder":
-    case "add-dose-log":
     case "add-medicine": {
       // Use setDoc with the locally generated ID so the entity stays stable
       // across offline → online transitions. addDoc would create a new ID.

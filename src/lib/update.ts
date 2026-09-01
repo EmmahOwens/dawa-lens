@@ -33,6 +33,7 @@ export const isNewerVersion = (remote: string, local: string): boolean => {
 export interface UpdateInfo {
   latestVersion: string;
   downloadUrl: string;
+  sha256?: string;
 }
 
 export const fetchLatestRelease = async (): Promise<UpdateInfo | null> => {
@@ -81,9 +82,41 @@ export const fetchLatestRelease = async (): Promise<UpdateInfo | null> => {
 
     const downloadUrl = apkAsset ? apkAsset.browser_download_url : data.html_url;
 
+    // Try to resolve sha256 checksum from release metadata or sibling checksum asset
+    let sha256: string | undefined;
+    if (apkAsset && Array.isArray(data.assets)) {
+      const checksumAsset = data.assets.find((a: any) => 
+        a.name === `${apkAsset.name}.sha256` || 
+        a.name.toLowerCase() === 'sha256sums.txt' || 
+        a.name.toLowerCase() === 'checksums.txt'
+      );
+      if (checksumAsset?.browser_download_url) {
+        try {
+          const checkResp = await fetch(checksumAsset.browser_download_url);
+          if (checkResp.ok) {
+            const checkText = await checkResp.text();
+            // Look for 64-character hex hash matching this APK or alone
+            const lines = checkText.split('\n');
+            for (const line of lines) {
+              if (line.includes(apkAsset.name) || lines.length === 1) {
+                const match = line.match(/\b([a-fA-F0-9]{64})\b/);
+                if (match) {
+                  sha256 = match[1];
+                  break;
+                }
+              }
+            }
+          }
+        } catch {
+          // Checksum lookup failure is non-fatal; plugin will still enforce HTTPS and host allow-list
+        }
+      }
+    }
+
     return {
       latestVersion: cleanVersion(latestVersion),
-      downloadUrl
+      downloadUrl,
+      sha256
     };
   } catch (error) {
     console.error("Failed to fetch latest release:", error);
