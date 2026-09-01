@@ -35,8 +35,25 @@ vi.mock("@/services/nativeService", () => ({
       set: vi.fn(),
       remove: vi.fn(),
     },
+    getDeviceOemInfo: vi.fn().mockResolvedValue({
+      manufacturer: "transsion",
+      brand: "infinix",
+      model: "hot 10",
+      isTranssion: true,
+      isXiaomi: false,
+      isSamsung: false,
+      isHuawei: false,
+      isOppoRealme: false,
+      isOnePlus: false,
+      isVivo: false,
+      isAsus: false,
+    }),
+    openAutostartSettings: vi.fn().mockResolvedValue(true),
+    openExactAlarmSettings: vi.fn().mockResolvedValue(true),
+    openAppInfoSettings: vi.fn().mockResolvedValue(true),
   },
 }));
+
 
 vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) =>
@@ -71,6 +88,19 @@ vi.mock("framer-motion", () => ({
 describe("BatteryOptimizationGate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(NativeService.getDeviceOemInfo).mockResolvedValue({
+      manufacturer: "transsion",
+      brand: "infinix",
+      model: "hot 10",
+      isTranssion: true,
+      isXiaomi: false,
+      isSamsung: false,
+      isHuawei: false,
+      isOppoRealme: false,
+      isOnePlus: false,
+      isVivo: false,
+      isAsus: false,
+    });
   });
 
   afterEach(() => {
@@ -191,4 +221,29 @@ describe("BatteryOptimizationGate", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
   });
+
+  it("renders Transsion/Infinix tailored guidance and triggers openAutostartSettings when tapped", async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
+    vi.mocked(NativeService.preferences.get).mockResolvedValue(null);
+    vi.mocked(NativeAlarm.isBatteryOptimizationIgnored).mockResolvedValue({ ignored: false });
+
+    render(
+      <BatteryOptimizationGate>
+        <div data-testid="app-content">Protected Content</div>
+      </BatteryOptimizationGate>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Infinix \/ Tecno Detected/i)).toBeInTheDocument();
+    const autostartBtn = screen.getByRole("button", { name: /Open Phone Master \(Auto-Start\)/i });
+    expect(autostartBtn).toBeInTheDocument();
+
+    fireEvent.click(autostartBtn);
+    expect(NativeService.openAutostartSettings).toHaveBeenCalledTimes(1);
+  });
 });
+

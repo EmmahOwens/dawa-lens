@@ -5,10 +5,12 @@ import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.content.ContextCompat
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -29,77 +31,168 @@ class NativeAlarmPlugin : Plugin() {
     private fun openAutostartSettingsInternal(ctx: Context): Boolean {
         val packageName = ctx.packageName
         val manufacturer = Build.MANUFACTURER.lowercase()
+        val brand = Build.BRAND.lowercase()
+        val pm = ctx.packageManager
 
-        val intents = mutableListOf<Intent>()
+        val candidateIntents = mutableListOf<Intent>()
 
-        when {
-            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> {
-                intents.add(Intent().apply {
-                    component = ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")
-                })
-                intents.add(Intent().apply {
-                    component = ComponentName("com.miui.powerkeeper", "com.miui.powerkeeper.ui.HiddenAppsConfigActivity")
-                    putExtra("package_name", packageName)
-                    putExtra("package_label", "Dawa Lens")
-                })
-            }
-            manufacturer.contains("transsion") || manufacturer.contains("tecno") || manufacturer.contains("infinix") || manufacturer.contains("itel") -> {
-                intents.add(Intent().apply {
-                    component = ComponentName("com.transsion.phonemanager", "com.transsion.phonemanager.shortcut.AutoStartManagementActivity")
-                })
-                intents.add(Intent().apply {
-                    component = ComponentName("com.transsion.phonemanager", "com.transsion.phonemanager.battery.view.BatteryOptimizationActivity")
-                })
-            }
-            manufacturer.contains("oppo") || manufacturer.contains("realme") || manufacturer.contains("oneplus") -> {
-                intents.add(Intent().apply {
-                    component = ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")
-                })
-                intents.add(Intent().apply {
-                    component = ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity")
-                })
-                intents.add(Intent().apply {
-                    component = ComponentName("com.oplus.battery", "com.oplus.battery.BatteryMainActivity")
-                })
-            }
-            manufacturer.contains("vivo") || manufacturer.contains("iqoo") -> {
-                intents.add(Intent().apply {
-                    component = ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")
-                })
-                intents.add(Intent().apply {
-                    component = ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")
-                })
-            }
-            manufacturer.contains("huawei") || manufacturer.contains("honor") -> {
-                intents.add(Intent().apply {
-                    component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
-                })
-                intents.add(Intent().apply {
-                    component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")
-                })
-            }
-            manufacturer.contains("samsung") -> {
-                intents.add(Intent().apply {
-                    component = ComponentName("com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity")
-                })
-                intents.add(Intent().apply {
-                    component = ComponentName("com.samsung.android.sm_cn", "com.samsung.android.sm.ui.battery.BatteryActivity")
-                })
-            }
+        // 1. Transsion (Infinix, Tecno, itel) - Modern Phone Master + legacy fallbacks
+        if (manufacturer.contains("transsion") || manufacturer.contains("tecno") || manufacturer.contains("infinix") || manufacturer.contains("itel") || brand.contains("infinix") || brand.contains("tecno")) {
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemaster", "com.cyin.himgr.autostart.AutoStartActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.shortcut.AutoStartManagementActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemaster", "com.cyin.himgr.power.PowerManagerActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemaster", "com.cyin.himgr.battery.BatteryActivity")
+            })
+            candidateIntents.add(Intent("com.transsion.phonemaster.ACTION_AUTOSTART"))
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.itel.autobootmanager", "com.itel.autobootmanager.activity.AutoBootMgrActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemanager", "com.transsion.phonemanager.shortcut.AutoStartManagementActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemanager", "com.transsion.phonemanager.battery.view.BatteryOptimizationActivity")
+            })
         }
 
-        // Generic fallbacks
-        intents.add(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        // 2. Xiaomi, Redmi, Poco (MIUI, HyperOS)
+        if (manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") || brand.contains("xiaomi") || brand.contains("redmi") || brand.contains("poco")) {
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")
+            })
+            candidateIntents.add(Intent("miui.intent.action.OP_AUTO_START").apply {
+                addCategory(Intent.CATEGORY_DEFAULT)
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.miui.powerkeeper", "com.miui.powerkeeper.ui.HiddenAppsConfigActivity")
+                putExtra("package_name", packageName)
+                putExtra("package_label", "Dawa Lens")
+            })
+        }
+
+        // 3. Samsung (One UI)
+        if (manufacturer.contains("samsung")) {
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.samsung.android.lool", "com.samsung.android.sm.battery.ui.BatteryActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.samsung.android.sm", "com.samsung.android.sm.ui.battery.BatteryActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.samsung.android.sm_cn", "com.samsung.android.sm.ui.battery.BatteryActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.AppSleepListActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.samsung.android.app.battery.ui", "com.samsung.android.app.battery.ui.AppBatteryUsageActivity")
+            })
+        }
+
+        // 4. Huawei & Honor (EMUI / MagicOS)
+        if (manufacturer.contains("huawei") || manufacturer.contains("honor") || brand.contains("huawei") || brand.contains("honor")) {
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.hihonor.systemmanager", "com.hihonor.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
+            })
+        }
+
+        // 5. Oppo & Realme (ColorOS / Realme UI)
+        if (manufacturer.contains("oppo") || manufacturer.contains("realme") || brand.contains("realme")) {
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.oplus.battery", "com.oplus.battery.BatteryMainActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.coloros.oppoguardelf", "com.coloros.powermanager.fuelgaue.PowerUsageModelActivity")
+            })
+        }
+
+        // 6. OnePlus (OxygenOS)
+        if (manufacturer.contains("oneplus") || brand.contains("oneplus")) {
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.oplus.battery", "com.oplus.battery.BatteryMainActivity")
+            })
+        }
+
+        // 7. Vivo & iQOO (Funtouch OS / OriginOS)
+        if (manufacturer.contains("vivo") || manufacturer.contains("iqoo") || brand.contains("vivo") || brand.contains("iqoo")) {
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.vivo.abe", "com.vivo.applicationbehaviorengine.ui.ExcessivePowerManagerActivity")
+            })
+        }
+
+        // 8. Asus (ZenUI / ROG)
+        if (manufacturer.contains("asus")) {
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.asus.mobilemanager", "com.asus.mobilemanager.entry.FunctionActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.asus.mobilemanager", "com.asus.mobilemanager.autostart.AutoStartActivity")
+            })
+        }
+
+        // 9. Sony (Xperia)
+        if (manufacturer.contains("sony")) {
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.sonymobile.superstamina", "com.sonymobile.superstamina.XperiaBatterySavingSettings")
+            })
+        }
+
+        // 10. Universal Standard Android Fallbacks
+        candidateIntents.add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        candidateIntents.add(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.parse("package:$packageName")
         })
-        intents.add(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-        intents.add(Intent(Settings.ACTION_SETTINGS))
+        candidateIntents.add(Intent(Settings.ACTION_SETTINGS))
 
-        for (intent in intents) {
+        // Query PackageManager to find the first candidate that can be resolved
+        for (intent in candidateIntents) {
             try {
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                ctx.startActivity(intent)
-                return true
+                val resolved = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong())).isNotEmpty()
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY).isNotEmpty()
+                }
+
+                if (resolved || intent.action == Settings.ACTION_APPLICATION_DETAILS_SETTINGS || intent.action == Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS) {
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    ctx.startActivity(intent)
+                    return true
+                }
             } catch (e: Exception) {
                 // Try next intent
             }
@@ -567,5 +660,81 @@ class NativeAlarmPlugin : Plugin() {
             result.put("ignored", true)
         }
         call.resolve(result)
+    }
+
+    @PluginMethod
+    fun getDeviceOemInfo(call: PluginCall) {
+        val result = JSObject()
+        val m = Build.MANUFACTURER.lowercase()
+        val b = Build.BRAND.lowercase()
+        result.put("manufacturer", Build.MANUFACTURER)
+        result.put("brand", Build.BRAND)
+        result.put("model", Build.MODEL)
+        result.put("isTranssion", m.contains("transsion") || m.contains("infinix") || m.contains("tecno") || m.contains("itel") || b.contains("infinix") || b.contains("tecno"))
+        result.put("isXiaomi", m.contains("xiaomi") || m.contains("redmi") || m.contains("poco") || b.contains("xiaomi") || b.contains("redmi") || b.contains("poco"))
+        result.put("isSamsung", m.contains("samsung"))
+        result.put("isHuawei", m.contains("huawei") || m.contains("honor") || b.contains("huawei") || b.contains("honor"))
+        result.put("isOppoRealme", m.contains("oppo") || m.contains("realme") || b.contains("realme"))
+        result.put("isOnePlus", m.contains("oneplus") || b.contains("oneplus"))
+        result.put("isVivo", m.contains("vivo") || m.contains("iqoo") || b.contains("vivo") || b.contains("iqoo"))
+        result.put("isAsus", m.contains("asus"))
+        call.resolve(result)
+    }
+
+    @PluginMethod
+    fun startGuardianService(call: PluginCall) {
+        try {
+            val ctx = context
+            val intent = Intent(ctx, AdherenceGuardianService::class.java).apply {
+                action = AdherenceGuardianService.ACTION_START
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(ctx, intent)
+            } else {
+                ctx.startService(intent)
+            }
+            val res = JSObject()
+            res.put("running", true)
+            call.resolve(res)
+        } catch (e: Exception) {
+            call.reject("Failed to start Adherence Guardian service: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
+    fun stopGuardianService(call: PluginCall) {
+        try {
+            val ctx = context
+            val intent = Intent(ctx, AdherenceGuardianService::class.java).apply {
+                action = AdherenceGuardianService.ACTION_STOP
+            }
+            ctx.startService(intent)
+            val res = JSObject()
+            res.put("running", false)
+            call.resolve(res)
+        } catch (e: Exception) {
+            call.reject("Failed to stop Adherence Guardian service: ${e.message}", e)
+        }
+    }
+
+    @PluginMethod
+    fun isGuardianServiceRunning(call: PluginCall) {
+        val res = JSObject()
+        res.put("running", AdherenceGuardianService.isRunning)
+        call.resolve(res)
+    }
+
+    @PluginMethod
+    fun openAppInfoSettings(call: PluginCall) {
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:${context.packageName}")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+            call.resolve()
+        } catch (e: Exception) {
+            call.reject("Failed to open app info settings: ${e.message}", e)
+        }
     }
 }

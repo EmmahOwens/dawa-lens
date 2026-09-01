@@ -16,6 +16,8 @@ export const sendPushNotification = async (userId, { title, body, data = {} }) =
       return;
     }
 
+    const channelId = data.channelId || 'dawa_reminders_v2';
+
     const message = {
       notification: {
         title,
@@ -23,15 +25,21 @@ export const sendPushNotification = async (userId, { title, body, data = {} }) =
       },
       data: {
         ...data,
-        click_action: 'FLUTTER_NOTIFICATION_CLICK', // Legacy but sometimes helps
+        channelId,
+        click_action: 'FLUTTER_NOTIFICATION_CLICK', // Legacy compatibility fallback
       },
       token: fcmToken,
-      // Capacitor / Android specific high priority
+      // Android specific high priority + offline resilience
       android: {
         priority: 'high',
+        ttl: 2419200, // 4 weeks in seconds (ensures delivery when device reconnects from offline)
         notification: {
           sound: 'default',
-          channelId: 'default',
+          channelId,
+          priority: 'max',
+          visibility: 'public',
+          defaultSound: true,
+          defaultVibrateTimings: true,
         },
       },
       apns: {

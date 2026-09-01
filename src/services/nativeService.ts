@@ -364,6 +364,134 @@ export const NativeService = {
       return { batteryIgnored: false, exactAlarmCanSchedule: false, notificationsEnabled: false, isFullyCompliant: false };
     }
   },
+
+  /**
+   * Retrieves manufacturer and OEM brand profiling to tailor background settings instructions.
+   */
+  getDeviceOemInfo: async () => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      return {
+        manufacturer: "generic",
+        brand: "generic",
+        model: "web",
+        isTranssion: false,
+        isXiaomi: false,
+        isSamsung: false,
+        isHuawei: false,
+        isOppoRealme: false,
+        isOnePlus: false,
+        isVivo: false,
+        isAsus: false,
+      };
+    }
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      if (NativeAlarm.getDeviceOemInfo) {
+        return await NativeAlarm.getDeviceOemInfo();
+      }
+      return {
+        manufacturer: "android",
+        brand: "android",
+        model: "device",
+        isTranssion: false,
+        isXiaomi: false,
+        isSamsung: false,
+        isHuawei: false,
+        isOppoRealme: false,
+        isOnePlus: false,
+        isVivo: false,
+        isAsus: false,
+      };
+    } catch (err) {
+      console.warn("Failed to get device OEM info:", err);
+      return {
+        manufacturer: "unknown",
+        brand: "unknown",
+        model: "unknown",
+        isTranssion: false,
+        isXiaomi: false,
+        isSamsung: false,
+        isHuawei: false,
+        isOppoRealme: false,
+        isOnePlus: false,
+        isVivo: false,
+        isAsus: false,
+      };
+    }
+  },
+
+  /**
+   * Starts the persistent adherence guardian foreground service to protect alarms against aggressive LMK killers.
+   */
+  startGuardianService: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return false;
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      if (NativeAlarm.startGuardianService) {
+        const res = await NativeAlarm.startGuardianService();
+        return res?.running ?? false;
+      }
+      return false;
+    } catch (err) {
+      console.error("Failed to start guardian service:", err);
+      return false;
+    }
+  },
+
+  /**
+   * Stops the persistent adherence guardian foreground service.
+   */
+  stopGuardianService: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return false;
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      if (NativeAlarm.stopGuardianService) {
+        const res = await NativeAlarm.stopGuardianService();
+        return res?.running ?? false;
+      }
+      return false;
+    } catch (err) {
+      console.error("Failed to stop guardian service:", err);
+      return false;
+    }
+  },
+
+  /**
+   * Checks if the adherence guardian service is currently active.
+   */
+  isGuardianServiceRunning: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return false;
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      if (NativeAlarm.isGuardianServiceRunning) {
+        const res = await NativeAlarm.isGuardianServiceRunning();
+        return res?.running ?? false;
+      }
+      return false;
+    } catch (err) {
+      console.error("Failed to check guardian service status:", err);
+      return false;
+    }
+  },
+
+  /**
+   * Directly opens the application details settings screen in Android settings.
+   */
+  openAppInfoSettings: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return false;
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      if (NativeAlarm.openAppInfoSettings) {
+        await NativeAlarm.openAppInfoSettings();
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Failed to open app info settings:", err);
+      return false;
+    }
+  },
 };
+
 
 
