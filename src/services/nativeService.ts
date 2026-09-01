@@ -491,6 +491,51 @@ export const NativeService = {
       return false;
     }
   },
+
+  /**
+   * Opens Android Notification Settings for this app.
+   */
+  openNotificationSettings: async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return false;
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      await NativeAlarm.openNotificationSettings();
+      return true;
+    } catch (err) {
+      console.error("Failed to open notification settings:", err);
+      return false;
+    }
+  },
+
+  /**
+   * Comprehensive readiness check covering notifications, exact alarm permission, and battery exemption.
+   */
+  checkReadiness: async () => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+      return {
+        notificationsEnabled: true,
+        channelBlocked: false,
+        exactAlarmCanSchedule: true,
+        batteryIgnored: true,
+        status: "ready_exact" as const,
+        isFullyCompliant: true,
+      };
+    }
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      return await NativeAlarm.checkReadiness();
+    } catch (err) {
+      console.error("Failed to check readiness:", err);
+      return {
+        notificationsEnabled: true,
+        channelBlocked: false,
+        exactAlarmCanSchedule: true,
+        batteryIgnored: true,
+        status: "ready_exact" as const,
+        isFullyCompliant: true,
+      };
+    }
+  },
 };
 
 

@@ -375,8 +375,8 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-tight uppercase font-bold tracking-tighter opacity-70 mt-0.5">
                   {batteryExempt
-                    ? "Unrestricted · Background alarms & reminders active"
-                    : "Required for exact background alarms"}
+                    ? "Unrestricted · Background alarms & reminders protected"
+                    : "Recommended for highest reliability during deep sleep"}
                 </p>
               </div>
             </div>

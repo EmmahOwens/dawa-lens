@@ -7,185 +7,97 @@ import android.content.Context
 import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.os.Build
+import android.os.PowerManager
+import android.os.UserManager
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import org.json.JSONArray
 import org.json.JSONObject
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
+/**
+ * Boot, Direct-Boot, and Permission State Change Receiver.
+ *
+ * Responsibilities:
+ * 1. LOCKED_BOOT_COMPLETED: Device is powered on but locked with PIN/pattern. Credential-protected
+ *    storage (SQLite) is inaccessible. Reconstructs and schedules single next alarms strictly
+ *    from NativeRecurrenceStore in Device-Protected Storage.
+ * 2. USER_UNLOCKED / BOOT_COMPLETED: User has unlocked the device. Credential-protected storage
+ *    is available. Reconciles Device-Protected Storage against SQLite (dawa_lens.db), enriches metadata,
+ *    and refreshes scheduled alarms.
+ * 3. ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED: Responds immediately when exact alarm
+ *    permission is granted or revoked in system settings, promoting or demoting alarms dynamically.
+ * 4. Re-enqueues the periodic MissedDoseWorker.
+ */
 class BootReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val action = intent.action
+        val action = intent.action ?: return
         if (action != Intent.ACTION_BOOT_COMPLETED &&
             action != "android.intent.action.QUICKBOOT_POWERON" &&
             action != Intent.ACTION_MY_PACKAGE_REPLACED &&
-            action != "android.intent.action.LOCKED_BOOT_COMPLETED"
+            action != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
+            action != Intent.ACTION_USER_UNLOCKED &&
+            action != AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
         ) return
 
-        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
         val wakeLock = powerManager?.newWakeLock(
-            android.os.PowerManager.PARTIAL_WAKE_LOCK,
+            PowerManager.PARTIAL_WAKE_LOCK,
             "DawaLens:BootReceiverWakeLock"
         )
         wakeLock?.acquire(15000L) // 15 second safety timeout
 
         try {
             val now = System.currentTimeMillis()
-            
-            // Read from Device-Protected Context first (available before user enters PIN on cold boot)
-            val dpContext = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                context.createDeviceProtectedStorageContext()
-            } else {
-                context
-            }
-            val dpPrefs = dpContext.getSharedPreferences("dawa_alarms", Context.MODE_PRIVATE)
-            val prefs = context.getSharedPreferences("dawa_alarms", Context.MODE_PRIVATE)
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+            val canExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                alarmManager.canScheduleExactAlarms()
+            } else true
 
-            val scheduleJson = dpPrefs.getString("dawa_alarm_schedule", null)
-                ?: prefs.getString("dawa_alarm_schedule", null)
+            val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
+            val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                userManager?.isUserUnlocked ?: true
+            } else true
 
-            var rescheduledCount = 0
-
-            if (!scheduleJson.isNullOrEmpty()) {
-                try {
-                    val array = JSONArray(scheduleJson)
-                    for (i in 0 until array.length()) {
-                        val item = array.getJSONObject(i)
-                        val id = item.optInt("id", 0)
-                        val title = item.optString("title", "Dawa Lens")
-                        val body = item.optString("body", "Medication reminder")
-                        val triggerAtMillis = item.optLong("triggerAtMillis", 0L)
-                        val extra = if (item.has("extra")) item.getString("extra") else ""
-
-                        if (triggerAtMillis > now && id != 0) {
-                            scheduleOne(context, id, triggerAtMillis, title, body, extra)
-                            rescheduledCount++
-                        }
-                    }
-                } catch (e: Exception) {
-                    // proceed to fallback
-                }
+            // Step 1: If unlocked, reconcile NativeRecurrenceStore with SQLite database if needed
+            if (isUserUnlocked && (action == Intent.ACTION_USER_UNLOCKED || action == Intent.ACTION_BOOT_COMPLETED)) {
+                reconcileWithSqliteIfUnlocked(context)
             }
 
-            // Fallback: If no schedule was saved in SharedPreferences, rebuild alarms directly from SQLite database
-            if (rescheduledCount == 0) {
-                val dbPath = context.getDatabasePath("dawa_lens.db")
-                if (dbPath.exists()) {
-                    try {
-                        val db = SQLiteDatabase.openDatabase(
-                            dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY
-                        )
-                        val cursor = db.rawQuery(
-                            """SELECT id, medicine_name, dose, time, repeat_schedule, repeat_days, patient_id 
-                               FROM reminders 
-                               WHERE enabled = 1""",
-                            null
-                        )
-                        val fallbackSchedule = JSONArray()
-                        val fallbackIds = mutableSetOf<String>()
+            // Step 2: Read active authoritative reminders from Device-Protected Storage
+            val storedReminders = NativeRecurrenceStore.getReminders(context)
+            for (reminder in storedReminders) {
+                if (!reminder.enabled) continue
 
-                        val isoUtcFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-                            timeZone = TimeZone.getTimeZone("UTC")
-                        }
+                val nextTrigger = NativeRecurrenceEngine.computeNextOccurrence(
+                    reminder.toEngineSchedule(),
+                    now
+                ) ?: continue
 
-                        while (cursor.moveToNext()) {
-                            val reminderId = cursor.getString(cursor.getColumnIndexOrThrow("id"))
-                            val medicineName = cursor.getString(cursor.getColumnIndexOrThrow("medicine_name")) ?: "Medication"
-                            val dose = cursor.getString(cursor.getColumnIndexOrThrow("dose")) ?: ""
-                            val timeStr = cursor.getString(cursor.getColumnIndexOrThrow("time")) ?: ""
-                            val repeatSchedule = cursor.getString(cursor.getColumnIndexOrThrow("repeat_schedule")) ?: "daily"
-                            val repeatDaysJson = cursor.getString(cursor.getColumnIndexOrThrow("repeat_days"))
-                            val patientId = cursor.getString(cursor.getColumnIndexOrThrow("patient_id"))
+                if (nextTrigger <= now) continue
 
-                            val times = timeStr.split(",").map { it.trim() }.filter { it.contains(":") }
+                val numericId = Math.abs(reminder.id.hashCode() % 2147483647).let { if (it == 0) 1 else it }
+                val extraJson = JSONObject().apply {
+                    put("type", "reminder")
+                    put("reminderId", reminder.id)
+                    put("scheduledTime", nextTrigger)
+                    if (reminder.patientId != null) put("patientId", reminder.patientId)
+                }.toString()
 
-                            for (dayOffset in 0..7) {
-                                for (t in times) {
-                                    val parts = t.split(":")
-                                    if (parts.size != 2) continue
-                                    val hour = parts[0].toIntOrNull() ?: continue
-                                    val min = parts[1].toIntOrNull() ?: continue
+                scheduleOneAlarm(
+                    context = context,
+                    alarmManager = alarmManager,
+                    id = numericId,
+                    triggerAtMillis = nextTrigger,
+                    title = reminder.genericTitle,
+                    body = reminder.genericBody,
+                    extra = extraJson,
+                    canExact = canExact
+                )
 
-                                    val cal = Calendar.getInstance()
-                                    cal.add(Calendar.DAY_OF_YEAR, dayOffset)
-                                    cal.set(Calendar.HOUR_OF_DAY, hour)
-                                    cal.set(Calendar.MINUTE, min)
-                                    cal.set(Calendar.SECOND, 0)
-                                    cal.set(Calendar.MILLISECOND, 0)
-
-                                    val triggerAt = cal.timeInMillis
-                                    if (triggerAt <= now) continue
-
-                                    if (repeatSchedule == "specific_days" && !repeatDaysJson.isNullOrEmpty()) {
-                                        try {
-                                            val daysArr = JSONArray(repeatDaysJson)
-                                            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
-                                            var matches = false
-                                            for (d in 0 until daysArr.length()) {
-                                                if (daysArr.getInt(d) == dayOfWeek) {
-                                                    matches = true
-                                                    break
-                                                }
-                                            }
-                                            if (!matches) continue
-                                        } catch (e: Exception) {}
-                                    }
-
-                                    val scheduledIso = isoUtcFormat.format(Date(triggerAt))
-                                    // Unified modulo matching TypeScript stringToHash exactly
-                                    val notifId = Math.abs((reminderId + scheduledIso).hashCode() % 2147483647).let { if (it == 0) 1 else it }
-                                    val title = "Time for $medicineName"
-                                    val body = "Dose: $dose. Remember to take your medicine!"
-                                    val extra = JSONObject().apply {
-                                        put("reminderId", reminderId)
-                                        put("medicineName", medicineName)
-                                        put("dose", dose)
-                                        put("scheduledTime", scheduledIso)
-                                        if (patientId != null) put("patientId", patientId)
-                                    }.toString()
-
-                                    scheduleOne(context, notifId, triggerAt, title, body, extra)
-
-                                    val schedObj = JSONObject().apply {
-                                        put("id", notifId)
-                                        put("title", title)
-                                        put("body", body)
-                                        put("triggerAtMillis", triggerAt)
-                                        put("extra", extra)
-                                    }
-                                    fallbackSchedule.put(schedObj)
-                                    fallbackIds.add(notifId.toString())
-
-                                    if (repeatSchedule == "once") break
-                                }
-                            }
-                        }
-                        cursor.close()
-                        db.close()
-
-                        if (fallbackSchedule.length() > 0) {
-                            val scheduleStr = fallbackSchedule.toString()
-                            prefs.edit()
-                                .putString("dawa_alarm_schedule", scheduleStr)
-                                .putStringSet("alarm_ids", fallbackIds)
-                                .apply()
-
-                            dpPrefs.edit()
-                                .putString("dawa_alarm_schedule", scheduleStr)
-                                .putStringSet("alarm_ids", fallbackIds)
-                                .apply()
-                        }
-                    } catch (e: Exception) {
-                        // non-fatal
-                    }
-                }
+                NativeRecurrenceStore.updateReminderNextTrigger(context, reminder.id, nextTrigger)
             }
         } finally {
             if (wakeLock?.isHeld == true) {
@@ -195,30 +107,99 @@ class BootReceiver : BroadcastReceiver() {
             }
         }
 
-        // Re-enqueue the missed-dose background worker
+        // Step 3: Ensure periodic missed-dose reconciliation worker is enqueued
         try {
             val missedDoseWork = PeriodicWorkRequest.Builder(
                 MissedDoseWorker::class.java, 15, TimeUnit.MINUTES
             ).build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 "missed_dose_check",
-                ExistingPeriodicWorkPolicy.UPDATE,
+                ExistingPeriodicWorkPolicy.KEEP,
                 missedDoseWork
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Non-fatal WorkManager init
         }
     }
 
-    private fun scheduleOne(
+    /**
+     * When credential-protected storage is unlocked, verifies that active reminders in SQLite
+     * are synchronized with NativeRecurrenceStore.
+     */
+    private fun reconcileWithSqliteIfUnlocked(context: Context) {
+        val dbPath = context.getDatabasePath("dawa_lens.db")
+        if (!dbPath.exists()) return
+
+        var db: SQLiteDatabase? = null
+        try {
+            db = SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            val cursor = db.rawQuery(
+                """SELECT id, medicine_name, dose, time, repeat_schedule, repeat_days, enabled, patient_id 
+                   FROM reminders 
+                   WHERE enabled = 1""",
+                null
+            )
+
+            val reconciledList = mutableListOf<NativeRecurrenceStore.StoredReminder>()
+            while (cursor.moveToNext()) {
+                val id = cursor.getString(cursor.getColumnIndexOrThrow("id"))
+                val medicineName = cursor.getString(cursor.getColumnIndexOrThrow("medicine_name")) ?: ""
+                val dose = cursor.getString(cursor.getColumnIndexOrThrow("dose")) ?: ""
+                val timeStr = cursor.getString(cursor.getColumnIndexOrThrow("time")) ?: ""
+                val repeatSchedule = cursor.getString(cursor.getColumnIndexOrThrow("repeat_schedule")) ?: "daily"
+                val repeatDaysJson = cursor.getString(cursor.getColumnIndexOrThrow("repeat_days"))
+                val patientId = cursor.getString(cursor.getColumnIndexOrThrow("patient_id"))
+
+                val repeatDaysList = if (!repeatDaysJson.isNullOrEmpty()) {
+                    try {
+                        val arr = JSONArray(repeatDaysJson)
+                        (0 until arr.length()).map { arr.getInt(it) }
+                    } catch (e: Exception) {
+                        null
+                    }
+                } else null
+
+                val genericTitle = if (medicineName.isNotEmpty()) "Time for $medicineName" else "Medication Reminder"
+                val genericBody = if (dose.isNotEmpty()) "Dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+
+                reconciledList.add(
+                    NativeRecurrenceStore.StoredReminder(
+                        id = id,
+                        time = timeStr,
+                        repeatSchedule = repeatSchedule,
+                        repeatDays = repeatDaysList,
+                        enabled = true,
+                        createdAt = System.currentTimeMillis(),
+                        genericTitle = genericTitle,
+                        genericBody = genericBody,
+                        lastScheduledTrigger = 0L,
+                        patientId = patientId
+                    )
+                )
+            }
+            cursor.close()
+
+            if (reconciledList.isNotEmpty()) {
+                NativeRecurrenceStore.saveReminders(context, reconciledList)
+            }
+        } catch (e: Exception) {
+            // Non-fatal SQLite read error
+        } finally {
+            try { db?.close() } catch (e: Exception) {}
+        }
+    }
+
+    private fun scheduleOneAlarm(
         context: Context,
+        alarmManager: AlarmManager,
         id: Int,
         triggerAtMillis: Long,
         title: String,
         body: String,
-        extra: String
+        extra: String,
+        canExact: Boolean
     ) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        if (triggerAtMillis <= 0L) return
 
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             putExtra("notificationId", id)
@@ -234,30 +215,9 @@ class BootReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val showIntent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("notification_id", id)
-            putExtra("notification_extra", extra)
-        }
-        val showPendingIntent = PendingIntent.getActivity(
-            context,
-            id,
-            showIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        var scheduledSuccessfully = false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            try {
-                val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent)
-                alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
-                scheduledSuccessfully = true
-            } catch (e: Exception) {
-                // fallback
-            }
-        }
-
-        if (!scheduledSuccessfully) {
+        // Use setExactAndAllowWhileIdle if exact alarms are permitted.
+        // Fall back gracefully to setAndAllowWhileIdle for degraded inexact timing.
+        if (canExact) {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     alarmManager.setExactAndAllowWhileIdle(
@@ -272,26 +232,26 @@ class BootReceiver : BroadcastReceiver() {
                         pendingIntent
                     )
                 }
-                scheduledSuccessfully = true
+                return
+            } catch (e: SecurityException) {
+                // Exact alarm permission not available; fallback to degraded mode
             } catch (e: Exception) {
-                // fallback
+                // Non-fatal error; fallback to inexact
             }
         }
 
-        if (!scheduledSuccessfully) {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    alarmManager.setAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerAtMillis,
-                        pendingIntent
-                    )
-                } else {
-                    alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-                }
-            } catch (e: Exception) {
-                // ignore
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             }
+        } catch (e: Exception) {
+            // ignore individual alarm failure
         }
     }
 }

@@ -247,6 +247,189 @@ class NativeAlarmPlugin : Plugin() {
         return storageContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    /**
+     * Schedules a single alarm using setExactAndAllowWhileIdle if exact alarm access is granted,
+     * or gracefully falls back to setAndAllowWhileIdle (degraded mode) without creating disruptive
+     * user-facing alarm clock icons.
+     */
+    fun scheduleOneAlarmInternal(
+        ctx: Context,
+        alarmManager: AlarmManager,
+        id: Int,
+        triggerAtMillis: Long,
+        title: String,
+        body: String,
+        extra: String,
+        canExact: Boolean
+    ): Boolean {
+        if (triggerAtMillis <= 0L) return false
+
+        val intent = Intent(ctx, AlarmReceiver::class.java).apply {
+            putExtra("notificationId", id)
+            putExtra("title", title)
+            putExtra("body", body)
+            putExtra("extra", extra)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            ctx,
+            id,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // 1. Primary path: setExactAndAllowWhileIdle (precise, wakes during Doze, no alarm-clock status clutter)
+        if (canExact) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAtMillis,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.setExact(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAtMillis,
+                        pendingIntent
+                    )
+                }
+                return true
+            } catch (e: SecurityException) {
+                // Exact alarm permission was revoked; fall through to degraded inexact
+            } catch (e: Exception) {
+                // Fall through to inexact fallback
+            }
+        }
+
+        // 2. Degraded Inexact Path: setAndAllowWhileIdle (works under Doze, inexact window)
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Authoritative recurrence scheduler.
+     * Receives recurrence configurations from TypeScript, saves to Device-Protected Storage,
+     * and sets strictly the single next exact alarm per active reminder.
+     */
+    @PluginMethod
+    fun scheduleAuthoritativeReminders(call: PluginCall) {
+        val remindersArray = call.getArray("reminders") ?: run {
+            call.reject("reminders array is required")
+            return
+        }
+
+        val ctx = context
+        val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        val canExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+
+        val storedReminders = mutableListOf<NativeRecurrenceStore.StoredReminder>()
+        val scheduledIds = mutableSetOf<String>()
+        val now = System.currentTimeMillis()
+
+        for (i in 0 until remindersArray.length()) {
+            val obj = remindersArray.getJSONObject(i)
+            val id = obj.optString("id", "")
+            if (id.isEmpty()) continue
+
+            val time = obj.optString("time", "")
+            val repeatSchedule = obj.optString("repeatSchedule", "daily")
+            val repeatDays = if (obj.has("repeatDays") && !obj.isNull("repeatDays")) {
+                val arr = obj.getJSONArray("repeatDays")
+                (0 until arr.length()).map { arr.getInt(it) }
+            } else null
+            val enabled = obj.optBoolean("enabled", true)
+            val createdAt = obj.optLong("createdAt", now)
+            val medicineName = obj.optString("medicineName", "")
+            val dose = obj.optString("dose", "")
+            val patientId = if (obj.has("patientId") && !obj.isNull("patientId")) obj.getString("patientId") else null
+
+            val genericTitle = if (medicineName.isNotEmpty()) "Time for $medicineName" else "Medication Reminder"
+            val genericBody = if (dose.isNotEmpty()) "Dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+
+            val engineSchedule = NativeRecurrenceEngine.ReminderSchedule(
+                id = id,
+                time = time,
+                repeatSchedule = repeatSchedule,
+                repeatDays = repeatDays,
+                enabled = enabled,
+                createdAt = createdAt
+            )
+
+            val nextTrigger = if (enabled) {
+                NativeRecurrenceEngine.computeNextOccurrence(engineSchedule, now)
+            } else null
+
+            storedReminders.add(
+                NativeRecurrenceStore.StoredReminder(
+                    id = id,
+                    time = time,
+                    repeatSchedule = repeatSchedule,
+                    repeatDays = repeatDays,
+                    enabled = enabled,
+                    createdAt = createdAt,
+                    genericTitle = genericTitle,
+                    genericBody = genericBody,
+                    lastScheduledTrigger = nextTrigger ?: 0L,
+                    patientId = patientId
+                )
+            )
+
+            if (nextTrigger != null && nextTrigger > now) {
+                val numericId = Math.abs(id.hashCode() % 2147483647).let { if (it == 0) 1 else it }
+                val extraJson = JSONObject().apply {
+                    put("type", "reminder")
+                    put("reminderId", id)
+                    put("medicineName", medicineName)
+                    put("dose", dose)
+                    put("scheduledTime", nextTrigger)
+                    if (patientId != null) put("patientId", patientId)
+                }.toString()
+
+                val scheduled = scheduleOneAlarmInternal(
+                    ctx = ctx,
+                    alarmManager = alarmManager,
+                    id = numericId,
+                    triggerAtMillis = nextTrigger,
+                    title = genericTitle,
+                    body = genericBody,
+                    extra = extraJson,
+                    canExact = canExact
+                )
+                if (scheduled) {
+                    scheduledIds.add(numericId.toString())
+                }
+            }
+        }
+
+        // Atomically commit to device-protected storage for Direct Boot survival
+        NativeRecurrenceStore.saveReminders(ctx, storedReminders)
+
+        val res = JSObject()
+        res.put("success", true)
+        res.put("exactGranted", canExact)
+        res.put("degradedMode", !canExact)
+        res.put("scheduledCount", scheduledIds.size)
+        call.resolve(res)
+    }
+
     @PluginMethod
     fun scheduleAlarms(call: PluginCall) {
         val notifications = call.getArray("notifications") ?: run {
@@ -257,13 +440,18 @@ class NativeAlarmPlugin : Plugin() {
         val ctx = context
         val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
+        val canExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            alarmManager.canScheduleExactAlarms()
+        } else {
+            true
+        }
+
         val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val dpPrefs = getDeviceProtectedPrefs(ctx)
 
         val existingAlarmIds = prefs.getStringSet(KEY_IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
         val alarmIds = HashSet(existingAlarmIds)
 
-        // Merge schedule JSON array, keeping active future alarms
         val existingScheduleStr = prefs.getString(KEY_SCHEDULE, null)
             ?: dpPrefs.getString(KEY_SCHEDULE, null)
         val scheduleMap = mutableMapOf<Int, JSONObject>()
@@ -297,87 +485,21 @@ class NativeAlarmPlugin : Plugin() {
 
                 if (triggerAtMillis <= 0L) continue
 
-                val intent = Intent(ctx, AlarmReceiver::class.java).apply {
-                    putExtra("notificationId", id)
-                    putExtra("title", title)
-                    putExtra("body", body)
-                    putExtra("extra", extra)
-                }
-
-                val pendingIntent = PendingIntent.getBroadcast(
-                    ctx,
-                    id,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                val success = scheduleOneAlarmInternal(
+                    ctx = ctx,
+                    alarmManager = alarmManager,
+                    id = id,
+                    triggerAtMillis = triggerAtMillis,
+                    title = title,
+                    body = body,
+                    extra = extra,
+                    canExact = canExact
                 )
 
-                // Intent to open app when user clicks the alarm clock info in system UI
-                val showIntent = Intent(ctx, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra("notification_id", id)
-                    putExtra("notification_extra", extra)
+                if (success) {
+                    alarmIds.add(id.toString())
+                    scheduleMap[id] = item
                 }
-                val showPendingIntent = PendingIntent.getActivity(
-                    ctx,
-                    id,
-                    showIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-
-                var scheduledSuccessfully = false
-
-                // 1. Primary Gold Standard: setAlarmClock (wakes from deep Doze, immune to OEM background killers)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    try {
-                        val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent)
-                        alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
-                        scheduledSuccessfully = true
-                    } catch (e: Exception) {
-                        // Fall through to fallback
-                    }
-                }
-
-                // 2. Secondary Fallback: setExactAndAllowWhileIdle
-                if (!scheduledSuccessfully) {
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            alarmManager.setExactAndAllowWhileIdle(
-                                AlarmManager.RTC_WAKEUP,
-                                triggerAtMillis,
-                                pendingIntent
-                            )
-                        } else {
-                            alarmManager.setExact(
-                                AlarmManager.RTC_WAKEUP,
-                                triggerAtMillis,
-                                pendingIntent
-                            )
-                        }
-                        scheduledSuccessfully = true
-                    } catch (e: Exception) {
-                        // Fall through to inexact fallback
-                    }
-                }
-
-                // 3. Final Inexact Fallback: setAndAllowWhileIdle / set
-                if (!scheduledSuccessfully) {
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            alarmManager.setAndAllowWhileIdle(
-                                AlarmManager.RTC_WAKEUP,
-                                triggerAtMillis,
-                                pendingIntent
-                            )
-                        } else {
-                            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-                        }
-                    } catch (e: Exception) {
-                        // ignore individual alarm failure
-                    }
-                }
-
-                alarmIds.add(id.toString())
-                scheduleMap[id] = item
             } catch (itemErr: Exception) {
                 // Ignore individual item parse error and continue
             }
@@ -390,13 +512,11 @@ class NativeAlarmPlugin : Plugin() {
             }
             val scheduleJsonStr = mergedScheduleArray.toString()
 
-            // Save to standard SharedPreferences
             prefs.edit()
                 .putString(KEY_SCHEDULE, scheduleJsonStr)
                 .putStringSet(KEY_IDS, alarmIds)
                 .apply()
 
-            // Save to Device-Protected SharedPreferences for Direct Boot recovery
             dpPrefs.edit()
                 .putString(KEY_SCHEDULE, scheduleJsonStr)
                 .putStringSet(KEY_IDS, alarmIds)
@@ -576,7 +696,7 @@ class NativeAlarmPlugin : Plugin() {
         }
         result.put("exactAlarmCanSchedule", canExact)
 
-        // 3. Notifications Enabled
+        // 3. App-level Notifications Enabled
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         val notifsEnabled = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             nm.areNotificationsEnabled()
@@ -585,9 +705,52 @@ class NativeAlarmPlugin : Plugin() {
         }
         result.put("notificationsEnabled", notifsEnabled)
 
-        // 4. Overall status
-        result.put("isFullyCompliant", isBatteryIgnored && canExact && notifsEnabled)
+        // 4. Channel-level blocked state
+        var channelBlocked = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = nm.getNotificationChannel(AlarmReceiver.CHANNEL_REMINDERS)
+            if (channel != null && channel.importance == android.app.NotificationManager.IMPORTANCE_NONE) {
+                channelBlocked = true
+            }
+        }
+        result.put("channelBlocked", channelBlocked)
+
+        // 5. Readiness Status
+        val status = when {
+            !notifsEnabled || channelBlocked -> "notifications_paused"
+            !canExact -> "degraded_inexact"
+            else -> "ready_exact"
+        }
+        result.put("status", status)
+        result.put("isFullyCompliant", isBatteryIgnored && canExact && notifsEnabled && !channelBlocked)
         call.resolve(result)
+    }
+
+    @PluginMethod
+    fun checkReadiness(call: PluginCall) {
+        checkAllPermissions(call)
+    }
+
+    @PluginMethod
+    fun openNotificationSettings(call: PluginCall) {
+        try {
+            val ctx = context
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+            } else {
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:${ctx.packageName}")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+            }
+            ctx.startActivity(intent)
+            call.resolve()
+        } catch (e: Exception) {
+            call.reject("Failed to open notification settings: ${e.message}", e)
+        }
     }
 
     @PluginMethod

@@ -1,5 +1,6 @@
 package com.dawainnovation.lens
 
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -10,6 +11,7 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import android.os.Build
 import android.os.PowerManager
+import android.os.UserManager
 import androidx.core.app.NotificationCompat
 import org.json.JSONObject
 
@@ -27,13 +29,15 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        // Acquire a temporary WakeLock to keep CPU running during SQLite verification & notification posting
+        val pendingResult = goAsync()
+
+        // Acquire a temporary WakeLock to keep CPU running during verification, notification posting & atomic reschedule
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
         val wakeLock = powerManager?.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
             "DawaLens:AlarmReceiverWakeLock"
         )
-        wakeLock?.acquire(5000L) // 5 second timeout safety
+        wakeLock?.acquire(8000L) // 8 second timeout safety
 
         try {
             val notificationId = intent.getIntExtra("notificationId", 0)
@@ -75,8 +79,13 @@ class AlarmReceiver : BroadcastReceiver() {
                 "low_stock"
             )
 
-            // 1. If this is a routine medicine reminder (not a standalone event), verify with SQLite database
-            if (!isEventNotification && reminderId.isNotEmpty()) {
+            // 1. If this is a routine medicine reminder (not a standalone event), verify with SQLite database (if unlocked)
+            val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
+            val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                userManager?.isUserUnlocked ?: true
+            } else true
+
+            if (!isEventNotification && reminderId.isNotEmpty() && isUserUnlocked) {
                 val dbPath = context.getDatabasePath("dawa_lens.db")
                 if (dbPath.exists()) {
                     try {
@@ -370,12 +379,117 @@ class AlarmReceiver : BroadcastReceiver() {
             }
 
             notificationManager.notify(notificationId, builder.build())
+
+            // 2. Promptly calculate and schedule the single next recurrence for this reminder
+            if (!isEventNotification && reminderId.isNotEmpty()) {
+                rescheduleSuccessorAlarm(context, reminderId, medicineName, dose, patientId)
+            }
         } finally {
             if (wakeLock?.isHeld == true) {
                 try {
                     wakeLock.release()
                 } catch (e: Exception) {}
             }
+            try {
+                pendingResult.finish()
+            } catch (e: Exception) {}
+        }
+    }
+
+    /**
+     * Authoritative atomic successor scheduler.
+     * Computes the immediate next dose slot after now + 60s and schedules exactly one alarm.
+     */
+    private fun rescheduleSuccessorAlarm(
+        context: Context,
+        reminderId: String,
+        medicineName: String,
+        dose: String,
+        patientId: String?
+    ) {
+        try {
+            val storedReminders = NativeRecurrenceStore.getReminders(context)
+            val matched = storedReminders.find { it.id == reminderId && it.enabled } ?: return
+
+            val now = System.currentTimeMillis()
+            // Look strictly after current dose slot (add 60 seconds buffer)
+            val nextTrigger = NativeRecurrenceEngine.computeNextOccurrence(
+                matched.toEngineSchedule(),
+                now + 60000L
+            ) ?: return
+
+            if (nextTrigger <= now) return
+
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+            val canExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                alarmManager.canScheduleExactAlarms()
+            } else true
+
+            val nextNumericId = Math.abs(reminderId.hashCode() % 2147483647).let { if (it == 0) 1 else it }
+            val nextExtra = JSONObject().apply {
+                put("type", "reminder")
+                put("reminderId", reminderId)
+                put("medicineName", medicineName)
+                put("dose", dose)
+                put("scheduledTime", nextTrigger)
+                if (patientId != null) put("patientId", patientId)
+            }.toString()
+
+            val nextIntent = Intent(context, AlarmReceiver::class.java).apply {
+                putExtra("notificationId", nextNumericId)
+                putExtra("title", matched.genericTitle)
+                putExtra("body", matched.genericBody)
+                putExtra("extra", nextExtra)
+            }
+
+            val nextPendingIntent = PendingIntent.getBroadcast(
+                context,
+                nextNumericId,
+                nextIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            if (canExact) {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        alarmManager.setExactAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            nextTrigger,
+                            nextPendingIntent
+                        )
+                    } else {
+                        alarmManager.setExact(
+                            AlarmManager.RTC_WAKEUP,
+                            nextTrigger,
+                            nextPendingIntent
+                        )
+                    }
+                } catch (e: Exception) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        alarmManager.setAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            nextTrigger,
+                            nextPendingIntent
+                        )
+                    } else {
+                        alarmManager.set(AlarmManager.RTC_WAKEUP, nextTrigger, nextPendingIntent)
+                    }
+                }
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        nextTrigger,
+                        nextPendingIntent
+                    )
+                } else {
+                    alarmManager.set(AlarmManager.RTC_WAKEUP, nextTrigger, nextPendingIntent)
+                }
+            }
+
+            NativeRecurrenceStore.updateReminderNextTrigger(context, reminderId, nextTrigger)
+        } catch (e: Exception) {
+            // Non-fatal reschedule failure
         }
     }
 }

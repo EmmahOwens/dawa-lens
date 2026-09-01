@@ -23,8 +23,14 @@ vi.mock("@capacitor/app", () => ({
 
 vi.mock("@/plugins/nativeAlarm", () => ({
   NativeAlarm: {
+    checkReadiness: vi.fn(),
+    checkAllPermissions: vi.fn(),
     isBatteryOptimizationIgnored: vi.fn(),
     requestIgnoreBatteryOptimization: vi.fn(),
+    openBatteryOptimizationSettings: vi.fn(),
+    openAutostartSettings: vi.fn(),
+    openExactAlarmSettings: vi.fn(),
+    openNotificationSettings: vi.fn(),
   },
 }));
 
@@ -53,7 +59,6 @@ vi.mock("@/services/nativeService", () => ({
     openAppInfoSettings: vi.fn().mockResolvedValue(true),
   },
 }));
-
 
 vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) =>
@@ -107,7 +112,7 @@ describe("BatteryOptimizationGate", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders children without blocking overlay on web or non-Android platform", async () => {
+  it("renders children without banner on web or non-Android platform", async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
     vi.mocked(Capacitor.getPlatform).mockReturnValue("web");
 
@@ -118,15 +123,21 @@ describe("BatteryOptimizationGate", () => {
     );
 
     expect(screen.getByTestId("app-content")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Mandatory Permission/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
   });
 
-  it("shows blocking overlay on Android when battery optimization is NOT ignored", async () => {
+  it("renders children always (non-blocking) and shows reliability banner on Android when not fully compliant", async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
     vi.mocked(NativeService.preferences.get).mockResolvedValue(null);
-    vi.mocked(NativeAlarm.isBatteryOptimizationIgnored).mockResolvedValue({ ignored: false });
+    vi.mocked(NativeAlarm.checkReadiness).mockResolvedValue({
+      notificationsEnabled: true,
+      channelBlocked: false,
+      exactAlarmCanSchedule: false,
+      batteryIgnored: false,
+      status: "degraded_inexact",
+      isFullyCompliant: false,
+    });
 
     render(
       <BatteryOptimizationGate>
@@ -134,20 +145,29 @@ describe("BatteryOptimizationGate", () => {
       </BatteryOptimizationGate>
     );
 
+    // App content MUST remain accessible and never be blocked!
+    expect(screen.getByTestId("app-content")).toBeInTheDocument();
+
     await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      expect(screen.getByRole("region", { name: /Notification & Reliability Status/i })).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Mandatory Permission/i)).toBeInTheDocument();
-    expect(screen.getByText(/Disable Battery Optimization/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Turn Off Battery Optimization/i })).toBeInTheDocument();
+    expect(screen.getByText(/Degraded Timing Mode/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Allow Exact Alarms/i })).toBeInTheDocument();
   });
 
-  it("triggers requestIgnoreBatteryOptimization when user taps the turn off button", async () => {
+  it("triggers settings when action button is tapped", async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
     vi.mocked(NativeService.preferences.get).mockResolvedValue(null);
-    vi.mocked(NativeAlarm.isBatteryOptimizationIgnored).mockResolvedValue({ ignored: false });
+    vi.mocked(NativeAlarm.checkReadiness).mockResolvedValue({
+      notificationsEnabled: true,
+      channelBlocked: false,
+      exactAlarmCanSchedule: true,
+      batteryIgnored: false,
+      status: "ready_exact",
+      isFullyCompliant: false,
+    });
     vi.mocked(NativeAlarm.requestIgnoreBatteryOptimization).mockResolvedValue(undefined as any);
 
     render(
@@ -157,20 +177,53 @@ describe("BatteryOptimizationGate", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Turn Off Battery Optimization/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Unrestrict Battery/i })).toBeInTheDocument();
     });
 
-    const button = screen.getByRole("button", { name: /Turn Off Battery Optimization/i });
+    const button = screen.getByRole("button", { name: /Unrestrict Battery/i });
     fireEvent.click(button);
 
     expect(NativeAlarm.requestIgnoreBatteryOptimization).toHaveBeenCalledTimes(1);
   });
 
-  it("hides overlay when battery optimization is confirmed as ignored", async () => {
+  it("hides banner when readiness is confirmed as fully compliant", async () => {
     vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
     vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
     vi.mocked(NativeService.preferences.get).mockResolvedValue(null);
-    vi.mocked(NativeAlarm.isBatteryOptimizationIgnored).mockResolvedValue({ ignored: true });
+    vi.mocked(NativeAlarm.checkReadiness).mockResolvedValue({
+      notificationsEnabled: true,
+      channelBlocked: false,
+      exactAlarmCanSchedule: true,
+      batteryIgnored: true,
+      status: "ready_exact",
+      isFullyCompliant: true,
+    });
+
+    render(
+      <BatteryOptimizationGate>
+        <div data-testid="app-content">Protected Content</div>
+      </BatteryOptimizationGate>
+    );
+
+    expect(screen.getByTestId("app-content")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    });
+  });
+
+  it("allows user to dismiss banner without blocking access to app", async () => {
+    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
+    vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
+    vi.mocked(NativeService.preferences.get).mockResolvedValue(null);
+    vi.mocked(NativeAlarm.checkReadiness).mockResolvedValue({
+      notificationsEnabled: true,
+      channelBlocked: false,
+      exactAlarmCanSchedule: false,
+      batteryIgnored: false,
+      status: "degraded_inexact",
+      isFullyCompliant: false,
+    });
 
     render(
       <BatteryOptimizationGate>
@@ -179,71 +232,16 @@ describe("BatteryOptimizationGate", () => {
     );
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Dismiss banner/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Dismiss banner/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("region")).not.toBeInTheDocument();
     });
 
     expect(screen.getByTestId("app-content")).toBeInTheDocument();
-    expect(NativeService.preferences.set).toHaveBeenCalledWith("battery_optimization_exempt", true);
-  });
-
-  it("rechecks status when app state changes to active and dismisses overlay once exempt", async () => {
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
-    vi.mocked(NativeService.preferences.get).mockResolvedValue(null);
-    vi.mocked(NativeAlarm.isBatteryOptimizationIgnored).mockResolvedValueOnce({ ignored: false });
-
-    let appStateCallback: (state: { isActive: boolean }) => void = () => {};
-    vi.mocked(CapApp.addListener).mockImplementation((event: string, cb: any) => {
-      if (event === "appStateChange") {
-        appStateCallback = cb;
-      }
-      return Promise.resolve({ remove: vi.fn() });
-    });
-
-    render(
-      <BatteryOptimizationGate>
-        <div data-testid="app-content">Protected Content</div>
-      </BatteryOptimizationGate>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-    });
-
-    // Simulate user toggling setting in OS and returning to app
-    vi.mocked(NativeAlarm.isBatteryOptimizationIgnored).mockResolvedValueOnce({ ignored: true });
-
-    await act(async () => {
-      appStateCallback({ isActive: true });
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    });
-  });
-
-  it("renders Transsion/Infinix tailored guidance and triggers openAutostartSettings when tapped", async () => {
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    vi.mocked(Capacitor.getPlatform).mockReturnValue("android");
-    vi.mocked(NativeService.preferences.get).mockResolvedValue(null);
-    vi.mocked(NativeAlarm.isBatteryOptimizationIgnored).mockResolvedValue({ ignored: false });
-
-    render(
-      <BatteryOptimizationGate>
-        <div data-testid="app-content">Protected Content</div>
-      </BatteryOptimizationGate>
-    );
-
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/Infinix \/ Tecno Detected/i)).toBeInTheDocument();
-    const autostartBtn = screen.getByRole("button", { name: /Open Phone Master \(Auto-Start\)/i });
-    expect(autostartBtn).toBeInTheDocument();
-
-    fireEvent.click(autostartBtn);
-    expect(NativeService.openAutostartSettings).toHaveBeenCalledTimes(1);
+    expect(NativeService.preferences.set).toHaveBeenCalled();
   });
 });
-

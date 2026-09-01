@@ -52,6 +52,8 @@
             <intent-filter>
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.USER_UNLOCKED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -101,11 +103,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Exact alarms: SCHEDULE_EXACT_ALARM requires user grant on Android 12+,
-         USE_EXACT_ALARM is auto-granted for apps targeting alarm/health use-cases.
-         Declare both so the OS picks the best available option. -->
+    <!-- Exact alarms: SCHEDULE_EXACT_ALARM allows setting exact medication reminders on Android 12+.
+         Requires user permission grant on Android 13+; when not granted, app operates in degraded inexact mode. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <!-- Required so scheduled alarms survive a device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

@@ -2,7 +2,12 @@ import {
   LocalNotifications,
   LocalNotificationSchema,
 } from "@capacitor/local-notifications";
-import { NativeAlarm, AlarmNotification } from "@/plugins/nativeAlarm";
+import {
+  NativeAlarm,
+  AlarmNotification,
+  AuthoritativeReminderConfig,
+  ReadinessCheckResult,
+} from "@/plugins/nativeAlarm";
 import { notify } from "@/lib/notifications";
 import { Capacitor } from "@capacitor/core";
 import { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
@@ -1013,9 +1018,28 @@ const executeScheduleReminders = async (
     }
 
     const activeReminders = (reminders || []).filter((r) => r && r.enabled);
+    const isAndroid = Capacitor.getPlatform() === "android";
 
-    // Ensure the channel exists before scheduling on Android
-    if (Capacitor.getPlatform() === "android") {
+    // 1. Check system readiness & channel status on Android
+    let readiness: ReadinessCheckResult | null = null;
+    if (isAndroid) {
+      try {
+        readiness = await NativeAlarm.checkReadiness();
+      } catch (checkErr) {
+        console.warn("[reminderService] checkReadiness failed:", checkErr);
+      }
+
+      if (readiness && readiness.status === "notifications_paused") {
+        console.warn("[reminderService] Reminders paused: Notifications are disabled or channel is blocked.");
+        notify.warning(
+          "Notifications Disabled",
+          "Medication reminders cannot be delivered because notifications are disabled in settings."
+        );
+        return;
+      }
+    }
+
+    if (isAndroid) {
       try {
         // Always ensure the owner channel exists
         await LocalNotifications.createChannel({
@@ -1204,18 +1228,46 @@ const executeScheduleReminders = async (
       }
     });
 
-    if (notifications.length > 0) {
-      console.log(`Scheduling ${notifications.length} notifications...`);
-      const isAndroid = Capacitor.getPlatform() === "android";
-      
+    if (activeReminders.length > 0 || notifications.length > 0) {
       if (isAndroid) {
-        // Primary path on Android: Native AlarmManager (immune to Doze, works across boot, headless tray actions)
+        // Primary path on Android: Native Authoritative Recurrence Engine
+        // Calculates strictly the single next exact alarm per reminder, stored in device-protected storage
         try {
-          await NativeAlarm.scheduleAlarms({
-            notifications: alarmNotifications,
+          const authoritativeConfigs: AuthoritativeReminderConfig[] = activeReminders.map((r) => ({
+            id: r.id,
+            medicineName: r.medicineName,
+            dose: r.dose,
+            time: r.time,
+            repeatSchedule: r.repeatSchedule,
+            repeatDays: r.repeatDays,
+            enabled: r.enabled,
+            createdAt: r.createdAt ? new Date(r.createdAt).getTime() : Date.now(),
+            patientId: r.patientId ?? null,
+            patientName: r.patientName ?? null,
+          }));
+
+          const nativeResult = await NativeAlarm.scheduleAuthoritativeReminders({
+            reminders: authoritativeConfigs,
           });
+
+          if (nativeResult.degradedMode) {
+            console.info("[reminderService] Alarms active in degraded inexact mode (SCHEDULE_EXACT_ALARM permission not granted).");
+          }
+
+          // Schedule any one-off refill event alerts through scheduleAlarms
+          const refillAlarms = alarmNotifications.filter((a) => {
+            try {
+              const extra = JSON.parse(a.extra || "{}");
+              return extra.type === "refill";
+            } catch {
+              return false;
+            }
+          });
+          if (refillAlarms.length > 0) {
+            await NativeAlarm.scheduleAlarms({ notifications: refillAlarms });
+          }
         } catch (alarmErr) {
-          console.warn("[reminderService] NativeAlarm schedule failed, falling back to LocalNotifications:", alarmErr);
+          console.warn("[reminderService] NativeAlarm authoritative schedule failed, falling back to LocalNotifications:", alarmErr);
           try {
             await LocalNotifications.schedule({ notifications });
           } catch (schedErr) {
@@ -1236,4 +1288,16 @@ const executeScheduleReminders = async (
   } catch (err) {
     console.error("Failed to schedule notifications:", err);
   }
+};
+
+/**
+ * Reconciles native authoritative alarm schedules upon app foregrounding.
+ */
+export const reconcileAuthoritativeSchedules = async (
+  reminders: Reminder[],
+  doseLogs: DoseLog[],
+  medicines?: Medicine[]
+): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+  await scheduleReminders(reminders, doseLogs, medicines);
 };

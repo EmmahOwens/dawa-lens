@@ -35,6 +35,12 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
     }
 
     override suspend fun doWork(): Result {
+        val userManager = applicationContext.getSystemService(Context.USER_SERVICE) as? android.os.UserManager
+        val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            userManager?.isUserUnlocked ?: true
+        } else true
+        if (!isUserUnlocked) return Result.success()
+
         val dbPath = applicationContext.getDatabasePath("dawa_lens.db")
         if (!dbPath.exists()) return Result.success()
 
@@ -191,7 +197,10 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
                 ts >= pruneCutoff
             }.toSet()
 
-            prefs.edit().putStringSet(KEY_NOTIFIED_SLOTS, cleanedSlots).apply()
+            prefs.edit()
+                .putStringSet(KEY_NOTIFIED_SLOTS, cleanedSlots)
+                .putLong("last_reconciliation_timestamp", now)
+                .apply()
 
         } catch (e: Exception) {
             // Non-fatal worker catch
@@ -245,9 +254,9 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
 
         val notification = NotificationCompat.Builder(applicationContext, AlarmReceiver.CHANNEL_MISSED)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
-            .setContentTitle("⚠️ Missed Dose: $medicineName")
-            .setContentText("You missed your $medicineName$doseLabel dose scheduled at $timeStr. Stay on track!")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("You missed your $medicineName$doseLabel dose scheduled at $timeStr. Please open Dawa Lens to log your medication or consult your schedule."))
+            .setContentTitle("⚠️ Missed Dose Follow-Up: $medicineName")
+            .setContentText("Dose follow-up: $medicineName$doseLabel scheduled at $timeStr was not logged. Stay on track!")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("Dose follow-up: You have an unlogged dose of $medicineName$doseLabel from $timeStr. Tap to review your adherence record or log this dose."))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

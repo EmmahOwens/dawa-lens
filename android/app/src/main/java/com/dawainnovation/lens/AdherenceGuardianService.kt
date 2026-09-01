@@ -15,12 +15,12 @@ import androidx.core.app.NotificationCompat
 /**
  * AdherenceGuardianService
  *
- * Persistent Foreground Service that grants the app process a PERCEPTIBLE_APP /
- * foreground OOM priority (oom_score_adj ~200).
+ * Optional foreground service that provides user-visible adherence monitoring
+ * and active status for users who explicitly opt-in.
  *
- * This immunizes the app from aggressive task killers on Infinix (Transsion XOS),
- * Xiaomi (MIUI/HyperOS), Samsung (One UI), and Oppo/Vivo, preventing the OS
- * from force-stopping the app and wiping AlarmManager alarms when swiped from recents.
+ * Note: Local alarms in Dawa Lens rely authoritatively on AlarmManager and
+ * device-protected Direct Boot recovery; this foreground service is purely optional
+ * and does not claim to override system force-stops or OEM power modes.
  */
 class AdherenceGuardianService : Service() {
 
