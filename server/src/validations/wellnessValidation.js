@@ -6,9 +6,9 @@ export const logWellnessSchema = z.object({
     type: z.enum(['symptom', 'food', 'mood'], { 
       required_error: 'Log type must be symptom, food, or mood' 
     }),
-    patientId: z.string().optional(),
+    patientId: z.string().nullable().optional(),
     timestamp: z.string().max(100).optional(),
-    data: z.record(z.union([z.string().max(500), z.number(), z.boolean(), z.array(z.string().max(200))])).optional(),
+    data: z.record(z.string(), z.unknown()).optional(),
     notes: z.string().max(1000).optional(),
   })
 });

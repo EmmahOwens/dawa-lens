@@ -551,7 +551,7 @@ export const chatWithDawaGPT = async (
   } catch (err: unknown) {
     console.error("DawaGPT Chat Error:", err);
     const rawMsg = err instanceof Error ? err.message : "";
-    const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json/i.test(rawMsg);
+    const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
     const errorMessage = isTechnicalError
       ? "I had trouble processing that request. Please try again in a moment."
       : rawMsg;
@@ -699,7 +699,7 @@ export const chatWithDawaGPTStream = async (
   } catch (err: unknown) {
     console.error("DawaGPT Streaming Error:", err);
     const rawMsg = err instanceof Error ? err.message : "";
-    const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json/i.test(rawMsg);
+    const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
     const errorMessage = isTechnicalError
       ? "I had trouble processing that request. Please try again in a moment."
       : rawMsg;

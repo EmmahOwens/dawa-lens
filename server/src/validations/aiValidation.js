@@ -32,11 +32,12 @@ export const wellnessLogInputSchema = z.object({
   type: z.string().max(50).optional(),
   timestamp: z.string().max(100).optional(),
   date: z.string().max(100).optional(),
-  mood: z.number().min(1).max(5).optional(),
-  energy: z.number().min(1).max(5).optional(),
+  mood: z.number().min(1).max(5).nullable().optional(),
+  energy: z.number().min(1).max(5).nullable().optional(),
   symptoms: z.array(z.string().max(200)).max(20).optional(),
   notes: z.string().max(1000).optional(),
-  data: z.record(z.unknown()).optional(),
+  patientId: z.string().max(100).nullable().optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
 }).strip();
 
 export const reminderInputSchema = z.object({
@@ -46,31 +47,41 @@ export const reminderInputSchema = z.object({
   time: z.string().max(100).optional(),
   repeatSchedule: z.string().max(100).optional(),
   patientId: z.string().max(100).nullable().optional(),
+  medicineId: z.string().max(100).nullable().optional(),
 }).strip();
 
 export const patientInputSchema = z.object({
   id: z.string().max(100).optional(),
   name: z.string().max(100).optional(),
-  age: z.number().min(0).max(150).optional(),
-  gender: z.string().max(50).optional(),
+  age: z.number().min(0).max(150).nullable().optional(),
+  gender: z.string().max(50).nullable().optional(),
   relation: z.string().max(50).optional(),
+  relationship: z.string().max(50).optional(),
 }).strip();
 
 export const userProfileInputSchema = z.object({
+  id: z.string().max(100).optional(),
   name: z.string().max(100).optional(),
-  email: z.string().max(200).optional(),
-  age: z.number().min(0).max(150).optional(),
-  gender: z.string().max(50).optional(),
+  email: z.string().max(200).nullable().optional(),
+  age: z.number().min(0).max(150).nullable().optional(),
+  dateOfBirth: z.string().max(100).nullable().optional(),
+  gender: z.string().max(50).nullable().optional(),
   allergies: z.array(z.string().max(200)).max(50).optional(),
   conditions: z.array(z.string().max(200)).max(50).optional(),
+  isProfessional: z.boolean().optional(),
+  language: z.string().max(50).optional(),
 }).strip();
 
 export const vitalitySummaryInputSchema = z.object({
+  name: z.string().max(100).optional(),
+  adherence: z.number().nullable().optional(),
+  energy: z.number().nullable().optional(),
+  mood: z.number().nullable().optional(),
   type: z.string().max(100).optional(),
-  score: z.number().optional(),
+  score: z.number().nullable().optional(),
   label: z.string().max(200).optional(),
   value: z.any().optional(),
-}).strip();
+}).passthrough();
 
 export const wellnessQuoteSchema = z.object({
   body: z.object({
@@ -140,18 +151,21 @@ export const emotionReflectionSchema = z.object({
 export const chatSchema = z.object({
   body: z.object({
     messages: z.array(z.object({
+      id: z.string().optional(),
       role: z.enum(['user', 'assistant', 'system']),
       content: z.string().max(20000).optional(),
       text: z.string().max(20000).optional(),
+      source: z.string().optional(),
+      suggestions: z.array(z.string()).optional(),
     })).max(50),
     medicines: z.array(medicineInputSchema).max(50).optional(),
-    userProfile: userProfileInputSchema.optional(),
+    userProfile: userProfileInputSchema.nullable().optional(),
     doseLogs: z.array(doseLogInputSchema).max(50).optional(),
     reminders: z.array(reminderInputSchema).max(50).optional(),
     wellnessLogs: z.array(wellnessLogInputSchema).max(50).optional(),
-    vitalitySummary: z.array(vitalitySummaryInputSchema).max(10).optional(),
+    vitalitySummary: z.array(vitalitySummaryInputSchema).max(20).optional(),
     patients: z.array(patientInputSchema).max(20).optional(),
     selectedPatientId: z.string().max(100).nullable().optional(),
-    currentPage: z.string().max(200).optional(),
+    currentPage: z.string().max(200).nullable().optional(),
   })
 });

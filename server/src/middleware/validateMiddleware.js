@@ -15,7 +15,8 @@ export const validate = (schema) => (req, res, next) => {
       const message = issues.map((err) => `${err.path.join('.')}: ${err.message}`).join(', ');
       next(new AppError(message, 400));
     } else {
-      next(new AppError(error.message || 'Validation failed', 400));
+      console.error('[validateMiddleware] Unexpected validation error:', error);
+      next(new AppError(error.isOperational ? error.message : 'Validation failed due to an internal error', 500));
     }
   }
 };
