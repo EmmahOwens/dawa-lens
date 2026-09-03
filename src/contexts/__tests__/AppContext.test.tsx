@@ -197,6 +197,59 @@ describe("AppContext - logDose dynamic reminder time shifting", () => {
     expect(mockLocalRemUpdate).toHaveBeenCalledWith("rem-123", { time: "20:50" });
   });
 
+  it("should shift all reminder times to preserve equal spacing when a subsequent dose is taken early", async () => {
+    const testReminder: Reminder = {
+      id: "rem-multi",
+      medicineName: "Multi Med",
+      dose: "1 tablet",
+      time: "08:00,20:00",
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    mockLocalRemsGetAll.mockResolvedValue([testReminder]);
+    mockLocalLogCreate.mockImplementation((data) =>
+      Promise.resolve({ ...data, id: "log-multi-1", actionTime: new Date().toISOString() })
+    );
+
+    const { result } = renderHook(() => useApp(), {
+      wrapper: AppProvider,
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    // Mock today's date for scheduledTime = 20:00, taken at 18:00 (2h early)
+    const todayStr = new OriginalDate().toISOString().split("T")[0];
+    const scheduledTime = `${todayStr}T20:00:00`;
+    const mockActualDate = new OriginalDate(`${todayStr}T18:00:00`);
+
+    const dateSpy = vi.spyOn(global, "Date").mockImplementation((...args) => {
+      if ((args as any).length === 0) {
+        return mockActualDate;
+      }
+      // @ts-ignore
+      return new OriginalDate(...args);
+    });
+
+    await act(async () => {
+      await result.current.logDose({
+        reminderId: "rem-multi",
+        medicineName: "Multi Med",
+        dose: "1 tablet",
+        scheduledTime,
+        action: "taken",
+      });
+    });
+
+    dateSpy.mockRestore();
+
+    // Verify both reminder slots were shifted: 08:00->06:00, 20:00->18:00 (preserving equal 12h spacing)
+    expect(mockLocalRemUpdate).toHaveBeenCalledWith("rem-multi", { time: "06:00,18:00" });
+  });
+
   it("should remove reminder locally and update state when deleteReminder is called", async () => {
     const testReminder: Reminder = {
       id: "rem-delete-test",

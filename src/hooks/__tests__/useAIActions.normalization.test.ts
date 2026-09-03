@@ -19,9 +19,10 @@ describe("useAIActions — time string normalization", () => {
   it("should parse descriptive daily frequency strings", () => {
     expect(normalizeTimeStr("twice daily")).toBe("08:00,20:00");
     expect(normalizeTimeStr("take twice a day")).toBe("08:00,20:00");
-    expect(normalizeTimeStr("3 times a day")).toBe("08:00,14:00,20:00");
-    expect(normalizeTimeStr("thrice daily")).toBe("08:00,14:00,20:00");
-    expect(normalizeTimeStr("4x daily")).toBe("08:00,12:00,16:00,20:00");
+    expect(normalizeTimeStr("3 times a day")).toBe("08:00,16:00,00:00");
+    expect(normalizeTimeStr("thrice daily")).toBe("08:00,16:00,00:00");
+    expect(normalizeTimeStr("4x daily")).toBe("08:00,14:00,20:00,02:00");
+    expect(normalizeTimeStr("4 times a day")).toBe("08:00,14:00,20:00,02:00");
   });
 
   it("should parse descriptive time of day words", () => {

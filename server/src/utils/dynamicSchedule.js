@@ -89,7 +89,7 @@ export function findSlotIndexForTime(times, scheduledDateOrStr) {
  * Calculates new reminder times when a dose is taken at `actualTakeTime`
  * instead of its scheduled slot `slotIndex`.
  *
- * Preserves the inter-dose intervals for all subsequent slots.
+ * Preserves the equal spacing between all doses throughout the recurring daily schedule.
  */
 export function calculateDynamicSchedule(times, slotIndex, actualTakeTime) {
   if (!times || times.length === 0 || slotIndex < 0 || slotIndex >= times.length) {
@@ -103,22 +103,15 @@ export function calculateDynamicSchedule(times, slotIndex, actualTakeTime) {
   const actualDate =
     typeof actualTakeTime === 'string' ? new Date(actualTakeTime) : actualTakeTime;
   const actualMinutes = actualDate.getHours() * 60 + actualDate.getMinutes();
-  const actualSlotStr = minutesToTimeStr(actualMinutes);
+  const N = times.length;
+  const intervalMinutes = Math.round((24 * 60) / N);
 
-  const newTimes = times.map((originalSlot, idx) => {
-    if (idx < slotIndex) {
-      return originalSlot;
-    }
+  const newTimes = times.map((_, idx) => {
     if (idx === slotIndex) {
-      return actualSlotStr;
+      return minutesToTimeStr(actualMinutes);
     }
-
-    let cumulativeInterval = 0;
-    for (let s = slotIndex; s < idx; s++) {
-      cumulativeInterval += getInterSlotInterval(times, s, s + 1);
-    }
-    const newSlotMins = actualMinutes + cumulativeInterval;
-    return minutesToTimeStr(newSlotMins);
+    const slotMins = actualMinutes + (idx - slotIndex) * intervalMinutes;
+    return minutesToTimeStr(slotMins);
   });
 
   const newTimeStr = newTimes.join(',');

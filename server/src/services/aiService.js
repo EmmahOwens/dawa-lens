@@ -2100,7 +2100,7 @@ export async function prepareDawaGPTContext({ messages, medicines, userProfile, 
         - If you can match the medicine to a reminder in context, include the reminderId.
         - EXAMPLE: "I took my Metformin this morning" → { type: "LOG_DOSE", payload: { medicineName: "Metformin", dose: "500mg", scheduledTime: "<now>", action: "taken" } }
     9. REMINDER FREQUENCY & TIME FORMATS (CRITICAL):
-       - If a medication requires multiple doses a day (e.g. twice daily, three times daily, or every 8 hours), you MUST specify all times as a single comma-separated string of HH:mm format times in the "time" field (e.g., "08:00,20:00" for twice daily, or "08:00,14:00,20:00" for three times daily).
+       - If a medication requires multiple doses a day (e.g. twice daily, three times daily, four times daily, or every 6/8/12 hours), you MUST specify all times as a single comma-separated string of HH:mm format times in the "time" field (e.g., "08:00,20:00" for twice daily, "08:00,16:00,00:00" for three times daily, or "08:00,14:00,20:00,02:00" for four times daily).
        - NEVER use text descriptions (like "morning", "twice a day", "night") in the "time" field.
        - Ensure "repeatSchedule" is set to "custom" if multiple time slots are provided, or "daily" for once-a-day schedules.
     10. SUGGESTIONS (CRITICAL — READ CAREFULLY):

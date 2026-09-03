@@ -100,11 +100,10 @@ export function findSlotIndexForTime(
  * instead of its scheduled slot `slotIndex`.
  *
  * Rules:
- * - Slots before `slotIndex` remain unchanged (already past/actioned).
- * - Slot `slotIndex` is updated to the actual take time.
- * - Each subsequent slot `i > slotIndex` is shifted to:
- *     actualTakeTime + cumulative original inter-slot interval from slotIndex to i
- *   This strictly preserves the inter-dose spacing for both early and late doses.
+ * - Computes the time deviation between the actual take time and the scheduled slot.
+ * - Updates the taken slot to `actualTakeTime`.
+ * - Shifts all other slots by the same offset, strictly preserving the equal time spacing
+ *   between all doses throughout the entire repeating daily schedule.
  */
 export function calculateDynamicSchedule(
   times: string[],
@@ -125,29 +124,22 @@ export function calculateDynamicSchedule(
     };
   }
 
-  const actualMinutes = actualTakeTime.getHours() * 60 + actualTakeTime.getMinutes();
-  const actualSlotStr = minutesToTimeStr(actualMinutes);
+  const actualMinutes =
+    actualTakeTime.getHours() * 60 + actualTakeTime.getMinutes();
+  const N = times.length;
+  const intervalMinutes = Math.round((24 * 60) / N);
 
-  const newTimes = times.map((originalSlot, idx) => {
-    if (idx < slotIndex) {
-      return originalSlot;
-    }
+  const newTimes = times.map((_, idx) => {
     if (idx === slotIndex) {
-      return actualSlotStr;
+      return minutesToTimeStr(actualMinutes);
     }
-
-    // Cumulative interval between slotIndex and this slot idx
-    let cumulativeInterval = 0;
-    for (let s = slotIndex; s < idx; s++) {
-      cumulativeInterval += getInterSlotInterval(times, s, s + 1);
-    }
-    const newSlotMins = actualMinutes + cumulativeInterval;
-    return minutesToTimeStr(newSlotMins);
+    const slotMins = actualMinutes + (idx - slotIndex) * intervalMinutes;
+    return minutesToTimeStr(slotMins);
   });
 
   const newTimeStr = newTimes.join(",");
   const hasChanges = newTimeStr !== times.join(",");
-  const adjustedSubsequentCount = times.length - slotIndex - 1;
+  const adjustedSubsequentCount = times.length - 1;
 
   return {
     newTimes,

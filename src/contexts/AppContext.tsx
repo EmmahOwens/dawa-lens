@@ -1769,7 +1769,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const originalTime = reminder.time;
             const direction = diffMinutes < 0 ? "earlier" : "later";
             const absDiff = Math.abs(diffMinutes);
-            const adjustedTimesLabel = newTimes.slice(slotIndex + 1).join(", ");
+            const nextSlotIndex = (slotIndex + 1) % newTimes.length;
+            const nextDoseTime = newTimes[nextSlotIndex];
+            const adjustedTimesLabel = newTimes.slice(slotIndex + 1).join(", ") || nextDoseTime;
 
             console.log(
               `[DynamicSchedule] Shifting ${reminder.medicineName} from ${originalTime} to ${newTimeStr} (${absDiff}m ${direction})`
@@ -1857,19 +1859,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
               medicineName: reminder.medicineName,
               patientId: reminder.patientId,
               patientName: reminder.patientName,
-              adjustedTimesLabel: adjustedTimesLabel || newTimes[slotIndex],
+              adjustedTimesLabel: nextDoseTime,
               absDiff,
               direction,
-              hasSubsequentSlots: newTimes.length > slotIndex + 1,
+              hasSubsequentSlots: newTimes.length > 1,
             });
 
             // 5. In-app toast with explicit adjusted times
-            const toastBody = newTimes.length > slotIndex + 1
+            const toastBody = newTimes.length > 1
               ? reminder.patientName
                 ? `${reminder.patientName} took ${reminder.medicineName} ${absDiff}m ${direction}. ` +
-                  `Next dose${newTimes.length - slotIndex - 1 > 1 ? "s" : ""} adjusted to: ${adjustedTimesLabel}.`
+                  `Next dose adjusted to: ${nextDoseTime}.`
                 : `Taken ${absDiff}m ${direction}. ` +
-                  `Next dose${newTimes.length - slotIndex - 1 > 1 ? "s" : ""} adjusted to: ${adjustedTimesLabel}.`
+                  `Next dose adjusted to: ${nextDoseTime}.`
               : `${reminder.medicineName} schedule updated (${absDiff}m ${direction}).`;
             notify.info("⏰ Schedule Adjusted", toastBody);
           }

@@ -14,10 +14,10 @@ export function normalizeTimeStr(timeStr: string): string {
     return "08:00,20:00";
   }
   if (cleanStr.includes("three times") || cleanStr.includes("thrice") || cleanStr.includes("3 times") || cleanStr.includes("3x")) {
-    return "08:00,14:00,20:00";
+    return "08:00,16:00,00:00";
   }
   if (cleanStr.includes("four times") || cleanStr.includes("4 times") || cleanStr.includes("4x")) {
-    return "08:00,12:00,16:00,20:00";
+    return "08:00,14:00,20:00,02:00";
   }
 
   return cleanStr

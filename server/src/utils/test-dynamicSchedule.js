@@ -52,10 +52,25 @@ assert(lateResult.newTimes[0] === '09:30', 'First slot updated to 09:30');
 assert(lateResult.newTimes[1] === '21:30', 'Second slot shifted later to 21:30');
 assert(lateResult.newTimeStr === '09:30,21:30', 'New time string is 09:30,21:30');
 
-// Test 6: 3-Dose schedule (08:00, 14:00, 20:00) taken late at 09:00
+// Test 6: 3-Dose schedule (08:00, 16:00, 00:00) taken late at 09:00 -> 09:00, 17:00, 01:00 (8h intervals)
 const threeDoseTake = new Date('2026-08-19T09:00:00');
-const threeDoseResult = calculateDynamicSchedule(['08:00', '14:00', '20:00'], 0, threeDoseTake);
-assert(threeDoseResult.newTimes.join(',') === '09:00,15:00,21:00', '3-dose schedule preserves 6h intervals (09:00, 15:00, 21:00)');
+const threeDoseResult = calculateDynamicSchedule(['08:00', '16:00', '00:00'], 0, threeDoseTake);
+assert(threeDoseResult.newTimes.join(',') === '09:00,17:00,01:00', '3-dose schedule enforces 8h intervals (09:00, 17:00, 01:00)');
+
+// Test 7: 2-Dose schedule (08:00, 20:00) second slot taken early at 18:00 -> shifts to 06:00, 18:00 (equal 12h spacing)
+const secondSlotEarly = new Date('2026-08-19T18:00:00');
+const secondSlotResult = calculateDynamicSchedule(['08:00', '20:00'], 1, secondSlotEarly);
+assert(secondSlotResult.newTimes.join(',') === '06:00,18:00', 'Second slot taken 2h early shifts both slots to preserve 12h spacing (06:00, 18:00)');
+
+// Test 8: 3-Dose schedule (08:00, 16:00, 00:00) second slot taken early at 14:00 -> shifts to 06:00, 14:00, 22:00 (equal 8h spacing)
+const tidSlotEarly = new Date('2026-08-19T14:00:00');
+const tidSlotResult = calculateDynamicSchedule(['08:00', '16:00', '00:00'], 1, tidSlotEarly);
+assert(tidSlotResult.newTimes.join(',') === '06:00,14:00,22:00', '3-dose second slot taken 2h early preserves 8h spacing (06:00, 14:00, 22:00)');
+
+// Test 9: 4-Dose schedule (08:00, 14:00, 20:00, 02:00) slot 2 taken early at 18:00 -> 06:00, 12:00, 18:00, 00:00 (equal 6h spacing)
+const qidSlotEarly = new Date('2026-08-19T18:00:00');
+const qidSlotResult = calculateDynamicSchedule(['08:00', '14:00', '20:00', '02:00'], 2, qidSlotEarly);
+assert(qidSlotResult.newTimes.join(',') === '06:00,12:00,18:00,00:00', '4-dose slot taken 2h early preserves 6h spacing (06:00, 12:00, 18:00, 00:00)');
 
 console.log(`\nSummary: ${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

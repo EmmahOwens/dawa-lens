@@ -234,23 +234,64 @@ describe("dynamicSchedule - interval preservation", () => {
     expect(result.newTimeStr).toBe("09:30,21:30");
   });
 
-  it("should preserve 3-dose daily intervals (e.g. 08:00, 14:00, 20:00)", () => {
-    const times = ["08:00", "14:00", "20:00"]; // 6h intervals
+  it("should enforce 8h spacing for 3-dose daily regimens (e.g. 08:00, 16:00, 00:00)", () => {
+    const times = ["08:00", "16:00", "00:00"]; // 8h intervals
     const actualTake = new Date();
     actualTake.setHours(9, 0, 0, 0); // 1h late for slot 0
 
     const result = calculateDynamicSchedule(times, 0, actualTake);
-    expect(result.newTimes).toEqual(["09:00", "15:00", "21:00"]);
+    expect(result.newTimes).toEqual(["09:00", "17:00", "01:00"]);
   });
 
-  it("should only adjust subsequent slots when taking second dose", () => {
-    const times = ["08:00", "14:00", "20:00"];
+  it("should adjust all slots to preserve equal 8h intervals when taking second dose late", () => {
+    const times = ["08:00", "16:00", "00:00"];
     const actualTake = new Date();
-    actualTake.setHours(15, 15, 0, 0); // slot 1 taken at 15:15 (75m late)
+    actualTake.setHours(17, 15, 0, 0); // slot 1 (16:00) taken at 17:15 (75m late)
 
     const result = calculateDynamicSchedule(times, 1, actualTake);
-    // slot 0 remains 08:00, slot 1 becomes 15:15, slot 2 becomes 21:15 (6h after 15:15)
-    expect(result.newTimes).toEqual(["08:00", "15:15", "21:15"]);
+    // All slots spaced by 8h anchored to 17:15: 09:15, 17:15, 01:15
+    expect(result.newTimes).toEqual(["09:15", "17:15", "01:15"]);
+  });
+
+  it("should preserve equal 12h spacing when taking second dose early (e.g. 08:00, 20:00 taken at 18:00)", () => {
+    const times = ["08:00", "20:00"]; // 12h interval
+    const actualTake = new Date();
+    actualTake.setHours(18, 0, 0, 0); // slot 1 taken at 18:00 (2h early)
+
+    const result = calculateDynamicSchedule(times, 1, actualTake);
+    // Both slots shift by -2h to preserve 12h spacing: 08:00->06:00, 20:00->18:00
+    expect(result.newTimes).toEqual(["06:00", "18:00"]);
+    expect(result.newTimeStr).toBe("06:00,18:00");
+  });
+
+  it("should preserve equal 8h spacing when taking second dose early (e.g. 08:00, 16:00, 00:00 taken at 14:00)", () => {
+    const times = ["08:00", "16:00", "00:00"]; // 8h interval
+    const actualTake = new Date();
+    actualTake.setHours(14, 0, 0, 0); // slot 1 taken at 14:00 (2h early)
+
+    const result = calculateDynamicSchedule(times, 1, actualTake);
+    // All slots shift by -2h to preserve 8h spacing: 08:00->06:00, 16:00->14:00, 00:00->22:00
+    expect(result.newTimes).toEqual(["06:00", "14:00", "22:00"]);
+  });
+
+  it("should preserve equal 8h spacing when taking third dose early (e.g. 08:00, 16:00, 00:00 taken at 22:00)", () => {
+    const times = ["08:00", "16:00", "00:00"]; // 8h interval
+    const actualTake = new Date();
+    actualTake.setHours(22, 0, 0, 0); // slot 2 taken at 22:00 (2h early)
+
+    const result = calculateDynamicSchedule(times, 2, actualTake);
+    // All slots shift by -2h to preserve 8h spacing: 08:00->06:00, 16:00->14:00, 00:00->22:00
+    expect(result.newTimes).toEqual(["06:00", "14:00", "22:00"]);
+  });
+
+  it("should preserve equal 6h spacing for 4-dose daily regimens (e.g. 08:00, 14:00, 20:00, 02:00 taken early at 18:00)", () => {
+    const times = ["08:00", "14:00", "20:00", "02:00"]; // 6h interval
+    const actualTake = new Date();
+    actualTake.setHours(18, 0, 0, 0); // slot 2 taken at 18:00 (2h early)
+
+    const result = calculateDynamicSchedule(times, 2, actualTake);
+    // All slots spaced by 6h anchored to 18:00: 06:00, 12:00, 18:00, 00:00
+    expect(result.newTimes).toEqual(["06:00", "12:00", "18:00", "00:00"]);
   });
 });
 
