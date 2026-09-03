@@ -33,12 +33,15 @@ public class AppUpdaterPlugin extends Plugin {
 
     private static final String TAG = "AppUpdater";
 
-    // Fixed HTTPS allow-list for release distribution (GitHub Releases)
+    // Fixed HTTPS allow-list for release distribution (GitHub Releases).
+    // Includes both the legacy CDN (objects.githubusercontent.com) and the current
+    // one (release-assets.githubusercontent.com) that GitHub now redirects to.
     private static final Set<String> ALLOWED_HOSTS = new HashSet<>(Arrays.asList(
             "github.com",
             "api.github.com",
             "objects.githubusercontent.com",
-            "raw.githubusercontent.com"
+            "raw.githubusercontent.com",
+            "release-assets.githubusercontent.com"  // GitHub's current release CDN
     ));
 
     // Upper bound cap on APK size to prevent storage denial-of-service (150 MB)
@@ -47,6 +50,10 @@ public class AppUpdaterPlugin extends Plugin {
     private static boolean isAllowedHost(String host) {
         if (host == null) return false;
         String lowerHost = host.toLowerCase(Locale.ROOT);
+        // Accept any *.githubusercontent.com subdomain (GitHub may rotate CDN hostnames)
+        if (lowerHost.endsWith(".githubusercontent.com") || lowerHost.equals("githubusercontent.com")) {
+            return true;
+        }
         return ALLOWED_HOSTS.contains(lowerHost);
     }
 

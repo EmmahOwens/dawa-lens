@@ -78,7 +78,7 @@ async function testGemini() {
 
 async function runTests() {
   console.log('Starting AI provider tests...');
-  await testGroq(GROQ_API_KEY, 'qwen/qwen3.6-27b');
+  await testGroq(GROQ_API_KEY, 'qwen/qwen3.8-27b');
   await testGroq(GROQ_API_KEY_2 || GROQ_API_KEY, 'openai/gpt-oss-20b');
   await testCerebras();
   await testGemini();

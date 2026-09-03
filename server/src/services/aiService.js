@@ -16,7 +16,7 @@ dotenv.config();
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
-const GROQ_MODEL = 'qwen/qwen3.6-27b';
+const GROQ_MODEL = 'qwen/qwen3.8-27b';
 const GROQ_SCOUT_MODEL = 'openai/gpt-oss-120b'; // was llama-4-scout (deprecated June 2026)
 const GROQ_LIGHT_MODEL = 'openai/gpt-oss-20b';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -490,7 +490,7 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
       payload.response_format = responseFormat;
     }
 
-    // qwen3.6-27b, openai/gpt-oss-20b, and openai/gpt-oss-120b are all reasoning models.
+    // qwen3.8-27b, openai/gpt-oss-20b, and openai/gpt-oss-120b are all reasoning models.
     // Their <think> tokens must be hidden when JSON mode is active, otherwise they
     // corrupt the JSON output or trigger a 400 error from the Groq API.
     const isReasoningModel = modelId === GROQ_MODEL || modelId === GROQ_LIGHT_MODEL || modelId === GROQ_SCOUT_MODEL;
@@ -613,7 +613,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 2. Try Groq 70B (qwen/qwen3.6-27b)
+  // 2. Try Groq 70B (qwen/qwen3.8-27b)
   if (GROQ_API_KEY && isComplex && preferredModel !== GROQ_MODEL && preferredModel !== 'groq-70b') {
     try {
       return await callGroqChat(messages, responseFormat, GROQ_MODEL, priority, maxTokens, true, temperature);
