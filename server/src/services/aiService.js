@@ -37,9 +37,13 @@ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.GITHUB_MODELS_KEY;
-const GITHUB_MODEL = 'meta-llama-3.3-70b-instruct';
-const GITHUB_API_URL = 'https://models.inference.ai.azure.com/chat/completions';
+const NVIDIA_API_KEY = process.env.NVIDIA_API || process.env.NVIDIA_NIM_API_KEY;
+const NVIDIA_MODEL = 'nvidia/llama-3.1-nemotron-70b-instruct';
+const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+
+const SILICONFLOW_API_KEY = process.env.SILICONFLOW_API || process.env.SILICONFLOW_API_KEY;
+const SILICONFLOW_MODEL = 'Qwen/Qwen2.5-7B-Instruct';
+const SILICONFLOW_API_URL = 'https://api.siliconflow.cn/v1/chat/completions';
 
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
 const MISTRAL_MODEL = 'mistral-small-latest';
@@ -373,29 +377,61 @@ const callOpenRouterChat = async (messages, responseFormat = { type: 'json_objec
 };
 
 /**
- * Standard chat completion call to GitHub Models API
+ * Standard chat completion call to NVIDIA NIM (Llama-3.1-Nemotron-70B)
  */
-const callGithubModelsChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GITHUB_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
-  if (!GITHUB_TOKEN) throw new AppError('GitHub Token not configured', 503);
+const callNvidiaNimChat = async (messages, responseFormat = { type: 'json_object' }, modelId = NVIDIA_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
+  if (!NVIDIA_API_KEY) throw new AppError('NVIDIA API key not configured', 503);
 
   const fn = async () => {
     const payload = { model: modelId, messages, max_tokens: maxTokens, temperature };
     if (responseFormat) payload.response_format = responseFormat;
 
-    const response = await axios.post(GITHUB_API_URL, payload, {
-      headers: { 'Authorization': `Bearer ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
-      timeout: 7000
+    const response = await axios.post(NVIDIA_API_URL, payload, {
+      headers: {
+        'Authorization': `Bearer ${NVIDIA_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000
     });
 
     const text = response.data?.choices?.[0]?.message?.content;
-    if (!text) throw new AppError('GitHub Models returned an empty response.', 502);
+    if (!text) throw new AppError('NVIDIA NIM returned an empty response.', 502);
 
     let result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
-    if (typeof result === 'object' && result !== null) result.source = `GitHub Models (${modelId})`;
+    if (typeof result === 'object' && result !== null) result.source = `NVIDIA NIM (${modelId})`;
     return result;
   };
 
-  return await rateLimitManager.enqueue(fn, 'github-models', messages, priority, 3, failFast);
+  return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', messages, priority, 3, failFast);
+};
+
+/**
+ * Standard chat completion call to SiliconFlow (Qwen-2.5-7B)
+ */
+const callSiliconFlowChat = async (messages, responseFormat = { type: 'json_object' }, modelId = SILICONFLOW_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
+  if (!SILICONFLOW_API_KEY) throw new AppError('SiliconFlow API key not configured', 503);
+
+  const fn = async () => {
+    const payload = { model: modelId, messages, max_tokens: maxTokens, temperature };
+    if (responseFormat) payload.response_format = responseFormat;
+
+    const response = await axios.post(SILICONFLOW_API_URL, payload, {
+      headers: {
+        'Authorization': `Bearer ${SILICONFLOW_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 9000
+    });
+
+    const text = response.data?.choices?.[0]?.message?.content;
+    if (!text) throw new AppError('SiliconFlow returned an empty response.', 502);
+
+    let result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
+    if (typeof result === 'object' && result !== null) result.source = `SiliconFlow (${modelId})`;
+    return result;
+  };
+
+  return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', messages, priority, 3, failFast);
 };
 
 /**
@@ -525,8 +561,11 @@ export const callAiWithFallback = async (messages, options = {}) => {
     if (forceModel === 'sambanova' || forceModel === SAMBANOVA_MODEL) {
       return await callSambaNovaChat(messages, responseFormat, SAMBANOVA_MODEL, priority, maxTokens, false, temperature);
     }
-    if (forceModel === 'github' || forceModel === GITHUB_MODEL) {
-      return await callGithubModelsChat(messages, responseFormat, GITHUB_MODEL, priority, maxTokens, false, temperature);
+    if (forceModel === 'nvidia' || forceModel === 'nvidia-nemotron' || forceModel === NVIDIA_MODEL) {
+      return await callNvidiaNimChat(messages, responseFormat, NVIDIA_MODEL, priority, maxTokens, false, temperature);
+    }
+    if (forceModel === 'siliconflow' || forceModel === 'qwen-7b' || forceModel === SILICONFLOW_MODEL) {
+      return await callSiliconFlowChat(messages, responseFormat, SILICONFLOW_MODEL, priority, maxTokens, false, temperature);
     }
     if (forceModel === 'openrouter' || forceModel === OPENROUTER_MODEL) {
       return await callOpenRouterChat(messages, responseFormat, OPENROUTER_MODEL, priority, maxTokens, false, temperature);
@@ -588,16 +627,16 @@ export const callAiWithFallback = async (messages, options = {}) => {
     try {
       return await callSambaNovaChat(messages, responseFormat, SAMBANOVA_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
-      console.warn("Fallback: SambaNova failed, trying GitHub Models...", err.message);
+      console.warn("Fallback: SambaNova failed, trying NVIDIA NIM...", err.message);
     }
   }
 
-  // 4. Try GitHub Models API (Llama-3.3-70B)
-  if (GITHUB_TOKEN && isComplex) {
+  // 4. Try NVIDIA NIM (Llama-3.1-Nemotron-70B)
+  if (NVIDIA_API_KEY && isComplex) {
     try {
-      return await callGithubModelsChat(messages, responseFormat, GITHUB_MODEL, priority, maxTokens, true, temperature);
+      return await callNvidiaNimChat(messages, responseFormat, NVIDIA_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
-      console.warn("Fallback: GitHub Models failed, trying OpenRouter Free...", err.message);
+      console.warn("Fallback: NVIDIA NIM failed, trying OpenRouter Free...", err.message);
     }
   }
 
@@ -633,11 +672,20 @@ export const callAiWithFallback = async (messages, options = {}) => {
     try {
       return await callGroqChat(messages, responseFormat, GROQ_LIGHT_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
-      console.warn("Fallback: Groq 8B failed, trying Z.ai...", err.message);
+      console.warn("Fallback: Groq 8B failed, trying SiliconFlow...", err.message);
     }
   }
 
-  // 9. Try Z.ai (GLM-4.7-Flash)
+  // 9. Try SiliconFlow (Qwen-2.5-7B)
+  if (SILICONFLOW_API_KEY) {
+    try {
+      return await callSiliconFlowChat(messages, responseFormat, SILICONFLOW_MODEL, priority, maxTokens, true, temperature);
+    } catch (err) {
+      console.warn("Fallback: SiliconFlow failed, trying Z.ai...", err.message);
+    }
+  }
+
+  // 10. Try Z.ai (GLM-4.7-Flash)
   if (Z_AI_API_KEY) {
     try {
       return await callZaiChat(messages, responseFormat, Z_AI_MODEL, priority, maxTokens, true, temperature);
@@ -1343,18 +1391,18 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    if (GITHUB_TOKEN && isComplex) {
+    if (NVIDIA_API_KEY && isComplex) {
       try {
         const fn = async () => {
-          const response = await axios.post(GITHUB_API_URL, { model: GITHUB_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+          const response = await axios.post(NVIDIA_API_URL, { model: NVIDIA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
             responseType: 'stream', timeout: 10000
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'github-models', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: GitHub Models failed.", err.message);
+        console.warn("Stream Fallback: NVIDIA NIM failed.", err.message);
       }
     }
 
@@ -1420,6 +1468,22 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: Groq 8B failed.", err.message);
+      }
+    }
+
+    if (SILICONFLOW_API_KEY) {
+      try {
+        const modelId = SILICONFLOW_MODEL;
+        const fn = async () => {
+          const response = await axios.post(SILICONFLOW_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${SILICONFLOW_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', finalMessages, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: SiliconFlow failed.", err.message);
       }
     }
 
@@ -2222,21 +2286,120 @@ export const testZaiProvider = async () => {
 };
 
 /**
+ * Diagnostic test specifically for NVIDIA NIM provider
+ */
+export const testNvidiaNimProvider = async () => {
+  if (!NVIDIA_API_KEY) {
+    return {
+      status: 'not_configured',
+      configured: false,
+      message: 'NVIDIA_API (or NVIDIA_NIM_API_KEY) environment variable is not set.'
+    };
+  }
+
+  const startTime = Date.now();
+  try {
+    const result = await callNvidiaNimChat(
+      [
+        { role: 'system', content: 'You are a test assistant. Respond in JSON.' },
+        { role: 'user', content: 'Return JSON: {"ping": "pong", "provider": "NVIDIA NIM"}' }
+      ],
+      { type: 'json_object' },
+      NVIDIA_MODEL,
+      'high',
+      60,
+      true,
+      0.5
+    );
+
+    return {
+      status: 'healthy',
+      configured: true,
+      provider: `NVIDIA NIM (${NVIDIA_MODEL})`,
+      latencyMs: Date.now() - startTime,
+      data: result
+    };
+  } catch (err) {
+    return {
+      status: 'error',
+      configured: true,
+      provider: `NVIDIA NIM (${NVIDIA_MODEL})`,
+      latencyMs: Date.now() - startTime,
+      error: err.message,
+      details: err.responseData || err.response?.data || null
+    };
+  }
+};
+
+/**
+ * Diagnostic test specifically for SiliconFlow provider
+ */
+export const testSiliconFlowProvider = async () => {
+  if (!SILICONFLOW_API_KEY) {
+    return {
+      status: 'not_configured',
+      configured: false,
+      message: 'SILICONFLOW_API (or SILICONFLOW_API_KEY) environment variable is not set.'
+    };
+  }
+
+  const startTime = Date.now();
+  try {
+    const result = await callSiliconFlowChat(
+      [
+        { role: 'system', content: 'You are a test assistant. Respond in JSON.' },
+        { role: 'user', content: 'Return JSON: {"ping": "pong", "provider": "SiliconFlow"}' }
+      ],
+      { type: 'json_object' },
+      SILICONFLOW_MODEL,
+      'high',
+      60,
+      true,
+      0.5
+    );
+
+    return {
+      status: 'healthy',
+      configured: true,
+      provider: `SiliconFlow (${SILICONFLOW_MODEL})`,
+      latencyMs: Date.now() - startTime,
+      data: result
+    };
+  } catch (err) {
+    return {
+      status: 'error',
+      configured: true,
+      provider: `SiliconFlow (${SILICONFLOW_MODEL})`,
+      latencyMs: Date.now() - startTime,
+      error: err.message,
+      details: err.responseData || err.response?.data || null
+    };
+  }
+};
+
+/**
  * Diagnostic test for all AI providers
  */
 export const testAllAiProviders = async () => {
-  const zai = await testZaiProvider();
+  const [zai, nvidia, siliconflow] = await Promise.all([
+    testZaiProvider(),
+    testNvidiaNimProvider(),
+    testSiliconFlowProvider()
+  ]);
+
   return {
     timestamp: new Date().toISOString(),
     providers: {
       cerebras: { configured: !!CEREBRAS_API_KEY, model: CEREBRAS_MODEL },
       groq: { configured: !!GROQ_API_KEY, model: GROQ_MODEL },
       sambanova: { configured: !!SAMBANOVA_API_KEY, model: SAMBANOVA_MODEL },
-      github_models: { configured: !!GITHUB_TOKEN, model: GITHUB_MODEL },
+      nvidia_nim: nvidia,
+      siliconflow: siliconflow,
       openrouter: { configured: !!OPENROUTER_API_KEY, model: OPENROUTER_MODEL },
       mistral: { configured: !!MISTRAL_API_KEY, model: MISTRAL_MODEL },
       zai,
-      gemini: { configured: !!(GEMINI_API_KEY || process.env.GEMINI_API_KEY_2) }
+      gemini: { configured: !!(GEMINI_API_KEY || process.env.GEMINI_API_KEY_2) },
+      voyage_ai: { configured: !!(process.env.VOYAGEAI_API || process.env.VOYAGE_API_KEY), model: 'voyage-3-lite' }
     }
   };
 };

@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/check-env.js": {
-    "mtime": 1785226359.3022048,
-    "ast_hash": "59a5395a0f53170e1c48f7aa78533bc4",
+    "mtime": 1788425808.5231085,
+    "ast_hash": "f8adf942c21732519606da99c3023a3d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/debug-ai.js": {
@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1787806293.7722657,
-    "ast_hash": "b745fd996a00cafa1d5e436899d2461a",
+    "mtime": 1788425775.0749972,
+    "ast_hash": "d53bd97b72db30de668afb6d52e227fe",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -410,8 +410,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/rateLimitManager.js": {
-    "mtime": 1787114186.4950144,
-    "ast_hash": "45628f75f9e525bb4661e98e08da60f9",
+    "mtime": 1788425700.0691898,
+    "ast_hash": "0130a63aa9261518160ee0e3cf038381",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/reminderService.js": {
@@ -425,8 +425,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/vectorService.js": {
-    "mtime": 1785222907.0265129,
-    "ast_hash": "0056dcfeeba7a84abd1734bc4b830089",
+    "mtime": 1788425793.1285114,
+    "ast_hash": "012fcb057a555f42f5ebaaad5d993daa",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/visionService.js": {
@@ -2922,6 +2922,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/index-CUwqMOIm.js": {
     "mtime": 1788275692.662754,
     "ast_hash": "3afdd1a33fbcc47d25d37ba07ef28587",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-new-providers.js": {
+    "mtime": 1788425831.520524,
+    "ast_hash": "609f550b6a0cdf505859eec319cb4207",
     "semantic_hash": ""
   }
 }
