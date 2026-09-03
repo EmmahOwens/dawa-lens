@@ -239,8 +239,18 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
   // Sort ALL slots in day-aware chronological order based on scheduled Date timestamp
   slots.sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
 
-  // The earliest pending slot in chronological order is the Next Dose
-  const earliestPendingSlot = slots.find((s) => !s.isActioned);
+  // Determine the "Next Dose" slot with date-awareness:
+  //   1. Prefer the earliest slot whose scheduled time is still in the future (truly upcoming).
+  //   2. Fall back to the earliest overdue un-actioned slot so the user can still action it.
+  // This prevents an overdue 07:00 dose from stealing the tick from an upcoming 23:00 dose.
+  const nowMs = now.getTime();
+  const firstUpcoming = slots.find(
+    (s) => !s.isActioned && s.scheduledDate.getTime() > nowMs
+  );
+  const earliestOverdue = slots.find(
+    (s) => !s.isActioned && s.scheduledDate.getTime() <= nowMs
+  );
+  const earliestPendingSlot = firstUpcoming ?? earliestOverdue;
 
   return (
     <div className="mb-8 overflow-hidden">

@@ -332,7 +332,12 @@ describe("DailyTimeline Component", () => {
   });
 
   it("should trigger onAction when the Next Dose action buttons are clicked", () => {
-    const today = new Date();
+    // Pin time to 08:00 so the 09:00 slot is genuinely upcoming (earliest pending)
+    const fakeNow = new Date();
+    fakeNow.setHours(8, 0, 0, 0);
+    vi.setSystemTime(fakeNow);
+
+    const today = fakeNow;
     const todayISO = today.toISOString();
 
     const reminders: Reminder[] = [
@@ -385,6 +390,8 @@ describe("DailyTimeline Component", () => {
       "taken",
       expectedISO
     );
+
+    vi.useRealTimers();
   });
 
   it("should advance next dose to subsequent reminder when earlier dose is actioned", () => {
@@ -456,5 +463,129 @@ describe("DailyTimeline Component", () => {
     expect(screen.getByText("Next Dose")).toBeInTheDocument();
     // "Upcoming" should no longer exist since Second Dose is now the only pending dose
     expect(screen.queryByText("Upcoming")).not.toBeInTheDocument();
+  });
+
+  it("should give 'Next Dose' to the upcoming 23:00 slot, not to an overdue 07:00 slot on the same day", () => {
+    // Simulate current time as 12:00 (midday) — the 07:00 slot is overdue, 23:00 is still upcoming
+    const fakeNow = new Date();
+    fakeNow.setHours(12, 0, 0, 0);
+    vi.setSystemTime(fakeNow);
+
+    const reminders: Reminder[] = [
+      {
+        id: "rem-overdue",
+        medicineName: "Morning Med",
+        dose: "1 pill",
+        time: "07:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: fakeNow.toISOString(),
+      },
+      {
+        id: "rem-upcoming",
+        medicineName: "Night Med",
+        dose: "1 capsule",
+        time: "23:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: fakeNow.toISOString(),
+      },
+    ];
+
+    const { container } = render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={[]}
+        onAction={vi.fn()}
+      />
+    );
+
+    // 07:00 card must appear before 23:00 in the DOM (chronological sort preserved)
+    const headings = Array.from(container.querySelectorAll("h3")).map(
+      (el) => el.textContent
+    );
+    expect(headings).toEqual(["Morning Med", "Night Med"]);
+
+    // 23:00 slot (still upcoming) should own the "Next Dose" badge
+    expect(screen.getByText("Next Dose")).toBeInTheDocument();
+    const nextDoseBadge = screen.getByText("Next Dose");
+    const nightCard = screen.getByText("Night Med").closest("[class*='rounded']");
+    expect(nightCard).toContainElement(nextDoseBadge);
+
+    // 07:00 overdue slot must NOT hold the "Next Dose" badge
+    const morningCard = screen.getByText("Morning Med").closest("[class*='rounded']");
+    expect(morningCard).not.toContainElement(nextDoseBadge);
+
+    vi.useRealTimers();
+  });
+
+  it("should order today's 23:00 slot before tomorrow's 07:00 cross-midnight slot", () => {
+    // Simulate current time as 12:00 today
+    const fakeNow = new Date();
+    fakeNow.setHours(12, 0, 0, 0);
+    vi.setSystemTime(fakeNow);
+
+    // Multi-slot reminder: 22:00 (first slot taken at 22:05), then 07:00 next day after the interval
+    const slot0ISO = new Date(
+      fakeNow.getFullYear(), fakeNow.getMonth(), fakeNow.getDate(), 22, 0, 0
+    ).toISOString();
+    const takeTime = new Date(
+      fakeNow.getFullYear(), fakeNow.getMonth(), fakeNow.getDate(), 22, 5, 0
+    ).toISOString();
+
+    const reminders: Reminder[] = [
+      {
+        // Single-slot today at 23:00 — should appear before a next-day slot
+        id: "rem-tonight",
+        medicineName: "Tonight Med",
+        dose: "1 tablet",
+        time: "23:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: fakeNow.toISOString(),
+      },
+      {
+        // Two-slot reminder: 22:00 (taken) → next slot shifts to 07:00 next day (9h interval)
+        id: "rem-multi",
+        medicineName: "Multi Dose Med",
+        dose: "2 tabs",
+        time: "22:00, 07:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: fakeNow.toISOString(),
+      },
+    ];
+
+    const doseLogs: DoseLog[] = [
+      {
+        id: "log-slot0",
+        reminderId: "rem-multi",
+        medicineName: "Multi Dose Med",
+        dose: "2 tabs",
+        scheduledTime: slot0ISO,
+        actionTime: takeTime,
+        action: "taken",
+      },
+    ];
+
+    const { container } = render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={doseLogs}
+        onAction={vi.fn()}
+      />
+    );
+
+    const headings = Array.from(container.querySelectorAll("h3")).map(
+      (el) => el.textContent
+    );
+
+    // The taken 22:00 slot (Multi Dose Med) appears, then Tonight Med at 23:00,
+    // then the cross-midnight next slot of Multi Dose Med (next day 07:00)
+    const tonightIdx = headings.indexOf("Tonight Med");
+    const multiIdx = headings.lastIndexOf("Multi Dose Med");
+    expect(tonightIdx).toBeLessThan(multiIdx);
+
+    vi.useRealTimers();
   });
 });

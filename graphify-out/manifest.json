@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/AlarmReceiver.kt": {
-    "mtime": 1788268507.9249537,
-    "ast_hash": "ddbd724a8d2dfff8cdc0adc429d369ee",
+    "mtime": 1788426949.4226882,
+    "ast_hash": "7c1e062e50b00d4ae4090aee5d10f7a8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/AppUpdaterPlugin.java": {
@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/BootReceiver.kt": {
-    "mtime": 1788268632.211222,
-    "ast_hash": "fa87c1c9dd7d3d4d7f38ca185ad982b7",
+    "mtime": 1788427025.648911,
+    "ast_hash": "eed8f9c90568384e0560c7fbaffc598c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/DawaLensApplication.kt": {
@@ -80,13 +80,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/MissedDoseWorker.kt": {
-    "mtime": 1788268809.2320282,
-    "ast_hash": "a542f79c73d1728267ddf244a72e0f93",
+    "mtime": 1788427046.230947,
+    "ast_hash": "50f663be34b80ce3e7b447d841995c28",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeAlarmPlugin.kt": {
-    "mtime": 1788268293.163762,
-    "ast_hash": "9d2d5d469c0781fccedcc88b5ac8a342",
+    "mtime": 1788426920.8185651,
+    "ast_hash": "6dc61bea5d09163c3f06c2815bf6b76c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeCameraPlugin.kt": {
@@ -705,8 +705,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/dashboard/DailyTimeline.tsx": {
-    "mtime": 1788105239.5957646,
-    "ast_hash": "66a5955708e01fcc0be67e77d6c246dd",
+    "mtime": 1788427879.3373504,
+    "ast_hash": "e6fb418fa352bc759469fada0a7234e8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/dashboard/DashboardSearch.tsx": {
@@ -2455,8 +2455,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BatteryOptimizationGate.tsx": {
-    "mtime": 1788269182.1718335,
-    "ast_hash": "de583fef8dae5b07079a27c7c0acd922",
+    "mtime": 1788427151.3919897,
+    "ast_hash": "56c0f0c1618d48f99a1b50a435038542",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/utils/dynamicSchedule.js": {
@@ -2485,8 +2485,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/dashboard/__tests__/DailyTimeline.test.tsx": {
-    "mtime": 1787123315.7813013,
-    "ast_hash": "c2815e1bc82eed1c35d0f0c797c6e820",
+    "mtime": 1788427954.7027552,
+    "ast_hash": "7b398e791405cfdd16b0353c40ab529d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/refillService.test.ts": {
@@ -2765,8 +2765,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/AdherenceGuardianService.kt": {
-    "mtime": 1788268330.8701468,
-    "ast_hash": "62d21675b0805288f81264813b3062d3",
+    "mtime": 1788427087.6779907,
+    "ast_hash": "4581adc54c7c57ca0fc74aced9be8a95",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-audit-remediation.js": {
