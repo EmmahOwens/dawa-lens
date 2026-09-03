@@ -84,7 +84,11 @@ export const fetchLatestRelease = async (): Promise<UpdateInfo | null> => {
 
     // Try to resolve sha256 checksum from release metadata or sibling checksum asset
     let sha256: string | undefined;
-    if (apkAsset && Array.isArray(data.assets)) {
+    if (apkAsset && typeof apkAsset.digest === 'string' && apkAsset.digest.toLowerCase().startsWith('sha256:')) {
+      sha256 = apkAsset.digest.substring(7).trim();
+    }
+
+    if (!sha256 && apkAsset && Array.isArray(data.assets)) {
       const checksumAsset = data.assets.find((a: any) => 
         a.name === `${apkAsset.name}.sha256` || 
         a.name.toLowerCase() === 'sha256sums.txt' || 

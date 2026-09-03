@@ -54,6 +54,11 @@ public class AppUpdaterPlugin extends Plugin {
         if (lowerHost.endsWith(".githubusercontent.com") || lowerHost.equals("githubusercontent.com")) {
             return true;
         }
+        // Accept GitHub's release asset AWS S3 storage buckets
+        if (lowerHost.equals("github-cloud.s3.amazonaws.com") ||
+            (lowerHost.startsWith("github-production-release-asset-") && lowerHost.endsWith(".s3.amazonaws.com"))) {
+            return true;
+        }
         return ALLOWED_HOSTS.contains(lowerHost);
     }
 
@@ -128,6 +133,7 @@ public class AppUpdaterPlugin extends Plugin {
                     connection.setConnectTimeout(15000);
                     connection.setReadTimeout(30000);
                     connection.setRequestProperty("Accept", "application/vnd.android.package-archive, application/octet-stream");
+                    connection.setRequestProperty("User-Agent", "DawaLens-AppUpdater");
                     connection.connect();
 
                     int responseCode = connection.getResponseCode();

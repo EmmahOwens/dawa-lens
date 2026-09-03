@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Rocket, ArrowRight, Download, CheckCircle, AlertTriangle } from "@/lib/icons";
+import { Rocket, ArrowRight, Download, CheckCircle, AlertTriangle, RefreshCw, ExternalLink } from "@/lib/icons";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
@@ -63,6 +63,15 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
     }
   };
 
+  const handleBrowserDownload = async () => {
+    try {
+      await Browser.open({ url: downloadUrl });
+    } catch (err) {
+      console.error('Failed to open browser:', err);
+      window.open(downloadUrl, '_blank');
+    }
+  };
+
   const getStatusText = () => {
     switch (downloadState) {
       case 'downloading':
@@ -70,7 +79,7 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
       case 'installing':
         return 'Opening installer...';
       case 'error':
-        return 'Download Failed';
+        return 'Retry In-App Download';
       default:
         return `Download v${newVersion}`;
     }
@@ -148,7 +157,7 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
               </div>
             )}
 
-            <p className="text-muted-foreground text-sm leading-relaxed mb-8 font-medium">
+            <p className="text-muted-foreground text-sm leading-relaxed mb-6 font-medium">
               {downloadState === 'error'
                 ? errorMessage
                 : downloadState === 'installing'
@@ -157,15 +166,25 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
             </p>
 
             <div className="w-full space-y-3">
+                {downloadState === 'error' && (
+                  <button
+                    onClick={handleBrowserDownload}
+                    className="w-full py-4 rounded-2xl font-bold text-base bg-primary text-primary-foreground shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                  >
+                    <ExternalLink className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    <span>Download via Browser</span>
+                  </button>
+                )}
+
                 <button 
                     onClick={downloadState === 'error' ? handleDownload : downloadState === 'idle' ? handleDownload : undefined}
                     disabled={downloadState === 'downloading' || downloadState === 'installing'}
-                    className={`w-full py-4 rounded-2xl font-bold text-lg shadow-xl transition-all flex items-center justify-center gap-2 group ${
+                    className={`w-full rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group ${
                       downloadState === 'downloading' || downloadState === 'installing'
-                        ? 'bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                        ? 'py-4 text-lg bg-muted text-muted-foreground cursor-not-allowed shadow-none'
                         : downloadState === 'error'
-                        ? 'bg-destructive text-destructive-foreground shadow-destructive/20 hover:scale-[1.02] active:scale-95'
-                        : 'bg-primary text-primary-foreground shadow-primary/20 hover:scale-[1.02] active:scale-95'
+                        ? 'py-3.5 text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:scale-[1.02] active:scale-95 shadow-sm'
+                        : 'py-4 text-lg bg-primary text-primary-foreground shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95'
                     }`}
                 >
                     {downloadState === 'downloading' ? (
@@ -174,6 +193,8 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
                         animate={{ rotate: 360 }}
                         transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
                       />
+                    ) : downloadState === 'error' ? (
+                      <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
                     ) : (
                       <Download className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
                     )}
