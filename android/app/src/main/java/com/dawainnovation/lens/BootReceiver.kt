@@ -9,6 +9,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.os.Build
 import android.os.PowerManager
 import android.os.UserManager
+import androidx.work.BackoffPolicy
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
@@ -36,6 +37,8 @@ class BootReceiver : BroadcastReceiver() {
         val action = intent.action ?: return
         if (action != Intent.ACTION_BOOT_COMPLETED &&
             action != "android.intent.action.QUICKBOOT_POWERON" &&
+            action != "com.htc.intent.action.QUICKBOOT_POWERON" &&  // HTC devices
+            action != "miui.intent.action.BOOT_COMPLETED" &&         // Xiaomi MIUI (fires before BOOT_COMPLETED on locked devices)
             action != Intent.ACTION_MY_PACKAGE_REPLACED &&
             action != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
             action != Intent.ACTION_USER_UNLOCKED &&
@@ -107,14 +110,20 @@ class BootReceiver : BroadcastReceiver() {
             }
         }
 
-        // Step 3: Ensure periodic missed-dose reconciliation worker is enqueued
+        // Step 3: Ensure periodic missed-dose reconciliation worker is enqueued.
+        // Cancel any existing instance first to prevent stacking after repeated boot events,
+        // then re-enqueue with exponential backoff so OEM force-stops are automatically retried.
         try {
+            WorkManager.getInstance(context).cancelAllWorkByTag("missed_dose_check")
             val missedDoseWork = PeriodicWorkRequest.Builder(
                 MissedDoseWorker::class.java, 15, TimeUnit.MINUTES
-            ).build()
+            )
+                .addTag("missed_dose_check")
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.MINUTES)
+                .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 "missed_dose_check",
-                ExistingPeriodicWorkPolicy.KEEP,
+                ExistingPeriodicWorkPolicy.REPLACE, // Replace to pick up new backoff policy
                 missedDoseWork
             )
         } catch (e: Exception) {
@@ -215,8 +224,30 @@ class BootReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Use setExactAndAllowWhileIdle if exact alarms are permitted.
-        // Fall back gracefully to setAndAllowWhileIdle for degraded inexact timing.
+        // Primary path: setAlarmClock() — highest OEM priority for medicine reminders rescheduled after boot.
+        // Guarantees delivery even through MIUI/HyperOS, XOS, ColorOS, and One UI battery managers.
+        if (canExact && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                val showIntent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                val showPendingIntent = PendingIntent.getActivity(
+                    context,
+                    id + 50000,
+                    showIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                val alarmInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent)
+                alarmManager.setAlarmClock(alarmInfo, pendingIntent)
+                return
+            } catch (e: SecurityException) {
+                // Exact alarm permission absent; fall through to setAndAllowWhileIdle
+            } catch (e: Exception) {
+                // Fall through to setExactAndAllowWhileIdle
+            }
+        }
+
+        // Fallback: setExactAndAllowWhileIdle when exact is granted but setAlarmClock fails
         if (canExact) {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -240,6 +271,7 @@ class BootReceiver : BroadcastReceiver() {
             }
         }
 
+        // Degraded inexact fallback
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setAndAllowWhileIdle(

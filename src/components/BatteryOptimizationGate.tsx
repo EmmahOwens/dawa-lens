@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 
 const DISMISSED_KEY = "reliability_card_dismissed_until";
+const AUTOSTART_PROMPTED_KEY = "autostart_proactive_prompted_v1";
 
 export default function BatteryOptimizationGate({
   children,
@@ -53,6 +54,7 @@ export default function BatteryOptimizationGate({
   const [dismissed, setDismissed] = useState(false);
   const [showOemTips, setShowOemTips] = useState(false);
   const [oemInfo, setOemInfo] = useState<DeviceOemInfo | null>(null);
+  const [autostartPrompted, setAutostartPrompted] = useState(false);
   const listenerRef = useRef<{ remove: () => Promise<void> } | null>(null);
 
   const fetchReadiness = useCallback(async () => {
@@ -95,6 +97,56 @@ export default function BatteryOptimizationGate({
     })();
   }, [isAndroid, fetchReadiness]);
 
+  // ── Proactive Autostart Prompt for Known-Problem OEMs ────────────────────
+  // Xiaomi (MIUI/HyperOS) and Transsion (Infinix/Tecno/itel) and Vivo devices
+  // require the user to manually enable "Autostart" in a proprietary settings menu.
+  // This is THE primary reason users on these brands never receive background alarms.
+  // We proactively open the autostart settings once per install, with an explanatory dialog.
+  useEffect(() => {
+    if (!isAndroid || !oemInfo) return;
+
+    const isKnownAggressiveOem =
+      oemInfo.isTranssion || oemInfo.isXiaomi || oemInfo.isVivo || oemInfo.isHuawei;
+    if (!isKnownAggressiveOem) return;
+
+    (async () => {
+      const alreadyPrompted = await NativeService.preferences.get(AUTOSTART_PROMPTED_KEY);
+      if (alreadyPrompted) {
+        setAutostartPrompted(true);
+        return;
+      }
+
+      // Wait for readiness check before deciding whether to prompt
+      if (!readiness) return;
+      if (readiness.batteryIgnored && readiness.isFullyCompliant) return;
+
+      // Mark as prompted so this only fires once
+      await NativeService.preferences.set(AUTOSTART_PROMPTED_KEY, true);
+      setAutostartPrompted(true);
+
+      // Show a brief dialog explaining the need, then open autostart settings
+      try {
+        const { value: proceed } = await import("@capacitor/dialog").then((m) =>
+          m.Dialog.confirm({
+            title: "Enable Background Alarms",
+            message:
+              `Your device (${oemInfo.brand || oemInfo.manufacturer}) requires Autostart permission ` +
+              `for Dawa Lens to deliver medication reminders when the app is closed. ` +
+              `We'll open the Autostart settings now — please enable Dawa Lens.`,
+            okButtonTitle: "Open Settings",
+            cancelButtonTitle: "Later",
+          })
+        );
+        if (proceed) {
+          await NativeAlarm.openAutostartSettings();
+        }
+      } catch {
+        // Non-fatal; the banner remains visible as a fallback
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAndroid, oemInfo, readiness]);
+
   // ── Listen for App Foreground Resumes ────────────────────────────────────
   useEffect(() => {
     if (!isAndroid) return;
@@ -116,8 +168,16 @@ export default function BatteryOptimizationGate({
   }, [isAndroid, fetchReadiness]);
 
   const handleDismiss = async () => {
-    // Dismiss for 24 hours unless status is notifications_paused (which is critical)
-    const until = Date.now() + 24 * 60 * 60 * 1000;
+    // Aggressive OEMs with battery not exempted: only dismiss for 4 hours
+    // so users are reminded more frequently to fix the setting.
+    const isKnownAggressiveOem =
+      oemInfo &&
+      (oemInfo.isTranssion || oemInfo.isXiaomi || oemInfo.isVivo || oemInfo.isHuawei || oemInfo.isOppoRealme || oemInfo.isOnePlus);
+    const dismissDurationMs =
+      isKnownAggressiveOem && !readiness?.batteryIgnored
+        ? 4 * 60 * 60 * 1000  // 4 hours for known OEMs without battery exemption
+        : 24 * 60 * 60 * 1000; // 24 hours otherwise
+    const until = Date.now() + dismissDurationMs;
     await NativeService.preferences.set(DISMISSED_KEY, until);
     setDismissed(true);
   };
@@ -301,6 +361,20 @@ export default function BatteryOptimizationGate({
                       : "Unrestrict Battery"}
                   </span>
                 </button>
+
+                {/* Visible Autostart button for known-aggressive OEMs — no longer hidden in accordion */}
+                {oemInfo && (oemInfo.isTranssion || oemInfo.isXiaomi || oemInfo.isVivo) && !readiness?.batteryIgnored && (
+                  <button
+                    type="button"
+                    onClick={openAutostartSettings}
+                    disabled={checking}
+                    className="py-2 px-3 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    title="Open Autostart Settings"
+                  >
+                    <Lock className="w-3 h-3" />
+                    <span>Autostart</span>
+                  </button>
+                )}
 
                 <button
                   type="button"

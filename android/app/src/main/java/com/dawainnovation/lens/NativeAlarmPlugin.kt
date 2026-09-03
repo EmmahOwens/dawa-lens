@@ -248,9 +248,18 @@ class NativeAlarmPlugin : Plugin() {
     }
 
     /**
-     * Schedules a single alarm using setExactAndAllowWhileIdle if exact alarm access is granted,
-     * or gracefully falls back to setAndAllowWhileIdle (degraded mode) without creating disruptive
-     * user-facing alarm clock icons.
+     * Schedules a single alarm.
+     *
+     * For medicine reminders ([isReminderAlarm] = true), uses AlarmManager.setAlarmClock() when
+     * exact alarms are permitted. setAlarmClock is the highest-priority alarm type: the OS displays
+     * an alarm-clock icon in the status bar and guarantees firing even through aggressive OEM battery
+     * managers (Xiaomi MIUI/HyperOS, Transsion XOS, Samsung One UI, Huawei EMUI). OEMs are far less
+     * likely to suppress an alarm the system itself surfaces as a user-visible clock event.
+     *
+     * For non-reminder event alarms (streaks, quotes, refills), uses setExactAndAllowWhileIdle to
+     * avoid cluttering the status bar with alarm icons for low-priority notifications.
+     *
+     * Falls back to setAndAllowWhileIdle (degraded mode) when exact alarm permission is absent.
      */
     fun scheduleOneAlarmInternal(
         ctx: Context,
@@ -260,7 +269,8 @@ class NativeAlarmPlugin : Plugin() {
         title: String,
         body: String,
         extra: String,
-        canExact: Boolean
+        canExact: Boolean,
+        isReminderAlarm: Boolean = false
     ): Boolean {
         if (triggerAtMillis <= 0L) return false
 
@@ -278,7 +288,32 @@ class NativeAlarmPlugin : Plugin() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // 1. Primary path: setExactAndAllowWhileIdle (precise, wakes during Doze, no alarm-clock status clutter)
+        // 1. Primary path for medicine reminders: setAlarmClock() — highest OEM priority,
+        //    bypasses aggressive battery managers that suppress setExactAndAllowWhileIdle.
+        if (canExact && isReminderAlarm && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            try {
+                // showIntent opens the app when the user taps the status-bar alarm icon.
+                val showIntent = Intent(ctx, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                val showPendingIntent = PendingIntent.getActivity(
+                    ctx,
+                    id + 50000, // offset to avoid collision with notification PendingIntents
+                    showIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                val alarmInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, showPendingIntent)
+                alarmManager.setAlarmClock(alarmInfo, pendingIntent)
+                return true
+            } catch (e: SecurityException) {
+                // SCHEDULE_EXACT_ALARM revoked — fall through to inexact
+            } catch (e: Exception) {
+                // Unexpected error — fall through to setExactAndAllowWhileIdle
+            }
+        }
+
+        // 2. Primary path for event alarms / fallback for reminders:
+        //    setExactAndAllowWhileIdle (precise, wakes during Doze, no status-bar alarm icon)
         if (canExact) {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -302,7 +337,7 @@ class NativeAlarmPlugin : Plugin() {
             }
         }
 
-        // 2. Degraded Inexact Path: setAndAllowWhileIdle (works under Doze, inexact window)
+        // 3. Degraded Inexact Path: setAndAllowWhileIdle (works under Doze, inexact window)
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setAndAllowWhileIdle(
@@ -411,7 +446,8 @@ class NativeAlarmPlugin : Plugin() {
                     title = genericTitle,
                     body = genericBody,
                     extra = extraJson,
-                    canExact = canExact
+                    canExact = canExact,
+                    isReminderAlarm = true // Use setAlarmClock() for highest OEM reliability
                 )
                 if (scheduled) {
                     scheduledIds.add(numericId.toString())

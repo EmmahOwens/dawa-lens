@@ -49,7 +49,8 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
                 dbPath.absolutePath, null, SQLiteDatabase.OPEN_READWRITE
             )
         } catch (e: Exception) {
-            return Result.success()
+            // Retry later via WorkManager exponential backoff
+            return Result.retry()
         }
 
         try {
@@ -123,8 +124,12 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
                             continue
                         }
 
-                        // Check repeat schedule specific days if applicable
-                        if (repeatSchedule == "specific_days" && !repeatDaysJson.isNullOrEmpty()) {
+                        // Check repeat schedule specific days if applicable.
+                        // "custom" and "weekly" schedules use repeatDays to restrict which
+                        // days of the week the reminder fires. "specific_days" was an old
+                        // schema name — it is now always stored as "custom" or "weekly".
+                        if ((repeatSchedule == "custom" || repeatSchedule == "weekly") &&
+                            !repeatDaysJson.isNullOrEmpty()) {
                             try {
                                 val daysArray = JSONArray(repeatDaysJson)
                                 val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1 // 0 = Sunday, 6 = Saturday

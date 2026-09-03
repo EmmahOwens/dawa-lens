@@ -37,7 +37,7 @@ class AlarmReceiver : BroadcastReceiver() {
             PowerManager.PARTIAL_WAKE_LOCK,
             "DawaLens:AlarmReceiverWakeLock"
         )
-        wakeLock?.acquire(8000L) // 8 second timeout safety
+        wakeLock?.acquire(20000L) // 20 second timeout: handles slow Transsion/Infinix eMMC I/O
 
         try {
             val notificationId = intent.getIntExtra("notificationId", 0)
@@ -449,6 +449,29 @@ class AlarmReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
+            // Use setAlarmClock() as the primary path for medicine reminders — this is the
+            // highest-priority alarm type and is suppressed far less often by OEM battery managers.
+            if (canExact && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                try {
+                    val showIntent = Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                    val showPendingIntent = PendingIntent.getActivity(
+                        context,
+                        nextNumericId + 50000,
+                        showIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    val alarmInfo = AlarmManager.AlarmClockInfo(nextTrigger, showPendingIntent)
+                    alarmManager.setAlarmClock(alarmInfo, nextPendingIntent)
+                    NativeRecurrenceStore.updateReminderNextTrigger(context, reminderId, nextTrigger)
+                    return
+                } catch (e: Exception) {
+                    // Fall through to setExactAndAllowWhileIdle
+                }
+            }
+
+            // Fallback: setExactAndAllowWhileIdle when exact is granted but setAlarmClock fails
             if (canExact) {
                 try {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

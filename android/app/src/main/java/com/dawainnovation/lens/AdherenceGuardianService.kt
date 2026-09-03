@@ -1,5 +1,6 @@
 package com.dawainnovation.lens
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -111,6 +112,43 @@ class AdherenceGuardianService : Service() {
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
+        }
+    }
+
+    /**
+     * OEM devices (Xiaomi MIUI, Transsion XOS, Huawei EMUI) can kill foreground services when
+     * the user swipes the app from recents. onTaskRemoved() is the last lifecycle hook called
+     * before the service dies in this scenario. We schedule a one-shot alarm 5 seconds in the
+     * future to restart the service, giving the OEM kill cycle time to complete before we
+     * attempt a restart.
+     */
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        try {
+            val restartIntent = Intent(this, AdherenceGuardianService::class.java).apply {
+                action = ACTION_START
+            }
+            val pendingIntent = PendingIntent.getService(
+                this,
+                NOTIFICATION_ID + 1,
+                restartIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val alarmManager = getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            val restartAt = System.currentTimeMillis() + 5000L // 5 second delay
+            if (alarmManager != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        restartAt,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, restartAt, pendingIntent)
+                }
+            }
+        } catch (e: Exception) {
+            // Non-fatal; service will remain stopped if restart scheduling fails
         }
     }
 
