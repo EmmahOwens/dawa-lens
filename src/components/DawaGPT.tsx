@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { X, Send, Bot, Sparkles, ChevronDown } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,62 @@ const SAMPLE_PROMPTS = [
   "What are the side effects of Amoxicillin?",
   "I'm feeling dizzy after taking my medicine...",
 ];
+
+export interface VisibilityCheckParams {
+  containerScrollHeight: number;
+  containerScrollTop: number;
+  containerClientHeight: number;
+  containerRect: { top: number; bottom: number; height: number };
+  latestRect: { top: number; bottom: number; height: number };
+}
+
+/**
+ * Determines whether the latest message is in view / being read by the user.
+ * Returns true if the user is reading or viewing the latest message,
+ * and false if the user is reading older messages and the latest message is below the viewport.
+ */
+export function isLatestMessageInView({
+  containerScrollHeight,
+  containerScrollTop,
+  containerClientHeight,
+  containerRect,
+  latestRect,
+}: VisibilityCheckParams): boolean {
+  // 1. If user is at or near the very bottom of the scroll container
+  const isNearBottom =
+    containerScrollHeight - containerScrollTop - containerClientHeight < 40;
+  if (isNearBottom) {
+    return true;
+  }
+
+  if (containerRect.height <= 0 || latestRect.height <= 0) return true;
+
+  // Visible height of the latest message within the container viewport
+  const visibleTop = Math.max(containerRect.top, latestRect.top);
+  const visibleBottom = Math.min(containerRect.bottom, latestRect.bottom);
+  const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+
+  // If completely or almost completely below the viewport
+  if (latestRect.top >= containerRect.bottom - 15) {
+    return false;
+  }
+
+  const visibleRatio = visibleHeight / latestRect.height;
+
+  // In view / being read if:
+  // 1. At least 50% of the message is visible
+  // 2. Or a substantial block (at least 180px or 35% of container height) is visible
+  // 3. Or user is scrolled inside the message body (message spans across the top of viewport)
+  const isSubstantiallyVisible =
+    visibleRatio >= 0.5 ||
+    visibleHeight >= Math.min(180, containerRect.height * 0.35);
+
+  const isInsideMessageBody =
+    latestRect.top <= containerRect.top + 60 &&
+    latestRect.bottom >= containerRect.top + 60;
+
+  return isSubstantiallyVisible || isInsideMessageBody;
+}
 
 export default function DawaGPT() {
   const { t } = useTranslation();
@@ -111,15 +167,48 @@ export default function DawaGPT() {
   const latestMessageRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const shouldAutoScrollRef = useRef(true);
+  const isScrollingToLatestRef = useRef(false);
+
+  // Check if the latest message is the one currently in view / being read
+  const checkIfLatestMessageInView = useCallback((): boolean => {
+    if (!scrollRef.current || !latestMessageRef.current || messages.length === 0) {
+      return true;
+    }
+
+    const container = scrollRef.current;
+    const latestEl = latestMessageRef.current;
+
+    return isLatestMessageInView({
+      containerScrollHeight: container.scrollHeight,
+      containerScrollTop: container.scrollTop,
+      containerClientHeight: container.clientHeight,
+      containerRect: container.getBoundingClientRect(),
+      latestRect: latestEl.getBoundingClientRect(),
+    });
+  }, [messages.length]);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    const isScrolledUp = scrollHeight - scrollTop - clientHeight > 100;
-    setShowScrollBottom(isScrolledUp && messages.length > 0);
+    if (isScrollingToLatestRef.current) return;
+
+    const inView = checkIfLatestMessageInView();
+    setShowScrollBottom(!inView && messages.length > 0);
+
+    const isNearBottom =
+      scrollRef.current.scrollHeight - scrollRef.current.scrollTop - scrollRef.current.clientHeight < 40;
+    if (isNearBottom) {
+      shouldAutoScrollRef.current = true;
+    } else if (!inView) {
+      shouldAutoScrollRef.current = false;
+    }
   };
 
   const scrollToLatestMessage = () => {
+    setShowScrollBottom(false);
+    shouldAutoScrollRef.current = true;
+    isScrollingToLatestRef.current = true;
+
     if (latestMessageRef.current) {
       latestMessageRef.current.scrollIntoView({
         behavior: "smooth",
@@ -131,6 +220,15 @@ export default function DawaGPT() {
         behavior: "smooth",
       });
     }
+
+    // Reset smooth scroll flag after animation completes
+    setTimeout(() => {
+      isScrollingToLatestRef.current = false;
+      if (scrollRef.current) {
+        const inView = checkIfLatestMessageInView();
+        setShowScrollBottom(!inView && messages.length > 0);
+      }
+    }, 500);
   };
 
   useEffect(() => {
@@ -142,11 +240,39 @@ export default function DawaGPT() {
   }, [inputValue]);
 
   useEffect(() => {
-    if (scrollRef.current) {
+    if (!scrollRef.current) return;
+    if (shouldAutoScrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       setShowScrollBottom(false);
+    } else {
+      const inView = checkIfLatestMessageInView();
+      setShowScrollBottom(!inView && messages.length > 0);
     }
-  }, [messages, isTyping]);
+  }, [messages, isTyping, checkIfLatestMessageInView]);
+
+  useEffect(() => {
+    if (isOpen) {
+      shouldAutoScrollRef.current = true;
+      const timer = setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          setShowScrollBottom(false);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (scrollRef.current) {
+        const inView = checkIfLatestMessageInView();
+        setShowScrollBottom(!inView && messages.length > 0);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [checkIfLatestMessageInView, messages.length]);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -330,6 +456,9 @@ export default function DawaGPT() {
 
   const handleSend = async (text: string) => {
     if (!text.trim() || isTyping) return;
+
+    shouldAutoScrollRef.current = true;
+    setShowScrollBottom(false);
 
     const userMsg: ChatMessage = { id: Date.now().toString(), role: "user", text };
     const botId = (Date.now() + 1).toString();
