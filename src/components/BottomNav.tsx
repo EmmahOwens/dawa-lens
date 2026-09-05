@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Home, Camera, Bell, History, Settings, Users } from "@/lib/icons";
+import { Home, Camera, Bell, History, Settings } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { useApp } from "@/contexts/AppContext";
@@ -115,7 +115,7 @@ function useSmartHideBottomNav() {
 export default function BottomNav() {
   const location = useLocation();
   const { t } = useTranslation();
-  const { reminders, doseLogs, isProfessionalMode } = useApp();
+  const { reminders, doseLogs } = useApp();
   const shouldHide = useSmartHideBottomNav();
 
   // Count reminders that haven't been logged today
@@ -131,7 +131,7 @@ export default function BottomNav() {
   const navItems = [
     { to: "/", icon: Home, label: t("nav.home") },
     { to: "/reminders", icon: Bell, label: t("nav.reminders", "Reminders"), badge: pendingReminderCount > 0 },
-    { to: isProfessionalMode ? "/family" : "/history", icon: isProfessionalMode ? Users : History, label: isProfessionalMode ? "Family" : t("nav.history") },
+    { to: "/history", icon: History, label: t("nav.history") },
     { to: "/settings", icon: Settings, label: t("nav.settings") },
   ];
 
@@ -157,6 +157,7 @@ export default function BottomNav() {
             {/* Central Scan Button */}
             <NavLink
               to="/scan"
+              aria-label={t("nav.scan")}
               onClick={() => NativeService.haptics.impact(ImpactStyle.Medium)}
               className="relative flex h-14 w-14 items-center justify-center -mt-6"
             >
@@ -186,6 +187,7 @@ function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: R
   return (
     <NavLink
       to={to}
+      aria-label={label}
       onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
       className="relative flex flex-col items-center justify-center w-12 h-12 group"
     >

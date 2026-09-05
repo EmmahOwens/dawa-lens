@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
-  ArrowLeft, Shield, Trash2, Moon, Lock, Users, 
-  ArrowRight, User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw
+  ArrowLeft, Shield, Trash2, Moon, Lock, 
+  User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw
 } from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { 
     storageMode, clearAllData, isLoggedIn, logoutUser, 
-    userProfile, isProfessionalMode, setIsProfessionalMode,
-    updateUserProfile, rememberMe, setRememberMe,
+    userProfile, updateUserProfile, rememberMe, setRememberMe,
   } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -234,63 +233,7 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        {/* 2. CHW / Professional Hub - Highlighted */}
-        <motion.div 
-          variants={itemVariants} 
-          className={`premium-card border-primary/20 transition-all duration-500 ${isProfessionalMode ? 'bg-primary/5 ring-1 ring-primary/20 shadow-lg shadow-primary/5' : 'bg-card'}`}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-xl transition-colors ${isProfessionalMode ? 'bg-primary text-primary-foreground shadow-md' : 'bg-primary/10 text-primary'}`}>
-                <Users size={20} />
-              </div>
-              <div>
-                <h3 className="font-bold text-foreground">{t("settings.professional_hub")}</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">CARING MODE</p>
-              </div>
-            </div>
-            <Switch 
-               id="professional-mode-switch"
-               aria-label={t("settings.chw_label")}
-               checked={isProfessionalMode} 
-               onCheckedChange={(v) => {
-                 setIsProfessionalMode(v);
-                 toast({
-                   title: v ? "Professional Mode Enabled" : "Professional Mode Disabled",
-                   description: v ? "Manage multiple patients in the Client Hub." : "Returning to personal mode.",
-                 });
-               }}
-            />
-          </div>
-          
-          <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-            {isProfessionalMode 
-              ? "You are in Professional Mode. This allows you to manage health records and adherence for multiple clients or family members."
-              : t("settings.chw_desc")}
-          </p>
-          
-          <AnimatePresence>
-            {isProfessionalMode && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                animate={{ opacity: 1, height: "auto", marginTop: 8 }}
-                exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                className="pt-4 border-t border-primary/10"
-              >
-                <Button 
-                  variant="default" 
-                  size="lg" 
-                  onClick={() => navigate("/family")}
-                  className="w-full bg-primary text-primary-foreground font-bold uppercase tracking-wider text-[11px] rounded-xl h-12 shadow-lg shadow-primary/20 group"
-                >
-                  Manage Patients <ArrowRight size={14} className="ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* 3. Preferences */}
+        {/* 2. Preferences */}
         <div className="grid grid-cols-1 gap-4">
 
           <motion.div variants={itemVariants} className="premium-card flex items-center justify-between">
@@ -308,7 +251,7 @@ export default function SettingsPage() {
 
         </div>
 
-        {/* 4. Security & Cloud */}
+        {/* 3. Security & Cloud */}
         <motion.div variants={itemVariants} className="premium-card">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -405,7 +348,7 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        {/* 5. Account Management */}
+        {/* 4. Account Management */}
         <motion.div variants={itemVariants} className="premium-card">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-xl bg-muted text-muted-foreground">
@@ -443,7 +386,7 @@ export default function SettingsPage() {
           )}
         </motion.div>
 
-        {/* 7. Danger Zone */}
+        {/* 5. Danger Zone */}
         <motion.div variants={itemVariants} className="p-6 rounded-3xl border border-destructive/10 bg-destructive/5">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-xl bg-destructive/10 text-destructive">

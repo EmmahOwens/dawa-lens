@@ -7,7 +7,6 @@ import {
   Edit2,
   MoreVertical,
   AlertCircle,
-  Activity,
   Baby,
   UserRound,
   UserPlus,
@@ -695,31 +694,6 @@ export default function FamilyHubPage() {
           </motion.div>
         )}
       </div>
-
-      {/* CHW Mode Teaser */}
-      {!isProfessionalMode && patients.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          className="mt-16 p-10 rounded-[2.5rem] bg-secondary/50 border border-border/40 text-center relative overflow-hidden"
-        >
-          <Activity size={36} className="text-primary/40 mx-auto mb-5" />
-          <h4 className="text-sm font-black uppercase tracking-widest text-foreground mb-2">
-            Need to manage more?
-          </h4>
-          <p className="text-xs text-muted-foreground leading-relaxed px-6 opacity-70 mb-6">
-            Switch to Professional Mode in settings if you are a health worker
-            or caregiver managing multiple clients.
-          </p>
-          <Button
-            variant="outline"
-            className="rounded-xl border-primary/20 text-primary font-bold text-[10px] uppercase tracking-widest"
-            onClick={() => navigate("/settings")}
-          >
-            Visit Settings
-          </Button>
-        </motion.div>
-      )}
 
       {/* Add/Edit Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>

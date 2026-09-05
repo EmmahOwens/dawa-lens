@@ -17,7 +17,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 
 export function AppSidebar() {
   const { t } = useTranslation();
@@ -33,7 +32,7 @@ export function AppSidebar() {
     { title: t("nav.history"), url: "/history", icon: History },
     { title: t("nav.medications", "Medications"), url: "/medications", icon: Pill },
     { title: t("nav.medvault", "Med Vault"), url: "/medvault", icon: Package },
-    ...(isProfessionalMode ? [{ title: "Family Hub", url: "/family", icon: Users, isPro: true }] : []),
+    { title: "Family Hub", url: "/family", icon: Users },
     { title: t("nav.safety"), url: "/interactions", icon: CopyPlus },
     { title: t("nav.settings"), url: "/settings", icon: Settings },
   ];
@@ -108,11 +107,6 @@ export function AppSidebar() {
                             className="relative z-10 flex flex-1 items-center justify-between"
                           >
                             <span className="text-[13px] tracking-wide">{item.title}</span>
-                            {item.isPro && (
-                              <Badge variant="outline" className={`text-[8px] uppercase tracking-widest h-4 border-primary/30 px-1.5 ${active ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`}>
-                                Pro
-                              </Badge>
-                            )}
                           </motion.div>
                         )}
                       </NavLink>

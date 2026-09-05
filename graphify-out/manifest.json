@@ -565,13 +565,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AppSidebar.tsx": {
-    "mtime": 1783788738.7372143,
-    "ast_hash": "0a5be45d3a793c363471469d1f819210",
+    "mtime": 1788611374.848728,
+    "ast_hash": "b9475844f05548c0bc0141ea0f85eee3",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BottomNav.tsx": {
-    "mtime": 1787805398.8983896,
-    "ast_hash": "4ea08cc986d2086c292e81910f20917b",
+    "mtime": 1788610838.8816328,
+    "ast_hash": "0aa6b2f8e5fc14734e69cd9486ebe087",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ConfirmationDialog.test.tsx": {
@@ -1185,8 +1185,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/FamilyHubPage.tsx": {
-    "mtime": 1788105425.7676523,
-    "ast_hash": "d95c57a0ea90ae6246a0fdc7ab967771",
+    "mtime": 1788610747.1485777,
+    "ast_hash": "dda67978fb316b045d28538f0ac51ce1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/HistoryPage.test.tsx": {
@@ -1255,13 +1255,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.test.tsx": {
-    "mtime": 1787295400.7107847,
-    "ast_hash": "b746d931d32c6c0442a0e873a62f7ff2",
+    "mtime": 1788610895.0050008,
+    "ast_hash": "4214040b7947269492164cb536f2c9e9",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.tsx": {
-    "mtime": 1788269218.0501995,
-    "ast_hash": "070e6ef85d33dc1ad73533a1a0e29a96",
+    "mtime": 1788610680.8456266,
+    "ast_hash": "313036f5cfc6080118e4aaece42a613f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
@@ -2937,6 +2937,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/__tests__/AddReminderPage.test.tsx": {
     "mtime": 1788609805.5536711,
     "ast_hash": "67e9d32449c427c45df03d6fb35a5abf",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/__tests__/BottomNav.test.tsx": {
+    "mtime": 1788610776.1035583,
+    "ast_hash": "6b1871104eecb9f32df1b9f8e8ece3da",
     "semantic_hash": ""
   }
 }

@@ -278,6 +278,15 @@ describe("SettingsPage — unit tests", () => {
       );
     });
   });
+
+  it("does not render Professional Hub card or professional mode switch", async () => {
+    renderSettingsPage();
+    await waitFor(() => {
+      expect(screen.queryByText(/Professional Hub/i)).toBeNull();
+      expect(screen.queryByText(/CARING MODE/i)).toBeNull();
+      expect(document.getElementById("professional-mode-switch")).toBeNull();
+    });
+  });
 });
 
 // ─── Property 6: Dialog state resets after any close path — SettingsPage variant ─
