@@ -28,6 +28,18 @@ function todayAt(hhmm: string, dayOffset = 0): Date {
   );
 }
 
+/**
+ * Resolves a grouping key for a reminder representing the medication track for a patient.
+ * Reminders sharing the same patient and medicine (either by normalized name or medicineId)
+ * belong to the same medication regimen.
+ */
+export function getMedicationKey(r: Reminder): string {
+  const patientKey = (r.patientId || "owner").trim();
+  const medId = (r.medicineId || "").trim();
+  const cleanName = (r.medicineName || "").trim().toLowerCase();
+  return `${patientKey}:${medId || cleanName || r.id}`;
+}
+
 interface DailyTimelineProps {
   reminders: Reminder[];
   doseLogs: DoseLog[];
@@ -239,10 +251,20 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
   // Sort ALL slots in day-aware chronological order based on scheduled Date timestamp
   slots.sort((a, b) => a.scheduledDate.getTime() - b.scheduledDate.getTime());
 
-  // Determine the "Next Dose" slot with date-awareness:
+  // Each reminder has its own queue and the tick appears at the next dose of each queue.
+  // Multiple doses belonging to the same reminder must be actioned sequentially.
+  const activeSlotPerReminder = new Map<string, SlotEntry>();
+  for (const entry of slots) {
+    if (entry.isActioned) continue;
+    const reminderId = entry.reminder.id;
+    if (!activeSlotPerReminder.has(reminderId)) {
+      activeSlotPerReminder.set(reminderId, entry);
+    }
+  }
+
+  // Determine the overall "Next Dose" slot with date-awareness (for the featured badge and primary ring):
   //   1. Prefer the earliest slot whose scheduled time is still in the future (truly upcoming).
-  //   2. Fall back to the earliest overdue un-actioned slot so the user can still action it.
-  // This prevents an overdue 07:00 dose from stealing the tick from an upcoming 23:00 dose.
+  //   2. Fall back to the earliest overdue un-actioned slot.
   const nowMs = now.getTime();
   const firstUpcoming = slots.find(
     (s) => !s.isActioned && s.scheduledDate.getTime() > nowMs
@@ -250,7 +272,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
   const earliestOverdue = slots.find(
     (s) => !s.isActioned && s.scheduledDate.getTime() <= nowMs
   );
-  const earliestPendingSlot = firstUpcoming ?? earliestOverdue;
+  const overallNextSlot = firstUpcoming ?? earliestOverdue;
 
   return (
     <div className="mb-8 overflow-hidden">
@@ -277,9 +299,12 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
             const isMissed = log?.action === "missed";
             const hasShift = offsetMinutes !== 0 && entry.slotIndex > -1;
 
-            // Only the earliest pending dose is highlighted with active action buttons
-            const isNextDose = !isActioned && entry === earliestPendingSlot;
-            const isUpcoming = !isActioned && !isNextDose;
+            // Actionable if this is the next pending dose for this reminder's queue
+            const isActionable = !isActioned && activeSlotPerReminder.get(r.id) === entry;
+            // Upcoming if this is a subsequent dose of the SAME reminder queue that still has an earlier pending dose
+            const isUpcoming = !isActioned && !isActionable;
+            // The single overall next dose in chronological time gets the featured "Next Dose" badge
+            const isNextDose = !isActioned && entry === overallNextSlot;
 
             return (
               <motion.div
@@ -290,11 +315,13 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                 className={`flex-shrink-0 w-44 snap-start rounded-[2rem] p-5 border transition-all relative ${
                   isNextDose
                     ? "bg-card border-primary/50 ring-1 ring-primary/30 shadow-md"
-                    : isTaken
-                      ? "bg-success/5 border-success/20 opacity-60"
-                      : isActioned
-                        ? "bg-muted/50 border-border opacity-50"
-                        : "bg-card/70 border-border opacity-90 shadow-none"
+                    : isActionable
+                      ? "bg-card border-primary/30 shadow-sm"
+                      : isTaken
+                        ? "bg-success/5 border-success/20 opacity-60"
+                        : isActioned
+                          ? "bg-muted/50 border-border opacity-50"
+                          : "bg-card/70 border-border opacity-90 shadow-none"
                 }`}
               >
                 <div className="flex flex-col gap-3.5 h-full justify-between">
@@ -303,7 +330,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors duration-300 ${
                         isTaken
                           ? "bg-success/20 text-success"
-                          : isNextDose
+                          : isActionable
                             ? "bg-primary/20 text-primary shadow-sm"
                             : "bg-muted text-muted-foreground"
                       }`}>
@@ -330,7 +357,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                     {/* Time display with shift badge */}
                     <div className="flex items-center gap-1 flex-wrap mb-0.5">
                       <p className={`text-xs font-bold uppercase tracking-widest leading-none ${
-                        isNextDose ? "text-primary font-black" : "text-muted-foreground"
+                        isActionable ? "text-primary font-black" : "text-muted-foreground"
                       }`}>
                         {displayTime}
                       </p>
@@ -360,7 +387,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                     </p>
                   </div>
 
-                  {isNextDose ? (
+                  {isActionable ? (
                     <div className="flex gap-2 pt-2">
                       <motion.button
                         whileHover={{ scale: 1.04 }}

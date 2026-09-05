@@ -91,46 +91,28 @@ describe("DailyTimeline Component", () => {
     expect(screen.queryByText("Ibuprofen")).not.toBeInTheDocument();
   });
 
-  it("should maintain chronological timeline order from morning to evening, highlighting the earliest pending dose as Next Dose", () => {
+  it("should maintain chronological timeline order from morning to evening, highlighting the earliest pending dose as Next Dose within a reminder queue", () => {
     const today = new Date();
     const todayISO = today.toISOString();
 
     const reminders: Reminder[] = [
       {
         id: "rem-1",
-        medicineName: "Morning Med",
+        medicineName: "Daily Med",
         dose: "1 pill",
-        time: "08:00",
-        repeatSchedule: "daily",
-        enabled: true,
-        createdAt: todayISO,
-      },
-      {
-        id: "rem-2",
-        medicineName: "Afternoon Med",
-        dose: "2 pills",
-        time: "14:00",
-        repeatSchedule: "daily",
-        enabled: true,
-        createdAt: todayISO,
-      },
-      {
-        id: "rem-3",
-        medicineName: "Night Med",
-        dose: "1 capsule",
-        time: "20:00",
+        time: "08:00, 14:00, 20:00",
         repeatSchedule: "daily",
         enabled: true,
         createdAt: todayISO,
       },
     ];
 
-    // Morning med is already taken
+    // Morning dose (08:00) is already taken
     const doseLogs: DoseLog[] = [
       {
         id: "log-morning",
         reminderId: "rem-1",
-        medicineName: "Morning Med",
+        medicineName: "Daily Med",
         dose: "1 pill",
         scheduledTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 0, 0).toISOString(),
         actionTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 5, 0).toISOString(),
@@ -148,14 +130,8 @@ describe("DailyTimeline Component", () => {
       />
     );
 
-    // Verify medicine names appear in the document
-    expect(screen.getByText("Morning Med")).toBeInTheDocument();
-    expect(screen.getByText("Afternoon Med")).toBeInTheDocument();
-    expect(screen.getByText("Night Med")).toBeInTheDocument();
-
-    // Check headings maintain chronological order in DOM (08:00, 14:00, 20:00)
-    const medicineHeadings = Array.from(container.querySelectorAll("h3")).map(el => el.textContent);
-    expect(medicineHeadings).toEqual(["Morning Med", "Afternoon Med", "Night Med"]);
+    // Verify medicine doses appear in the document
+    expect(screen.getAllByText("Daily Med")).toHaveLength(3);
 
     // Morning med is marked as "Done"
     expect(screen.getByText("Done")).toBeInTheDocument();
@@ -371,8 +347,8 @@ describe("DailyTimeline Component", () => {
       />
     );
 
-    const takeButton = screen.getByTitle("Take dose");
-    takeButton.click();
+    const takeButtons = screen.getAllByTitle("Take dose");
+    takeButtons[0].click();
 
     const expectedISO = new Date(
       today.getFullYear(),
@@ -394,25 +370,16 @@ describe("DailyTimeline Component", () => {
     vi.useRealTimers();
   });
 
-  it("should advance next dose to subsequent reminder when earlier dose is actioned", () => {
+  it("should advance next dose to subsequent reminder slot when earlier dose is actioned", () => {
     const today = new Date();
     const todayISO = today.toISOString();
 
     const reminders: Reminder[] = [
       {
-        id: "rem-1",
+        id: "rem-multi-step",
         medicineName: "First Dose",
         dose: "5mg",
-        time: "08:00",
-        repeatSchedule: "daily",
-        enabled: true,
-        createdAt: todayISO,
-      },
-      {
-        id: "rem-2",
-        medicineName: "Second Dose",
-        dose: "10mg",
-        time: "12:00",
+        time: "08:00, 12:00",
         repeatSchedule: "daily",
         enabled: true,
         createdAt: todayISO,
@@ -421,7 +388,7 @@ describe("DailyTimeline Component", () => {
 
     const handleAction = vi.fn();
 
-    // First render with no logs: First Dose is Next Dose
+    // First render with no logs: First Dose (08:00) is Next Dose
     const { rerender } = render(
       <DailyTimeline
         reminders={reminders}
@@ -430,18 +397,17 @@ describe("DailyTimeline Component", () => {
       />
     );
 
-    expect(screen.getByText("First Dose")).toBeInTheDocument();
-    expect(screen.getByText("Second Dose")).toBeInTheDocument();
+    expect(screen.getAllByText("First Dose")).toHaveLength(2);
     expect(screen.getByText("Next Dose")).toBeInTheDocument();
 
     // Second dose has Upcoming text
     expect(screen.getByText("Upcoming")).toBeInTheDocument();
 
-    // Now simulate First Dose being taken
+    // Now simulate 08:00 dose being taken
     const doseLogs: DoseLog[] = [
       {
         id: "log-first-taken",
-        reminderId: "rem-1",
+        reminderId: "rem-multi-step",
         medicineName: "First Dose",
         dose: "5mg",
         scheduledTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 0, 0).toISOString(),
@@ -458,10 +424,10 @@ describe("DailyTimeline Component", () => {
       />
     );
 
-    // First Dose is Done, Second Dose is now the Next Dose
+    // 08:00 is Done, 12:00 is now the Next Dose
     expect(screen.getByText("Done")).toBeInTheDocument();
     expect(screen.getByText("Next Dose")).toBeInTheDocument();
-    // "Upcoming" should no longer exist since Second Dose is now the only pending dose
+    // "Upcoming" should no longer exist since 12:00 is now the only pending dose
     expect(screen.queryByText("Upcoming")).not.toBeInTheDocument();
   });
 
@@ -587,5 +553,135 @@ describe("DailyTimeline Component", () => {
     expect(tonightIdx).toBeLessThan(multiIdx);
 
     vi.useRealTimers();
+  });
+
+  it("should show tick (take dose) and skip buttons for all different reminders when they are for different medications", () => {
+    const today = new Date();
+    const reminders: Reminder[] = [
+      {
+        id: "rem-amox",
+        medicineName: "Amoxicillin",
+        dose: "500mg",
+        time: "08:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: today.toISOString(),
+      },
+      {
+        id: "rem-lisin",
+        medicineName: "Lisinopril",
+        dose: "10mg",
+        time: "08:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: today.toISOString(),
+      },
+      {
+        id: "rem-vitc",
+        medicineName: "Vitamin C",
+        dose: "1000mg",
+        time: "09:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: today.toISOString(),
+      },
+    ];
+
+    render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={[]}
+        onAction={vi.fn()}
+      />
+    );
+
+    // All 3 different medications must have their own Take dose (tick) button and Skip button
+    const takeButtons = screen.getAllByTitle("Take dose");
+    expect(takeButtons).toHaveLength(3);
+
+    const skipButtons = screen.getAllByTitle("Mark missed or skipped");
+    expect(skipButtons).toHaveLength(3);
+
+    // None of them should be marked "Upcoming" since they are each the active pending dose for their medication
+    expect(screen.queryByText("Upcoming")).not.toBeInTheDocument();
+  });
+
+  it("should add ticks to all different medications while keeping future doses of the same medication upcoming", () => {
+    const today = new Date();
+    const reminders: Reminder[] = [
+      {
+        id: "rem-multi-dose",
+        medicineName: "Paracetamol",
+        dose: "500mg",
+        time: "08:00, 14:00, 20:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: today.toISOString(),
+      },
+      {
+        id: "rem-vit-d",
+        medicineName: "Vitamin D",
+        dose: "1 pill",
+        time: "08:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: today.toISOString(),
+      },
+    ];
+
+    render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={[]}
+        onAction={vi.fn()}
+      />
+    );
+
+    // Paracetamol 08:00 and Vitamin D 08:00 are actionable -> 2 take buttons
+    const takeButtons = screen.getAllByTitle("Take dose");
+    expect(takeButtons).toHaveLength(2);
+
+    // Paracetamol 14:00 and 20:00 are subsequent doses of the same medication -> 2 "Upcoming" badges
+    const upcomingBadges = screen.getAllByText("Upcoming");
+    expect(upcomingBadges).toHaveLength(2);
+  });
+
+  it("should treat reminders for different patients as independent even if they share the same medicine name", () => {
+    const today = new Date();
+    const reminders: Reminder[] = [
+      {
+        id: "rem-user",
+        medicineName: "Panadol",
+        dose: "500mg",
+        time: "08:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: today.toISOString(),
+        patientId: null,
+      },
+      {
+        id: "rem-child",
+        medicineName: "Panadol",
+        dose: "250mg",
+        time: "08:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: today.toISOString(),
+        patientId: "patient-child-1",
+        patientName: "Junior",
+      },
+    ];
+
+    render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={[]}
+        onAction={vi.fn()}
+      />
+    );
+
+    // Both should have Take dose buttons
+    const takeButtons = screen.getAllByTitle("Take dose");
+    expect(takeButtons).toHaveLength(2);
   });
 });
