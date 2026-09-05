@@ -475,6 +475,24 @@ export const NativeService = {
   },
 
   /**
+   * Schedules a test alarm (default: 10 seconds) to verify device wake-lock, sound, and background execution.
+   */
+  scheduleTestAlarm: async (delaySeconds: number = 10): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return false;
+    try {
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      if (NativeAlarm.scheduleTestAlarm) {
+        const res = await NativeAlarm.scheduleTestAlarm({ delaySeconds });
+        return res?.success ?? false;
+      }
+      return false;
+    } catch (err) {
+      console.error("Failed to schedule test alarm:", err);
+      return false;
+    }
+  },
+
+  /**
    * Directly opens the application details settings screen in Android settings.
    */
   openAppInfoSettings: async (): Promise<boolean> => {

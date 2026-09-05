@@ -29,7 +29,7 @@ import {
   onSnapshot,
   getDocs,
 } from "firebase/firestore";
-import { localPersistence, setActiveUserScope, clearAllLocalPersistence } from "../services/localPersistence";
+import { localPersistence, setActiveUserScope, clearAllLocalPersistence, initLocalPersistence } from "../services/localPersistence";
 import { doseLogsApi } from "../services/api";
 import { scheduleReminders, computeShiftOffset, scheduleAdjustmentNotification } from "../services/reminderService";
 import {
@@ -41,6 +41,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
 import { toast } from "../hooks/use-toast";
 import { calculateRefillStatus } from "../services/refillService";
+import { initPushNotifications } from "../services/pushNotificationService";
 import { useTranslation } from "react-i18next";
 import { storage } from "../lib/storage";
 import { toDate } from "../lib/utils";
@@ -882,6 +883,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // --- Local mode: one-shot load from IndexedDB ---
     if (storageMode === "local") {
       const loadLocal = async () => {
+        if (Capacitor.isNativePlatform()) {
+          await initLocalPersistence();
+        }
         const [pMeds, pRems, pLogs, pPatients, pWell, pAudit] = await Promise.all([
           localPersistence.medicines.getAll(),
           localPersistence.reminders.getAll(),
@@ -995,6 +999,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const loadData = async () => {
       try {
+        if (Capacitor.isNativePlatform()) {
+          await initLocalPersistence();
+        }
         await Promise.all([loadProfile(), loadCache()]);
       } catch (err) {
         console.warn("[AppContext] Initial loadData warning:", err);
@@ -1003,6 +1010,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     };
     loadData();
+
+    if (currentUserId && Capacitor.isNativePlatform()) {
+      initPushNotifications(currentUserId).catch((err) =>
+        console.warn("[AppContext] Failed to initialize push notifications:", err)
+      );
+    }
 
     // 3. Set up real-time Firestore listeners — these auto-sync across web + Capacitor
     const medsQuery = query(

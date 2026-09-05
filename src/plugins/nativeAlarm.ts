@@ -115,6 +115,9 @@ export interface NativeAlarmPlugin {
   stopGuardianService?(): Promise<{ running: boolean }>;
   isGuardianServiceRunning?(): Promise<{ running: boolean }>;
 
+  /** Schedule an immediate test alarm with custom delay in seconds (defaults to 10s). */
+  scheduleTestAlarm?(options?: { delaySeconds?: number }): Promise<{ success: boolean; triggerAtMillis: number }>;
+
   /** Opens the system App Details / App Info screen directly. */
   openAppInfoSettings?(): Promise<void>;
 }

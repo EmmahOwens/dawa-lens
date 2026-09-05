@@ -40,3 +40,7 @@ ui-debug.log*
 coverage/
 .scannerwork/
 
+# Firebase & Android Secrets
+android/app/google-services.json
+**/google-services.json
+

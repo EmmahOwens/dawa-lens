@@ -59,6 +59,9 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
                 <!-- Xiaomi MIUI / HyperOS: fires before BOOT_COMPLETED on locked-boot devices -->
                 <action android:name="miui.intent.action.BOOT_COMPLETED" />
+                <!-- Transsion (Infinix, Tecno, itel) HiOS / XOS fast-boot and boot completed -->
+                <action android:name="com.transsion.intent.action.BOOT_COMPLETED" />
+                <action android:name="com.transsion.powercenter.POWER_ON" />
                 <!-- Catches explicit device reboots -->
                 <action android:name="android.intent.action.REBOOT" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
@@ -112,6 +115,8 @@
     <!-- Exact alarms: SCHEDULE_EXACT_ALARM allows setting exact medication reminders on Android 12+.
          Requires user permission grant on Android 13+; when not granted, app operates in degraded inexact mode. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Android 13+ pre-granted exact alarm permission for medication reminder and clock apps -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <!-- Required so scheduled alarms survive a device reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

@@ -86,30 +86,38 @@ class AlarmReceiver : BroadcastReceiver() {
             } else true
 
             if (!isEventNotification && reminderId.isNotEmpty() && isUserUnlocked) {
+                var isExplicitlyDisabled = false
+                var isExplicitlyTaken = false
+
+                // 1a. Check Device-Protected NativeRecurrenceStore (authoritative primary source)
+                val storedReminders = NativeRecurrenceStore.getReminders(context)
+                val storeMatch = storedReminders.find { it.id == reminderId }
+                if (storeMatch != null && !storeMatch.enabled) {
+                    isExplicitlyDisabled = true
+                }
+
+                // 1b. Check SQLite database (if accessible) for disabled status or early-taken log
                 val dbPath = context.getDatabasePath("dawa_lens.db")
-                if (dbPath.exists()) {
+                if (!isExplicitlyDisabled && dbPath.exists()) {
                     try {
                         val db = android.database.sqlite.SQLiteDatabase.openDatabase(
                             dbPath.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
                         )
 
-                        // Check if reminder still exists and is enabled
                         val reminderCursor = db.rawQuery(
                             "SELECT id, enabled FROM reminders WHERE id = ? LIMIT 1",
                             arrayOf(reminderId)
                         )
-                        val exists = reminderCursor.moveToFirst()
-                        val isEnabled = if (exists) reminderCursor.getInt(reminderCursor.getColumnIndexOrThrow("enabled")) == 1 else false
+                        if (reminderCursor.moveToFirst()) {
+                            val isEnabled = reminderCursor.getInt(reminderCursor.getColumnIndexOrThrow("enabled")) == 1
+                            if (!isEnabled) {
+                                isExplicitlyDisabled = true
+                            }
+                        }
                         reminderCursor.close()
 
-                        if (!exists || !isEnabled) {
-                            db.close()
-                            // Silent return: reminder was deleted or turned off
-                            return
-                        }
-
                         // Check if dose was already taken early for this scheduled slot
-                        if (scheduledTime.isNotEmpty()) {
+                        if (!isExplicitlyDisabled && scheduledTime.isNotEmpty()) {
                             val dosePrefix = if (scheduledTime.length >= 16) scheduledTime.substring(0, 16) else scheduledTime
                             val doseCursor = db.rawQuery(
                                 """SELECT id FROM dose_logs 
@@ -119,20 +127,21 @@ class AlarmReceiver : BroadcastReceiver() {
                                    LIMIT 1""",
                                 arrayOf(reminderId, "$dosePrefix%")
                             )
-                            val alreadyTaken = doseCursor.moveToFirst()
-                            doseCursor.close()
-
-                            if (alreadyTaken) {
-                                db.close()
-                                // User already took or skipped this dose early; skip alarm
-                                return
+                            if (doseCursor.moveToFirst()) {
+                                isExplicitlyTaken = true
                             }
+                            doseCursor.close()
                         }
 
                         db.close()
                     } catch (dbErr: Exception) {
                         // Non-fatal DB read error — proceed with alarm delivery
                     }
+                }
+
+                if (isExplicitlyDisabled || isExplicitlyTaken) {
+                    // Explicitly disabled or dose already completed; skip alarm
+                    return
                 }
             }
 

@@ -72,18 +72,36 @@ function safeJsonParse<T>(val: unknown, fallback: T): T {
   return fallback;
 }
 
+let initPromise: Promise<void> | null = null;
+
 export async function initLocalPersistence(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-  try {
-    await NativeSqlite.initialize();
-    sqliteReady = true;
-  } catch (err) {
-    sqliteReady = false;
-    console.warn(
-      "[localPersistence] NativeSqlite init failed, falling back to storage:",
-      err
-    );
+  if (initPromise) return initPromise;
+  initPromise = (async () => {
+    try {
+      await NativeSqlite.initialize();
+      sqliteReady = true;
+    } catch (err) {
+      sqliteReady = false;
+      console.warn(
+        "[localPersistence] NativeSqlite init failed, falling back to storage:",
+        err
+      );
+    }
+  })();
+  return initPromise;
+}
+
+export async function ensureSqliteReady(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false;
+  if (!sqliteReady && initPromise) {
+    try {
+      await initPromise;
+    } catch {}
+  } else if (!sqliteReady && !initPromise) {
+    await initLocalPersistence();
   }
+  return sqliteReady;
 }
 
 export const localPersistence = {
@@ -227,6 +245,7 @@ export const localPersistence = {
       await storage.setItem(LOCAL_MEDS_KEY, filtered);
     },
     replaceAll: async (items: Medicine[]): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({ sql: "DELETE FROM medicines", params: [] });
@@ -386,6 +405,7 @@ export const localPersistence = {
       await storage.setItem(LOCAL_REMS_KEY, filtered);
     },
     replaceAll: async (items: Reminder[]): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({ sql: "DELETE FROM reminders", params: [] });

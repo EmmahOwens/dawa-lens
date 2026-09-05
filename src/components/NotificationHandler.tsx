@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { LocalNotifications, ActionPerformed } from "@capacitor/local-notifications";
+import { PushNotifications, ActionPerformed as PushActionPerformed } from "@capacitor/push-notifications";
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "@/contexts/AppContext";
 import { registerNotificationActions, migrateNotificationChannels } from "@/services/reminderService";
@@ -245,15 +246,49 @@ export const NotificationHandler = () => {
           }
         );
 
+        // Push notification listeners (FCM)
+        const pushReceivedListener = await PushNotifications.addListener(
+          "pushNotificationReceived",
+          (notification) => {
+            console.log("[NotificationHandler] FCM Push received in foreground:", notification);
+            toast.info(notification.title || "Health Alert", {
+              description: notification.body,
+              duration: 6000,
+            });
+          }
+        );
+
+        const pushActionListener = await PushNotifications.addListener(
+          "pushNotificationActionPerformed",
+          (action: PushActionPerformed) => {
+            console.log("[NotificationHandler] FCM Push tapped:", action);
+            const data = action.notification.data || {};
+            if (data.route) {
+              navigateRef.current(data.route);
+            } else if (data.channelId === "dawa_missed_v2" || data.type === "missed_alert") {
+              navigateRef.current("/history");
+            } else {
+              navigateRef.current("/");
+            }
+          }
+        );
+
         if (isCancelled) {
           actionListener.remove();
+          pushReceivedListener.remove();
+          pushActionListener.remove();
         } else {
           actionListenerHandle = actionListener;
+          pushReceivedHandle = pushReceivedListener;
+          pushActionHandle = pushActionListener;
         }
       } catch (listenerErr) {
         console.warn("[NotificationHandler] Failed to attach notification listeners:", listenerErr);
       }
     };
+
+    let pushReceivedHandle: { remove: () => void } | null = null;
+    let pushActionHandle: { remove: () => void } | null = null;
 
     setupNotifications();
 
@@ -264,6 +299,12 @@ export const NotificationHandler = () => {
       }
       if (actionListenerHandle) {
         actionListenerHandle.remove();
+      }
+      if (pushReceivedHandle) {
+        pushReceivedHandle.remove();
+      }
+      if (pushActionHandle) {
+        pushActionHandle.remove();
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

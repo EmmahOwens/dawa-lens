@@ -118,7 +118,8 @@ export default function BatteryOptimizationGate({
 
       // Wait for readiness check before deciding whether to prompt
       if (!readiness) return;
-      if (readiness.batteryIgnored && readiness.isFullyCompliant) return;
+      // On Transsion (Infinix/Tecno) and Xiaomi, standard battery exemption does NOT bypass Phone Master / MIUI autostart block
+      if (readiness.batteryIgnored && readiness.isFullyCompliant && !oemInfo.isTranssion && !oemInfo.isXiaomi) return;
 
       // Mark as prompted so this only fires once
       await NativeService.preferences.set(AUTOSTART_PROMPTED_KEY, true);
