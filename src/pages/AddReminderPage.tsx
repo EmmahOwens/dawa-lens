@@ -90,9 +90,18 @@ export default function AddReminderPage() {
   const [times, setTimes] = useState<string[]>(
     state?.time ? state.time.split(",") : ["08:00"]
   );
-  const [repeat, setRepeat] = useState<"daily" | "weekly" | "once" | "custom">(
-    state?.repeat || "daily"
-  );
+  const [repeat, setRepeat] = useState<"daily" | "weekly" | "once" | "custom">(() => {
+    if (state?.repeat) {
+      if (state.repeat === "daily" && state.time && state.time.split(",").length > 1) {
+        return "custom";
+      }
+      return state.repeat;
+    }
+    if (state?.time && state.time.split(",").length > 1) {
+      return "custom";
+    }
+    return "daily";
+  });
 
   const [notes, setNotes] = useState(state?.notes || "");
   const [color, setColor] = useState(state?.color || "blue");
@@ -119,7 +128,9 @@ export default function AddReminderPage() {
   const isStockNegativeQty = !isNaN(parsedStockQty) && parsedStockQty < 0;
 
   // Keep track of loaded medicine ID to prevent resetting stock inputs while manually typing
-  const [prevMedicineId, setPrevMedicineId] = useState<string | undefined>(undefined);
+  const [prevMedicineId, setPrevMedicineId] = useState<string | undefined>(
+    isEditing ? state?.medicineId : undefined
+  );
   const [isEditingStock, setIsEditingStock] = useState(false);
 
   // Sync stock tracking fields and frequency when a medicine is selected or during initial load/edit
@@ -133,7 +144,12 @@ export default function AddReminderPage() {
           setStockPerDose(med.dosagePerDose !== undefined ? med.dosagePerDose.toString() : "1");
           setStockUnit(med.unit || "tablets");
           setStockTotal(med.totalQuantity !== undefined ? med.totalQuantity.toString() : "");
-          if (med.frequencyPerDay && med.frequencyPerDay > 0 && times.length !== med.frequencyPerDay) {
+          if (med.frequencyPerDay && med.frequencyPerDay > 0) {
+            if (med.frequencyPerDay > 1) {
+              setRepeat("custom");
+            } else {
+              setRepeat("daily");
+            }
             setTimes(distributeTimes(times[0] || "08:00", med.frequencyPerDay));
           }
         }
@@ -148,11 +164,28 @@ export default function AddReminderPage() {
     }
   }, [medicineId, medicines, prevMedicineId, times]);
 
-
+  // Auto-link to inventory if medicineName passed from scanner/info page matches a vault medication
+  useEffect(() => {
+    if (!isEditing && !medicineId && state?.medicineName && scopedMedicines.length > 0) {
+      const matched = scopedMedicines.find(
+        (m) => m.name.toLowerCase() === state.medicineName?.trim().toLowerCase()
+      );
+      if (matched) {
+        setMedicineId(matched.id);
+        if (matched.dosage && !dose) {
+          setDose(matched.dosage);
+        }
+      }
+    }
+  }, [scopedMedicines, isEditing, medicineId, state?.medicineName, dose]);
 
   const distributeTimes = (startTime: string, freq: number) => {
-    const [h, m] = startTime.split(":").map(Number);
-    const intervalHours = 24 / freq;
+    if (!startTime || !startTime.includes(":")) return times;
+    const [hStr, mStr] = startTime.split(":");
+    const h = Number(hStr);
+    const m = Number(mStr);
+    if (isNaN(h) || isNaN(m)) return times;
+    const intervalHours = 24 / Math.max(1, freq);
     const newTimes = [];
     for (let i = 0; i < freq; i++) {
       const totalMinutes = Math.round((h * 60 + m + i * intervalHours * 60)) % (24 * 60);
@@ -473,6 +506,8 @@ export default function AddReminderPage() {
                       setMedicineId(med.id);
                       setMedicineName(med.name);
                       setDose(med.dosage);
+                      if (med.icon) setIcon(med.icon);
+                      if (med.color) setColor(med.color);
 
                       // Check if a reminder already exists for this medicine
                       const existingRem = reminders.find(r => r.medicineId === med.id);
@@ -607,8 +642,14 @@ export default function AddReminderPage() {
                     value={t}
                     onChange={(e) => {
                       const newTime = e.target.value;
-                      if (idx === 0 && repeat === "custom") {
-                        // Re-distribute based on new start time
+                      if (!newTime) {
+                        const newTimes = [...times];
+                        newTimes[idx] = "";
+                        setTimes(newTimes);
+                        return;
+                      }
+                      if (idx === 0 && (times.length > 1 || repeat === "custom")) {
+                        // Re-distribute based on new start time to maintain equal spacing
                         setTimes(distributeTimes(newTime, times.length));
                       } else {
                         const newTimes = [...times];
