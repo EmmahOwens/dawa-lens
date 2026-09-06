@@ -307,7 +307,7 @@ export async function fetchTopPharmaciesRoadDistances(
         const distRow = data.distances[0]; // [0, distToP1, distToP2, ...]
         const durationRow = Array.isArray(data.durations) ? data.durations[0] : null;
 
-        return pharmacies.map((p, idx) => {
+        const withDistances = pharmacies.map((p, idx) => {
           const distMeters = distRow[idx + 1];
           if (typeof distMeters === "number" && distMeters > 0) {
             const distKm = Math.round((distMeters / 1000) * 10) / 10;
@@ -327,13 +327,20 @@ export async function fetchTopPharmaciesRoadDistances(
           }
           return p;
         });
+
+        // Always sort in ascending order from nearest to farthest distance
+        return withDistances.sort(
+          (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+        );
       }
     }
   } catch (err) {
     console.warn("[PharmacyService] Failed to fetch road distances via OSRM table:", err);
   }
 
-  return pharmacies;
+  return [...pharmacies].sort(
+    (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+  );
 }
 
 /**

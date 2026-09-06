@@ -107,14 +107,17 @@ describe("pharmacyService", () => {
     expect(walkingRoute.durationMinutes).toBeCloseTo(expectedApproxWalkMins, -1);
   });
 
-  it("handles fetchTopPharmaciesRoadDistances gracefully", async () => {
+  it("handles fetchTopPharmaciesRoadDistances gracefully and sorts ascending", async () => {
     const userCoords: [number, number] = [32.5825, 0.3476];
     const top5 = findTopNearestPharmacies(0.3476, 32.5825, 3);
     const enriched = await fetchTopPharmaciesRoadDistances(userCoords, top5, "driving");
 
     expect(enriched).toHaveLength(top5.length);
-    for (const p of enriched) {
-      expect(p.distanceKm).toBeGreaterThan(0);
+    for (let i = 0; i < enriched.length; i++) {
+      expect(enriched[i].distanceKm).toBeGreaterThan(0);
+      if (i < enriched.length - 1) {
+        expect(enriched[i].distanceKm!).toBeLessThanOrEqual(enriched[i + 1].distanceKm!);
+      }
     }
   });
 });

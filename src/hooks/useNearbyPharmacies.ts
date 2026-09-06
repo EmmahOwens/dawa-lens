@@ -31,24 +31,44 @@ export function useNearbyPharmacies() {
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
   // Top 5 nearest pharmacies reactive state
-  const [top5Pharmacies, setTop5Pharmacies] = useState<NdaPharmacy[]>(() =>
+  const [rawTopPharmacies, setRawTopPharmacies] = useState<NdaPharmacy[]>(() =>
     findTopNearestPharmacies(userCoords[1], userCoords[0], 5, true)
   );
 
-  // Immediately compute initial top 5 by geographic proximity, then enrich with live road distances
+  // Always enforce strict ascending order from nearest distance to farthest
+  const top5Pharmacies = useMemo(() => {
+    return [...rawTopPharmacies].sort(
+      (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+    );
+  }, [rawTopPharmacies]);
+
+  // Immediately compute initial candidates by geographic proximity, then enrich and sort by live road distances
   useEffect(() => {
-    const initialTop5 = findTopNearestPharmacies(userCoords[1], userCoords[0], 5, true);
-    setTop5Pharmacies(initialTop5);
+    // Check top 10 candidates by proximity to ensure true top 5 nearest road routes are selected
+    const initialCandidates = findTopNearestPharmacies(userCoords[1], userCoords[0], 10, true);
+    setRawTopPharmacies(initialCandidates.slice(0, 5));
 
     let isCancelled = false;
-    fetchTopPharmaciesRoadDistances(userCoords, initialTop5, transportMode)
+    fetchTopPharmaciesRoadDistances(userCoords, initialCandidates, transportMode)
       .then((enriched) => {
         if (!isCancelled && enriched.length > 0) {
-          setTop5Pharmacies(enriched);
+          // Sort strictly in ascending order from nearest road distance to farthest, take top 5
+          const sorted = [...enriched]
+            .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+            .slice(0, 5);
+
+          setRawTopPharmacies(sorted);
+
+          // Auto-select the nearest pharmacy if none selected yet
+          setSelectedPharmacy((prev) => {
+            if (!prev) return sorted[0];
+            const updated = sorted.find((p) => p.id === prev.id);
+            return updated || prev;
+          });
         }
       })
       .catch((err) => {
-        console.warn("[useNearbyPharmacies] Error enriching top 5 road distances:", err);
+        console.warn("[useNearbyPharmacies] Error enriching top road distances:", err);
       });
 
     return () => {
@@ -95,7 +115,7 @@ export function useNearbyPharmacies() {
           setRoute(res);
           setIsRouteLoading(false);
 
-          // Synchronize selectedPharmacy and top5Pharmacies with actual road route distance
+          // Synchronize selectedPharmacy and rawTopPharmacies with actual road route distance
           setSelectedPharmacy((prev) => {
             if (!prev) return prev;
             return {
@@ -105,13 +125,16 @@ export function useNearbyPharmacies() {
             };
           });
 
-          setTop5Pharmacies((prev) =>
-            prev.map((p) =>
+          setRawTopPharmacies((prev) => {
+            const updated = prev.map((p) =>
               p.id === selectedPharmacy.id
                 ? { ...p, distanceKm: res.distanceKm, durationMinutes: res.durationMinutes }
                 : p
-            )
-          );
+            );
+            return [...updated].sort(
+              (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+            );
+          });
         }
       })
       .catch((err) => {
