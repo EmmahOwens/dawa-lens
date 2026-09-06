@@ -9,6 +9,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.os.Build
 import android.os.PowerManager
 import android.os.UserManager
+import androidx.core.content.ContextCompat
 import androidx.work.BackoffPolicy
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
@@ -42,7 +43,10 @@ class BootReceiver : BroadcastReceiver() {
             action != Intent.ACTION_MY_PACKAGE_REPLACED &&
             action != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
             action != Intent.ACTION_USER_UNLOCKED &&
-            action != AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
+            action != AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED &&
+            // Transsion (Infinix, Tecno, itel) proprietary boot actions
+            action != "com.transsion.intent.action.BOOT_COMPLETED" &&
+            action != "com.transsion.powercenter.POWER_ON"
         ) return
 
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -110,7 +114,12 @@ class BootReceiver : BroadcastReceiver() {
             }
         }
 
-        // Step 3: Ensure periodic missed-dose reconciliation worker is enqueued.
+        // Step 3: Auto-start AdherenceGuardianService on aggressive OEM devices.
+        // These manufacturers aggressively kill background processes on swipe-from-recents;
+        // a foreground service is the only reliable way to survive and protect alarm delivery.
+        autoStartGuardianIfNeeded(context)
+
+        // Step 4: Ensure periodic missed-dose reconciliation worker is enqueued.
         // Cancel any existing instance first to prevent stacking after repeated boot events,
         // then re-enqueue with exponential backoff so OEM force-stops are automatically retried.
         try {
@@ -284,6 +293,44 @@ class BootReceiver : BroadcastReceiver() {
             }
         } catch (e: Exception) {
             // ignore individual alarm failure
+        }
+    }
+
+    /**
+     * Auto-starts the AdherenceGuardianService on devices from manufacturers known to
+     * aggressively kill background processes. This is critical for alarm survival on:
+     * - Transsion (Infinix, Tecno, itel) — XOS treats swipe-from-recents as force-stop
+     * - Xiaomi (Redmi, Poco) — MIUI/HyperOS aggressive battery management
+     * - Samsung — One UI deep sleep and sleeping apps
+     * - Huawei/Honor — EMUI/MagicOS process management
+     * - Oppo/Realme — ColorOS/Realme UI battery optimization
+     * - OnePlus — OxygenOS chain launch restrictions
+     * - Vivo/iQOO — Funtouch OS/OriginOS background management
+     */
+    private fun autoStartGuardianIfNeeded(context: Context) {
+        if (AdherenceGuardianService.isRunning) return
+
+        val m = Build.MANUFACTURER.lowercase()
+        val b = Build.BRAND.lowercase()
+        val isAggressiveOem = m.contains("transsion") || m.contains("infinix") ||
+            m.contains("tecno") || m.contains("itel") || b.contains("infinix") || b.contains("tecno") ||
+            m.contains("xiaomi") || m.contains("redmi") || m.contains("poco") ||
+            b.contains("xiaomi") || b.contains("redmi") || b.contains("poco") ||
+            m.contains("samsung") ||
+            m.contains("huawei") || m.contains("honor") || b.contains("huawei") || b.contains("honor") ||
+            m.contains("oppo") || m.contains("realme") || b.contains("realme") ||
+            m.contains("oneplus") || b.contains("oneplus") ||
+            m.contains("vivo") || m.contains("iqoo") || b.contains("vivo") || b.contains("iqoo")
+
+        if (isAggressiveOem) {
+            try {
+                val guardianIntent = Intent(context, AdherenceGuardianService::class.java).apply {
+                    action = AdherenceGuardianService.ACTION_START
+                }
+                ContextCompat.startForegroundService(context, guardianIntent)
+            } catch (e: Exception) {
+                // Non-fatal: service start failed, alarms still rely on AlarmManager
+            }
         }
     }
 }

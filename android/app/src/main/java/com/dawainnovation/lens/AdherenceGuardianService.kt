@@ -10,18 +10,28 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * AdherenceGuardianService
  *
- * Optional foreground service that provides user-visible adherence monitoring
- * and active status for users who explicitly opt-in.
+ * Foreground service that provides:
+ * 1. Process protection against aggressive OEM battery managers (Transsion XOS, Xiaomi MIUI,
+ *    Samsung One UI, Huawei EMUI, Oppo ColorOS, Vivo Funtouch, etc.)
+ * 2. An "upcoming alarm" countdown notification showing the next scheduled dose
+ *    with a live countdown timer, similar to how native alarm clock apps display
+ *    "Alarm in 3h 42m" in the notification bar.
  *
- * Note: Local alarms in Dawa Lens rely authoritatively on AlarmManager and
- * device-protected Direct Boot recovery; this foreground service is purely optional
- * and does not claim to override system force-stops or OEM power modes.
+ * The service is auto-started on aggressive OEM devices at boot (via BootReceiver)
+ * and on app process creation (via DawaLensApplication). Users can also manually
+ * toggle it from the Settings diagnostic center.
  */
 class AdherenceGuardianService : Service() {
 
@@ -30,16 +40,26 @@ class AdherenceGuardianService : Service() {
         const val NOTIFICATION_ID = 9901
         const val ACTION_START = "com.dawainnovation.lens.ACTION_START_GUARDIAN"
         const val ACTION_STOP = "com.dawainnovation.lens.ACTION_STOP_GUARDIAN"
+        const val ACTION_REFRESH = "com.dawainnovation.lens.ACTION_REFRESH_GUARDIAN"
 
         @Volatile
         var isRunning = false
             private set
     }
 
+    private val handler = Handler(Looper.getMainLooper())
+    private val countdownRunnable = object : Runnable {
+        override fun run() {
+            updateUpcomingAlarmNotification()
+            handler.postDelayed(this, 60_000L) // Update every 60 seconds
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            handler.removeCallbacks(countdownRunnable)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
             } else {
@@ -51,33 +71,29 @@ class AdherenceGuardianService : Service() {
             return START_NOT_STICKY
         }
 
+        if (intent?.action == ACTION_REFRESH) {
+            // Force an immediate countdown update (e.g. after a new alarm is scheduled)
+            updateUpcomingAlarmNotification()
+            return START_STICKY
+        }
+
         startForegroundServiceInternal()
         isRunning = true
+
+        // Start the countdown update loop
+        handler.removeCallbacks(countdownRunnable)
+        handler.post(countdownRunnable)
+
         return START_STICKY
     }
 
     private fun startForegroundServiceInternal() {
         createNotificationChannel()
 
-        val openIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val notification = buildNotification(
+            contentText = "Monitoring medication schedule...",
+            upcomingTriggerMs = null
         )
-
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Dawa Lens Protection Active")
-            .setContentText("Medication alarms & offline dose reminders are protected")
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .build()
 
         try {
             if (Build.VERSION.SDK_INT >= 34) {
@@ -100,6 +116,91 @@ class AdherenceGuardianService : Service() {
         }
     }
 
+    /**
+     * Queries NativeRecurrenceStore for the next upcoming alarm trigger across all active
+     * reminders and updates the persistent notification with a human-readable countdown.
+     */
+    private fun updateUpcomingAlarmNotification() {
+        try {
+            val storedReminders = NativeRecurrenceStore.getReminders(this)
+            val now = System.currentTimeMillis()
+
+            var earliestTrigger: Long? = null
+            var earliestTitle: String? = null
+
+            for (reminder in storedReminders) {
+                if (!reminder.enabled) continue
+                val nextTrigger = NativeRecurrenceEngine.computeNextOccurrence(
+                    reminder.toEngineSchedule(), now
+                ) ?: continue
+                if (nextTrigger > now && (earliestTrigger == null || nextTrigger < earliestTrigger)) {
+                    earliestTrigger = nextTrigger
+                    earliestTitle = reminder.genericTitle
+                }
+            }
+
+            val contentText = if (earliestTrigger != null && earliestTitle != null) {
+                val diff = earliestTrigger - now
+                val hours = diff / 3_600_000
+                val minutes = (diff % 3_600_000) / 60_000
+                val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(earliestTrigger))
+                val medicineName = earliestTitle.removePrefix("Time for ")
+
+                if (hours > 0) {
+                    "Next: $medicineName in ${hours}h ${minutes}m ($timeStr)"
+                } else if (minutes > 0) {
+                    "Next: $medicineName in ${minutes}m ($timeStr)"
+                } else {
+                    "Next: $medicineName — imminent ($timeStr)"
+                }
+            } else {
+                "Medication alarms & offline dose reminders are protected"
+            }
+
+            val notification = buildNotification(contentText, earliestTrigger)
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            nm.notify(NOTIFICATION_ID, notification)
+        } catch (e: Exception) {
+            // Non-fatal notification update failure
+        }
+    }
+
+    /**
+     * Builds the persistent foreground notification with optional chronometer countdown.
+     */
+    private fun buildNotification(contentText: String, upcomingTriggerMs: Long?): Notification {
+        val openIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Dawa Lens Protection Active")
+            .setContentText(contentText)
+            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setShowWhen(false)
+
+        // Use system chronometer countdown on API 24+ for real-time countdown
+        if (upcomingTriggerMs != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val elapsedTarget = SystemClock.elapsedRealtime() + (upcomingTriggerMs - System.currentTimeMillis())
+            builder.setUsesChronometer(true)
+            builder.setChronometerCountDown(true)
+            builder.setWhen(elapsedTarget)
+            builder.setShowWhen(true)
+        }
+
+        return builder.build()
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -107,7 +208,7 @@ class AdherenceGuardianService : Service() {
                 "Dawa Lens Adherence Protection",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Keeps medication adherence monitoring and offline alarms active"
+                description = "Keeps medication adherence monitoring and offline alarms active. Shows countdown to next dose."
                 setShowBadge(false)
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -153,6 +254,7 @@ class AdherenceGuardianService : Service() {
     }
 
     override fun onDestroy() {
+        handler.removeCallbacks(countdownRunnable)
         isRunning = false
         super.onDestroy()
     }

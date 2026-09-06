@@ -25,6 +25,7 @@ class AlarmReceiver : BroadcastReceiver() {
         const val CHANNEL_WELLNESS = "dawa_wellness_v2"
         const val CHANNEL_HYDRATION = "dawa_hydration_v2"
         const val CHANNEL_REFILL = "dawa_refill_v2"
+        const val CHANNEL_UPCOMING = "dawa_upcoming_v1"
         private const val LEGACY_CHANNEL_ID = "dawa_reminders"
     }
 

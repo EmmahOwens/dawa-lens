@@ -1015,6 +1015,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       initPushNotifications(currentUserId).catch((err) =>
         console.warn("[AppContext] Failed to initialize push notifications:", err)
       );
+
+      // Auto-start AdherenceGuardianService on aggressive OEM devices.
+      // This is a web-layer safety net: the native layer (DawaLensApplication.onCreate
+      // and BootReceiver) also auto-starts the service, but this covers the case where
+      // the user opens the app for the first time after install.
+      (async () => {
+        try {
+          const { NativeService: NS } = await import("../services/nativeService");
+          const oemInfo = await NS.getDeviceOemInfo();
+          const isAggressiveOem = oemInfo.isTranssion || oemInfo.isXiaomi || oemInfo.isSamsung ||
+            oemInfo.isHuawei || oemInfo.isOppoRealme || oemInfo.isOnePlus || oemInfo.isVivo;
+          if (isAggressiveOem && Capacitor.getPlatform() === "android") {
+            const isRunning = await NS.isGuardianServiceRunning();
+            if (!isRunning) {
+              await NS.startGuardianService();
+            }
+          }
+        } catch (guardianErr) {
+          console.warn("[AppContext] Guardian auto-start check failed:", guardianErr);
+        }
+      })();
     }
 
     // 3. Set up real-time Firestore listeners — these auto-sync across web + Capacitor
