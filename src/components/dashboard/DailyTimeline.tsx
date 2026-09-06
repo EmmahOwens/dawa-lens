@@ -160,10 +160,22 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
       );
     }
 
+    // Pre-compute base dayOffset for each slot to handle midnight crossings.
+    // When consecutive slots in a reminder cross midnight (e.g. 23:00 → 07:00),
+    // the later-indexed slot belongs to the next calendar day.
+    const baseDayOffsets: number[] = new Array(times.length).fill(0);
+    for (let i = 1; i < times.length; i++) {
+      const prevMins = timeStrToMinutes(times[i - 1]);
+      const currMins = timeStrToMinutes(times[i]);
+      // If this slot's time-of-day is earlier than or equal to the previous slot's,
+      // it has crossed midnight → increment the day offset.
+      baseDayOffsets[i] = baseDayOffsets[i - 1] + (currMins <= prevMins ? 1 : 0);
+    }
+
     times.forEach((baseTime, idx) => {
       let displayTime = baseTime;
       let slotOffset = 0;
-      let dayOffset = 0;
+      let dayOffset = baseDayOffsets[idx];
 
       if (todayTakenLog && takenSlotIndex !== -1 && idx > takenSlotIndex) {
         let cumulativeInterval = 0;
@@ -176,9 +188,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
           actualTakeDate.getMinutes() +
           cumulativeInterval;
 
-        if (totalMins >= 1440) {
-          dayOffset = Math.floor(totalMins / 1440);
-        }
+        dayOffset = Math.floor(totalMins / 1440);
         displayTime = minutesToTimeStr(totalMins);
 
         let diff = timeStrToMinutes(displayTime) - timeStrToMinutes(baseTime);
@@ -191,7 +201,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
 
       const scheduledDate = todayAt(displayTime, dayOffset);
       const scheduledISO = scheduledDate.toISOString();
-      const slotISO = todayAt(baseTime, 0).toISOString();
+      const slotISO = todayAt(baseTime, baseDayOffsets[idx]).toISOString();
 
       // Find matching log for this slot, prioritizing terminal actions over snoozed and sorting by latest actionTime
       const candidateLogs = doseLogs

@@ -684,4 +684,91 @@ describe("DailyTimeline Component", () => {
     const takeButtons = screen.getAllByTitle("Take dose");
     expect(takeButtons).toHaveLength(2);
   });
+
+  it("should order today's 23:00 before next-day 07:00 when no dose is taken (midnight crossing)", () => {
+    // Simulate current time as 20:00 — both slots are upcoming, but 07:00 crosses midnight
+    const fakeNow = new Date();
+    fakeNow.setHours(20, 0, 0, 0);
+    vi.setSystemTime(fakeNow);
+
+    const reminders: Reminder[] = [
+      {
+        id: "rem-cross-midnight",
+        medicineName: "Night-Morning Med",
+        dose: "1 pill",
+        time: "23:00, 07:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: fakeNow.toISOString(),
+      },
+    ];
+
+    const { container } = render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={[]}
+        onAction={vi.fn()}
+      />
+    );
+
+    const headings = Array.from(container.querySelectorAll("h3")).map(
+      (el) => el.textContent
+    );
+
+    // Both cards are the same medicine name, but the 23:00 card (today) must come before 07:00 (tomorrow)
+    expect(headings).toHaveLength(2);
+
+    // Verify the time labels appear in the correct order: 23:00 before 07:00
+    const timeLabels = Array.from(container.querySelectorAll("p"))
+      .map((el) => el.textContent?.trim())
+      .filter((t) => t === "23:00" || t === "07:00");
+    expect(timeLabels).toEqual(["23:00", "07:00"]);
+
+    // The 23:00 slot (today, upcoming) should be marked as "Next Dose"
+    expect(screen.getByText("Next Dose")).toBeInTheDocument();
+
+    // The 07:00 slot (tomorrow) should be "Upcoming" (queued behind 23:00 for the same reminder)
+    expect(screen.getByText("Upcoming")).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it("should handle 3-dose midnight crossing correctly (22:00, 02:00, 08:00)", () => {
+    const fakeNow = new Date();
+    fakeNow.setHours(20, 0, 0, 0);
+    vi.setSystemTime(fakeNow);
+
+    const reminders: Reminder[] = [
+      {
+        id: "rem-3dose-cross",
+        medicineName: "Triple Med",
+        dose: "10mg",
+        time: "22:00, 02:00, 08:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: fakeNow.toISOString(),
+      },
+    ];
+
+    const { container } = render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={[]}
+        onAction={vi.fn()}
+      />
+    );
+
+    // Verify the time labels are in chronological order: 22:00 (today) → 02:00 (tomorrow) → 08:00 (tomorrow)
+    const timeLabels = Array.from(container.querySelectorAll("p"))
+      .map((el) => el.textContent?.trim())
+      .filter((t) => t === "22:00" || t === "02:00" || t === "08:00");
+    expect(timeLabels).toEqual(["22:00", "02:00", "08:00"]);
+
+    // 22:00 should be "Next Dose", the other two should be "Upcoming"
+    expect(screen.getByText("Next Dose")).toBeInTheDocument();
+    const upcomingBadges = screen.getAllByText("Upcoming");
+    expect(upcomingBadges).toHaveLength(2);
+
+    vi.useRealTimers();
+  });
 });
