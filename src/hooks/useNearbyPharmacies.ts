@@ -6,6 +6,7 @@ import {
   findTopNearestPharmacies,
   findNearbyPharmacies,
   getPharmacyRoute,
+  fetchTopPharmaciesRoadDistances,
   getAllDistricts,
 } from "../services/pharmacyService";
 
@@ -29,10 +30,31 @@ export function useNearbyPharmacies() {
   const [route, setRoute] = useState<PharmacyRoute | null>(null);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
-  // Top 5 nearest pharmacies based on current GPS / user location
-  const top5Pharmacies = useMemo(() => {
-    return findTopNearestPharmacies(userCoords[1], userCoords[0], 5, true);
-  }, [userCoords]);
+  // Top 5 nearest pharmacies reactive state
+  const [top5Pharmacies, setTop5Pharmacies] = useState<NdaPharmacy[]>(() =>
+    findTopNearestPharmacies(userCoords[1], userCoords[0], 5, true)
+  );
+
+  // Immediately compute initial top 5 by geographic proximity, then enrich with live road distances
+  useEffect(() => {
+    const initialTop5 = findTopNearestPharmacies(userCoords[1], userCoords[0], 5, true);
+    setTop5Pharmacies(initialTop5);
+
+    let isCancelled = false;
+    fetchTopPharmaciesRoadDistances(userCoords, initialTop5, transportMode)
+      .then((enriched) => {
+        if (!isCancelled && enriched.length > 0) {
+          setTop5Pharmacies(enriched);
+        }
+      })
+      .catch((err) => {
+        console.warn("[useNearbyPharmacies] Error enriching top 5 road distances:", err);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [userCoords, transportMode]);
 
   // Filtered / searched list of pharmacies
   const filteredPharmacies = useMemo(() => {
@@ -72,6 +94,24 @@ export function useNearbyPharmacies() {
         if (!isCancelled) {
           setRoute(res);
           setIsRouteLoading(false);
+
+          // Synchronize selectedPharmacy and top5Pharmacies with actual road route distance
+          setSelectedPharmacy((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              distanceKm: res.distanceKm,
+              durationMinutes: res.durationMinutes,
+            };
+          });
+
+          setTop5Pharmacies((prev) =>
+            prev.map((p) =>
+              p.id === selectedPharmacy.id
+                ? { ...p, distanceKm: res.distanceKm, durationMinutes: res.durationMinutes }
+                : p
+            )
+          );
         }
       })
       .catch((err) => {
@@ -84,7 +124,7 @@ export function useNearbyPharmacies() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedPharmacy, userCoords, transportMode]);
+  }, [selectedPharmacy?.id, userCoords, transportMode]);
 
   const allDistricts = useMemo(() => getAllDistricts(), []);
 

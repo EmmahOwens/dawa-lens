@@ -4,6 +4,8 @@ import {
   findTopNearestPharmacies,
   findNearbyPharmacies,
   getPharmacyRoute,
+  fetchTopPharmaciesRoadDistances,
+  formatDuration,
   getAllDistricts,
   getDirectionsUrl,
 } from "../pharmacyService";
@@ -83,4 +85,37 @@ describe("pharmacyService", () => {
     expect(url).toContain("0.3476");
     expect(url).toContain("32.5825");
   });
+
+  it("formats route duration cleanly for minutes and hours", () => {
+    expect(formatDuration(1)).toBe("~1 min");
+    expect(formatDuration(15)).toBe("~15 mins");
+    expect(formatDuration(60)).toBe("~1 hr");
+    expect(formatDuration(120)).toBe("~2 hrs");
+    expect(formatDuration(96)).toBe("~1h 36m");
+  });
+
+  it("calculates realistic walking duration instead of using car duration", async () => {
+    const userCoords: [number, number] = [32.5825, 0.3476];
+    const pharmacyCoords: [number, number] = [32.6108, 0.3542];
+
+    const drivingRoute = await getPharmacyRoute(userCoords, pharmacyCoords, "driving");
+    const walkingRoute = await getPharmacyRoute(userCoords, pharmacyCoords, "walking");
+
+    expect(walkingRoute.durationMinutes).toBeGreaterThan(drivingRoute.durationMinutes);
+    // Walking should roughly reflect ~4.8 km/h (approx 12.5 mins per km)
+    const expectedApproxWalkMins = (walkingRoute.distanceKm / 4.8) * 60;
+    expect(walkingRoute.durationMinutes).toBeCloseTo(expectedApproxWalkMins, -1);
+  });
+
+  it("handles fetchTopPharmaciesRoadDistances gracefully", async () => {
+    const userCoords: [number, number] = [32.5825, 0.3476];
+    const top5 = findTopNearestPharmacies(0.3476, 32.5825, 3);
+    const enriched = await fetchTopPharmaciesRoadDistances(userCoords, top5, "driving");
+
+    expect(enriched).toHaveLength(top5.length);
+    for (const p of enriched) {
+      expect(p.distanceKm).toBeGreaterThan(0);
+    }
+  });
 });
+

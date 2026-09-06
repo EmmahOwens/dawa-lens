@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useNearbyPharmacies } from "@/hooks/useNearbyPharmacies";
 import { PharmacyRouteMap } from "./PharmacyRouteMap";
-import { getDirectionsUrl, NdaPharmacy } from "@/services/pharmacyService";
+import { getDirectionsUrl, formatDuration, NdaPharmacy } from "@/services/pharmacyService";
 import { Medicine } from "@/contexts/AppContext";
 import {
   Navigation,
@@ -240,8 +240,8 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                             #{rank}
                           </span>
                           <span className="text-[11px] font-black text-teal-600 dark:text-teal-400">
-                            {pharmacy.distanceKm !== undefined
-                              ? `${pharmacy.distanceKm} km`
+                            {(isSelected && route ? route.distanceKm : pharmacy.distanceKm) !== undefined
+                              ? `${isSelected && route ? route.distanceKm : pharmacy.distanceKm} km`
                               : ""}
                           </span>
                         </div>
@@ -314,7 +314,9 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                             </p>
                           </div>
                           <span className="text-[11px] font-black text-teal-600 dark:text-teal-400 flex-shrink-0">
-                            {p.distanceKm !== undefined ? `${p.distanceKm} km` : ""}
+                            {(isSelected && route ? route.distanceKm : p.distanceKm) !== undefined
+                              ? `${isSelected && route ? route.distanceKm : p.distanceKm} km`
+                              : ""}
                           </span>
                         </div>
                       );
@@ -373,7 +375,9 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                       {route ? `${route.distanceKm} km` : `${selectedPharmacy.distanceKm ?? "—"} km`}
                     </span>
                     <span className="text-[10px] font-bold text-muted-foreground mt-1">
-                      {route ? `~${route.durationMinutes} min ${transportMode}` : "Distance"}
+                      {route
+                        ? `${formatDuration(route.durationMinutes)} ${transportMode}`
+                        : "Distance"}
                     </span>
                   </div>
                 </div>

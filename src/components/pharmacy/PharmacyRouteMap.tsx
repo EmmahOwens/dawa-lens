@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import maplibregl, { Map, Marker, LngLatBounds } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { NdaPharmacy, PharmacyRoute } from "@/services/pharmacyService";
+import { NdaPharmacy, PharmacyRoute, formatDuration } from "@/services/pharmacyService";
 import {
   Navigation,
   Compass,
@@ -379,7 +379,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
                 </div>
                 <span className="text-[10px] text-muted-foreground">·</span>
                 <span className="text-xs font-extrabold text-foreground">
-                  ~{route.durationMinutes} min{route.durationMinutes !== 1 ? "s" : ""}
+                  {formatDuration(route.durationMinutes)}
                 </span>
               </div>
             ) : selectedPharmacy.distanceKm !== undefined ? (

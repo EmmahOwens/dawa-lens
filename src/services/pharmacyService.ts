@@ -150,6 +150,55 @@ export function findNearbyPharmacies(
 }
 
 /**
+ * Formats duration in minutes to a user-friendly string (e.g., "~12 mins" or "~1h 35m").
+ */
+export function formatDuration(minutes?: number): string {
+  if (!minutes || minutes <= 0) return "";
+  if (minutes < 60) {
+    return `~${minutes} min${minutes !== 1 ? "s" : ""}`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remainingMins = minutes % 60;
+  if (remainingMins === 0) {
+    return `~${hours} hr${hours !== 1 ? "s" : ""}`;
+  }
+  return `~${hours}h ${remainingMins}m`;
+}
+
+/**
+ * Safe wrapper around fetch with timeout signal that gracefully falls back if
+ * the test environment (jsdom vs node) has cross-realm AbortSignal mismatch.
+ */
+async function safeFetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+  let signal: AbortSignal | undefined = undefined;
+  try {
+    if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+      signal = AbortSignal.timeout(timeoutMs);
+    } else if (typeof AbortController !== "undefined") {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), timeoutMs);
+      signal = controller.signal;
+    }
+  } catch {
+    // Ignore signal creation errors
+  }
+
+  try {
+    return await fetch(url, {
+      signal,
+      headers: { Accept: "application/json" },
+    });
+  } catch (err: any) {
+    if (signal && err instanceof TypeError && err.message?.includes("AbortSignal")) {
+      return await fetch(url, {
+        headers: { Accept: "application/json" },
+      });
+    }
+    throw err;
+  }
+}
+
+/**
  * Fetches turn-by-turn road route coordinates and distance/duration using OSRM (Open Source Routing Machine),
  * with graceful fallback to straight-line interpolation if offline or network failure.
  *
@@ -174,23 +223,24 @@ export async function getPharmacyRoute(
     const osrmProfile = mode === "walking" ? "walking" : "driving";
     const url = `https://router.project-osrm.org/route/v1/${osrmProfile}/${uLng},${uLat};${pLng},${pLat}?overview=full&geometries=geojson`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: { Accept: "application/json" },
-    });
-    clearTimeout(timeoutId);
+    const res = await safeFetchWithTimeout(url, 6000);
 
     if (res.ok) {
       const data = await res.json();
       if (data.code === "Ok" && data.routes && data.routes.length > 0) {
         const routeObj = data.routes[0];
+        const routeDistanceKm = Math.round((routeObj.distance / 1000) * 10) / 10;
+        
+        // OSRM demo server only computes driving durations. For walking, calculate realistic walking time based on distance (4.8 km/h).
+        const durationMinutes =
+          mode === "walking"
+            ? Math.max(1, Math.round((routeDistanceKm / 4.8) * 60))
+            : Math.max(1, Math.round(routeObj.duration / 60));
+
         const routeResult: PharmacyRoute = {
           coordinates: routeObj.geometry.coordinates as [number, number][],
-          distanceKm: Math.round((routeObj.distance / 1000) * 10) / 10,
-          durationMinutes: Math.max(1, Math.round(routeObj.duration / 60)),
+          distanceKm: routeDistanceKm,
+          durationMinutes,
           mode,
           isFallback: false,
         };
@@ -213,7 +263,7 @@ export async function getPharmacyRoute(
     ]);
   }
 
-  const speedKmh = mode === "walking" ? 4.5 : 30; // avg city speed in Uganda
+  const speedKmh = mode === "walking" ? 4.8 : 30; // avg city speed in Uganda
   const estDuration = Math.max(1, Math.round((straightDist / speedKmh) * 60));
 
   const fallbackResult: PharmacyRoute = {
@@ -226,6 +276,64 @@ export async function getPharmacyRoute(
 
   routeCache.set(cacheKey, fallbackResult);
   return fallbackResult;
+}
+
+/**
+ * Fetches true turn-by-turn road route distances for a list of candidate pharmacies using the OSRM table service.
+ * If OSRM is unavailable or offline, seamlessly preserves existing distances (e.g. Haversine).
+ */
+export async function fetchTopPharmaciesRoadDistances(
+  userCoords: [number, number],
+  pharmacies: NdaPharmacy[],
+  mode: "driving" | "walking" = "driving"
+): Promise<NdaPharmacy[]> {
+  if (!pharmacies || pharmacies.length === 0) return pharmacies;
+
+  const [uLng, uLat] = userCoords;
+  const coordsStr = [
+    `${uLng.toFixed(5)},${uLat.toFixed(5)}`,
+    ...pharmacies.map((p) => `${p.longitude.toFixed(5)},${p.latitude.toFixed(5)}`),
+  ].join(";");
+
+  try {
+    const osrmProfile = mode === "walking" ? "walking" : "driving";
+    const url = `https://router.project-osrm.org/table/v1/${osrmProfile}/${coordsStr}?sources=0&annotations=distance,duration`;
+
+    const res = await safeFetchWithTimeout(url, 5000);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.code === "Ok" && Array.isArray(data.distances) && data.distances[0]) {
+        const distRow = data.distances[0]; // [0, distToP1, distToP2, ...]
+        const durationRow = Array.isArray(data.durations) ? data.durations[0] : null;
+
+        return pharmacies.map((p, idx) => {
+          const distMeters = distRow[idx + 1];
+          if (typeof distMeters === "number" && distMeters > 0) {
+            const distKm = Math.round((distMeters / 1000) * 10) / 10;
+            let durationMins: number | undefined = undefined;
+
+            if (mode === "walking") {
+              durationMins = Math.max(1, Math.round((distKm / 4.8) * 60));
+            } else if (durationRow && typeof durationRow[idx + 1] === "number") {
+              durationMins = Math.max(1, Math.round(durationRow[idx + 1] / 60));
+            }
+
+            return {
+              ...p,
+              distanceKm: distKm,
+              durationMinutes: durationMins,
+            };
+          }
+          return p;
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("[PharmacyService] Failed to fetch road distances via OSRM table:", err);
+  }
+
+  return pharmacies;
 }
 
 /**
@@ -251,3 +359,4 @@ export function getDirectionsUrl(lat: number, lng: number, name?: string): strin
   }
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${encodeURIComponent(name || "Pharmacy")}`;
 }
+
