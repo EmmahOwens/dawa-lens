@@ -1284,9 +1284,69 @@ const executeScheduleReminders = async (
       }
     } else {
       console.log("No notifications to schedule.");
+      if (isAndroid) {
+        try {
+          await NativeAlarm.scheduleAuthoritativeReminders({ reminders: [] });
+        } catch (e) {
+          console.warn("[reminderService] Failed to clear authoritative reminders:", e);
+        }
+      }
     }
   } catch (err) {
     console.error("Failed to schedule notifications:", err);
+  }
+};
+
+/**
+ * Eagerly cancels native exact alarms, pending local notifications,
+ * and clears delivered status bar notifications for a specific reminder ID.
+ */
+export const cancelSingleReminder = async (reminderId: string): Promise<void> => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  // 1. Cancel via NativeAlarm plugin (exact alarm intent + status bar dismissal + device-protected store)
+  try {
+    if (NativeAlarm.cancelReminder) {
+      await NativeAlarm.cancelReminder({ reminderId });
+    }
+  } catch (e) {
+    console.warn("[reminderService] NativeAlarm.cancelReminder failed:", e);
+  }
+
+  // 2. Cancel matching pending LocalNotifications by reminderId in extra payload
+  try {
+    const pending = await LocalNotifications.getPending();
+    if (pending.notifications && pending.notifications.length > 0) {
+      const matching = pending.notifications.filter((n) => {
+        const extra = (n.extra || {}) as Record<string, any>;
+        return extra.reminderId === reminderId;
+      });
+      if (matching.length > 0) {
+        await LocalNotifications.cancel({
+          notifications: matching.map((n) => ({ id: n.id })),
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("[reminderService] LocalNotifications cancel by reminderId failed:", e);
+  }
+
+  // 3. Remove any delivered notification in drawer for this reminder
+  try {
+    const delivered = await LocalNotifications.getDeliveredNotifications();
+    if (delivered.notifications && delivered.notifications.length > 0) {
+      const matching = delivered.notifications.filter((n) => {
+        const extra = n.extra || (n as any).data;
+        return extra && extra.reminderId === reminderId;
+      });
+      if (matching.length > 0) {
+        await LocalNotifications.removeDeliveredNotifications({
+          notifications: matching,
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("[reminderService] removeDeliveredNotifications failed:", e);
   }
 };
 

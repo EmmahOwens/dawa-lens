@@ -9,11 +9,13 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.database.sqlite.SQLiteDatabase
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.os.UserManager
 import androidx.core.app.NotificationCompat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -125,11 +127,36 @@ class AdherenceGuardianService : Service() {
             val storedReminders = NativeRecurrenceStore.getReminders(this)
             val now = System.currentTimeMillis()
 
+            val userManager = getSystemService(Context.USER_SERVICE) as? UserManager
+            val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                userManager?.isUserUnlocked ?: true
+            } else true
+
+            val dbPath = getDatabasePath("dawa_lens.db")
+            val activeSqliteIds: Set<String>? = if (isUserUnlocked && dbPath.exists()) {
+                try {
+                    val db = SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+                    val cursor = db.rawQuery("SELECT id FROM reminders WHERE enabled = 1", null)
+                    val set = mutableSetOf<String>()
+                    while (cursor.moveToNext()) {
+                        set.add(cursor.getString(0))
+                    }
+                    cursor.close()
+                    db.close()
+                    set
+                } catch (e: Exception) { null }
+            } else null
+
             var earliestTrigger: Long? = null
             var earliestTitle: String? = null
 
             for (reminder in storedReminders) {
                 if (!reminder.enabled) continue
+                if (activeSqliteIds != null && !activeSqliteIds.contains(reminder.id)) {
+                    // Deleted or disabled in SQLite -> purge from store and skip
+                    NativeRecurrenceStore.removeReminder(this, reminder.id)
+                    continue
+                }
                 val nextTrigger = NativeRecurrenceEngine.computeNextOccurrence(
                     reminder.toEngineSchedule(), now
                 ) ?: continue

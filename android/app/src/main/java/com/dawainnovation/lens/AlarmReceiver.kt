@@ -80,26 +80,19 @@ class AlarmReceiver : BroadcastReceiver() {
                 "low_stock"
             )
 
-            // 1. If this is a routine medicine reminder (not a standalone event), verify with SQLite database (if unlocked)
-            val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
-            val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                userManager?.isUserUnlocked ?: true
-            } else true
+            // 1. If this is a routine medicine reminder (not a standalone event), verify with SQLite database & NativeRecurrenceStore
+            if (!isEventNotification && reminderId.isNotEmpty()) {
+                val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
+                val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    userManager?.isUserUnlocked ?: true
+                } else true
 
-            if (!isEventNotification && reminderId.isNotEmpty() && isUserUnlocked) {
+                var reminderExists = false
                 var isExplicitlyDisabled = false
                 var isExplicitlyTaken = false
-
-                // 1a. Check Device-Protected NativeRecurrenceStore (authoritative primary source)
-                val storedReminders = NativeRecurrenceStore.getReminders(context)
-                val storeMatch = storedReminders.find { it.id == reminderId }
-                if (storeMatch != null && !storeMatch.enabled) {
-                    isExplicitlyDisabled = true
-                }
-
-                // 1b. Check SQLite database (if accessible) for disabled status or early-taken log
                 val dbPath = context.getDatabasePath("dawa_lens.db")
-                if (!isExplicitlyDisabled && dbPath.exists()) {
+
+                if (isUserUnlocked && dbPath.exists()) {
                     try {
                         val db = android.database.sqlite.SQLiteDatabase.openDatabase(
                             dbPath.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
@@ -110,15 +103,19 @@ class AlarmReceiver : BroadcastReceiver() {
                             arrayOf(reminderId)
                         )
                         if (reminderCursor.moveToFirst()) {
+                            reminderExists = true
                             val isEnabled = reminderCursor.getInt(reminderCursor.getColumnIndexOrThrow("enabled")) == 1
                             if (!isEnabled) {
                                 isExplicitlyDisabled = true
                             }
+                        } else {
+                            // Row does NOT exist in reminders table -> DELETED
+                            reminderExists = false
                         }
                         reminderCursor.close()
 
                         // Check if dose was already taken early for this scheduled slot
-                        if (!isExplicitlyDisabled && scheduledTime.isNotEmpty()) {
+                        if (reminderExists && !isExplicitlyDisabled && scheduledTime.isNotEmpty()) {
                             val dosePrefix = if (scheduledTime.length >= 16) scheduledTime.substring(0, 16) else scheduledTime
                             val doseCursor = db.rawQuery(
                                 """SELECT id FROM dose_logs 
@@ -136,12 +133,56 @@ class AlarmReceiver : BroadcastReceiver() {
 
                         db.close()
                     } catch (dbErr: Exception) {
-                        // Non-fatal DB read error — proceed with alarm delivery
+                        // Non-fatal DB read error — fallback to NativeRecurrenceStore verification
+                        val storedReminders = NativeRecurrenceStore.getReminders(context)
+                        val storeMatch = storedReminders.find { it.id == reminderId }
+                        if (storeMatch != null) {
+                            reminderExists = true
+                            if (!storeMatch.enabled) isExplicitlyDisabled = true
+                        } else {
+                            reminderExists = false
+                        }
+                    }
+                } else {
+                    // Direct Boot (user locked) or DB not created yet: verify via Device-Protected NativeRecurrenceStore
+                    val storedReminders = NativeRecurrenceStore.getReminders(context)
+                    val storeMatch = storedReminders.find { it.id == reminderId }
+                    if (storeMatch != null) {
+                        reminderExists = true
+                        if (!storeMatch.enabled) {
+                            isExplicitlyDisabled = true
+                        }
+                    } else {
+                        reminderExists = false
                     }
                 }
 
-                if (isExplicitlyDisabled || isExplicitlyTaken) {
-                    // Explicitly disabled or dose already completed; skip alarm
+                if (!reminderExists || isExplicitlyDisabled || isExplicitlyTaken) {
+                    // Cancel this exact alarm from AlarmManager so it never fires again
+                    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+                    if (notificationId != 0 && alarmManager != null) {
+                        try {
+                            val cancelIntent = Intent(context, AlarmReceiver::class.java)
+                            val pi = PendingIntent.getBroadcast(
+                                context,
+                                notificationId,
+                                cancelIntent,
+                                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                            )
+                            alarmManager.cancel(pi)
+                            pi.cancel()
+                        } catch (e: Exception) {}
+                    }
+
+                    // If deleted, purge from NativeRecurrenceStore
+                    if (!reminderExists) {
+                        NativeRecurrenceStore.removeReminder(context, reminderId)
+                    }
+
+                    // Dismiss any active notification for this ID
+                    val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                    nm?.cancel(notificationId)
+
                     return
                 }
             }
@@ -418,6 +459,37 @@ class AlarmReceiver : BroadcastReceiver() {
         patientId: String?
     ) {
         try {
+            // If device is unlocked, verify that the reminder still exists and is enabled in SQLite
+            val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
+            val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                userManager?.isUserUnlocked ?: true
+            } else true
+
+            if (isUserUnlocked) {
+                val dbPath = context.getDatabasePath("dawa_lens.db")
+                if (dbPath.exists()) {
+                    try {
+                        val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                            dbPath.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+                        )
+                        val cursor = db.rawQuery(
+                            "SELECT id, enabled FROM reminders WHERE id = ? LIMIT 1",
+                            arrayOf(reminderId)
+                        )
+                        val activeInSqlite = if (cursor.moveToFirst()) {
+                            cursor.getInt(cursor.getColumnIndexOrThrow("enabled")) == 1
+                        } else false
+                        cursor.close()
+                        db.close()
+
+                        if (!activeInSqlite) {
+                            NativeRecurrenceStore.removeReminder(context, reminderId)
+                            return
+                        }
+                    } catch (e: Exception) {}
+                }
+            }
+
             val storedReminders = NativeRecurrenceStore.getReminders(context)
             val matched = storedReminders.find { it.id == reminderId && it.enabled } ?: return
 

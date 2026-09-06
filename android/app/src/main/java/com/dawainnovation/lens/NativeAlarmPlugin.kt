@@ -1,6 +1,7 @@
 package com.dawainnovation.lens
 
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
@@ -383,11 +384,71 @@ class NativeAlarmPlugin : Plugin() {
 
         val ctx = context
         val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val canExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             alarmManager.canScheduleExactAlarms()
         } else {
             true
+        }
+
+        // 1. Read previously stored authoritative reminders to detect deletions & removals
+        val previouslyStored = NativeRecurrenceStore.getReminders(ctx)
+        val incomingActiveIds = mutableSetOf<String>()
+
+        for (i in 0 until remindersArray.length()) {
+            val obj = remindersArray.getJSONObject(i)
+            val id = obj.optString("id", "")
+            val enabled = obj.optBoolean("enabled", true)
+            if (id.isNotEmpty() && enabled) {
+                incomingActiveIds.add(id)
+            }
+        }
+
+        // 2. Actively cancel alarms for any reminders that were previously stored but are omitted or disabled now
+        for (prev in previouslyStored) {
+            if (!incomingActiveIds.contains(prev.id)) {
+                val numericId = Math.abs(prev.id.hashCode() % 2147483647).let { if (it == 0) 1 else it }
+                try {
+                    val intent = Intent(ctx, AlarmReceiver::class.java)
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        ctx,
+                        numericId,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    alarmManager.cancel(pendingIntent)
+                    pendingIntent.cancel()
+                } catch (e: Exception) {}
+                try {
+                    notificationManager.cancel(numericId)
+                } catch (e: Exception) {}
+            }
+        }
+
+        // 3. Clear active status bar notifications for deleted reminders on Android M+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                for (sbn in notificationManager.activeNotifications) {
+                    val extra = sbn.notification.extras
+                    val reminderId = extra?.getString("reminderId")
+                    if (reminderId != null && !incomingActiveIds.contains(reminderId)) {
+                        notificationManager.cancel(sbn.tag, sbn.id)
+                    }
+                }
+            } catch (e: Exception) {}
+        }
+
+        // 4. Handle empty active reminders edge case
+        if (incomingActiveIds.isEmpty()) {
+            NativeRecurrenceStore.clearAll(ctx)
+            val res = JSObject()
+            res.put("success", true)
+            res.put("exactGranted", canExact)
+            res.put("degradedMode", !canExact)
+            res.put("scheduledCount", 0)
+            call.resolve(res)
+            return
         }
 
         val storedReminders = mutableListOf<NativeRecurrenceStore.StoredReminder>()
@@ -579,11 +640,151 @@ class NativeAlarmPlugin : Plugin() {
         call.resolve()
     }
 
+    /**
+     * Cancels alarms and dismisses notifications for a single reminder by its ID.
+     */
+    @PluginMethod
+    fun cancelReminder(call: PluginCall) {
+        val reminderId = call.getString("reminderId") ?: run {
+            call.reject("reminderId is required")
+            return
+        }
+        cancelSingleReminderInternal(reminderId)
+        call.resolve()
+    }
+
+    private fun cancelSingleReminderInternal(reminderId: String) {
+        try {
+            val ctx = context
+            val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            // 1. Cancel exact alarm intent
+            val numericId = Math.abs(reminderId.hashCode() % 2147483647).let { if (it == 0) 1 else it }
+            try {
+                val intent = Intent(ctx, AlarmReceiver::class.java)
+                val pendingIntent = PendingIntent.getBroadcast(
+                    ctx,
+                    numericId,
+                    intent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                alarmManager.cancel(pendingIntent)
+                pendingIntent.cancel()
+            } catch (e: Exception) {}
+
+            try {
+                notificationManager.cancel(numericId)
+            } catch (e: Exception) {}
+
+            // Dismiss active notifications matching reminderId on Android M+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                try {
+                    for (sbn in notificationManager.activeNotifications) {
+                        val extra = sbn.notification.extras
+                        if (extra?.getString("reminderId") == reminderId) {
+                            notificationManager.cancel(sbn.tag, sbn.id)
+                        }
+                    }
+                } catch (e: Exception) {}
+            }
+
+            // 2. Remove from NativeRecurrenceStore
+            NativeRecurrenceStore.removeReminder(ctx, reminderId)
+
+            // 3. Remove from KEY_SCHEDULE if present
+            val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val dpPrefs = getDeviceProtectedPrefs(ctx)
+            val existingScheduleStr = prefs.getString(KEY_SCHEDULE, null) ?: dpPrefs.getString(KEY_SCHEDULE, null)
+            if (!existingScheduleStr.isNullOrEmpty()) {
+                val array = JSONArray(existingScheduleStr)
+                val remainingSchedule = JSONArray()
+                val remainingIds = mutableSetOf<String>()
+                for (i in 0 until array.length()) {
+                    val item = array.getJSONObject(i)
+                    val extraStr = item.optString("extra", "")
+                    var matchesReminder = false
+                    if (extraStr.isNotEmpty()) {
+                        try {
+                            val extraObj = JSONObject(extraStr)
+                            if (extraObj.optString("reminderId") == reminderId) {
+                                matchesReminder = true
+                            }
+                        } catch (e: Exception) {}
+                    }
+                    if (matchesReminder) {
+                        val id = item.optInt("id", 0)
+                        if (id != 0) {
+                            try {
+                                val intent = Intent(ctx, AlarmReceiver::class.java)
+                                val pendingIntent = PendingIntent.getBroadcast(
+                                    ctx,
+                                    id,
+                                    intent,
+                                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                                )
+                                alarmManager.cancel(pendingIntent)
+                                pendingIntent.cancel()
+                            } catch (e: Exception) {}
+                        }
+                    } else {
+                        remainingSchedule.put(item)
+                        val id = item.optInt("id", 0)
+                        if (id != 0) remainingIds.add(id.toString())
+                    }
+                }
+                val remainingStr = remainingSchedule.toString()
+                prefs.edit().putString(KEY_SCHEDULE, remainingStr).putStringSet(KEY_IDS, remainingIds).apply()
+                dpPrefs.edit().putString(KEY_SCHEDULE, remainingStr).putStringSet(KEY_IDS, remainingIds).apply()
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+
     @PluginMethod
     fun cancelReminderAlarms(call: PluginCall) {
         try {
             val ctx = context
             val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            // 1. Cancel all authoritative reminders in NativeRecurrenceStore
+            val storedReminders = NativeRecurrenceStore.getReminders(ctx)
+            for (r in storedReminders) {
+                val numericId = Math.abs(r.id.hashCode() % 2147483647).let { if (it == 0) 1 else it }
+                try {
+                    val intent = Intent(ctx, AlarmReceiver::class.java)
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        ctx,
+                        numericId,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    alarmManager.cancel(pendingIntent)
+                    pendingIntent.cancel()
+                } catch (e: Exception) {}
+                try {
+                    notificationManager.cancel(numericId)
+                } catch (e: Exception) {}
+            }
+            NativeRecurrenceStore.clearAll(ctx)
+
+            // Dismiss active status bar notifications for routine reminders on Android M+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                try {
+                    for (sbn in notificationManager.activeNotifications) {
+                        val extra = sbn.notification.extras
+                        val type = extra?.getString("type")
+                        val reminderId = extra?.getString("reminderId")
+                        if (reminderId != null && (type == null || type == "reminder")) {
+                            notificationManager.cancel(sbn.tag, sbn.id)
+                        }
+                    }
+                } catch (e: Exception) {}
+            }
+
+            // 2. Legacy / event alarms in KEY_SCHEDULE
             val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val dpPrefs = getDeviceProtectedPrefs(ctx)
 
@@ -657,6 +858,7 @@ class NativeAlarmPlugin : Plugin() {
         try {
             val ctx = context
             val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val prefs = ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val dpPrefs = getDeviceProtectedPrefs(ctx)
 
@@ -679,8 +881,29 @@ class NativeAlarmPlugin : Plugin() {
                 }
             }
 
+            // Also cancel authoritative reminders from NativeRecurrenceStore
+            val storedReminders = NativeRecurrenceStore.getReminders(ctx)
+            for (r in storedReminders) {
+                val numericId = Math.abs(r.id.hashCode() % 2147483647).let { if (it == 0) 1 else it }
+                try {
+                    val intent = Intent(ctx, AlarmReceiver::class.java)
+                    val pendingIntent = PendingIntent.getBroadcast(
+                        ctx,
+                        numericId,
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    alarmManager.cancel(pendingIntent)
+                    pendingIntent.cancel()
+                } catch (cancelErr: Exception) {}
+                try {
+                    notificationManager.cancel(numericId)
+                } catch (e: Exception) {}
+            }
+
             prefs.edit().clear().apply()
             dpPrefs.edit().clear().apply()
+            NativeRecurrenceStore.clearAll(ctx)
         } catch (e: Exception) {
             // ignore
         }

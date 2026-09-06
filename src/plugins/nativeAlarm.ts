@@ -77,6 +77,9 @@ export interface NativeAlarmPlugin {
   /** Cancel only recurring reminder alarms, preserving event and milestone alarms. */
   cancelReminderAlarms?(): Promise<void>;
 
+  /** Cancel alarms and dismiss notifications for a specific reminder ID. */
+  cancelReminder?(options: { reminderId: string }): Promise<void>;
+
   /** Returns whether native alarm scheduling is available on this platform. */
   isSupported(): Promise<{ supported: boolean }>;
 

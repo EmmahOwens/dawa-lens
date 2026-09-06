@@ -143,6 +143,15 @@ object NativeRecurrenceStore {
         saveReminders(context, updated)
     }
 
+    /**
+     * Atomically removes a single reminder by ID from device-protected storage.
+     */
+    fun removeReminder(context: Context, reminderId: String) {
+        val reminders = getReminders(context)
+        val updated = reminders.filter { it.id != reminderId }
+        saveReminders(context, updated)
+    }
+
     fun clearAll(context: Context) {
         getDeviceProtectedPrefs(context).edit().clear().apply()
     }

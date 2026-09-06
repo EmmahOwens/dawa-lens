@@ -86,6 +86,7 @@ vi.mock("../../services/reminderService", () => ({
   scheduleReminders: (rems: any, logs: any, meds: any) => mockScheduleReminders(rems, logs, meds),
   computeShiftOffset: vi.fn().mockReturnValue(0),
   scheduleAdjustmentNotification: vi.fn().mockResolvedValue(undefined),
+  cancelSingleReminder: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock storage

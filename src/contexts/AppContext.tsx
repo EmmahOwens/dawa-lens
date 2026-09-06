@@ -31,7 +31,7 @@ import {
 } from "firebase/firestore";
 import { localPersistence, setActiveUserScope, clearAllLocalPersistence, initLocalPersistence } from "../services/localPersistence";
 import { doseLogsApi } from "../services/api";
-import { scheduleReminders, computeShiftOffset, scheduleAdjustmentNotification } from "../services/reminderService";
+import { scheduleReminders, computeShiftOffset, scheduleAdjustmentNotification, cancelSingleReminder } from "../services/reminderService";
 import {
   schedulePostDoseEncouragementNotification,
   computeCurrentStreak,
@@ -1558,6 +1558,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteReminder = async (id: string) => {
+    // 0. Eagerly cancel exact OS alarm and clear delivered notifications for this reminder
+    if (Capacitor.isNativePlatform()) {
+      cancelSingleReminder(id).catch((err) =>
+        console.warn("[AppContext] Failed to cancelSingleReminder:", err)
+      );
+    }
+
     // 1. Save locally instantly (SQLite row removed before any notification logic)
     try {
       await localPersistence.reminders.remove(id);

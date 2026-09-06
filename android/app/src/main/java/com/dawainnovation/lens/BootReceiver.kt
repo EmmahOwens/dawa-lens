@@ -1,6 +1,7 @@
 package com.dawainnovation.lens
 
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -197,9 +198,34 @@ class BootReceiver : BroadcastReceiver() {
             }
             cursor.close()
 
-            if (reconciledList.isNotEmpty()) {
-                NativeRecurrenceStore.saveReminders(context, reconciledList)
+            // Cancel alarms and dismiss notifications for any reminders in NativeRecurrenceStore that are no longer in reconciledList
+            val oldStored = NativeRecurrenceStore.getReminders(context)
+            val reconciledIds = reconciledList.map { it.id }.toSet()
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+
+            for (old in oldStored) {
+                if (!reconciledIds.contains(old.id)) {
+                    val numericId = Math.abs(old.id.hashCode() % 2147483647).let { if (it == 0) 1 else it }
+                    try {
+                        val intent = Intent(context, AlarmReceiver::class.java)
+                        val pendingIntent = PendingIntent.getBroadcast(
+                            context,
+                            numericId,
+                            intent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        )
+                        alarmManager?.cancel(pendingIntent)
+                        pendingIntent.cancel()
+                    } catch (e: Exception) {}
+                    try {
+                        notificationManager?.cancel(numericId)
+                    } catch (e: Exception) {}
+                }
             }
+
+            // Always commit reconciled list to NativeRecurrenceStore, even if empty
+            NativeRecurrenceStore.saveReminders(context, reconciledList)
         } catch (e: Exception) {
             // Non-fatal SQLite read error
         } finally {

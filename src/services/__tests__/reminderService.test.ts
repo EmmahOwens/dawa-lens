@@ -581,6 +581,14 @@ describe("filterInvalidMissedLogs (Auto-healing)", () => {
     expect(validLogs.length).toBe(1);
     expect(validLogs[0].id).toBe("valid-missed-2");
   });
+
+  describe("cancelSingleReminder", () => {
+    it("should be defined and resolve gracefully", async () => {
+      const { cancelSingleReminder } = await import("../reminderService");
+      expect(typeof cancelSingleReminder).toBe("function");
+      await expect(cancelSingleReminder("rem-test-cancel")).resolves.not.toThrow();
+    });
+  });
 });
 
 
