@@ -15,12 +15,12 @@ The platform directly eliminates preventable medication errors, bridges severe h
 Across Uganda, healthcare delivery continues to experience structural fragmentation, particularly within outpatient clinical management, chronic disease care, and pharmaceutical distribution. The prevailing healthcare model requires citizens to navigate a dispersed continuum of public health centers, private clinics, community pharmacies, and informal drug dispensaries. Because centralized Electronic Health Record (EHR) systems remain non-existent for the vast majority of the population, longitudinal medical histories and active medication profiles reside exclusively in the physical possession of patients or their immediate family members.
 
 ```
-+-----------------------------------------------------------------------------+
-|                  The Fragmented Healthcare Landscape in Uganda              |
-+-----------------------------------------------------------------------------+
-|                                                                             |
-|   +-------------------+    +--------------------+    +------------------+   |
-|   |  Public Referral  |    |  Private Clinics   |    | Local Community  |   |
++----------------------------------------------------------------------+
+|                  The Fragmented Healthcare Landscape in Uganda       |
++----------------------------------------------------------------------+
+|                                                                      |
+| +-------------------+    +--------------------+    +--------------+|
+| |  Public Referral  |    |  Private Clinics   |    | Local Community |   |
 |   |    Hospitals      |    |  & Dispensaries    |    |    Pharmacies    |   |
 |   +---------+---------+    +---------+----------+    +--------+---------+   |
 |             |                        |                        |             |
@@ -664,7 +664,7 @@ Dawa Lens handles sensitive personal health information (PHI) and adheres to rig
 
 ## 14. Work Breakdown Structure (WBS) & Implementation Timeline
 
-The project follows a structured 7-month development lifecycle partitioned into six distinct engineering phases, currently operating at production milestone **v1.6.9** (Version Code 34).
+The project is planned to run from September 2026 through May 2027, partitioned into six distinct engineering phases, targeting an initial production release (**v1.0**) by project completion.
 
 ```mermaid
 gantt
@@ -703,7 +703,7 @@ gantt
 * **Phase 5: Quality Assurance, Clinical Verification & Pilot Testing**
   * *Deliverables*: Vitest unit test suite, Playwright end-to-end integration tests, closed beta field trial with 50 patients and caregivers in Uganda.
 * **Phase 6: Production Deployment, Dissemination & Final Reporting**
-  * *Deliverables*: Android Production AAB build (v1.6.9), Capgo live OTA update pipeline, final project dissertation and clinical evaluation report.
+  * *Deliverables*: Android Production AAB build (v1.0), Capgo live OTA update pipeline, final project dissertation and clinical evaluation report.
 
 ---
 
@@ -713,14 +713,14 @@ The following budget outlines the financial resources required for the developme
 
 | Category | Item Description | Unit Cost | Total (UGX) | Total (USD) |
 | :--- | :--- | :---: | :---: | :---: |
-| **Cloud Infrastructure** | Firebase Blaze Plan (Firestore reads/writes, Auth, Hosting) | $15 / month | 390,000 UGX | ~$105 |
-| **Artificial Intelligence** | Groq Cloud & Google Gemini Token Allocation (Vision + Chat) | $20 / month | 520,000 UGX | ~$140 |
+| **Cloud Infrastructure** | Firebase Blaze Plan (Firestore reads/writes, Auth, Hosting) | $15 / month | 513,000 UGX | ~$135 |
+| **Artificial Intelligence** | Groq Cloud & Google Gemini Token Allocation (Vision + Chat) | $20 / month | 684,000 UGX | ~$180 |
 | **Developer Accounts** | Google Play Console Developer License (One-time registration) | $25 | 95,000 UGX | $25 |
 | **Pilot Hardware Testing** | Test Android Devices (Entry-tier Transsion & Mid-tier Samsung) | *Provided / Shared* | 0 UGX | $0 |
 | **Field Pilot & User Study** | Data Stipends for 50 Pilot Beta Testers (Kampala & Wakiso) | 15,000 UGX / tester | 750,000 UGX | ~$200 |
-| **Connectivity & Utilities**| Broadband Internet & Research Utilities (7 Months) | 100,000 UGX / month | 700,000 UGX | ~$188 |
-| **Contingency** | Miscellaneous Technical Contingency Fund (10%) | — | 285,000 UGX | ~$76 |
-| **TOTAL ESTIMATED BUDGET**| | | **2,740,000 UGX** | **~$734** |
+| **Connectivity & Utilities**| Broadband Internet & Research Utilities (9 Months) | 100,000 UGX / month | 900,000 UGX | ~$237 |
+| **Contingency** | Miscellaneous Technical Contingency Fund (~10%) | — | 294,000 UGX | ~$77 |
+| **TOTAL ESTIMATED BUDGET**| | | **3,236,000 UGX** | **~$852** |
 
 ---
 
