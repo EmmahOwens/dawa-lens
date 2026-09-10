@@ -771,4 +771,91 @@ describe("DailyTimeline Component", () => {
 
     vi.useRealTimers();
   });
+
+  it("should match a dose taken >30 minutes late to its scheduled slot and mark it as Done with action timestamp", () => {
+    const today = new Date();
+    const reminders: Reminder[] = [
+      {
+        id: "rem-late-take",
+        medicineName: "Late Med",
+        dose: "10mg",
+        time: "09:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: today.toISOString(),
+      },
+    ];
+
+    // Scheduled at 09:00, taken at 09:50 (50m late, >30m threshold of previous rigid logic)
+    const scheduledTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 0, 0).toISOString();
+    const actionTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 9, 50, 0).toISOString();
+
+    const doseLogs: DoseLog[] = [
+      {
+        id: "log-late",
+        reminderId: "rem-late-take",
+        medicineName: "Late Med",
+        dose: "10mg",
+        scheduledTime,
+        actionTime,
+        action: "taken",
+      },
+    ];
+
+    render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={doseLogs}
+        onAction={vi.fn()}
+      />
+    );
+
+    // Slot is successfully matched as Done, not left pending
+    expect(screen.getByText("Done")).toBeInTheDocument();
+    expect(screen.queryByText("Next Dose")).not.toBeInTheDocument();
+    expect(screen.queryByText("Upcoming")).not.toBeInTheDocument();
+    expect(screen.getByText(/@ 09:50/)).toBeInTheDocument();
+  });
+
+  it("should match a missed dose and display Missed badge with alert styling instead of leaving it pending", () => {
+    const today = new Date();
+    const reminders: Reminder[] = [
+      {
+        id: "rem-missed",
+        medicineName: "Missed Med",
+        dose: "20mg",
+        time: "08:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: today.toISOString(),
+      },
+    ];
+
+    const scheduledTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 8, 0, 0).toISOString();
+    const actionTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 10, 0, 0).toISOString();
+
+    const doseLogs: DoseLog[] = [
+      {
+        id: "log-missed-1",
+        reminderId: "rem-missed",
+        medicineName: "Missed Med",
+        dose: "20mg",
+        scheduledTime,
+        actionTime,
+        action: "missed",
+      },
+    ];
+
+    render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={doseLogs}
+        onAction={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Missed")).toBeInTheDocument();
+    expect(screen.queryByText("Next Dose")).not.toBeInTheDocument();
+    expect(screen.getByText(/@ 10:00/)).toBeInTheDocument();
+  });
 });

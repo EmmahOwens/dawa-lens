@@ -532,6 +532,43 @@ describe("isReminderScheduledOnDate & checkMissedDoses", () => {
     expect(loggedDoses[0].patientId).toBe("patient-abc");
     expect(loggedDoses[0].action).toBe("missed");
   });
+
+  it("checkMissedDoses does not log duplicate missed dose if a taken or skipped dose exists for that slot", async () => {
+    const { checkMissedDoses } = await import("../reminderService");
+
+    const loggedDoses: any[] = [];
+    const mockLogDose = async (log: any) => {
+      loggedDoses.push(log);
+    };
+
+    const now = new Date();
+    const threeHoursAgo = new Date(now.getTime() - 3 * 3600 * 1000);
+    const timeStr = `${threeHoursAgo.getHours().toString().padStart(2, "0")}:${threeHoursAgo.getMinutes().toString().padStart(2, "0")}`;
+
+    const reminder: Reminder = {
+      id: "rem-daily-already-taken",
+      medicineName: "Taken Med",
+      dose: "1 tab",
+      time: timeStr,
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date(now.getTime() - 48 * 3600 * 1000).toISOString(),
+    };
+
+    // An existing taken log with slightly shifted action/scheduled time
+    const existingLog: DoseLog = {
+      id: "log-already-taken",
+      reminderId: "rem-daily-already-taken",
+      medicineName: "Taken Med",
+      dose: "1 tab",
+      scheduledTime: threeHoursAgo.toISOString(),
+      actionTime: new Date(threeHoursAgo.getTime() + 15 * 60 * 1000).toISOString(),
+      action: "taken",
+    };
+
+    await checkMissedDoses([reminder], [existingLog], mockLogDose);
+    expect(loggedDoses.length).toBe(0);
+  });
 });
 
 describe("filterInvalidMissedLogs (Auto-healing)", () => {

@@ -463,6 +463,8 @@ export const localPersistence = {
           console.warn("[localPersistence] NativeSqlite doseLogs.getAll failed, falling back to storage:", err);
         }
       }
+      const partitioned = await storage.getItem<DoseLog[]>(getPartitionKey(LOCAL_LOGS_KEY), []);
+      if (partitioned && partitioned.length > 0) return partitioned;
       return storage.getItem<DoseLog[]>(LOCAL_LOGS_KEY, []);
     },
     create: async (
@@ -494,14 +496,14 @@ export const localPersistence = {
           console.warn("[localPersistence] NativeSqlite doseLogs.create failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<DoseLog[]>(LOCAL_LOGS_KEY, []);
+      const all = await storage.getItem<DoseLog[]>(getPartitionKey(LOCAL_LOGS_KEY), []);
       const newItem: DoseLog = {
         ...data,
         id,
         actionTime,
       };
       all.push(newItem);
-      await storage.setItem(LOCAL_LOGS_KEY, all);
+      await storage.setItem(getPartitionKey(LOCAL_LOGS_KEY), all);
       return newItem;
     },
     update: async (id: string, updates: Partial<DoseLog>): Promise<void> => {
@@ -552,9 +554,14 @@ export const localPersistence = {
           console.warn("[localPersistence] NativeSqlite doseLogs.remove failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<DoseLog[]>(LOCAL_LOGS_KEY, []);
+      const all = await storage.getItem<DoseLog[]>(getPartitionKey(LOCAL_LOGS_KEY), []);
       const filtered = all.filter((l) => l.id !== id);
-      await storage.setItem(LOCAL_LOGS_KEY, filtered);
+      await storage.setItem(getPartitionKey(LOCAL_LOGS_KEY), filtered);
+      // Clean from legacy unpartitioned store if present
+      const legacy = await storage.getItem<DoseLog[]>(LOCAL_LOGS_KEY, []);
+      if (legacy && legacy.length > 0) {
+        await storage.setItem(LOCAL_LOGS_KEY, legacy.filter((l) => l.id !== id));
+      }
     },
   },
 

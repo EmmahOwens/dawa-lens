@@ -14,7 +14,7 @@ import {
 } from "@/lib/dynamicSchedule";
 
 /** Build a Date for today (plus optional dayOffset) at HH:mm */
-function todayAt(hhmm: string, dayOffset = 0): Date {
+export function todayAt(hhmm: string, dayOffset = 0): Date {
   const [h, m] = (hhmm || "00:00").split(":").map(Number);
   const now = new Date();
   return new Date(
@@ -38,6 +38,32 @@ export function getMedicationKey(r: Reminder): string {
   const medId = (r.medicineId || "").trim();
   const cleanName = (r.medicineName || "").trim().toLowerCase();
   return `${patientKey}:${medId || cleanName || r.id}`;
+}
+
+export function getLogMinutes(log: DoseLog): number | null {
+  if (log.scheduledTime) {
+    const trimmed = log.scheduledTime.trim();
+    if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
+      return timeStrToMinutes(trimmed);
+    }
+    const d = toDate(trimmed);
+    if (!isNaN(d.getTime())) {
+      return d.getHours() * 60 + d.getMinutes();
+    }
+  }
+  if (log.actionTime) {
+    const d = toDate(log.actionTime);
+    if (!isNaN(d.getTime())) {
+      return d.getHours() * 60 + d.getMinutes();
+    }
+  }
+  return null;
+}
+
+export function getCircularDiffMinutes(m1: number, m2: number): number {
+  let diff = Math.abs(m1 - m2);
+  if (diff > 12 * 60) diff = 24 * 60 - diff;
+  return diff;
 }
 
 interface DailyTimelineProps {
@@ -224,15 +250,21 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
       const log = candidateLogs.find((l) => {
         if (l.scheduledTime === slotISO || l.scheduledTime === scheduledISO) return true;
 
-        if (l.scheduledTime) {
-          const lDate = toDate(l.scheduledTime);
-          const lMins = lDate.getHours() * 60 + lDate.getMinutes();
-          const baseMins = timeStrToMinutes(baseTime);
-          let diff = Math.abs(lMins - baseMins);
-          if (diff > 12 * 60) diff = 24 * 60 - diff;
-          if (diff <= 30) return true;
-        }
-        return false;
+        const logMins = getLogMinutes(l);
+        if (logMins === null) return false;
+
+        // If reminder only has 1 slot, any unclaimed log for this reminder on this date matches
+        if (times.length === 1) return true;
+
+        // For multi-slot reminders, verify this slot is the closest among all slots of the reminder
+        const thisSlotDiff = getCircularDiffMinutes(timeStrToMinutes(baseTime), logMins);
+        const isClosestSlot = times.every((otherTime, otherIdx) => {
+          if (otherIdx === idx) return true;
+          const otherDiff = getCircularDiffMinutes(timeStrToMinutes(otherTime), logMins);
+          return thisSlotDiff <= otherDiff;
+        });
+
+        return isClosestSlot;
       });
 
       if (log) {
@@ -340,19 +372,29 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors duration-300 ${
                         isTaken
                           ? "bg-success/20 text-success"
-                          : isActionable
-                            ? "bg-primary/20 text-primary shadow-sm"
-                            : "bg-muted text-muted-foreground"
+                          : isMissed
+                            ? "bg-destructive/20 text-destructive"
+                            : isSkipped
+                              ? "bg-muted text-muted-foreground border border-border"
+                              : isActionable
+                                ? "bg-primary/20 text-primary shadow-sm"
+                                : "bg-muted text-muted-foreground"
                       }`}>
                         <AnimatePresence mode="wait" initial={false}>
                           <motion.div
-                            key={isTaken ? "check" : "pill"}
+                            key={isTaken ? "check" : isMissed ? "missed" : isSkipped ? "skipped" : "pill"}
                             initial={{ scale: 0.8, rotate: -45, opacity: 0 }}
                             animate={{ scale: 1, rotate: 0, opacity: 1 }}
                             exit={{ scale: 0.8, rotate: 45, opacity: 0 }}
                             transition={{ duration: 0.2 }}
                           >
-                            {isTaken ? <Check size={20} /> : <Pill size={20} />}
+                            {isTaken ? (
+                              <Check size={20} />
+                            ) : isMissed || isSkipped ? (
+                              <AlertCircle size={20} />
+                            ) : (
+                              <Pill size={20} />
+                            )}
                           </motion.div>
                         </AnimatePresence>
                       </div>
@@ -434,7 +476,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                       }`}>
                         {isTaken ? "Done" : isSkipped ? "Skipped" : "Missed"}
                       </span>
-                      {isTaken && log && (
+                      {log && (
                         <p className="text-[9px] text-muted-foreground mt-0.5">
                           @ {toDate(log.actionTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </p>

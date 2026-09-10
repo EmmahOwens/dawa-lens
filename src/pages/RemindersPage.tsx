@@ -11,6 +11,7 @@ import {
   Pill,
   AlarmCheck,
   AlarmClockOff,
+  AlertCircle,
   Pencil,
   Syringe,
   Droplets,
@@ -22,6 +23,7 @@ import {
 import { useApp, Reminder } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { computeShiftOffset } from "@/services/reminderService";
+import { toDate } from "@/lib/utils";
 import {
   parseReminderTimes,
   findSlotIndexForTime,
@@ -33,7 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { DailyTimeline } from "@/components/dashboard/DailyTimeline";
+import { DailyTimeline, todayAt, getCircularDiffMinutes } from "@/components/dashboard/DailyTimeline";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -169,6 +171,12 @@ export default function RemindersPage() {
       l.action === "taken" &&
       new Date(l.actionTime).toDateString() === todayStr
   ).length;
+  const skippedToday = scopedDoseLogs.filter(
+    (l) =>
+      filteredReminderIds.has(l.reminderId) &&
+      l.action === "skipped" &&
+      new Date(l.actionTime).toDateString() === todayStr
+  ).length;
   const missedToday = scopedDoseLogs.filter(
     (l) =>
       filteredReminderIds.has(l.reminderId) &&
@@ -212,6 +220,7 @@ export default function RemindersPage() {
         dose: reminder.dose,
         scheduledTime,
         action,
+        patientId: reminder.patientId ?? null,
       });
       toast({
         title: action === "taken" ? "Dose logged!" : "Dose skipped.",
@@ -319,7 +328,7 @@ export default function RemindersPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6"
+        className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6"
       >
         <div className="p-3 rounded-2xl bg-primary/8 border border-primary/15 text-center">
           <p className="text-2xl font-bold text-primary">
@@ -339,6 +348,12 @@ export default function RemindersPage() {
           <p className="text-2xl font-bold text-foreground">{takenToday}</p>
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
             Taken
+          </p>
+        </div>
+        <div className="p-3 rounded-2xl bg-accent border border-border/50 text-center">
+          <p className="text-2xl font-bold text-muted-foreground">{skippedToday}</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+            Skipped
           </p>
         </div>
         <div
@@ -361,14 +376,12 @@ export default function RemindersPage() {
         </div>
       </motion.div>
 
-      {/* Daily Timeline (Only when offline since Dashboard is blocked) */}
-      {!isOnline && (
-        <DailyTimeline
-          reminders={scopedReminders}
-          doseLogs={scopedDoseLogs}
-          onAction={handleAction}
-        />
-      )}
+      {/* Daily Timeline */}
+      <DailyTimeline
+        reminders={scopedReminders}
+        doseLogs={scopedDoseLogs}
+        onAction={handleAction}
+      />
 
       {/* Reminder List */}
       {isInitializing ? (
@@ -558,24 +571,99 @@ export default function RemindersPage() {
                       );
                     })()}
 
-                    {/* Today's action badge */}
-                    {actionToday && (
-                      <div className="mt-1.5 inline-flex items-center gap-1">
-                        {actionToday.action === "taken" ? (
-                          <span className="flex items-center gap-1 text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-full">
-                            <AlarmCheck size={10} /> Taken today
-                          </span>
-                        ) : actionToday.action === "skipped" ? (
-                          <span className="flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
-                            <AlarmClockOff size={10} /> Skipped today
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-[10px] font-bold text-warning bg-warning/10 px-2 py-0.5 rounded-full">
-                            <Clock size={10} /> Snoozed today
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    {/* Today's dose status badges */}
+                    {(() => {
+                      const baseTimes = parseReminderTimes(reminder.time);
+                      const todayLogs = scopedDoseLogs.filter((l) => {
+                        if (l.reminderId !== reminder.id) return false;
+                        const lDate = toDate(l.scheduledTime || l.actionTime);
+                        return lDate.toDateString() === todayStr;
+                      });
+
+                      if (baseTimes.length <= 1) {
+                        const singleLog = todayLogs.sort(
+                          (a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime()
+                        )[0];
+
+                        if (!singleLog) return null;
+
+                        return (
+                          <div className="mt-1.5 inline-flex items-center gap-1">
+                            {singleLog.action === "taken" ? (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-success bg-success/10 px-2 py-0.5 rounded-full">
+                                <AlarmCheck size={10} /> Taken today
+                              </span>
+                            ) : singleLog.action === "skipped" ? (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                                <AlarmClockOff size={10} /> Skipped today
+                              </span>
+                            ) : singleLog.action === "missed" ? (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 px-2 py-0.5 rounded-full">
+                                <AlertCircle size={10} /> Missed today
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-warning bg-warning/10 px-2 py-0.5 rounded-full">
+                                <Clock size={10} /> Snoozed today
+                              </span>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // Multi-dose slots: match each slot to its closest log
+                      const slotStatuses = baseTimes.map((baseTime, idx) => {
+                        const slotISO = todayAt(baseTime).toISOString();
+                        const matched = todayLogs.find((l) => {
+                          if (l.scheduledTime === slotISO) return true;
+                          const lDate = toDate(l.scheduledTime || l.actionTime);
+                          const logMins = l.scheduledTime && /^\d{1,2}:\d{2}$/.test(l.scheduledTime.trim())
+                            ? timeStrToMinutes(l.scheduledTime.trim())
+                            : lDate.getHours() * 60 + lDate.getMinutes();
+                          const thisSlotDiff = getCircularDiffMinutes(timeStrToMinutes(baseTime), logMins);
+                          return baseTimes.every((otherTimeStr, otherIdx) => {
+                            if (otherIdx === idx) return true;
+                            return thisSlotDiff <= getCircularDiffMinutes(timeStrToMinutes(otherTimeStr), logMins);
+                          });
+                        });
+
+                        return {
+                          time: baseTime,
+                          action: matched?.action,
+                        };
+                      });
+
+                      return (
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                          {slotStatuses.map((s, idx) => (
+                            <span
+                              key={idx}
+                              className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                s.action === "taken"
+                                  ? "bg-success/10 text-success"
+                                  : s.action === "skipped"
+                                  ? "bg-muted text-muted-foreground"
+                                  : s.action === "missed"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : s.action === "snoozed"
+                                  ? "bg-warning/10 text-warning"
+                                  : "bg-primary/5 text-muted-foreground/60"
+                              }`}
+                            >
+                              {s.action === "taken" ? (
+                                <AlarmCheck size={9} />
+                              ) : s.action === "missed" ? (
+                                <AlertCircle size={9} />
+                              ) : s.action === "skipped" ? (
+                                <AlarmClockOff size={9} />
+                              ) : (
+                                <Clock size={9} />
+                              )}
+                              {s.time} {s.action ? s.action : "Pending"}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Actions */}

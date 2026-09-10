@@ -286,12 +286,45 @@ export const checkMissedDoses = async (
             scheduledDate,
             computeShiftOffset(r, doseLogs)
           );
-          const logExists = doseLogs.some(
-            (log) =>
-              log.reminderId === r.id &&
-              (log.scheduledTime === scheduledDate.toISOString() ||
-                log.scheduledTime === shiftedScheduledDate.toISOString())
-          );
+          const logExists = doseLogs.some((log) => {
+            const matchesReminder =
+              log.reminderId === r.id ||
+              (Boolean(log.medicineName) &&
+                Boolean(r.medicineName) &&
+                log.medicineName.toLowerCase().trim() === r.medicineName.toLowerCase().trim());
+            if (!matchesReminder) return false;
+
+            // Direct ISO match (normal or shifted)
+            if (
+              log.scheduledTime === scheduledDate.toISOString() ||
+              log.scheduledTime === shiftedScheduledDate.toISOString()
+            ) {
+              return true;
+            }
+
+            const logDate = toDate(log.scheduledTime || log.actionTime);
+            if (isNaN(logDate.getTime())) return false;
+            if (!isSameDay(logDate, scheduledDate)) return false;
+
+            // Single slot reminder: any log on this day covers the slot
+            if (times.length <= 1) return true;
+
+            // Multi-slot reminder: match closest slot
+            const logMinutes = logDate.getHours() * 60 + logDate.getMinutes();
+            const getDiff = (m1: number, m2: number) => {
+              let diff = Math.abs(m1 - m2);
+              if (diff > 12 * 60) diff = 24 * 60 - diff;
+              return diff;
+            };
+            const thisSlotMinutes = hours * 60 + minutes;
+            const thisSlotDiff = getDiff(thisSlotMinutes, logMinutes);
+
+            return times.every((otherTimeStr) => {
+              if (otherTimeStr === timeStr) return true;
+              const [oH, oM] = otherTimeStr.split(":").map(Number);
+              return thisSlotDiff <= getDiff(oH * 60 + oM, logMinutes);
+            });
+          });
 
           if (!logExists) {
             console.log(

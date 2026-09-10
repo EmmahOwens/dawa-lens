@@ -30,6 +30,7 @@ export type OfflineOpType =
   | "delete-reminder"
   | "add-dose-log"
   | "update-dose-log"
+  | "delete-dose-log"
   | "add-medicine"
   | "update-medicine"
   | "delete-medicine";
@@ -249,9 +250,18 @@ async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
     }
 
     case "delete-reminder":
-    case "delete-medicine": {
+    case "delete-medicine":
+    case "delete-dose-log": {
       try {
-        await deleteDoc(docRef);
+        if (op.type === "delete-dose-log") {
+          try {
+            await doseLogsApi.delete(op.docId);
+          } catch {
+            await deleteDoc(docRef);
+          }
+        } else {
+          await deleteDoc(docRef);
+        }
       } catch (e: any) {
         // NOT_FOUND is fine — doc may have been deleted on another device
         if (e?.code !== "not-found") throw e;

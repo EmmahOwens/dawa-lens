@@ -1694,6 +1694,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (isOnline) {
         try {
           const res = await doseLogsApi.create(serverPayload as any);
+          if (res?.id) {
+            const serverId = res.id;
+            try {
+              await localPersistence.doseLogs.remove(localId);
+              await localPersistence.doseLogs.create({
+                ...newLog,
+                id: serverId,
+              });
+            } catch (e) {
+              console.warn("[AppContext] Failed to swap localId to serverId in persistence:", e);
+            }
+            newLog.id = serverId;
+            setDoseLogs((prev) => {
+              const next = prev.map((l) => (l.id === localId ? { ...l, id: serverId } : l));
+              storage.setItem(CLOUD_CACHE_LOGS_KEY, next);
+              return next;
+            });
+          }
           if (res?.newQuantity !== undefined) {
             setMedicines((prev) =>
               prev.map((m) =>
@@ -1856,7 +1874,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
 
             if (storageMode === "cloud") {
-              if (isOnline) {
+              if (isOnline && !newLog.id.startsWith("llog-")) {
                 try {
                   const logDocRef = doc(db, "doseLogs", newLog.id);
                   await updateDoc(logDocRef, { scheduledTime: newScheduledTime });
@@ -2033,13 +2051,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteDoseLog = async (id: string) => {
-    if (storageMode === "local") {
+    // 1. Instant local removal for responsive UI & cache synchronization
+    try {
       await localPersistence.doseLogs.remove(id);
-      setDoseLogs((p) => p.filter((l) => l.id !== id));
-    } else {
-      const docRef = doc(db, "doseLogs", id);
-      await deleteDoc(docRef);
-      // onSnapshot listener will auto-update state
+    } catch (e) {
+      console.warn("[AppContext] Failed to remove dose log locally:", e);
+    }
+    setDoseLogs((p) => {
+      const next = p.filter((l) => l.id !== id);
+      storage.setItem(CLOUD_CACHE_LOGS_KEY, next);
+      return next;
+    });
+
+    if (storageMode === "cloud") {
+      if (isOnline && !id.startsWith("llog-")) {
+        try {
+          const docRef = doc(db, "doseLogs", id);
+          await deleteDoc(docRef);
+        } catch (err) {
+          console.warn("[AppContext] deleteDoc failed, enqueueing offline delete:", err);
+          if (currentUserId) {
+            enqueueOp({
+              type: "delete-dose-log",
+              collection: "doseLogs",
+              docId: id,
+              userId: currentUserId,
+            });
+            setPendingOfflineOps(getPendingCount());
+          }
+        }
+      } else if (currentUserId) {
+        enqueueOp({
+          type: "delete-dose-log",
+          collection: "doseLogs",
+          docId: id,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
+      }
     }
   };
 

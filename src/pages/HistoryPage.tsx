@@ -5,6 +5,7 @@ import {
   Check,
   X,
   Clock,
+  AlertCircle,
   Download,
   Upload,
   Trash2,
@@ -53,7 +54,7 @@ export default function HistoryPage() {
   }>({ open: false, logId: "", medicineName: "" });
 
   const [statusFilter, setStatusFilter] = useState<
-    "All" | "taken" | "skipped" | "snoozed"
+    "All" | "taken" | "skipped" | "missed" | "snoozed"
   >("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(30);
@@ -328,7 +329,7 @@ export default function HistoryPage() {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-          {(["All", "taken", "skipped", "snoozed"] as const).map((status) => (
+          {(["All", "taken", "skipped", "missed", "snoozed"] as const).map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -407,13 +408,17 @@ export default function HistoryPage() {
                             className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-2xl shadow-sm transition-transform group-hover:scale-110 ${
                               log.action === "taken"
                                 ? "bg-success/10 text-success"
-                                : log.action === "skipped"
+                                : log.action === "missed"
                                 ? "bg-destructive/10 text-destructive"
+                                : log.action === "skipped"
+                                ? "bg-muted text-muted-foreground border border-border"
                                 : "bg-warning/10 text-warning"
                             }`}
                           >
                             {log.action === "taken" ? (
                               <Check size={22} strokeWidth={3} />
+                            ) : log.action === "missed" ? (
+                              <AlertCircle size={22} strokeWidth={2.5} />
                             ) : log.action === "skipped" ? (
                               <X size={22} strokeWidth={3} />
                             ) : (
@@ -430,8 +435,10 @@ export default function HistoryPage() {
                                 className={`text-[10px] uppercase font-black tracking-widest px-2 py-0 border-none ${
                                   log.action === "taken"
                                     ? "bg-success/10 text-success"
-                                    : log.action === "skipped"
+                                    : log.action === "missed"
                                     ? "bg-destructive/10 text-destructive"
+                                    : log.action === "skipped"
+                                    ? "bg-muted text-muted-foreground"
                                     : "bg-warning/10 text-warning"
                                 }`}
                               >

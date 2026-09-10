@@ -194,6 +194,27 @@ describe("HistoryPage — unit tests", () => {
       );
     });
   });
+
+  it("filters logs when 'Missed' tab is clicked and shows missed dose with alert styling", async () => {
+    testState.scopedDoseLogs = [
+      makeDoseLog({ id: "log-taken", medicineName: "TakenMed", action: "taken" }),
+      makeDoseLog({ id: "log-missed", medicineName: "MissedMed", action: "missed" }),
+    ];
+
+    renderHistoryPage();
+
+    // Both logs present in 'All' tab
+    expect(await screen.findByText("TakenMed")).toBeInTheDocument();
+    expect(screen.getByText("MissedMed")).toBeInTheDocument();
+
+    // Click Missed tab
+    const missedTabButton = screen.getByRole("button", { name: /missed/i });
+    fireEvent.click(missedTabButton);
+
+    // Only MissedMed should be visible
+    expect(screen.queryByText("TakenMed")).not.toBeInTheDocument();
+    expect(screen.getByText("MissedMed")).toBeInTheDocument();
+  });
 });
 
 // ─── Property 1: Confirm invokes deleteDoseLog with the correct log ID ────────

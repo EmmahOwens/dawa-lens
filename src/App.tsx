@@ -95,25 +95,46 @@ const AppContent = () => {
   useEffect(() => {
     // Do NOT run until data is fully loaded — prevents false "missed" entries
     // when reminders/doseLogs are still empty on initial mount.
-    if (!Capacitor.isNativePlatform() || isInitializing) return;
+    if (isInitializing) return;
 
-    // Run once when data is ready
+    // Run missed dose reconciliation once data is ready (web and native)
     checkMissedDoses(reminders, doseLogs, logDose);
-    // scheduleReminders first (it cancels all pending alarms), then
-    // scheduleEngagementNotifications adds engagement alarms on top.
-    scheduleReminders(reminders, doseLogs, medicines).then(() =>
-      scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
-    );
 
-    // Refresh reminders and engagement notifications when app comes to foreground.
-    const unsubForeground = onForeground(() => {
+    if (Capacitor.isNativePlatform()) {
+      // scheduleReminders first (it cancels all pending alarms), then
+      // scheduleEngagementNotifications adds engagement alarms on top.
       scheduleReminders(reminders, doseLogs, medicines).then(() =>
         scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
       );
-      checkMissedDoses(reminders, doseLogs, logDose);
-    });
 
-    return unsubForeground;
+      // Refresh reminders and engagement notifications when app comes to foreground.
+      const unsubForeground = onForeground(() => {
+        scheduleReminders(reminders, doseLogs, medicines).then(() =>
+          scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
+        );
+        checkMissedDoses(reminders, doseLogs, logDose);
+      });
+
+      return unsubForeground;
+    } else {
+      // On web/PWA: check missed doses when tab becomes active and on 15m interval
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === "visible") {
+          checkMissedDoses(reminders, doseLogs, logDose);
+        }
+      };
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      window.addEventListener("focus", handleVisibilityChange);
+      const intervalId = setInterval(() => {
+        checkMissedDoses(reminders, doseLogs, logDose);
+      }, 15 * 60 * 1000);
+
+      return () => {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        window.removeEventListener("focus", handleVisibilityChange);
+        clearInterval(intervalId);
+      };
+    }
   }, [reminders, doseLogs, medicines, wellnessLogs, logDose, isInitializing]);
 
   return null;
