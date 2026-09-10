@@ -43,7 +43,13 @@ class DawaLensApplication : Application() {
             m.contains("oneplus") || b.contains("oneplus") ||
             m.contains("vivo") || m.contains("iqoo") || b.contains("vivo") || b.contains("iqoo")
 
-        if (isAggressiveOem) {
+        val hasActiveReminders = try {
+            NativeRecurrenceStore.getReminders(this).any { it.enabled }
+        } catch (e: Exception) {
+            false
+        }
+
+        if (isAggressiveOem || hasActiveReminders) {
             try {
                 val intent = Intent(this, AdherenceGuardianService::class.java).apply {
                     action = AdherenceGuardianService.ACTION_START

@@ -20,6 +20,7 @@ import androidx.core.app.NotificationCompat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.json.JSONArray
 
 /**
  * AdherenceGuardianService
@@ -47,35 +48,72 @@ class AdherenceGuardianService : Service() {
 
         const val PREFS_NAME = "dawa_guardian_prefs"
         const val KEY_NOTIF_DISMISSED = "guardian_notif_dismissed"
+        const val KEY_DISMISSED_TRIGGER = "guardian_dismissed_trigger_ms"
 
         @Volatile
         var isRunning = false
             private set
 
         @Volatile
-        var isNotificationDismissed = false
+        var dismissedTriggerMs: Long = 0L
             private set
 
-        fun setNotificationDismissedState(context: Context, dismissed: Boolean) {
-            isNotificationDismissed = dismissed
+        fun setNotificationDismissedForTrigger(context: Context, triggerMs: Long) {
+            dismissedTriggerMs = triggerMs
             try {
                 context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     .edit()
-                    .putBoolean(KEY_NOTIF_DISMISSED, dismissed)
+                    .putLong(KEY_DISMISSED_TRIGGER, triggerMs)
+                    .putBoolean(KEY_NOTIF_DISMISSED, triggerMs != 0L)
                     .apply()
             } catch (e: Exception) {
                 // Ignore storage failure
             }
         }
 
-        fun isNotificationDismissed(context: Context): Boolean {
-            if (isNotificationDismissed) return true
-            return try {
+        fun resetDismissedState(context: Context) {
+            dismissedTriggerMs = 0L
+            try {
                 context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                    .getBoolean(KEY_NOTIF_DISMISSED, false)
+                    .edit()
+                    .putLong(KEY_DISMISSED_TRIGGER, 0L)
+                    .putBoolean(KEY_NOTIF_DISMISSED, false)
+                    .apply()
             } catch (e: Exception) {
-                false
+                // Ignore storage failure
             }
+        }
+
+        fun setNotificationDismissedState(context: Context, dismissed: Boolean) {
+            if (!dismissed) {
+                resetDismissedState(context)
+            } else {
+                setNotificationDismissedForTrigger(context, -1L)
+            }
+        }
+
+        fun isDismissedForTrigger(context: Context, triggerMs: Long?): Boolean {
+            if (triggerMs == null || triggerMs <= 0L) {
+                return try {
+                    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        .getBoolean(KEY_NOTIF_DISMISSED, false)
+                } catch (e: Exception) {
+                    false
+                }
+            }
+            if (dismissedTriggerMs == triggerMs) return true
+            val savedTrigger = try {
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .getLong(KEY_DISMISSED_TRIGGER, 0L)
+            } catch (e: Exception) {
+                0L
+            }
+            dismissedTriggerMs = savedTrigger
+            return savedTrigger == triggerMs
+        }
+
+        fun isNotificationDismissed(context: Context): Boolean {
+            return isDismissedForTrigger(context, null)
         }
     }
 
@@ -105,7 +143,8 @@ class AdherenceGuardianService : Service() {
         }
 
         if (intent?.action == ACTION_DISMISS) {
-            setNotificationDismissedState(this, true)
+            val dismissedTrigger = intent.getLongExtra("dismiss_trigger_ms", -1L)
+            setNotificationDismissedForTrigger(this, dismissedTrigger)
             val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             nm.cancel(NOTIFICATION_ID)
             if (Build.VERSION.SDK_INT < 34) {
@@ -120,15 +159,22 @@ class AdherenceGuardianService : Service() {
         }
 
         if (intent?.action == ACTION_REFRESH) {
-            // Force an immediate countdown update (e.g. after a new alarm is scheduled)
-            updateUpcomingAlarmNotification()
+            if (intent.getBooleanExtra("reset_dismissed", false)) {
+                resetDismissedState(this)
+            }
+            if (!isRunning) {
+                startForegroundServiceInternal()
+                isRunning = true
+                handler.removeCallbacks(countdownRunnable)
+                handler.post(countdownRunnable)
+            } else {
+                updateUpcomingAlarmNotification()
+            }
             return START_STICKY
         }
 
         if (intent?.getBooleanExtra("reset_dismissed", false) == true) {
-            setNotificationDismissedState(this, false)
-        } else {
-            isNotificationDismissed = isNotificationDismissed(this)
+            resetDismissedState(this)
         }
 
         startForegroundServiceInternal()
@@ -169,8 +215,18 @@ class AdherenceGuardianService : Service() {
             }
         }
 
-        // If previously dismissed, dismiss the notification immediately while keeping foreground execution
-        if (isNotificationDismissed(this)) {
+        // If previously dismissed for current upcoming trigger, suppress notification while keeping service alive
+        val stored = NativeRecurrenceStore.getReminders(this)
+        var nextTrigger: Long? = null
+        val now = System.currentTimeMillis()
+        for (r in stored) {
+            if (!r.enabled) continue
+            val trig = NativeRecurrenceEngine.computeNextOccurrence(r.toEngineSchedule(), now) ?: continue
+            if (trig > now && (nextTrigger == null || trig < nextTrigger)) {
+                nextTrigger = trig
+            }
+        }
+        if (isDismissedForTrigger(this, nextTrigger)) {
             val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             nm.cancel(NOTIFICATION_ID)
             if (Build.VERSION.SDK_INT < 34) {
@@ -190,8 +246,73 @@ class AdherenceGuardianService : Service() {
      */
     private fun updateUpcomingAlarmNotification() {
         try {
-            val storedReminders = NativeRecurrenceStore.getReminders(this)
+            var storedReminders = NativeRecurrenceStore.getReminders(this)
             val now = System.currentTimeMillis()
+
+            // If NativeRecurrenceStore has no active reminders, hydrate directly from SQLite database (dawa_lens.db)
+            if (storedReminders.none { it.enabled }) {
+                val dbPath = getDatabasePath("dawa_lens.db")
+                val userManager = getSystemService(Context.USER_SERVICE) as? UserManager
+                val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    userManager?.isUserUnlocked ?: true
+                } else true
+
+                if (isUserUnlocked && dbPath.exists()) {
+                    try {
+                        val db = SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+                        val cursor = db.rawQuery(
+                            """SELECT id, medicine_name, dose, time, repeat_schedule, repeat_days, enabled, patient_id 
+                               FROM reminders 
+                               WHERE enabled = 1""",
+                            null
+                        )
+                        val hydrated = mutableListOf<NativeRecurrenceStore.StoredReminder>()
+                        while (cursor.moveToNext()) {
+                            val id = cursor.getString(cursor.getColumnIndexOrThrow("id"))
+                            val medicineName = cursor.getString(cursor.getColumnIndexOrThrow("medicine_name")) ?: ""
+                            val dose = cursor.getString(cursor.getColumnIndexOrThrow("dose")) ?: ""
+                            val timeStr = cursor.getString(cursor.getColumnIndexOrThrow("time")) ?: ""
+                            val repeatSchedule = cursor.getString(cursor.getColumnIndexOrThrow("repeat_schedule")) ?: "daily"
+                            val repeatDaysJson = cursor.getString(cursor.getColumnIndexOrThrow("repeat_days"))
+                            val patientId = cursor.getString(cursor.getColumnIndexOrThrow("patient_id"))
+
+                            val repeatDaysList = if (!repeatDaysJson.isNullOrEmpty()) {
+                                try {
+                                    val arr = JSONArray(repeatDaysJson)
+                                    (0 until arr.length()).map { arr.getInt(it) }
+                                } catch (e: Exception) { null }
+                            } else null
+
+                            val genericTitle = if (medicineName.isNotEmpty()) "Time for $medicineName" else "Medication Reminder"
+                            val genericBody = if (dose.isNotEmpty()) "Dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+
+                            hydrated.add(
+                                NativeRecurrenceStore.StoredReminder(
+                                    id = id,
+                                    time = timeStr,
+                                    repeatSchedule = repeatSchedule,
+                                    repeatDays = repeatDaysList,
+                                    enabled = true,
+                                    createdAt = System.currentTimeMillis(),
+                                    genericTitle = genericTitle,
+                                    genericBody = genericBody,
+                                    lastScheduledTrigger = 0L,
+                                    patientId = patientId
+                                )
+                            )
+                        }
+                        cursor.close()
+                        db.close()
+
+                        if (hydrated.isNotEmpty()) {
+                            NativeRecurrenceStore.saveReminders(this, hydrated)
+                            storedReminders = hydrated
+                        }
+                    } catch (e: Exception) {
+                        // Non-fatal SQLite fallback hydration failure
+                    }
+                }
+            }
 
             var earliestTrigger: Long? = null
             var earliestTitle: String? = null
@@ -230,10 +351,9 @@ class AdherenceGuardianService : Service() {
                 }
             }
 
-            // Check if user has dismissed the guardian notification.
-            // Watchdog check (step 1 above) has already run, so return early
-            // to avoid re-posting a notification the user explicitly cleared.
-            if (isNotificationDismissed(this)) {
+            // Check if user has dismissed the notification specifically for this upcoming trigger.
+            // When a new dose becomes upcoming (earliestTrigger changes), countdown notification automatically re-appears.
+            if (isDismissedForTrigger(this, earliestTrigger)) {
                 return
             }
 
@@ -266,7 +386,7 @@ class AdherenceGuardianService : Service() {
     /**
      * Builds the foreground notification with optional chronometer countdown.
      * Note: ongoing is set to false, autoCancel is enabled, and a deleteIntent/action
-     * is attached so users can dismiss the notification freely.
+     * is attached so users can dismiss the notification freely for the current dose.
      */
     private fun buildNotification(contentText: String, upcomingTriggerMs: Long?): Notification {
         val openIntent = Intent(this, MainActivity::class.java).apply {
@@ -281,6 +401,9 @@ class AdherenceGuardianService : Service() {
 
         val dismissIntent = Intent(this, AdherenceGuardianService::class.java).apply {
             action = ACTION_DISMISS
+            if (upcomingTriggerMs != null) {
+                putExtra("dismiss_trigger_ms", upcomingTriggerMs)
+            }
         }
         val dismissPendingIntent = PendingIntent.getService(
             this,
@@ -289,8 +412,10 @@ class AdherenceGuardianService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val contentTitle = if (upcomingTriggerMs != null) "Upcoming Medication Dose" else "Dawa Lens Protection Active"
+
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Dawa Lens Protection Active")
+            .setContentTitle(contentTitle)
             .setContentText(contentText)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentIntent(pendingIntent)

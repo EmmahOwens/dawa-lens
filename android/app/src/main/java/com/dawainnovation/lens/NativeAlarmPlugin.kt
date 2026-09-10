@@ -537,10 +537,20 @@ class NativeAlarmPlugin : Plugin() {
 
         // Trigger immediate countdown update on AdherenceGuardianService
         try {
-            val refreshIntent = Intent(ctx, AdherenceGuardianService::class.java).apply {
-                action = AdherenceGuardianService.ACTION_REFRESH
+            val startOrRefreshAction = if (AdherenceGuardianService.isRunning) {
+                AdherenceGuardianService.ACTION_REFRESH
+            } else {
+                AdherenceGuardianService.ACTION_START
             }
-            ctx.startService(refreshIntent)
+            val intent = Intent(ctx, AdherenceGuardianService::class.java).apply {
+                action = startOrRefreshAction
+                putExtra("reset_dismissed", true)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(ctx, intent)
+            } else {
+                ctx.startService(intent)
+            }
         } catch (e: Exception) {}
 
         val res = JSObject()

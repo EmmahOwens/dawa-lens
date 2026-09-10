@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.os.UserManager
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import org.json.JSONObject
 
 class AlarmReceiver : BroadcastReceiver() {
@@ -682,7 +683,11 @@ class AlarmReceiver : BroadcastReceiver() {
             val refreshIntent = Intent(context, AdherenceGuardianService::class.java).apply {
                 action = AdherenceGuardianService.ACTION_REFRESH
             }
-            context.startService(refreshIntent)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(context, refreshIntent)
+            } else {
+                context.startService(refreshIntent)
+            }
         } catch (e: Exception) {}
     }
 }

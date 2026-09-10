@@ -590,6 +590,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  // Auto-start AdherenceGuardianService on Android devices so reminder countdown
+  // notifications remain active even when offline or in guest/local storage mode.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+    (async () => {
+      try {
+        const { NativeService: NS } = await import("../services/nativeService");
+        const isRunning = await NS.isGuardianServiceRunning();
+        if (!isRunning) {
+          await NS.startGuardianService();
+        }
+      } catch (guardianErr) {
+        console.warn("[AppContext] Guardian auto-start check failed:", guardianErr);
+      }
+    })();
+  }, []);
+
   const setIsProfessionalMode = useCallback(
     async (v: boolean) => {
       setIsProfessionalModeState(v);
@@ -1025,26 +1042,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
       }
 
-      // Auto-start AdherenceGuardianService on aggressive OEM devices.
-      // This is a web-layer safety net: the native layer (DawaLensApplication.onCreate
-      // and BootReceiver) also auto-starts the service, but this covers the case where
-      // the user opens the app offline, in guest mode, or for the first time after install.
-      (async () => {
-        try {
-          const { NativeService: NS } = await import("../services/nativeService");
-          const oemInfo = await NS.getDeviceOemInfo();
-          const isAggressiveOem = oemInfo.isTranssion || oemInfo.isXiaomi || oemInfo.isSamsung ||
-            oemInfo.isHuawei || oemInfo.isOppoRealme || oemInfo.isOnePlus || oemInfo.isVivo;
-          if (isAggressiveOem && Capacitor.getPlatform() === "android") {
+      // Safety net to ensure AdherenceGuardianService is running on Android
+      if (Capacitor.getPlatform() === "android") {
+        (async () => {
+          try {
+            const { NativeService: NS } = await import("../services/nativeService");
             const isRunning = await NS.isGuardianServiceRunning();
             if (!isRunning) {
               await NS.startGuardianService();
             }
+          } catch (guardianErr) {
+            console.warn("[AppContext] Guardian auto-start check failed:", guardianErr);
           }
-        } catch (guardianErr) {
-          console.warn("[AppContext] Guardian auto-start check failed:", guardianErr);
-        }
-      })();
+        })();
+      }
     }
 
     // 3. Set up real-time Firestore listeners — these auto-sync across web + Capacitor
@@ -1096,9 +1107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       remsQuery,
       (snap) => {
         try {
-          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) {
-            if (getPendingOps().some((op) => op.collection === "reminders")) return;
-          }
+          if (snap.empty && (snap.metadata.fromCache || !hasNetwork())) return;
           const data = snap.docs.map(
             (d) => ({ id: d.id, ...d.data() } as Reminder)
           );
