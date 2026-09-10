@@ -858,4 +858,32 @@ describe("DailyTimeline Component", () => {
     expect(screen.queryByText("Next Dose")).not.toBeInTheDocument();
     expect(screen.getByText(/@ 10:00/)).toBeInTheDocument();
   });
+
+  it("should not contain touch-pan-x on its scroll container so vertical page scrolling is never blocked", () => {
+    const reminders: Reminder[] = [
+      {
+        id: "rem-scroll-test",
+        medicineName: "Metformin",
+        dose: "500mg",
+        time: "12:00",
+        repeatSchedule: "daily",
+        enabled: true,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+
+    const { container } = render(
+      <DailyTimeline
+        reminders={reminders}
+        doseLogs={[]}
+        onAction={vi.fn()}
+      />
+    );
+
+    const scrollContainer = container.querySelector(".overflow-x-auto");
+    expect(scrollContainer).toBeInTheDocument();
+    expect(scrollContainer?.classList.contains("touch-pan-x")).toBe(false);
+    expect(scrollContainer?.classList.contains("overscroll-x-contain")).toBe(true);
+  });
 });
+

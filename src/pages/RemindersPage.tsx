@@ -235,7 +235,7 @@ export default function RemindersPage() {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full pb-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

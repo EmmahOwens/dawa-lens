@@ -15,7 +15,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   if (isMobile) {
     return (
       <div className="h-[100dvh] min-h-[100dvh] bg-background flex flex-col overscroll-none relative overflow-hidden">
-        <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+        <div className="flex-1 overflow-y-auto no-scrollbar overscroll-y-contain">
           {/* Safe-top spacer for edge-to-edge screens with notch */}
           <div className="h-[env(safe-area-inset-top,0px)] bg-white/10 dark:bg-black/20 backdrop-blur-xl border-white/10 dark:border-white/5 border-t-0 border-x-0 border-b sticky top-0 z-40 w-full shrink-0" />
           <PatientContextBanner />
@@ -35,7 +35,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <AppSidebar />
 
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <main className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+          <main className="flex-1 overflow-y-auto no-scrollbar">
             <Navbar />
             <PatientContextBanner />
             <div className="mx-auto w-full max-w-5xl px-6 py-8 lg:px-12 lg:py-12">
