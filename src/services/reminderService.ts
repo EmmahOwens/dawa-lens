@@ -326,12 +326,16 @@ export const checkMissedDoses = async (
             });
           });
 
-          if (!logExists) {
+          const alertKey = `dawa_missed_alerted_${r.id}_${scheduledDate.getTime()}`;
+          const alreadyAlerted = localStorage.getItem(alertKey);
+
+          if (!logExists && !alreadyAlerted) {
             console.log(
               `Marking missed dose for ${
                 r.medicineName
               } scheduled at ${scheduledDate.toISOString()}`
             );
+            localStorage.setItem(alertKey, "1");
             await logDose({
               reminderId: r.id,
               medicineName: r.medicineName,
@@ -1112,14 +1116,23 @@ const executeScheduleReminders = async (
     }
 
     // Cancel pending reminder notifications to refresh the schedule while preserving event notifications
+    const activeIds = new Set(activeReminders.map((r) => r.id));
     try {
       const pending = await LocalNotifications.getPending();
       if (pending.notifications && pending.notifications.length > 0) {
         const toCancel = pending.notifications.filter((n) => {
           const extra = (n.extra || {}) as Record<string, any>;
           const type = extra.type;
-          // Only cancel routine medicine reminders, preserving encouragement, streak, missed alert, adjustment
-          return !type || type === "reminder" || !["encouragement", "streak", "missed_alert", "schedule_adjusted"].includes(type);
+          // If this notification belongs to a reminder that is no longer active, cancel it immediately!
+          if (extra.reminderId && !activeIds.has(extra.reminderId)) {
+            return true;
+          }
+          // Only cancel routine medicine reminders, preserving active engagement events
+          return (
+            !type ||
+            type === "reminder" ||
+            !["encouragement", "streak", "wellness_nudge", "hydration", "daily_quote", "evening_checkin", "weekly_summary", "refill", "low_stock"].includes(type)
+          );
         });
         if (toCancel.length > 0) {
           await LocalNotifications.cancel({
@@ -1135,7 +1148,6 @@ const executeScheduleReminders = async (
     try {
       const delivered = await LocalNotifications.getDeliveredNotifications();
       if (delivered.notifications && delivered.notifications.length > 0) {
-        const activeIds = new Set(activeReminders.map((r) => r.id));
         const toRemove = delivered.notifications.filter((n) => {
           const extra = n.extra || n.data;
           if (extra && extra.reminderId && !activeIds.has(extra.reminderId)) {
@@ -1166,50 +1178,21 @@ const executeScheduleReminders = async (
 
     activeReminders.forEach((r) => {
       const medicine = medicines?.find((m) => m.id === r.medicineId);
-      let currentStock = medicine?.currentQuantity ?? 999;
-      const doseAmount = medicine?.dosagePerDose || 1;
+      // Strictly skip scheduling routine dose alarms if the medicine is currently completely out of stock (currentQuantity <= 0).
+      // Daily refill notifications in scheduleRefillNotifications handle the out-of-stock warning.
+      if (
+        medicine &&
+        medicine.currentQuantity !== undefined &&
+        medicine.currentQuantity <= 0
+      ) {
+        return;
+      }
 
       let nextFrom = now;
       // Schedule next 60 occurrences or up to 30 days
       for (let i = 0; i < 60; i++) {
         const next = getNextOccurrence(r, nextFrom, doseLogs);
         if (!next || isAfter(next, addDays(now, 30))) break;
-
-        // Stop scheduling if we are out of stock
-        if (medicine && currentStock < doseAmount) {
-          const refillId = stringToHash(r.id + "refill");
-          notifications.push({
-            title: `Refill Needed: ${r.medicineName}`,
-            body: `You are out of stock. Please refill to continue reminders.`,
-            id: refillId,
-            schedule: { at: next, allowWhileIdle: true },
-            channelId: r.patientId
-              ? patientChannelId(r.patientId)
-              : CHANNEL_OWNER,
-            sound: "default",
-            extra: {
-              type: "refill",
-              medicineId: r.medicineId,
-              patientId: r.patientId ?? null,
-              route: "/medvault",
-            },
-          });
-          alarmNotifications.push({
-            id: refillId,
-            title: `Refill Needed: ${r.medicineName}`,
-            body: `You are out of stock. Please refill to continue reminders.`,
-            triggerAtMillis: next.getTime(),
-            extra: JSON.stringify({
-              type: "refill",
-              reminderId: r.id,
-              medicineId: r.medicineId,
-              medicineName: r.medicineName,
-              patientId: r.patientId ?? null,
-              route: "/medvault",
-            }),
-          });
-          break;
-        }
 
         const notifId = stringToHash(r.id + next.toISOString());
         notifications.push({
@@ -1254,7 +1237,6 @@ const executeScheduleReminders = async (
           }),
         });
 
-        if (medicine) currentStock -= doseAmount;
         if (r.repeatSchedule === "once") break;
 
         nextFrom = addMinutes(next, 1);

@@ -114,8 +114,6 @@ class AlarmReceiver : BroadcastReceiver() {
             val isEventNotification = notifType in listOf(
                 "encouragement",
                 "streak",
-                "missed_alert",
-                "schedule_adjusted",
                 "wellness_nudge",
                 "hydration",
                 "daily_quote",
@@ -135,8 +133,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 }
             }
 
-            // 1. If this is a routine medicine reminder (not a standalone event), verify with SQLite database & NativeRecurrenceStore
-            if (!isEventNotification && reminderId.isNotEmpty()) {
+            // 1. If this alarm references a reminderId, verify with SQLite database & NativeRecurrenceStore
+            if (reminderId.isNotEmpty()) {
                 val userManager = context.getSystemService(Context.USER_SERVICE) as? UserManager
                 val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     userManager?.isUserUnlocked ?: true

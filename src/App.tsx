@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, Routes, Navigate, Outlet, useLocation } from "react-router-dom";
 import { Suspense } from "react";
@@ -91,6 +91,17 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
 const AppContent = () => {
   const { reminders, doseLogs, medicines, wellnessLogs, logDose, isInitializing } = useApp();
+  const lastMissedCheckRef = useRef<number>(0);
+
+  const runMissedDoseReconciliation = useCallback(() => {
+    const now = Date.now();
+    // 10-minute cooldown to prevent repeating reconciliation loops when doseLogs change
+    if (now - lastMissedCheckRef.current < 10 * 60 * 1000) {
+      return;
+    }
+    lastMissedCheckRef.current = now;
+    checkMissedDoses(reminders, doseLogs, logDose);
+  }, [reminders, doseLogs, logDose]);
 
   useEffect(() => {
     // Do NOT run until data is fully loaded — prevents false "missed" entries
@@ -98,7 +109,7 @@ const AppContent = () => {
     if (isInitializing) return;
 
     // Run missed dose reconciliation once data is ready (web and native)
-    checkMissedDoses(reminders, doseLogs, logDose);
+    runMissedDoseReconciliation();
 
     if (Capacitor.isNativePlatform()) {
       // scheduleReminders first (it cancels all pending alarms), then
@@ -112,7 +123,7 @@ const AppContent = () => {
         scheduleReminders(reminders, doseLogs, medicines).then(() =>
           scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
         );
-        checkMissedDoses(reminders, doseLogs, logDose);
+        runMissedDoseReconciliation();
       });
 
       return unsubForeground;
@@ -120,13 +131,13 @@ const AppContent = () => {
       // On web/PWA: check missed doses when tab becomes active and on 15m interval
       const handleVisibilityChange = () => {
         if (document.visibilityState === "visible") {
-          checkMissedDoses(reminders, doseLogs, logDose);
+          runMissedDoseReconciliation();
         }
       };
       document.addEventListener("visibilitychange", handleVisibilityChange);
       window.addEventListener("focus", handleVisibilityChange);
       const intervalId = setInterval(() => {
-        checkMissedDoses(reminders, doseLogs, logDose);
+        runMissedDoseReconciliation();
       }, 15 * 60 * 1000);
 
       return () => {
@@ -135,7 +146,7 @@ const AppContent = () => {
         clearInterval(intervalId);
       };
     }
-  }, [reminders, doseLogs, medicines, wellnessLogs, logDose, isInitializing]);
+  }, [reminders, doseLogs, medicines, wellnessLogs, logDose, isInitializing, runMissedDoseReconciliation]);
 
   return null;
 };

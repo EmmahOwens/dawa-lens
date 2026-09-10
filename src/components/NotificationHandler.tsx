@@ -63,7 +63,26 @@ export const NotificationHandler = () => {
             const extra = parseNotificationExtra(notification.extra);
             const notifType = extra.type as string | undefined;
 
+            // Strict check: if this notification references a reminder, verify it exists and is enabled
+            if (extra.reminderId) {
+              const exists = remindersRef.current.some((r) => r.id === extra.reminderId && r.enabled);
+              if (!exists) {
+                console.log(`[NotificationHandler] Discarding notification for deleted/disabled reminder: ${extra.reminderId}`);
+                if (notification.id) {
+                  LocalNotifications.cancel({ notifications: [{ id: notification.id }] }).catch(console.warn);
+                }
+                return;
+              }
+            }
+
             if (notifType === "missed_alert") {
+              // If there are no active reminders at all, do not show missed dose alerts
+              if (remindersRef.current.length === 0 || remindersRef.current.every((r) => !r.enabled)) {
+                if (notification.id) {
+                  LocalNotifications.cancel({ notifications: [{ id: notification.id }] }).catch(console.warn);
+                }
+                return;
+              }
               toast.error(notification.title || "Missed Dose Alert", {
                 description: notification.body,
                 duration: 6000,
@@ -84,17 +103,7 @@ export const NotificationHandler = () => {
             }
 
             const isReminder = !!extra.reminderId;
-
             if (isReminder) {
-              const exists = remindersRef.current.some((r) => r.id === extra.reminderId && r.enabled);
-              if (!exists) {
-                console.log(`[NotificationHandler] Discarding notification for deleted/disabled reminder: ${extra.reminderId}`);
-                if (notification.id) {
-                  LocalNotifications.cancel({ notifications: [{ id: notification.id }] }).catch(console.warn);
-                }
-                return;
-              }
-
               toast.info(`Reminder: ${notification.title}`, {
                 description: notification.body,
                 duration: 5000,

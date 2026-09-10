@@ -66,6 +66,9 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
             }
             val isoLocalFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
 
+            val storedReminders = NativeRecurrenceStore.getReminders(applicationContext)
+            val storedRemindersMap = storedReminders.associateBy { it.id }
+
             val reminderCursor = db.rawQuery(
                 """SELECT id, medicine_name, dose, time, repeat_schedule, repeat_days, created_at, patient_id 
                    FROM reminders 
@@ -75,6 +78,16 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
 
             while (reminderCursor.moveToNext()) {
                 val reminderId = reminderCursor.getString(reminderCursor.getColumnIndexOrThrow("id"))
+
+                // Authoritative cross-check: if deleted from NativeRecurrenceStore or disabled, delete orphan row from SQLite and skip!
+                val stored = storedRemindersMap[reminderId]
+                if (stored == null || !stored.enabled) {
+                    try {
+                        db.delete("reminders", "id = ?", arrayOf(reminderId))
+                    } catch (e: Exception) {}
+                    continue
+                }
+
                 val medicineName = reminderCursor.getString(reminderCursor.getColumnIndexOrThrow("medicine_name")) ?: "Medication"
                 val dose = reminderCursor.getString(reminderCursor.getColumnIndexOrThrow("dose")) ?: ""
                 val timeString = reminderCursor.getString(reminderCursor.getColumnIndexOrThrow("time")) ?: ""

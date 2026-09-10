@@ -454,8 +454,6 @@ export async function scheduleEngagementNotifications(
     await scheduleNotif(localBatch, alarmBatch);
     saveEngagementIds(ids);
     await scheduleWellnessNudge(wellnessLogs);
-    const streak = computeCurrentStreak(doseLogs, reminders);
-    if (streak > 0) await scheduleStreakNotification(streak);
     console.log(`[quotesService] Scheduled ${localBatch.length} engagement notifications + ${alarmBatch.length} native alarms.`);
   } catch (err) { console.warn("[quotesService] scheduleEngagementNotifications failed:", err); }
 }

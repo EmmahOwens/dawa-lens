@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/AlarmReceiver.kt": {
-    "mtime": 1789037616.751202,
-    "ast_hash": "83e7af734d5357e06945c1f11043de08",
+    "mtime": 1789042307.5114198,
+    "ast_hash": "2abdd510a9b3029361092f64cab7a48c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/AppUpdaterPlugin.java": {
@@ -80,13 +80,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/MissedDoseWorker.kt": {
-    "mtime": 1788427046.230947,
-    "ast_hash": "50f663be34b80ce3e7b447d841995c28",
+    "mtime": 1789042341.958751,
+    "ast_hash": "5b243a83e4675f7fd5571f5bffd2670c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeAlarmPlugin.kt": {
-    "mtime": 1789037562.7383037,
-    "ast_hash": "a6e3bfafd7272d1b2310222643a63d0c",
+    "mtime": 1789042285.884106,
+    "ast_hash": "6afdd92d7b630c57b30cbbc11cd22266",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeCameraPlugin.kt": {
@@ -550,8 +550,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1789039672.5124218,
-    "ast_hash": "6aa614d0a3815d194f73e9ccbd061c43",
+    "mtime": 1789042399.1859055,
+    "ast_hash": "ff597225521b7c2c2a43f768a1ed7f81",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -635,8 +635,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/NotificationHandler.tsx": {
-    "mtime": 1788615865.1269076,
-    "ast_hash": "0bc00519ff85393257db552a8e1cc4bb",
+    "mtime": 1789042229.2578359,
+    "ast_hash": "04ca76c865b9b47221c84d5fceb02735",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/OfflineOverlay.tsx": {
@@ -1395,8 +1395,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/localPersistence.ts": {
-    "mtime": 1789039927.4948187,
-    "ast_hash": "3c5c837f1cba7f58e1776c06cd47463d",
+    "mtime": 1789042255.6595144,
+    "ast_hash": "524dc62710c2fb26571db7f62fe35478",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/mlService.ts": {
@@ -1415,13 +1415,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/refillService.ts": {
-    "mtime": 1787197973.8683398,
-    "ast_hash": "264b6828a5625312fef905ede3b60250",
+    "mtime": 1789041839.933015,
+    "ast_hash": "39fb4584a2aa1840f152644137feb5b4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/reminderService.ts": {
-    "mtime": 1789039654.2830348,
-    "ast_hash": "e2a2a6bd6c1b2ca1e177f5b093be41c1",
+    "mtime": 1789042202.116963,
+    "ast_hash": "7073005207b3ec16dbd45fc879c68797",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/visionService.ts": {
@@ -2405,8 +2405,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/reminderService.test.ts": {
-    "mtime": 1789040133.5399399,
-    "ast_hash": "ccb8beba07d126b8ccd2b2909ce72770",
+    "mtime": 1789042448.2277105,
+    "ast_hash": "341eb2e34c26bb8e0fb8be0bbb39302f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BouncingPillsLoader.tsx": {
@@ -2440,8 +2440,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/quotesService.ts": {
-    "mtime": 1787890701.8770547,
-    "ast_hash": "d984c2ac59a1b3bc47ab491b0634777a",
+    "mtime": 1789042366.9138746,
+    "ast_hash": "3c2d7af8a4c900ec3d3df842d19c4054",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/project_proposal.md": {

@@ -229,20 +229,24 @@ export const localPersistence = {
       }
     },
     remove: async (id: string): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
             sql: "DELETE FROM medicines WHERE id=?",
             params: [id],
           });
-          return;
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite medicines.remove failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<Medicine[]>(LOCAL_MEDS_KEY, []);
-      const filtered = all.filter((m) => m.id !== id);
-      await storage.setItem(LOCAL_MEDS_KEY, filtered);
+      const partKey = getPartitionKey(LOCAL_MEDS_KEY);
+      const allPart = await storage.getItem<Medicine[]>(partKey, []);
+      await storage.setItem(partKey, allPart.filter((m) => m.id !== id));
+      if (partKey !== LOCAL_MEDS_KEY) {
+        const allUnpart = await storage.getItem<Medicine[]>(LOCAL_MEDS_KEY, []);
+        await storage.setItem(LOCAL_MEDS_KEY, allUnpart.filter((m) => m.id !== id));
+      }
     },
     replaceAll: async (items: Medicine[]): Promise<void> => {
       await ensureSqliteReady();
@@ -353,6 +357,7 @@ export const localPersistence = {
       return newItem;
     },
     update: async (id: string, updates: Partial<Reminder>): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           const mapping: Record<string, string> = {
@@ -389,20 +394,24 @@ export const localPersistence = {
       }
     },
     remove: async (id: string): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
             sql: "DELETE FROM reminders WHERE id=?",
             params: [id],
           });
-          return;
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite reminders.remove failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<Reminder[]>(LOCAL_REMS_KEY, []);
-      const filtered = all.filter((r) => r.id !== id);
-      await storage.setItem(LOCAL_REMS_KEY, filtered);
+      const partKey = getPartitionKey(LOCAL_REMS_KEY);
+      const allPart = await storage.getItem<Reminder[]>(partKey, []);
+      await storage.setItem(partKey, allPart.filter((r) => r.id !== id));
+      if (partKey !== LOCAL_REMS_KEY) {
+        const allUnpart = await storage.getItem<Reminder[]>(LOCAL_REMS_KEY, []);
+        await storage.setItem(LOCAL_REMS_KEY, allUnpart.filter((r) => r.id !== id));
+      }
     },
     replaceAll: async (items: Reminder[]): Promise<void> => {
       await ensureSqliteReady();

@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -755,6 +756,18 @@ class NativeAlarmPlugin : Plugin() {
                 val remainingStr = remainingSchedule.toString()
                 prefs.edit().putString(KEY_SCHEDULE, remainingStr).putStringSet(KEY_IDS, remainingIds).apply()
                 dpPrefs.edit().putString(KEY_SCHEDULE, remainingStr).putStringSet(KEY_IDS, remainingIds).apply()
+            }
+
+            // 4. Remove from SQLite reminders table to ensure MissedDoseWorker never sees deleted reminder
+            val dbPath = ctx.getDatabasePath("dawa_lens.db")
+            if (dbPath.exists()) {
+                try {
+                    val db = SQLiteDatabase.openDatabase(
+                        dbPath.absolutePath, null, SQLiteDatabase.OPEN_READWRITE
+                    )
+                    db.delete("reminders", "id = ?", arrayOf(reminderId))
+                    db.close()
+                } catch (e: Exception) {}
             }
         } catch (e: Exception) {
             // ignore

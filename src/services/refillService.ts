@@ -98,11 +98,11 @@ export function calculateRefillStatus(
   const daysRemaining =
     dailyDoseTotal > 0
       ? Math.floor(currentQuantity / dailyDoseTotal)
-      : currentQuantity === 0
+      : currentQuantity <= 0
       ? 0
       : null;
 
-  const isOutOfStock = currentQuantity === 0;
+  const isOutOfStock = currentQuantity <= 0;
 
   // Status flags strictly derived from dosage-based days remaining
   const isLow =

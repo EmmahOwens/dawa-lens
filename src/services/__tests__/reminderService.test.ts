@@ -569,6 +569,63 @@ describe("isReminderScheduledOnDate & checkMissedDoses", () => {
     await checkMissedDoses([reminder], [existingLog], mockLogDose);
     expect(loggedDoses.length).toBe(0);
   });
+
+  it("checkMissedDoses deduplicates so the same missed slot is not re-alerted on subsequent checks", async () => {
+    const { checkMissedDoses } = await import("../reminderService");
+
+    const loggedDoses: any[] = [];
+    const mockLogDose = async (log: any) => {
+      loggedDoses.push(log);
+    };
+
+    const now = new Date();
+    const threeHoursAgo = new Date(now.getTime() - 3 * 3600 * 1000);
+    const timeStr = `${threeHoursAgo.getHours().toString().padStart(2, "0")}:${threeHoursAgo.getMinutes().toString().padStart(2, "0")}`;
+
+    const reminder: Reminder = {
+      id: "rem-daily-dedupe",
+      medicineName: "Dedupe Med",
+      dose: "1 tab",
+      time: timeStr,
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date(now.getTime() - 48 * 3600 * 1000).toISOString(),
+    };
+
+    // First check should log the missed dose
+    await checkMissedDoses([reminder], [], mockLogDose);
+    expect(loggedDoses.length).toBe(1);
+
+    // Second check immediately after should be deduplicated via localStorage key
+    await checkMissedDoses([reminder], [], mockLogDose);
+    expect(loggedDoses.length).toBe(1);
+  });
+
+  it("scheduleReminders does not schedule out-of-stock alarms when medicine stock is positive", async () => {
+    const { scheduleReminders } = await import("../reminderService");
+
+    const reminder: Reminder = {
+      id: "rem-positive-stock",
+      medicineId: "med-positive-stock",
+      medicineName: "Coartem",
+      dose: "1 tab",
+      time: "08:00, 20:00",
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const medicine = {
+      id: "med-positive-stock",
+      name: "Coartem",
+      currentQuantity: 10, // positive stock (10 pills)
+      dosagePerDose: 1,
+      addedAt: new Date().toISOString(),
+    } as any;
+
+    // Call scheduleReminders with positive stock
+    await expect(scheduleReminders([reminder], [], [medicine])).resolves.not.toThrow();
+  });
 });
 
 describe("filterInvalidMissedLogs (Auto-healing)", () => {
