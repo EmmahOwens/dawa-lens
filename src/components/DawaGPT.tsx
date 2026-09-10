@@ -14,6 +14,7 @@ import MessageRenderer from "@/components/MessageRenderer";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { calculateRefillStatus } from "@/services/refillService";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 const SAMPLE_PROMPTS = [
   "Does Panadol interact with Ibuprofen?",
@@ -86,6 +87,7 @@ export function isLatestMessageInView({
 export default function DawaGPT() {
   const { t } = useTranslation();
   const location = useLocation();
+  const { isOnline } = useNetworkStatus();
   const {
     userProfile,
     isDawaGPTOpen: isOpen,
@@ -630,18 +632,28 @@ export default function DawaGPT() {
 
   return (
     <>
-      {/* Floating Toggle Button - Claude Inspired */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border/50 bg-background"
-        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.35 + 4.5rem)' }}
-      >
-        <div className="w-full h-full flex items-center justify-center overflow-hidden">
-          <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-10 h-10 object-contain transition-transform group-hover:scale-110" />
-        </div>
-      </motion.button>
+      {/* Floating Toggle Button - Claude Inspired (hidden when offline) */}
+      <AnimatePresence>
+        {isOnline && (
+          <motion.button
+            key="dawagpt-floating-trigger"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsOpen(true)}
+            className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border/50 bg-background"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.35 + 4.5rem)' }}
+            aria-label="Open DawaGPT"
+          >
+            <div className="w-full h-full flex items-center justify-center overflow-hidden">
+              <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-10 h-10 object-contain transition-transform group-hover:scale-110" />
+            </div>
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isOpen && (
@@ -680,8 +692,13 @@ export default function DawaGPT() {
                       <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-6 h-6 object-contain" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-base tracking-tight text-foreground">
+                      <h3 className="font-semibold text-base tracking-tight text-foreground flex items-center gap-2">
                         DawaGPT
+                        {!isOnline && (
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                            Offline
+                          </span>
+                        )}
                       </h3>
                     </div>
                   </div>
@@ -804,26 +821,33 @@ export default function DawaGPT() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
-                          handleSend(inputValue);
+                          if (isOnline) handleSend(inputValue);
                         }
                       }}
-                      placeholder={placeholder || "Send a message..."}
+                      disabled={!isOnline}
+                      placeholder={
+                        !isOnline
+                          ? "DawaGPT is unavailable offline..."
+                          : (placeholder || "Send a message...")
+                      }
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}
-                      className="bg-transparent border-none text-[15px] resize-none outline-none px-3 py-2 min-h-[44px] max-h-[200px] placeholder:text-muted-foreground/50 w-full"
+                      className="bg-transparent border-none text-[15px] resize-none outline-none px-3 py-2 min-h-[44px] max-h-[200px] placeholder:text-muted-foreground/50 w-full disabled:opacity-50 disabled:cursor-not-allowed"
                       rows={1}
                     />
                     <Button
                       onClick={() => handleSend(inputValue)}
-                      disabled={isTyping || !inputValue.trim()}
+                      disabled={isTyping || !inputValue.trim() || !isOnline}
                       size="icon"
-                      className="rounded-xl h-10 w-10 shrink-0 bg-primary hover:bg-primary/90 transition-all"
+                      className="rounded-xl h-10 w-10 shrink-0 bg-primary hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send size={18} />
                     </Button>
                   </div>
                   <p className="text-[10px] text-center text-muted-foreground/60 px-4">
-                    DawaGPT can make mistakes. Please verify important medical information.
+                    {!isOnline
+                      ? "Internet connection required for AI responses. Reminders are accessible offline."
+                      : "DawaGPT can make mistakes. Please verify important medical information."}
                   </p>
                 </div>
               </div>

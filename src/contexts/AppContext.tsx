@@ -557,11 +557,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [dawaGPTInitialPrompt, setDawaGPTInitialPrompt] = useState<string | null>(null);
 
   const openDawaGPTWithPrompt = useCallback((prompt?: string) => {
+    if (!isOnline) {
+      toast({
+        title: "DawaGPT Offline",
+        description: "DawaGPT requires an internet connection. Reminders remain accessible offline.",
+      });
+      return;
+    }
     if (prompt) {
       setDawaGPTInitialPrompt(prompt);
     }
     setIsDawaGPTOpen(true);
-  }, []);
+  }, [isOnline, toast]);
   const [isIntelligenceCollapsed, setIntelligenceCollapsedState] = useState(
     () => loadLocal("med_intelligence_collapsed", false)
   );

@@ -46,7 +46,7 @@ export function IntelligencePanel() {
   const location = useLocation();
   const {
     isIntelligenceCollapsed, setIsIntelligenceCollapsed,
-    isDawaGPTOpen, openDawaGPTWithPrompt
+    isDawaGPTOpen, openDawaGPTWithPrompt, isOnline
   } = useApp();
 
   const [inputQuery, setInputQuery] = useState("");
@@ -105,10 +105,11 @@ export function IntelligencePanel() {
         <div className="flex flex-col items-center gap-3">
           <button
             onClick={() => handleLaunch()}
-            title="Ask DawaGPT"
-            className="relative group w-11 h-11 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+            title={isOnline ? "Ask DawaGPT" : "DawaGPT is offline"}
+            disabled={!isOnline}
+            className="relative group w-11 h-11 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background animate-pulse" />
+            <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
             <Bot size={20} className="group-hover:rotate-6 transition-transform" />
           </button>
           <Info size={16} className="text-muted-foreground/30 mb-2" />
@@ -128,7 +129,7 @@ export function IntelligencePanel() {
               <img src="/dawa-gpt.png" alt="Intelligence" className="w-full h-full object-cover rounded-[calc(0.5rem-2px)]" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-background rounded-full flex items-center justify-center">
-              <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
+              <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-success animate-pulse" : "bg-amber-500"}`} />
             </div>
           </div>
           <div>
@@ -182,9 +183,11 @@ export function IntelligencePanel() {
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[11px] font-black tracking-wide text-foreground">DawaGPT AI</span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
                 </div>
-                <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">Medical Copilot</p>
+                <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  {isOnline ? "Medical Copilot" : "Offline"}
+                </p>
               </div>
             </div>
 
@@ -211,22 +214,24 @@ export function IntelligencePanel() {
               value={inputQuery}
               onChange={(e) => setInputQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && isOnline) {
                   handleLaunch(inputQuery);
                 }
               }}
-              placeholder={placeholder || "Ask DawaGPT anything..."}
+              disabled={!isOnline}
+              placeholder={isOnline ? (placeholder || "Ask DawaGPT anything...") : "DawaGPT is offline..."}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
-              className="flex-1 bg-transparent text-[12px] font-medium outline-none placeholder:text-muted-foreground/60 min-w-0"
+              className="flex-1 bg-transparent text-[12px] font-medium outline-none placeholder:text-muted-foreground/60 min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleLaunch(inputQuery);
+                if (isOnline) handleLaunch(inputQuery);
               }}
+              disabled={!isOnline}
               aria-label="Send prompt"
-              className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all shrink-0 shadow-sm"
+              className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all shrink-0 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {inputQuery.trim() ? <Send size={12} /> : <ArrowRight size={12} />}
             </button>

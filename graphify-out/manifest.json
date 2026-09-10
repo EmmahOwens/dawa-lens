@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1788505590.8550205,
-    "ast_hash": "a089f5d64ea6290f8241ee86c5db337e",
+    "mtime": 1789029245.69267,
+    "ast_hash": "41143352483863b78de2a2f923c0b1b4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -610,8 +610,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/IntelligencePanel.tsx": {
-    "mtime": 1787229897.5559998,
-    "ast_hash": "afc3dafc43e32afa1c100d216b377337",
+    "mtime": 1789029283.043985,
+    "ast_hash": "456c8a4c0b213596378a0e3d9523632f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MedicalReportContent.tsx": {
@@ -1055,8 +1055,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1788693322.6326241,
-    "ast_hash": "305525df6d06ec7b1eb4d2db13ec8fd3",
+    "mtime": 1789029199.818287,
+    "ast_hash": "e23dbad0aff4500af9d7b047e6b52201",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -2445,8 +2445,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/project_proposal.md": {
-    "mtime": 1788975599.0135045,
-    "ast_hash": "79c12802723e93254e7ea3c612de8d17",
+    "mtime": 1789027192.0,
+    "ast_hash": "54aee26ed94959d7a56e6392fe2f1ed8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BatteryOptimizationGate.test.tsx": {
@@ -2952,6 +2952,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/index-Bx5CIBYJ.js": {
     "mtime": 1788694331.5845726,
     "ast_hash": "339770e2b1a8c08c7beda6ff39a8a7b1",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/__tests__/DawaGPTOffline.test.tsx": {
+    "mtime": 1789029316.8002713,
+    "ast_hash": "372597bbca6231e09cf62c0607cbd2ee",
     "semantic_hash": ""
   }
 }
