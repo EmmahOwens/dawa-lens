@@ -201,7 +201,7 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="px-4 pt-8 pb-24 max-w-2xl mx-auto">
+    <div className="w-full pt-2">
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigate(-1)}

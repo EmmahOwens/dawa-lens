@@ -252,7 +252,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="pb-8">
+    <div className="w-full">
       {/* Back Button */}
       <motion.button 
         initial={{ opacity: 0, x: -10 }}

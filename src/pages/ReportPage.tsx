@@ -516,7 +516,7 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="pb-8 w-full min-w-0 print:p-0 print:m-0 print:bg-white print:text-black">
+    <div className="w-full min-w-0 print:p-0 print:m-0 print:bg-white print:text-black">
       {/* -------------------- WEB VIEW -------------------- */}
       <div className="print:hidden">
         {/* Header */}

@@ -530,7 +530,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
   };
 
   return (
-    <div className="pb-8">
+    <div className="w-full">
       {activeTab === "cabinet" && medicines.length >= 2 && loading && !animationComplete && (
         <PremiumLoader 
           onComplete={() => setAnimationComplete(true)} 

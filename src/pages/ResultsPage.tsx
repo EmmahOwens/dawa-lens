@@ -96,7 +96,7 @@ export default function ResultsPage() {
   };
 
   return (
-    <div className="px-4 pt-6 pb-4 min-h-screen">
+    <div className="w-full pt-4">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-8 hover:text-primary transition-colors group">
         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> {t("common.back")}
       </button>
@@ -364,9 +364,6 @@ export default function ResultsPage() {
           )}
         </>
       )}
-
-
-      <div className="h-12" />
     </div>
   );
 }

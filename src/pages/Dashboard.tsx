@@ -287,7 +287,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="px-4 pt-8 pb-24">
+    <div className="pt-2 sm:pt-4">
       <AchievementOverlay
         open={showAchievement}
         onClose={() => setShowAchievement(false)}

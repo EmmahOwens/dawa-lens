@@ -610,7 +610,7 @@ export default function MedicationsPage() {
   };
 
   return (
-    <div className="pb-8">
+    <div className="w-full">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

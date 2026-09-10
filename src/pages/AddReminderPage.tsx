@@ -389,7 +389,7 @@ export default function AddReminderPage() {
   };
 
   return (
-    <div className="pb-8 max-w-2xl mx-auto">
+    <div className="w-full">
       <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigate(-1)}
