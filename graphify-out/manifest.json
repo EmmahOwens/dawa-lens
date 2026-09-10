@@ -735,8 +735,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/HistoryWidget.tsx": {
-    "mtime": 1783768917.6808288,
-    "ast_hash": "733ec1278442171df7cdecd00e128073",
+    "mtime": 1789040746.7146177,
+    "ast_hash": "f6039c4582967813323527ab0b66e3df",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/InteractionsWidget.tsx": {
@@ -1115,8 +1115,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/i18n.ts": {
-    "mtime": 1787429102.235232,
-    "ast_hash": "f78ff37709372ac7c96a6a9cf81bb02a",
+    "mtime": 1789040755.7009373,
+    "ast_hash": "c19364e636495bb0bb3a3e8cc8208358",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/icons.tsx": {
@@ -1190,13 +1190,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/HistoryPage.test.tsx": {
-    "mtime": 1789040108.5617073,
-    "ast_hash": "a74aa9a43bce8c2bad4b1ffdf9c0eb20",
+    "mtime": 1789040766.7011003,
+    "ast_hash": "4e6f05ce8b05c8ea72d4d68469773a61",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/HistoryPage.tsx": {
-    "mtime": 1789039867.2052326,
-    "ast_hash": "b7302102929031da512df56430fce682",
+    "mtime": 1789040737.292328,
+    "ast_hash": "ce8c759cc8c7de360e50c251983bb046",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/Index.tsx": {

@@ -54,16 +54,21 @@ export default function HistoryPage() {
   }>({ open: false, logId: "", medicineName: "" });
 
   const [statusFilter, setStatusFilter] = useState<
-    "All" | "taken" | "skipped" | "missed" | "snoozed"
+    "All" | "taken" | "skipped" | "missed"
   >("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(30);
 
   const { scopedDoseLogs, scopedWellnessLogs } = usePatientScope();
 
+  // Exclude non-history/temporary logs (e.g. snoozed actions)
+  const historyDoseLogs = useMemo(() => {
+    return scopedDoseLogs.filter((l) => l.action !== "snoozed");
+  }, [scopedDoseLogs]);
+
   // Adherence Stats
   const stats = useMemo(() => {
-    const chartData = calculateVitalitySummary(scopedDoseLogs, scopedWellnessLogs);
+    const chartData = calculateVitalitySummary(historyDoseLogs, scopedWellnessLogs);
     const rate = Math.round(chartData.reduce((acc, d) => acc + d.adherence, 0) / 7) || 0;
 
     const sevenDaysAgo = new Date();
@@ -71,7 +76,7 @@ export default function HistoryPage() {
     // Set to start of day for accurate comparison
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
-    const last7Days = scopedDoseLogs.filter((l) => {
+    const last7Days = historyDoseLogs.filter((l) => {
       const logDate = toDate(l.actionTime);
       return logDate >= sevenDaysAgo;
     });
@@ -80,11 +85,11 @@ export default function HistoryPage() {
     const total = last7Days.length;
 
     return { taken, total, rate };
-  }, [scopedDoseLogs, scopedWellnessLogs]);
+  }, [historyDoseLogs, scopedWellnessLogs]);
 
   // Group and sort
   const filteredLogs = useMemo(() => {
-    let filtered = scopedDoseLogs;
+    let filtered = historyDoseLogs;
     if (statusFilter !== "All") {
       filtered = filtered.filter((l) => l.action === statusFilter);
     }
@@ -98,7 +103,7 @@ export default function HistoryPage() {
     return filtered.sort(
       (a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime()
     );
-  }, [scopedDoseLogs, statusFilter, searchTerm]);
+  }, [historyDoseLogs, statusFilter, searchTerm]);
 
   const visibleLogs = filteredLogs.slice(0, visibleCount);
 
@@ -114,7 +119,7 @@ export default function HistoryPage() {
   const days = Object.keys(grouped);
 
   const handleDelete = (logId: string) => {
-    const log = scopedDoseLogs.find((l) => l.id === logId);
+    const log = historyDoseLogs.find((l) => l.id === logId);
     setDeleteDialog({
       open: true,
       logId,
@@ -126,7 +131,7 @@ export default function HistoryPage() {
     const escape = (val: string) =>
       `"${(val || "").toString().replace(/"/g, '""')}"`;
     const header = "Date,Medicine,Dose,Scheduled Time,Action\n";
-    const rows = scopedDoseLogs
+    const rows = historyDoseLogs
       .map((l) =>
         [
           toDate(l.actionTime).toLocaleDateString(),
@@ -172,7 +177,11 @@ export default function HistoryPage() {
             const medicine = parts[1]?.trim();
             const dose = parts[2]?.trim();
             const scheduledTime = parts[3]?.trim();
-            const action = (parts[4]?.trim() as DoseLog["action"]) || "taken";
+            const rawAction = parts[4]?.trim().toLowerCase();
+            const action: DoseLog["action"] =
+              rawAction === "missed" || rawAction === "skipped"
+                ? rawAction
+                : "taken";
 
             if (medicine && dose) {
               logDose({
@@ -329,7 +338,7 @@ export default function HistoryPage() {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-          {(["All", "taken", "skipped", "missed", "snoozed"] as const).map((status) => (
+          {(["All", "taken", "skipped", "missed"] as const).map((status) => (
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
@@ -410,19 +419,15 @@ export default function HistoryPage() {
                                 ? "bg-success/10 text-success"
                                 : log.action === "missed"
                                 ? "bg-destructive/10 text-destructive"
-                                : log.action === "skipped"
-                                ? "bg-muted text-muted-foreground border border-border"
-                                : "bg-warning/10 text-warning"
+                                : "bg-muted text-muted-foreground border border-border"
                             }`}
                           >
                             {log.action === "taken" ? (
                               <Check size={22} strokeWidth={3} />
                             ) : log.action === "missed" ? (
                               <AlertCircle size={22} strokeWidth={2.5} />
-                            ) : log.action === "skipped" ? (
-                              <X size={22} strokeWidth={3} />
                             ) : (
-                              <Clock size={22} strokeWidth={3} />
+                              <X size={22} strokeWidth={3} />
                             )}
                           </div>
                           <div>
@@ -437,9 +442,7 @@ export default function HistoryPage() {
                                     ? "bg-success/10 text-success"
                                     : log.action === "missed"
                                     ? "bg-destructive/10 text-destructive"
-                                    : log.action === "skipped"
-                                    ? "bg-muted text-muted-foreground"
-                                    : "bg-warning/10 text-warning"
+                                    : "bg-muted text-muted-foreground"
                                 }`}
                               >
                                 {log.action}

@@ -7,7 +7,7 @@ import { toDate } from "@/lib/utils";
 
 export function HistoryWidget() {
   const { doseLogs } = useApp();
-  const recentLogs = doseLogs.slice(0, 5);
+  const recentLogs = doseLogs.filter((l) => l.action !== "snoozed").slice(0, 5);
 
   return (
     <div className="space-y-8">

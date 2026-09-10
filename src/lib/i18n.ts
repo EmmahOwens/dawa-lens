@@ -79,7 +79,6 @@ const en = {
       marked_as: "marked as",
       taken: "taken",
       skipped: "skipped",
-      snoozed: "snoozed",
       exported: "Exported!",
       exported_desc: "History downloaded as CSV",
       imported: "Imported!",

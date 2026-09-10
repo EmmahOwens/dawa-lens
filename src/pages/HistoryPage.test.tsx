@@ -215,6 +215,41 @@ describe("HistoryPage — unit tests", () => {
     expect(screen.queryByText("TakenMed")).not.toBeInTheDocument();
     expect(screen.getByText("MissedMed")).toBeInTheDocument();
   });
+
+  it("does not render a 'snoozed' filter option among the status tabs", () => {
+    renderHistoryPage();
+
+    // Verify 'snoozed' button does not exist
+    expect(screen.queryByRole("button", { name: /^snoozed$/i })).not.toBeInTheDocument();
+
+    // Verify only the expected filter options exist: ALL, TAKEN, SKIPPED, MISSED
+    expect(screen.getByRole("button", { name: /^all$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^taken$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^skipped$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^missed$/i })).toBeInTheDocument();
+  });
+
+  it("excludes logs with action 'snoozed' from the Medication History list and stats", async () => {
+    testState.scopedDoseLogs = [
+      makeDoseLog({ id: "log-1", medicineName: "ActiveMed", action: "taken" }),
+      makeDoseLog({
+        id: "log-2",
+        medicineName: "SnoozedMed",
+        action: "snoozed" as import("@/contexts/AppContext").DoseLog["action"],
+      }),
+    ];
+
+    renderHistoryPage();
+
+    // ActiveMed should be present in the history timeline
+    expect(await screen.findByText("ActiveMed")).toBeInTheDocument();
+
+    // SnoozedMed should NOT be rendered in the history timeline
+    expect(screen.queryByText("SnoozedMed")).not.toBeInTheDocument();
+
+    // 7-Day Adherence stats should only count the 1 non-snoozed dose, giving 100% adherence (1 of 1)
+    expect(screen.getByText(/You've taken 1 of your last 1 scheduled doses/i)).toBeInTheDocument();
+  });
 });
 
 // ─── Property 1: Confirm invokes deleteDoseLog with the correct log ID ────────
