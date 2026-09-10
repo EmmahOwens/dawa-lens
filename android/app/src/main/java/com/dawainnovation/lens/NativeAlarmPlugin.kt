@@ -1131,8 +1131,10 @@ class NativeAlarmPlugin : Plugin() {
     fun startGuardianService(call: PluginCall) {
         try {
             val ctx = context
+            AdherenceGuardianService.setNotificationDismissedState(ctx, false)
             val intent = Intent(ctx, AdherenceGuardianService::class.java).apply {
                 action = AdherenceGuardianService.ACTION_START
+                putExtra("reset_dismissed", true)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 ContextCompat.startForegroundService(ctx, intent)

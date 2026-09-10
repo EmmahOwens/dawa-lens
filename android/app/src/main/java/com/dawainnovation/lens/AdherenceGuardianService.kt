@@ -43,10 +43,40 @@ class AdherenceGuardianService : Service() {
         const val ACTION_START = "com.dawainnovation.lens.ACTION_START_GUARDIAN"
         const val ACTION_STOP = "com.dawainnovation.lens.ACTION_STOP_GUARDIAN"
         const val ACTION_REFRESH = "com.dawainnovation.lens.ACTION_REFRESH_GUARDIAN"
+        const val ACTION_DISMISS = "com.dawainnovation.lens.ACTION_DISMISS_GUARDIAN_NOTIF"
+
+        const val PREFS_NAME = "dawa_guardian_prefs"
+        const val KEY_NOTIF_DISMISSED = "guardian_notif_dismissed"
 
         @Volatile
         var isRunning = false
             private set
+
+        @Volatile
+        var isNotificationDismissed = false
+            private set
+
+        fun setNotificationDismissedState(context: Context, dismissed: Boolean) {
+            isNotificationDismissed = dismissed
+            try {
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putBoolean(KEY_NOTIF_DISMISSED, dismissed)
+                    .apply()
+            } catch (e: Exception) {
+                // Ignore storage failure
+            }
+        }
+
+        fun isNotificationDismissed(context: Context): Boolean {
+            if (isNotificationDismissed) return true
+            return try {
+                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                    .getBoolean(KEY_NOTIF_DISMISSED, false)
+            } catch (e: Exception) {
+                false
+            }
+        }
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -70,13 +100,35 @@ class AdherenceGuardianService : Service() {
             }
             stopSelf()
             isRunning = false
+            setNotificationDismissedState(this, false)
             return START_NOT_STICKY
+        }
+
+        if (intent?.action == ACTION_DISMISS) {
+            setNotificationDismissedState(this, true)
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(NOTIFICATION_ID)
+            if (Build.VERSION.SDK_INT < 34) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_DETACH)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(false)
+                }
+            }
+            return START_STICKY
         }
 
         if (intent?.action == ACTION_REFRESH) {
             // Force an immediate countdown update (e.g. after a new alarm is scheduled)
             updateUpcomingAlarmNotification()
             return START_STICKY
+        }
+
+        if (intent?.getBooleanExtra("reset_dismissed", false) == true) {
+            setNotificationDismissedState(this, false)
+        } else {
+            isNotificationDismissed = isNotificationDismissed(this)
         }
 
         startForegroundServiceInternal()
@@ -114,6 +166,20 @@ class AdherenceGuardianService : Service() {
                 startForeground(NOTIFICATION_ID, notification)
             } catch (fallbackErr: Exception) {
                 // Non-fatal service start fallback
+            }
+        }
+
+        // If previously dismissed, dismiss the notification immediately while keeping foreground execution
+        if (isNotificationDismissed(this)) {
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(NOTIFICATION_ID)
+            if (Build.VERSION.SDK_INT < 34) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_DETACH)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(false)
+                }
             }
         }
     }
@@ -164,6 +230,13 @@ class AdherenceGuardianService : Service() {
                 }
             }
 
+            // Check if user has dismissed the guardian notification.
+            // Watchdog check (step 1 above) has already run, so return early
+            // to avoid re-posting a notification the user explicitly cleared.
+            if (isNotificationDismissed(this)) {
+                return
+            }
+
             val contentText = if (earliestTrigger != null && earliestTitle != null) {
                 val diff = earliestTrigger - now
                 val hours = diff / 3_600_000
@@ -191,7 +264,9 @@ class AdherenceGuardianService : Service() {
     }
 
     /**
-     * Builds the persistent foreground notification with optional chronometer countdown.
+     * Builds the foreground notification with optional chronometer countdown.
+     * Note: ongoing is set to false, autoCancel is enabled, and a deleteIntent/action
+     * is attached so users can dismiss the notification freely.
      */
     private fun buildNotification(contentText: String, upcomingTriggerMs: Long?): Notification {
         val openIntent = Intent(this, MainActivity::class.java).apply {
@@ -204,12 +279,25 @@ class AdherenceGuardianService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val dismissIntent = Intent(this, AdherenceGuardianService::class.java).apply {
+            action = ACTION_DISMISS
+        }
+        val dismissPendingIntent = PendingIntent.getService(
+            this,
+            NOTIFICATION_ID + 2,
+            dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Dawa Lens Protection Active")
             .setContentText(contentText)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentIntent(pendingIntent)
-            .setOngoing(true)
+            .setDeleteIntent(dismissPendingIntent)
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPendingIntent)
+            .setOngoing(false)
+            .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setShowWhen(false)
