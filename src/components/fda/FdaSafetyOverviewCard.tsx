@@ -266,7 +266,7 @@ export const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
           </p>
           <div className="pt-2 border-t border-border/30 text-[11px] text-primary font-medium flex items-center gap-1.5">
             <CheckCircle2 size={13} />
-            <span>Optimal for East African ambient conditions</span>
+            <span>Optimal for Ugandan ambient conditions</span>
           </div>
         </div>
       )}

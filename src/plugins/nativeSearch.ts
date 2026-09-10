@@ -3,7 +3,7 @@
  *
  * Backed by a Rust library (libdawa_search) compiled as a native binary
  * for each platform. Uses Jaro-Winkler similarity ranking over a bundled
- * index of ~1,000 common drug names from the EAC Essential Medicines List.
+ * index of ~1,000 common drug names from the Uganda Essential Medicines List (EMLU).
  *
  * Results are returned in < 1 ms with no network call, enabling true
  * offline autocomplete in the drug interaction checker.

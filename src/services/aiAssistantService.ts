@@ -1,7 +1,7 @@
 /**
  * DawaGPT Service
  * Conversational medical assistant with full system read/write access.
- * Focused on regional (East African) context and user safety.
+ * Focused on Ugandan healthcare context and user safety.
  */
 
 import { Medicine, Reminder, UserProfile, DoseLog, WellnessLog, Patient } from "../contexts/AppContext";

@@ -110,7 +110,7 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
     number: '+261 20 22 295 53',
   },
 
-  // ── EAST AFRICA (extras) ──────────────────────────────────────────────────
+  // ── CENTRAL AFRICA (extras) ───────────────────────────────────────────────
   burundi: {
     authority: 'Agence Burundaise de Régulation des Médicaments et Aliments (ABREMA)',
     number: '+257 22 252 714',

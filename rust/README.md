@@ -53,7 +53,7 @@ The Android JNI path returns a JSON string directly to the JVM bridge.
 ## Expanding the drug database
 
 Edit `src/search.rs` — the `DRUG_INDEX` static slice currently holds ~180
-entries from the EAC Essential Medicines List and WHO Model List.
+entries from the Uganda Essential Medicines List (EMLU) and WHO Model List.
 
 For production, replace with a compressed binary index generated from the
 full RxNorm RXNCONSO table (~15 000 entries, ~120 KB compressed with zstd):

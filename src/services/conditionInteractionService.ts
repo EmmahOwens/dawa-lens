@@ -2,7 +2,7 @@ import { ConditionSafetyCheck } from '../types/interactions';
 
 /**
  * Regional Condition-Drug Safety Database
- * Focusing on East African health context (Uganda, etc.)
+ * Focusing on Ugandan health context.
  */
 const CONDITION_SAFETY_DATABASE: ConditionSafetyCheck[] = [
   {

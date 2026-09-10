@@ -120,8 +120,8 @@ pub fn fuzzy_search(query: &str, limit: usize) -> Vec<DrugEntry> {
 
 /// Embedded drug index: (generic/brand name, RxCUI) pairs.
 ///
-/// Sources: EAC Essential Medicines List, WHO Model List of Essential Medicines,
-/// and common East African formulary entries.
+/// Sources: Uganda Essential Medicines List (EMLU), WHO Model List of Essential Medicines,
+/// and common Ugandan national formulary entries.
 ///
 /// For production use, replace this slice with a compressed binary index generated
 /// from the full RxNorm RXNCONSO table (~15 000 drug names, ~120 KB with zstd).

@@ -11,7 +11,7 @@ async function runTest() {
 
   const systemInstruction = `
     You are "DawaGPT", a premium medical AI assistant integrated into the Dawa-Lens app.
-    Regional Context: Uganda / East Africa.
+    Regional Context: Uganda.
 
     === RESPONSE FORMAT ===
     Respond STRICTLY in JSON format, with the "text" field containing Markdown-formatted content.

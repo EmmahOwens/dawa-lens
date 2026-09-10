@@ -9,7 +9,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D24.14-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-Proprietary-red?style=flat-square)](LICENSE)
 
-> **Empowering patients, families, and healthcare providers across East Africa and beyond with instant computer vision medication recognition, real-time drug interaction safeguards, context-aware AI clinical support, and synchronized family caregiving.**
+> **Empowering patients, families, and healthcare providers across Uganda with instant computer vision medication recognition, real-time drug interaction safeguards, context-aware AI clinical support, and synchronized family caregiving.**
 
 ---
 
@@ -26,6 +26,7 @@
   - [6. Holistic Wellness Journal & Adherence Analytics](#6-holistic-wellness-journal--adherence-analytics)
   - [7. Doctor-Ready Clinical Reports](#7-doctor-ready-clinical-reports)
   - [8. Offline-First Resilience & Live Updates](#8-offline-first-resilience--live-updates)
+  - [9. Official NDA Uganda Pharmacy Locator](#9-official-nda-uganda-pharmacy-locator)
 - [System Architecture](#-system-architecture)
 - [Technology Stack](#-technology-stack)
 - [Database & Data Architecture](#-database--data-architecture)
@@ -45,7 +46,7 @@
 
 ## 🌍 The Story & Mission
 
-In East Africa and many healthcare systems worldwide, managing multiple prescriptions is fraught with preventable risks. Unlabelled generic packages, faded prescription slips, missed doses during hectic routines, and dangerous drug-drug or drug-food interactions frequently lead to avoidable complications and hospital readmissions.
+In Uganda and many healthcare systems worldwide, managing multiple prescriptions is fraught with preventable risks. Unlabelled generic packages, faded prescription slips, missed doses during hectic routines, and dangerous drug-drug or drug-food interactions frequently lead to avoidable complications and hospital readmissions.
 
 **Dawa Lens** was conceived to solve these challenges at their root. By bridging high-performance mobile engineering with modern multimodal artificial intelligence, Dawa Lens transforms any everyday smartphone into a vigilant, empathetic personal pharmacist. Whether you are managing your own chronic condition, caring for an aging parent, or coordinating treatments for your children, Dawa Lens brings clarity, confidence, and peace of mind to every single dose.
 
@@ -107,6 +108,11 @@ Dawa Lens takes a fundamentally holistic approach:
 - **Zero-Connectivity Continuity**: Full offline CRUD operations backed by IndexedDB and local Firestore caching.
 - **Background Sync**: Automatic conflict resolution and data synchronization as soon as internet connectivity returns.
 - **Over-The-Air (OTA) Updates**: Integrated with Capgo to deliver critical updates and bug fixes directly to users without waiting for app store review cycles.
+
+### 9. Official NDA Uganda Pharmacy Locator
+- **Verified Pharmacy Registry**: Direct integration with the official National Drug Authority (NDA) Uganda licensed register of pharmacies.
+- **Proximity & Route Navigation**: GPS distance calculation and walking/driving route lines to the nearest licensed pharmacy.
+- **One-Click Refill Synchronization**: Seamlessly locate licensed dispensaries and record refills directly into `MedVault`.
 
 ---
 
@@ -424,7 +430,7 @@ Dawa Lens follows strict software craftsmanship principles:
 
 © 2026 **Dawa Lens Team**. All rights reserved.
 
-*Built with passion to elevate medication safety, health literacy, and coordinated care across East Africa and the globe.*
+*Built with passion to elevate medication safety, health literacy, and coordinated care across Uganda and the globe.*
 
 For inquiries, support, or partnership opportunities, visit [dawalens.web.app](https://dawalens.web.app).
 

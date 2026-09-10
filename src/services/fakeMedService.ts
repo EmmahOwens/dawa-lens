@@ -1,5 +1,5 @@
 /**
- * Simulated authentication service for East African medicine scratch codes.
+ * Simulated authentication service for Ugandan medicine scratch codes.
  * This mimics services like mPedigree Goldkeys or Sproxil Defender.
  */
 

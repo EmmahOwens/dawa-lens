@@ -45,7 +45,7 @@ const setInMemoryCache = (key, data, ttlMs = MEMORY_CACHE_TTL_MS) => {
 };
 
 // ── Global Substance & Regional Synonym Map ──────────────────────────────────
-// Maps East African / British Pharmacopoeia (BP) and INN names to US FDA terminology
+// Maps Ugandan / British Pharmacopoeia (BP) and INN names to US FDA terminology
 export const SYNONYM_MAP = {
   paracetamol: ['acetaminophen', 'paracetamol', 'panadol', 'tylenol'],
   panadol: ['acetaminophen', 'paracetamol', 'panadol'],
@@ -119,7 +119,7 @@ export const getEnrichedSearchTerms = async (rawName) => {
   const clean = rawName.trim().toLowerCase();
   const terms = new Set([clean]);
 
-  // Baseline dictionary terms (East African / Commonwealth)
+  // Baseline dictionary terms (Ugandan / Commonwealth)
   if (SYNONYM_MAP[clean]) {
     SYNONYM_MAP[clean].forEach((t) => terms.add(t));
   }

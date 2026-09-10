@@ -745,7 +745,7 @@ export const getWellnessQuote = async (userName, priority = 'medium') => {
     const prompt = `
       Generate a short, powerful, and inspiring wellness quote (max 15 words) for a health app user named ${userName || 'friend'}.
       The quote should emphasize consistency, strength, or the journey to better health.
-      Context: East Africa (keep it culturally relevant but universally inspiring).
+      Context: Uganda (keep it culturally relevant but universally inspiring).
       Respond in JSON format: { "quote": "..." }
     `;
     return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 200, 0.6);
@@ -754,7 +754,7 @@ export const getWellnessQuote = async (userName, priority = 'medium') => {
 
 export const getCoachAdvice = async (logs, medicines, userName, priority = 'high') => {
   const prompt = `
-    You are the "Dawa-Lens Adherence Coach", a supportive health assistant for users in East Africa.
+    You are the "Dawa-Lens Adherence Coach", a supportive health assistant for users in Uganda.
     User Name: ${userName || 'User'}
     Current Medications: ${JSON.stringify(medicines)}
     Recent Medication Activity (Logs): ${JSON.stringify(logs)}
@@ -765,7 +765,7 @@ export const getCoachAdvice = async (logs, medicines, userName, priority = 'high
     3. If adherence is high, give praise.
     4. Mention specific medications with more misses.
     5. Proactive suggestions: If a user consistently misses a dose at a certain time, suggest moving it by 30-60 minutes if safe, or suggest a specific ritual (e.g., "take with your morning tea").
-    6. Tone: Warm and culturally appropriate for East Africa.
+    6. Tone: Warm and culturally appropriate for Uganda.
     7. Warning: Do not change dosages. Advise doctor visit if heart/BP meds are skipped.
     8. Use Markdown for formatting the advice (bolding, lists) to make it readable.
     9. DATE FORMATTING: For any dates or times generated in the response, only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds.
@@ -802,7 +802,7 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors = [], prio
     console.warn('[checkHolisticSafety] FDA grounding retrieval skipped:', fdaErr.message);
   }
 
-  // Inject relevant East African nutritional context ONLY if requested factors mention them
+  // Inject relevant Ugandan nutritional context ONLY if requested factors mention them
   const matchedLocalFoods = (LOCAL_FOODS || []).filter(lf =>
     requestedFactors.some(rf => rf.toLowerCase().includes(lf.name.toLowerCase()) || lf.name.toLowerCase().includes(rf.toLowerCase()))
   );
@@ -1058,7 +1058,7 @@ export const getNutritionalGuidance = async (medicines, priority = 'high') => {
       1. Provide 2-3 specific "Food Recommendations" that aid absorption or mitigate side effects for these medications.
       2. Identify "Critical Safety Warnings" regarding foods/drinks to avoid (e.g., Grapefruit, Alcohol, Dairy, Caffeine).
       3. Include "Timing Advice" (e.g., "Take 2 hours after dairy").
-      4. Focus on East African regional foods (Matooke, G-nuts, Mukene, Kalo, Nakati, etc.) where appropriate, explaining their specific local benefits.
+      4. Focus on Ugandan foods (Matooke, G-nuts, Mukene, Kalo, Nakati, etc.) where appropriate, explaining their specific local benefits.
       5. Use Markdown for formatting reasons, explanations, and advice.
 
       Respond in EXACT JSON format:
@@ -1079,11 +1079,11 @@ export const getNutritionalGuidance = async (medicines, priority = 'high') => {
 export const getHealthDiscoveries = async (priority = 'low') => {
   return withCache('health-discoveries', 12 * 60 * 60 * 1000, async () => {
     const prompt = `
-      Generate TWO distinct health discovery items for an East African health app:
+      Generate TWO distinct health discovery items for a Ugandan health app:
       1. A "Health Tip": A short, actionable health or medication advice (max 15 words).
       2. A "Did You Know": A surprising, evidence-based health fact (max 15 words).
 
-      Context: East Africa (e.g., Uganda, Kenya, Tanzania). Use regional context where appropriate (e.g., local foods like Matooke, G-nuts, Mukene, Kalo, or local climate/lifestyle).
+      Context: Uganda. Use local context where appropriate (e.g., local foods like Matooke, G-nuts, Mukene, Kalo, or local climate/lifestyle).
 
       Respond in EXACT JSON format:
       {
@@ -1924,7 +1924,7 @@ export async function prepareDawaGPTContext({ messages, medicines, userProfile, 
 
   const STATIC_SYSTEM_PROMPT = `
     You are "DawaGPT", a warm and caring medical AI assistant integrated into the Dawa-Lens app.
-    Regional Context: Uganda / East Africa.
+    Regional Context: Uganda.
 
     ${getFoodKnowledgePrompt()}
 
@@ -2006,7 +2006,7 @@ export async function prepareDawaGPTContext({ messages, medicines, userProfile, 
          * Only suggest a page link if it directly answers the user's question or relates to the active topic being discussed.
 
        === APPLICATION NAVIGATION MAP ===
-       * '/interactions' (or '/safety'): Drug & East African Food Interactions Guard
+       * '/interactions' (or '/safety'): Drug & Ugandan Food Interactions Guard
          - Domain: Checking drug-drug interactions, Ugandan/regional food compatibility (e.g. Matooke, G-nut sauce, Waragi, Tea, Kalo, Grapefruit), duplicate therapy alerts, safety guard warnings, contraindications.
          - Intent Triggers: "interactions", "drug interactions", "food interactions", "safety check", "is X safe with Y", "side effects", "contraindications", "food safety", "safety guard", "interactions page".
          - Example Links: [Check Interactions](/interactions), [Drug & Food Safety Guard](/interactions).

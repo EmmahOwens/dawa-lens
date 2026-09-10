@@ -4,19 +4,19 @@
 
 ## 1. Executive Summary
 
-The proposed project, entitled **Dawa Lens**, designs, architects, and deploys an intelligent, offline-first medication safety, adherence, and caregiving ecosystem engineered specifically to address the structural healthcare challenges of East Africa and emerging global markets. By harmonizing high-performance mobile edge computing, on-device optical character recognition (OCR), multimodal artificial intelligence, localized pharmacological intelligence, and an official directory of licensed community pharmacies, Dawa Lens transforms any standard smartphone into a context-aware personal clinical companion.
+The proposed project, entitled **Dawa Lens**, designs, architects, and deploys an intelligent, offline-first medication safety, adherence, and caregiving ecosystem engineered specifically to address the structural healthcare challenges in Uganda. By harmonizing high-performance mobile edge computing, on-device optical character recognition (OCR), multimodal artificial intelligence, localized pharmacological intelligence, and an official directory of licensed community pharmacies, Dawa Lens transforms any standard smartphone into a context-aware personal clinical companion.
 
-The platform directly eliminates preventable medication errors, bridges severe health literacy divides, validates licensed pharmaceutical outlets via the National Drug Authority (NDA) Uganda register, and safeguards patients against hazardous drug-drug and drug-food interactions involving indigenous East African diets (*Matooke*, *Mukene*, *G-nut sauce*, *Nakati*). Furthermore, through an integrated Family Hub and an Android-native adherence defense layer, Dawa Lens provides multi-generational families and caregivers with real-time, synchronized oversight of vulnerable dependents. Built on an offline-first architectural paradigm utilizing React 18, Vite 8, Capacitor 8 with custom native Kotlin background services (**`AdherenceGuardianService`**, **`NativeRecurrenceEngine`**), Node.js 24, and Firebase Cloud Firestore, Dawa Lens delivers sub-second clinical guidance and deterministic alarm delivery even in environments characterized by complete network outages, aggressive operating system battery killers, and entry-tier smartphone hardware.
+The platform directly eliminates preventable medication errors, bridges severe health literacy divides, validates licensed pharmaceutical outlets via the National Drug Authority (NDA) Uganda register, and safeguards patients against hazardous drug-drug and drug-food interactions involving indigenous Ugandan diets (*Matooke*, *Mukene*, *G-nut sauce*, *Nakati*). Furthermore, through an integrated Family Hub and an Android-native adherence defense layer, Dawa Lens provides multi-generational families and caregivers with real-time, synchronized oversight of vulnerable dependents. Built on an offline-first architectural paradigm utilizing React 18, Vite 8, Capacitor 8 with custom native Kotlin background services (**`AdherenceGuardianService`**, **`NativeRecurrenceEngine`**), Node.js 24, and Firebase Cloud Firestore, Dawa Lens delivers sub-second clinical guidance and deterministic alarm delivery even in environments characterized by complete network outages, aggressive operating system battery killers, and entry-tier smartphone hardware.
 
 ---
 
-## 2. Introduction, Background & Regional Healthcare Context
+## 2. Introduction, Background & Healthcare Context in Uganda
 
-In Uganda and across the broader East African Community (EAC), healthcare delivery continues to experience structural fragmentation, particularly within outpatient clinical management, chronic disease care, and pharmaceutical distribution. The prevailing regional healthcare model requires citizens to navigate a dispersed continuum of public health centers, private clinics, community pharmacies, and informal drug dispensaries. Because centralized Electronic Health Record (EHR) systems remain non-existent for the vast majority of the population, longitudinal medical histories and active medication profiles reside exclusively in the physical possession of patients or their immediate family members.
+Across Uganda, healthcare delivery continues to experience structural fragmentation, particularly within outpatient clinical management, chronic disease care, and pharmaceutical distribution. The prevailing healthcare model requires citizens to navigate a dispersed continuum of public health centers, private clinics, community pharmacies, and informal drug dispensaries. Because centralized Electronic Health Record (EHR) systems remain non-existent for the vast majority of the population, longitudinal medical histories and active medication profiles reside exclusively in the physical possession of patients or their immediate family members.
 
 ```
 +-----------------------------------------------------------------------------+
-|               The Fragmented Healthcare Landscape in East Africa            |
+|                  The Fragmented Healthcare Landscape in Uganda              |
 +-----------------------------------------------------------------------------+
 |                                                                             |
 |   +-------------------+    +--------------------+    +------------------+   |
@@ -40,9 +40,9 @@ Consequently, the burden of managing multi-drug regimens, identifying unlabelled
 
 1. **Polypharmacy in Multi-Morbidity Management**: Chronic conditions such as hypertension, diabetes, and cardiovascular diseases frequently co-occur with infectious diseases including HIV/AIDS, malaria, and tuberculosis. Patients are routinely prescribed complex combinations of antiretrovirals (ARVs), Artemisinin-based Combination Therapies (ACTs), antihypertensives, and antibiotics, dramatically elevating the risk of adverse drug reactions (ADRs).
 2. **Profligacy of Generic Packaging and Unregulated Outlets**: Pharmacies frequently dispense generic formulations in plain blister strips or unlabelled envelopes without accompanying patient information leaflets (PILs). Patients unable to decipher pharmaceutical nomenclature frequently take incorrect dosages or discontinue therapy prematurely. Furthermore, outpatient consumers lack readily accessible tools to confirm whether local dispensing premises hold authentic operating licenses from the National Drug Authority (NDA).
-3. **Localized Dietary Interactions**: Standard clinical databases evaluate drug interactions exclusively against Western dietary staples, ignoring indigenous East African foods. Common regional foods—such as steamed green bananas (*Matooke*), millet bread (*Kalo*), silver fish (*Mukene*), groundnut stew (*G-nut sauce*), grasshoppers (*Nsenene*), and indigenous greens (*Nakati*, *Dodo*)—contain biochemical properties that alter drug bioavailability, yet patients receive no systematic warnings regarding these food-drug interactions.
-4. **Hardware and Infrastructure Constraints**: Mobile users across East Africa predominantly utilize entry-level to mid-tier Android smartphones produced by manufacturers (such as Transsion/Tecno/Infinix, Xiaomi, and Samsung) whose aggressive operating system battery-saving algorithms kill background tasks, rendering standard reminder alarms non-functional. Furthermore, frequent network blackouts and high mobile data costs make cloud-dependent applications impractical.
-5. **Language & Cultural Barriers in Digital Health**: Generic medical applications use technical clinical English that alienates regional users. Bridging this gap requires conversational AI capable of contextualizing medical advice with regional cultural nuances and authentic Luganda honorific greetings (*Ssebo*, *Nyabo*).
+3. **Localized Dietary Interactions**: Standard clinical databases evaluate drug interactions exclusively against Western dietary staples, ignoring indigenous Ugandan foods. Common local foods—such as steamed green bananas (*Matooke*), millet bread (*Kalo*), silver fish (*Mukene*), groundnut stew (*G-nut sauce*), grasshoppers (*Nsenene*), and indigenous greens (*Nakati*, *Dodo*)—contain biochemical properties that alter drug bioavailability, yet patients receive no systematic warnings regarding these food-drug interactions.
+4. **Hardware and Infrastructure Constraints**: Mobile users across Uganda predominantly utilize entry-level to mid-tier Android smartphones produced by manufacturers (such as Transsion/Tecno/Infinix, Xiaomi, and Samsung) whose aggressive operating system battery-saving algorithms kill background tasks, rendering standard reminder alarms non-functional. Furthermore, frequent network blackouts and high mobile data costs make cloud-dependent applications impractical.
+5. **Language & Cultural Barriers in Digital Health**: Generic medical applications use technical clinical English that alienates local users. Bridging this gap requires conversational AI capable of contextualizing medical advice with regional cultural nuances and authentic Luganda honorific greetings (*Ssebo*, *Nyabo*).
 
 With mobile phone penetration in Uganda exceeding 70% and rapid advancements in lightweight edge machine learning models, an unprecedented opportunity exists to build a localized, intelligent, and highly resilient mobile health platform. Dawa Lens directly addresses these systemic vulnerabilities.
 
@@ -50,7 +50,7 @@ With mobile phone penetration in Uganda exceeding 70% and rapid advancements in 
 
 ## 3. Problem Statement & Motivation
 
-Despite the proliferation of digital health applications globally, existing solutions fail to provide effective medication safety and adherence management within developing regions. Western-centric applications (such as Medisafe and MyTherapy) operate on assumptions of uninterrupted high-speed 4G/5G connectivity, comprehensive national drug registries (e.g., US NDC or UK BNF), high baseline health literacy, and Western dietary habits. When deployed within East Africa, these applications break down: they cannot recognize regional generic brands, they fail to sound alarms when background processes are terminated by low-RAM Android skins, and they offer zero insight into local dietary contraindications.
+Despite the proliferation of digital health applications globally, existing solutions fail to provide effective medication safety and adherence management within developing regions. Western-centric applications (such as Medisafe and MyTherapy) operate on assumptions of uninterrupted high-speed 4G/5G connectivity, comprehensive national drug registries (e.g., US NDC or UK BNF), high baseline health literacy, and Western dietary habits. When deployed within Uganda, these applications break down: they cannot recognize local generic brands, they fail to sound alarms when background processes are terminated by low-RAM Android skins, and they offer zero insight into local dietary contraindications.
 
 Medication non-adherence and adverse drug events (ADEs) represent major drivers of preventable morbidity, mortality, antimicrobial resistance (AMR), and emergency hospital readmissions across Sub-Saharan Africa. Furthermore, multi-generational households place an unsustainable mental burden on primary caregivers who must coordinate the daily treatments of aging parents and young children without shared tools or verified access to licensed pharmacies.
 
@@ -61,14 +61,14 @@ The motivation behind Dawa Lens is to engineer an accessible, culturally compete
 ## 4. Project Aim and Specific Objectives
 
 ### 4.1 Primary Aim
-The primary aim of this project is to design, develop, evaluate, and deploy **Dawa Lens** — an offline-first, intelligence-driven medication safety, adherence tracking, and family caregiving ecosystem tailored to the clinical, linguistic, regulatory, and infrastructural realities of East Africa.
+The primary aim of this project is to design, develop, evaluate, and deploy **Dawa Lens** — an offline-first, intelligence-driven medication safety, adherence tracking, and family caregiving ecosystem tailored to the clinical, linguistic, regulatory, and infrastructural realities of Uganda.
 
 ### 4.2 Specific Objectives
 To achieve this primary aim, the project executes the following specific engineering and research objectives:
 
 1. **Develop an Edge-Optimized Computer Vision & OCR Module**: Implement a dual-tier medication recognition pipeline utilizing client-side Tesseract.js in dedicated Web Workers for instant text extraction, paired with cloud multimodal Vision LLMs (Groq Llama 3.2 Vision and Google Gemini 2.0 Flash) to identify pills, blister strips, and handwritten prescription slips, complemented by simulated scratch-code authentication.
 2. **Build DawaGPT — A Context-Aware Clinical Conversational Agent**: Construct an empathetic, multi-turn AI assistant capable of translating complex medical leaflets into plain, culturally tailored language, resolving authentic Luganda honorifics (*Ssebo*, *Nyabo*), injecting multi-dependent Family Hub clinical records, and executing in-app deep link recommendations via Page Link Intelligence.
-3. **Formulate an East African Drug & Local Food Interaction Guard**: Develop an intelligent cross-referencing engine combining international clinical databases (OpenFDA, RxNorm concept resolution) with a specialized East African Nutritional Knowledge Base to proactively detect dangerous drug-drug combinations and dietary contraindications (*Mukene* with Tetracyclines, *Nakati* with Warfarin, *G-nut sauce* with *Coartem*).
+3. **Formulate a Ugandan Drug & Local Food Interaction Guard**: Develop an intelligent cross-referencing engine combining international clinical databases (OpenFDA, RxNorm concept resolution) with a specialized Ugandan Nutritional Knowledge Base to proactively detect dangerous drug-drug combinations and dietary contraindications (*Mukene* with Tetracyclines, *Nakati* with Warfarin, *G-nut sauce* with *Coartem*).
 4. **Engineer an Offline-First Persistence & Sync Architecture**: Implement a robust client-side storage architecture utilizing IndexedDB, native SQLite plugins, TanStack Query, Firestore memory caching, and a distributed locking manager to ensure zero-latency read/write access during complete internet outages, with race-condition-free background delta-synchronization upon network restoration.
 5. **Implement an Android Native Recurrence Engine & Adherence Guardian Service**: Build a native Android Kotlin execution layer comprising `NativeRecurrenceEngine`, persistent `NativeRecurrenceStore`, `AdherenceGuardianService` (Foreground Service with persistent notification channel), and `NativeActionReceiver` for zero-overhead background alarm actions (Take, Snooze, Skip), combined with multi-OEM battery optimization intent resolution.
 6. **Construct a Collaborative Family Hub & Caregiver Network**: Provide a secure multi-profile management framework enabling caregivers to remotely monitor medication adherence, verify dose logs, consult DawaGPT within specific dependent contexts, and receive instant alerts regarding skipped critical doses for elderly relatives or pediatric dependents.
@@ -85,7 +85,7 @@ The development of Dawa Lens holds profound clinical, socio-economic, and techno
 * **Clinical Impact & Patient Safety**: By warning patients of adverse drug interactions and contraindications before ingestion, Dawa Lens directly prevents toxic drug combinations, mitigates drug-induced organ damage, and curtails the emergence of drug-resistant pathogens caused by erratic dosing.
 * **Reduction of Healthcare Costs**: Preventable adverse drug events and treatment failures place an immense financial strain on both households and public health facilities. By enhancing adherence and preventing acute complications, Dawa Lens reduces emergency room visits and hospital readmissions.
 * **Official Regulatory Alignment**: Integrating the National Drug Authority (NDA) licensed pharmacy register directly connects patients to authentic, inspected community drug outlets, combating the infiltration of substandard and counterfeit medicines.
-* **Caregiver Empowerment & Family Inclusion**: In the East African cultural context, family units provide the primary healthcare safety net. The Family Hub feature formalizes and simplifies this caregiving structure, allowing remote family members to support aging parents and children transparently.
+* **Caregiver Empowerment & Family Inclusion**: In the Ugandan cultural context, family units provide the primary healthcare safety net. The Family Hub feature formalizes and simplifies this caregiving structure, allowing remote family members to support aging parents and children transparently.
 * **Technological Innovation for Emerging Markets**: Dawa Lens serves as an architectural benchmark for building high-performance, AI-augmented health applications that operate seamlessly under severe infrastructural constraints (low-end hardware, limited bandwidth, intermittent power, and aggressive Android OS process termination).
 
 ---
@@ -104,7 +104,7 @@ The development of Dawa Lens holds profound clinical, socio-economic, and techno
 |   * Official NDA Uganda Licensed Pharmacy Locator & GPS Route Navigation    |
 |   * Dual-engine Pill & Blister Pack OCR (Tesseract.js + Vision LLMs)        |
 |   * Contextual Clinical AI Assistant (DawaGPT with Luganda Honorifics)      |
-|   * Drug-Drug, RxNorm Equivalence & East African Food Interaction Guard     |
+|   * Drug-Drug, RxNorm Equivalence & Ugandan Food Interaction Guard          |
 |   * Offline-First IndexedDB, Native SQLite, & Distributed Lock Sync         |
 |   * Travel Companion with Animated Flight Map & Timezone Regimen Shifter    |
 |   * Family Hub Caregiver Portal with Multi-Dependent Isolation & AI Context |
@@ -116,7 +116,7 @@ The development of Dawa Lens holds profound clinical, socio-economic, and techno
 |   x E-Commerce Drug Financial Settlement or Unlicensed Pharmacy Dispensing  |
 |   x Autonomous Clinical Diagnosis (The app operates strictly as an advisory)|
 |   x Native iOS Deployment (Strategically de-scoped to concentrate resources |
-|     on deep native Android execution for the East African mobile market)    |
+|     on deep native Android execution for the Ugandan mobile market)         |
 |                                                                             |
 +-----------------------------------------------------------------------------+
 ```
@@ -125,7 +125,7 @@ The development of Dawa Lens holds profound clinical, socio-economic, and techno
 The platform encompasses a complete mobile client and cloud backend supporting user authentication, medication inventory management (*MedVault*), intelligent reminder scheduling, computer vision scanning, conversational clinical assistance, family multi-profile delegation, wellness logging, PDF medical export, and NDA pharmacy navigation.
 
 ### 6.2 Target Audience & Geographic Scope
-The initial target deployment focuses on urban, peri-urban, and rural populations across Uganda (Kampala, Wakiso, Mbarara, Gulu, Jinja, Mbale), localized for English, Swahili, and Luganda, architected for scalable expansion across the broader East African Community (Kenya, Tanzania, Rwanda).
+The target deployment is strictly focused on urban, peri-urban, and rural populations across Uganda (Kampala, Wakiso, Mbarara, Gulu, Jinja, Mbale), localized for English and Luganda, with core system integrations (such as the National Drug Authority register) dedicated exclusively to the Ugandan regulatory, pharmaceutical, and healthcare context.
 
 ### 6.3 Delimitations & Strategic Focus
 * **No Direct EHR Integration**: Due to the absence of standardized, public FHIR/HL7 APIs in regional hospitals, direct two-way hospital EHR synchronization is not included in this phase.
@@ -143,7 +143,7 @@ Adherence to long-term therapies for chronic illnesses in developing countries a
 Traditional OCR solutions often require clean, high-contrast flat documents, performing poorly on curved pill bottles, reflective blister foils, and crumpled prescription slips. Lightweight neural OCR (such as WebAssembly-compiled Tesseract.js) combined with large multimodal vision models (e.g., Meta Llama 3.2 Vision, Google Gemini 2.0 Flash) allows applications to extract structured entities (Drug Name, Strength, Dosage, Frequency, Expiry Date) directly from low-quality mobile camera frames. Processing initial OCR passes directly on-device substantially reduces cloud API costs and latency.
 
 ### 7.3 Large Language Models in Clinical Decision Support & Cultural Localization
-While commercial LLMs exhibit impressive medical knowledge, unconstrained generative models pose risks of clinical hallucinations. Best practices in medical AI engineering mandate structured retrieval-augmented generation (RAG), strict system prompt boundaries, zero-shot entity validation against authoritative sources (RxNorm, OpenFDA), and deterministic safety filters. Furthermore, linguistic adaptations—such as injecting culturally authentic Luganda honorifics (*Ssebo*, *Nyabo*)—significantly improve user trust and adherence among East African patients.
+While commercial LLMs exhibit impressive medical knowledge, unconstrained generative models pose risks of clinical hallucinations. Best practices in medical AI engineering mandate structured retrieval-augmented generation (RAG), strict system prompt boundaries, zero-shot entity validation against authoritative sources (RxNorm, OpenFDA), and deterministic safety filters. Furthermore, linguistic adaptations—such as injecting culturally authentic Luganda honorifics (*Ssebo*, *Nyabo*)—significantly improve user trust and adherence among Ugandan patients.
 
 ### 7.4 Offline-First Computing & Distributed State Synchronization
 Offline-first software engineering shifts the primary source of truth from remote servers to the local client runtime. Utilizing IndexedDB, native SQLite, and local document caches alongside optimistic UI updates ensures instantaneous application responsiveness regardless of network availability. When connectivity is restored, idempotent synchronization protocols backed by distributed locking resolve conflicts and ensure global consistency without data loss.
@@ -358,7 +358,7 @@ flowchart TD
     subgraph AppWorkflows ["Dawa Lens Client Capabilities"]
         ScanAct["Scan Packaging & Verify Authenticity"]
         ChatAct["Consult DawaGPT (with Luganda Honorifics)"]
-        GuardAct["Check Drug & East African Food Interactions"]
+        GuardAct["Check Drug & Ugandan Food Interactions"]
         DoseAct["Manage MedVault & Log Doses"]
         PharmAct["Locate Licensed NDA Pharmacies & Routes"]
         AlarmAct["Receive Resilient Native Alarms"]
@@ -475,7 +475,7 @@ flowchart TD
     DispatchAlert --> FlowEnd
 ```
 
-### 10.4 East African Food Interaction & NDA Pharmacy Refill Sequence Diagram
+### 10.4 Ugandan Food Interaction & NDA Pharmacy Refill Sequence Diagram
 This diagram details the interaction checking pipeline and how low-stock alerts seamlessly trigger the NDA Community Pharmacy Locator.
 
 ```mermaid
@@ -484,7 +484,7 @@ sequenceDiagram
     actor User as Patient
     participant App as Dawa Lens MedVault
     participant Guard as Interaction Guard Engine
-    participant FoodDB as East African Nutritional DB
+    participant FoodDB as Ugandan Nutritional DB
     participant NDAService as NDA Pharmacy Service
     participant GPS as Geolocation Engine
 
@@ -528,9 +528,9 @@ Dawa Lens comprises nine seamlessly interconnected functional subsystems:
 |      * Multi-dependent Family Hub clinical context injection                |
 |      * Page Link Intelligence for deep in-app navigation                    |
 |                                                                             |
-|  [3] Drug, RxNorm & East African Food Interaction Guard                     |
+|  [3] Drug, RxNorm & Ugandan Food Interaction Guard                          |
 |      * Deterministic drug-drug interaction matrix via OpenFDA & RxNorm      |
-|      * East African Nutritional Engine (Matooke, Mukene, G-nuts, Nakati)    |
+|      * Ugandan Nutritional Engine (Matooke, Mukene, G-nuts, Nakati)         |
 |      * Rate-limited caching layer to eliminate redundant API lookups        |
 |                                                                             |
 |  [4] Family Hub & Caregiver Synchronization Network                         |
@@ -577,7 +577,7 @@ Dawa Lens comprises nine seamlessly interconnected functional subsystems:
 * **Page Link Intelligence**: Detects conversational intent and provides interactive deep links guiding users directly to relevant pages (MedVault, Travel Companion, NDA Pharmacy Locator, Wellness).
 * **Multi-Dependent Context**: Caregivers can switch patient contexts in Family Hub to ask specific questions regarding elderly parents or pediatric dependents.
 
-### 11.3 Subsystem 3: Drug, RxNorm & East African Food Interaction Guard
+### 11.3 Subsystem 3: Drug, RxNorm & Ugandan Food Interaction Guard
 * **Functional Description**: Cross-references newly prescribed medications against active regimens and regional dietary staples. Integrates RxNorm concept resolution to match international generic formulations.
 * **Localized Nutritional Intelligence**:
   * *Mukene* (Silver fish): High calcium content binds with Tetracyclines and Fluoroquinolones, inhibiting absorption. The system instructs patients to separate intake by $\ge 2$ hours.
@@ -693,7 +693,7 @@ gantt
 
 ### Phase Breakdown & Key Deliverables
 * **Phase 1: System Planning, Clinical Architecture & Prototyping**
-  * *Deliverables*: Comprehensive System Requirements Specification (SRS), Figma UI/UX design system, verified East African food-drug interaction dataset.
+  * *Deliverables*: Comprehensive System Requirements Specification (SRS), Figma UI/UX design system, verified Ugandan food-drug interaction dataset.
 * **Phase 2: Core Mobile Client, Backend & Offline Engine**
   * *Deliverables*: React 18 / Vite 8 skeleton, Firebase Firestore security rules, IndexedDB/SQLite persistence layer, distributed lock manager, *MedVault* CRUD module.
 * **Phase 3: Multimodal Vision, Cultural AI & NDA Directory**

@@ -8,7 +8,7 @@
  *
  * Results are cached for 30 minutes. Subsequent calls within the TTL
  * resolve instantly from cache (fromCache: true) with zero GPS radio usage.
- * Falls back to Kampala, Uganda (default location for EAC region).
+ * Falls back to Kampala, Uganda (default location).
  */
 import { registerPlugin } from '@capacitor/core';
 

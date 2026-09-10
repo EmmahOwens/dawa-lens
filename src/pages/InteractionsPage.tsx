@@ -1064,7 +1064,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Add any food, herb, or drink (e.g. Avocado, Sukuma Wiki, Bananas)..."
+              placeholder="Add any food, herb, or drink (e.g. Matooke, Mukene, Nakati, Avocado)..."
               value={customFactor}
               onChange={(e) => setCustomFactor(e.target.value)}
               className="w-full px-4 py-2.5 text-xs rounded-xl bg-card border border-border/50 focus:outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground/60 shadow-inner"
@@ -1148,7 +1148,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
         {/* Popular Suggestions Pills */}
         <div className="mb-10">
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
-            Popular & Regional Foods
+            Popular & Ugandan Foods
           </p>
           <div className="flex flex-wrap gap-1.5">
             {popularSuggestions.map(sug => {

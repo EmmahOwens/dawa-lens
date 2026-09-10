@@ -1,6 +1,6 @@
 /**
  * Local Food Knowledge Base
- * Focused on East African (Ugandan) nutritional context.
+ * Focused on Ugandan nutritional context.
  */
 
 export const LOCAL_FOODS = [
@@ -92,7 +92,7 @@ export const LOCAL_FOODS = [
 
 export const getFoodKnowledgePrompt = () => {
   return `
-    === LOCAL FOOD KNOWLEDGE (East Africa/Uganda) ===
+    === LOCAL FOOD KNOWLEDGE (Uganda) ===
     ${LOCAL_FOODS.map(f => `- ${f.name}: ${f.benefits} (${f.medicationContext})`).join('\n')}
 
     Use this knowledge to provide specific, culturally relevant nutritional advice.
