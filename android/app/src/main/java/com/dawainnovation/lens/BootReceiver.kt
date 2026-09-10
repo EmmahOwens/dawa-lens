@@ -70,7 +70,8 @@ class BootReceiver : BroadcastReceiver() {
             } else true
 
             // Step 1: If unlocked, reconcile NativeRecurrenceStore with SQLite database if needed
-            if (isUserUnlocked && (action == Intent.ACTION_USER_UNLOCKED || action == Intent.ACTION_BOOT_COMPLETED)) {
+            if (isUserUnlocked && (action == Intent.ACTION_USER_UNLOCKED || action == Intent.ACTION_BOOT_COMPLETED ||
+                action == "com.transsion.intent.action.BOOT_COMPLETED" || action == "com.transsion.powercenter.POWER_ON")) {
                 reconcileWithSqliteIfUnlocked(context)
             }
 
@@ -198,6 +199,12 @@ class BootReceiver : BroadcastReceiver() {
             }
             cursor.close()
 
+            // If SQLite is empty or has 0 rows, DO NOT overwrite NativeRecurrenceStore!
+            // NativeRecurrenceStore in Device-Protected Storage is our primary source of truth across reboots.
+            if (reconciledList.isEmpty()) {
+                return
+            }
+
             // Cancel alarms and dismiss notifications for any reminders in NativeRecurrenceStore that are no longer in reconciledList
             val oldStored = NativeRecurrenceStore.getReminders(context)
             val reconciledIds = reconciledList.map { it.id }.toSet()
@@ -224,7 +231,6 @@ class BootReceiver : BroadcastReceiver() {
                 }
             }
 
-            // Always commit reconciled list to NativeRecurrenceStore, even if empty
             NativeRecurrenceStore.saveReminders(context, reconciledList)
         } catch (e: Exception) {
             // Non-fatal SQLite read error
@@ -259,6 +265,8 @@ class BootReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val safeShowIntentId = (id and 0x3FFFFFFF) + 50000
+
         // Primary path: setAlarmClock() — highest OEM priority for medicine reminders rescheduled after boot.
         // Guarantees delivery even through MIUI/HyperOS, XOS, ColorOS, and One UI battery managers.
         if (canExact && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -268,7 +276,7 @@ class BootReceiver : BroadcastReceiver() {
                 }
                 val showPendingIntent = PendingIntent.getActivity(
                     context,
-                    id + 50000,
+                    safeShowIntentId,
                     showIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )

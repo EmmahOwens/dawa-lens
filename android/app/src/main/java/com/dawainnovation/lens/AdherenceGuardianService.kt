@@ -127,36 +127,34 @@ class AdherenceGuardianService : Service() {
             val storedReminders = NativeRecurrenceStore.getReminders(this)
             val now = System.currentTimeMillis()
 
-            val userManager = getSystemService(Context.USER_SERVICE) as? UserManager
-            val isUserUnlocked = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                userManager?.isUserUnlocked ?: true
-            } else true
-
-            val dbPath = getDatabasePath("dawa_lens.db")
-            val activeSqliteIds: Set<String>? = if (isUserUnlocked && dbPath.exists()) {
-                try {
-                    val db = SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-                    val cursor = db.rawQuery("SELECT id FROM reminders WHERE enabled = 1", null)
-                    val set = mutableSetOf<String>()
-                    while (cursor.moveToNext()) {
-                        set.add(cursor.getString(0))
-                    }
-                    cursor.close()
-                    db.close()
-                    set
-                } catch (e: Exception) { null }
-            } else null
-
             var earliestTrigger: Long? = null
             var earliestTitle: String? = null
 
             for (reminder in storedReminders) {
                 if (!reminder.enabled) continue
-                if (activeSqliteIds != null && !activeSqliteIds.contains(reminder.id)) {
-                    // Deleted or disabled in SQLite -> purge from store and skip
-                    NativeRecurrenceStore.removeReminder(this, reminder.id)
-                    continue
+
+                // 1. Active Watchdog Check:
+                // If AlarmManager was suppressed or delayed by Transsion XOS / MIUI battery managers,
+                // the running guardian service detects due doses (within the last 2 minutes) and
+                // directly triggers the alarm notification. AlarmReceiver.markSlotFired() guarantees
+                // no duplicate alarms if AlarmManager also fires.
+                val recentTrigger = NativeRecurrenceEngine.computeNextOccurrence(
+                    reminder.toEngineSchedule(), now - 120_000L
+                )
+                if (recentTrigger != null && recentTrigger <= now && (now - recentTrigger) <= 120_000L) {
+                    val medName = reminder.genericTitle.removePrefix("Time for ").trim()
+                    val doseStr = reminder.genericBody.substringAfter("Dose: ", "").substringBefore(". Remember")
+                    AlarmReceiver.triggerDirectReminderNotification(
+                        context = this,
+                        reminderId = reminder.id,
+                        medicineName = medName,
+                        dose = doseStr,
+                        scheduledTimeMs = recentTrigger,
+                        patientId = reminder.patientId
+                    )
                 }
+
+                // 2. Compute upcoming future trigger for countdown display
                 val nextTrigger = NativeRecurrenceEngine.computeNextOccurrence(
                     reminder.toEngineSchedule(), now
                 ) ?: continue
@@ -256,12 +254,21 @@ class AdherenceGuardianService : Service() {
             val restartIntent = Intent(this, AdherenceGuardianService::class.java).apply {
                 action = ACTION_START
             }
-            val pendingIntent = PendingIntent.getService(
-                this,
-                NOTIFICATION_ID + 1,
-                restartIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            val pendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                PendingIntent.getForegroundService(
+                    this,
+                    NOTIFICATION_ID + 1,
+                    restartIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            } else {
+                PendingIntent.getService(
+                    this,
+                    NOTIFICATION_ID + 1,
+                    restartIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            }
             val alarmManager = getSystemService(Context.ALARM_SERVICE) as? AlarmManager
             val restartAt = System.currentTimeMillis() + 5000L // 5 second delay
             if (alarmManager != null) {

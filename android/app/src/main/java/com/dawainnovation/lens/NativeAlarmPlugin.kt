@@ -312,9 +312,10 @@ class NativeAlarmPlugin : Plugin() {
                 val showIntent = Intent(ctx, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
+                val safeShowIntentId = (id and 0x3FFFFFFF) + 50000
                 val showPendingIntent = PendingIntent.getActivity(
                     ctx,
-                    id + 50000, // offset to avoid collision with notification PendingIntents
+                    safeShowIntentId,
                     showIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
@@ -533,6 +534,14 @@ class NativeAlarmPlugin : Plugin() {
 
         // Atomically commit to device-protected storage for Direct Boot survival
         NativeRecurrenceStore.saveReminders(ctx, storedReminders)
+
+        // Trigger immediate countdown update on AdherenceGuardianService
+        try {
+            val refreshIntent = Intent(ctx, AdherenceGuardianService::class.java).apply {
+                action = AdherenceGuardianService.ACTION_REFRESH
+            }
+            ctx.startService(refreshIntent)
+        } catch (e: Exception) {}
 
         val res = JSObject()
         res.put("success", true)

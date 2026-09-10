@@ -571,7 +571,7 @@ export default function SettingsPage() {
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Keeps a lightweight protection service in the background to prevent aggressive task managers (Infinix Phone Master, Xiaomi MIUI) from killing alarms when you swipe away the app.
+                  Keeps a lightweight protection service in the background to prevent aggressive task managers from killing alarms when you swipe away the app.
                 </p>
               </div>
             </div>

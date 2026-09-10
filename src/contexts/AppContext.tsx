@@ -1018,15 +1018,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     loadData();
 
-    if (currentUserId && Capacitor.isNativePlatform()) {
-      initPushNotifications(currentUserId).catch((err) =>
-        console.warn("[AppContext] Failed to initialize push notifications:", err)
-      );
+    if (Capacitor.isNativePlatform()) {
+      if (currentUserId) {
+        initPushNotifications(currentUserId).catch((err) =>
+          console.warn("[AppContext] Failed to initialize push notifications:", err)
+        );
+      }
 
       // Auto-start AdherenceGuardianService on aggressive OEM devices.
       // This is a web-layer safety net: the native layer (DawaLensApplication.onCreate
       // and BootReceiver) also auto-starts the service, but this covers the case where
-      // the user opens the app for the first time after install.
+      // the user opens the app offline, in guest mode, or for the first time after install.
       (async () => {
         try {
           const { NativeService: NS } = await import("../services/nativeService");
