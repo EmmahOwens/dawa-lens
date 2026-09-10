@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Geolocation } from "@capacitor/geolocation";
 import { Capacitor } from "@capacitor/core";
 import { NativeLocation } from "@/plugins/nativeLocation";
+import {
+  saveLastKnownLocation,
+  getLastKnownLocation,
+} from "../services/pharmacyService";
 
 export interface UserLocation {
   latitude: number;
@@ -12,7 +16,7 @@ export interface UserLocation {
 
 type LocationStatus = "idle" | "requesting" | "granted" | "denied" | "error";
 
-/** Kampala, Uganda – used when GPS is unavailable */
+/** Kampala, Uganda – used when GPS and previous location are unavailable */
 const DEFAULT_LOCATION: UserLocation = {
   latitude: 0.3476,
   longitude: 32.5825,
@@ -50,6 +54,20 @@ async function reverseGeocode(
   return null;
 }
 
+function getInitialLocation(): UserLocation | null {
+  if (cachedLocation) return cachedLocation;
+  const prev = getLastKnownLocation();
+  if (prev) {
+    return {
+      latitude: prev.latitude,
+      longitude: prev.longitude,
+      country: prev.country ?? "Uganda",
+      countryCode: prev.countryCode ?? "UG",
+    };
+  }
+  return null;
+}
+
 let cachedLocation: UserLocation | null = null;
 let cachedStatus: LocationStatus = "idle";
 
@@ -63,7 +81,7 @@ export interface UseGeolocationOptions {
  */
 export function useGeolocation(options: UseGeolocationOptions = {}) {
   const { autoRequest = true } = options;
-  const [location, setLocation] = useState<UserLocation | null>(cachedLocation);
+  const [location, setLocation] = useState<UserLocation | null>(() => getInitialLocation());
   const [status, setStatus] = useState<LocationStatus>(cachedStatus);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,6 +104,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
         setLocation(loc);
         setStatus("granted");
         setError(null);
+        saveLastKnownLocation(loc);
         return;
       } catch (err) {
         console.warn(
@@ -109,9 +128,18 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
           });
         }
         if (perm.location === "denied") {
-          cachedLocation = DEFAULT_LOCATION;
+          const prev = getLastKnownLocation();
+          const fallbackLoc: UserLocation = prev
+            ? {
+                latitude: prev.latitude,
+                longitude: prev.longitude,
+                country: prev.country ?? "Uganda",
+                countryCode: prev.countryCode ?? "UG",
+              }
+            : DEFAULT_LOCATION;
+          cachedLocation = fallbackLoc;
           cachedStatus = "denied";
-          setLocation(DEFAULT_LOCATION);
+          setLocation(fallbackLoc);
           setStatus("denied");
           setError("Location permission denied");
           return;
@@ -140,11 +168,22 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
       cachedStatus = "granted";
       setLocation(userLoc);
       setStatus("granted");
+      saveLastKnownLocation(userLoc);
     } catch (err) {
       console.error("Geolocation error:", err);
-      // Fall back to Kampala, Uganda
-      cachedLocation = DEFAULT_LOCATION;
-      setLocation(DEFAULT_LOCATION);
+      // Fall back to previous location if possible, or Kampala if first-time user
+      const prev = getLastKnownLocation();
+      const fallbackLoc: UserLocation = prev
+        ? {
+            latitude: prev.latitude,
+            longitude: prev.longitude,
+            country: prev.country ?? "Uganda",
+            countryCode: prev.countryCode ?? "UG",
+          }
+        : DEFAULT_LOCATION;
+
+      cachedLocation = fallbackLoc;
+      setLocation(fallbackLoc);
       const e = err as { code?: number; message?: string };
       if (e?.code === 1 || e?.message?.includes("denied")) {
         cachedStatus = "denied";

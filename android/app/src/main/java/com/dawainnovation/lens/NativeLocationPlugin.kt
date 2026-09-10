@@ -200,12 +200,19 @@ class NativeLocationPlugin : Plugin() {
     }
 
     private fun resolveWithFallback(call: PluginCall) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val hasSaved = prefs.contains(KEY_LAT) && prefs.contains(KEY_LNG)
+        val lat = if (hasSaved) prefs.getFloat(KEY_LAT, FALLBACK_LAT.toFloat()).toDouble() else FALLBACK_LAT
+        val lng = if (hasSaved) prefs.getFloat(KEY_LNG, FALLBACK_LNG.toFloat()).toDouble() else FALLBACK_LNG
+        val country = if (hasSaved) prefs.getString(KEY_COUNTRY, FALLBACK_COUNTRY) ?: FALLBACK_COUNTRY else FALLBACK_COUNTRY
+        val code = if (hasSaved) prefs.getString(KEY_CODE, FALLBACK_CODE) ?: FALLBACK_CODE else FALLBACK_CODE
+
         call.resolve(JSObject().apply {
-            put("country",     FALLBACK_COUNTRY)
-            put("countryCode", FALLBACK_CODE)
-            put("lat",  FALLBACK_LAT)
-            put("lng",  FALLBACK_LNG)
-            put("fromCache", false)
+            put("country",     country)
+            put("countryCode", code)
+            put("lat",  lat)
+            put("lng",  lng)
+            put("fromCache", hasSaved)
         })
     }
 }

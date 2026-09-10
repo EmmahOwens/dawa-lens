@@ -48,6 +48,155 @@ export const NDA_SOURCE_METADATA = {
   verificationStatement: "Verified and licensed by the National Drug Authority (NDA) Uganda under the National Drug Policy and Authority Act.",
 } as const;
 
+export const DEFAULT_KAMPALA_COORDS: [number, number] = [32.5825, 0.3476]; // [lng, lat]
+export const KAMPALA_LAT_LNG = { latitude: 0.3476, longitude: 32.5825 } as const;
+export const LAST_KNOWN_LOCATION_STORAGE_KEY = "dawa_pharmacy_last_location";
+
+export interface SavedPharmacyLocation {
+  latitude: number;
+  longitude: number;
+  country?: string | null;
+  countryCode?: string | null;
+  district?: string | null;
+  timestamp: number;
+}
+
+let inMemorySavedLocation: SavedPharmacyLocation | null = null;
+
+export function saveLastKnownLocation(location: {
+  latitude: number;
+  longitude: number;
+  country?: string | null;
+  countryCode?: string | null;
+  district?: string | null;
+}): void {
+  if (
+    typeof location?.latitude !== "number" ||
+    isNaN(location.latitude) ||
+    typeof location?.longitude !== "number" ||
+    isNaN(location.longitude) ||
+    location.latitude < -90 ||
+    location.latitude > 90 ||
+    location.longitude < -180 ||
+    location.longitude > 180
+  ) {
+    return;
+  }
+
+  const saved: SavedPharmacyLocation = {
+    latitude: location.latitude,
+    longitude: location.longitude,
+    country: location.country ?? null,
+    countryCode: location.countryCode ?? null,
+    district: location.district ?? null,
+    timestamp: Date.now(),
+  };
+
+  inMemorySavedLocation = saved;
+
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(LAST_KNOWN_LOCATION_STORAGE_KEY, JSON.stringify(saved));
+    }
+  } catch (err) {
+    console.warn("[pharmacyService] Failed to persist last known location to localStorage:", err);
+  }
+}
+
+export function getLastKnownLocation(): SavedPharmacyLocation | null {
+  try {
+    if (typeof localStorage !== "undefined") {
+      const raw =
+        localStorage.getItem(LAST_KNOWN_LOCATION_STORAGE_KEY) ||
+        localStorage.getItem("dawa_last_known_location");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (
+          typeof parsed?.latitude === "number" &&
+          !isNaN(parsed.latitude) &&
+          typeof parsed?.longitude === "number" &&
+          !isNaN(parsed.longitude) &&
+          parsed.latitude >= -90 &&
+          parsed.latitude <= 90 &&
+          parsed.longitude >= -180 &&
+          parsed.longitude <= 180
+        ) {
+          inMemorySavedLocation = parsed as SavedPharmacyLocation;
+          return parsed as SavedPharmacyLocation;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[pharmacyService] Failed to read last known location from localStorage:", err);
+  }
+
+  return inMemorySavedLocation;
+}
+
+export function clearLastKnownLocation(): void {
+  inMemorySavedLocation = null;
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(LAST_KNOWN_LOCATION_STORAGE_KEY);
+      localStorage.removeItem("dawa_last_known_location");
+    }
+  } catch {}
+}
+
+export interface ResolveCoordinatesOptions {
+  liveLocation?: { latitude: number; longitude: number } | null;
+  hasNetworkIssue?: boolean;
+}
+
+export interface ResolvedCoordinates {
+  coords: [number, number]; // [lng, lat]
+  source: "live" | "previous" | "default";
+}
+
+/**
+ * Resolves user coordinates for the NDA Pharmacy locator:
+ * - If online and live GPS location is available -> uses live location.
+ * - If there is a network issue (or live location unavailable):
+ *     1. Uses the previous location if one was previously recorded.
+ *     2. If no previous location exists (e.g. first-time user with network issue), defaults to Kampala.
+ */
+export function resolvePharmacyCoordinates(
+  options: ResolveCoordinatesOptions = {}
+): ResolvedCoordinates {
+  const { liveLocation, hasNetworkIssue = false } = options;
+
+  const hasValidLive =
+    liveLocation &&
+    typeof liveLocation.latitude === "number" &&
+    !isNaN(liveLocation.latitude) &&
+    typeof liveLocation.longitude === "number" &&
+    !isNaN(liveLocation.longitude);
+
+  // If we have valid live GPS and NO network issue, use live location
+  if (hasValidLive && !hasNetworkIssue) {
+    return {
+      coords: [liveLocation.longitude, liveLocation.latitude],
+      source: "live",
+    };
+  }
+
+  // Network issue OR live location not available:
+  // Check if a previous location exists
+  const previous = getLastKnownLocation();
+  if (previous) {
+    return {
+      coords: [previous.longitude, previous.latitude],
+      source: "previous",
+    };
+  }
+
+  // First-time users with network issues (or no previous location): default to Kampala
+  return {
+    coords: DEFAULT_KAMPALA_COORDS,
+    source: "default",
+  };
+}
+
 // In-memory cache for road routes: `${lng1},${lat1}->${lng2},${lat2}:${mode}`
 const routeCache = new Map<string, PharmacyRoute>();
 

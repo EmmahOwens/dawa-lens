@@ -8,6 +8,11 @@ import {
   formatDuration,
   getAllDistricts,
   getDirectionsUrl,
+  saveLastKnownLocation,
+  getLastKnownLocation,
+  clearLastKnownLocation,
+  resolvePharmacyCoordinates,
+  DEFAULT_KAMPALA_COORDS,
 } from "../pharmacyService";
 
 describe("pharmacyService", () => {
@@ -120,5 +125,100 @@ describe("pharmacyService", () => {
       }
     }
   });
+
+  describe("Location persistence and fallback handling", () => {
+    beforeEach(() => {
+      clearLastKnownLocation();
+      localStorage.clear();
+    });
+
+    it("saves and retrieves last known valid location", () => {
+      expect(getLastKnownLocation()).toBeNull();
+
+      saveLastKnownLocation({
+        latitude: 0.6133,
+        longitude: 30.6585,
+        district: "Mbarara",
+      });
+
+      const saved = getLastKnownLocation();
+      expect(saved).not.toBeNull();
+      expect(saved?.latitude).toBeCloseTo(0.6133);
+      expect(saved?.longitude).toBeCloseTo(30.6585);
+      expect(saved?.district).toBe("Mbarara");
+    });
+
+    it("ignores invalid or NaN coordinates", () => {
+      saveLastKnownLocation({
+        latitude: NaN,
+        longitude: 32.58,
+      });
+      expect(getLastKnownLocation()).toBeNull();
+
+      saveLastKnownLocation({
+        latitude: 100, // out of range -90..90
+        longitude: 32.58,
+      });
+      expect(getLastKnownLocation()).toBeNull();
+    });
+
+    it("resolves to live location when online and GPS coordinate is available", () => {
+      const live = { latitude: 0.4479, longitude: 33.2026 }; // Jinja
+      const result = resolvePharmacyCoordinates({
+        liveLocation: live,
+        hasNetworkIssue: false,
+      });
+
+      expect(result.source).toBe("live");
+      expect(result.coords).toEqual([33.2026, 0.4479]); // [lng, lat]
+    });
+
+    it("uses previous location in case of a network issue when previous location exists", () => {
+      // User previously visited Mbarara
+      saveLastKnownLocation({
+        latitude: 0.6133,
+        longitude: 30.6585,
+        district: "Mbarara",
+      });
+
+      // Network issue occurs (e.g. offline or GPS network timeout)
+      const result = resolvePharmacyCoordinates({
+        liveLocation: null,
+        hasNetworkIssue: true,
+      });
+
+      expect(result.source).toBe("previous");
+      expect(result.coords[0]).toBeCloseTo(30.6585); // lng
+      expect(result.coords[1]).toBeCloseTo(0.6133); // lat
+    });
+
+    it("defaults to Kampala in case of a network issue for first-time users (no previous location)", () => {
+      // First-time user: no stored location
+      clearLastKnownLocation();
+      localStorage.clear();
+
+      const result = resolvePharmacyCoordinates({
+        liveLocation: null,
+        hasNetworkIssue: true,
+      });
+
+      expect(result.source).toBe("default");
+      expect(result.coords).toEqual(DEFAULT_KAMPALA_COORDS); // [32.5825, 0.3476] Kampala
+    });
+
+    it("defaults to Kampala if live GPS is unavailable and no previous location exists", () => {
+      clearLastKnownLocation();
+      localStorage.clear();
+
+      const result = resolvePharmacyCoordinates({
+        liveLocation: null,
+        hasNetworkIssue: false,
+      });
+
+      expect(result.source).toBe("default");
+      expect(result.coords).toEqual(DEFAULT_KAMPALA_COORDS);
+    });
+  });
 });
+
 

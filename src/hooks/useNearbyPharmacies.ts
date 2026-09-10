@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useGeolocation } from "./useGeolocation";
+import { useNetworkStatus } from "./useNetworkStatus";
 import {
   NdaPharmacy,
   PharmacyRoute,
@@ -8,19 +9,40 @@ import {
   getPharmacyRoute,
   fetchTopPharmaciesRoadDistances,
   getAllDistricts,
+  resolvePharmacyCoordinates,
+  saveLastKnownLocation,
+  DEFAULT_KAMPALA_COORDS,
 } from "../services/pharmacyService";
-
-const DEFAULT_USER_COORDS: [number, number] = [32.5825, 0.3476]; // [lng, lat] Kampala
 
 export function useNearbyPharmacies() {
   const { location, status: geoStatus, requestLocation } = useGeolocation();
+  const { isOnline } = useNetworkStatus();
 
-  const userCoords = useMemo<[number, number]>(() => {
-    if (location && typeof location.longitude === "number" && typeof location.latitude === "number") {
-      return [location.longitude, location.latitude];
+  const isNetworkIssue = !isOnline || geoStatus === "error";
+
+  const resolved = useMemo(() => {
+    return resolvePharmacyCoordinates({
+      liveLocation: geoStatus === "granted" ? location : null,
+      hasNetworkIssue: isNetworkIssue,
+    });
+  }, [location, geoStatus, isNetworkIssue]);
+
+  const userCoords = resolved.coords;
+  const locationSource = resolved.source; // "live" | "previous" | "default"
+  const isUsingPreviousLocation = locationSource === "previous";
+  const isUsingDefaultLocation = locationSource === "default";
+
+  // Persist live location when successfully obtained and online
+  useEffect(() => {
+    if (location && geoStatus === "granted" && !isNetworkIssue) {
+      saveLastKnownLocation({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        country: location.country,
+        countryCode: location.countryCode,
+      });
     }
-    return DEFAULT_USER_COORDS;
-  }, [location]);
+  }, [location, geoStatus, isNetworkIssue]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("ALL");
@@ -48,6 +70,11 @@ export function useNearbyPharmacies() {
     const initialCandidates = findTopNearestPharmacies(userCoords[1], userCoords[0], 10, true);
     setRawTopPharmacies(initialCandidates.slice(0, 5));
 
+    if (!isOnline) {
+      // In offline / network issue mode, use direct proximity calculations without blocking network calls
+      return;
+    }
+
     let isCancelled = false;
     fetchTopPharmaciesRoadDistances(userCoords, initialCandidates, transportMode)
       .then((enriched) => {
@@ -74,7 +101,7 @@ export function useNearbyPharmacies() {
     return () => {
       isCancelled = true;
     };
-  }, [userCoords, transportMode]);
+  }, [userCoords, transportMode, isOnline]);
 
   // Filtered / searched list of pharmacies
   const filteredPharmacies = useMemo(() => {
@@ -162,6 +189,10 @@ export function useNearbyPharmacies() {
 
   return {
     userCoords,
+    locationSource,
+    isUsingPreviousLocation,
+    isUsingDefaultLocation,
+    isNetworkIssue,
     geoStatus,
     requestLocation,
     top5Pharmacies,

@@ -21,6 +21,7 @@ import {
   ArrowRight,
   Filter,
   Location,
+  WifiOff,
 } from "@/lib/icons";
 import PermissionRequest from "@/components/PermissionRequest";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,10 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
 }) => {
   const {
     userCoords,
+    locationSource,
+    isUsingPreviousLocation,
+    isUsingDefaultLocation,
+    isNetworkIssue,
     geoStatus,
     requestLocation,
     top5Pharmacies,
@@ -184,12 +189,35 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
 
           {/* Modal Body */}
           <div className="p-6 space-y-5 flex-1 overflow-y-auto no-scrollbar touch-auto overscroll-contain">
-            {/* Location Status Warning Banner (if location denied / error) */}
-            {(geoStatus === "denied" || geoStatus === "error") && (
+            {/* Location Status Warning Banner (Network issue, previous location fallback, or denied) */}
+            {isNetworkIssue ? (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <WifiOff className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span className="truncate">
+                    {isUsingPreviousLocation
+                      ? "Network issue detected. Using your previous location (offline mode)."
+                      : "Network issue detected. Defaulting to Kampala area."}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => requestLocation()}
+                  className="h-7 text-[10px] font-bold rounded-xl border-amber-500/30 bg-amber-500/15 hover:bg-amber-500/25 shrink-0 ml-2"
+                >
+                  Retry GPS
+                </Button>
+              </div>
+            ) : (geoStatus === "denied" || geoStatus === "error") && (
               <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                   <Location className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <span className="truncate">Location disabled. Showing default Kampala area.</span>
+                  <span className="truncate">
+                    {isUsingPreviousLocation
+                      ? "Location disabled. Showing your previous location."
+                      : "Location disabled. Showing default Kampala area."}
+                  </span>
                 </div>
                 <Button
                   size="sm"
