@@ -11,6 +11,7 @@ import { checkConditionSafety } from "@/services/conditionInteractionService";
 import { checkFdaMultiSafety, FdaMultiSafetyResult } from "@/services/openFdaClient";
 import { checkInteractions } from "@/services/interactionChecker";
 import { ConditionSafetyCheck, ParsedInteraction } from "@/types/interactions";
+import { MobileWatchdogResolveButton } from "./MobileWatchdogResolveButton";
 
 export function InteractionsWidget() {
   const { t } = useTranslation();
@@ -271,13 +272,12 @@ export function InteractionsWidget() {
                 </div>
               </div>
 
-              <button
+              <MobileWatchdogResolveButton
                 onClick={handleConsultAllAlerts}
-                className="w-full py-2 px-3 rounded-xl bg-destructive text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-destructive/90 transition-all active:scale-98 shadow-sm"
-              >
-                <Bot size={13} />
-                Ask DawaGPT to Resolve
-              </button>
+                conflictCount={totalAlertsCount}
+                isCritical={true}
+                label="Ask DawaGPT to Resolve"
+              />
             </motion.div>
           ) : isWarning ? (
             <motion.div
@@ -313,13 +313,12 @@ export function InteractionsWidget() {
                 </div>
               </div>
 
-              <button
+              <MobileWatchdogResolveButton
                 onClick={handleConsultAllAlerts}
-                className="w-full py-2 px-3 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-amber-600 transition-all active:scale-98 shadow-sm"
-              >
-                <Bot size={13} />
-                Consult DawaGPT on Safety
-              </button>
+                conflictCount={totalAlertsCount}
+                isCritical={false}
+                label="Consult DawaGPT on Safety"
+              />
             </motion.div>
           ) : isSecure ? (
             <motion.div

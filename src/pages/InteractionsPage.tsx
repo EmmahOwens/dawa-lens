@@ -21,12 +21,13 @@ import { NativeService } from "@/services/nativeService";
 import { ImpactStyle } from "@capacitor/haptics";
 import { checkFdaMultiSafety, FdaMultiSafetyResult } from "@/services/openFdaClient";
 import FdaBoxedWarningBadge from "@/components/fda/FdaBoxedWarningBadge";
+import { MobileWatchdogResolveButton } from "@/components/intelligence/MobileWatchdogResolveButton";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
 
 export default function InteractionsPage() {
-  const { medicines, userProfile, patients, selectedPatientId } = useApp();
+  const { medicines, userProfile, patients, selectedPatientId, openDawaGPTWithPrompt } = useApp();
   const [activeTab, setActiveTab] = useState<"cabinet" | "sandbox">("cabinet");
   const { t } = useTranslation();
 
@@ -44,6 +45,22 @@ export default function InteractionsPage() {
       (fdaSafety.allergenAlerts && fdaSafety.allergenAlerts.length > 0)
     )
   );
+
+  const handleConsultAllAlerts = () => {
+    const medNames = medicines.map(m => m.name).join(", ");
+    let query = `I have active safety alerts in my cabinet (${medNames}). `;
+    if (fdaSafety?.duplicateTherapies && fdaSafety.duplicateTherapies.length > 0) {
+      query += `Specifically, duplicate therapies detected: ${fdaSafety.duplicateTherapies.map(d => `${d.drug1} + ${d.drug2} (${d.sharedClass})`).join("; ")}. `;
+    }
+    if (fdaSafety?.boxedWarnings && fdaSafety.boxedWarnings.length > 0) {
+      query += `FDA Boxed Warnings: ${fdaSafety.boxedWarnings.map(b => `${b.drugName}: ${b.warning}`).join("; ")}. `;
+    }
+    if (interactions.length > 0) {
+      query += `Also drug interactions: ${interactions.map(i => `${i.drug1} + ${i.drug2}`).join("; ")}. `;
+    }
+    query += "Please advise on how I should manage this safely and whether I should space them out or talk to a doctor.";
+    openDawaGPTWithPrompt(query);
+  };
 
   // Sandbox State
   const [sandboxDrugs, setSandboxDrugs] = useState<{ name: string; rxcui: string }[]>([]);
@@ -621,6 +638,32 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                   FDA Clinical Safety Intelligence
                 </h3>
               </div>
+
+              {/* Mobile Watchdog Resolve Action */}
+              <MobileWatchdogResolveButton
+                onClick={handleConsultAllAlerts}
+                conflictCount={
+                  (fdaSafety.duplicateTherapies?.length || 0) +
+                  (fdaSafety.boxedWarnings?.length || 0) +
+                  (fdaSafety.contraindicationAlerts?.length || 0) +
+                  (fdaSafety.allergenAlerts?.length || 0) +
+                  interactions.length
+                }
+                isCritical={Boolean(
+                  fdaSafety.hasCriticalAlert ||
+                  (fdaSafety.boxedWarnings && fdaSafety.boxedWarnings.length > 0) ||
+                  (fdaSafety.contraindicationAlerts && fdaSafety.contraindicationAlerts.length > 0)
+                )}
+                label={
+                  Boolean(
+                    fdaSafety.hasCriticalAlert ||
+                    (fdaSafety.boxedWarnings && fdaSafety.boxedWarnings.length > 0) ||
+                    (fdaSafety.contraindicationAlerts && fdaSafety.contraindicationAlerts.length > 0)
+                  )
+                    ? "Ask DawaGPT to Resolve"
+                    : "Consult DawaGPT on Safety"
+                }
+              />
 
               {/* Duplicate Therapies */}
               {fdaSafety.duplicateTherapies?.map((dup, i) => (
