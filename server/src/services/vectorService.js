@@ -42,7 +42,7 @@ export const generateVoyageEmbedding = async (text) => {
 };
 
 /**
- * Generates text embeddings using Gemini text-embedding-004.
+ * Generates text embeddings using Gemini gemini-embedding-001 with 768-dim output.
  * @param {string} text - Text to embed.
  * @returns {Promise<number[]|null>} Array of floats (768-dim) or null.
  */
@@ -52,11 +52,14 @@ export const generateGeminiEmbedding = async (text) => {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
-    const result = await model.embedContent(text);
+    const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
+    const result = await model.embedContent({
+      content: { parts: [{ text }] },
+      outputDimensionality: 768
+    });
     return result.embedding?.values || null;
   } catch (err) {
-    console.warn('⚠️ Gemini text-embedding-004 embedding failed:', err.message);
+    console.warn('⚠️ Gemini gemini-embedding-001 embedding failed:', err.message);
     return null;
   }
 };
@@ -100,7 +103,7 @@ export const testVoyageAiProvider = async () => {
 
 /**
  * Retrieves relevant medical knowledge snippets from Firestore Vector Search.
- * Uses Gemini text-embedding-004 (768-dim) as primary for Firestore 768-dim index,
+ * Uses Gemini gemini-embedding-001 (768-dim) as primary for Firestore 768-dim index,
  * with Voyage AI voyage-3-lite available as alternative embedding provider.
  * 
  * @param {string} query - The user's question or search term.

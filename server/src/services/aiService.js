@@ -22,11 +22,11 @@ const GROQ_LIGHT_MODEL = 'openai/gpt-oss-20b';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
-const CEREBRAS_MODEL = 'llama-3.3-70b';
+const CEREBRAS_MODEL = 'gpt-oss-120b'; // migrated from llama-3.3-70b (decommissioned Feb 16, 2026)
 const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 const Z_AI_API_KEY = process.env.Z_AI_API_KEY;
-const Z_AI_MODEL = 'glm-4.7-flash';
+const Z_AI_MODEL = 'glm-5-flash';
 const Z_AI_API_URL = 'https://api.z.ai/api/coding/paas/v4/chat/completions';
 
 const SAMBANOVA_API_KEY = process.env.SAMBACLOUD_API_KEY || process.env.SAMBANOVA_API_KEY;
@@ -38,7 +38,7 @@ const OPENROUTER_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 const NVIDIA_API_KEY = process.env.NVIDIA_API || process.env.NVIDIA_NIM_API_KEY;
-const NVIDIA_MODEL = 'nvidia/llama-3.1-nemotron-70b-instruct';
+const NVIDIA_MODEL = 'nvidia/llama-3.3-nemotron-super-49b-instruct';
 const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
 const SILICONFLOW_API_KEY = process.env.SILICONFLOW_API || process.env.SILICONFLOW_API_KEY;
@@ -46,7 +46,7 @@ const SILICONFLOW_MODEL = 'Qwen/Qwen2.5-7B-Instruct';
 const SILICONFLOW_API_URL = 'https://api.siliconflow.cn/v1/chat/completions';
 
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
-const MISTRAL_MODEL = 'mistral-small-latest';
+const MISTRAL_MODEL = 'mistral-small-latest'; // Mistral Small 4 family alias (mistral-small-2501)
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 
 /**
@@ -96,7 +96,7 @@ const getGroqApiKey = (modelId) => {
 };
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 /**
@@ -216,7 +216,7 @@ const callCerebrasChat = async (messages, responseFormat = { type: 'json_object'
     }
 
     const result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
-    if (typeof result === 'object') result.source = "Cerebras (Llama-3.3-70B)";
+    if (typeof result === 'object') result.source = `Cerebras (${modelId})`;
     return result;
   };
 
@@ -230,6 +230,7 @@ const Z_AI_ENDPOINTS = [
 ];
 
 const Z_AI_MODELS = [
+  'glm-5-flash',
   'glm-4.7-flash',
   'glm-4-flash',
   'glm-4',
@@ -316,7 +317,7 @@ const callZaiChat = async (messages, responseFormat = { type: 'json_object' }, m
     return result;
   };
 
-  return await rateLimitManager.enqueue(fn, 'zai-glm-4.7-flash', messages, priority, 3, failFast);
+  return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', messages, priority, 3, failFast);
 };
 
 /**
@@ -377,7 +378,7 @@ const callOpenRouterChat = async (messages, responseFormat = { type: 'json_objec
 };
 
 /**
- * Standard chat completion call to NVIDIA NIM (Llama-3.1-Nemotron-70B)
+ * Standard chat completion call to NVIDIA NIM (Llama-3.3-Nemotron-Super-49B)
  */
 const callNvidiaNimChat = async (messages, responseFormat = { type: 'json_object' }, modelId = NVIDIA_MODEL, priority = 'high', maxTokens = 2048, failFast = false, temperature = 0.7) => {
   if (!NVIDIA_API_KEY) throw new AppError('NVIDIA API key not configured', 503);
@@ -546,7 +547,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
 
   // Strict forced model (used primarily for isolated provider test diagnostics)
   if (forceModel) {
-    if (forceModel === 'cerebras' || forceModel === CEREBRAS_MODEL) {
+    if (forceModel === 'cerebras' || forceModel === CEREBRAS_MODEL || forceModel === 'llama-3.3-70b') {
       return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, false, temperature);
     }
     if (forceModel === 'groq-70b' || forceModel === GROQ_MODEL) {
@@ -561,7 +562,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
     if (forceModel === 'sambanova' || forceModel === SAMBANOVA_MODEL) {
       return await callSambaNovaChat(messages, responseFormat, SAMBANOVA_MODEL, priority, maxTokens, false, temperature);
     }
-    if (forceModel === 'nvidia' || forceModel === 'nvidia-nemotron' || forceModel === NVIDIA_MODEL) {
+    if (forceModel === 'nvidia' || forceModel === 'nvidia-nemotron' || forceModel === NVIDIA_MODEL || forceModel === 'nvidia/llama-3.1-nemotron-70b-instruct') {
       return await callNvidiaNimChat(messages, responseFormat, NVIDIA_MODEL, priority, maxTokens, false, temperature);
     }
     if (forceModel === 'siliconflow' || forceModel === 'qwen-7b' || forceModel === SILICONFLOW_MODEL) {
@@ -570,13 +571,13 @@ export const callAiWithFallback = async (messages, options = {}) => {
     if (forceModel === 'openrouter' || forceModel === OPENROUTER_MODEL) {
       return await callOpenRouterChat(messages, responseFormat, OPENROUTER_MODEL, priority, maxTokens, false, temperature);
     }
-    if (forceModel === 'mistral' || forceModel === MISTRAL_MODEL) {
+    if (forceModel === 'mistral' || forceModel === MISTRAL_MODEL || forceModel === 'mistral-small-2501') {
       return await callMistralChat(messages, responseFormat, MISTRAL_MODEL, priority, maxTokens, false, temperature);
     }
-    if (forceModel === 'zai' || forceModel === Z_AI_MODEL) {
+    if (forceModel === 'zai' || forceModel === Z_AI_MODEL || forceModel === 'glm-4.7-flash') {
       return await callZaiChat(messages, responseFormat, Z_AI_MODEL, priority, maxTokens, false, temperature);
     }
-    if (forceModel === 'gemini' || forceModel === GEMINI_MODEL) {
+    if (forceModel === 'gemini' || forceModel === GEMINI_MODEL || forceModel === 'gemini-2.0-flash') {
       return await callGeminiChat(messages, priority, maxTokens, temperature);
     }
   }
@@ -604,7 +605,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 1. Try Cerebras (Primary ultra-fast 70B, for complex tasks)
+  // 1. Try Cerebras (Primary ultra-fast 120B, for complex tasks)
   if (CEREBRAS_API_KEY && isComplex) {
     try {
       return await callCerebrasChat(messages, responseFormat, CEREBRAS_MODEL, priority, maxTokens, true, temperature);
@@ -631,7 +632,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 4. Try NVIDIA NIM (Llama-3.1-Nemotron-70B)
+  // 4. Try NVIDIA NIM (Llama-3.3-Nemotron-Super-49B)
   if (NVIDIA_API_KEY && isComplex) {
     try {
       return await callNvidiaNimChat(messages, responseFormat, NVIDIA_MODEL, priority, maxTokens, true, temperature);
@@ -685,12 +686,12 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 10. Try Z.ai (GLM-4.7-Flash)
+  // 10. Try Z.ai (GLM-5-Flash)
   if (Z_AI_API_KEY) {
     try {
       return await callZaiChat(messages, responseFormat, Z_AI_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
-      console.warn("Fallback: Z.ai GLM-4.7-Flash failed, trying Gemini...", err.message);
+      console.warn("Fallback: Z.ai GLM-5-Flash failed, trying Gemini...", err.message);
     }
   }
 
@@ -1497,9 +1498,9 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'zai-glm-4.7-flash', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: Z.ai GLM-4.7-Flash failed.", err.message);
+        console.warn("Stream Fallback: Z.ai GLM-5-Flash failed.", err.message);
       }
     }
 
@@ -2240,7 +2241,7 @@ export const getEmotionReflection = async (mood, energy, symptoms, medicines = [
 };
 
 /**
- * Diagnostic test specifically for Z.ai (GLM-4.7-Flash) provider
+ * Diagnostic test specifically for Z.ai (GLM-5-Flash) provider
  */
 export const testZaiProvider = async () => {
   if (!Z_AI_API_KEY) {
@@ -2269,7 +2270,7 @@ export const testZaiProvider = async () => {
     return {
       status: 'healthy',
       configured: true,
-      provider: 'Z.ai (GLM-4.7-Flash)',
+      provider: 'Z.ai (GLM-5-Flash)',
       latencyMs: Date.now() - startTime,
       data: result
     };
@@ -2277,7 +2278,7 @@ export const testZaiProvider = async () => {
     return {
       status: 'error',
       configured: true,
-      provider: 'Z.ai (GLM-4.7-Flash)',
+      provider: 'Z.ai (GLM-5-Flash)',
       latencyMs: Date.now() - startTime,
       error: err.message,
       details: err.responseData || err.response?.data || null

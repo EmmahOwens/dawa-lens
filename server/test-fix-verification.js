@@ -56,9 +56,9 @@ async function runTest() {
       console.log("Action Payload:", JSON.stringify(groqParsed.action?.payload, null, 2));
     }
 
-    // 2. Test Gemini (2.0 Flash)
-    console.log("\n--- Testing Gemini (gemini-2.0-flash) ---");
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    // 2. Test Gemini (2.5 Flash)
+    console.log("\n--- Testing Gemini (gemini-2.5-flash) ---");
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
     const geminiResponse = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -7,12 +7,16 @@ import { fetchDrugLabel, fetchNdcData } from './openFdaService.js';
 dotenv.config();
 
 // ── API Config ───────────────────────────────────────────────────────────────
-const GEMINI_FLASH_MODEL = 'gemini-2.5-flash';
+const GEMINI_FLASH_MODEL = 'gemini-3.5-flash';
 
 const getGeminiApiKeyForScan = () => {
-  const key = process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY;
+  const key = process.env.GEMINI_API_KEY_2;
   if (!key) {
-    throw new AppError('Gemini API key for scanning (GEMINI_API_KEY_2 or GEMINI_API_KEY) is not configured in environment.', 500, 'GEMINI_KEY_MISSING');
+    if (process.env.NODE_ENV !== 'production' && process.env.GEMINI_API_KEY) {
+      console.warn('[visionService] ⚠️ GEMINI_API_KEY_2 is not set. Falling back to GEMINI_API_KEY for development.');
+      return process.env.GEMINI_API_KEY;
+    }
+    throw new AppError('Gemini API key for scanning (GEMINI_API_KEY_2) is not configured.', 500, 'GEMINI_KEY_2_MISSING');
   }
   return key;
 };
@@ -137,11 +141,11 @@ const identifyWithGeminiText = async (ocrText, patientAge) => {
   let response;
   try {
     // Best rate limiting techniques:
-    // - Enqueue under 'gemini-2.5-flash' rate limit config
+    // - Enqueue under 'gemini-3.5-flash' rate limit config
     // - priority: high
     // - maxRetries: 3
     // - failFast: false (queues request on rate limit instead of immediate failure)
-    response = await rateLimitManager.enqueue(fn, 'gemini-2.5-flash', requestBody.contents, 'high', 3, false);
+    response = await rateLimitManager.enqueue(fn, 'gemini-3.5-flash', requestBody.contents, 'high', 3, false);
   } catch (err) {
     const genericErr = new Error(`Gemini Text API error: ${err.message}`);
     genericErr.status = err.response?.status;
@@ -217,7 +221,7 @@ const enrichMatchesWithFda = async (matches) => {
 /**
  * Identifies a pill/medication using extracted OCR text.
  *
- * Exclusively uses Gemini 2.5 Flash with GEMINI_API_KEY_2 (isolated from DawaGPT).
+ * Exclusively uses Gemini 3.5 Flash with GEMINI_API_KEY_2 (isolated from DawaGPT).
  *
  * @param {string} [image]     - Ignored/Optional base64 image.
  * @param {number} [patientAge] - Optional patient age for dosage context.

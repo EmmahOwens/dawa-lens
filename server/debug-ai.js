@@ -9,7 +9,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 async function testGroq(key, model) {

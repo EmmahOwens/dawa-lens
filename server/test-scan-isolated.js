@@ -57,11 +57,11 @@ async function testScanIsolation() {
   console.log('🧪 Running Scan Isolation & Key Verification Tests...');
 
   // Reset rate limit manager stats for clean test runs
-  rateLimitManager.counters['gemini-2.5-flash'] = { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 };
-  rateLimitManager.cooldownUntil['gemini-2.5-flash'] = 0;
+  rateLimitManager.counters['gemini-3.5-flash'] = { reqMinute: 0, reqDay: 0, tokensMinute: 0, tokensDay: 0 };
+  rateLimitManager.cooldownUntil['gemini-3.5-flash'] = 0;
 
   // --- Test Case 1: Primary usage of GEMINI_API_KEY_2 ---
-  console.log('\n🔹 Test Case 1: Scanning uses GEMINI_API_KEY_2 and gemini-2.5-flash model');
+  console.log('\n🔹 Test Case 1: Scanning uses GEMINI_API_KEY_2 and gemini-3.5-flash model');
   process.env.GEMINI_API_KEY_2 = 'TEST_KEY_2_VAL';
   process.env.GEMINI_API_KEY = 'TEST_KEY_1_VAL';
   process.env.NODE_ENV = 'production';
@@ -69,8 +69,8 @@ async function testScanIsolation() {
   const result1 = await visionService.identifyPill(null, 30, 'Paracetamol 500mg');
   
   assert.ok(result1.success, 'Scan should return success');
-  assert.strictEqual(result1.engine, 'gemini-2.5-flash', 'Engine should be gemini-2.5-flash');
-  assert.ok(lastRequestUrl.includes('gemini-2.5-flash'), 'API URL should target gemini-2.5-flash');
+  assert.strictEqual(result1.engine, 'gemini-3.5-flash', 'Engine should be gemini-3.5-flash');
+  assert.ok(lastRequestUrl.includes('gemini-3.5-flash'), 'API URL should target gemini-3.5-flash');
   assert.ok(lastRequestUrl.includes('key=TEST_KEY_2_VAL'), 'API URL should authenticate with GEMINI_API_KEY_2');
   console.log('✅ Test Case 1 Passed! Correct model and key used.');
 
@@ -105,13 +105,13 @@ async function testScanIsolation() {
 
   // --- Test Case 4: Rate limit manager integration ---
   console.log('\n🔹 Test Case 4: Rate Limit Manager Integration and Config verification');
-  const config = rateLimitManager.configs['gemini-2.5-flash'];
-  assert.ok(config, 'Rate Limit configs should contain gemini-2.5-flash');
+  const config = rateLimitManager.configs['gemini-3.5-flash'];
+  assert.ok(config, 'Rate Limit configs should contain gemini-3.5-flash');
   assert.strictEqual(config.rpm, 15, 'RPM limit should be 15');
   assert.strictEqual(config.rpd, 1500, 'RPD limit should be 1500');
   
   const stats = rateLimitManager.getStats();
-  assert.ok(stats.counters['gemini-2.5-flash'], 'Counters should track gemini-2.5-flash requests');
+  assert.ok(stats.counters['gemini-3.5-flash'], 'Counters should track gemini-3.5-flash requests');
   console.log('✅ Test Case 4 Passed! Rate limit configuration and counter tracking validated.');
 
   // Restore original axios post

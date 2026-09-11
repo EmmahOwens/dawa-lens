@@ -49,7 +49,19 @@ class RateLimitManager {
         rpd: 1500,
         tpd: 5000000,
       },
+      'gemini-3.5-flash': {
+        rpm: 15,
+        tpm: 1000000,   // Gemini 3.5 Flash Free Tier
+        rpd: 1500,
+        tpd: 5000000,
+      },
       'gemini-pro':    { rpm: 15,  tpm: 360000,  rpd: 1000,  tpd: 3000000  },
+      'zai-glm-5-flash': {
+        rpm: 15,
+        tpm: 100000,    // 100k TPM
+        rpd: 1000,      // 1,000 RPD
+        tpd: 1000000,   // 1M tokens/day
+      },
       'zai-glm-4.7-flash': {
         rpm: 15,
         tpm: 100000,    // 100k TPM
