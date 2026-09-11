@@ -16,9 +16,9 @@ dotenv.config();
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
-const GROQ_MODEL = 'qwen/qwen3.8-27b';
-const GROQ_SCOUT_MODEL = 'openai/gpt-oss-120b'; // was llama-4-scout (deprecated June 2026)
-const GROQ_LIGHT_MODEL = 'openai/gpt-oss-20b';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
+const GROQ_SCOUT_MODEL = process.env.GROQ_SCOUT_MODEL || 'openai/gpt-oss-120b'; // was llama-4-scout (deprecated June 2026)
+const GROQ_LIGHT_MODEL = process.env.GROQ_LIGHT_MODEL || 'openai/gpt-oss-20b';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
@@ -84,8 +84,8 @@ let groqKeyIndex = 0;
 
 const getGroqApiKey = (modelId) => {
   if (GROQ_KEYS.length === 0) return null;
-  if (modelId && modelId.toLowerCase().includes('gpt-oss-20b') && GROQ_API_KEY_2) {
-    // Independent key for the 20B model if available to avoid 70B limit sharing
+  if (modelId && (modelId.toLowerCase().includes('8b') || modelId.toLowerCase().includes('gpt-oss-20b')) && GROQ_API_KEY_2) {
+    // Independent key for the lightweight model if available to avoid 70B limit sharing
     return GROQ_API_KEY_2;
   }
 
@@ -96,7 +96,7 @@ const getGroqApiKey = (modelId) => {
 };
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 /**
@@ -491,19 +491,17 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
       payload.response_format = responseFormat;
     }
 
-    // qwen3.8-27b, openai/gpt-oss-20b, and openai/gpt-oss-120b are all reasoning models.
-    // Their <think> tokens must be hidden when JSON mode is active, otherwise they
-    // corrupt the JSON output or trigger a 400 error from the Groq API.
-    const isReasoningModel = modelId === GROQ_MODEL || modelId === GROQ_LIGHT_MODEL || modelId === GROQ_SCOUT_MODEL;
+    // Reasoning models (e.g. qwen3.8-27b, openai/gpt-oss-20b, openai/gpt-oss-120b)
+    // Their <think> tokens must be hidden when JSON mode is active.
+    const isReasoningModel = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
     if (isReasoningModel) {
       if (responseFormat?.type === 'json_object') {
         payload.reasoning_format = 'hidden';
       }
-      // Low reasoning effort on GPT-OSS models gives ultra-low latency while maintaining high precision JSON
-      if (modelId === GROQ_LIGHT_MODEL || modelId === GROQ_SCOUT_MODEL) {
+      if (modelId.includes('gpt-oss-20b') || modelId.includes('gpt-oss-120b')) {
         payload.reasoning_effort = 'low';
-      } else if (modelId === GROQ_MODEL) {
-        payload.reasoning_effort = 'default';
+      } else if (modelId.includes('qwen')) {
+        payload.reasoning_effort = 'none'; // 'none' on Qwen 3.8-27B disables thinking overhead for instant JSON responses
       }
     }
 
@@ -994,28 +992,44 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
   };
 };
 
-export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines, priority = 'high') => {
+export const getWellnessInsight = async (doseLogs = [], wellnessLogs = [], medicines = [], patientContext = null, priority = 'high') => {
+  const safeMedicines = Array.isArray(medicines) ? medicines : [];
+  const safeDoseLogs = Array.isArray(doseLogs) ? doseLogs : [];
+  const safeWellnessLogs = Array.isArray(wellnessLogs) ? wellnessLogs : [];
+
+  const patientInfo = patientContext ? `
+    Patient Name: ${patientContext.name || 'Patient'}
+    Age: ${patientContext.age ?? 'Not specified'}
+    Gender: ${patientContext.gender ?? 'Not specified'}
+    Known Conditions: ${JSON.stringify(patientContext.conditions || [])}
+    Known Allergies: ${JSON.stringify(patientContext.allergies || [])}
+  ` : '';
+
   const prompt = `
     You are the "Dawa-Lens Medical Data Analyst".
     
+    === PATIENT CONTEXT ===
+    ${patientInfo || 'General patient profile.'}
+
     === DATA FOR ANALYSIS ===
-    Medicines: ${JSON.stringify(medicines.map(m => m.name))}
-    Medication Logs (last 30 days): ${JSON.stringify(doseLogs.slice(0, 30).map(l => ({
-    med: l.medicineName,
-    time: l.actionTime ? l.actionTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined,
-    status: l.action
+    Medicines: ${JSON.stringify(safeMedicines.map(m => (typeof m === 'string' ? m : m?.name || '')))}
+    Medication Logs (last 30 days): ${JSON.stringify(safeDoseLogs.slice(0, 30).map(l => ({
+    med: l?.medicineName,
+    time: l?.actionTime ? l.actionTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined,
+    status: l?.action
   })))}
-    Wellness/Symptom Logs: ${JSON.stringify(wellnessLogs.slice(0, 20).map(l => ({
-    time: l.timestamp ? l.timestamp.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined,
-    type: l.type,
-    data: l.data
+    Wellness/Symptom Logs: ${JSON.stringify(safeWellnessLogs.slice(0, 20).map(l => ({
+    time: l?.timestamp ? l.timestamp.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : undefined,
+    type: l?.type,
+    data: l?.data
   })))}
     
     === TASK ===
     1. Correlate medication adherence with wellness trends (side effects, energy, mood).
     2. Identify specific dosage patterns (e.g., missed morning doses, timing delays).
-    3. Generate a high-level clinical summary suitable for a doctor.
-    4. DATE FORMATTING: For any dates or times generated in the response, only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds.
+    3. Generate a high-level clinical summary suitable for a doctor and patient.
+    4. Determine an overall health / adherence score (0-100) and status ("improving", "declining", or "stable").
+    5. DATE FORMATTING: For any dates or times generated in the response, only include the date and time (YYYY-MM-DD HH:mm). REMOVE seconds and milliseconds.
 
     === RESPONSE FORMAT (STRICT JSON) ===
     { 
@@ -1023,11 +1037,54 @@ export const getWellnessInsight = async (doseLogs, wellnessLogs, medicines, prio
       "dosagePatterns": "Analysis of adherence, skipped doses, and timing (Markdown formatted).",
       "lifestyleAnalysis": "Correlation between symptoms/energy and logs (Markdown formatted).",
       "insights": ["Specific correlation bullet 1", "Specific correlation bullet 2"],
+      "insight": "Single primary highlight sentence for quick glance.",
       "actionItems": ["Actionable clinical suggestion 1", "Suggestion 2"],
-      "correlationScore": 85
+      "recommendation": "Primary actionable clinical recommendation.",
+      "correlationScore": 85,
+      "score": 85,
+      "status": "improving"
     }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 800);
+
+  const messages = [{ role: 'user', content: prompt }];
+  const raw = await callAiWithFallback(messages, {
+    isJson: true,
+    priority,
+    maxTokens: 1200,
+    isComplex: true,
+    preferredModel: GROQ_MODEL,
+    temperature: 0.6
+  });
+
+  if (raw && typeof raw === 'object') {
+    const scoreVal = typeof raw.score === 'number'
+      ? raw.score
+      : (typeof raw.correlationScore === 'number' ? raw.correlationScore : 80);
+    raw.score = Math.max(0, Math.min(100, Math.round(scoreVal)));
+    raw.correlationScore = raw.score;
+
+    if (!raw.insight) {
+      raw.insight = Array.isArray(raw.insights) && raw.insights.length > 0
+        ? raw.insights[0]
+        : (raw.summary || "Adherence patterns recorded.");
+    }
+    if (!Array.isArray(raw.insights)) {
+      raw.insights = raw.insight ? [raw.insight] : [];
+    }
+    if (!raw.recommendation) {
+      raw.recommendation = Array.isArray(raw.actionItems) && raw.actionItems.length > 0
+        ? raw.actionItems[0]
+        : "Maintain consistent scheduled doses.";
+    }
+    if (!Array.isArray(raw.actionItems)) {
+      raw.actionItems = raw.recommendation ? [raw.recommendation] : [];
+    }
+    if (!raw.status || !['improving', 'declining', 'stable'].includes(raw.status)) {
+      raw.status = raw.score >= 75 ? 'improving' : raw.score >= 50 ? 'stable' : 'declining';
+    }
+  }
+
+  return raw;
 };
 
 export const checkMealSafety = async (medicines, mealDescription, priority = 'high') => {

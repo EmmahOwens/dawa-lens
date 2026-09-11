@@ -140,8 +140,8 @@ router.post('/travel', protect, tokenBudgetGuard, validate(aiValidation.travelAd
  */
 router.post('/wellness-insight', protect, tokenBudgetGuard, validate(aiValidation.wellnessInsightSchema), aiLimiter, async (req, res, next) => {
   try {
-    const { doseLogs, wellnessLogs, medicines } = req.body;
-    const insight = await aiService.getWellnessInsight(doseLogs, wellnessLogs, medicines);
+    const { doseLogs = [], wellnessLogs = [], medicines = [], patientContext = null } = req.body;
+    const insight = await aiService.getWellnessInsight(doseLogs, wellnessLogs, medicines, patientContext);
     res.json(insight);
   } catch (error) {
     next(error);

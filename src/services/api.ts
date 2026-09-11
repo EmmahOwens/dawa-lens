@@ -46,7 +46,11 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit & { timeoutMs?: number }): Promise<T> {
+  const { timeoutMs = 20000, ...fetchOptions } = options || {};
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
@@ -61,21 +65,31 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     }
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      ...headers,
-      ...(options?.headers as Record<string, string>),
-    },
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({ error: `Request failed with status ${res.status}` }));
-    throw new ApiError(data, res.status);
-  }
   try {
-    return (await res.json()) as T;
-  } catch {
-    return {} as T;
+    const res = await fetch(`${BASE_URL}${path}`, {
+      ...fetchOptions,
+      signal: fetchOptions.signal || controller.signal,
+      headers: {
+        ...headers,
+        ...(fetchOptions?.headers as Record<string, string>),
+      },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: `Request failed with status ${res.status}` }));
+      throw new ApiError(data, res.status);
+    }
+    try {
+      return (await res.json()) as T;
+    } catch {
+      return {} as T;
+    }
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      throw new ApiError({ error: `Request to ${path} timed out after ${timeoutMs / 1000}s` }, 408);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -204,6 +218,7 @@ export const aiApi = {
   }) =>
     request<unknown>("/ai/wellness-insight", {
       method: "POST",
+      timeoutMs: 18000,
       body: JSON.stringify({
         ...data,
         medicines: sanitizeMedicines(data.medicines),

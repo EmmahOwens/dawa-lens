@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus, Loader2 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
+import { generateLocalClinicalAssessment } from "@/services/clinicalAssessmentService";
 import { toDate } from "@/lib/utils";
 import { RiveMoji } from "../rive/RiveMoji";
 
@@ -82,9 +83,16 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
           } catch (e) {
             console.error("Failed to save AI health insight to sessionStorage", e);
           }
+        } else {
+          const fallback = generateLocalClinicalAssessment(doseLogs, wellnessLogs, medicines);
+          const fallbackText = fallback.insight || fallback.summary;
+          if (fallbackText) setGroqInsight(fallbackText);
         }
       } catch (err) {
-        console.warn("AIInsightCard Groq call failed:", err);
+        console.warn("AIInsightCard Groq call failed, generating local fallback:", err);
+        const fallback = generateLocalClinicalAssessment(doseLogs, wellnessLogs, medicines);
+        const fallbackText = fallback.insight || fallback.summary;
+        if (fallbackText) setGroqInsight(fallbackText);
       } finally {
         setInsightLoading(false);
       }

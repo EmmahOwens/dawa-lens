@@ -7,6 +7,7 @@ import { usePatientScope } from "@/hooks/usePatientScope";
 import { Heart, Utensils, Sparkles, Loader2, Smile, Zap, CheckCircle2, AlertTriangle, ShieldCheck, Brain, Activity, Coffee, Info, Trash2, TrendingUp } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
+import { generateLocalClinicalAssessment } from "@/services/clinicalAssessmentService";
 import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
 import { LottieMoji } from "@/components/rive/LottieMoji";
 import { RiveMoji } from "@/components/rive/RiveMoji";
@@ -124,22 +125,24 @@ export default function WellnessPage() {
       .slice(0, 10);
   }, [scopedWellnessLogs]);
 
-  const fetchWellnessInsight = async () => {
-    const cached = (() => {
-      try {
-        const item = sessionStorage.getItem("dawa_wellness_page_insight");
-        return item ? JSON.parse(item) : null;
-      } catch {
-        return null;
-      }
-    })();
+  const fetchWellnessInsight = async (forceRefresh = false) => {
+    if (!forceRefresh) {
+      const cached = (() => {
+        try {
+          const item = sessionStorage.getItem("dawa_wellness_page_insight");
+          return item ? JSON.parse(item) : null;
+        } catch {
+          return null;
+        }
+      })();
 
-    if (cached) {
-      setInsight(cached);
-      return;
+      if (cached) {
+        setInsight(cached);
+        return;
+      }
     }
 
-    if (scopedWellnessLogs.length === 0) return;
+    if (scopedWellnessLogs.length === 0 && scopedDoseLogs.length === 0 && scopedMedicines.length === 0) return;
     setInsightLoading(true);
     try {
       const res = await aiApi.getWellnessInsight({
@@ -147,16 +150,42 @@ export default function WellnessPage() {
         wellnessLogs: scopedWellnessLogs,
         medicines: scopedMedicines
       });
-      if (res) {
-        setInsight(res);
+      if (res && typeof res === "object") {
+        const raw = res as any;
+        const scoreVal = typeof raw?.score === "number"
+          ? raw.score
+          : typeof raw?.correlationScore === "number"
+          ? raw.correlationScore
+          : 80;
+        const normalized = {
+          ...raw,
+          score: Math.max(0, Math.min(100, Math.round(scoreVal))),
+          correlationScore: Math.max(0, Math.min(100, Math.round(scoreVal))),
+          insight: raw?.insight ?? (Array.isArray(raw?.insights) && raw.insights.length > 0 ? raw.insights[0] : (raw?.summary || "Adherence patterns recorded.")),
+          recommendation: raw?.recommendation ?? (Array.isArray(raw?.actionItems) && raw.actionItems.length > 0 ? raw.actionItems[0] : "Maintain consistent scheduled doses."),
+          status: raw?.status ?? (scoreVal >= 75 ? "improving" : scoreVal >= 50 ? "stable" : "declining"),
+          source: "ai" as const,
+        };
+        setInsight(normalized);
         try {
-          sessionStorage.setItem("dawa_wellness_page_insight", JSON.stringify(res));
+          sessionStorage.setItem("dawa_wellness_page_insight", JSON.stringify(normalized));
         } catch (e) {
           console.error("Failed to save wellness page insight to sessionStorage", e);
         }
+      } else {
+        const local = generateLocalClinicalAssessment(scopedDoseLogs, scopedWellnessLogs, scopedMedicines);
+        setInsight(local);
+        try {
+          sessionStorage.setItem("dawa_wellness_page_insight", JSON.stringify(local));
+        } catch {}
       }
     } catch (err) {
-      console.error("Failed to fetch wellness insight:", err);
+      console.warn("AI Wellness insight fetch failed, falling back to local intelligence:", err);
+      const local = generateLocalClinicalAssessment(scopedDoseLogs, scopedWellnessLogs, scopedMedicines);
+      setInsight(local);
+      try {
+        sessionStorage.setItem("dawa_wellness_page_insight", JSON.stringify(local));
+      } catch {}
     } finally {
       setInsightLoading(false);
     }
@@ -354,7 +383,7 @@ export default function WellnessPage() {
 
       {/* AI Insight Card */}
       <div className="mb-8">
-        <WellnessInsightCard insight={insight} loading={insightLoading} />
+        <WellnessInsightCard insight={insight} loading={insightLoading} onRefresh={() => fetchWellnessInsight(true)} />
       </div>
 
       {/* Tabs */}

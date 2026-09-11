@@ -1,17 +1,22 @@
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { Sparkles, TrendingUp, TrendingDown, Minus, Info, Brain, Zap, Heart, ArrowRight } from "@/lib/icons";
+import { Sparkles, TrendingUp, TrendingDown, Minus, Info, Brain, Zap, Heart, ArrowRight, RefreshCw } from "@/lib/icons";
 
 interface WellnessInsightCardProps {
   insight: {
-    summary: string;
-    insight: string;
-    score: number;
-    status: "improving" | "declining" | "stable";
+    summary?: string;
+    insight?: string;
+    insights?: string[];
+    score?: number;
+    correlationScore?: number;
+    status?: "improving" | "declining" | "stable" | string;
     recommendation?: string;
+    actionItems?: string[];
     lifestyleAnalysis?: string;
+    source?: "local" | "ai";
   } | null;
   loading: boolean;
+  onRefresh?: () => void;
 }
 
 const STATUS_CONFIG = {
@@ -41,7 +46,7 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function WellnessInsightCard({ insight, loading }: WellnessInsightCardProps) {
+export default function WellnessInsightCard({ insight, loading, onRefresh }: WellnessInsightCardProps) {
   if (loading) {
     return (
       <div className="premium-card animate-pulse space-y-4">
@@ -62,9 +67,25 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
 
   if (!insight) return null;
 
-  const cfg = STATUS_CONFIG[insight.status] || STATUS_CONFIG.stable;
+  // Defensive normalization
+  const scoreVal = typeof insight.score === "number"
+    ? insight.score
+    : typeof insight.correlationScore === "number"
+    ? insight.correlationScore
+    : 75;
+  const scorePercent = Math.max(0, Math.min(100, Math.round(scoreVal)));
+
+  const statusKey: "improving" | "declining" | "stable" =
+    insight.status === "improving" || insight.status === "declining" || insight.status === "stable"
+      ? insight.status
+      : scorePercent >= 75 ? "improving" : scorePercent >= 50 ? "stable" : "declining";
+
+  const cfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.stable;
   const StatusIcon = cfg.icon;
-  const scorePercent = Math.max(0, Math.min(100, insight.score));
+
+  const summaryText = insight.summary || "";
+  const keyInsightText = insight.insight || (Array.isArray(insight.insights) && insight.insights.length > 0 ? insight.insights[0] : summaryText);
+  const recommendationText = insight.recommendation || (Array.isArray(insight.actionItems) && insight.actionItems.length > 0 ? insight.actionItems[0] : undefined);
 
   return (
     <motion.div
@@ -82,9 +103,16 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
             <Brain size={22} />
           </div>
           <div>
-            <h4 className="text-sm font-black uppercase tracking-tight text-foreground/90">
-              Wellness Intelligence
-            </h4>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-black uppercase tracking-tight text-foreground/90">
+                Wellness Intelligence
+              </h4>
+              {insight.source === "local" && (
+                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground">
+                  Local
+                </span>
+              )}
+            </div>
             <div className={`inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.border} border`}>
               <StatusIcon size={11} className={cfg.color} />
               <span className={`text-[10px] font-black uppercase tracking-wider ${cfg.color}`}>
@@ -94,14 +122,26 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
           </div>
         </div>
 
-        {/* Score badge */}
-        <div className="text-right shrink-0 ml-2">
-          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60 mb-1">
-            Health Score
-          </p>
-          <div className="text-3xl font-black text-primary tracking-tighter leading-none">
-            {insight.score}
-            <span className="text-xs opacity-40 ml-0.5">/100</span>
+        {/* Score badge & Refresh action */}
+        <div className="flex items-center gap-3 shrink-0 ml-2">
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              title="Refresh Wellness Insights"
+            >
+              <RefreshCw size={13} />
+            </button>
+          )}
+          <div className="text-right">
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60 mb-1">
+              Health Score
+            </p>
+            <div className="text-3xl font-black text-primary tracking-tighter leading-none">
+              {scorePercent}
+              <span className="text-xs opacity-40 ml-0.5">/100</span>
+            </div>
           </div>
         </div>
       </div>
@@ -123,10 +163,10 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
       </div>
 
       {/* Summary block */}
-      {insight.summary && (
+      {summaryText && (
         <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 mb-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-primary/60 mb-1.5">
-            AI Summary
+            Summary
           </p>
           <div className="text-xs font-semibold text-foreground leading-relaxed">
             <ReactMarkdown
@@ -136,27 +176,29 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
                 li: ({ children }) => <li className="text-[11px]">{children}</li>,
               }}
             >
-              {insight.summary}
+              {summaryText}
             </ReactMarkdown>
           </div>
         </div>
       )}
 
       {/* Key insight */}
-      <div className="p-4 rounded-2xl bg-accent/30 border border-border/40 mb-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1.5">
-          Key Insight
-        </p>
-        <div className="text-xs font-semibold text-foreground leading-relaxed">
-          <ReactMarkdown
-            components={{
-              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-            }}
-          >
-            {insight.insight}
-          </ReactMarkdown>
+      {keyInsightText && (
+        <div className="p-4 rounded-2xl bg-accent/30 border border-border/40 mb-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1.5">
+            Key Insight
+          </p>
+          <div className="text-xs font-semibold text-foreground leading-relaxed">
+            <ReactMarkdown
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+              }}
+            >
+              {keyInsightText}
+            </ReactMarkdown>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Lifestyle analysis */}
       {insight.lifestyleAnalysis && (
@@ -174,7 +216,7 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
       )}
 
       {/* Recommendation */}
-      {insight.recommendation && (
+      {recommendationText && (
         <div className="flex items-start gap-3 px-1 mb-2">
           <div className="mt-0.5 p-1.5 rounded-full bg-warning/10 text-warning shrink-0">
             <Zap size={10} />
@@ -185,7 +227,7 @@ export default function WellnessInsightCard({ insight, loading }: WellnessInsigh
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
               }}
             >
-              {insight.recommendation}
+              {recommendationText}
             </ReactMarkdown>
           </div>
         </div>

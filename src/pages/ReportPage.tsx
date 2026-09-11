@@ -24,9 +24,11 @@ import {
   Zap,
   Brain,
   Heart,
+  RefreshCw,
 } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { aiApi } from "@/services/api";
+import { generateLocalClinicalAssessment } from "@/services/clinicalAssessmentService";
 import { VitalityTrends2D } from "@/components/wellness/VitalityTrends2D";
 import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
@@ -64,6 +66,7 @@ export default function ReportPage() {
     lifestyleAnalysis?: string;
     insights?: string[];
     actionItems?: string[];
+    source?: "local" | "ai";
   }
   const cacheKey = `dawa_clinical_assessment_${selectedPatientId || "default"}`;
   const [insights, setInsights] = useState<WellnessInsight | null>(() => {
@@ -200,7 +203,10 @@ export default function ReportPage() {
       return;
     }
 
-    if (scopedDoseLogs.length === 0 && scopedMedicines.length === 0) return;
+    if (scopedDoseLogs.length === 0 && scopedMedicines.length === 0) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const res = await aiApi.getWellnessInsight({
@@ -216,16 +222,38 @@ export default function ReportPage() {
           allergies: resolvedPatient.allergies,
         },
       });
-      if (res) {
-        setInsights(res);
+      if (res && typeof res === "object") {
+        const enriched = { ...(res as any), source: "ai" as const };
+        setInsights(enriched);
         try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(res));
+          sessionStorage.setItem(cacheKey, JSON.stringify(enriched));
         } catch (e) {
           console.error("Failed to save clinical assessment to sessionStorage", e);
         }
+      } else {
+        const local = generateLocalClinicalAssessment(
+          scopedDoseLogs,
+          scopedWellnessLogs,
+          scopedMedicines.filter((m) => !m.isConflict),
+          resolvedPatient
+        );
+        setInsights(local);
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(local));
+        } catch {}
       }
     } catch (err) {
-      console.error("Insight fetch failed", err);
+      console.warn("AI Clinical Assessment fetch failed, generating local assessment:", err);
+      const local = generateLocalClinicalAssessment(
+        scopedDoseLogs,
+        scopedWellnessLogs,
+        scopedMedicines.filter((m) => !m.isConflict),
+        resolvedPatient
+      );
+      setInsights(local);
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(local));
+      } catch {}
     } finally {
       setLoading(false);
     }
@@ -739,16 +767,37 @@ export default function ReportPage() {
           {/* AI Clinical Summary */}
           <motion.div variants={item} className="premium-card">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="section-title flex items-center gap-2 mb-0">
-                <Sparkles size={14} className="text-primary" /> AI Clinical
-                Assessment
-              </h3>
-              {loading && (
-                <Loader2
-                  size={14}
-                  className="animate-spin text-primary opacity-50"
-                />
-              )}
+              <div className="flex items-center gap-2">
+                <h3 className="section-title flex items-center gap-2 mb-0">
+                  <Sparkles size={14} className="text-primary" /> AI Clinical
+                  Assessment
+                </h3>
+                {insights?.source === "local" && (
+                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    Calculated from logs
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.removeItem(cacheKey);
+                    fetchInsights();
+                  }}
+                  disabled={loading}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  title="Refresh Assessment"
+                >
+                  <RefreshCw size={13} className={loading ? "animate-spin text-primary" : ""} />
+                </button>
+                {loading && (
+                  <Loader2
+                    size={14}
+                    className="animate-spin text-primary opacity-50"
+                  />
+                )}
+              </div>
             </div>
 
             {insights ? (
@@ -888,13 +937,26 @@ export default function ReportPage() {
                 )}
               </div>
             ) : (
-              <div className="py-14 text-center opacity-40 bg-accent/20 rounded-2xl border border-dashed border-border/50">
-                <Info size={32} className="mx-auto mb-4 opacity-50" />
-                <p className="text-[10px] font-black uppercase tracking-widest">
-                  {scopedDoseLogs.length > 0
+              <div className="py-14 text-center opacity-80 bg-accent/20 rounded-2xl border border-dashed border-border/50 p-6">
+                <Info size={32} className="mx-auto mb-3 opacity-50" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  {loading
                     ? "Generating Clinical Insights..."
-                    : "No Data Available Yet"}
+                    : scopedDoseLogs.length > 0 || scopedMedicines.length > 0
+                    ? "Tap generate to compute clinical assessment"
+                    : "No Medication or Dose Data Available Yet"}
                 </p>
+                {!loading && (scopedDoseLogs.length > 0 || scopedMedicines.length > 0) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchInsights}
+                    className="mt-4 text-xs font-bold rounded-xl gap-2"
+                  >
+                    <Sparkles size={13} className="text-primary" />
+                    Generate Clinical Assessment
+                  </Button>
+                )}
               </div>
             )}
           </motion.div>

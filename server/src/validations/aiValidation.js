@@ -123,6 +123,14 @@ export const wellnessInsightSchema = z.object({
     doseLogs: z.array(doseLogInputSchema).max(100).optional(),
     wellnessLogs: z.array(wellnessLogInputSchema).max(100).optional(),
     medicines: z.array(medicineInputSchema).max(50).optional(),
+    patientContext: z.object({
+      name: z.string().max(100).optional(),
+      age: z.number().min(0).max(150).nullable().optional(),
+      gender: z.string().max(50).nullable().optional(),
+      type: z.string().max(50).optional(),
+      conditions: z.array(z.string().max(200)).max(50).optional(),
+      allergies: z.array(z.string().max(200)).max(50).optional(),
+    }).optional(),
   })
 });
 
