@@ -1,0 +1,70 @@
+{
+  "project": {
+    "name": "",
+    "description": ""
+  },
+  "defaults": {
+    "sourceRoot": ".",
+    "outputDir": ".archify"
+  },
+  "skillInstall": {
+    "mode": "project",
+    "platform": "codex",
+    "platforms": [
+      "codex"
+    ],
+    "installedAt": "2026-09-11T13:43:01.734Z",
+    "version": 1,
+    "target": {
+      "platform": "codex",
+      "path": "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/archify",
+      "projectRoot": "/home/iammbayo/Documents/Projects/dawa-lens"
+    },
+    "targets": [
+      {
+        "platform": "codex",
+        "path": "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/archify",
+        "projectRoot": "/home/iammbayo/Documents/Projects/dawa-lens"
+      }
+    ]
+  },
+  "analysis": {
+    "enabled": true,
+    "pipeline": {
+      "detect": true,
+      "extract": true,
+      "build": true,
+      "cluster": true,
+      "analyze": true,
+      "export": true
+    },
+    "detect": {
+      "followSymlinks": false,
+      "includeHidden": false,
+      "maxFileSizeBytes": 1048576,
+      "includeGlobs": [],
+      "excludeGlobs": []
+    },
+    "semantic": {
+      "enabled": false,
+      "mode": "docs_first",
+      "includeFileTypes": [
+        "document"
+      ],
+      "includeExtensions": [
+        ".md",
+        ".mdx",
+        ".txt",
+        ".rst"
+      ],
+      "maxDocumentBytes": 262144,
+      "maxChunksPerDocument": 32,
+      "maxChunkBytes": 8192,
+      "backend": "none"
+    }
+  },
+  "languageScope": {
+    "include": [],
+    "exclude": []
+  }
+}
