@@ -16,6 +16,12 @@
       "sourceType": "github",
       "computedHash": "2fa9adb27f7cfc4635decebea65222cd56e36b5de34781f7862be888504c04f4"
     },
+    "diagram-design": {
+      "source": "cathrynlavery/diagram-design",
+      "sourceType": "github",
+      "skillPath": "skills/diagram-design/SKILL.md",
+      "computedHash": "e01adcceff753d259c534500d993512bf4d37301fa507cd45f2d4c3eaf4c6163"
+    },
     "firebase-ai-logic": {
       "source": "firebase/agent-skills",
       "sourceType": "github",
