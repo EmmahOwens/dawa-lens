@@ -282,4 +282,51 @@ describe("WellnessPage - Recent Reflections ordering & limits", () => {
     expect(screen.getByText(/Recorded/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Update Daily Reflection/i })).toBeInTheDocument();
   });
+
+  it("renders AI Nutritional Guard warnings with markdown formatting and timing advice with separated numbered items", () => {
+    const mockGuidance = {
+      recommendations: [
+        { food: "Matooke (steamed plantain)", benefit: "Sustained energy and **reduced drug-induced** hypoglycemia." }
+      ],
+      warnings: [
+        {
+          factor: "Grapefruit",
+          severity: "High",
+          explanation: "* Grapefruit juice inhibits CYP3A4, metabolising **Coartem** and **Omeprazole**. * Avoid grapefruit entirely."
+        }
+      ],
+      timingAdvice: `" 1. **Take Omeprazole** 30–60 minutes before a meal. 2. **Coartem** should be taken with a light meal. 3. **Avoid dairy** for at least 2 hours. "`
+    };
+
+    sessionStorage.setItem("dawa_nutritional_guidance", JSON.stringify(mockGuidance));
+
+    render(<WellnessPage />);
+
+    // Switch to Food Log tab
+    const foodTabBtn = screen.getByRole("button", { name: /Food Log/i });
+    fireEvent.click(foodTabBtn);
+
+    // AI Nutritional Guard should be displayed
+    expect(screen.getByText(/AI Nutritional Guard/i)).toBeInTheDocument();
+
+    // Check warning factor
+    expect(screen.getByText("Grapefruit", { exact: true })).toBeInTheDocument();
+    expect(screen.getByText(/high risk/i)).toBeInTheDocument();
+
+    // Check that markdown bolding worked (rendered as strong in both warning and timing advice)
+    const strongCoartemList = screen.getAllByText("Coartem");
+    expect(strongCoartemList.length).toBe(2);
+    expect(strongCoartemList[0].tagName.toLowerCase()).toBe("strong");
+    expect(strongCoartemList[1].tagName.toLowerCase()).toBe("strong");
+
+    // Check timing advice title
+    expect(screen.getByText(/Administration & Timing Advice/i)).toBeInTheDocument();
+
+    // Check that numbered items are rendered as separate list items
+    const strongOmeprazole = screen.getByText("Take Omeprazole");
+    expect(strongOmeprazole.tagName.toLowerCase()).toBe("strong");
+    expect(screen.getByText("Avoid dairy").tagName.toLowerCase()).toBe("strong");
+
+    sessionStorage.removeItem("dawa_nutritional_guidance");
+  });
 });

@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useApp } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { Heart, Utensils, Sparkles, Loader2, Smile, Zap, CheckCircle2, AlertTriangle, ShieldCheck, Brain, Activity, Coffee, Info, Trash2, TrendingUp } from "@/lib/icons";
@@ -40,6 +42,41 @@ function useEmotionSparkline(wellnessLogs: ReturnType<typeof usePatientScope>["s
   }
 
   return sparkline;
+}
+
+/**
+ * Normalizes warning explanation markdown text so that bullet points and bolding are preserved cleanly.
+ * Splits inline bullets (e.g. "* Item 1 * Item 2") onto new lines.
+ */
+function formatWarningExplanation(text: string): string {
+  if (!text || typeof text !== "string") return "";
+  let clean = text.trim().replace(/^["'\u201C\u201D\s]+|["'\u201C\u201D\s]+$/g, "").trim();
+  clean = clean.replace(/(?:^|\s+)•\s*/g, "\n* ");
+  clean = clean.replace(/([^\n])\s+([*•-]\s+)/g, "$1\n\n$2");
+  clean = clean.replace(/([^\n])\s+(\d+)[\.\)]\s+/g, "$1\n\n$2. ");
+  return clean.trim();
+}
+
+/**
+ * Normalizes timing advice text so each numbered item (1. ..., 2. ...) is placed on its own line
+ * rather than being compacted into a single run-on paragraph.
+ */
+function formatTimingAdvice(text: string | string[]): string {
+  if (!text) return "";
+  const rawText = Array.isArray(text) ? text.join("\n\n") : text;
+  if (typeof rawText !== "string") return "";
+
+  let clean = rawText.trim().replace(/^["'\u201C\u201D\s]+|["'\u201C\u201D\s]+$/g, "").trim();
+
+  // Ensure each numbered item starts on a new line
+  clean = clean.replace(/(?:^|\s+)(\d+)[\.\)]\s+/g, (match, num, offset) => {
+    return offset === 0 ? `${num}. ` : `\n\n${num}. `;
+  });
+
+  clean = clean.replace(/(?:^|\s+)•\s*/g, "\n* ");
+  clean = clean.replace(/([^\n])\s+([*•-]\s+)/g, "$1\n\n$2");
+
+  return clean.trim();
 }
 
 export default function WellnessPage() {
@@ -547,12 +584,21 @@ export default function WellnessPage() {
                         <div className="grid grid-cols-1 gap-2">
                           {guidance.recommendations?.map((rec: any, idx: number) => (
                             <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-success/5 border border-success/10 transition-all hover:bg-success/10">
-                              <div className="mt-1 p-1 rounded-lg bg-success/20 text-success">
+                              <div className="mt-1 p-1 rounded-lg bg-success/20 text-success shrink-0">
                                 <Utensils size={10} />
                               </div>
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <p className="text-[11px] font-bold text-foreground mb-0.5">{rec.food}</p>
-                                <p className="text-[10px] text-muted-foreground leading-tight">{rec.benefit}</p>
+                                <div className="text-[10px] text-muted-foreground leading-tight">
+                                  <ReactMarkdown
+                                    components={{
+                                      p: ({ children }) => <p className="mb-0 leading-tight">{children}</p>,
+                                      strong: ({ children }) => <strong className="font-bold text-foreground">{children}</strong>,
+                                    }}
+                                  >
+                                    {rec.benefit || rec.reason || ""}
+                                  </ReactMarkdown>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -563,17 +609,30 @@ export default function WellnessPage() {
                           <div className="space-y-2">
                             {guidance.warnings.map((warn: any, idx: number) => (
                               <div key={idx} className="flex items-start gap-3 p-3 rounded-xl bg-destructive/5 border border-destructive/10">
-                                <div className="mt-1 p-1 rounded-lg bg-destructive/20 text-destructive">
+                                <div className="mt-1 p-1 rounded-lg bg-destructive/20 text-destructive shrink-0">
                                   <AlertTriangle size={10} />
                                 </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-0.5">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
                                     <p className="text-[10px] font-black uppercase text-destructive tracking-widest">{warn.factor}</p>
                                     <span className="px-1.5 py-0.5 rounded-full bg-destructive/10 text-[8px] font-black uppercase tracking-tighter text-destructive">
                                       {warn.severity} RISK
                                     </span>
                                   </div>
-                                  <p className="text-[10px] text-muted-foreground leading-tight">{warn.explanation}</p>
+                                  <div className="text-[10px] text-muted-foreground leading-relaxed">
+                                    <ReactMarkdown
+                                      remarkPlugins={[remarkGfm]}
+                                      components={{
+                                        p: ({ children }) => <p className="mb-1 last:mb-0 leading-relaxed">{children}</p>,
+                                        ul: ({ children }) => <ul className="list-disc pl-3.5 space-y-1 my-0.5">{children}</ul>,
+                                        ol: ({ children }) => <ol className="list-decimal pl-4 space-y-1 my-0.5">{children}</ol>,
+                                        li: ({ children }) => <li className="text-[10px] leading-relaxed marker:text-destructive/60">{children}</li>,
+                                        strong: ({ children }) => <strong className="font-bold text-foreground">{children}</strong>,
+                                      }}
+                                    >
+                                      {formatWarningExplanation(warn.explanation)}
+                                    </ReactMarkdown>
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -582,11 +641,29 @@ export default function WellnessPage() {
 
                         {/* Timing Advice */}
                         {guidance.timingAdvice && (
-                          <div className="p-3 rounded-xl bg-muted/30 border border-border/50 flex items-center gap-3">
-                            <Coffee size={14} className="text-muted-foreground/60" />
-                            <p className="text-[10px] font-semibold text-muted-foreground italic">
-                              "{guidance.timingAdvice}"
-                            </p>
+                          <div className="p-3.5 rounded-xl bg-muted/30 border border-border/50 flex items-start gap-3">
+                            <div className="mt-0.5 p-1 rounded-lg bg-muted/50 text-muted-foreground/70 shrink-0">
+                              <Coffee size={14} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/70 mb-1.5">
+                                Administration & Timing Advice
+                              </p>
+                              <div className="text-[10px] text-muted-foreground leading-relaxed">
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-relaxed">{children}</p>,
+                                    ol: ({ children }) => <ol className="list-decimal pl-4 space-y-1.5 my-1">{children}</ol>,
+                                    ul: ({ children }) => <ul className="list-disc pl-3.5 space-y-1.5 my-1">{children}</ul>,
+                                    li: ({ children }) => <li className="text-[10px] leading-relaxed marker:font-bold marker:text-foreground/70 pl-0.5">{children}</li>,
+                                    strong: ({ children }) => <strong className="font-bold text-foreground">{children}</strong>,
+                                  }}
+                                >
+                                  {formatTimingAdvice(guidance.timingAdvice)}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>

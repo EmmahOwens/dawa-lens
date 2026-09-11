@@ -1057,10 +1057,10 @@ export const getNutritionalGuidance = async (medicines, priority = 'high') => {
 
       Task:
       1. Provide 2-3 specific "Food Recommendations" that aid absorption or mitigate side effects for these medications.
-      2. Identify "Critical Safety Warnings" regarding foods/drinks to avoid (e.g., Grapefruit, Alcohol, Dairy, Caffeine).
-      3. Include "Timing Advice" (e.g., "Take 2 hours after dairy").
+      2. Identify "Critical Safety Warnings" regarding foods/drinks to avoid (e.g., Grapefruit, Alcohol, Dairy, Caffeine). Format each explanation with concise bullet points on separate lines (* bullet 1\n* bullet 2) and bold medication names with **MedName**.
+      3. Include "Timing Advice" as a numbered list where EACH numbered item is placed on its own line (e.g. 1. **Take Drug** before meals.\n2. **Drug B** with food.\n...). Do NOT compress everything into a single run-on paragraph.
       4. Focus on Ugandan foods (Matooke, G-nuts, Mukene, Kalo, Nakati, etc.) where appropriate, explaining their specific local benefits.
-      5. Use Markdown for formatting reasons, explanations, and advice.
+      5. Use clean Markdown formatting for reasons, explanations, and advice. Always separate list items with newline characters (\n).
 
       Respond in EXACT JSON format:
       {
@@ -1068,9 +1068,9 @@ export const getNutritionalGuidance = async (medicines, priority = 'high') => {
           { "food": "string", "reason": "text (Markdown)", "benefit": "string" }
         ],
         "warnings": [
-          { "factor": "string", "severity": "High" | "Medium", "explanation": "text (Markdown)" }
+          { "factor": "string", "severity": "High" | "Medium", "explanation": "Markdown text with bullet points on separate lines (* bullet 1\\n* bullet 2) and bold drug names" }
         ],
-        "timingAdvice": "text (Markdown)"
+        "timingAdvice": "Markdown text with numbered items on separate new lines (1. ...\\n2. ...)"
       }
     `;
     return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 800, 0.4);
