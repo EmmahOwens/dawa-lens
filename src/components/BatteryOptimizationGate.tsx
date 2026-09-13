@@ -413,23 +413,35 @@ export default function BatteryOptimizationGate({
                       <p>
                         Some Android manufacturers close apps in the background. If you notice delayed reminders:
                       </p>
-                      <ul className="list-disc pl-4 space-y-1">
-                        <li>Set Dawa Lens battery usage to <strong>Unrestricted</strong> in Settings &gt; Apps.</li>
-                        {(oemInfo?.isTranssion || oemInfo?.isXiaomi) && (
-                          <li>
-                            Enable <strong>Autostart</strong> in Phone Master or Security app.
-                          </li>
-                        )}
-                        <li>Lock Dawa Lens in your phone's Recent Apps view.</li>
-                      </ul>
+                      {oemInfo?.isTranssion ? (
+                        <div className="space-y-1.5">
+                          <p className="font-semibold text-foreground">Infinix / Tecno (XOS &amp; Phone Master):</p>
+                          <ol className="list-decimal pl-4 space-y-1">
+                            <li>Tap <strong>Open Autostart Settings</strong> below to open Phone Master &gt; Toolbox &gt; <strong>Auto-start management</strong> &gt; toggle <strong>Dawa Lens ON</strong>.</li>
+                            <li>In Recent Apps (multitasking), tap the <strong>🔒 (Lock / Padlock)</strong> icon on Dawa Lens so it is not stopped by swipe-cleaning.</li>
+                            <li>In Settings &gt; Battery Lab &gt; Advanced Settings, turn <strong>OFF</strong> &quot;Screen off push block&quot;.</li>
+                          </ol>
+                        </div>
+                      ) : oemInfo?.isXiaomi ? (
+                        <ul className="list-disc pl-4 space-y-1">
+                          <li>Set Dawa Lens battery usage to <strong>No restrictions</strong> in App info &gt; Battery saver.</li>
+                          <li>Enable <strong>Autostart</strong> in Security app &gt; Manage apps &gt; Permissions &gt; Autostart.</li>
+                          <li>Lock Dawa Lens in your phone&apos;s Recent Apps view.</li>
+                        </ul>
+                      ) : (
+                        <ul className="list-disc pl-4 space-y-1">
+                          <li>Set Dawa Lens battery usage to <strong>Unrestricted</strong> in Settings &gt; Apps.</li>
+                          <li>Lock Dawa Lens in your phone&apos;s Recent Apps view.</li>
+                        </ul>
+                      )}
                       <div className="pt-1 flex gap-2">
                         <button
                           type="button"
                           onClick={openAutostartSettings}
-                          className="text-primary hover:underline font-bold text-[10.5px] flex items-center gap-1"
+                          className="text-primary hover:underline font-bold text-[10.5px] flex items-center gap-1 cursor-pointer"
                         >
                           <ExternalLink className="w-2.5 h-2.5" />
-                          <span>Open Autostart Settings</span>
+                          <span>Open Autostart Settings (Phone Master)</span>
                         </button>
                       </div>
                     </motion.div>

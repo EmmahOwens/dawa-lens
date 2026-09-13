@@ -252,6 +252,8 @@ class BootReceiver : BroadcastReceiver() {
         if (triggerAtMillis <= 0L) return
 
         val intent = Intent(context, AlarmReceiver::class.java).apply {
+            addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+            addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
             putExtra("notificationId", id)
             putExtra("title", title)
             putExtra("body", body)

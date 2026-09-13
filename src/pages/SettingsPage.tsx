@@ -5,7 +5,7 @@ import {
   ArrowLeft, Shield, Trash2, Moon, Lock, 
   User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw
 } from "@/lib/icons";
-import { Bell, Smartphone, Clock, Zap, ExternalLink, Play } from "lucide-react";
+import { Bell, Smartphone, Clock, Zap, ExternalLink, Play, ChevronDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
@@ -42,6 +42,7 @@ export default function SettingsPage() {
   const [exactAlarmsAllowed, setExactAlarmsAllowed] = useState(true);
   const [isTogglingGuardian, setIsTogglingGuardian] = useState(false);
   const [testCountdown, setTestCountdown] = useState<number | null>(null);
+  const [showOemGuidance, setShowOemGuidance] = useState(false);
   const testTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const checkBatteryStatus = useCallback(async () => {
@@ -552,6 +553,69 @@ export default function SettingsPage() {
               </Button>
             )}
           </div>
+
+          {/* OEM Optimization Guide for aggressive device managers (Infinix, Tecno, Xiaomi) */}
+          {(!oemInfo || oemInfo.isTranssion || oemInfo.isXiaomi) && (
+            <div className="mb-4 p-3.5 rounded-2xl bg-muted/40 border border-border/50 text-xs">
+              <button
+                type="button"
+                onClick={() => setShowOemGuidance(!showOemGuidance)}
+                className="w-full text-foreground flex items-center justify-between font-bold cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Smartphone size={14} className="text-amber-500" />
+                  <span>
+                    {oemInfo?.isTranssion
+                      ? "Infinix / Tecno (Phone Master & XOS Setup Guide)"
+                      : oemInfo?.isXiaomi
+                      ? "Xiaomi / Redmi (MIUI & HyperOS Setup Guide)"
+                      : "Device Background Reliability Tips"}
+                  </span>
+                </span>
+                <ChevronDown size={14} className={`transition-transform duration-200 ${showOemGuidance ? "rotate-180" : ""}`} />
+              </button>
+
+              {showOemGuidance && (
+                <div className="mt-3 pt-3 border-t border-border/40 text-muted-foreground space-y-2 text-[11px]">
+                  {oemInfo?.isTranssion ? (
+                    <>
+                      <p className="text-foreground font-semibold">
+                        To guarantee offline dose alarms ring when Dawa Lens is in the background or closed:
+                      </p>
+                      <ol className="list-decimal pl-4 space-y-1.5 leading-relaxed">
+                        <li>
+                          <strong>Enable Auto-start in Phone Master:</strong> Tap the <em>Auto-Start Settings</em> button above to launch Phone Master &gt; Toolbox &gt; <em>Auto-start management</em> &gt; switch <strong>Dawa Lens ON</strong>.
+                        </li>
+                        <li>
+                          <strong>Lock Dawa Lens in Recent Apps:</strong> Open your phone&apos;s Recent Apps view (swipe up &amp; hold), then tap the <strong>🔒 (Padlock)</strong> icon above Dawa Lens so it is not force-stopped when clearing apps.
+                        </li>
+                        <li>
+                          <strong>Disable Screen-off Push Block:</strong> Go to phone <em>Settings &gt; Battery Lab (Power Marathon) &gt; Advanced Settings</em> and turn <strong>OFF</strong> &quot;Screen off push block&quot;.
+                        </li>
+                      </ol>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-foreground font-semibold">
+                        To guarantee offline reminders ring when the app is closed:
+                      </p>
+                      <ul className="list-disc pl-4 space-y-1.5 leading-relaxed">
+                        <li>
+                          Set Battery Saver to <strong>No restrictions</strong> in App info.
+                        </li>
+                        <li>
+                          Enable <strong>Autostart</strong> in Security app &gt; Permissions &gt; Autostart.
+                        </li>
+                        <li>
+                          Lock Dawa Lens in your Recent Apps view with the padlock icon.
+                        </li>
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Adherence Guardian Service Toggle */}
           <div className="p-4 rounded-2xl bg-muted/30 border border-border/50 flex items-start justify-between gap-3 mb-4">

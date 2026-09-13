@@ -591,6 +591,8 @@ class AlarmReceiver : BroadcastReceiver() {
             }.toString()
 
             val nextIntent = Intent(context, AlarmReceiver::class.java).apply {
+                addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+                addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
                 putExtra("notificationId", nextNumericId)
                 putExtra("title", matched.genericTitle)
                 putExtra("body", matched.genericBody)

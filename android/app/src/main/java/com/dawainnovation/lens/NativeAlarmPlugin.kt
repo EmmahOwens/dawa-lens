@@ -38,8 +38,9 @@ class NativeAlarmPlugin : Plugin() {
 
         val candidateIntents = mutableListOf<Intent>()
 
-        // 1. Transsion (Infinix, Tecno, itel) - Modern Phone Master + legacy fallbacks
+        // 1. Transsion (Infinix, Tecno, itel) - Modern Phone Master + legacy fallbacks (XOS 7+ / Infinix Hot 10)
         if (manufacturer.contains("transsion") || manufacturer.contains("tecno") || manufacturer.contains("infinix") || manufacturer.contains("itel") || brand.contains("infinix") || brand.contains("tecno")) {
+            // Modern Phone Master autostart activities
             candidateIntents.add(Intent().apply {
                 component = ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.autostart.AutoStartActivity")
             })
@@ -52,8 +53,15 @@ class NativeAlarmPlugin : Plugin() {
             candidateIntents.add(Intent().apply {
                 component = ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.shortcut.AutoStartManagementActivity")
             })
+            // Older Phone Master (v4.x/v5.x on XOS 7 / Infinix Hot 10)
             candidateIntents.add(Intent().apply {
                 component = ComponentName("com.transsion.phonemaster", "com.cyin.himgr.autostart.AutoStartActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemaster", "com.cyin.himgr.appmgr.AutoStartActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemaster", "com.cyin.himgr.bootmgr.AutoBootMgrActivity")
             })
             candidateIntents.add(Intent().apply {
                 component = ComponentName("com.transsion.phonemaster", "com.cyin.himgr.power.PowerManagerActivity")
@@ -61,7 +69,37 @@ class NativeAlarmPlugin : Plugin() {
             candidateIntents.add(Intent().apply {
                 component = ComponentName("com.transsion.phonemaster", "com.cyin.himgr.battery.BatteryActivity")
             })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.toolbox.ToolboxActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.home.MainActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.phonemaster", "com.transsion.phonemaster.main.MainActivity")
+            })
             candidateIntents.add(Intent("com.transsion.phonemaster.ACTION_AUTOSTART"))
+
+            // Transsion PowerCenter / Battery Lab (Power Marathon)
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.powercenter", "com.transsion.powercenter.PowerCenterActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.powercenter", "com.transsion.powercenter.activity.PowerCenterMainActivity")
+            })
+            candidateIntents.add(Intent().apply {
+                component = ComponentName("com.transsion.powercenter", "com.transsion.powercenter.activity.BatterySavingActivity")
+            })
+
+            // Direct launch intent for Phone Master package (opens Phone Master dashboard directly)
+            pm.getLaunchIntentForPackage("com.transsion.phonemaster")?.let {
+                candidateIntents.add(it)
+            }
+            // Direct launch intent for Battery Lab / PowerCenter
+            pm.getLaunchIntentForPackage("com.transsion.powercenter")?.let {
+                candidateIntents.add(it)
+            }
+
             candidateIntents.add(Intent().apply {
                 component = ComponentName("com.transsion.phonemanager", "com.transsion.phonemanager.shortcut.AutoStartManagementActivity")
             })
@@ -69,13 +107,7 @@ class NativeAlarmPlugin : Plugin() {
                 component = ComponentName("com.transsion.phonemanager", "com.transsion.phonemanager.battery.view.BatteryOptimizationActivity")
             })
             candidateIntents.add(Intent().apply {
-                component = ComponentName("com.transsion.powercenter", "com.transsion.powercenter.PowerCenterActivity")
-            })
-            candidateIntents.add(Intent().apply {
                 component = ComponentName("com.itel.autobootmanager", "com.itel.autobootmanager.activity.AutoBootMgrActivity")
-            })
-            candidateIntents.add(Intent("android.settings.APPLICATION_DETAILS_SETTINGS").apply {
-                data = Uri.parse("package:$packageName")
             })
         }
 
@@ -292,6 +324,8 @@ class NativeAlarmPlugin : Plugin() {
         if (triggerAtMillis <= 0L) return false
 
         val intent = Intent(ctx, AlarmReceiver::class.java).apply {
+            addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+            addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
             putExtra("notificationId", id)
             putExtra("title", title)
             putExtra("body", body)
