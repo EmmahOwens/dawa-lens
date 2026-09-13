@@ -168,12 +168,6 @@ export const aiApi = {
       method: "POST",
     }),
 
-  getWellnessQuote: (data: { userName?: string }) =>
-    request<{ quote: string }>("/ai/wellness-quote", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-
   checkHolisticSafety: (data: {
     medicines: Medicine[];
     lifestyleFactors: string[];

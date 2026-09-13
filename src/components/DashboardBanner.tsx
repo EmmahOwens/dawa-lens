@@ -1,42 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, TrendingUp, Calendar, ArrowRight, Loader2 } from "@/lib/icons";
+import { Sparkles, TrendingUp, Calendar, ArrowRight } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
-import { aiApi } from "@/services/api";
-
-const FALLBACK_QUOTES = [
-  (name: string) => `Consistency is your greatest strength, ${name}.`,
-  (name: string) => `Every small step toward your health counts today, ${name}.`,
-  (name: string) => `Your future self will thank you for taking care of yourself today, ${name}.`,
-  (name: string) => `Wellness is a daily journey of small, positive habits, ${name}.`,
-  (name: string) => `Prioritizing your health is the highest form of self-care, ${name}.`,
-  (name: string) => `Small daily improvements over time lead to remarkable results, ${name}.`,
-  (name: string) => `You are doing an incredible job taking care of your health, ${name}.`,
-  (name: string) => `Stay mindful, stay consistent, and keep nourishing your life, ${name}.`,
-  (name: string) => `Health is not a destination, it is a daily commitment, ${name}.`,
-  (name: string) => `Every dose and every log brings you closer to optimal vitality, ${name}.`,
-  (name: string) => `Take a breath and celebrate every step of your wellness journey, ${name}.`,
-  (name: string) => `Building healthy habits is an investment in your best tomorrow, ${name}.`,
-  (name: string) => `Listen to your body, honour your routine, and keep shining, ${name}.`,
-  (name: string) => `Great achievements are built on small, consistent choices, ${name}.`,
-  (name: string) => `Your dedication to your well-being inspires everyone around you, ${name}.`,
-  (name: string) => `Nurture your mind and body with patience and positivity today, ${name}.`,
-  (name: string) => `Progress over perfection: every healthy choice matters, ${name}.`,
-  (name: string) => `You are stronger, healthier, and more resilient every single day, ${name}.`,
-  (name: string) => `Self-care is never selfish—it is your foundation, ${name}.`,
-  (name: string) => `Keep up the momentum, ${name}, your health journey is worth every effort.`,
-  (name: string) => `Rest, recover, and keep moving forward with confidence, ${name}.`
-];
-
-function getRandomFallbackQuote(name: string = "friend"): string {
-  const randomIndex = Math.floor(Math.random() * FALLBACK_QUOTES.length);
-  return FALLBACK_QUOTES[randomIndex](name);
-}
+import { getNextWellnessPulseQuote } from "@/data/wellnessPulseQuotes";
 
 export function DashboardBanner() {
   const navigate = useNavigate();
@@ -44,63 +15,13 @@ export function DashboardBanner() {
   const { scopedDoseLogs } = usePatientScope();
   const { t } = useTranslation();
 
-  const [quote, setQuote] = useState<string | null>(() => {
-    try {
-      return sessionStorage.getItem("dawa_wellness_quote");
-    } catch {
-      return null;
-    }
-  });
-  const [loadingQuote, setLoadingQuote] = useState(false);
+  const firstName = userProfile?.name?.split(" ")[0];
+  const [quote, setQuote] = useState<string>(() => getNextWellnessPulseQuote(firstName));
 
-  // 1. Fetch Dynamic Quote using GROQ_API_KEY_2 (via backend) - Once per session
+  // Keep quote personalized if profile loads asynchronously
   useEffect(() => {
-    const cachedQuote = (() => {
-      try {
-        return sessionStorage.getItem("dawa_wellness_quote");
-      } catch {
-        return null;
-      }
-    })();
-
-    if (cachedQuote) {
-      setQuote(cachedQuote);
-      return;
-    }
-
-    const fetchQuote = async () => {
-      setLoadingQuote(true);
-      try {
-        const res = await aiApi.getWellnessQuote({
-          userName: userProfile?.name?.split(" ")[0]
-        });
-        if (res?.quote) {
-          setQuote(res.quote);
-          try {
-            sessionStorage.setItem("dawa_wellness_quote", res.quote);
-          } catch (e) {
-            console.error("Failed to save quote to sessionStorage", e);
-          }
-        } else {
-          throw new Error("No quote returned");
-        }
-      } catch (err) {
-        console.error("Failed to fetch wellness quote, using fallback:", err);
-        // Fallback with random quote from pool
-        const fallbackQuote = getRandomFallbackQuote(userProfile?.name?.split(" ")[0] || "friend");
-        setQuote(fallbackQuote);
-        try {
-          sessionStorage.setItem("dawa_wellness_quote", fallbackQuote);
-        } catch (e) {
-          console.error("Failed to save fallback quote to sessionStorage", e);
-        }
-      } finally {
-        setLoadingQuote(false);
-      }
-    };
-
-    fetchQuote();
-  }, [userProfile?.name]);
+    setQuote(getNextWellnessPulseQuote(firstName));
+  }, [firstName]);
 
   // 2. Calculate 7-Day Consistency (Matching VitalityTrends logic)
   const adherencePercent = useMemo(() => {
@@ -175,15 +96,6 @@ export function DashboardBanner() {
   }, [scopedDoseLogs]);
 
   const renderQuote = () => {
-    if (loadingQuote && !quote) {
-      return (
-        <div className="flex items-center gap-2 opacity-30">
-          <Loader2 size={20} className="animate-spin text-primary" />
-          <span className="text-xl font-medium italic">Gathering inspiration...</span>
-        </div>
-      );
-    }
-
     if (!quote) return null;
 
     return (
