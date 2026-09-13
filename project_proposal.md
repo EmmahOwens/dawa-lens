@@ -14,26 +14,43 @@ The platform directly eliminates preventable medication errors, bridges severe h
 
 Across Uganda, healthcare delivery continues to experience structural fragmentation, particularly within outpatient clinical management, chronic disease care, and pharmaceutical distribution. The prevailing healthcare model requires citizens to navigate a dispersed continuum of public health centers, private clinics, community pharmacies, and informal drug dispensaries. Because centralized Electronic Health Record (EHR) systems remain non-existent for the vast majority of the population, longitudinal medical histories and active medication profiles reside exclusively in the physical possession of patients or their immediate family members.
 
-```
-+----------------------------------------------------------------------+
-|                  The Fragmented Healthcare Landscape in Uganda       |
-+----------------------------------------------------------------------+
-|                                                                      |
-| +-------------------+    +--------------------+    +--------------+|
-| |  Public Referral  |    |  Private Clinics   |    | Local Community |   |
-|   |    Hospitals      |    |  & Dispensaries    |    |    Pharmacies    |   |
-|   +---------+---------+    +---------+----------+    +--------+---------+   |
-|             |                        |                        |             |
-|             \________________________|________________________/             |
-|                                      |                                      |
-|                                      v                                      |
-|                     +----------------------------------+                    |
-|                     |        The Patient / Family      |                    |
-|                     |  (No Unified Records, Manual     |                    |
-|                     |   Prescriptions, Complex Dosing) |                    |
-|                     +----------------------------------+                    |
-|                                                                             |
-+-----------------------------------------------------------------------------+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#1e293b',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e1b4b',
+    'clusterBkg': '#0b1120',
+    'clusterBorder': '#334155',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
+flowchart TD
+    subgraph FragmentedLandscape ["🏥 Dispersed Outpatient Landscape in Uganda"]
+        Hosp["<b>🏥 Public Referral Hospitals</b><br/><span style='font-size:10px;color:#94a3b8'>Overburdened Facilities · Paper Slips · No Central EHR</span>"]:::fragile
+        Clinics["<b>🩺 Private Clinics & Dispensaries</b><br/><span style='font-size:10px;color:#94a3b8'>Disjointed Hand-Written Slips · Zero Historical Sync</span>"]:::fragile
+        Pharma["<b>💊 Community Pharmacies</b><br/><span style='font-size:10px;color:#94a3b8'>Generic Packaging · Missing Patient Information Leaflets</span>"]:::fragile
+        Informal["<b>🏪 Unregulated Drug Outlets</b><br/><span style='font-size:10px;color:#94a3b8'>Unverified Premise Licenses · 10-30% Counterfeit Risks</span>"]:::danger
+    end
+
+    Hosp -->|Physical Records| Patient(["<b>👤 Patient & Family Caregivers</b><br/><span style='font-size:10px;color:#fca5a5'>High ADR Risk · Polypharmacy Failure · Zero Continuity</span>"]):::victim
+    Clinics -->|No Interop| Patient
+    Pharma -->|Unlabelled Packs| Patient
+    Informal -->|Unchecked Origin| Patient
+
+    Patient ==>|Unifies & Shields| DawaLens[["<b>🛡️ Dawa Lens Ecosystem</b><br/><span style='font-size:11px;color:#67e8f9'>On-Device OCR · NDA Registry · Luganda AI · Android Watchdog</span>"]]:::guardian
+
+    classDef fragile fill:#1e293b,stroke:#f59e0b,stroke-width:1.5px,color:#f8fafc;
+    classDef danger fill:#450a0a,stroke:#ef4444,stroke-width:2px,color:#fee2e2;
+    classDef victim fill:#2e1065,stroke:#a855f7,stroke-width:2px,color:#faf5ff;
+    classDef guardian fill:#082f49,stroke:#06b6d4,stroke-width:2.5px,color:#ecfeff;
+    style FragmentedLandscape fill:#0b1120,stroke:#334155,stroke-width:1.5px,stroke-dasharray: 4 2,color:#94a3b8;
 ```
 
 Consequently, the burden of managing multi-drug regimens, identifying unlabelled generic packaging, recognizing contraindications, verifying pharmacy legitimacy, and adhering strictly to complex dosing schedules falls entirely upon patients and domestic caregivers. This dynamic is exacerbated by five critical socio-technical factors:
@@ -92,33 +109,50 @@ The development of Dawa Lens holds profound clinical, socio-economic, and techno
 
 ## 6. Project Scope
 
-```
-+-----------------------------------------------------------------------------+
-|                              PROJECT BOUNDARIES                             |
-+-----------------------------------------------------------------------------+
-|                                                                             |
-|   [ IN SCOPE ]                                                              |
-|   * Native Android Mobile App (Production APK & AAB via Capacitor 8)        |
-|   * Progressive Web App (PWA) with responsive desktop/tablet layouts        |
-|   * Native Kotlin Core: AdherenceGuardianService & NativeRecurrenceEngine   |
-|   * Official NDA Uganda Licensed Pharmacy Locator & GPS Route Navigation    |
-|   * Dual-engine Pill & Blister Pack OCR (Tesseract.js + Vision LLMs)        |
-|   * Contextual Clinical AI Assistant (DawaGPT with Luganda Honorifics)      |
-|   * Drug-Drug, RxNorm Equivalence & Ugandan Food Interaction Guard          |
-|   * Offline-First IndexedDB, Native SQLite, & Distributed Lock Sync         |
-|   * Travel Companion with Animated Flight Map & Timezone Regimen Shifter    |
-|   * Family Hub Caregiver Portal with Multi-Dependent Isolation & AI Context |
-|   * Holistic Wellness Journal & 10,000-Quote Engagement Affirmations Engine |
-|   * Dual-Engine Doctor-Ready Clinical PDF Generation (jsPDF + PDFKit)       |
-|                                                                             |
-|   [ EXCLUDED / OUT OF SCOPE ]                                               |
-|   x Direct Two-Way Integration with National Hospital EHR / EMR Systems     |
-|   x E-Commerce Drug Financial Settlement or Unlicensed Pharmacy Dispensing  |
-|   x Autonomous Clinical Diagnosis (The app operates strictly as an advisory)|
-|   x Native iOS Deployment (Strategically de-scoped to concentrate resources |
-|     on deep native Android execution for the Ugandan mobile market)         |
-|                                                                             |
-+-----------------------------------------------------------------------------+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#1e293b',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e1b4b',
+    'clusterBkg': '#0b1120',
+    'clusterBorder': '#334155',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
+flowchart LR
+    subgraph InScope ["✅ IN SCOPE — Core Production Deliverables"]
+        direction TB
+        S1["📱 <b>Native Android App & PWA</b><br/><span style='font-size:10px;color:#6ee7b7'>Capacitor 8 · Production APK/AAB · Responsive</span>"]:::scopeItem
+        S2["⚡ <b>Kotlin Adherence Core</b><br/><span style='font-size:10px;color:#6ee7b7'>AdherenceGuardianService & NativeRecurrenceEngine</span>"]:::scopeItem
+        S3["🏥 <b>Official NDA Uganda Directory</b><br/><span style='font-size:10px;color:#6ee7b7'>1,800+ Licensed Outlets · Haversine Proximity</span>"]:::scopeItem
+        S4["📷 <b>Dual-Engine Vision Studio</b><br/><span style='font-size:10px;color:#6ee7b7'>On-Device Tesseract.js & Cloud Multimodal AI</span>"]:::scopeItem
+        S5["🤖 <b>DawaGPT Clinical Assistant</b><br/><span style='font-size:10px;color:#6ee7b7'>Luganda Honorifics · In-App Deep Linking</span>"]:::scopeItem
+        S6["🥗 <b>Ugandan Food Interaction Guard</b><br/><span style='font-size:10px;color:#6ee7b7'>Mukene, Matooke, G-Nuts, Nakati Bio-Scans</span>"]:::scopeItem
+        S7["💾 <b>Offline-First Resilience</b><br/><span style='font-size:10px;color:#6ee7b7'>Encrypted IndexedDB · SQLite · TanStack Sync</span>"]:::scopeItem
+        S8["✈️ <b>TravelMap Companion</b><br/><span style='font-size:10px;color:#6ee7b7'>MapLibre GL · Flight Paths & Timezone Shifting</span>"]:::scopeItem
+        S9["👥 <b>Family Hub Caregiver Network</b><br/><span style='font-size:10px;color:#6ee7b7'>Multi-Dependent Isolation · Escalate Missed Doses</span>"]:::scopeItem
+        S10["📄 <b>Doctor-Ready Clinical PDF</b><br/><span style='font-size:10px;color:#6ee7b7'>Client jsPDF & Server PDFKit Engine</span>"]:::scopeItem
+    end
+
+    subgraph OutScope ["⛔ OUT OF SCOPE — Explicit Boundaries"]
+        direction TB
+        E1["❌ <b>Direct Hospital EHR Integration</b><br/><span style='font-size:10px;color:#fca5a5'>No Public FHIR/HL7 Hospital APIs in Uganda</span>"]:::outItem
+        E2["❌ <b>In-App Drug E-Commerce</b><br/><span style='font-size:10px;color:#fca5a5'>Strictly Verification & Routing; No Settlement</span>"]:::outItem
+        E3["❌ <b>Autonomous Medical Diagnosis</b><br/><span style='font-size:10px;color:#fca5a5'>Strictly Educational & Clinical Safety Advisory</span>"]:::outItem
+        E4["❌ <b>Native iOS App Store Distribution</b><br/><span style='font-size:10px;color:#fca5a5'>100% Engineering Focused on Android Dominance</span>"]:::outItem
+    end
+
+    classDef scopeItem fill:#062b21,stroke:#10b981,stroke-width:1.5px,color:#f8fafc;
+    classDef outItem fill:#3b0712,stroke:#f43f5e,stroke-width:1.5px,color:#f8fafc;
+    style InScope fill:#041a14,stroke:#059669,stroke-width:1.8px,color:#34d399;
+    style OutScope fill:#1c050a,stroke:#e11d48,stroke-width:1.8px,color:#fb7185;
 ```
 
 ### 6.1 Functional Scope
@@ -157,64 +191,116 @@ Modern Android operating systems enforce aggressive power-saving protocols (Doze
 
 Dawa Lens is engineered using an **Agile Software Development Lifecycle (SDLC)** with two-week iterative sprints, automated continuous integration/continuous deployment (CI/CD) pipelines, and rigorous test-driven development.
 
-```
-+---------------------------------------------------------------------------------------------------+
-|                                  DAWA LENS SYSTEM ARCHITECTURE                                    |
-+---------------------------------------------------------------------------------------------------+
-|                                                                                                   |
-|  +---------------------------------------------------------------------------------------------+  |
-|  |                            PRESENTATION & CLIENT LAYER (React 18 + PWA)                     |  |
-|  |                                                                                             |  |
-|  |   [ Dashboard ] [ MedVault & NDA Locator ] [ Visual Scanner ] [ DawaGPT ] [ Family Hub ]    |  |
-|  |   [ TravelMap Companion ] [ Vitality Journal ] [ Doctor-Ready Clinical PDF Generator ]      |  |
-|  |   ---------------------------------------------------------------------------------------   |  |
-|  |             Atomic UI System (Tailwind CSS 3.4 + Radix UI Primitives + Lucide + Rive)       |  |
-|  +----------------------------------------------+----------------------------------------------+  |
-|                                                 |                                                 |
-|  +----------------------------------------------v----------------------------------------------+  |
-|  |                      NATIVE ANDROID EXECUTION LAYER (Capacitor 8 + Kotlin)                  |  |
-|  |                                                                                             |  |
-|  |   * AdherenceGuardianService (Foreground Service Watchdog with Continuous Notification)     |  |
-|  |   * NativeRecurrenceEngine & NativeRecurrenceStore (On-Device Local Evaluation & Storage)   |  |
-|  |   * NativeActionReceiver (Background Action Processor: Take, Snooze, Skip)                  |  |
-|  |   * AlarmReceiver & BootReceiver (Exact Alarms & Post-Reboot Rescheduling)                  |  |
-|  |   * MissedDoseWorker (WorkManager Auto-Healing & Phantom Purge)                             |  |
-|  |   * NativeCameraPlugin | NativeSqlitePlugin | NativeLocationPlugin | BatteryOptimizationGate |  |
-|  +----------------------------------------------+----------------------------------------------+  |
-|                                                 |                                                 |
-|  +----------------------------------------------v----------------------------------------------+  |
-|  |                         CLIENT STATE & OFFLINE PERSISTENCE LAYER                            |  |
-|  |                                                                                             |  |
-|  |   [ TanStack Query v5 Cache ]   [ Zustand Stores ]   [ IndexedDB / SQLite ]                 |  |
-|  |   [ Distributed Lock Manager ]  [ Tesseract WebWorker ] [ Quotes 10k Rotation Engine ]      |  |
-|  +-----------------------+-----------------------------------------------------+---------------+  |
-|                          |                                                     |                  |
-|                          | (Encrypted HTTPS REST / CSP Protected)              | (Firestore SDK)  |
-|                          v                                                     v                  |
-|  +----------------------------------------------+    +-----------------------------------------+  |
-|  |         BACKEND API ENGINE (Node.js 24)      |    |        FIREBASE CLOUD INFRASTRUCTURE    |  |
-|  |                                              |    |                                         |  |
-|  |   * Express 4.21 API Gateway                 |    |   * Cloud Firestore (Memory Cached)     |  |
-|  |   * Firebase Admin JWT Authentication Guard  |    |   * Firebase Authentication             |  |
-|  |   * Rate Limiter & Response Caching Layer    |    |   * Granular Security Rules Engine      |  |
-|  |   * Multi-Tier AI Cascade & Prompt Engine    |    |   * Firebase Hosting & Global CDN       |  |
-|  |   * OpenFDA & RxNorm Clinical Client         |    |                                         |  |
-|  |   * Local Food Interaction Engine            |    |                                         |  |
-|  |   * NDA Pharmacy Directory Service           |    |                                         |  |
-|  |   * PDFKit Report Generation Pipeline        |    |                                         |  |
-|  +-----------------------+----------------------+    +-----------------------------------------+  |
-|                          |                                                                        |
-|                          | (External APIs)                                                        |
-|                          v                                                                        |
-|  +---------------------------------------------------------------------------------------------+  |
-|  |                              EXTERNAL CLUSTER SERVICES & APIS                               |  |
-|  |                                                                                             |  |
-|  |   [ Groq AI Engine (Llama 3.3 / 3.2 Vision) ]    [ Google Gemini 2.0 Flash Fallback ]       |  |
-|  |   [ OpenFDA Drug Endpoints ]                     [ NIH RxNorm Concept Resolver ]            |  |
-|  |   [ Official National Drug Authority (NDA) Uganda Pharmacy Register ]                       |  |
-|  +---------------------------------------------------------------------------------------------+  |
-|                                                                                                   |
-+---------------------------------------------------------------------------------------------------+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#1e293b',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e1b4b',
+    'clusterBkg': '#0b1120',
+    'clusterBorder': '#334155',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
+flowchart TD
+    %% Presentation Tier
+    subgraph PresentationLayer ["📱 PRESENTATION & CLIENT LAYER · React 18 + Vite 8 + PWA"]
+        UI_Dash(["<b>📊 Dashboard & Analytics</b><br/><span style='font-size:10px;color:#94a3b8'>Tailwind CSS 3.4 · Radix UI · Recharts</span>"]):::client
+        UI_Vault["<b>💊 MedVault & Refill Gateway</b><br/><span style='font-size:10px;color:#94a3b8'>Uganda NDA Directory · Geo-Locator</span>"]:::client
+        UI_Scan["<b>📷 Visual Scanner Studio</b><br/><span style='font-size:10px;color:#94a3b8'>Camera & Blister Pack Capture · WebWorker OCR</span>"]:::focal
+        UI_Chat["<b>🧠 DawaGPT Clinical AI</b><br/><span style='font-size:10px;color:#94a3b8'>Luganda Honorifics · Patient Context Injection</span>"]:::client
+        UI_Family["<b>👨‍👩‍👧 Family Hub Caregiver</b><br/><span style='font-size:10px;color:#94a3b8'>Multi-Dependent Isolation & Remote Sync</span>"]:::client
+        UI_Travel["<b>✈️ TravelMap Companion</b><br/><span style='font-size:10px;color:#94a3b8'>MapLibre GL Flight Paths · Timezone Shift</span>"]:::client
+        UI_Report["<b>📄 Doctor-Ready PDF Export</b><br/><span style='font-size:10px;color:#94a3b8'>Client jsPDF & Server PDFKit Pipeline</span>"]:::client
+    end
+
+    %% Native Android Execution Layer
+    subgraph AndroidLayer ["⚡ NATIVE ANDROID EXECUTION LAYER · Capacitor 8 + Kotlin"]
+        K_Guardian[["<b>🛡️ AdherenceGuardianService</b><br/><span style='font-size:10px;color:#c084fc'>Foreground Watchdog · Persistent Notification</span>"]]:::native
+        K_Engine[["<b>⏰ NativeRecurrenceEngine & Store</b><br/><span style='font-size:10px;color:#c084fc'>On-Device AlarmManager · Exact Alarms</span>"]]:::native
+        K_Receiver[["<b>🎯 NativeActionReceiver</b><br/><span style='font-size:10px;color:#c084fc'>Headless Actions: Take / Snooze / Skip</span>"]]:::native
+        K_Alarms[["<b>🔄 AlarmReceiver & BootReceiver</b><br/><span style='font-size:10px;color:#c084fc'>Reboot Rescheduling · Doze Bypass</span>"]]:::native
+        K_Worker[["<b>🧹 MissedDoseWorker</b><br/><span style='font-size:10px;color:#c084fc'>WorkManager Auto-Healing & Purge</span>"]]:::native
+        K_Gate[["<b>🔋 BatteryOptimizationGate</b><br/><span style='font-size:10px;color:#c084fc'>Multi-OEM Autostart Intent Resolver</span>"]]:::native
+    end
+
+    %% Client State & Offline Persistence Layer
+    subgraph OfflineLayer ["💾 CLIENT STATE & OFFLINE PERSISTENCE LAYER"]
+        S_Cache[("<b>⚡ TanStack Query & State</b><br/><span style='font-size:10px;color:#34d399'>Zustand Reactive Store · In-Memory Cache</span>")]:::offline
+        S_DB[("<b>🗄️ IndexedDB & SQLite Engine</b><br/><span style='font-size:10px;color:#34d399'>AES-GCM-256 Encrypted Offline Store</span>")]:::offline
+        S_Fallback{{"<b>🔬 LocalClinicalAssessment</b><br/><span style='font-size:10px;color:#34d399'>Zero-Latency Fallback for AI Outages</span>"}}:::offlineHighlight
+        S_Lock["<b>🔒 Distributed Lock Manager</b><br/><span style='font-size:10px;color:#34d399'>Mutex Serialization for Delta Sync</span>"]:::offline
+        S_OCR[["<b>📜 Tesseract.js WebWorker</b><br/><span style='font-size:10px;color:#34d399'>Isolated Background Thread OCR</span>"]]:::offline
+        S_Quotes["<b>📖 10,000-Quote Rotation Engine</b><br/><span style='font-size:10px;color:#34d399'>Deterministic 27.4-Yr Epoch Calendar</span>"]:::offline
+    end
+
+    %% Backend Gateway & Firebase
+    subgraph BackendLayer ["🚀 BACKEND API ENGINE · Node.js 24 + Express 4.21"]
+        API_Gate[["<b>🛡️ Express API Gateway</b><br/><span style='font-size:10px;color:#fbbf24'>Token Bucket Rate Limiter · Helmet CSP</span>"]]:::gateway
+        API_Auth["<b>🔑 Firebase Admin JWT Guard</b><br/><span style='font-size:10px;color:#fbbf24'>Cryptographic Token Verification</span>"]:::gateway
+        API_Cascade[["<b>🔀 Multi-Tier AI Cascade</b><br/><span style='font-size:10px;color:#fbbf24'>Prompt Engineering · 2.5s Timeout Fallback</span>"]]:::gateway
+        API_Food["<b>🥗 Ugandan Food Interaction Guard</b><br/><span style='font-size:10px;color:#fbbf24'>Mukene, Matooke, G-Nuts, Nakati Models</span>"]:::gateway
+        API_NDA["<b>🗺️ NDA Directory Service</b><br/><span style='font-size:10px;color:#fbbf24'>Haversine Geodetic Proximity Solver</span>"]:::gateway
+        API_PDF["<b>📄 PDFKit Clinical Pipeline</b><br/><span style='font-size:10px;color:#fbbf24'>Server-Side Medical Record Generation</span>"]:::gateway
+    end
+
+    subgraph FirebaseLayer ["🔥 FIREBASE CLOUD INFRASTRUCTURE"]
+        C_Firestore[("<b>🔥 Cloud Firestore</b><br/><span style='font-size:10px;color:#818cf8'>Granular Security Rules · Delta Sync</span>")]:::cloud
+        C_Auth(["<b>🔐 Firebase Authentication</b><br/><span style='font-size:10px;color:#818cf8'>OAuth 2.0 · JWT Provider</span>"]):::cloud
+        C_Hosting["<b>🌐 Firebase Global CDN</b><br/><span style='font-size:10px;color:#818cf8'>Edge Static Asset Caching</span>"]:::cloud
+    end
+
+    %% External Cluster Services
+    subgraph ExternalServices ["🌐 EXTERNAL CLUSTER SERVICES & APIS"]
+        Ext_Groq[["<b>⚡ Groq Cloud Vision AI</b><br/><span style='font-size:10px;color:#60a5fa'>Llama 3.2 Vision Inference</span>"]]:::cloud
+        Ext_Gemini[["<b>🤖 Google Gemini 2.0 Flash</b><br/><span style='font-size:10px;color:#60a5fa'>Multimodal Fallback Engine</span>"]]:::cloud
+        Ext_FDA[("<b>🏛️ OpenFDA & NIH RxNorm</b><br/><span style='font-size:10px;color:#60a5fa'>Standard Clinical Interaction Matrix</span>")]:::cloud
+        Ext_NDA[("<b>🇺🇬 Official Uganda NDA Register</b><br/><span style='font-size:10px;color:#60a5fa'>Licensed Pharmacy Verification</span>")]:::cloud
+    end
+
+    %% Styling Classes
+    classDef client fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#f8fafc;
+    classDef focal fill:#1e1b4b,stroke:#ec4899,stroke-width:2px,color:#fdf2f8;
+    classDef native fill:#1e1b4b,stroke:#a855f7,stroke-width:1.8px,color:#f8fafc;
+    classDef offline fill:#062b21,stroke:#10b981,stroke-width:1.5px,color:#f8fafc;
+    classDef offlineHighlight fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ecfdf5;
+    classDef gateway fill:#2a1a05,stroke:#f59e0b,stroke-width:1.5px,color:#f8fafc;
+    classDef cloud fill:#0d1836,stroke:#60a5fa,stroke-width:1.5px,color:#f8fafc;
+
+    %% Subgraph Styling
+    style PresentationLayer fill:#080d1a,stroke:#0284c7,stroke-width:1.5px,stroke-dasharray: 4 2,color:#38bdf8;
+    style AndroidLayer fill:#10091d,stroke:#9333ea,stroke-width:1.5px,stroke-dasharray: 4 2,color:#c084fc;
+    style OfflineLayer fill:#061410,stroke:#059669,stroke-width:1.5px,stroke-dasharray: 4 2,color:#34d399;
+    style BackendLayer fill:#140e04,stroke:#d97706,stroke-width:1.5px,stroke-dasharray: 4 2,color:#fbbf24;
+    style FirebaseLayer fill:#091024,stroke:#4f46e5,stroke-width:1.5px,stroke-dasharray: 4 2,color:#818cf8;
+    style ExternalServices fill:#091024,stroke:#2563eb,stroke-width:1.5px,stroke-dasharray: 4 2,color:#60a5fa;
+
+    %% Connections
+    PresentationLayer ==>|Capacitor Native Bridge| AndroidLayer
+    PresentationLayer --> OfflineLayer
+    AndroidLayer --> OfflineLayer
+
+    OfflineLayer --> S_DB
+    S_DB <==>|Encrypted HTTPS Delta-Sync| C_Firestore
+    OfflineLayer -->|Authenticated REST / CSP| API_Gate
+
+    API_Gate --> API_Auth
+    API_Gate --> API_Cascade
+    API_Gate --> API_Food
+    API_Gate --> API_NDA
+    API_Gate --> API_PDF
+
+    API_Cascade -->|Vision Token Stream| Ext_Groq
+    API_Cascade -->|Secondary Failover| Ext_Gemini
+    API_Cascade -->|RxCUI Resolution| Ext_FDA
+    API_NDA -->|Premise Validation| Ext_NDA
+    OfflineLayer --> S_Fallback
 ```
 
 ### 8.1 Frontend Client Tier
@@ -348,163 +434,280 @@ firestore-root/
 The process flowchart delineates the primary workflows connecting Patients, Domestic Caregivers, and Healthcare Providers with the core platform services.
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#1e293b',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e1b4b',
+    'clusterBkg': '#0b1120',
+    'clusterBorder': '#334155',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
 flowchart TD
     %% Primary Actors
-    Patient["👤 Patient"]
-    Caregiver["👥 Family Caregiver"]
-    Clinician["🩺 Doctor / Pharmacist"]
-
-    %% Core Actions & Workflows
-    subgraph AppWorkflows ["Dawa Lens Client Capabilities"]
-        ScanAct["Scan Packaging & Verify Authenticity"]
-        ChatAct["Consult DawaGPT (with Luganda Honorifics)"]
-        GuardAct["Check Drug & Ugandan Food Interactions"]
-        DoseAct["Manage MedVault & Log Doses"]
-        PharmAct["Locate Licensed NDA Pharmacies & Routes"]
-        AlarmAct["Receive Resilient Native Alarms"]
-        FamilyAct["Oversee Dependents in Family Hub"]
-        TravelAct["Recalculate Travel Interval Regimens"]
-        ReportAct["Export Doctor-Ready Clinical PDF"]
+    subgraph Actors ["👥 PRIMARY SYSTEM ACTORS"]
+        Patient(["<b>👤 Patient</b><br/><span style='font-size:10px;color:#38bdf8'>Primary Care Recipient · Self-Management</span>"]):::actorNode
+        Caregiver(["<b>👨‍👩‍👧 Family Caregiver</b><br/><span style='font-size:10px;color:#38bdf8'>Remote Adherence Oversight · Escalations</span>"]):::actorNode
+        Clinician(["<b>🩺 Clinician / Pharmacist</b><br/><span style='font-size:10px;color:#38bdf8'>Consultation · Review Clinical Records</span>"]):::actorNode
     end
 
-    %% Native & Cloud Engines
-    subgraph ExecutionEngines ["Underlying System Engines"]
-        EngRecurrence["NativeRecurrenceEngine & Guardian Service"]
-        EngNDA["NDA Registry & Haversine Route Solver"]
-        EngAI["Groq & Gemini Multimodal AI Cascade"]
-        EngSync["Offline SQLite / IndexedDB & Firestore Sync"]
+    %% Client Workflows
+    subgraph AppWorkflows ["📱 DAWA LENS CLIENT CAPABILITIES"]
+        ScanAct["<b>📷 Scan Packaging & Anti-Fake Shield</b><br/><span style='font-size:10px;color:#94a3b8'>Blister Pack Vision & Scratch Codes</span>"]:::workflowNode
+        ChatAct["<b>💬 Consult DawaGPT Assistant</b><br/><span style='font-size:10px;color:#94a3b8'>Luganda Honorifics · Plain Language Guidance</span>"]:::workflowNode
+        GuardAct["<b>🥗 Ugandan Food & Drug Safety Scan</b><br/><span style='font-size:10px;color:#94a3b8'>Screen Mukene, Matooke, G-Nut Conflicts</span>"]:::workflowNode
+        DoseAct["<b>💊 MedVault Management & Dose Logging</b><br/><span style='font-size:10px;color:#94a3b8'>Confirm Intake, Snooze, or Skip</span>"]:::workflowNode
+        PharmAct["<b>🏥 NDA Pharmacy Locator & Routes</b><br/><span style='font-size:10px;color:#94a3b8'>GPS Distance & Walking Directions</span>"]:::workflowNode
+        AlarmAct["<b>🔔 Native Foreground Alarms</b><br/><span style='font-size:10px;color:#94a3b8'>Doze Bypass · Headless Notifications</span>"]:::workflowNode
+        FamilyAct["<b>👨‍👩‍👧 Family Hub Dependent Oversight</b><br/><span style='font-size:10px;color:#94a3b8'>Cross-Profile Adherence Telemetry</span>"]:::workflowNode
+        TravelAct["<b>✈️ TravelMap Companion Regimens</b><br/><span style='font-size:10px;color:#94a3b8'>Trans-Meridian Interval Adjuster</span>"]:::workflowNode
+        ReportAct["<b>📄 Doctor-Ready Clinical PDF Export</b><br/><span style='font-size:10px;color:#94a3b8'>Consultation Prep & Telemetry History</span>"]:::workflowNode
     end
+
+    %% Underlying Engines
+    subgraph ExecutionEngines ["⚙️ UNDERLYING EXECUTION ENGINES"]
+        EngRecurrence[["<b>⚡ NativeRecurrenceEngine & Guardian</b><br/><span style='font-size:10px;color:#c084fc'>Kotlin Foreground Service · Exact Alarms</span>"]]:::engineNode
+        EngNDA[("<b>🗺️ NDA Haversine Directory Engine</b><br/><span style='font-size:10px;color:#fbbf24'>1,800+ Geocoded Licensed Premise DB</span>")]:::engineNode
+        EngAI[["<b>🧠 Groq & Gemini Vision AI Cascade</b><br/><span style='font-size:10px;color:#60a5fa'>Multimodal Entity Extraction (2.5s SLA)</span>"]]:::engineNode
+        EngLocalAI{{"<b>🛡️ LocalClinicalAssessment Fallback</b><br/><span style='font-size:10px;color:#34d399'>Deterministic Rule Engine (Air-Gapped)</span>"}}:::engineNode
+        EngSync[("<b>💾 Offline Storage & Firestore Sync</b><br/><span style='font-size:10px;color:#34d399'>IndexedDB / SQLite · Distributed Lock Mutex</span>")]:::engineNode
+    end
+
+    %% Classes
+    classDef actorNode fill:#0c2a4d,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef workflowNode fill:#0f172a,stroke:#64748b,stroke-width:1.5px,color:#f8fafc;
+    classDef engineNode fill:#1e1b4b,stroke:#a855f7,stroke-width:1.8px,color:#f8fafc;
+
+    %% Subgraphs
+    style Actors fill:#081329,stroke:#0284c7,stroke-width:1.5px,stroke-dasharray: 4 2,color:#38bdf8;
+    style AppWorkflows fill:#0b1120,stroke:#475569,stroke-width:1.5px,stroke-dasharray: 4 2,color:#cbd5e1;
+    style ExecutionEngines fill:#120c24,stroke:#7c3aed,stroke-width:1.5px,stroke-dasharray: 4 2,color:#c084fc;
 
     %% Actor Connections
-    Patient --> ScanAct
-    Patient --> ChatAct
-    Patient --> GuardAct
-    Patient --> DoseAct
-    Patient --> PharmAct
-    Patient --> TravelAct
-    Patient --> ReportAct
+    Patient --> ScanAct & ChatAct & GuardAct & DoseAct & PharmAct & TravelAct & ReportAct
+    Caregiver --> FamilyAct & DoseAct & ReportAct
+    Clinician -.->|Reviews Consultation Report| ReportAct
 
-    Caregiver --> FamilyAct
-    Caregiver --> DoseAct
-    Caregiver --> ReportAct
-
-    Clinician -.->|Reviews Clinical PDF| ReportAct
-
-    %% Subsystem Bindings
+    %% Engine Bindings
     ScanAct --> EngAI
     ChatAct --> EngAI
+    ScanAct -.->|Offline / Fallback| EngLocalAI
     AlarmAct --- EngRecurrence
     DoseAct --> EngRecurrence
     PharmAct --> EngNDA
     DoseAct --> EngSync
+    GuardAct --> EngLocalAI
 ```
 
 ### 10.2 Multimodal Pill Scanning & AI Verification Sequence Diagram
 This diagram illustrates the lifecycle of capturing medication packaging, executing edge OCR, performing cloud multimodal validation, checking interactions, and cataloging the drug into *MedVault*.
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'actorBkg': '#1e293b',
+    'actorBorder': '#38bdf8',
+    'actorTextColor': '#f8fafc',
+    'actorLineColor': '#64748b',
+    'signalColor': '#94a3b8',
+    'signalTextColor': '#f8fafc',
+    'labelBoxBkgColor': '#0f172a',
+    'labelBoxBorderColor': '#334155',
+    'labelTextColor': '#f8fafc',
+    'loopTextColor': '#f8fafc',
+    'noteBorderColor': '#f59e0b',
+    'noteBkgColor': '#1e293b',
+    'noteTextColor': '#f8fafc',
+    'activationBorderColor': '#38bdf8',
+    'activationBkgColor': '#0f172a',
+    'fontFamily': 'Geist, Inter, system-ui, sans-serif'
+  }
+}}%%
 sequenceDiagram
     autonumber
-    actor User as Patient / Caregiver
-    participant UI as React Client View
-    participant Worker as OCR WebWorker (Tesseract)
-    participant Server as Node.js Backend API
-    participant LLM as Groq / Gemini Vision AI
-    participant FDA as OpenFDA / RxNorm Service
-    participant Cache as IndexedDB / Firestore
+    actor User as 👤 Patient / Caregiver
+    participant UI as 📱 React Client View
+    participant Worker as 📜 Tesseract OCR Worker
+    participant LocalAI as 🔬 LocalClinicalAssessment
+    participant Server as 🚀 Express API Gateway
+    participant VisionAI as 🧠 Groq / Gemini AI
+    participant FDA as 🏛️ OpenFDA / RxNorm
+    participant Cache as 🗄️ IndexedDB / SQLite Store
+    participant Cloud as 🔥 Cloud Firestore
 
-    User->>UI: Captures Pill / Blister Pack Image
-    UI->>Worker: Dispatch Image Buffer to ocrWorker
-    Worker-->>UI: Return Extracted Raw Text & Confidence
+    User->>UI: Captures Pill / Blister Pack Camera Frame
+    activate UI
+    UI->>Worker: Offload Image Buffer via WebWorker IPC
+    activate Worker
+    Worker-->>UI: Return Extracted Raw Text & Confidence Score
+    deactivate Worker
     
-    alt Confidence is High & Offline
-        UI->>UI: Parse Drug Entities via Local Regex
+    alt Offline Mode or API Timeout (>2.5s)
+        UI->>LocalAI: Execute Local Clinical Rule Engine & Entity Regex
+        activate LocalAI
+        LocalAI-->>UI: Instant Extracted Formulation, Strength & Safety Advisory
+        deactivate LocalAI
     else Online Multimodal Verification
         UI->>Server: POST /api/vision/analyze (Image + Raw OCR)
-        Server->>LLM: Multimodal Inference (Extract Name, Strength, Form, Expiry)
-        LLM-->>Server: Return Structured JSON Medication Data
+        activate Server
+        Server->>VisionAI: Multimodal Inference (Name, Strength, Form, Expiry)
+        activate VisionAI
+        VisionAI-->>Server: Return Structured JSON Medication Monograph
+        deactivate VisionAI
         Server->>FDA: Cross-reference Drug Name with RxNorm & OpenFDA
-        FDA-->>Server: Return Monograph & Interaction Catalog
-        Server-->>UI: Return Verified Drug Data & Interaction Matrix
+        activate FDA
+        FDA-->>Server: Return Contraindications & Interaction Catalog
+        deactivate FDA
+        Server-->>UI: Return Verified Drug Profile & Food Interaction Matrix
+        deactivate Server
+    end
+
+    opt Anti-Counterfeit Verification
+        User->>UI: Inputs Packaging Scratch-Off Code
+        UI->>Server: Verify Code against Simulated Batch Registry
+        Server-->>UI: Authenticity Verified (Authentic vs Counterfeit Alert)
     end
 
     UI->>User: Display Verification Screen for One-Tap Confirmation
-    User->>UI: Confirms & Saves Medication
-    UI->>Cache: Persist to Local Storage & Queue Delta Sync
-```
+    User->>UI: Confirms & Saves Medication to MedVault
+    UI->>Cache: Persist Locally (Immediate Offline Availability)
+    Cache-->>Cloud: Enqueue Distributed Lock Delta-Sync upon Network
+    deactivate UI
 
 ### 10.3 Native Recurrence Engine, Adherence Guardian & Battery Gate Activity Flow
 This activity diagram demonstrates how Dawa Lens ensures reliable alarm delivery despite aggressive Android OS process termination, handles dose logging via background action receivers, and synchronizes data across network transitions.
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#1e293b',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e1b4b',
+    'clusterBkg': '#0b1120',
+    'clusterBorder': '#334155',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
 flowchart TD
-    Start([Scheduled Dose Time Approaches]) --> GuardianCheck{Is AdherenceGuardianService Running?}
+    Start(["<b>⏰ Scheduled Dose Approaches</b><br/><span style='font-size:10px;color:#94a3b8'>Native Alarm Window Opens</span>"]):::stateNode --> GuardianCheck{"<b>🔍 Is Guardian Service Active?</b><br/><span style='font-size:10px;color:#94a3b8'>Foreground Watchdog Verification</span>"}:::decisionNode
     
-    GuardianCheck -- No --> StartGuardian[Start Foreground Service with Persistent Notification]
+    GuardianCheck -- "No" --> StartGuardian["<b>🛡️ Start AdherenceGuardianService</b><br/><span style='font-size:10px;color:#94a3b8'>Spawn Persistent Status Notification</span>"]:::actionNode
     StartGuardian --> BatteryCheck
-    GuardianCheck -- Yes --> BatteryCheck{Is Battery Optimization Bypassed?}
+    GuardianCheck -- "Yes" --> BatteryCheck{"<b>🔋 Is Battery Optimization Bypassed?</b><br/><span style='font-size:10px;color:#94a3b8'>OEM Autostart Intent Whitelist</span>"}:::decisionNode
     
-    BatteryCheck -- No --> PromptGate[Display BatteryOptimizationGate Dialog]
-    PromptGate --> RequestPermission[Fire OEM Specific Autostart Whitelist Intent]
-    RequestPermission --> ArmAlarm[NativeRecurrenceEngine Schedules Exact Alarm]
-    BatteryCheck -- Yes --> ArmAlarm
+    BatteryCheck -- "No" --> PromptGate["<b>⚠️ Display BatteryOptimizationGate</b><br/><span style='font-size:10px;color:#94a3b8'>Prompt Xiaomi / Samsung / Transsion Intent</span>"]:::alertNode
+    PromptGate --> RequestPermission["<b>⚙️ Request Autostart Exemption</b><br/><span style='font-size:10px;color:#94a3b8'>Direct User to Settings Whitelist</span>"]:::actionNode
+    RequestPermission --> ArmAlarm["<b>🎯 NativeRecurrenceEngine Arms Alarm</b><br/><span style='font-size:10px;color:#94a3b8'>AlarmManager.setExactAndAllowWhileIdle()</span>"]:::nativeNode
+    BatteryCheck -- "Yes" --> ArmAlarm
 
-    ArmAlarm --> AlarmTriggered([AlarmReceiver Fires at Exact Time])
-    AlarmTriggered --> UserAction{User Notification Action}
+    ArmAlarm --> AlarmTriggered(["<b>🔔 AlarmReceiver Fires at Exact Time</b><br/><span style='font-size:10px;color:#c084fc'>Full-Screen Intent / High-Priority Heads-Up</span>"]):::stateNode
+    AlarmTriggered --> UserAction{"<b>👆 User Notification Action</b><br/><span style='font-size:10px;color:#94a3b8'>Headless Button Press</span>"}:::decisionNode
 
-    UserAction -- "Take" --> ActionReceiver[NativeActionReceiver Handles Action in Background]
+    UserAction -- "Take" --> ActionReceiver[["<b>⚡ NativeActionReceiver (Background)</b><br/><span style='font-size:10px;color:#34d399'>Executes Zero-Overhead Intake Log</span>"]]:::actionNode
     UserAction -- "Skip" --> ActionReceiver
-    UserAction -- "Snooze" --> Reschedule[Reschedule Exact Alarm in 15 Minutes]
+    UserAction -- "Snooze" --> Reschedule["<b>⏱️ Reschedule Alarm +15 Mins</b><br/><span style='font-size:10px;color:#94a3b8'>Set Immediate Snooze Alarm</span>"]:::actionNode
     Reschedule --> ArmAlarm
 
-    ActionReceiver --> DeductStock[Update Stock & Log Dose in NativeRecurrenceStore]
-    DeductStock --> WriteLocalDB[Persist to IndexedDB / SQLite]
+    ActionReceiver --> DeductStock["<b>📦 Deduct MedVault Inventory Stock</b><br/><span style='font-size:10px;color:#94a3b8'>Update NativeRecurrenceStore</span>"]:::actionNode
+    DeductStock --> WriteLocalDB[("<b>🗄️ Persist to IndexedDB / SQLite</b><br/><span style='font-size:10px;color:#34d399'>Local Commit (Zero Latency)</span>")]:::dbNode
 
-    WriteLocalDB --> ConnectivityCheck{Is Network Online?}
-    ConnectivityCheck -- Yes --> DistributedLock[Acquire Distributed Sync Lock]
-    DistributedLock --> PushFirestore[Push Delta-Sync to Cloud Firestore]
-    PushFirestore --> ReleaseLock[Release Distributed Lock]
+    WriteLocalDB --> ConnectivityCheck{"<b>🌐 Is Network Online?</b><br/><span style='font-size:10px;color:#94a3b8'>Capacitor Network Plugin Status</span>"}:::decisionNode
+    ConnectivityCheck -- "Yes" --> DistributedLock["<b>🔒 Acquire Distributed Sync Lock</b><br/><span style='font-size:10px;color:#94a3b8'>Mutex Serialization across Threads</span>"]:::actionNode
+    DistributedLock --> PushFirestore[("<b>🔥 Push Delta-Sync to Firestore</b><br/><span style='font-size:10px;color:#818cf8'>Multi-Tenant Remote Synchronization</span>")]:::cloudNode
+    PushFirestore --> ReleaseLock["<b>🔓 Release Distributed Lock</b><br/><span style='font-size:10px;color:#94a3b8'>Free Sync Mutex</span>"]:::actionNode
     
-    ConnectivityCheck -- No --> QueueDelta[Append to Offline Sync Queue]
-    QueueDelta --> Reconnect([Network Connection Restored])
+    ConnectivityCheck -- "No" --> QueueDelta["<b>📥 Append to Offline Sync Queue</b><br/><span style='font-size:10px;color:#fbbf24'>Queue Stored in SQLite</span>"]:::alertNode
+    QueueDelta --> Reconnect(["<b>📶 Cellular / Wi-Fi Restored</b><br/><span style='font-size:10px;color:#94a3b8'>Network State Change Event</span>"]):::stateNode
     Reconnect --> DistributedLock
 
-    PushFirestore --> CaregiverAlert{Is Caregiver Profile Linked?}
-    CaregiverAlert -- Yes --> DispatchAlert[Transmit Status to Family Hub]
-    CaregiverAlert -- No --> FlowEnd([Adherence Flow Complete])
+    PushFirestore --> CaregiverAlert{"<b>👨‍👩‍👧 Caregiver Profile Linked?</b><br/><span style='font-size:10px;color:#94a3b8'>Family Hub Remote Sync Status</span>"}:::decisionNode
+    CaregiverAlert -- "Yes" --> DispatchAlert["<b>📲 Dispatch Status to Family Hub</b><br/><span style='font-size:10px;color:#38bdf8'>Push Notification to Caregiver</span>"]:::actionNode
+    CaregiverAlert -- "No" --> FlowEnd(["<b>✅ Adherence Cycle Complete</b><br/><span style='font-size:10px;color:#34d399'>Dose Fully Verified & Stored</span>"]):::stateNode
     DispatchAlert --> FlowEnd
+
+    classDef stateNode fill:#0c2a4d,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef decisionNode fill:#1e1b4b,stroke:#a855f7,stroke-width:1.8px,color:#f8fafc;
+    classDef actionNode fill:#0f172a,stroke:#64748b,stroke-width:1.5px,color:#f8fafc;
+    classDef nativeNode fill:#2e1065,stroke:#c084fc,stroke-width:2px,color:#faf5ff;
+    classDef alertNode fill:#3a1a05,stroke:#f59e0b,stroke-width:1.8px,color:#fef3c7;
+    classDef dbNode fill:#062b21,stroke:#10b981,stroke-width:2px,color:#ecfdf5;
+    classDef cloudNode fill:#0d1836,stroke:#60a5fa,stroke-width:2px,color:#eff6ff;
 ```
 
 ### 10.4 Ugandan Food Interaction & NDA Pharmacy Refill Sequence Diagram
 This diagram details the interaction checking pipeline and how low-stock alerts seamlessly trigger the NDA Community Pharmacy Locator.
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'actorBkg': '#1e293b',
+    'actorBorder': '#38bdf8',
+    'actorTextColor': '#f8fafc',
+    'actorLineColor': '#64748b',
+    'signalColor': '#94a3b8',
+    'signalTextColor': '#f8fafc',
+    'labelBoxBkgColor': '#0f172a',
+    'labelBoxBorderColor': '#334155',
+    'labelTextColor': '#f8fafc',
+    'noteBorderColor': '#f59e0b',
+    'noteBkgColor': '#1e293b',
+    'noteTextColor': '#f8fafc',
+    'activationBorderColor': '#38bdf8',
+    'activationBkgColor': '#0f172a',
+    'fontFamily': 'Geist, Inter, system-ui, sans-serif'
+  }
+}}%%
 sequenceDiagram
     autonumber
-    actor User as Patient
-    participant App as Dawa Lens MedVault
-    participant Guard as Interaction Guard Engine
-    participant FoodDB as Ugandan Nutritional DB
-    participant NDAService as NDA Pharmacy Service
-    participant GPS as Geolocation Engine
+    actor User as 👤 Patient
+    participant App as 📱 MedVault Client
+    participant Guard as 🥗 Interaction Guard Engine
+    participant FoodDB as 🍲 Ugandan Nutritional DB
+    participant NDAService as 🏛️ NDA Pharmacy Service
+    participant GPS as 🛰️ Geolocation Engine
 
     User->>App: Adds New Medicine (e.g. Coartem / Tetracycline)
+    activate App
     App->>Guard: Initiate Regimen Safety Scan
+    activate Guard
     Guard->>FoodDB: Cross-reference with Indigenous Foods (Mukene, Matooke, G-nuts)
+    activate FoodDB
     FoodDB-->>Guard: Return Biochemical Dietary Warnings
+    deactivate FoodDB
     Guard-->>App: Display Stratified Dietary Advice Cards
+    deactivate Guard
     
-    Note over App: Daily Intake Depletes Medication Stock
+    Note over App: Daily Intake Depletes Medication Stock in MedVault
     App->>App: Remaining Stock <= Refill Threshold
     App->>User: Display Refill Alert + "Find Licensed Pharmacy"
     
     User->>App: Clicks "Locate Nearby NDA Pharmacy"
     App->>GPS: Request Current Device Coordinates
+    activate GPS
     GPS-->>App: Return [Latitude, Longitude]
-    App->>NDAService: Query Licensed Outlets within Radius
+    deactivate GPS
+    App->>NDAService: Query Licensed Outlets within Radius (Haversine)
+    activate NDAService
     NDAService-->>App: Return Verified NDA Pharmacies, Distances & Routes
+    deactivate NDAService
     App->>User: Render Interactive Map with Route & Pharmacist Info
     User->>App: Selects Outlet & Logs Refill Confirmation
+    deactivate App
 ```
 
 ---
@@ -513,58 +716,54 @@ sequenceDiagram
 
 Dawa Lens comprises nine seamlessly interconnected functional subsystems:
 
-```
-+-----------------------------------------------------------------------------+
-|                      THE 9 CORE FUNCTIONAL SUBSYSTEMS                       |
-+-----------------------------------------------------------------------------+
-|                                                                             |
-|  [1] Visual Pill & Prescription Scanner + Anti-Fake Verification            |
-|      * On-device Tesseract.js OCR in Web Worker                             |
-|      * Cloud Multimodal Vision (Groq Llama 3.2 Vision / Gemini Flash)       |
-|      * Anti-counterfeit scratch-code verification simulation                |
-|                                                                             |
-|  [2] DawaGPT — Context-Aware Clinical AI Assistant                          |
-|      * Authentic Luganda honorific resolution (Ssebo / Nyabo)               |
-|      * Multi-dependent Family Hub clinical context injection                |
-|      * Page Link Intelligence for deep in-app navigation                    |
-|                                                                             |
-|  [3] Drug, RxNorm & Ugandan Food Interaction Guard                          |
-|      * Deterministic drug-drug interaction matrix via OpenFDA & RxNorm      |
-|      * Ugandan Nutritional Engine (Matooke, Mukene, G-nuts, Nakati)         |
-|      * Rate-limited caching layer to eliminate redundant API lookups        |
-|                                                                             |
-|  [4] Family Hub & Caregiver Synchronization Network                         |
-|      * Multi-dependent profile management (Children, Elderly Parents)       |
-|      * Role-based access control (Primary Patient, Viewer, Caregiver)       |
-|      * Remote real-time adherence oversight & missed dose alerts            |
-|                                                                             |
-|  [5] Android Native Recurrence Engine & Adherence Guardian Service          |
-|      * Foreground AdherenceGuardianService with persistent watchdog         |
-|      * NativeRecurrenceEngine & NativeRecurrenceStore for on-device alarms  |
-|      * NativeActionReceiver for zero-overhead background notification clicks|
-|      * BatteryOptimizationGate with multi-OEM autostart bypass              |
-|                                                                             |
-|  [6] Travel Companion & Trajectory Mapping Engine                           |
-|      * MapLibre GL TravelMap with animated flight paths & mini plane marker |
-|      * Trans-meridian timezone drift & offset interval recalculation        |
-|      * Cross-border international medication equivalence mapping            |
-|                                                                             |
-|  [7] Holistic Wellness Journal & 10,000-Quote Engagement Engine             |
-|      * Daily mood (1-5), energy (1-5), sleep hours & symptom logging        |
-|      * Deterministic 27.4-year calendar rotation of 10,000 health quotes    |
-|      * Recharts trendlines, adherence streaks & motivational badges         |
-|                                                                             |
-|  [8] Doctor-Ready Clinical PDF Report Generator                             |
-|      * One-click export of structured medical summaries                     |
-|      * Dual-mode client (jsPDF) and backend (PDFKit) document engines       |
-|      * Formatted for rapid clinical handover to physicians & pharmacists    |
-|                                                                             |
-|  [9] Official NDA Uganda Licensed Pharmacy Locator & Refill Gateway         |
-|      * Ingestion of official National Drug Authority licensed outlet index  |
-|      * GPS proximity matching with Haversine distance & road route estimates|
-|      * Display of premise license number, pharmacist name, and PSU registry |
-|                                                                             |
-+-----------------------------------------------------------------------------+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#1e293b',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e1b4b',
+    'clusterBkg': '#0b1120',
+    'clusterBorder': '#334155',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
+flowchart TD
+    subgraph Subsystems ["🛡️ THE 9 CORE FUNCTIONAL SUBSYSTEMS"]
+        direction TB
+
+        subgraph CoreClinical ["🩺 Clinical & Regulatory Intelligence"]
+            M1["<b>1. Visual Scanner & Anti-Fake Shield</b><br/>• Edge Tesseract.js WebWorker<br/>• Multimodal Vision (Groq / Gemini)<br/>• Scratch-code batch authentication"]:::clinicalNode
+            M2["<b>2. DawaGPT Clinical AI Companion</b><br/>• Luganda honorifics (Ssebo / Nyabo)<br/>• Multi-dependent context injection<br/>• Page Link Intelligence deep linking"]:::clinicalNode
+            M3["<b>3. Drug & Ugandan Food Guard</b><br/>• OpenFDA & RxNorm matrix<br/>• Indigenous food DB (Mukene, Matooke)<br/>• Local Clinical Assessment fallback"]:::clinicalNode
+            M9["<b>9. Official NDA Pharmacy Locator</b><br/>• Official 1,800+ licensed registry<br/>• GPS Haversine & walking routes<br/>• 1-click refill logging into MedVault"]:::clinicalNode
+        end
+
+        subgraph DeviceReliability ["⚡ Device Resilience & Care Coordination"]
+            M5["<b>5. Android Native Recurrence Suite</b><br/>• Foreground AdherenceGuardianService<br/>• NativeRecurrenceEngine & Store<br/>• Zero-overhead NativeActionReceiver<br/>• Multi-OEM battery autostart bypass"]:::deviceNode
+            M4["<b>4. Family Hub Caregiver Network</b><br/>• Multi-dependent profile isolation<br/>• Remote real-time adherence sync<br/>• Escalated skipped-dose alerts"]:::deviceNode
+            M6["<b>6. TravelMap Companion Engine</b><br/>• MapLibre GL animated flight paths<br/>• Timezone drift regimen recalculator<br/>• Cross-border drug equivalence"]:::deviceNode
+        end
+
+        subgraph EngagementWellness ["🌱 Wellness & Medical Dissemination"]
+            M7["<b>7. Holistic Wellness & Quotes Engine</b><br/>• Mood, energy & symptom tracking<br/>• Deterministic 27.4-yr 10k quote cycle<br/>• Recharts biometric correlation"]:::wellnessNode
+            M8["<b>8. Doctor-Ready Clinical PDF Generator</b><br/>• 1-click structured clinical summary<br/>• Dual jsPDF client & backend PDFKit<br/>• Physician & pharmacist handover"]:::wellnessNode
+        end
+    end
+
+    classDef clinicalNode fill:#0c2a4d,stroke:#38bdf8,stroke-width:1.8px,color:#f8fafc;
+    classDef deviceNode fill:#1e1b4b,stroke:#a855f7,stroke-width:1.8px,color:#f8fafc;
+    classDef wellnessNode fill:#062b21,stroke:#10b981,stroke-width:1.8px,color:#f8fafc;
+
+    style Subsystems fill:#080d1a,stroke:#334155,stroke-width:1.5px,color:#f8fafc;
+    style CoreClinical fill:#061426,stroke:#0284c7,stroke-width:1.5px,stroke-dasharray: 4 2,color:#38bdf8;
+    style DeviceReliability fill:#120a21,stroke:#9333ea,stroke-width:1.5px,stroke-dasharray: 4 2,color:#c084fc;
+    style EngagementWellness fill:#051712,stroke:#059669,stroke-width:1.5px,stroke-dasharray: 4 2,color:#34d399;
 ```
 
 ### 11.1 Subsystem 1: Visual Pill Scanner & Anti-Fake Verification
@@ -616,28 +815,60 @@ Dawa Lens comprises nine seamlessly interconnected functional subsystems:
 
 Dawa Lens handles sensitive personal health information (PHI) and adheres to rigorous data protection standards:
 
-```
-+-----------------------------------------------------------------------------+
-|                           SECURITY & PRIVACY FRAMEWORK                      |
-+-----------------------------------------------------------------------------+
-|                                                                             |
-|   +--------------------------+        +---------------------------------+   |
-|   |  Data in Transit & Rest  |        |    AI Privacy Anonymization     |   |
-|   |  * HTTPS / TLS 1.3       |        |    * PII Stripped Before API    |   |
-|   |  * AES-256 Storage       |        |    * Ephemeral AI Sessions      |   |
-|   |  * Android NetSec Config |        |    * Reasoning Token Isolation  |   |
-|   +------------+-------------+        +----------------+----------------+   |
-|                |                                       |                    |
-|                \___________________ ___________________/                    |
-|                                    v                                        |
-|                       +--------------------------+                          |
-|                       |  Firestore Security Rule |                          |
-|                       |  * Cryptographic Auth    |                          |
-|                       |  * Strict User Isolation |                          |
-|                       |  * Distributed Sync Lock |                          |
-|                       +--------------------------+                          |
-|                                                                             |
-+-----------------------------------------------------------------------------+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#1e293b',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e1b4b',
+    'clusterBkg': '#0b1120',
+    'clusterBorder': '#334155',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
+flowchart TD
+    subgraph SecurityArchitecture ["🔒 MULTI-TIER CLINICAL SECURITY & PRIVACY ARCHITECTURE"]
+        subgraph Layer1 ["1. Client & Hardware Security Tier"]
+            Sec_Storage["<b>🔐 AES-GCM-256 Cryptographic Vault</b><br/><span style='font-size:10px;color:#94a3b8'>Encrypted SQLite & WebCrypto Preferences</span>"]:::secNode
+            Sec_NetSec["<b>🛡️ Strict Network Security Config</b><br/><span style='font-size:10px;color:#94a3b8'>Cleartext Traffic Prohibited · Certificate Pinning</span>"]:::secNode
+            Sec_Worker["<b>📜 Isolated WebWorker Sandbox</b><br/><span style='font-size:10px;color:#94a3b8'>Isolated Memory Heap for Tesseract Image OCR</span>"]:::secNode
+        end
+
+        subgraph Layer2 ["2. Perimeter & Transport Defense Tier"]
+            Sec_TLS["<b>🔒 TLS 1.3 Cryptographic Tunnel</b><br/><span style='font-size:10px;color:#94a3b8'>Strict Transport Security (HSTS) Forced</span>"]:::secNode
+            Sec_Helmet["<b>🛡️ Helmet HTTP Security Headers</b><br/><span style='font-size:10px;color:#94a3b8'>Content-Security-Policy · X-Frame-Options</span>"]:::secNode
+            Sec_Rate["<b>⏱️ Token Bucket Rate Limiting</b><br/><span style='font-size:10px;color:#94a3b8'>Anti-Brute Force on API Gateway Endpoints</span>"]:::secNode
+        end
+
+        subgraph Layer3 ["3. AI Privacy & Data Anonymization Tier"]
+            Sec_PII["<b>🧼 Client-Side PII Scrubbing Pipeline</b><br/><span style='font-size:10px;color:#94a3b8'>Names, Phones & National IDs Stripped</span>"]:::secNode
+            Sec_Tokens["<b>💊 Pure Pharmacological Ingestion</b><br/><span style='font-size:10px;color:#94a3b8'>Only De-Identified Drug Tokens Sent to AI</span>"]:::secNode
+            Sec_Ephem["<b>⚡ Ephemeral Inference Sessions</b><br/><span style='font-size:10px;color:#94a3b8'>Zero Data Retention · No Model Retraining</span>"]:::secNode
+        end
+
+        subgraph Layer4 ["4. Multi-Tenant Cloud Isolation Tier"]
+            Sec_Auth["<b>🔑 Firebase Admin Cryptographic JWT</b><br/><span style='font-size:10px;color:#94a3b8'>Signature Verification · Role Claims Check</span>"]:::secNode
+            Sec_Rules["<b>🔥 Firestore Security Rules Granularity</b><br/><span style='font-size:10px;color:#94a3b8'>User-Scoped & Family-Scoped Access Barriers</span>"]:::secNode
+            Sec_Lock["<b>🔒 Client Distributed Lock Manager</b><br/><span style='font-size:10px;color:#94a3b8'>Race-Condition-Free Offline Delta Sync</span>"]:::secNode
+        end
+    end
+
+    classDef secNode fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#f8fafc;
+    style SecurityArchitecture fill:#060a14,stroke:#334155,stroke-width:1.8px,color:#f8fafc;
+    style Layer1 fill:#091426,stroke:#0284c7,stroke-width:1.5px,stroke-dasharray: 4 2,color:#38bdf8;
+    style Layer2 fill:#140c24,stroke:#9333ea,stroke-width:1.5px,stroke-dasharray: 4 2,color:#c084fc;
+    style Layer3 fill:#191104,stroke:#d97706,stroke-width:1.5px,stroke-dasharray: 4 2,color:#fbbf24;
+    style Layer4 fill:#051712,stroke:#059669,stroke-width:1.5px,stroke-dasharray: 4 2,color:#34d399;
+
+    Layer1 ==>|Encrypted Data in Transit| Layer2
+    Layer2 ==>|Sanitized Payload| Layer3
+    Layer3 ==>|Authenticated State Sync| Layer4
 ```
 
 1. **Cryptographic Authentication & Tenant Isolation**: All client-server communications are encrypted via HTTPS/TLS 1.3. Firestore Security Rules enforce strict user-level and caregiver-level authorization barriers, preventing unauthorized cross-tenant data access.
@@ -667,8 +898,31 @@ Dawa Lens handles sensitive personal health information (PHI) and adheres to rig
 The project is planned to run from September 2026 through May 2027, partitioned into six distinct engineering phases, targeting an initial production release (**v1.0**) by project completion.
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#0284c7',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#38bdf8',
+    'sectionBkgColor': '#0f172a',
+    'altSectionBkgColor': '#1e293b',
+    'sectionBkgColor2': '#0b1329',
+    'taskBorderColor': '#38bdf8',
+    'taskBkgColor': '#0284c7',
+    'taskTextLightColor': '#ffffff',
+    'taskTextColor': '#ffffff',
+    'taskTextDarkColor': '#0f172a',
+    'activeTaskBorderColor': '#10b981',
+    'activeTaskBkgColor': '#059669',
+    'gridColor': '#334155',
+    'todayLineColor': '#f43f5e',
+    'fontFamily': 'Geist, Inter, system-ui, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
 gantt
-    title Dawa Lens Engineering & Deployment Roadmap
+    title Dawa Lens Engineering & Production Deployment Roadmap
     dateFormat  YYYY-MM-DD
     section Phase 1: Planning & Design
     Clinical Requirements & Ethical Review   :p1_1, 2026-09-01, 14d
@@ -736,19 +990,40 @@ The following budget outlines the financial resources required for the developme
 
 ### 16.2 Quantitative Evaluation Metrics & KPIs
 
-```
-+-----------------------------------------------------------------------------+
-|                         SYSTEM PERFORMANCE TARGETS & KPIS                   |
-+-----------------------------------------------------------------------------+
-|                                                                             |
-|   [ OCR Parsing Accuracy ]       >= 95% on Standard Packaging               |
-|   [ Vision Recognition Latency ]  < 1.8 seconds (Cloud) / < 0.8s (Edge)     |
-|   [ Offline Reminder Reliability] 99.99% on Android 10+ (Foreground Guardian)|
-|   [ Interaction Detection Recall] 100% on Severe Drug-Drug / Food Conflicts |
-|   [ Patient Adherence Increase ] >= 35% Improvement in Pilot Cohort         |
-|   [ Offline Data Sync Integrity] 0% Data Loss Across Disconnections         |
-|                                                                             |
-+-----------------------------------------------------------------------------+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#1e293b',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e1b4b',
+    'clusterBkg': '#0b1120',
+    'clusterBorder': '#334155',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
+flowchart LR
+    subgraph Targets ["🎯 SYSTEM PERFORMANCE TARGETS & QUANTITATIVE KPIS"]
+        direction TB
+        K1["📷 <b>OCR Parsing Accuracy</b><br/><span style='font-size:10px;color:#34d399'>≥ 95% on Packaging & Blister Foils</span>"]:::kpiGreen
+        K2["⚡ <b>Computer Vision Latency</b><br/><span style='font-size:10px;color:#38bdf8'>&lt; 1.8s (Cloud LLM) / &lt; 0.8s (Tesseract WebWorker)</span>"]:::kpiBlue
+        K3["🔔 <b>Offline Reminder Reliability</b><br/><span style='font-size:10px;color:#c084fc'>99.99% On-Time (Foreground Guardian Watchdog)</span>"]:::kpiPurple
+        K4["🥗 <b>Interaction Detection Recall</b><br/><span style='font-size:10px;color:#f59e0b'>100% on Severe Drug-Drug & Food Conflicts</span>"]:::kpiAmber
+        K5["📈 <b>Clinical Adherence Lift</b><br/><span style='font-size:10px;color:#34d399'>≥ 35% Increase in Scheduled Dose Compliance</span>"]:::kpiGreen
+        K6["💾 <b>Offline Sync Integrity</b><br/><span style='font-size:10px;color:#38bdf8'>0% Data Loss Across Blackouts & Process Kills</span>"]:::kpiBlue
+    end
+
+    classDef kpiGreen fill:#062b21,stroke:#10b981,stroke-width:2px,color:#f8fafc;
+    classDef kpiBlue fill:#0c2a4d,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+    classDef kpiPurple fill:#1e1b4b,stroke:#a855f7,stroke-width:2px,color:#f8fafc;
+    classDef kpiAmber fill:#2a1a05,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
+
+    style Targets fill:#080d1a,stroke:#334155,stroke-width:1.8px,color:#f8fafc;
 ```
 
 * **OCR Accuracy**: $\ge 95\%$ character and entity recognition accuracy on standard pharmaceutical packaging and blister foils.

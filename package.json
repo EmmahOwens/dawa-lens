@@ -16,7 +16,10 @@
     "test:watch": "vitest",
     "scrape:nda": "python3 scripts/scrapeNdaPharmacies.py",
     "deploy:web": "vite build && firebase deploy --only hosting",
-    "cap:sync": "vite build && npx cap sync"
+    "cap:sync": "vite build && npx cap sync",
+    "archify:status": "archify-cli status",
+    "archify:analyze": "archify-cli analyze .",
+    "archify:generate": "archify-cli generate ."
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

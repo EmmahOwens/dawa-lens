@@ -1,7 +1,7 @@
 {
   "project": {
-    "name": "",
-    "description": ""
+    "name": "dawa-lens",
+    "description": "Cross-platform medication adherence and pharmaceutical safety verification system"
   },
   "defaults": {
     "sourceRoot": ".",
@@ -43,7 +43,17 @@
       "includeHidden": false,
       "maxFileSizeBytes": 1048576,
       "includeGlobs": [],
-      "excludeGlobs": []
+      "excludeGlobs": [
+        "dist/**",
+        "build/**",
+        "android/.gradle/**",
+        "android/app/build/**",
+        "android/app/src/main/assets/public/**",
+        "rust/target/**",
+        "node_modules/**",
+        ".archify/**",
+        "graphify-out/**"
+      ]
     },
     "semantic": {
       "enabled": false,

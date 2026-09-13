@@ -1,0 +1,293 @@
+{
+  "artifact": "guide.json",
+  "status": "ready",
+  "phase": "generate",
+  "docType": "archify",
+  "outputFile": "archify.md",
+  "targetPath": "/home/iammbayo/Documents/Projects/dawa-lens",
+  "goal": "Guide the agent to write `archify.md` from grounded `.archify` artifacts with minimal extra repository reads.",
+  "primaryArtifacts": [
+    ".archify/docs/archify/packet.json",
+    ".archify/architecture-context.json",
+    ".archify/architecture-context.md",
+    ".archify/facts.json",
+    ".archify/modules.json",
+    ".archify/services.json",
+    ".archify/routes.json",
+    ".archify/database.json",
+    ".archify/dependencies.json",
+    ".archify/docs-summary.json"
+  ],
+  "readOrder": [
+    ".archify/docs/archify/packet.json",
+    ".archify/docs/archify/guide.json",
+    ".archify/docs/archify/packet.json",
+    ".archify/architecture-context.json",
+    ".archify/facts.json",
+    ".archify/modules.json",
+    ".archify/services.json",
+    ".archify/dependencies.json",
+    ".archify/routes.json",
+    ".archify/database.json",
+    ".archify/docs-summary.json",
+    "README.md",
+    "rust/README.md"
+  ],
+  "sectionPlan": [
+    {
+      "section": "System Prompt",
+      "required": true,
+      "sourceArtifacts": [
+        ".archify/docs/archify/packet.json"
+      ],
+      "sourceFields": [
+        "generationRules.requiredSections",
+        "generationRules.documentShape"
+      ],
+      "factPolicy": "instruction_only",
+      "draftingInstructions": [
+        "Define the assistant role, grounding expectations, and factuality constraints.",
+        "State that `.archify` artifacts are the primary source of truth."
+      ],
+      "missingEvidenceBehavior": "Do not invent repository facts in this section. Keep it as instruction-only content.",
+      "validationChecks": [
+        "Keep this section instructional, not descriptive of unverified repository details.",
+        "Mention grounded `.archify` evidence as the primary source of confirmed facts."
+      ]
+    },
+    {
+      "section": "User Prompt",
+      "required": true,
+      "sourceArtifacts": [
+        ".archify/docs/archify/packet.json"
+      ],
+      "sourceFields": [
+        "questionnaireTemplate",
+        "generationRules.promptBehavior"
+      ],
+      "factPolicy": "instruction_only",
+      "draftingInstructions": [
+        "Tell the downstream AI what to produce using the grounded repository context.",
+        "Preserve the guided interaction requirements from the packet."
+      ],
+      "missingEvidenceBehavior": "Do not add repository-specific claims unless they are already grounded elsewhere in the packet.",
+      "validationChecks": [
+        "Preserve the requirement to ask which architecture artifact the user wants.",
+        "Preserve the requirement to ask for visual style before visual generation."
+      ]
+    },
+    {
+      "section": "Grounded Repository Context",
+      "required": true,
+      "sourceArtifacts": [
+        ".archify/architecture-context.json",
+        ".archify/architecture-context.md",
+        ".archify/facts.json",
+        ".archify/modules.json",
+        ".archify/services.json",
+        ".archify/routes.json",
+        ".archify/database.json",
+        ".archify/dependencies.json"
+      ],
+      "sourceFields": [
+        "confirmedFromCodebase",
+        "groundedRepositoryContext"
+      ],
+      "factPolicy": "confirmed_first",
+      "draftingInstructions": [
+        "Summarize the system, subsystems, interfaces, dependencies, routes, and data concerns from the listed artifacts.",
+        "Prefer compact factual statements over exhaustive dumps."
+      ],
+      "missingEvidenceBehavior": "If a subsystem or concern is not supported by the listed artifacts, omit it or explicitly mark evidence as insufficient.",
+      "validationChecks": [
+        "Every major claim should map back to at least one listed artifact.",
+        "Do not blend inferred architecture into this section without labeling it."
+      ]
+    },
+    {
+      "section": "Confirmed From Codebase",
+      "required": true,
+      "sourceArtifacts": [
+        ".archify/architecture-context.json",
+        ".archify/facts.json",
+        ".archify/modules.json",
+        ".archify/services.json",
+        ".archify/routes.json",
+        ".archify/database.json",
+        ".archify/dependencies.json"
+      ],
+      "sourceFields": [
+        "confirmedFromCodebase"
+      ],
+      "factPolicy": "confirmed_only",
+      "draftingInstructions": [
+        "Use only packet entries already categorized as confirmed.",
+        "Preserve evidence-backed distinctions such as subsystem inventory, interfaces, services, routes, and data stores."
+      ],
+      "missingEvidenceBehavior": "If there are few confirmed items for a topic, state that the codebase evidence is limited instead of filling gaps.",
+      "validationChecks": [
+        "Every bullet or paragraph in this section must come from confirmed packet content.",
+        "Do not introduce README-only or inferred claims here."
+      ]
+    },
+    {
+      "section": "Inferred Architecture",
+      "required": true,
+      "sourceArtifacts": [
+        ".archify/architecture-context.json",
+        ".archify/architecture-context.md"
+      ],
+      "sourceFields": [
+        "inferredArchitecture"
+      ],
+      "factPolicy": "inferred_must_be_labeled",
+      "draftingInstructions": [
+        "Summarize architectural implications synthesized from grounded relationships.",
+        "Use explicit labels such as `Inferred` when describing boundaries, flows, or responsibilities not directly declared."
+      ],
+      "missingEvidenceBehavior": "If the packet has no meaningful inferred items, say that no strong additional architectural inference was derived.",
+      "validationChecks": [
+        "Every statement in this section should be explicitly framed as inference.",
+        "Do not move inferred content into confirmed sections."
+      ]
+    },
+    {
+      "section": "Open Questions / Uncertainty",
+      "required": true,
+      "sourceArtifacts": [
+        ".archify/architecture-context.json",
+        ".archify/docs-summary.json"
+      ],
+      "sourceFields": [
+        "openQuestionsAndUncertainty"
+      ],
+      "factPolicy": "uncertainty_only",
+      "draftingInstructions": [
+        "List unresolved architecture questions, ambiguous boundaries, and missing evidence areas.",
+        "Keep uncertainty actionable and specific."
+      ],
+      "missingEvidenceBehavior": "If the packet has no open questions, state that no major unresolved questions were extracted from the grounded artifacts.",
+      "validationChecks": [
+        "Do not convert uncertainty into factual statements.",
+        "Keep this section focused on ambiguity, missing evidence, or decisions needing user input."
+      ]
+    },
+    {
+      "section": "Questions Before Architecture Generation",
+      "required": true,
+      "sourceArtifacts": [
+        ".archify/docs/archify/packet.json"
+      ],
+      "sourceFields": [
+        "questionnaireTemplate.sectionTitle",
+        "questionnaireTemplate.questions"
+      ],
+      "factPolicy": "instruction_only",
+      "draftingInstructions": [
+        "Preserve the packet questionnaire as a pre-generation gating step.",
+        "Keep the questions focused on user intent, flows, constraints, and scope."
+      ],
+      "missingEvidenceBehavior": "Do not replace the questionnaire with assumptions.",
+      "validationChecks": [
+        "Keep the section title from the packet.",
+        "Preserve the requirement to ask these questions before final architecture output."
+      ]
+    },
+    {
+      "section": "Diagram / Image Generation Instructions",
+      "required": true,
+      "sourceArtifacts": [
+        ".archify/docs/archify/packet.json"
+      ],
+      "sourceFields": [
+        "generationRules.diagramCapabilityPolicy",
+        "generationRules.promptBehavior"
+      ],
+      "factPolicy": "instruction_only",
+      "draftingInstructions": [
+        "Tell capable apps to generate visuals directly and other apps to return render-ready diagram specifications.",
+        "Preserve the visual-style question and wait-for-answer requirement."
+      ],
+      "missingEvidenceBehavior": "Do not invent diagram content beyond what the grounded context supports.",
+      "validationChecks": [
+        "State the direct image-generation behavior when supported.",
+        "State the fallback render-ready specification behavior when image generation is unavailable."
+      ]
+    }
+  ],
+  "factPolicy": {
+    "confirmed": "Only state items as confirmed when they are directly supported by the listed `.archify` artifacts.",
+    "inferred": "Use inferred statements only when synthesized from artifact relationships and label them explicitly as inferred.",
+    "missingEvidence": "If the artifacts do not support a claim, state that repository evidence is insufficient instead of guessing.",
+    "supportingDocs": "Treat README and optional supporting docs as secondary context that cannot override grounded `.archify` evidence."
+  },
+  "draftingWorkflow": [
+    "Read `.archify/docs/archify/packet.json`.",
+    "Read `.archify/docs/archify/guide.json`.",
+    "Read only the artifacts listed in `readOrder`.",
+    "Draft `archify.md` section by section using `sectionPlan`.",
+    "Run section-level validation using each section's `validationChecks`.",
+    "Run final document validation using `validationChecks` before finalizing output."
+  ],
+  "fallbackRepoReads": [
+    {
+      "path": "README.md",
+      "reason": "Supporting product and usage context referenced by the design packet."
+    },
+    {
+      "path": "rust/README.md",
+      "reason": "Optional supporting context referenced by the design packet."
+    }
+  ],
+  "forbiddenBehaviors": [
+    "Do not inspect the whole repository before reading the guide and the referenced `.archify` artifacts.",
+    "Do not present README-only or supporting-doc-only claims as confirmed codebase facts.",
+    "Do not invent rationale, deployment boundaries, or undocumented architecture decisions.",
+    "Do not write any primary output file other than `archify.md`."
+  ],
+  "promptBehavior": {
+    "firstResponseMustAskArtifactType": true,
+    "artifactTypeOptions": [
+      "high-level architecture",
+      "low-level architecture",
+      "component breakdown",
+      "user flow diagram",
+      "sequence / interaction view",
+      "custom request"
+    ],
+    "firstResponseMustAskVisualStyle": true,
+    "mustAllowCustomAnswers": true,
+    "mustWaitForAnswersBeforeFinalOutput": true
+  },
+  "questionnaire": {
+    "sectionTitle": "Questions Before Architecture Generation",
+    "instructions": [
+      "Ask every question in this section before generating or revising the final architecture.",
+      "Use the answers to adjust boundaries, flows, naming, assumptions, and diagram scope.",
+      "Keep inferred items explicitly marked as inferred until the answers confirm them."
+    ],
+    "questions": [
+      "What kind of architecture output do you want next: a high-level diagram, a deployment view, a sequence flow, or a deeper written architecture?",
+      "Which user journeys, business workflows, or API flows matter most for this architecture pass?",
+      "What operational constraints should shape the design, such as scale, latency, reliability, compliance, tenancy, or geographic requirements?",
+      "Which external systems, third-party integrations, or data providers are in scope and which are intentionally out of scope?",
+      "Are there planned changes, migrations, or target-state boundaries that differ from the current codebase structure?",
+      "Which inferred components, names, or boundaries should be treated as tentative until you confirm them?"
+    ]
+  },
+  "diagramCapabilityPolicy": {
+    "mustAskForPreferredVisualStyleBeforeGeneratingVisuals": true,
+    "generateImageWhenAppSupportsIt": true,
+    "fallbackToRenderReadyDiagramSpecWhenImageGenerationUnavailable": true,
+    "mustNotAssumeSpecificAppFeatureSet": true
+  },
+  "validationChecks": [
+    "Read `.archify/docs/archify/packet.json` before any other synthesis artifact.",
+    "Read `.archify/docs/archify/guide.json` before reading repository files outside `.archify`.",
+    "Draft and validate `archify.md` section by section using `sectionPlan`.",
+    "Ensure every major section is traceable to the listed source artifacts.",
+    "Ensure inferred statements are labeled and kept separate from confirmed facts.",
+    "Ensure unsupported claims are replaced with explicit uncertainty or missing-evidence language.",
+    "Ensure the final document includes `System Prompt`, `User Prompt`, `Grounded Repository Context`, `Questions Before Architecture Generation`, and `Diagram / Image Generation Instructions`."
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "artifact": "database.json",
+  "status": "ready",
+  "phase": "analyze",
+  "targetPath": "/home/iammbayo/Documents/Projects/dawa-lens",
+  "scanRoot": ".",
+  "tables": [],
+  "migrations": [],
+  "accessBoundaries": [],
+  "querySignals": [],
+  "summary": {
+    "tableCount": 0,
+    "migrationCount": 0,
+    "boundaryCount": 0
+  }
+}

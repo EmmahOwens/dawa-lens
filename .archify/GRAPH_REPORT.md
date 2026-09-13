@@ -1,0 +1,423 @@
+# Graph Report - /home/iammbayo/Documents/Projects/dawa-lens (2026-09-13)
+
+## Corpus Check
+- 414 files scanned
+- 321 code files contributed grounded graph fragments
+- Verdict: graph analysis is available without LLM synthesis.
+
+## Summary
+- 8334 nodes · 18659 edges · 357 communities
+- Warnings: 0 · Ambiguous edges: 15882 (85%)
+- Top hubs: 10 · Surprises: 5 · Suggested questions: 5
+
+## God Nodes
+1. `react` - degree 132 · community 37 · src/App.tsx
+2. `async` - degree 103 · community 171 · server/list-models.js
+3. `async` - degree 91 · community 17 · src/App.tsx
+4. `logDose()` - degree 82 · community 60 · src/contexts/AppContext.tsx
+5. `@/lib/icons` - degree 67 · community 102 · src/components/AchievementOverlay.tsx
+6. `framer-motion` - degree 66 · community 102 · src/components/AchievementOverlay.tsx
+7. `@/lib/utils` - degree 58 · community 113 · src/components/ConfirmationDialog.tsx
+8. `handleDownloadPDF()` - degree 55 · community 228 · src/pages/ReportPage.tsx
+9. `cn` - degree 48 · community 113 · src/components/ConfirmationDialog.tsx
+10. `console.log` - degree 45 · community 216 · server/check-env.js
+
+## Surprising Connections
+- `isComplexTask()` --calls--> `Uses` [AMBIGUOUS]
+  server/src/services/aiService.js -> server/src/test-isComplexTask.js · ambiguous relationship, cross-file link, cross-community bridge, peripheral-to-hub jump
+- `isComplexTask()` --calls--> `Uses` [AMBIGUOUS]
+  server/src/services/aiService.js -> server/src/test-isComplexTask.js · ambiguous relationship, cross-file link, cross-community bridge, peripheral-to-hub jump
+- `isComplexTask()` --calls--> `intent` [AMBIGUOUS]
+  server/src/services/aiService.js -> server/src/test-isComplexTask.js · ambiguous relationship, cross-file link, cross-community bridge, peripheral-to-hub jump
+- `isComplexTask()` --calls--> `intent` [AMBIGUOUS]
+  server/src/services/aiService.js -> server/src/test-isComplexTask.js · ambiguous relationship, cross-file link, cross-community bridge, peripheral-to-hub jump
+- `handleConfirm()` --calls--> `setConfirmed` [AMBIGUOUS]
+  src/components/ConfirmationDialog.tsx -> src/pages/ResultsPage.tsx · ambiguous relationship, cross-file link, cross-community bridge, peripheral-to-hub jump
+
+## Communities (357 total)
+- Community 0: 287 nodes · cohesion 0.01 · action, actions, actionTime.replace, active.push, activeMedsList.some, Activity, advice, AI
+- Community 1: 166 nodes · cohesion 0.0 · actualDate.getTime, actualDate.toISOString, actualTakeTime.getTime, addDoc, addScheduleAuditLog, age, allReminders.filter, allReminders.find
+- Community 2: 83 nodes · cohesion 0.0 · a.getTime, activeIds.has, activeReminders.forEach, activeReminders.map, addMinutes, alarmNotifications.filter, alarmNotifications.push, alarms
+- Community 3: 79 nodes · cohesion 0.03 · activeIngredients.forEach, activeIngredients.join, ai.toLowerCase, allergy.trim, bn.toLowerCase, brandSynonyms.forEach, c.includes, c.replace
+- Community 4: 77 nodes · cohesion 0.0 · aiApi.chat, aiApi.chatStream, allergies.join, allMedicines.filter, allText.lastIndexOf, allText.match, allText.replace, allText.substring
+- Community 5: 71 nodes · cohesion 0.0 · added.push, advice.replace, affectedMedicines.join, affectedMedicines.map, aiApi.chat, aiApi.checkHolisticSafety, availableFactors.find, availableFactors.map
+- Community 6: 66 nodes · cohesion 0.0 · activeSuggestions.map, b, block, body, calculateRefillStatus, calculateVitalitySummary, chatWithDawaGPTStream, checkIfLatestMessageInView
+- Community 7: 63 nodes · cohesion 0.0 · activeReminders.forEach, activeSlotPerReminder.get, activeSlotPerReminder.has, activeSlotPerReminder.set, actualTakeDate.getHours, actualTakeDate.getMinutes, Array, awareness
+- Community 8: 60 nodes · cohesion 0.05 · allItems.map, complete, configurations, constructor, content.forEach, crypto.randomUUID, disk, existsSync
+- Community 9: 54 nodes · cohesion 0.0 · afterDelete.find, afterUpdate.find, all.find, device.getBatteryInfo, device.getInfo, device.getLanguageCode, haptics.error, haptics.heavy
+- Community 10: 51 nodes · cohesion 0.05 · arcCoords.forEach, bearing, container.appendChild, coordinates, coords.push, current.setPopup, destination.toLowerCase, disconnect
+- Community 11: 50 nodes · cohesion 0.0 · actionTime.getDate, actionTime.setDate, actionTime.setHours, actionTime.toISOString, actualTake.setHours, actualTakeTime.setHours, afterEach, AM
+- Community 12: 48 nodes · cohesion 0.04 · allergenAlerts.push, allergenAlerts.some, Array.from, boxedWarnings.push, conflicts.some, contraindicationAlerts.push, Date.now, drug.toLowerCase
+- Community 13: 48 nodes · cohesion 0.0 · _20px_50px_rgba, AddReminderPage, capacity, COLORS.find, COLORS.map, currentQuantity.toString, dosagePerDose.toString, dose.trim
+- Community 14: 47 nodes · cohesion 0.0 · activeReminders.every, addDays, alarmBatch.push, cancelPreviousEngagementNotifs, createEngagementChannels, d.getDate, d.getFullYear, d.getMonth
+- Community 15: 46 nodes · cohesion 0.04 · Administration, Affairs, AFRICA, Agency, Aliments, Board, CARE, Center
+- Community 16: 46 nodes · cohesion 0.04 · AbortSignal.timeout, address.toLowerCase, distance, distances, district.toLowerCase, environment, exists, fallbackCoords.push
+- Community 17: 46 nodes · cohesion 0.0 · AppShell, async, backListener.then, Capacitor.isNativePlatform, CapApp.addListener, CapApp.exitApp, checkMissedDoses, clearInterval
+- Community 18: 45 nodes · cohesion 0.04 · actions, alarm, console.log, Device.getBatteryInfo, Device.getInfo, Device.getLanguageCode, Dialog.alert, Dialog.confirm
+- Community 19: 45 nodes · cohesion 0.0 · alert, block.cloneNode, block.getBoundingClientRect, blocks, blocks.forEach, body.appendChild, body.removeChild, canvas.toDataURL
+- Community 20: 42 nodes · cohesion 0.05 · allButtons.filter, allButtons.find, button, called, className.includes, combinations, enable, facingMode
+- Community 21: 41 nodes · cohesion 0.05 · a.click, Blob, date.toDateString, date.toLocaleDateString, deleteDoseLog, FileReader, filtered.filter, filtered.sort
+- Community 22: 40 nodes · cohesion 0.06 · actualTakeTime.getHours, actualTakeTime.getMinutes, dateObj.getHours, dateObj.getMinutes, doseLogs.find, endOfDay, getMinutes, h.toString
+- Community 23: 39 nodes · cohesion 0.05 · card, classList.contains, click, closest, container.querySelector, container.querySelectorAll, correctly, day
+- Community 24: 39 nodes · cohesion 0.0 · aiApi.checkMealSafety, aiApi.getNutritionalGuidance, bullets, clean.replace, clean.trim, dayLogs.reduce, deleteWellnessLog, energy
+- Community 25: 38 nodes · cohesion 0.0 · append, attrs_dict.get, datetime.now, decode, dict, dirname, DISTRICT_COORDS.items, district.replace
+- Community 26: 37 nodes · cohesion 0.05 · actionListener.remove, actionListenerHandle.remove, addMinutes, c.charCodeAt, console.log, current.every, current.find, current.some
+- Community 27: 37 nodes · cohesion 0.08 · AuthPage, Branding, createUserWithEmailAndPassword, email.trim, GoogleAuthProvider, loginUser, name.trim, notify.error
+- Community 28: 36 nodes · cohesion 0.06 · _4px_14px_rgba, activeEl.getAttribute, BottomNav, calc, cancelAnimationFrame, Date, document.querySelector, doseLogs.some
+- Community 29: 35 nodes · cohesion 0.06 · array, candidateName.toLowerCase, case, Error, existingNames.has, fc.assert, fc.integer, fc.pre
+- Community 30: 35 nodes · cohesion 0.07 · Actual, background, buttons, cancel, close, closed, condition, default
+- Community 31: 34 nodes · cohesion 0.06 · addTo, Badge, bezier, bounds.extend, Controls, coordinates.forEach, current.forEach, current.push
+- Community 32: 33 nodes · cohesion 0.06 · afterEach, always, beforeEach, describe, expect, fireEvent.click, it, mockResolvedValue
+- Community 33: 32 nodes · cohesion 0.06 · Array.from, callOrder.push, cleanup, faithfully, fc.array, fc.assert, fc.boolean, fc.property
+- Community 34: 32 nodes · cohesion 0.07 · _0_8px_rgba, activeMeds.flatMap, activeMeds.map, Alerts, Boolean, boxedWarnings.map, cabinet, checkConditionSafety
+- Community 35: 31 nodes · cohesion 0.06 · Adherence, calculateNextDose, Care, chartData.reduce, Check, Dashboard, formatCompactNumber, Hub
+- Community 36: 31 nodes · cohesion 0.06 · all.filter, all.findIndex, all.push, allPart.filter, allUnpart.filter, Boolean, clearAllLocalPersistence, dose_logs
+- Community 37: 31 nodes · cohesion 0.0 · @capacitor/app, @capacitor/camera, @capacitor/core, @capacitor/keyboard, @capacitor/local-notifications, @capacitor/status-bar, @/components/AppShell, @/components/BatteryOptimizationGate
+- Community 38: 30 nodes · cohesion 0.07 · Active, ALLOWED_ORIGINS.split, allowedOrigins.push, app.all, app.get, app.listen, app.set, app.use
+- Community 39: 30 nodes · cohesion 0.07 · actualDate.getTime, atomicity, autonomousService.interceptCriticalAdherence, batch.commit, batch.delete, calculateDynamicSchedule, db.batch, db.runTransaction
+- Community 40: 30 nodes · cohesion 0.08 · BatteryOptimizationGate, breakdown, capability, Capacitor.getPlatform, device, Dialog.confirm, fetchReadiness, guidance
+- Community 41: 30 nodes · cohesion 0.08 · App.addListener, appStatePromise.then, cb, cleanupFns.forEach, cleanupFns.push, fn, getStatus, networkPromise.then
+- Community 42: 30 nodes · cohesion 0.08 · ageDt.getUTCFullYear, Alarm, birthDate.getTime, checkBatteryStatus, clearAllData, fetchReliabilityData, logoutUser, NativeService.openAutostartSettings
+- Community 43: 30 nodes · cohesion 0.07 · cloudSnap.data, cloudSnap.exists, deleteDoc, doc, doseLogsApi.create, doseLogsApi.delete, failed.push, filtered.push
+- Community 44: 29 nodes · cohesion 0.07 · aiApi.getWellnessQuote, alive, comparisonDate.setHours, Consistency, dayLogs.filter, days.map, dayScores.reduce, Error
+- Community 45: 29 nodes · cohesion 0.07 · ABI, abi.toLowerCase, AppUpdater.getDeviceABI, Array.isArray, assets.find, b, Capacitor.getPlatform, checkResp.text
+- Community 46: 29 nodes · cohesion 0.07 · _0_30px_rgba, c.getContext, c.toDataURL, canvas.getContext, CapCamera.getPhoto, CapCamera.requestPermissions, current.getTracks, downscaleImage
+- Community 47: 28 nodes · cohesion 0.07 · allDistricts.map, Authority, Banner, Bar, Districts, filteredPharmacies.map, filteredPharmacies.slice, formatDuration
+- Community 48: 27 nodes · cohesion 0.14 · criticalKeywords.some, db.collection, doc, doc.data, docs.map, factors, get, interactions.filter
+- Community 49: 27 nodes · cohesion 0.08 · count.toString, dismissToast, listener, listeners.forEach, listeners.indexOf, listeners.push, listeners.splice, React.useEffect
+- Community 50: 27 nodes · cohesion 0.08 · async, Capacitor.isNativePlatform, console.error, console.warn, fetch, Geolocation.checkPermissions, Geolocation.getCurrentPosition, Geolocation.requestPermissions
+- Community 51: 26 nodes · cohesion 0.08 · aiService.chatWithDawaGPT, aiService.checkHolisticSafety, aiService.checkMealSafety, aiService.getCoachAdvice, aiService.getEmotionReflection, aiService.getHealthDiscoveries, aiService.getNutritionalGuidance, aiService.getTravelAdvice
+- Community 52: 26 nodes · cohesion 0.08 · aiApi.getWellnessInsight, Array.isArray, doseLogs.slice, generateLocalClinicalAssessment, getTime, Number, pills, replace
+- Community 53: 26 nodes · cohesion 0.08 · act, callback, callback.next, current.deleteReminder, current.logDose, dateSpy.mockRestore, mockImplementation, mockLocalAuditCreate
+- Community 54: 26 nodes · cohesion 0.08 · addMedicine, addPatient, addReminder, addWellnessLog, cleanStr.includes, deleteMedicine, deleteReminder, genericName.toLowerCase
+- Community 55: 25 nodes · cohesion 0.1 · actualDate.getHours, actualDate.getMinutes, dateObj.getHours, dateObj.getMinutes, dateObj.getTime, getMinutes, h.toString, m.toString
+- Community 56: 25 nodes · cohesion 0.08 · aiApi.getTravelAdvice, country, equivalents.map, find, healthRisks.map, Intl.DateTimeFormat, lookupDRA, medGeneric.toLowerCase
+- Community 57: 24 nodes · cohesion 0.08 · ALLOWED_HOSTS.includes, assert.deepStrictEqual, assert.ok, assert.strictEqual, boundary, Buffer.from, chatSchema.safeParse, createDoseLogSchema.safeParse
+- Community 58: 24 nodes · cohesion 0.08 · acc.find, acc.push, actionItems.map, avgEnergy.toFixed, avgMood.toFixed, doseLogsLast7.map, doseLogsLast7.reduce, format
+- Community 59: 24 nodes · cohesion 0.08 · dosage.trim, filteredMedicines.map, genericName.trim, hand, MedicationsPage, Notes, onSave, searchQuery.toLowerCase
+- Community 60: 24 nodes · cohesion 0.05 · addReminder(), AppProvider(), completeOnboarding(), deleteDoseLog(), deleteMedicine(), deletePatient(), deleteReminder(), deleteWellnessLog()
+- Community 61: 23 nodes · cohesion 0.09 · activeQuery.trim, checkCurrentDrug, getFdaDrugProfile, loadFda, MedicineInfoPage, preExisting.some, reminders.some, results.filter
+- Community 62: 23 nodes · cohesion 0.09 · allText.indexOf, allText.trim, displayText.includes, displayText.trim, exactly, fc.array, fc.constantFrom, fc.option
+- Community 63: 22 nodes · cohesion 0.1 · encodeURIComponent, logged, medicineStatuses.filter, MedVaultPage, setPendingPharmacyMedicine, setPharmacyFinderMedicine, setRefillTarget, setShowLocationPermission
+- Community 64: 22 nodes · cohesion 0.09 · baseTime.split, baseTimes.every, baseTimes.map, displayTimes.join, filteredReminderIds.has, getCircularDiffMinutes, lDate.getHours, lDate.getMinutes
+- Community 65: 21 nodes · cohesion 0.11 · bounds, clearTimeout, failed, Live, oldest, reject, resolve, setInterval
+- Community 66: 21 nodes · cohesion 0.1 · actionItems.push, adherence, avgEnergy.toFixed, avgMood.toFixed, date.getHours, doseLogs.forEach, insights.push, Number.isFinite
+- Community 67: 20 nodes · cohesion 0.1 · fetchTopPharmaciesRoadDistances, findNearbyPharmacies, findTopNearestPharmacies, getAllDistricts, getPharmacyRoute, initialCandidates.slice, prev.map, resolvePharmacyCoordinates
+- Community 68: 20 nodes · cohesion 0.13 · Allergies, Conditions, deletePatient, FamilyHubPage, history.replaceState, patients.forEach, relevantLogs.filter, scopedRemIds.has
+- Community 69: 20 nodes · cohesion 0.1 · AlarmManager.setExactAndAllowWhileIdle, cancelAllAlarms, canScheduleExactAlarms, checkAllPermissions, checkReadiness, isBatteryOptimizationIgnored, notifications, openAutostartSettings
+- Community 70: 19 nodes · cohesion 0.13 · false, fetchNdcData, GEMINI_API_KEY_2, indicationsAndUsage.slice, ingredient, matches, matches.map, matches.push
+- Community 71: 19 nodes · cohesion 0.12 · aiApi.getCoachAdvice, aiApi.getNutritionalGuidance, clearTimeout, doseLogs.slice, fetchInsights, Promise.all, sessionStorage.getItem, sessionStorage.setItem
+- Community 72: 18 nodes · cohesion 0.11 · cert, console.warn, Credentials, dirname, fileURLToPath, FIREBASE_PRIVATE_KEY.replace, getAuth, getFirestore
+- Community 73: 18 nodes · cohesion 0.11 · api.canScrollNext, api.canScrollPrev, api.on, event.preventDefault, off, React.useCallback, React.useContext, React.useEffect
+- Community 74: 18 nodes · cohesion 0.1 · _0_50px_rgba, age.toString, ageDate.getUTCFullYear, aiMatches.filter, dob.getTime, highConfidence.map, identifyPill, lowConfidence.map
+- Community 75: 18 nodes · cohesion 0.11 · checkInteractions, Deduplicate, first, getRxCUI, getSpellingSuggestions, id.trim, Identifier, interactions.filter
+- Community 76: 17 nodes · cohesion 0.12 · max, nullable, optional, passthrough, strip, userProfileInputSchema.nullable, z.any, z.array
+- Community 77: 17 nodes · cohesion 0.13 · current.getBoundingClientRect, data.every, data.map, getAdherenceY, getWellnessY, getX, rating, Ratings
+- Community 78: 17 nodes · cohesion 0.12 · AbortController, AI, constructor, controller.abort, encodeURIComponent, envUrl.endsWith, JSON.stringify, medicines.map
+- Community 79: 16 nodes · cohesion 0.14 · activeIngredients.add, approximateTerm.json, BN, brandSynonyms.add, canonicalGenericName.toLowerCase, IN, PIN, query
+- Community 80: 16 nodes · cohesion 0.12 · Behaviour, current.play, current.setFrame, forEach, grayscale, greyscale, head.appendChild, instance.play
+- Community 81: 16 nodes · cohesion 0.12 · beforeEach, clearLastKnownLocation, issue, localStorage.clear, renderHook, saveLastKnownLocation, toBeCloseTo, toBeGreaterThan
+- Community 82: 16 nodes · cohesion 0.12 · age.toString, ageGroup.toString, authHeaders, checkFdaMultiSafety, concept, getFdaAdverseEvents, getFdaAutocomplete, getFdaDrugProfile
+- Community 83: 15 nodes · cohesion 0.13 · Array.isArray, Buffer.byteLength, cap, expensive, ipKeyGenerator, JSON.stringify, limiter, medicines.map
+- Community 84: 15 nodes · cohesion 0.16 · autonomousService.interceptMedicineSafety, background, docRef.data, it, medicines.push, medicinesCol.add, medicinesCol.doc, medicinesCol.where
+- Community 85: 15 nodes · cohesion 0.19 · collection.findNearest, floats, genAI.getGenerativeModel, GoogleGenerativeAI, model.embedContent, search, VOYAGEAI_API, @google/generative-ai
+- Community 86: 15 nodes · cohesion 0.14 · aiApi.getHealthDiscoveries, JSON.parse, JSON.stringify, nextSlide, prevSlide, setCurrentIndex, setIsPaused, setSlides
+- Community 87: 15 nodes · cohesion 0.13 · entries.forEach, fallback, IntersectionObserver, Layout, offscreen, rive.pause, rive.play, rive.stateMachineInputs
+- Community 88: 15 nodes · cohesion 0.17 · classList.add, classList.remove, classList.toggle, localStorage.getItem, localStorage.setItem, mq.addEventListener, mq.removeEventListener, setThemeState
+- Community 89: 15 nodes · cohesion 0.0 · addSandboxDrug(), checkHolistic(), clearSandbox(), clearSelectedFactors(), fetchInteractions(), fetchSandboxInteractions(), handleAddCustomFactor(), handleShareReport()
+- Community 90: 14 nodes · cohesion 0.15 · _0_0_1px_hsl, _setOpen, setOpenMobile, setOpenProp, sidebarMenuButtonVariants, _theme, toggleSidebar, value
+- Community 91: 14 nodes · cohesion 0.16 · cleanup.then, handle.remove, listenerHandle.remove, Network.addListener, Network.getStatus, setIsOnline, window.addEventListener, window.removeEventListener
+- Community 92: 13 nodes · cohesion 0.1 · assert.equal, failures.forEach, failures.push, intent, length, noun, repeat, Tests
+- Community 93: 13 nodes · cohesion 0.15 · charAt, items.map, pathname.startsWith, t, useSidebar, useTranslation, @/components/NavLink, @/components/ui/avatar
+- Community 94: 13 nodes · cohesion 0.15 · changes, componentDidCatch, componentDidUpdate, getDerivedStateFromError, isChunkLoadError, location.reload, sessionStorage.removeItem, String
+- Community 95: 13 nodes · cohesion 0.15 · apps, getAnalytics, getAuth, initializeApp, initializeFirestore, isSupported, memoryLocalCache, persistentLocalCache
+- Community 96: 13 nodes · cohesion 0.15 · expect.objectContaining, expect.stringMatching, fc.asyncProperty, fc.constantFrom, fireEvent.keyDown, ID, mockDeleteDoseLog.mockResolvedValue, screen.findByRole
+- Community 97: 13 nodes · cohesion 0.15 · clear, mockClearAllData.mockClear, mockClearAllData.mockResolvedValue, mockIsBatteryOptimizationIgnored, mockIsBatteryOptimizationIgnored.mockResolvedValue, mockOpenBatteryOptimizationSettings, mockOpenBatteryOptimizationSettings.mockResolvedValue, mockRequestBatteryOptimizationExemption
+- Community 98: 12 nodes · cohesion 0.17 · anemia, calcium, fats, fish, Groundnut, issues, LOCAL_FOODS.map, source
+- Community 99: 12 nodes · cohesion 0.2 · deleteDoseLogsByPatient, deleteMedicinesByPatient, deleteRemindersByPatient, patients.push, patientsCol.add, patientsCol.doc, patientsCol.where, createPatient()
+- Community 100: 12 nodes · cohesion 0.21 · all, reminders.push, remindersCol.add, remindersCol.doc, remindersCol.where, write, createReminder(), deleteReminder()
+- Community 101: 12 nodes · cohesion 0.17 · CEREBRAS_API_KEY.slice, CEREBRAS_API_KEY.substring, listModels, models.find, models.forEach, present, run, substring
+- Community 102: 12 nodes · cohesion 0.17 · _30px_100px_rgba, AchievementOverlay, clearTimeout, confetti, e.stopPropagation, gradient, Math.random, canvas-confetti
+- Community 103: 12 nodes · cohesion 0.17 · activeReminders.some, doseLogs.filter, getDay, memberReminders.filter, navigate, onSelect, patients.map, toUpperCase
+- Community 104: 12 nodes · cohesion 0.17 · Action, allergenConflicts.map, C, contraConflicts.map, Frequency, setActiveTab, Signals, topReactions.slice
+- Community 105: 12 nodes · cohesion 0.18 · AppUpdater.addListener, AppUpdater.downloadAndInstall, Browser.open, setDownloadState, setErrorMessage, setProgress, @capacitor/browser, @/plugins/app-updater
+- Community 106: 12 nodes · cohesion 0.17 · beginning, bottom, containerRect.bottom, describe, expect, isLatestMessageInView, it, message
+- Community 107: 12 nodes · cohesion 0.17 · clinical, context, Date, doseLogs.filter, getFullYear, matchPatient, medicines.filter, owner
+- Community 108: 12 nodes · cohesion 0.15 · completeOnboarding, date.getTime, date.getTimezoneOffset, getFullYear, localDate.toISOString, OnboardingPage, setDateOfBirth, setGender
+- Community 109: 12 nodes · cohesion 0.17 · getStoredFcmToken, initPushNotifications, PushNotifications.addListener, PushNotifications.checkPermissions, PushNotifications.register, PushNotifications.requestPermissions, saveTokenToFirestore, updateDoc
+- Community 110: 12 nodes · cohesion 0.17 · alert, critical, CRITICAL_STOCK_THRESHOLD, date.getDate, date.setDate, frequencyPerDay, parseFloat, warning
+- Community 111: 12 nodes · cohesion 0.17 · calculateHaversineDistance, Entebbe, formatDuration, getDirectionsUrl, h, Kampala, not.toBeNull, occurs
+- Community 112: 12 nodes · cohesion 0.17 · componentTagger, defineConfig, id.includes, limit, manualChunks, path.resolve, react, lovable-tagger
+- Community 113: 11 nodes · cohesion 0.18 · cn, confirm, ConfirmationDialog, dialog, itemList.map, onConfirm, @/components/ui/button, @/lib/utils
+- Community 114: 11 nodes · cohesion 0.22 · aiApi.getEmotionReflection, Groq, MOOD_OPTIONS.find, MOOD_OPTIONS.map, onAddLog, reflection, setSavingMood, getMoodLabel()
+- Community 115: 11 nodes · cohesion 0.18 · d.getDate, d.setDate, d.toDateString, dailyStatus.map, last7Days.map, logsForDay.filter, time.localeCompare, useIntelligenceContext
+- Community 116: 11 nodes · cohesion 0.18 · formatter, labelFormatter, payload.map, React.useId, uniqueId.replace, value.toLocaleString, recharts, ChartStyle()
+- Community 117: 11 nodes · cohesion 0.18 · Array.from, Calculation, dayLogs.filter, dayWellnessLogs.reduce, format, isSameDay, Number, subDays
+- Community 118: 11 nodes · cohesion 0.18 · AFRICAN_DRUG_DATABASE.find, Amoxicillin, Artemether, b.toLowerCase, g, infections, Lumefantrine, NDA
+- Community 119: 10 nodes · cohesion 0.2 · assert, familySessionContext.includes, femalePrompt.includes, femaleSessionContext.includes, maleSessionContext.includes, Nabirye, process.exit, unspecSessionContext.includes
+- Community 120: 10 nodes · cohesion 0.22 · completedTasks.push, finish, resolveBlocker, t3, Task4, then, flakyTask(), makeTask()
+- Community 121: 10 nodes · cohesion 0.24 · createMedicineSchema.safeParse, FAIL, mealCheckSchema.safeParse, PASS, restrictToOwner, testIDOR, next(), testMiddleware()
+- Community 122: 10 nodes · cohesion 0.22 · inputQuery.trim, path.startsWith, px_0_40px_rgba, QUICK_PROMPTS.map, setInputQuery, setIsIntelligenceCollapsed, handleLaunch(), IntelligencePanel()
+- Community 123: 10 nodes · cohesion 0.2 · check, clsx, d.getTime, twMerge, types, clsx, tailwind-merge, cn()
+- Community 124: 10 nodes · cohesion 0.2 · Matooke, Meal, recent, screen.getByLabelText, tagName.toLowerCase, timestamps, toHaveTextContent, twoDaysAgo.toISOString
+- Community 125: 10 nodes · cohesion 0.2 · c.toLowerCase, CONDITION_SAFETY_DATABASE.filter, condition.toLowerCase, Disease, drug.toLowerCase, drugName.toLowerCase, Malaria, normalizedConditions.includes
+- Community 126: 10 nodes · cohesion 0.2 · emojiRegex.test, getDailyQuote, getEncouragementQuote, getQuoteForDayOffset, getQuoteIndexForDate, q.trim, quote.trim, visitedIndices.add
+- Community 127: 10 nodes · cohesion 0.22 · Kit, NativeOcr.recognizeText, platforms, tellWorker, URL, @/lib/workerBridge, @/plugins/nativeOcr, getOcrWorker()
+- Community 128: 9 nodes · cohesion 0.22 · Amlodipine, buildFamilyHubSummary, console.assert, emptySummary.includes, Nalule, Ochieng, summary.includes, Ventolin
+- Community 129: 9 nodes · cohesion 0.22 · chatSchema.parse, logWellnessSchema.parse, payload, userProfileInputSchema.parse, vitalitySummaryInputSchema.parse, wellnessInsightSchema.parse, wellnessLogInputSchema.parse, assert()
+- Community 130: 9 nodes · cohesion 0.22 · _4px_12px_rgba, _4px_20px_rgba, blur, Half, hsl, pills.map, rgba, BouncingPillsLoader()
+- Community 131: 9 nodes · cohesion 0.22 · Ibuprofen, mockCheckFdaMultiSafety, mockCheckFdaMultiSafety.mockResolvedValue, mockCheckInteractions, mockCheckInteractions.mockResolvedValue, toBeGreaterThanOrEqual, toContain, vi.hoisted
+- Community 132: 9 nodes · cohesion 0.22 · _0_12px_hsl, _0_20px_hsl, animation, backing, fields, PageLoader, translate, ScanBeam()
+- Community 133: 9 nodes · cohesion 0.22 · Crying, Happy, Laughing, Smiling, Surprise, Winking, Wow, getArtboard()
+- Community 134: 9 nodes · cohesion 0.22 · clamp, color, modes, rotate, shadow, Spinner, useTheme, next-themes
+- Community 135: 9 nodes · cohesion 0.22 · init, Notes, Sync, use, Worker, i18next, i18next-browser-languagedetector, react-i18next
+- Community 136: 9 nodes · cohesion 0.28 · cancelIdleCallback.bind, Math.min, requestIdleCallback, requestIdleCallback.bind, window.clearTimeout, window.setTimeout, deferToIdle(), deferToIdleWithTimeout()
+- Community 137: 9 nodes · cohesion 0.22 · expect.stringContaining, fireEvent.change, food, mockCheckFdaMultiSafety.mockResolvedValueOnce, mockCheckHolisticSafety, mockCheckHolisticSafety.mockResolvedValueOnce, mockCheckInteractions.mockResolvedValueOnce, submitCustomFactor()
+- Community 138: 9 nodes · cohesion 0.22 · ANDA, fetchFromANDA, fetchFromDailyMed, fetchFromMedlinePlus, fetchFromMLModel, fetchFromOpenFDA, fetchFromRxNorm, Model
+- Community 139: 9 nodes · cohesion 0.22 · act, current.ignoreUpdate, current.isUpdateAvailable, current.setAutoUpdate, current.setCurrentVersion, current.setLatestVersion, current.setWifiOnly, useUpdateStore
+- Community 140: 9 nodes · cohesion 0.22 · addEventListener, createWorker, postMessage, recognize, tesseractWorker.recognize, tesseract.js, ensureWorker(), post()
+- Community 141: 9 nodes · cohesion 0.0 · datetime, hashlib, html.parser, json, os, re, sys, urllib.error
+- Community 142: 9 nodes · cohesion 0.0 · @/components/MessageRenderer, @/hooks/use-toast, @/hooks/useAIActions, @/hooks/useNetworkStatus, @/hooks/useSwipeToDismiss, @/hooks/useTypewriterPlaceholder, @/lib/vitalityUtils, @/services/aiAssistantService
+- Community 143: 8 nodes · cohesion 0.25 · axios.post, model.includes, runTests, testCerebras, testGemini, testGroq, axios
+- Community 144: 8 nodes · cohesion 0.25 · autonomousService.interceptMealSafety, wellnessCol.add, wellnessCol.doc, wellnessCol.where, createWellnessLog(), deleteWellnessLog(), getWellnessLogs()
+- Community 145: 8 nodes · cohesion 0.25 · far, orderOfCompletion.includes, orderOfCompletion.push, Pro, rateLimitManager.estimateTokens, runVisionTests, runTask()
+- Community 146: 8 nodes · cohesion 0.25 · _0_15px_rgba, isReminderScheduledOnDate, scopedReminders.filter, todayReminders.reduce, todayReminders.sort, @/lib/dynamicSchedule, RemindersWidget()
+- Community 147: 8 nodes · cohesion 0.25 · clicked, href.startsWith, MessageRenderer, suggestions, validRoutes.includes, ExternalLinkChip(), InternalLinkChip()
+- Community 148: 8 nodes · cohesion 0.29 · currentPhrase.slice, setCurrentText, setIsDeleting, setPhraseIndex, useRef, tick(), useTypewriterPlaceholder()
+- Community 149: 8 nodes · cohesion 0.25 · clear, clearAll, del, get, IndexedDB, removeItem, idb-keyval
+- Community 150: 8 nodes · cohesion 0.14 · crypto.randomUUID, Promise, reject, resolve, worker.addEventListener, worker.postMessage, worker.removeEventListener
+- Community 151: 8 nodes · cohesion 0.25 · createRoot, document.getElementById, initTheme, rejections, SplashScreen.hide, @capacitor/splash-screen, react-dom/client
+- Community 152: 8 nodes · cohesion 0.0 · @capacitor/filesystem, @capacitor/share, @/components/MedicalReportContent, @/components/ui/scroll-area, @/components/wellness/VitalityTrends2D, html2canvas, jspdf, @/plugins/nativePdf
+- Community 153: 8 nodes · cohesion 0.0 · checkMeal(), fetchNutritionalGuidance(), fetchWellnessInsight(), formatTimingAdvice(), formatWarningExplanation(), handleLogFood(), handleLogWellness(), useEmotionSparkline()
+- Community 154: 8 nodes · cohesion 0.07 · computeCurrentStreak(), fireDateSafe(), getDailyQuote(), getEncouragementQuote(), getQuoteForDayOffset(), getQuoteIndexForDate(), saveEngagementIds(), setTime()
+- Community 155: 8 nodes · cohesion 0.0 · computeShiftOffset(), getDiff(), getIntervalMinutes(), getTodayTakenLog(), isReminderScheduledOnDate(), patientChannelId(), registerNotificationActions(), toMins()
+- Community 156: 7 nodes · cohesion 0.29 · tseslint.config, @eslint/js, eslint-plugin-react-hooks, eslint-plugin-react-refresh, globals, typescript-eslint
+- Community 157: 7 nodes · cohesion 0.29 · authAdmin.verifyIdToken, authorization.split, authorization.startsWith, exists, protect(), restrictToOwner()
+- Community 158: 7 nodes · cohesion 0.29 · getInterSlotInterval, intervals, minutesToTimeStr, schedule, Shift, timeStrToMinutes
+- Community 159: 7 nodes · cohesion 0.29 · Network.getStatus, OFFLINE_ALLOWED_ROUTES.some, OfflineOverlay, setRetrying, @capacitor/network, handleRetry()
+- Community 160: 7 nodes · cohesion 0.29 · Math.cos, Math.sin, particles.map, PremiumLoader, Ring, setCurrentStep
+- Community 161: 7 nodes · cohesion 0.29 · _0_20px_rgba, ins.replace, instructions.map, ARInstruction(), ARInstructionOverlay(), getIcon()
+- Community 162: 7 nodes · cohesion 0.29 · getFieldState, useFormContext, @/components/ui/label, @radix-ui/react-label, react-hook-form, useFormField()
+- Community 163: 7 nodes · cohesion 0.29 · Calm, categories, Healing, Longevity, Nutrition, Routine
+- Community 164: 7 nodes · cohesion 0.29 · Iconly, pen, right, vertical, iconly(), svg()
+- Community 165: 7 nodes · cohesion 0.29 · factory, lazy, location.reload, message.includes, sessionStorage.removeItem, isChunkLoadError()
+- Community 166: 7 nodes · cohesion 0.33 · Footer, Header, ONBOARDING_STEPS.map, WelcomePage, handleFinish(), handleNext()
+- Community 167: 7 nodes · cohesion 0.29 · base64Image.replace, data, extractTextFromImage, identifyPill, ocrText.trim, visionApi.identifyPill
+- Community 168: 7 nodes · cohesion 0.29 · currentVersion.split, latestVersion.split, persist, storage, zustand, zustand/middleware
+- Community 169: 7 nodes · cohesion 0.29 · mockResolvedValue, not.toHaveBeenCalled, rejects.toThrow, toHaveBeenCalledWith, vi.mocked, vi.resetAllMocks
+- Community 170: 7 nodes · cohesion 0.14 · App(), AppContent(), checkForUpdate(), handleVisibilityChange(), initNativeFeatures(), OnboardingRoute(), ProtectedRoute()
+- Community 171: 6 nodes · cohesion 0.33 · async, axios.get, console.error, data.map, join
+- Community 172: 6 nodes · cohesion 0.33 · doseLogService.createDoseLog, doseLogService.deleteDoseLog, doseLogService.getDoseLogs, log, router.delete
+- Community 173: 6 nodes · cohesion 0.33 · medicineService.createMedicine, medicineService.deleteMedicine, medicineService.getAllMedicines, medicineService.updateMedicine, router.patch
+- Community 174: 6 nodes · cohesion 0.33 · reminderService.createReminder, reminderService.deleteReminder, reminderService.getAllReminders, reminderService.updateReminder, user
+- Community 175: 6 nodes · cohesion 0.33 · cron.schedule, runDailyCoachAnalysis, runWeeklyReports, node-cron, initScheduler()
+- Community 176: 6 nodes · cohesion 0.4 · messaging.send, seconds, userIds.map, broadcastNotification(), sendPushNotification()
+- Community 177: 6 nodes · cohesion 0.4 · autonomousService.interceptTimezoneChange, updatedRef.data, usersCol.doc, getUserProfile(), upsertUserProfile()
+- Community 178: 6 nodes · cohesion 0.33 · List, reminder, Remove, SHOW, word
+- Community 179: 6 nodes · cohesion 0.33 · acquireLock, expiring, lockRef.delete, pid.toString, releaseLock
+- Community 180: 6 nodes · cohesion 0.33 · Conflicts, Drug, Fetching, Paracetamol, returned
+- Community 181: 6 nodes · cohesion 0.33 · env, Panel, useIsMobile, @/components/ui/sidebar, @/hooks/use-mobile
+- Community 182: 6 nodes · cohesion 0.33 · _4px_16px_rgba, _8px_25px_rgba, onClick, VARIANT, handleClick()
+- Community 183: 6 nodes · cohesion 0.33 · not, cmdk, @/components/ui/dialog, CommandDialog(), CommandShortcut()
+- Community 184: 6 nodes · cohesion 0.33 · Pagination(), PaginationEllipsis(), PaginationLink(), PaginationNext(), PaginationPrevious()
+- Community 185: 6 nodes · cohesion 0.4 · mql.addEventListener, mql.removeEventListener, setIsMobile, onChange(), useIsMobile()
+- Community 186: 6 nodes · cohesion 0.33 · getDrugInfo, query.trim, useQuery, @tanstack/react-query, useDrugData()
+- Community 187: 6 nodes · cohesion 0.4 · v.replace, v.split, cleanVersion(), isNewerVersion(), parse()
+- Community 188: 6 nodes · cohesion 0.33 · addListener, device, downloadAndInstall, getDeviceABI, updates
+- Community 189: 6 nodes · cohesion 0.33 · cache, clearCache, FusedLocationProviderClient.lastLocation, getCachedCountry, Uganda
+- Community 190: 6 nodes · cohesion 0.33 · fuzzySearch, isAvailable, library, List, unavailable
+- Community 191: 6 nodes · cohesion 0.33 · close, execute, initialize, protection, query
+- Community 192: 6 nodes · cohesion 0.33 · clearQueue, cloud, enqueueOp, getPendingOps, toHaveLength
+- Community 193: 6 nodes · cohesion 0.33 · calc, hsl, tailwindcss, tailwindcss-animate, @tailwindcss/typography
+- Community 194: 6 nodes · cohesion 0.0 · getSmartFallbacks(), handleResize(), handleScroll(), handleSend(), isLatestMessageInView(), scrollToLatestMessage()
+- Community 195: 5 nodes · cohesion 0.4 · issues.map, path.join, schema.parse, validate()
+- Community 196: 5 nodes · cohesion 0.4 · patientService.createPatient, patientService.deletePatient, patientService.getAllPatients, patientService.updatePatient
+- Community 197: 5 nodes · cohesion 0.4 · logs, wellnessService.createWellnessLog, wellnessService.deleteWellnessLog, wellnessService.getWellnessLogs
+- Community 198: 5 nodes · cohesion 0.4 · buildMedVaultSummary, calculateServerRefillStatus, getServerDailyDoseRate, statusText.includes
+- Community 199: 5 nodes · cohesion 0.4 · Error.captureStackTrace, startsWith, AppError, AppError.super()
+- Community 200: 5 nodes · cohesion 0.5 · add, query.startAfter, runDailyCoachAnalysis(), sleep()
+- Community 201: 5 nodes · cohesion 0.4 · fetch, geminiResponse.json, groqResponse.json, runTest
+- Community 202: 5 nodes · cohesion 0.4 · testAllAiProviders, testNvidiaNimProvider, testSiliconFlowProvider, testVoyageAiProvider
+- Community 203: 5 nodes · cohesion 0.4 · assert.rejects, lastRequestUrl.includes, rateLimitManager.getStats, testScanIsolation
+- Community 204: 5 nodes · cohesion 0.4 · cleanWarning.slice, setIsExpanded, text, warning.replace
+- Community 205: 5 nodes · cohesion 0.4 · scopedMedicines.filter, statuses.filter, trackedMeds.map, MedVaultWidget()
+- Community 206: 5 nodes · cohesion 0.4 · buttonVariants, @radix-ui/react-alert-dialog, AlertDialogFooter(), AlertDialogHeader()
+- Community 207: 5 nodes · cohesion 0.4 · vaul, Drawer(), DrawerFooter(), DrawerHeader()
+- Community 208: 5 nodes · cohesion 0.4 · dismissed, Math.abs, onDismiss, useSwipeToDismiss()
+- Community 209: 5 nodes · cohesion 0.6 · setMessage, setStatus, VerifyEmailPage, verify()
+- Community 210: 5 nodes · cohesion 0.4 · image, Recognition, recognizeText, VNRecognizeTextRequest
+- Community 211: 5 nodes · cohesion 0.4 · generateLocalClinicalAssessment, toBeDefined, toBeGreaterThanOrEqual, toBeLessThanOrEqual
+- Community 212: 5 nodes · cohesion 0.4 · dosing, getMedVaultSystemContext, remaining, supply
+- Community 213: 5 nodes · cohesion 0.0 · DailyTimeline(), getCircularDiffMinutes(), getLogMinutes(), getMedicationKey(), todayAt()
+- Community 214: 5 nodes · cohesion 0.3 · distributeTimes(), executeSave(), handleFrequencyChange(), handleRequestPermission(), handleSave()
+- Community 215: 4 nodes · cohesion 0.5 · SplashScreen.hide, @capacitor/cli, @capacitor/keyboard
+- Community 216: 4 nodes · cohesion 0.5 · console.log, dotenv.config, dotenv
+- Community 217: 4 nodes · cohesion 0.5 · recentLogs.map, slice, HistoryWidget()
+- Community 218: 4 nodes · cohesion 0.5 · translateZ, up, PageTransition()
+- Community 219: 4 nodes · cohesion 0.5 · createPortal, PermissionRequest, react-dom
+- Community 220: 4 nodes · cohesion 0.5 · mockReturnThis, not.toThrow, unmount
+- Community 221: 4 nodes · cohesion 0.5 · alertVariants, cva, class-variance-authority
+- Community 222: 4 nodes · cohesion 0.5 · @radix-ui/react-slot, BreadcrumbEllipsis(), BreadcrumbSeparator()
+- Community 223: 4 nodes · cohesion 0.5 · has, react-day-picker, Calendar()
+- Community 224: 4 nodes · cohesion 0.5 · sheetVariants, SheetFooter(), SheetHeader()
+- Community 225: 4 nodes · cohesion 0.5 · toggleVariants, @/components/ui/toggle, @radix-ui/react-toggle-group
+- Community 226: 4 nodes · cohesion 0.5 · Doliprane, mockGetTravelAdvice, mockGetTravelAdvice.mockResolvedValue
+- Community 227: 4 nodes · cohesion 0.0 · TablePressParser.handle_data(), TablePressParser.handle_endtag(), TablePressParser.handle_starttag(), TablePressParser.__init__()
+- Community 228: 4 nodes · cohesion 0.0 · cached(), handleDownloadPDF(), handlePrint(), handleShare()
+- Community 229: 3 nodes · cohesion 0.67 · createLovableConfig, lovable-agent-playwright-config/config
+- Community 230: 3 nodes · cohesion 0.67 · userService.getUserProfile, userService.upsertUserProfile
+- Community 231: 3 nodes · cohesion 0.67 · image, visionService.identifyPill
+- Community 232: 3 nodes · cohesion 0.67 · model.generateContent, response.text
+- Community 233: 3 nodes · cohesion 0.67 · rxNormService.getSpellingSuggestions, rxNormService.resolveRxNormConcept
+- Community 234: 3 nodes · cohesion 0.67 · _0_12px_rgba, ScanWidget()
+- Community 235: 3 nodes · cohesion 0.67 · _0_10px_rgba, WellnessWidget()
+- Community 236: 3 nodes · cohesion 0.67 · setSelectedPatientId, PatientContextBanner()
+- Community 237: 3 nodes · cohesion 0.67 · screen.getByPlaceholderText, toBeDisabled
+- Community 238: 3 nodes · cohesion 0.67 · setTheme, ThemeToggle()
+- Community 239: 3 nodes · cohesion 0.67 · badgeVariants, Badge()
+- Community 240: 3 nodes · cohesion 0.67 · @radix-ui/react-context-menu, ContextMenuShortcut()
+- Community 241: 3 nodes · cohesion 0.67 · DialogFooter(), DialogHeader()
+- Community 242: 3 nodes · cohesion 0.67 · @radix-ui/react-dropdown-menu, DropdownMenuShortcut()
+- Community 243: 3 nodes · cohesion 0.67 · @radix-ui/react-menubar, MenubarShortcut()
+- Community 244: 3 nodes · cohesion 0.67 · navigationMenuTriggerStyle, @radix-ui/react-navigation-menu
+- Community 245: 3 nodes · cohesion 0.67 · translateX, @radix-ui/react-progress
+- Community 246: 3 nodes · cohesion 0.67 · react-resizable-panels, ResizablePanelGroup()
+- Community 247: 3 nodes · cohesion 0.67 · toastVariants, @radix-ui/react-toast
+- Community 248: 3 nodes · cohesion 0.33 · toasts.map, @/components/ui/toast
+- Community 249: 3 nodes · cohesion 0.67 · page, PlaceholderIndex()
+- Community 250: 3 nodes · cohesion 0.67 · medication, screen.getAllByDisplayValue
+- Community 251: 3 nodes · cohesion 0.67 · mockRequestLocation.mockImplementation, screen.queryByTestId
+- Community 252: 3 nodes · cohesion 0.67 · barcode, resolveBarcodeToDrugName
+- Community 253: 3 nodes · cohesion 0.67 · response.text, text.match
+- Community 254: 3 nodes · cohesion 0.67 · generateDawaGPTResponse, not.toContain
+- Community 255: 3 nodes · cohesion 0.67 · stringToHash, toBeLessThanOrEqual
+- Community 256: 3 nodes · cohesion 0.67 · Object.defineProperty, Promise.resolve
+- Community 257: 3 nodes · cohesion 0.0 · @/components/ui/card, @/components/ui/select, @/components/ui/textarea
+- Community 258: 3 nodes · cohesion 0.0 · @/components/fda/FdaBoxedWarningBadge, @/components/intelligence/MobileWatchdogResolveButton, @/components/PremiumLoader
+- Community 259: 3 nodes · cohesion 0.67 · fetch_nda_html(), resolve_coordinates(), run_scraper()
+- Community 260: 2 nodes · cohesion 1.0 · lovable-agent-playwright-config/fixture
+- Community 261: 2 nodes · cohesion 1.0 · errorMiddleware()
+- Community 262: 2 nodes · cohesion 1.0 · assert.doesNotThrow
+- Community 263: 2 nodes · cohesion 1.0 · runWeeklyReports()
+- Community 264: 2 nodes · cohesion 1.0 · chatWithDawaGPT
+- Community 265: 2 nodes · cohesion 1.0 · guide
+- Community 266: 2 nodes · cohesion 1.0 · identifyPill
+- Community 267: 2 nodes · cohesion 1.0 · DashboardSearch()
+- Community 268: 2 nodes · cohesion 1.0 · ErrorDialog
+- Community 269: 2 nodes · cohesion 1.0 · FamilyHubWidget()
+- Community 270: 2 nodes · cohesion 1.0 · MedDetailsWidget()
+- Community 271: 2 nodes · cohesion 1.0 · ReportWidget()
+- Community 272: 2 nodes · cohesion 1.0 · SettingsWidget()
+- Community 273: 2 nodes · cohesion 1.0 · TravelWidget()
+- Community 274: 2 nodes · cohesion 1.0 · Navbar()
+- Community 275: 2 nodes · cohesion 1.0 · StatusHero()
+- Community 276: 2 nodes · cohesion 1.0 · SuccessState
+- Community 277: 2 nodes · cohesion 1.0 · toHaveAttribute
+- Community 278: 2 nodes · cohesion 1.0 · ThemeProvider()
+- Community 279: 2 nodes · cohesion 1.0 · @radix-ui/react-accordion
+- Community 280: 2 nodes · cohesion 1.0 · @radix-ui/react-aspect-ratio
+- Community 281: 2 nodes · cohesion 1.0 · @radix-ui/react-avatar
+- Community 282: 2 nodes · cohesion 1.0 · @radix-ui/react-checkbox
+- Community 283: 2 nodes · cohesion 1.0 · @radix-ui/react-collapsible
+- Community 284: 2 nodes · cohesion 1.0 · @radix-ui/react-hover-card
+- Community 285: 2 nodes · cohesion 1.0 · input-otp
+- Community 286: 2 nodes · cohesion 1.0 · labelVariants
+- Community 287: 2 nodes · cohesion 1.0 · @radix-ui/react-popover
+- Community 288: 2 nodes · cohesion 1.0 · @radix-ui/react-radio-group
+- Community 289: 2 nodes · cohesion 1.0 · @radix-ui/react-scroll-area
+- Community 290: 2 nodes · cohesion 1.0 · @radix-ui/react-select
+- Community 291: 2 nodes · cohesion 1.0 · @radix-ui/react-separator
+- Community 292: 2 nodes · cohesion 1.0 · Skeleton()
+- Community 293: 2 nodes · cohesion 1.0 · @radix-ui/react-slider
+- Community 294: 2 nodes · cohesion 1.0 · Toaster()
+- Community 295: 2 nodes · cohesion 1.0 · @radix-ui/react-switch
+- Community 296: 2 nodes · cohesion 1.0 · @radix-ui/react-tabs
+- Community 297: 2 nodes · cohesion 1.0 · @radix-ui/react-toggle
+- Community 298: 2 nodes · cohesion 1.0 · @radix-ui/react-tooltip
+- Community 299: 2 nodes · cohesion 1.0 · @/hooks/use-toast
+- Community 300: 2 nodes · cohesion 1.0 · WellnessInsightCard
+- Community 301: 2 nodes · cohesion 1.0 · normalizeTimeStr
+- Community 302: 2 nodes · cohesion 1.0 · toast.message
+- Community 303: 2 nodes · cohesion 1.0 · NotFound()
+- Community 304: 2 nodes · cohesion 1.0 · startScan
+- Community 305: 2 nodes · cohesion 1.0 · generateReport
+- Community 306: 2 nodes · cohesion 1.0 · approxRes.json
+- Community 307: 2 nodes · cohesion 1.0 · generateDawaGPTResponse
+- Community 308: 2 nodes · cohesion 1.0 · not.toContain
+- Community 309: 2 nodes · cohesion 1.0 · dosagePerDose
+- Community 310: 2 nodes · cohesion 1.0 · vitest/config
+- Community 311: 2 nodes · cohesion 0.0 · @/components/rive/LottieMoji, @/components/wellness/WellnessInsightCard
+- Community 312: 2 nodes · cohesion 0.0 · @/lib/notifications, @/plugins/nativeAlarm
+- Community 313: 2 nodes · cohesion 0.0 · @/lib/utils, @/services/refillService
+- Community 314: 1 nodes · cohesion 1.0 · no non-file members
+- Community 315: 1 nodes · cohesion 1.0 · no non-file members
+- Community 316: 1 nodes · cohesion 1.0 · no non-file members
+- Community 317: 1 nodes · cohesion 1.0 · no non-file members
+- Community 318: 1 nodes · cohesion 1.0 · no non-file members
+- Community 319: 1 nodes · cohesion 1.0 · no non-file members
+- Community 320: 1 nodes · cohesion 1.0 · no non-file members
+- Community 321: 1 nodes · cohesion 1.0 · no non-file members
+- Community 322: 1 nodes · cohesion 1.0 · no non-file members
+- Community 323: 1 nodes · cohesion 1.0 · no non-file members
+- Community 324: 1 nodes · cohesion 1.0 · no non-file members
+- Community 325: 1 nodes · cohesion 1.0 · no non-file members
+- Community 326: 1 nodes · cohesion 1.0 · no non-file members
+- Community 327: 1 nodes · cohesion 1.0 · no non-file members
+- Community 328: 1 nodes · cohesion 1.0 · no non-file members
+- Community 329: 1 nodes · cohesion 1.0 · no non-file members
+- Community 330: 1 nodes · cohesion 1.0 · no non-file members
+- Community 331: 1 nodes · cohesion 1.0 · no non-file members
+- Community 332: 1 nodes · cohesion 1.0 · no non-file members
+- Community 333: 1 nodes · cohesion 1.0 · no non-file members
+- Community 334: 1 nodes · cohesion 1.0 · no non-file members
+- Community 335: 1 nodes · cohesion 1.0 · no non-file members
+- Community 336: 1 nodes · cohesion 1.0 · no non-file members
+- Community 337: 1 nodes · cohesion 1.0 · no non-file members
+- Community 338: 1 nodes · cohesion 1.0 · no non-file members
+- Community 339: 1 nodes · cohesion 1.0 · no non-file members
+- Community 340: 1 nodes · cohesion 1.0 · no non-file members
+- Community 341: 1 nodes · cohesion 1.0 · no non-file members
+- Community 342: 1 nodes · cohesion 1.0 · no non-file members
+- Community 343: 1 nodes · cohesion 1.0 · no non-file members
+- Community 344: 1 nodes · cohesion 1.0 · no non-file members
+- Community 345: 1 nodes · cohesion 1.0 · no non-file members
+- Community 346: 1 nodes · cohesion 1.0 · no non-file members
+- Community 347: 1 nodes · cohesion 1.0 · no non-file members
+- Community 348: 1 nodes · cohesion 1.0 · no non-file members
+- Community 349: 1 nodes · cohesion 1.0 · no non-file members
+- Community 350: 1 nodes · cohesion 1.0 · no non-file members
+- Community 351: 1 nodes · cohesion 1.0 · no non-file members
+- Community 352: 1 nodes · cohesion 1.0 · no non-file members
+- Community 353: 1 nodes · cohesion 1.0 · no non-file members
+- Community 354: 1 nodes · cohesion 1.0 · @/services/reminderService
+- Community 355: 1 nodes · cohesion 1.0 · TablePressParser
+- Community 356: 1 nodes · cohesion 1.0 · mockLogDose()
+
+## Ambiguous Edges
+- `capacitor.config.ts` -> `SplashScreen.hide` · relation `calls` · capacitor.config.ts
+- `eslint.config.js` -> `tseslint.config` · relation `calls` · eslint.config.js
+- `playwright.config.ts` -> `createLovableConfig` · relation `calls` · playwright.config.ts
+- `scripts/scrapeNdaPharmacies.py` -> `dirname` · relation `calls` · scripts/scrapeNdaPharmacies.py
+- `scripts/scrapeNdaPharmacies.py` -> `dirname` · relation `calls` · scripts/scrapeNdaPharmacies.py
+- `scripts/scrapeNdaPharmacies.py` -> `join` · relation `calls` · scripts/scrapeNdaPharmacies.py
+- `scripts/scrapeNdaPharmacies.py` -> `join` · relation `calls` · scripts/scrapeNdaPharmacies.py
+- `server/check-env.js` -> `console.log` · relation `calls` · server/check-env.js
+- `server/check-env.js` -> `console.log` · relation `calls` · server/check-env.js
+- `server/check-env.js` -> `console.log` · relation `calls` · server/check-env.js
+
+## Knowledge Gaps
+- Isolated grounded nodes: 2667
+- Thin communities: 206, 207, 218, 222, 223, 224, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 256, 260, 261, 262, 263, 264, 265, 266, 268, 269, 270, 272, 276, 277, 279, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311, 312, 313, 354, 355, 356
+- Sample isolated nodes: `SplashScreen.hide`, `@capacitor/cli`, `@capacitor/keyboard`, `tseslint.config`, `@eslint/js`
+
+## Suggested Questions
+- **Why is `react` central to the repository?**
+  It has the highest grounded degree in community 37.
+- **How does `isComplexTask()` connect to `Uses` across boundaries?**
+  ambiguous relationship, cross-file link, cross-community bridge, peripheral-to-hub jump
+- **What responsibilities are grouped inside Community 0?**
+  Representative nodes: action, actions, actionTime.replace.
+- **What responsibilities are grouped inside Community 1?**
+  Representative nodes: actualDate.getTime, actualDate.toISOString, actualTakeTime.getTime.
+- **What responsibilities are grouped inside Community 2?**
+  Representative nodes: a.getTime, activeIds.has, activeReminders.forEach.

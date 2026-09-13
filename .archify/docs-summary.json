@@ -1,0 +1,106 @@
+{
+  "artifact": "docs-summary.json",
+  "status": "ready",
+  "phase": "analyze",
+  "targetPath": "/home/iammbayo/Documents/Projects/dawa-lens",
+  "scanRoot": ".",
+  "semantic": {
+    "enabled": false,
+    "backend": "none",
+    "providerEnrichmentSkipped": true,
+    "message": "Semantic enrichment is disabled. This summary preserves document provenance for downstream synthesis."
+  },
+  "detectedDocs": [
+    {
+      "path": "AGENTS.md",
+      "fileType": "document",
+      "detectionReason": "extension:.md",
+      "evidence": [
+        "file:AGENTS.md"
+      ]
+    },
+    {
+      "path": "BUSINESS_MODEL.md",
+      "fileType": "document",
+      "detectionReason": "extension:.md",
+      "evidence": [
+        "file:BUSINESS_MODEL.md"
+      ]
+    },
+    {
+      "path": "README.md",
+      "fileType": "document",
+      "detectionReason": "extension:.md",
+      "evidence": [
+        "file:README.md"
+      ]
+    },
+    {
+      "path": "lint_results.txt",
+      "fileType": "document",
+      "detectionReason": "extension:.txt",
+      "evidence": [
+        "file:lint_results.txt"
+      ]
+    },
+    {
+      "path": "project_proposal.md",
+      "fileType": "document",
+      "detectionReason": "extension:.md",
+      "evidence": [
+        "file:project_proposal.md"
+      ]
+    },
+    {
+      "path": "public/robots.txt",
+      "fileType": "document",
+      "detectionReason": "extension:.txt",
+      "evidence": [
+        "file:public/robots.txt"
+      ]
+    },
+    {
+      "path": "rust/README.md",
+      "fileType": "document",
+      "detectionReason": "extension:.md",
+      "evidence": [
+        "file:rust/README.md"
+      ]
+    }
+  ],
+  "confirmedFacts": {
+    "processedDocuments": [],
+    "skippedDocuments": [],
+    "readmeLikeDocs": [
+      {
+        "path": "README.md",
+        "fileType": "document",
+        "detectionReason": "extension:.md",
+        "evidence": [
+          "file:README.md"
+        ]
+      },
+      {
+        "path": "rust/README.md",
+        "fileType": "document",
+        "detectionReason": "extension:.md",
+        "evidence": [
+          "file:rust/README.md"
+        ]
+      }
+    ]
+  },
+  "inferredAlignments": {
+    "docToSubsystem": [],
+    "architectureThemes": [],
+    "unresolvedDocuments": []
+  },
+  "summary": {
+    "detectedDocumentCount": 7,
+    "processedDocumentCount": 0,
+    "skippedDocumentCount": 0,
+    "alignedDocumentCount": 0,
+    "themeCount": 0,
+    "unresolvedDocumentCount": 0
+  }
+}

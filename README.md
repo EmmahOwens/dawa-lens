@@ -118,39 +118,102 @@ Dawa Lens takes a fundamentally holistic approach:
 
 ## 🏛 System Architecture
 
-```text
-                                  +------------------------+
-                                  |     User Interface     |
-                                  |  (React 18 + Radix UI) |
-                                  +-----------+------------+
-                                              |
-                   +--------------------------+--------------------------+
-                   |                                                     |
-                   v                                                     v
-      +-------------------------+                           +-------------------------+
-      |  Web / PWA Application  |                           |  Native Android Bridge  |
-      |   (Vite + Tailwind CSS) |                           |      (Capacitor 8)      |
-      +------------+------------+                           +------------+------------+
-                   |                                                     |
-                   +--------------------------+--------------------------+
-                                              |
-                                              v
-                                 +-------------------------+
-                                 |  State & Offline Layer  |
-                                 | (TanStack Query, Zustand|
-                                 |   IndexedDB, Firestore) |
-                                 +------------+------------+
-                                              |
-                         +--------------------+--------------------+
-                         |                                         |
-                         v                                         v
-            +-------------------------+               +-------------------------+
-            |  Firebase Cloud Backend |               | Node.js / Express API   |
-            |  * Firestore Database   |               |  * Groq Llama 3/4 Vision|
-            |  * Firebase Auth (JWT)  | <-----------> |  * Google Gemini Fallback|
-            |  * Security Rules Guard |               |  * FDA Drug Interaction |
-            |  * Firebase Hosting     |               |  * PDF Report Generator |
-            +-------------------------+               +-------------------------+
+```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#1e293b',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#0f172a',
+    'tertiaryColor': '#1e1b4b',
+    'clusterBkg': '#0b1120',
+    'clusterBorder': '#334155',
+    'edgeLabelBackground': '#1e293b',
+    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontSize': '12px'
+  }
+}}%%
+flowchart TD
+    %% Presentation Tier
+    subgraph ClientUI ["📱 Presentation & UI Layer · React 18 + Vite 8"]
+        UI_Dash(["<b>📊 Dashboard & Analytics</b><br/><span style='font-size:10px;color:#94a3b8'>Tailwind CSS 3.4 · Radix UI · Recharts</span>"]):::client
+        UI_Vault["<b>💊 MedVault & Refills</b><br/><span style='font-size:10px;color:#94a3b8'>Uganda NDA Directory · Geo-Locator</span>"]:::client
+        UI_Scan["<b>📷 Visual Scanner Studio</b><br/><span style='font-size:10px;color:#94a3b8'>Blister Pack & Pill Capture · WebWorker OCR</span>"]:::focal
+        UI_Chat["<b>🧠 DawaGPT Assistant</b><br/><span style='font-size:10px;color:#94a3b8'>Context-Aware · Luganda/Swahili Support</span>"]:::client
+        UI_Travel["<b>✈️ TravelMap Companion</b><br/><span style='font-size:10px;color:#94a3b8'>MapLibre GL · Timezone Drift Recomputation</span>"]:::client
+        UI_Family["<b>👨‍👩‍👧 Family Hub</b><br/><span style='font-size:10px;color:#94a3b8'>Multi-Dependent · Caregiver Sync</span>"]:::client
+    end
+
+    %% Native Android Execution Layer
+    subgraph AndroidLayer ["⚡ Native Android Core · Capacitor 8 + Kotlin"]
+        K_Guardian[["<b>🛡️ AdherenceGuardianService</b><br/><span style='font-size:10px;color:#c084fc'>Foreground Watchdog · Persistent Notification</span>"]]:::native
+        K_Engine[["<b>⏰ NativeRecurrenceEngine</b><br/><span style='font-size:10px;color:#c084fc'>On-Device AlarmManager · Exact Alarms</span>"]]:::native
+        K_Receiver[["<b>🎯 NativeActionReceiver</b><br/><span style='font-size:10px;color:#c084fc'>Headless Action: Take / Snooze / Skip</span>"]]:::native
+        K_Gate[["<b>🔋 BatteryOptimizationGate</b><br/><span style='font-size:10px;color:#c084fc'>OEM Autostart Intent Resolver</span>"]]:::native
+    end
+
+    %% Client State & Offline Persistence Tier
+    subgraph OfflineSync ["💾 Client State & Offline Persistence Tier"]
+        S_Query[("<b>⚡ State & Query Cache</b><br/><span style='font-size:10px;color:#34d399'>TanStack Query v5 · Zustand Store</span>")]:::offline
+        S_Storage[("<b>🗄️ Secure Local Storage</b><br/><span style='font-size:10px;color:#34d399'>Encrypted IndexedDB · Capacitor Preferences</span>")]:::offline
+        S_Fallback{{"<b>🔬 LocalClinicalAssessment</b><br/><span style='font-size:10px;color:#34d399'>Zero-Latency Fallback · Heuristic Engine</span>"}}:::offlineHighlight
+        S_OCR[["<b>📜 Tesseract.js OCR Worker</b><br/><span style='font-size:10px;color:#34d399'>Isolated Background WebWorker Thread</span>"]]:::offline
+        S_Quotes["<b>📖 10k-Quote Deterministic Hash</b><br/><span style='font-size:10px;color:#34d399'>Epoch-Day Calendar Rotation Engine</span>"]:::offline
+    end
+
+    %% Backend Gateway Tier
+    subgraph BackendAPI ["🚀 Backend API Gateway · Node.js 24 + Express 4.21"]
+        API_Gate[["<b>🛡️ Express API Gateway</b><br/><span style='font-size:10px;color:#fbbf24'>Token Bucket Rate Limiter · Helmet CSP</span>"]]:::gateway
+        API_Auth["<b>🔑 Firebase Admin JWT Guard</b><br/><span style='font-size:10px;color:#fbbf24'>Decoded Claims · Scope Verification</span>"]:::gateway
+        API_Cascade[["<b>🔀 Multi-Tier AI Cascade</b><br/><span style='font-size:10px;color:#fbbf24'>Prompt Engineering · 2.5s Timeout Fallback</span>"]]:::gateway
+        API_PDF["<b>📄 Medical PDF Pipeline</b><br/><span style='font-size:10px;color:#fbbf24'>PDFKit Server & jsPDF Client Engines</span>"]:::gateway
+    end
+
+    %% Cloud Infrastructure Tier
+    subgraph ExternalServices ["☁️ Cloud Infrastructure & Authoritative APIs"]
+        C_Firestore[("<b>🔥 Cloud Firestore</b><br/><span style='font-size:10px;color:#818cf8'>Delta Synchronization · Security Rules</span>")]:::cloud
+        C_Auth(["<b>🔐 Firebase Authentication</b><br/><span style='font-size:10px;color:#818cf8'>OAuth 2.0 · JWT Provider</span>"]):::cloud
+        C_Gemini[["<b>🤖 Google Gemini 2.5/1.5 Flash</b><br/><span style='font-size:10px;color:#818cf8'>Multimodal Active Ingredient Detection</span>"]]:::cloud
+        C_RxNorm[("<b>🏛️ NIH RxNorm & OpenFDA</b><br/><span style='font-size:10px;color:#818cf8'>Clinical Drug-Drug Interaction Matrix</span>")]:::cloud
+        C_NDA[("<b>🇺🇬 Uganda NDA Registry</b><br/><span style='font-size:10px;color:#818cf8'>1,800+ Licensed Pharmacies Directory</span>")]:::cloud
+    end
+
+    %% Styling Classes
+    classDef client fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#f8fafc;
+    classDef focal fill:#1e1b4b,stroke:#ec4899,stroke-width:2px,color:#fdf2f8;
+    classDef native fill:#1e1b4b,stroke:#a855f7,stroke-width:1.8px,color:#f8fafc;
+    classDef offline fill:#062b21,stroke:#10b981,stroke-width:1.5px,color:#f8fafc;
+    classDef offlineHighlight fill:#064e3b,stroke:#34d399,stroke-width:2px,color:#ecfdf5;
+    classDef gateway fill:#2a1a05,stroke:#f59e0b,stroke-width:1.5px,color:#f8fafc;
+    classDef cloud fill:#0d1836,stroke:#60a5fa,stroke-width:1.5px,color:#f8fafc;
+
+    %% Subgraph Styling
+    style ClientUI fill:#080d1a,stroke:#0284c7,stroke-width:1.5px,stroke-dasharray: 4 2,color:#38bdf8;
+    style AndroidLayer fill:#10091d,stroke:#9333ea,stroke-width:1.5px,stroke-dasharray: 4 2,color:#c084fc;
+    style OfflineSync fill:#061410,stroke:#059669,stroke-width:1.5px,stroke-dasharray: 4 2,color:#34d399;
+    style BackendAPI fill:#140e04,stroke:#d97706,stroke-width:1.5px,stroke-dasharray: 4 2,color:#fbbf24;
+    style ExternalServices fill:#091024,stroke:#4f46e5,stroke-width:1.5px,stroke-dasharray: 4 2,color:#818cf8;
+
+    %% Connectors
+    ClientUI ==>|Capacitor Bridge IPC| AndroidLayer
+    ClientUI -->|Local Queries| OfflineSync
+    AndroidLayer -->|Alarm Signals| OfflineSync
+
+    OfflineSync --> S_Storage
+    S_Storage <==>|Encrypted HTTPS Sync| C_Firestore
+    OfflineSync -->|Authenticated REST| API_Gate
+
+    API_Gate --> API_Auth
+    API_Gate --> API_Cascade
+    API_Gate --> API_PDF
+
+    API_Cascade -->|Multimodal Inference| C_Gemini
+    API_Cascade -->|Interaction Lookup| C_RxNorm
+    UI_Scan -.->|Fallback <2.5s| S_Fallback
+    UI_Scan -->|Background Worker| S_OCR
+    UI_Vault -->|Haversine Proximity Query| C_NDA
 ```
 
 ### Directory Structure Overview
