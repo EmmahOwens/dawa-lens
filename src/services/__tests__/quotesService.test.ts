@@ -7,10 +7,18 @@ import {
   MINDFULNESS_QUOTES,
   LIFESTYLE_QUOTES,
   INSPIRATION_QUOTES,
+  HYDRATION_MESSAGES,
+  EVENING_CHECKIN_MESSAGES,
+  WEEKLY_SUMMARY_MESSAGES,
+  WELLNESS_NUDGE_MESSAGES,
   getQuoteIndexForDate,
   getDailyQuote,
   getQuoteForDayOffset,
   getEncouragementQuote,
+  getHydrationQuote,
+  getEveningCheckInQuote,
+  getWeeklySummaryQuote,
+  getWellnessNudgeQuote,
 } from "../quotesService";
 import { addDays, subDays } from "date-fns";
 
@@ -36,14 +44,15 @@ describe("10,000 Health Quotes Dataset & Engine", () => {
     expect(new Set(INSPIRATION_QUOTES).size).toBe(2000);
   });
 
-  it("contains 100+ unique encouragement quotes with emojis", () => {
-    expect(ENCOURAGEMENT_QUOTES.length).toBeGreaterThanOrEqual(100);
+  it("contains 200+ unique encouragement quotes with emojis", () => {
+    expect(ENCOURAGEMENT_QUOTES.length).toBeGreaterThanOrEqual(200);
     const emojiRegex = /\p{Extended_Pictographic}/u;
     for (const quote of ENCOURAGEMENT_QUOTES) {
       expect(typeof quote).toBe("string");
       expect(quote.trim().length).toBeGreaterThan(10);
       expect(emojiRegex.test(quote)).toBe(true);
     }
+    expect(new Set(ENCOURAGEMENT_QUOTES).size).toBe(ENCOURAGEMENT_QUOTES.length);
   });
 
   it("every single quote in HEALTH_QUOTES contains a vibrant emoji and valid text", () => {
@@ -135,10 +144,155 @@ describe("10,000 Health Quotes Dataset & Engine", () => {
     expect(leapQuote.length).toBeGreaterThan(0);
   });
 
-  it("returns a valid encouragement quote from getEncouragementQuote", () => {
-    for (let i = 0; i < 20; i++) {
+  it("returns a valid encouragement quote from getEncouragementQuote with anti-repetition", () => {
+    const picked: string[] = [];
+    for (let i = 0; i < 25; i++) {
       const quote = getEncouragementQuote();
       expect(ENCOURAGEMENT_QUOTES).toContain(quote);
+      picked.push(quote);
     }
+    // With anti-repetition memory buffer, there should be high uniqueness across 25 sequential calls
+    const uniqueCount = new Set(picked).size;
+    expect(uniqueCount).toBeGreaterThanOrEqual(20);
   });
 });
+
+describe("Hydration & Engagement Quotes Datasets & Rotation Engines", () => {
+  const emojiRegex = /\p{Extended_Pictographic}/u;
+
+  describe("Hydration Quotes (HYDRATION_MESSAGES)", () => {
+    it("contains at least 120 unique hydration quotes", () => {
+      expect(HYDRATION_MESSAGES).toBeDefined();
+      expect(HYDRATION_MESSAGES.length).toBeGreaterThanOrEqual(120);
+      const set = new Set(HYDRATION_MESSAGES);
+      expect(set.size).toBe(HYDRATION_MESSAGES.length);
+    });
+
+    it("every single quote has an emoji and substantive, valid text", () => {
+      for (const quote of HYDRATION_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getHydrationQuote produces no repeats across all 6 slots in a day", () => {
+      const testDate = new Date("2026-09-15T08:00:00Z");
+      const dayQuotes = new Set<string>();
+      for (let slot = 0; slot < 6; slot++) {
+        const quote = getHydrationQuote(testDate, slot);
+        expect(HYDRATION_MESSAGES).toContain(quote);
+        dayQuotes.add(quote);
+      }
+      expect(dayQuotes.size).toBe(6);
+    });
+
+    it("getHydrationQuote cycles without duplicate quotes across 20 consecutive days", () => {
+      const baseDate = new Date("2026-09-01T08:00:00Z");
+      const visited = new Set<string>();
+      const totalSlots = 20 * 6; // 120 slots
+
+      for (let day = 0; day < 20; day++) {
+        const d = addDays(baseDate, day);
+        for (let slot = 0; slot < 6; slot++) {
+          const quote = getHydrationQuote(d, slot);
+          visited.add(quote);
+        }
+      }
+
+      // Over 120 slots, all 120 quotes are visited before wrapping
+      expect(visited.size).toBe(HYDRATION_MESSAGES.length);
+    });
+
+    it("getHydrationQuote wraps around smoothly and idempotently", () => {
+      const d0 = new Date("2026-01-01T08:00:00Z");
+      const wrapDays = Math.floor(HYDRATION_MESSAGES.length / 6);
+      const dWrap = addDays(d0, wrapDays);
+
+      expect(getHydrationQuote(dWrap, 0)).toBe(getHydrationQuote(d0, 0));
+      expect(getHydrationQuote(dWrap, 3)).toBe(getHydrationQuote(d0, 3));
+    });
+  });
+
+  describe("Evening Check-In Quotes (EVENING_CHECKIN_MESSAGES)", () => {
+    it("contains at least 50 unique evening check-in quotes", () => {
+      expect(EVENING_CHECKIN_MESSAGES).toBeDefined();
+      expect(EVENING_CHECKIN_MESSAGES.length).toBeGreaterThanOrEqual(50);
+      const set = new Set(EVENING_CHECKIN_MESSAGES);
+      expect(set.size).toBe(EVENING_CHECKIN_MESSAGES.length);
+    });
+
+    it("every quote has an emoji and valid text", () => {
+      for (const quote of EVENING_CHECKIN_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getEveningCheckInQuote rotates day-by-day across 50 consecutive days without repeating", () => {
+      const baseDate = new Date("2026-09-01T20:00:00Z");
+      const visited = new Set<string>();
+      for (let day = 0; day < 50; day++) {
+        const quote = getEveningCheckInQuote(addDays(baseDate, day));
+        visited.add(quote);
+      }
+      expect(visited.size).toBe(50);
+    });
+  });
+
+  describe("Weekly Summary Messages (WEEKLY_SUMMARY_MESSAGES)", () => {
+    it("contains at least 24 unique weekly summary quotes", () => {
+      expect(WEEKLY_SUMMARY_MESSAGES).toBeDefined();
+      expect(WEEKLY_SUMMARY_MESSAGES.length).toBeGreaterThanOrEqual(24);
+      const set = new Set(WEEKLY_SUMMARY_MESSAGES);
+      expect(set.size).toBe(WEEKLY_SUMMARY_MESSAGES.length);
+    });
+
+    it("every quote has an emoji and valid text", () => {
+      for (const quote of WEEKLY_SUMMARY_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getWeeklySummaryQuote rotates week-by-week across 8 consecutive weeks", () => {
+      const baseDate = new Date("2026-09-06T20:00:00Z");
+      const visited = new Set<string>();
+      for (let week = 0; week < 8; week++) {
+        const quote = getWeeklySummaryQuote(week, baseDate);
+        visited.add(quote);
+      }
+      expect(visited.size).toBe(8);
+    });
+  });
+
+  describe("Wellness Nudge Messages (WELLNESS_NUDGE_MESSAGES)", () => {
+    it("contains at least 24 unique wellness nudge quotes", () => {
+      expect(WELLNESS_NUDGE_MESSAGES).toBeDefined();
+      expect(WELLNESS_NUDGE_MESSAGES.length).toBeGreaterThanOrEqual(24);
+      const set = new Set(WELLNESS_NUDGE_MESSAGES);
+      expect(set.size).toBe(WELLNESS_NUDGE_MESSAGES.length);
+    });
+
+    it("every quote has an emoji and valid text", () => {
+      for (const quote of WELLNESS_NUDGE_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getWellnessNudgeQuote rotates day-by-day across consecutive days", () => {
+      const baseDate = new Date("2026-09-01T10:00:00Z");
+      const visited = new Set<string>();
+      for (let day = 0; day < 20; day++) {
+        const quote = getWellnessNudgeQuote(addDays(baseDate, day));
+        visited.add(quote);
+      }
+      expect(visited.size).toBe(20);
+    });
+  });
+});
+

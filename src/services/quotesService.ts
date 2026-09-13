@@ -38,6 +38,12 @@ import {
   LIFESTYLE_QUOTES,
   INSPIRATION_QUOTES,
 } from "@/data/quotesData";
+import {
+  HYDRATION_MESSAGES,
+  EVENING_CHECKIN_MESSAGES,
+  WEEKLY_SUMMARY_MESSAGES,
+  WELLNESS_NUDGE_MESSAGES,
+} from "@/data/engagementQuotes";
 
 export {
   HEALTH_QUOTES,
@@ -47,6 +53,10 @@ export {
   MINDFULNESS_QUOTES,
   LIFESTYLE_QUOTES,
   INSPIRATION_QUOTES,
+  HYDRATION_MESSAGES,
+  EVENING_CHECKIN_MESSAGES,
+  WEEKLY_SUMMARY_MESSAGES,
+  WELLNESS_NUDGE_MESSAGES,
 };
 
 // ─── Channel IDs ────────────────────────────────────────────────────────────
@@ -163,11 +173,27 @@ export function getQuoteForDayOffset(dayOffset: number, baseDate: Date = new Dat
   return getDailyQuote(targetDate);
 }
 
+const recentEncouragementIndices: number[] = [];
+
 export function getEncouragementQuote(): string {
   if (!ENCOURAGEMENT_QUOTES || ENCOURAGEMENT_QUOTES.length === 0) {
     return "💊 Dose logged! Consistency is your superpower.";
   }
-  const index = Math.floor(Math.random() * ENCOURAGEMENT_QUOTES.length);
+  if (ENCOURAGEMENT_QUOTES.length <= 1) {
+    return ENCOURAGEMENT_QUOTES[0];
+  }
+  // Anti-repetition sliding window: remembers recently selected quotes
+  const maxHistory = Math.min(30, Math.floor(ENCOURAGEMENT_QUOTES.length / 3));
+  let index = Math.floor(Math.random() * ENCOURAGEMENT_QUOTES.length);
+  let attempts = 0;
+  while (recentEncouragementIndices.includes(index) && attempts < 15) {
+    index = Math.floor(Math.random() * ENCOURAGEMENT_QUOTES.length);
+    attempts++;
+  }
+  recentEncouragementIndices.push(index);
+  if (recentEncouragementIndices.length > maxHistory) {
+    recentEncouragementIndices.shift();
+  }
   return ENCOURAGEMENT_QUOTES[index] as string;
 }
 
@@ -252,6 +278,21 @@ export async function schedulePostDoseEncouragementNotification(medicineName: st
 
 // ─── 3. Evening Check-In ─────────────────────────────────────────────────────
 
+/**
+ * Returns a calendar-day rotating evening check-in quote.
+ * Seamlessly cycles across 50 unique messages so evening reminders never feel repetitive.
+ */
+export function getEveningCheckInQuote(date: Date = new Date()): string {
+  if (!EVENING_CHECKIN_MESSAGES || EVENING_CHECKIN_MESSAGES.length === 0) {
+    return "🌙 Have you logged all your medications today? A quick check keeps your health on track.";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOffset = Math.round((localDayUtc - ANCHOR_UTC) / 86400000);
+  const index = ((dayOffset % EVENING_CHECKIN_MESSAGES.length) + EVENING_CHECKIN_MESSAGES.length) % EVENING_CHECKIN_MESSAGES.length;
+  return EVENING_CHECKIN_MESSAGES[index] ?? EVENING_CHECKIN_MESSAGES[0];
+}
+
 async function scheduleEveningCheckIns(
   reminders: Reminder[],
   localBatch: LocalNotificationSchema[],
@@ -265,7 +306,7 @@ async function scheduleEveningCheckIns(
     if (fireDate <= now) continue;
     const dateKey = startOfDay(addDays(now, i)).toISOString();
     const id = stringToHash("dawa_evening_checkin_" + dateKey);
-    const body = "Have you logged all your medications today? A quick check keeps your health on track.";
+    const body = getEveningCheckInQuote(fireDate);
     localBatch.push({ id, title: "🌙 Evening Check-In", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_WELLNESS, sound: "default", extra: { type: "evening_checkin", route: "/" } });
     alarmBatch.push({ id, title: "🌙 Evening Check-In", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "evening_checkin" }) });
     ids.push(id);
@@ -274,15 +315,22 @@ async function scheduleEveningCheckIns(
 
 // ─── 4. Hydration Reminders ──────────────────────────────────────────────────
 
-const HYDRATION_MESSAGES: readonly string[] = [
-  "💧 Time to hydrate! A glass of water now keeps fatigue away.",
-  "💧 Drink up! Staying hydrated supports your medication and your health.",
-  "💧 Water break! Hydration keeps your kidneys happy and your energy high.",
-  "💧 Your body is about 60% water — keep it that way. Drink up!",
-  "💧 Sip some water! It helps your medication absorb better.",
-  "💧 Quick water break! Your brain and body both need it.",
-  "💧 Stay hydrated! Even mild dehydration affects focus and mood.",
-];
+/**
+ * Computes a deterministic, non-repeating hydration quote based on calendar date
+ * and daily time slot. Guarantees that all 6 hydration reminders per day are completely
+ * distinct and loops across 120+ unique quotes over 20 consecutive days before wrapping.
+ */
+export function getHydrationQuote(date: Date = new Date(), hourSlotIndex: number = 0): string {
+  if (!HYDRATION_MESSAGES || HYDRATION_MESSAGES.length === 0) {
+    return "💧 Time to hydrate! A glass of water now keeps fatigue away.";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOffset = Math.round((localDayUtc - ANCHOR_UTC) / 86400000);
+  const slot = dayOffset * 6 + hourSlotIndex;
+  const index = ((slot % HYDRATION_MESSAGES.length) + HYDRATION_MESSAGES.length) % HYDRATION_MESSAGES.length;
+  return HYDRATION_MESSAGES[index] ?? HYDRATION_MESSAGES[0];
+}
 
 async function scheduleHydrationReminders(
   localBatch: LocalNotificationSchema[],
@@ -292,12 +340,13 @@ async function scheduleHydrationReminders(
   const now = new Date();
   const hydrationHours = [8, 10, 12, 14, 16, 18];
   for (let i = 0; i < 7; i++) {
-    for (const hour of hydrationHours) {
+    for (let hIdx = 0; hIdx < hydrationHours.length; hIdx++) {
+      const hour = hydrationHours[hIdx];
       const fireDate = setTime(startOfDay(addDays(now, i)), hour, 0);
       if (fireDate <= now) continue;
       const dateKey = `${startOfDay(addDays(now, i)).toISOString()}_${hour}`;
       const id = stringToHash("dawa_hydration_" + dateKey);
-      const body = HYDRATION_MESSAGES[Math.floor(Math.random() * HYDRATION_MESSAGES.length)] as string;
+      const body = getHydrationQuote(fireDate, hIdx);
       localBatch.push({ id, title: "💧 Hydration Reminder", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_HYDRATION, sound: "default", extra: { type: "hydration", route: "/" } });
       alarmBatch.push({ id, title: "💧 Hydration Reminder", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "hydration" }) });
       ids.push(id);
@@ -306,6 +355,20 @@ async function scheduleHydrationReminders(
 }
 
 // ─── 5. Weekly Adherence Summary ─────────────────────────────────────────────
+
+/**
+ * Returns a weekly adherence summary quote that rotates across 24 distinct messages.
+ */
+export function getWeeklySummaryQuote(weekOffset: number = 0, date: Date = new Date()): string {
+  if (!WEEKLY_SUMMARY_MESSAGES || WEEKLY_SUMMARY_MESSAGES.length === 0) {
+    return "📊 How did you do with your medications this week? Tap to see your adherence report and keep up the momentum!";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const weekIndex = Math.floor(localDayUtc / (86400000 * 7)) + weekOffset;
+  const index = ((weekIndex % WEEKLY_SUMMARY_MESSAGES.length) + WEEKLY_SUMMARY_MESSAGES.length) % WEEKLY_SUMMARY_MESSAGES.length;
+  return WEEKLY_SUMMARY_MESSAGES[index] ?? WEEKLY_SUMMARY_MESSAGES[0];
+}
 
 async function scheduleWeeklyAdherenceSummary(
   localBatch: LocalNotificationSchema[],
@@ -320,7 +383,7 @@ async function scheduleWeeklyAdherenceSummary(
     if (fireDate <= now) continue;
     const dateKey = startOfDay(addDays(now, daysUntilSunday + week * 7)).toISOString();
     const id = stringToHash("dawa_weekly_summary_" + dateKey);
-    const body = "How did you do with your medications this week? Tap to see your adherence report and keep up the momentum!";
+    const body = getWeeklySummaryQuote(week, fireDate);
     localBatch.push({ id, title: "📊 Your Weekly Health Summary", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_QUOTES, sound: "default", extra: { type: "weekly_summary", route: "/history" } });
     alarmBatch.push({ id, title: "📊 Your Weekly Health Summary", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "weekly_summary" }) });
     ids.push(id);
@@ -406,6 +469,20 @@ export async function scheduleStreakNotification(streak: number): Promise<void> 
 
 // ─── 7. Wellness Log Nudge ───────────────────────────────────────────────────
 
+/**
+ * Returns a calendar-day rotating wellness nudge message.
+ */
+export function getWellnessNudgeQuote(date: Date = new Date()): string {
+  if (!WELLNESS_NUDGE_MESSAGES || WELLNESS_NUDGE_MESSAGES.length === 0) {
+    return "🩺 It has been a few days since your last wellness log. How are you feeling? Log a symptom or mood update to stay on top of your health.";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOffset = Math.round((localDayUtc - ANCHOR_UTC) / 86400000);
+  const index = ((dayOffset % WELLNESS_NUDGE_MESSAGES.length) + WELLNESS_NUDGE_MESSAGES.length) % WELLNESS_NUDGE_MESSAGES.length;
+  return WELLNESS_NUDGE_MESSAGES[index] ?? WELLNESS_NUDGE_MESSAGES[0];
+}
+
 export async function scheduleWellnessNudge(wellnessLogs: WellnessLog[]): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   const todayKey = new Date().toDateString();
@@ -419,9 +496,9 @@ export async function scheduleWellnessNudge(wellnessLogs: WellnessLog[]): Promis
     await createEngagementChannels();
     const fireAt = new Date(Date.now() + 2000);
     const id = stringToHash("dawa_wellness_nudge_" + todayKey);
-    const body = "It has been a few days since your last wellness log. How are you feeling? Log a symptom or mood update to stay on top of your health.";
-    await LocalNotifications.schedule({ notifications: [{ id, title: "\uD83E\uDE7A Wellness Check-In", body, schedule: { at: fireDateSafe(fireAt), allowWhileIdle: true }, channelId: CHANNEL_WELLNESS, sound: "default", extra: { type: "wellness_nudge", route: "/wellness" } }] });
-    try { await NativeAlarm.scheduleAlarms({ notifications: [{ id, title: "\uD83E\uDE7A Wellness Check-In", body, triggerAtMillis: fireAt.getTime(), extra: JSON.stringify({ type: "wellness_nudge" }) }] }); }
+    const body = getWellnessNudgeQuote(fireAt);
+    await LocalNotifications.schedule({ notifications: [{ id, title: "🩺 Wellness Check-In", body, schedule: { at: fireDateSafe(fireAt), allowWhileIdle: true }, channelId: CHANNEL_WELLNESS, sound: "default", extra: { type: "wellness_nudge", route: "/wellness" } }] });
+    try { await NativeAlarm.scheduleAlarms({ notifications: [{ id, title: "🩺 Wellness Check-In", body, triggerAtMillis: fireAt.getTime(), extra: JSON.stringify({ type: "wellness_nudge" }) }] }); }
     catch (e) { console.warn("[quotesService] NativeAlarm wellness nudge failed (non-fatal):", e); }
     localStorage.setItem(dedupeKey, "1");
   } catch (err) { console.warn("[quotesService] scheduleWellnessNudge failed:", err); }
