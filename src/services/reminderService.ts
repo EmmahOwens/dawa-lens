@@ -613,10 +613,10 @@ const getNextOccurrence = (
         const actionD = toDate(log.actionTime);
         const schedD = log.scheduledTime ? toDate(log.scheduledTime) : actionD;
 
-        if (
-          (isAfter(actionD, candDayStart) && isBefore(actionD, candDayEnd)) ||
-          (isAfter(schedD, candDayStart) && isBefore(schedD, candDayEnd))
-        ) {
+        // Only match if the log's scheduled date (or actionTime if scheduledTime is unset) is on candidate's calendar day.
+        // Checking actionD when scheduledTime is set causes logs recorded today for yesterday's slots (e.g. missed doses)
+        // to falsely suppress today's upcoming dose.
+        if (isAfter(schedD, candDayStart) && isBefore(schedD, candDayEnd)) {
           const logMins = schedD.getHours() * 60 + schedD.getMinutes();
           let diff = Math.abs(logMins - candMins);
           if (diff > 12 * 60) diff = 24 * 60 - diff;

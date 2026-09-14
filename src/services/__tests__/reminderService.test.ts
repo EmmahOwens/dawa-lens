@@ -408,6 +408,38 @@ describe("reminderService - calculateNextDose with dynamic shifts", () => {
     const now = new Date();
     expect(nextDose!.scheduledAt.getDate()).toBe(new Date(now.getTime() + 24 * 3600 * 1000).getDate());
   });
+
+  it("should not suppress today's upcoming dose when yesterday's dose was logged as missed today", () => {
+    // Current simulated time: 2026-08-22 at 10:00:00 (from beforeEach)
+    const reminder: Reminder = {
+      id: "rem-evening",
+      medicineName: "Nasatab",
+      dose: "1 tablet",
+      time: "20:00",
+      repeatSchedule: "daily",
+      enabled: true,
+      createdAt: new Date(2026, 7, 21, 10, 0, 0).toISOString(), // Created yesterday
+    };
+
+    // Yesterday's 20:00 dose was missed, and checkMissedDoses logged it today
+    const yesterdayScheduled = new Date(2026, 7, 21, 20, 0, 0);
+    const missedLog: DoseLog = {
+      id: "log-missed-yesterday",
+      reminderId: "rem-evening",
+      medicineName: "Nasatab",
+      dose: "1 tablet",
+      scheduledTime: yesterdayScheduled.toISOString(), // Scheduled for yesterday
+      actionTime: new Date(2026, 7, 22, 9, 30, 0).toISOString(), // Detected/logged today
+      action: "missed",
+    };
+
+    const nextDose = calculateNextDose([reminder], [missedLog]);
+    expect(nextDose).not.toBeNull();
+    // Must be TODAY at 20:00 (10h from 10:00), NOT tomorrow at 20:00 (34h)
+    expect(nextDose!.scheduledAt.getDate()).toBe(22);
+    expect(nextDose!.scheduledAt.getHours()).toBe(20);
+    expect(nextDose!.timeUntil).toBe("10h 0m");
+  });
 });
 
 describe("isReminderScheduledOnDate & checkMissedDoses", () => {
