@@ -17,11 +17,16 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
 const sanitizeGroqModel = (model) => {
-  if (!model || typeof model !== 'string') return 'llama-3.3-70b-versatile';
+  if (!model || typeof model !== 'string') return 'openai/gpt-oss-120b';
   const m = model.trim();
   const lower = m.toLowerCase();
-  if (lower.includes('qwen3.8') || lower.includes('llama-4-scout') || lower.includes('mixtral-8x7b') || lower.includes('llama2')) {
-    return 'llama-3.3-70b-versatile';
+  // Groq officially decommissioned all Llama models (llama-3.3-70b-versatile, llama-3.1-8b-instant, etc.) in August 2026.
+  // Groq's official active production models are openai/gpt-oss-120b, openai/gpt-oss-20b, and qwen/qwen3.6-27b.
+  if (lower.includes('llama') || lower.includes('qwen3.8') || lower.includes('mixtral') || lower.includes('gemma')) {
+    if (lower.includes('8b') || lower.includes('light') || lower.includes('instant') || lower.includes('20b')) {
+      return 'openai/gpt-oss-20b';
+    }
+    return 'openai/gpt-oss-120b';
   }
   return m;
 };
@@ -36,9 +41,9 @@ const sanitizeGeminiModel = (model) => {
   return m;
 };
 
-const GROQ_MODEL = sanitizeGroqModel(process.env.GROQ_MODEL);
-const GROQ_SCOUT_MODEL = process.env.GROQ_SCOUT_MODEL || 'openai/gpt-oss-120b'; // was llama-4-scout (deprecated June 2026)
-const GROQ_LIGHT_MODEL = process.env.GROQ_LIGHT_MODEL || 'openai/gpt-oss-20b';
+const GROQ_MODEL = sanitizeGroqModel(process.env.GROQ_MODEL || 'openai/gpt-oss-120b');
+const GROQ_SCOUT_MODEL = sanitizeGroqModel(process.env.GROQ_SCOUT_MODEL || 'openai/gpt-oss-120b');
+const GROQ_LIGHT_MODEL = sanitizeGroqModel(process.env.GROQ_LIGHT_MODEL || 'openai/gpt-oss-20b');
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
@@ -577,15 +582,20 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
       : 'groq-8b';
 
   const fn = async () => {
-    // Resilient candidate list: if the requested model returns 404 or decommissioned, try alternatives
-    const candidateModels = Array.from(new Set([
+    // Resilient candidate list: active Groq models (gpt-oss-120b, gpt-oss-20b, qwen3.6-27b)
+    const rawCandidates = [
       modelId,
       GROQ_MODEL,
-      'llama-3.3-70b-versatile',
       'openai/gpt-oss-120b',
       'openai/gpt-oss-20b',
-      'llama-3.1-8b-instant'
-    ]));
+      'qwen/qwen3.6-27b'
+    ];
+    // Filter out decommissioned Llama models and nonexistent models
+    const candidateModels = Array.from(new Set(rawCandidates))
+      .filter(m => typeof m === 'string' && !m.toLowerCase().includes('llama') && !m.toLowerCase().includes('qwen3.8'));
+    if (candidateModels.length === 0) {
+      candidateModels.push('openai/gpt-oss-120b', 'openai/gpt-oss-20b');
+    }
 
     let response = null;
     let lastErr = null;
@@ -796,16 +806,16 @@ export const callAiWithFallback = async (messages, options = {}) => {
     try {
       return await callGroqChat(messages, responseFormat, GROQ_LIGHT_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
-      console.warn("Fallback: Groq Light failed, trying Groq Instant...", err.message);
+      console.warn("Fallback: Groq Light failed, trying Groq Qwen...", err.message);
     }
   }
 
-  // 8b. Try Groq Instant (llama-3.1-8b-instant) if light model was not already 8b
-  if (GROQ_API_KEY && GROQ_LIGHT_MODEL !== 'llama-3.1-8b-instant') {
+  // 8b. Try Groq Qwen (qwen/qwen3.6-27b)
+  if (GROQ_API_KEY) {
     try {
-      return await callGroqChat(messages, responseFormat, 'llama-3.1-8b-instant', priority, maxTokens, true, temperature);
+      return await callGroqChat(messages, responseFormat, 'qwen/qwen3.6-27b', priority, maxTokens, true, temperature);
     } catch (err) {
-      console.warn("Fallback: Groq Instant failed, trying SiliconFlow...", err.message);
+      console.warn("Fallback: Groq Qwen failed, trying SiliconFlow...", err.message);
     }
   }
 
@@ -1714,10 +1724,10 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 9. Try Groq Instant (llama-3.1-8b-instant) if light model was not already 8b
-    if (GROQ_API_KEY && GROQ_LIGHT_MODEL !== 'llama-3.1-8b-instant') {
+    // 9. Try Groq Qwen (qwen/qwen3.6-27b)
+    if (GROQ_API_KEY) {
       try {
-        const modelId = 'llama-3.1-8b-instant';
+        const modelId = 'qwen/qwen3.6-27b';
         const apiKey = getGroqApiKey(modelId);
         const fn = async () => {
           const payload = {
@@ -1727,15 +1737,16 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
             max_tokens: chatMaxTokens,
             temperature: 0.7
           };
+          payload.reasoning_format = 'hidden';
           const response = await axios.post(GROQ_API_URL, payload, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             responseType: 'stream', timeout: 12000
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: Groq Instant failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+        console.warn("Stream Fallback: Groq Qwen failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
