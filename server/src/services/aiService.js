@@ -16,7 +16,27 @@ dotenv.config();
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
-const GROQ_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
+const sanitizeGroqModel = (model) => {
+  if (!model || typeof model !== 'string') return 'llama-3.3-70b-versatile';
+  const m = model.trim();
+  const lower = m.toLowerCase();
+  if (lower.includes('qwen3.8') || lower.includes('llama-4-scout') || lower.includes('mixtral-8x7b') || lower.includes('llama2')) {
+    return 'llama-3.3-70b-versatile';
+  }
+  return m;
+};
+
+const sanitizeGeminiModel = (model) => {
+  if (!model || typeof model !== 'string') return 'gemini-2.5-flash';
+  const m = model.trim();
+  const lower = m.toLowerCase();
+  if (lower.includes('gemini-2.0-flash') || lower.includes('gemini-1.0')) {
+    return 'gemini-2.5-flash';
+  }
+  return m;
+};
+
+const GROQ_MODEL = sanitizeGroqModel(process.env.GROQ_MODEL);
 const GROQ_SCOUT_MODEL = process.env.GROQ_SCOUT_MODEL || 'openai/gpt-oss-120b'; // was llama-4-scout (deprecated June 2026)
 const GROQ_LIGHT_MODEL = process.env.GROQ_LIGHT_MODEL || 'openai/gpt-oss-20b';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -96,7 +116,7 @@ const getGroqApiKey = (modelId) => {
 };
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+const GEMINI_MODEL = sanitizeGeminiModel(process.env.GEMINI_MODEL);
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 /**
@@ -182,9 +202,26 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
       };
     }
 
-    const response = await axios.post(`${GEMINI_API_URL}?key=${activeGeminiKey}`, payload, {
-      timeout: 15000
-    });
+    const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-1.5-flash']));
+    let response = null;
+    let lastGeminiErr = null;
+
+    for (const mId of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${mId}:generateContent?key=${activeGeminiKey}`;
+        response = await axios.post(url, payload, { timeout: 15000 });
+        if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+          break;
+        }
+      } catch (gErr) {
+        lastGeminiErr = gErr;
+        console.warn(`Gemini (${mId}) failed:`, gErr.response?.data?.error?.message || gErr.message);
+      }
+    }
+
+    if (!response) {
+      throw lastGeminiErr || new AppError('Gemini API call failed.', 502);
+    }
 
     const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) throw new AppError('Gemini returned an empty response.', 502);
@@ -530,8 +567,8 @@ const callMistralChat = async (messages, responseFormat = { type: 'json_object' 
  * Standard chat completion call to Groq routed via rate limit queue
  */
 const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GROQ_MODEL, priority = 'high', maxTokens = 4096, failFast = false, temperature = 0.7) => {
-  const apiKey = getGroqApiKey(modelId);
-  if (!apiKey) {
+  const initialApiKey = getGroqApiKey(modelId);
+  if (!initialApiKey) {
     throw new AppError('Groq API key not configured', 401);
   }
 
@@ -540,41 +577,65 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
       : 'groq-8b';
 
   const fn = async () => {
-    // Thinking models (qwen3.8-27b, openai/gpt-oss-20b, openai/gpt-oss-120b) need token budget for both thinking and output
-    const isReasoningModel = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
-    const effectiveMaxTokens = isReasoningModel ? Math.max(maxTokens, 4096) : Math.max(maxTokens, 2048);
+    // Resilient candidate list: if the requested model returns 404 or decommissioned, try alternatives
+    const candidateModels = Array.from(new Set([
+      modelId,
+      GROQ_MODEL,
+      'llama-3.3-70b-versatile',
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+      'llama-3.1-8b-instant'
+    ]));
 
-    const payload = {
-      model: modelId,
-      messages,
-      max_tokens: effectiveMaxTokens,
-      temperature: temperature
-    };
-    if (responseFormat) {
-      payload.response_format = responseFormat;
-    }
+    let response = null;
+    let lastErr = null;
+    let usedModel = modelId;
 
-    // For thinking models: hide raw <think> tokens in JSON mode so pure JSON is returned.
-    // Allow thinking models to reason freely with the expanded context & completion window.
-    if (isReasoningModel) {
-      if (responseFormat?.type === 'json_object') {
+    for (const currentModel of candidateModels) {
+      const isReasoningModel = typeof currentModel === 'string' && (currentModel.includes('gpt-oss') || currentModel.includes('qwen') || currentModel.includes('deepseek-r1') || currentModel.includes('qwq'));
+      const effectiveMaxTokens = isReasoningModel ? Math.max(maxTokens, 4096) : Math.max(maxTokens, 2048);
+      const currentApiKey = getGroqApiKey(currentModel) || initialApiKey;
+
+      const payload = {
+        model: currentModel,
+        messages,
+        max_tokens: effectiveMaxTokens,
+        temperature: temperature
+      };
+      if (responseFormat) {
+        payload.response_format = responseFormat;
+      }
+      if (isReasoningModel && responseFormat?.type === 'json_object') {
         payload.reasoning_format = 'hidden';
       }
-      // Note: Groq accepts reasoning_effort: 'default' or 'none'. We avoid 'low'/'medium' which cause 400 Bad Request.
+
+      try {
+        response = await axios.post(GROQ_API_URL, payload, {
+          headers: {
+            'Authorization': `Bearer ${currentApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000 // 15s timeout
+        });
+        if (response.data?.choices?.[0]?.message?.content) {
+          usedModel = currentModel;
+          break;
+        }
+      } catch (apiErr) {
+        lastErr = apiErr;
+        const errMsg = apiErr.response?.data?.error?.message || apiErr.response?.data || apiErr.message;
+        console.warn(`Groq (${currentModel}) API error:`, errMsg);
+        const status = apiErr.response?.status;
+        const errDetail = String(errMsg).toLowerCase();
+        if (status === 404 || errDetail.includes('model') || errDetail.includes('not found') || errDetail.includes('decommission')) {
+          continue;
+        }
+        throw apiErr;
+      }
     }
 
-    let response;
-    try {
-      response = await axios.post(GROQ_API_URL, payload, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 15000 // 15s timeout
-      });
-    } catch (apiErr) {
-      console.warn(`Groq (${modelId}) API error:`, apiErr.response?.data?.error?.message || apiErr.response?.data || apiErr.message);
-      throw apiErr;
+    if (!response) {
+      throw lastErr || new AppError('AI returned an empty response.', 502);
     }
 
     const text = response.data?.choices?.[0]?.message?.content;
@@ -583,7 +644,7 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
     }
 
     const result = responseFormat?.type === 'json_object' ? JSON.parse(sanitizeJson(text)) : text;
-    if (typeof result === 'object' && result !== null) result.source = `Groq (${modelId})`;
+    if (typeof result === 'object' && result !== null) result.source = `Groq (${usedModel})`;
     return result;
   };
 
@@ -735,7 +796,16 @@ export const callAiWithFallback = async (messages, options = {}) => {
     try {
       return await callGroqChat(messages, responseFormat, GROQ_LIGHT_MODEL, priority, maxTokens, true, temperature);
     } catch (err) {
-      console.warn("Fallback: Groq Light failed, trying SiliconFlow...", err.message);
+      console.warn("Fallback: Groq Light failed, trying Groq Instant...", err.message);
+    }
+  }
+
+  // 8b. Try Groq Instant (llama-3.1-8b-instant) if light model was not already 8b
+  if (GROQ_API_KEY && GROQ_LIGHT_MODEL !== 'llama-3.1-8b-instant') {
+    try {
+      return await callGroqChat(messages, responseFormat, 'llama-3.1-8b-instant', priority, maxTokens, true, temperature);
+    } catch (err) {
+      console.warn("Fallback: Groq Instant failed, trying SiliconFlow...", err.message);
     }
   }
 
@@ -1327,12 +1397,23 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
 
     const chatMaxTokens = isComplex ? 8192 : 4096;
 
-    let result = await callAiWithFallback(finalMessages, {
-      isJson: true,
-      priority,
-      maxTokens: chatMaxTokens,
-      isComplex
-    });
+    let result;
+    try {
+      result = await callAiWithFallback(finalMessages, {
+        isJson: true,
+        priority,
+        maxTokens: chatMaxTokens,
+        isComplex
+      });
+    } catch (jsonErr) {
+      console.warn("DawaGPT JSON mode failed, cascading to text mode in AI API fallback:", jsonErr.message);
+      result = await callAiWithFallback(finalMessages, {
+        isJson: false,
+        priority,
+        maxTokens: chatMaxTokens,
+        isComplex
+      });
+    }
 
     // Action execution is handled client-side by dispatchAIAction (useAIActions.tsx).
     // The server's role is to generate the action intent and return it in result.action.
@@ -1341,8 +1422,15 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
       if (typeof result.text === 'string') {
         result.text = result.text.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
       }
-      result.suggestions = Array.isArray(result.suggestions) ? result.suggestions : [];
+      result.suggestions = Array.isArray(result.suggestions) ? result.suggestions : ["Check medications", "View reminders", "Drug safety"];
       result.action = result.action || null;
+    } else if (typeof result === 'string') {
+      result = {
+        text: result.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim(),
+        suggestions: ["Check medications", "View reminders", "Drug safety"],
+        source: "AI Fallback",
+        action: null
+      };
     }
 
     return result;
@@ -1473,7 +1561,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 2. Try Groq Primary (qwen/qwen3.8-27b) - High capacity 200k TPM, primary streaming engine for all queries
+    // 2. Try Groq Primary (llama-3.3-70b-versatile) - High capacity 200k TPM
     if (GROQ_API_KEY) {
       try {
         const modelId = GROQ_MODEL;
@@ -1497,11 +1585,39 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: Groq Primary failed.", err.message);
+        console.warn("Stream Fallback: Groq Primary failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
-    // 3. Try SambaNova Cloud (70B)
+    // 3. Try Groq Scout (openai/gpt-oss-120b) - High capacity reasoning stream
+    if (GROQ_API_KEY && GROQ_SCOUT_MODEL !== GROQ_MODEL) {
+      try {
+        const modelId = GROQ_SCOUT_MODEL;
+        const apiKey = getGroqApiKey(modelId);
+        const fn = async () => {
+          const payload = {
+            model: modelId,
+            messages: finalMessages,
+            stream: true,
+            max_tokens: chatMaxTokens,
+            temperature: 0.7
+          };
+          if (typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'))) {
+            payload.reasoning_format = 'hidden';
+          }
+          const response = await axios.post(GROQ_API_URL, payload, {
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 12000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'groq-scout', finalMessages, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: Groq Scout failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 4. Try SambaNova Cloud (70B)
     if (SAMBANOVA_API_KEY) {
       try {
         const fn = async () => {
@@ -1513,11 +1629,11 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'sambanova-70b', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: SambaNova failed.", err.message);
+        console.warn("Stream Fallback: SambaNova failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
-    // 4. Try NVIDIA NIM
+    // 5. Try NVIDIA NIM
     if (NVIDIA_API_KEY) {
       try {
         const fn = async () => {
@@ -1529,11 +1645,11 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: NVIDIA NIM failed.", err.message);
+        console.warn("Stream Fallback: NVIDIA NIM failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
-    // 5. Try OpenRouter Free
+    // 6. Try OpenRouter Free
     if (OPENROUTER_API_KEY) {
       try {
         const fn = async () => {
@@ -1550,11 +1666,11 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'openrouter-free', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: OpenRouter Free failed.", err.message);
+        console.warn("Stream Fallback: OpenRouter Free failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
-    // 6. Try Mistral AI
+    // 7. Try Mistral AI
     if (MISTRAL_API_KEY) {
       try {
         const fn = async () => {
@@ -1566,11 +1682,11 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'mistral-small', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: Mistral AI failed.", err.message);
+        console.warn("Stream Fallback: Mistral AI failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
-    // 7. Try Groq Secondary / Lightweight Model
+    // 8. Try Groq Secondary / Lightweight Model (openai/gpt-oss-20b)
     if ((GROQ_API_KEY_2 || GROQ_API_KEY) && GROQ_LIGHT_MODEL !== GROQ_MODEL) {
       try {
         const modelId = GROQ_LIGHT_MODEL;
@@ -1594,11 +1710,36 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: Groq Light failed.", err.message);
+        console.warn("Stream Fallback: Groq Light failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
-    // 8. Try SiliconFlow
+    // 9. Try Groq Instant (llama-3.1-8b-instant) if light model was not already 8b
+    if (GROQ_API_KEY && GROQ_LIGHT_MODEL !== 'llama-3.1-8b-instant') {
+      try {
+        const modelId = 'llama-3.1-8b-instant';
+        const apiKey = getGroqApiKey(modelId);
+        const fn = async () => {
+          const payload = {
+            model: modelId,
+            messages: finalMessages,
+            stream: true,
+            max_tokens: chatMaxTokens,
+            temperature: 0.7
+          };
+          const response = await axios.post(GROQ_API_URL, payload, {
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 12000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: Groq Instant failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 10. Try SiliconFlow
     if (SILICONFLOW_API_KEY) {
       try {
         const modelId = SILICONFLOW_MODEL;
@@ -1611,11 +1752,11 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: SiliconFlow failed.", err.message);
+        console.warn("Stream Fallback: SiliconFlow failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
-    // 9. Try Z.ai
+    // 11. Try Z.ai
     if (Z_AI_API_KEY) {
       try {
         const modelId = Z_AI_MODEL;
@@ -1628,18 +1769,57 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: Z.ai GLM-5-Flash failed.", err.message);
+        console.warn("Stream Fallback: Z.ai GLM-5-Flash failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
-    // 10. Ultimate fallback: Gemini with resilient Markdown/metadata handling
+    // 12. Try Gemini with resilient Markdown/metadata handling
     try {
       const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens, 0.7, null, false);
       return createFakeStream(geminiResp);
     } catch (err) {
-      console.error("Stream Fallback: Gemini failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      return createFakeStream({ text: "Sorry, I'm having trouble connecting.", suggestions: ["Try again"], source: "System", action: null });
+      console.warn("Stream Fallback: Direct Gemini streaming failed, cascading to unified AI API fallback...", err.response?.data?.error?.message || err.response?.data || err.message);
     }
+
+    // 13. Ultimate Fallback: Route through application-wide unified callAiWithFallback
+    // Guarantees DawaGPT follows the exact same resilient multi-provider AI API fallback
+    // as all other AI features (Adherence Coach, Wellness Insight, Safety checks, etc.)
+    try {
+      console.log("Stream Fallback: Cascading DawaGPT to unified AI API fallback (callAiWithFallback)...");
+      const fallbackResult = await callAiWithFallback(finalMessages, {
+        isJson: false,
+        priority,
+        maxTokens: chatMaxTokens,
+        isComplex
+      });
+
+      let displayText = "";
+      let suggestions = ["Check medications", "View reminders", "Drug safety"];
+      let source = "AI Fallback";
+      let action = null;
+
+      if (typeof fallbackResult === 'object' && fallbackResult !== null) {
+        displayText = fallbackResult.text || fallbackResult.message || fallbackResult.response || "";
+        if (Array.isArray(fallbackResult.suggestions)) suggestions = fallbackResult.suggestions;
+        if (fallbackResult.source) source = fallbackResult.source;
+        if (fallbackResult.action) action = fallbackResult.action;
+      } else {
+        displayText = String(fallbackResult || "");
+      }
+
+      if (displayText) {
+        return createFakeStream({
+          text: displayText,
+          suggestions,
+          source,
+          action
+        });
+      }
+    } catch (finalCascadeErr) {
+      console.error("Stream Fallback: Unified AI API fallback cascade also failed:", finalCascadeErr.response?.data?.error?.message || finalCascadeErr.response?.data || finalCascadeErr.message);
+    }
+
+    return createFakeStream({ text: "Sorry, I'm having trouble connecting. Please try again in a moment.", suggestions: ["Try again"], source: "System", action: null });
   } catch (err) {
     return new Readable({
       read() {
