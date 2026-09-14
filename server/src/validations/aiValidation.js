@@ -165,7 +165,8 @@ export const chatSchema = z.object({
       text: z.string().max(20000).optional(),
       source: z.string().optional(),
       suggestions: z.array(z.string()).optional(),
-    })).max(50),
+      action: z.any().optional(),
+    }).passthrough()).max(50),
     medicines: z.array(medicineInputSchema).max(50).optional(),
     userProfile: userProfileInputSchema.nullable().optional(),
     doseLogs: z.array(doseLogInputSchema).max(50).optional(),
@@ -175,5 +176,5 @@ export const chatSchema = z.object({
     patients: z.array(patientInputSchema).max(20).optional(),
     selectedPatientId: z.string().max(100).nullable().optional(),
     currentPage: z.string().max(200).nullable().optional(),
-  })
+  }).passthrough()
 });

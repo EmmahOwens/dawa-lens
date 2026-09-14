@@ -21,19 +21,19 @@ class RateLimitManager {
       },
       'groq-70b': {
         rpm: 30,
-        tpm: 30000,     // 30,000 TPM
+        tpm: 200000,    // 200,000 TPM (qwen/qwen3.8-27b / llama-3.3-70b)
         rpd: 1000,
         tpd: 1000000,
       },
       'groq-8b': {
         rpm: 30,
-        tpm: 30000,     // 30,000 TPM (openai/gpt-oss-20b)
+        tpm: 60000,     // 60,000 TPM (allows reasoning tokens for openai/gpt-oss-20b)
         rpd: 14400,     // 14,400 RPD
         tpd: 2000000,
       },
       'groq-scout': {   // gpt-oss-120b (replaced llama-4-scout deprecated June 2026)
         rpm: 30,
-        tpm: 30000,     // 30,000 TPM
+        tpm: 60000,     // 60,000 TPM
         rpd: 1000,
         tpd: 1000000,
       },
@@ -223,7 +223,7 @@ class RateLimitManager {
    * doubled effective token estimates and caused false TPM rejections.
    * We now add a flat 512-token completion buffer — conservative but not punishing.
    */
-  estimateTokens(messages, _defaultMaxTokens = 2048) {
+  estimateTokens(messages, isReasoningOrMaxTokens = false) {
     let text = '';
     let imageCount = 0;
 
@@ -262,14 +262,17 @@ class RateLimitManager {
 
     const promptTokens = Math.ceil(text.length / 3.7);
     const imageTokens  = imageCount * 1000;
-    return promptTokens + imageTokens + 512; // flat completion buffer
+    const isReasoning = isReasoningOrMaxTokens === true || (typeof isReasoningOrMaxTokens === 'number' && isReasoningOrMaxTokens > 2048);
+    const completionBuffer = isReasoning ? 2048 : 512; // reasoning models generate internal thinking tokens
+    return promptTokens + imageTokens + completionBuffer;
   }
 
   // ─── Enqueue ──────────────────────────────────────────────────────────────────
 
   enqueue(fn, modelKey, messages, priority = 'low', maxRetries = 3, failFast = false) {
     return new Promise((resolve, reject) => {
-      const estimatedTokens = this.estimateTokens(messages);
+      const isReasoning = typeof modelKey === 'string' && (modelKey.includes('120b') || modelKey.includes('70b') || modelKey.includes('scout') || modelKey.includes('qwen') || modelKey.includes('8b'));
+      const estimatedTokens = this.estimateTokens(messages, isReasoning);
 
       if (failFast) {
         const decision = this.canMakeRequest(modelKey, estimatedTokens);
