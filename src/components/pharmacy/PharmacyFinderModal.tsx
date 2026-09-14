@@ -66,7 +66,10 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
   const swipe = useSwipeToDismiss(onClose);
 
   const handleOpenExternalMaps = (pharmacy: NdaPharmacy) => {
-    const url = getDirectionsUrl(pharmacy.latitude, pharmacy.longitude, pharmacy.name);
+    const url = getDirectionsUrl(pharmacy.latitude, pharmacy.longitude, pharmacy.name, {
+      userCoords,
+      mode: transportMode,
+    });
     window.open(url, "_blank", "noopener,noreferrer");
   };
 

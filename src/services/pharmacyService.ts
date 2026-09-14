@@ -505,14 +505,112 @@ export function getAllDistricts(): string[] {
   return Array.from(set).sort();
 }
 
+export interface DirectionsUrlOptions {
+  /** User coordinates as [lng, lat] (standard in this app) or { latitude, longitude } */
+  userCoords?: [number, number] | { latitude: number; longitude: number; [key: string]: any } | null;
+  /** Explicit user latitude */
+  userLat?: number;
+  /** Explicit user longitude */
+  userLng?: number;
+  /** Travel mode: driving or walking */
+  mode?: "driving" | "walking";
+  /** If true, generates Google Maps URL even on iOS */
+  preferGoogleMaps?: boolean;
+}
+
 /**
  * Generates an external deep link to open navigation in Google Maps or Apple Maps.
+ *
+ * Sends exact coordinates for both origin (user location) and destination (pharmacy),
+ * enabling turn-by-turn navigation without place ID corruption.
  */
-export function getDirectionsUrl(lat: number, lng: number, name?: string): string {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  if (isIOS) {
-    return `maps://maps.apple.com/?daddr=${lat},${lng}&q=${encodeURIComponent(name || "Pharmacy")}`;
+export function getDirectionsUrl(
+  lat: number,
+  lng: number,
+  name?: string,
+  options?: DirectionsUrlOptions | [number, number]
+): string {
+  let originLat: number | undefined;
+  let originLng: number | undefined;
+  let mode: "driving" | "walking" | undefined;
+  let preferGoogleMaps = false;
+
+  if (Array.isArray(options)) {
+    // Array format is [lng, lat]
+    originLng = options[0];
+    originLat = options[1];
+  } else if (options && typeof options === "object") {
+    mode = options.mode;
+    preferGoogleMaps = !!options.preferGoogleMaps;
+
+    if (typeof options.userLat === "number" && !isNaN(options.userLat)) {
+      originLat = options.userLat;
+    }
+    if (typeof options.userLng === "number" && !isNaN(options.userLng)) {
+      originLng = options.userLng;
+    }
+
+    if (originLat === undefined && originLng === undefined && options.userCoords) {
+      if (Array.isArray(options.userCoords)) {
+        originLng = options.userCoords[0];
+        originLat = options.userCoords[1];
+      } else if (typeof options.userCoords === "object") {
+        const coordsObj = options.userCoords as any;
+        if (typeof coordsObj.latitude === "number" && !isNaN(coordsObj.latitude)) {
+          originLat = coordsObj.latitude;
+        } else if (typeof coordsObj.lat === "number" && !isNaN(coordsObj.lat)) {
+          originLat = coordsObj.lat;
+        }
+        if (typeof coordsObj.longitude === "number" && !isNaN(coordsObj.longitude)) {
+          originLng = coordsObj.longitude;
+        } else if (typeof coordsObj.lng === "number" && !isNaN(coordsObj.lng)) {
+          originLng = coordsObj.lng;
+        }
+      }
+    }
   }
-  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${encodeURIComponent(name || "Pharmacy")}`;
+
+  const hasOrigin =
+    typeof originLat === "number" &&
+    !isNaN(originLat) &&
+    typeof originLng === "number" &&
+    !isNaN(originLng);
+
+  const isIOS =
+    !preferGoogleMaps &&
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent || "");
+
+  if (isIOS) {
+    const parts: string[] = [];
+    if (hasOrigin) {
+      parts.push(`saddr=${originLat},${originLng}`);
+    }
+    parts.push(`daddr=${lat},${lng}`);
+    if (mode === "walking") {
+      parts.push("dirflg=w");
+    } else if (mode === "driving") {
+      parts.push("dirflg=d");
+    }
+    if (name) {
+      parts.push(`q=${encodeURIComponent(name)}`);
+    }
+    return `maps://maps.apple.com/?${parts.join("&")}`;
+  }
+
+  // Google Maps Directions URL (API v1)
+  // Sends exact user origin and pharmacy destination coordinates, plus transport mode and navigate action
+  const parts: string[] = ["api=1"];
+  if (hasOrigin) {
+    parts.push(`origin=${originLat},${originLng}`);
+  }
+  parts.push(`destination=${lat},${lng}`);
+  if (mode) {
+    parts.push(`travelmode=${encodeURIComponent(mode)}`);
+  }
+  parts.push("dir_action=navigate");
+
+  return `https://www.google.com/maps/dir/?${parts.join("&")}`;
 }
+
 

@@ -85,10 +85,79 @@ describe("pharmacyService", () => {
     expect(route.mode).toBe("driving");
   });
 
-  it("generates correct directions navigation URLs", () => {
+  it("generates correct directions navigation URLs for Google Maps with exact coordinates", () => {
+    // Basic call with destination coordinates
     const url = getDirectionsUrl(0.3476, 32.5825, "Test Pharmacy");
-    expect(url).toContain("0.3476");
-    expect(url).toContain("32.5825");
+    expect(url).toContain("destination=0.3476,32.5825");
+    expect(url).toContain("dir_action=navigate");
+    // Should NOT contain corrupted destination_place_id with pharmacy name
+    expect(url).not.toContain("destination_place_id");
+  });
+
+  it("sends exact origin (user) and destination coordinates to Google Maps with travel mode", () => {
+    // userCoords in [lng, lat] format (standard in dawa-lens)
+    const userCoords: [number, number] = [32.5712, 0.3188];
+    const pharmacyLat = 0.3542;
+    const pharmacyLng = 32.6108;
+
+    const drivingUrl = getDirectionsUrl(pharmacyLat, pharmacyLng, "Abacus Pharmacy", {
+      userCoords,
+      mode: "driving",
+    });
+
+    expect(drivingUrl).toContain("origin=0.3188,32.5712");
+    expect(drivingUrl).toContain("destination=0.3542,32.6108");
+    expect(drivingUrl).toContain("travelmode=driving");
+    expect(drivingUrl).toContain("dir_action=navigate");
+    expect(drivingUrl).not.toContain("destination_place_id");
+
+    const walkingUrl = getDirectionsUrl(pharmacyLat, pharmacyLng, "First Pharmacy", {
+      userCoords,
+      mode: "walking",
+    });
+
+    expect(walkingUrl).toContain("origin=0.3188,32.5712");
+    expect(walkingUrl).toContain("destination=0.3542,32.6108");
+    expect(walkingUrl).toContain("travelmode=walking");
+  });
+
+  it("handles user coordinates passed as latitude/longitude object or direct array", () => {
+    const fromObject = getDirectionsUrl(0.35, 32.60, "Object Pharmacy", {
+      userCoords: { latitude: 0.32, longitude: 32.58 },
+    });
+    expect(fromObject).toContain("origin=0.32,32.58");
+    expect(fromObject).toContain("destination=0.35,32.6");
+
+    // Direct [lng, lat] 4th argument
+    const fromArray = getDirectionsUrl(0.35, 32.60, "Array Pharmacy", [32.59, 0.33]);
+    expect(fromArray).toContain("origin=0.33,32.59");
+    expect(fromArray).toContain("destination=0.35,32.6");
+  });
+
+  it("formats Apple Maps URLs correctly when on iOS", () => {
+    const originalUserAgent = navigator.userAgent;
+    try {
+      Object.defineProperty(navigator, "userAgent", {
+        value: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)",
+        configurable: true,
+      });
+
+      const appleUrl = getDirectionsUrl(0.3542, 32.6108, "Life Pharmacy", {
+        userCoords: [32.5712, 0.3188],
+        mode: "walking",
+      });
+
+      expect(appleUrl).toContain("maps://maps.apple.com/");
+      expect(appleUrl).toContain("saddr=0.3188,32.5712");
+      expect(appleUrl).toContain("daddr=0.3542,32.6108");
+      expect(appleUrl).toContain("dirflg=w");
+      expect(appleUrl).toContain("q=Life%20Pharmacy");
+    } finally {
+      Object.defineProperty(navigator, "userAgent", {
+        value: originalUserAgent,
+        configurable: true,
+      });
+    }
   });
 
   it("formats route duration cleanly for minutes and hours", () => {
