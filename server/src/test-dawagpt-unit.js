@@ -101,4 +101,27 @@ const contextOutput = await prepareDawaGPTContext({
 assert(contextOutput.finalMessages.length >= 15, `Context window should preserve at least 15 messages, got ${contextOutput.finalMessages.length}`);
 console.log(`✔ Context window retains multi-turn history (${contextOutput.finalMessages.length} messages) for thinking models.`);
 
+// 7. Test Uganda Contact Support & Emergency Directory in DawaGPT
+console.log("\n7. Verifying Uganda Contact Support & Emergency Directory in DawaGPT...");
+const systemInstruction = contextOutput.systemInstruction;
+assert(systemInstruction.includes("UGANDA CONTACT SUPPORT & EMERGENCY DIRECTORY"), "System prompt must include Uganda Contact Support directory");
+assert(systemInstruction.includes("112"), "System prompt must include national emergency number 112");
+assert(systemInstruction.includes("999"), "System prompt must include landline emergency 999");
+assert(systemInstruction.includes("0800 100 066"), "System prompt must include Ministry of Health toll-free hotline");
+assert(systemInstruction.includes("0800 101 622"), "System prompt must include National Drug Authority toll-free hotline");
+assert(systemInstruction.includes("support@dawalens.ug"), "System prompt must include Dawa-Lens support email");
+
+// Verify Emergency Response incorporates Uganda-specific emergency services
+const { chatWithDawaGPT } = await import('./services/aiService.js');
+const emergencyTestResult = await chatWithDawaGPT({
+  messages: [{ role: 'user', content: 'Help, I took an overdose and need emergency help' }],
+  medicines: [],
+  userProfile: { name: 'Sarah' }
+});
+assert(emergencyTestResult.text.includes("EMERGENCY ALERT (Uganda)"), "Emergency response must specify Uganda regional context");
+assert(emergencyTestResult.text.includes("112"), "Emergency response must include Uganda emergency line 112");
+assert(emergencyTestResult.text.includes("0800 100 066"), "Emergency response must include MoH toll-free helpline");
+console.log("✔ Uganda Contact Support & Emergency Directory verified in both system prompt and emergency handler.");
+
 console.log("\n🎉 ALL UNIT AND INTEGRATION CHECKS PASSED SUCCESSFULLY!");
+

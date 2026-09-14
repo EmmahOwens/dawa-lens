@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789377180.1221888,
-    "ast_hash": "b469fd9d9ead7a98c65c888b4c6252e2",
+    "mtime": 1789378713.0936563,
+    "ast_hash": "84ad07de2246462f08e4ec6a0f7ed8c2",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1789029245.69267,
-    "ast_hash": "41143352483863b78de2a2f923c0b1b4",
+    "mtime": 1789378734.6442442,
+    "ast_hash": "16975eb17af6dd6502778809a141227a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789026075.653787,
-    "ast_hash": "0180b9e1c2ad98a8a76aecf440210a10",
+    "mtime": 1789378683.1928065,
+    "ast_hash": "4457067b4dd38f70f17f5fcac880c638",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -4215,8 +4215,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-dawagpt-unit.js": {
-    "mtime": 1789372808.5753393,
-    "ast_hash": "64db15c0ff73b38906c27a7f1b62d626",
+    "mtime": 1789378789.4076526,
+    "ast_hash": "bdb205b6521e07976765b6b4ebd085c7",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptUgandaSupport.test.ts": {
+    "mtime": 1789378758.3088675,
+    "ast_hash": "4b3d3ad78c8a93dc824f92b54cfd9499",
     "semantic_hash": ""
   }
 }

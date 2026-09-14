@@ -55,6 +55,11 @@ const FAQ_RESPONSE_MAP: Record<string, string> = {
   "eddagala": "Eddagala (medicine) is key to your health. Do you want to check details for one of your medicines, or set up a reminder?",
   "omutwe gunnuma": "Bambi (oh dear), sorry about the headache. Ensure you are hydrated, and check if you have a pain reliever reminder like Panadol (Paracetamol) set up.",
   "olubuto lunnuma": "Bambi, sorry about the stomach ache. Have you taken any medication recently, or eaten? Some medicines should be taken with food (like Matooke or Posho) to prevent stomach irritation.",
+  "contact support": "For support in Uganda: 1) National Emergency & Ambulance: 112 (Mobile Toll-Free) or 999; 2) Ministry of Health (MoH) Uganda: 0800 100 066 / 0800 203 033; 3) National Drug Authority (NDA) Drug Safety: 0800 101 622 / WhatsApp +256 791 415 555; 4) Mulago Hospital Emergency: +256 414 554 008; 5) Butabika Crisis Hotline: 0800 200 600; 6) App Support: support@dawalens.ug.",
+  "support uganda": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: support@dawalens.ug.",
+  "uganda support": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: support@dawalens.ug.",
+  "emergency contact": "Official Uganda Emergency Contacts: Emergency/Ambulance: 112 (Mobile) / 999 (Landline); Police Toll-Free: 0800 199 699; MoH: 0800 100 066; Mulago Emergency: +256 414 554 008; Butabika Crisis: 0800 200 600.",
+  "customer care": "For customer care and support in Uganda, email support@dawalens.ug. For official health helplines: MoH Toll-Free 0800 100 066, NDA Hotline 0800 101 622, or National Emergency 112.",
 };
 
 export const generateDawaGPTResponse = async (
@@ -69,6 +74,51 @@ export const generateDawaGPTResponse = async (
   currentPage: string | null = null
 ): Promise<ChatMessage> => {
   const normalizedQuery = query.toLowerCase().trim();
+
+  // Uganda Contact Support & Emergency Directory Resolution
+  const isAskingForSupport = (
+    normalizedQuery.includes("support") ||
+    normalizedQuery.includes("contact support") ||
+    normalizedQuery.includes("customer care") ||
+    normalizedQuery.includes("customer service") ||
+    normalizedQuery.includes("help desk") ||
+    normalizedQuery.includes("helpdesk") ||
+    normalizedQuery.includes("helpline") ||
+    normalizedQuery.includes("hotline") ||
+    normalizedQuery.includes("emergency contact") ||
+    normalizedQuery.includes("emergency number") ||
+    normalizedQuery.includes("who can i call") ||
+    normalizedQuery.includes("who do i contact") ||
+    normalizedQuery.includes("who to contact") ||
+    normalizedQuery.includes("moh contact") ||
+    normalizedQuery.includes("nda hotline") ||
+    normalizedQuery.includes("nda contact") ||
+    (normalizedQuery.includes("help") && (
+      normalizedQuery.includes("call") ||
+      normalizedQuery.includes("number") ||
+      normalizedQuery.includes("contact") ||
+      normalizedQuery.includes("phone") ||
+      normalizedQuery.includes("uganda")
+    ))
+  );
+
+  if (isAskingForSupport) {
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: "Here is the official **Contact Support Directory for Uganda**:\n\n" +
+        "• **National Medical Emergency & Ambulance**: Call **112** (Toll-Free Mobile on MTN/Airtel) or **999** (Landline)\n" +
+        "• **Ministry of Health (MoH) Uganda**: Toll-Free **0800 100 066** or **0800 203 033** | Email: info@health.go.ug\n" +
+        "• **National Drug Authority (NDA) Uganda**: Toll-Free **0800 101 622** | WhatsApp: **+256 791 415 555** | Head Office: **+256 417 788 100** *(for medicine safety, adverse reactions & reporting fake drugs)*\n" +
+        "• **Mulago National Referral Hospital (Casualty & Emergency)**: **+256 414 554 008** / **+256 414 554 001**\n" +
+        "• **Mental Health & Crisis Hotline (Butabika Hospital)**: Toll-Free **0800 200 600**\n" +
+        "• **Uganda Police Emergency Dispatch**: Toll-Free **0800 199 699** / **0800 199 399**\n" +
+        "• **Dawa-Lens App Support**: Email **support@dawalens.ug** or [manage your emergency contacts in Settings](/settings).\n\n" +
+        "If you are experiencing an acute medical emergency or severe reaction, please call **112** or proceed immediately to the nearest healthcare facility.",
+      source: "MoH",
+      suggestions: ["Call Uganda Emergency (112)", "National Drug Authority Helpline", "Open Settings"]
+    };
+  }
 
   // 1. Direct Page Navigation & Link Intent Resolution
   const isAskingForPageLink = (

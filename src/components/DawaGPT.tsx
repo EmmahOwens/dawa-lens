@@ -24,6 +24,7 @@ const SAMPLE_PROMPTS = [
   "Log my morning dose of Metformin...",
   "Open my Med Vault",
   "Refill my Metformin stock to 30",
+  "Contact support for Uganda",
   "What are the side effects of Amoxicillin?",
   "I'm feeling dizzy after taking my medicine...",
 ];
@@ -611,6 +612,7 @@ export default function DawaGPT() {
       const generic = [
         "Open my Med Vault",
         "What are my reminders?",
+        "Contact support for Uganda",
         "Add a new medicine",
         "Is Matooke safe with my meds?",
       ];

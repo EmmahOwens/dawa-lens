@@ -145,8 +145,8 @@ const detectEmergency = (text) => {
 };
 
 const EMERGENCY_RESPONSE = {
-  text: "🚨 **EMERGENCY ALERT**: I've detected a potentially life-threatening situation in your message. \n\n**PLEASE STOP AND SEEK IMMEDIATE HELP:**\n- **Call Emergency Services (911/999/112)** immediately.\n- Contact your nearest hospital or clinic.\n- If this is an overdose or allergic reaction, inform the medical team exactly what was taken.\n\nI am an AI, not a doctor. Please do not wait for my response.",
-  suggestions: ["Call Emergency", "Nearest Hospital", "I'm okay now"],
+  text: "🚨 **EMERGENCY ALERT (Uganda)**: I've detected a potentially life-threatening situation in your message. \n\n**PLEASE SEEK IMMEDIATE EMERGENCY MEDICAL HELP IN UGANDA:**\n- **National Emergency & Ambulance (Uganda)**: Call **112** (Mobile Toll-Free on MTN/Airtel) or **999** (Landline)\n- **Ministry of Health (MoH) Uganda Toll-Free Helpline**: **0800 100 066** / **0800 203 033**\n- **Mulago National Referral Hospital (Casualty & Emergency)**: **+256 414 554 008** / **+256 414 554 001**\n- **National Drug Authority (NDA) Poison & Drug Safety**: **0800 101 622** (Toll-Free)\n- **Mental Health & Crisis Hotline (Butabika Hospital)**: **0800 200 600** (Toll-Free)\n\nIf this is an overdose or severe allergic reaction, proceed immediately to the nearest hospital or clinic and inform the medical team exactly what was taken.\n\nI am an AI, not a doctor. Please contact emergency services right away.",
+  suggestions: ["Call Uganda Emergency (112)", "National Drug Authority Helpline", "I'm okay now"],
   source: "System Safety",
   action: null
 };
@@ -2393,8 +2393,8 @@ export async function prepareDawaGPTContext({ messages, medicines, userProfile, 
          - Example Links: [Visual Scanner](/scan), [Scan Medicine](/scan).
 
        * '/settings': Settings & Profile
-         - Domain: Account preferences, emergency contacts, notification settings, language, offline data management.
-         - Intent Triggers: "settings", "profile", "account", "preferences", "notifications config".
+         - Domain: Account preferences, emergency contacts, notification settings, language, offline data management, app support.
+         - Intent Triggers: "settings", "profile", "account", "preferences", "notifications config", "support", "emergency contacts", "contact support".
          - Example Links: [Settings](/settings), [Profile Preferences](/settings).
 
        * '/': Dashboard (Home)
@@ -2484,6 +2484,20 @@ export async function prepareDawaGPTContext({ messages, medicines, userProfile, 
          * When adding or updating a medicine, reminder, dose log, or wellness log for a family member or client, ALWAYS include their patient ID in the action payload as 'patientId': "patient_id".
          * When adding a new family member or client (e.g., "Add my daughter Sarah, age 8", "Add client John with hypertension"): Include an ADD_PATIENT action with { name, age?, gender?, relation?, type: 'family' | 'client', conditions?: string[], allergies?: string[], bloodType?: string, notes?: string }.
          * Recommend opening [Family Hub](/family-hub) (or [Family](/family)) whenever discussing managing family members or clients.
+
+    13. UGANDA CONTACT SUPPORT & EMERGENCY DIRECTORY (CRITICAL):
+       - You are operating in the Ugandan healthcare context.
+       - Whenever the user asks for support, contact support, customer care, technical assistance, helpline, emergency numbers, or who to call in Uganda (e.g., "contact support", "support for Uganda", "who can I call for emergency?", "customer care", "helpline in Uganda", "who do I contact"):
+       - You MUST provide the verified, official Uganda Contact Support Directory:
+         * **National Emergency & Ambulance (Uganda)**: Call **112** (Toll-Free Mobile on MTN/Airtel) or **999** (Landline) for immediate emergency response.
+         * **Ministry of Health (MoH) Uganda**: Toll-Free **0800 100 066** or **0800 203 033** | General: **+256 414 340 874** | Email: **info@health.go.ug** (for public health emergencies, inquiries, and outbreaks).
+         * **National Drug Authority (NDA) Uganda**: Toll-Free **0800 101 622** | WhatsApp: **+256 791 415 555** | Head Office: **+256 417 788 100** | Website: **https://www.nda.or.ug** *(for reporting adverse drug reactions, suspect counterfeit medicines, or pharmacy licensing questions)*.
+         * **Mulago National Referral Hospital (Kampala - Casualty & Emergency Desk)**: **+256 414 554 008** / **+256 414 554 001**.
+         * **Mental Health & Crisis Support (Butabika Hospital)**: Toll-Free **0800 200 600**.
+         * **Uganda Police Emergency Dispatch**: Toll-Free **0800 199 699** / **0800 199 399**.
+         * **Dawa-Lens App Support**: Email **support@dawalens.ug** or [manage your emergency contacts in Settings](/settings).
+       - Always present the phone numbers clearly in bold so they are instantly readable.
+       - Provide relevant follow-up suggestions (e.g., ["Call Uganda Emergency (112)", "National Drug Authority Helpline", "Open Settings"]).
 
     CONVERSATION PHASE: ${conversationPhase}
     ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
