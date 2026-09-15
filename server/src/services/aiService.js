@@ -606,17 +606,20 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
       const effectiveMaxTokens = isReasoningModel ? Math.max(maxTokens, 4096) : Math.max(maxTokens, 2048);
       const currentApiKey = getGroqApiKey(currentModel) || initialApiKey;
 
+      // Reasoning models (gpt-oss, qwen) support reasoning_format but do NOT
+      // reliably support response_format=json_object combined with reasoning_format.
+      // Use text mode for reasoning models and parse JSON manually from the response.
       const payload = {
         model: currentModel,
         messages,
         max_tokens: effectiveMaxTokens,
         temperature: temperature
       };
-      if (responseFormat) {
-        payload.response_format = responseFormat;
-      }
-      if (isReasoningModel && responseFormat?.type === 'json_object') {
+      if (isReasoningModel) {
         payload.reasoning_format = 'hidden';
+        // Do NOT set response_format for reasoning models — they return JSON in text
+      } else if (responseFormat) {
+        payload.response_format = responseFormat;
       }
 
       try {
@@ -636,11 +639,13 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
         const errMsg = apiErr.response?.data?.error?.message || apiErr.response?.data || apiErr.message;
         console.warn(`Groq (${currentModel}) API error:`, errMsg);
         const status = apiErr.response?.status;
-        const errDetail = String(errMsg).toLowerCase();
-        if (status === 404 || errDetail.includes('model') || errDetail.includes('not found') || errDetail.includes('decommission')) {
-          continue;
+        // Only hard-fail on auth errors — for any other error (400, 404, 422, 429, 5xx),
+        // try the next candidate model in the list.
+        if (status === 401 || status === 403) {
+          throw apiErr;
         }
-        throw apiErr;
+        // Continue to next model for all other errors
+        continue;
       }
     }
 
@@ -1571,7 +1576,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 2. Try Groq Primary (llama-3.3-70b-versatile) - High capacity 200k TPM
+    // 2. Try Groq Primary (openai/gpt-oss-120b) - 128k context, reasoning model
     if (GROQ_API_KEY) {
       try {
         const modelId = GROQ_MODEL;
@@ -1584,9 +1589,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
             max_tokens: chatMaxTokens,
             temperature: 0.7
           };
-          if (typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'))) {
-            payload.reasoning_format = 'hidden';
-          }
+          // Streaming doesn't use response_format, so reasoning_format is safe here
+          payload.reasoning_format = 'hidden';
           const response = await axios.post(GROQ_API_URL, payload, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             responseType: 'stream', timeout: 12000
@@ -1599,10 +1603,10 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 3. Try Groq Scout (openai/gpt-oss-120b) - High capacity reasoning stream
-    if (GROQ_API_KEY && GROQ_SCOUT_MODEL !== GROQ_MODEL) {
+    // 3. Try Groq Light (openai/gpt-oss-20b) - fast fallback reasoning model
+    if (GROQ_API_KEY) {
       try {
-        const modelId = GROQ_SCOUT_MODEL;
+        const modelId = GROQ_LIGHT_MODEL;
         const apiKey = getGroqApiKey(modelId);
         const fn = async () => {
           const payload = {
@@ -1612,18 +1616,16 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
             max_tokens: chatMaxTokens,
             temperature: 0.7
           };
-          if (typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'))) {
-            payload.reasoning_format = 'hidden';
-          }
+          payload.reasoning_format = 'hidden';
           const response = await axios.post(GROQ_API_URL, payload, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             responseType: 'stream', timeout: 12000
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'groq-scout', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: Groq Scout failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+        console.warn("Stream Fallback: Groq Light failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
@@ -1696,35 +1698,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 8. Try Groq Secondary / Lightweight Model (openai/gpt-oss-20b)
-    if ((GROQ_API_KEY_2 || GROQ_API_KEY) && GROQ_LIGHT_MODEL !== GROQ_MODEL) {
-      try {
-        const modelId = GROQ_LIGHT_MODEL;
-        const apiKey = getGroqApiKey(modelId);
-        const fn = async () => {
-          const payload = {
-            model: modelId,
-            messages: finalMessages,
-            stream: true,
-            max_tokens: chatMaxTokens,
-            temperature: 0.7
-          };
-          if (typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'))) {
-            payload.reasoning_format = 'hidden';
-          }
-          const response = await axios.post(GROQ_API_URL, payload, {
-            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 12000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Groq Light failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 9. Try Groq Qwen (qwen/qwen3.6-27b)
+    // 8. Try Groq Qwen (qwen/qwen3.6-27b)
     if (GROQ_API_KEY) {
       try {
         const modelId = 'qwen/qwen3.6-27b';
