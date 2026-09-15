@@ -320,8 +320,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/middleware/rateLimiter.js": {
-    "mtime": 1788264866.599161,
-    "ast_hash": "3d6f87dd4b30abd26643190ffe5fe221",
+    "mtime": 1789470920.5082474,
+    "ast_hash": "d9d256f0d31a54195c9c6239dec7d1c3",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/middleware/validateMiddleware.js": {
@@ -330,8 +330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/routes/ai.js": {
-    "mtime": 1789117198.497404,
-    "ast_hash": "972b46fdd9ba076941e35ffd5dcefeca",
+    "mtime": 1789471025.181283,
+    "ast_hash": "6671a49a32a204f3cd36b0a0da1adb55",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/routes/doseLogs.js": {
@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789460732.2676253,
-    "ast_hash": "a5ca59eb42abb7a4197b55d0c4120f1e",
+    "mtime": 1789471297.9873745,
+    "ast_hash": "4d8b489e981b95f4f652eb98f4d97e70",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789378683.1928065,
-    "ast_hash": "4457067b4dd38f70f17f5fcac880c638",
+    "mtime": 1789465116.9765077,
+    "ast_hash": "d2074d96571715dccf619656d8ccb72a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -2710,8 +2710,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-audit-remediation.js": {
-    "mtime": 1788264989.7505543,
-    "ast_hash": "01899c75761e07ce7f13e98dba57554d",
+    "mtime": 1789470960.9322612,
+    "ast_hash": "6cee1428fe4632517d5d13fafbc66d02",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/firebase-bundle-CJ3ou2_n.js": {

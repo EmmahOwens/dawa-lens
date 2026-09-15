@@ -157,8 +157,8 @@ test('Finding 7: AI payload schemas reject untyped arbitrary objects and bound s
   assert.strictEqual(oversizedResult.success, false);
 });
 
-// 5. Finding 7: TokenBudgetGuard 64KB Hard Cap
-test('Finding 7: TokenBudgetGuard blocks payloads exceeding 64KB', () => {
+// 5. Finding 7: TokenBudgetGuard 128KB Hard Cap
+test('Finding 7: TokenBudgetGuard blocks payloads exceeding 128KB', () => {
   let statusResult = null;
   let jsonResult = null;
   let nextCalled = false;
@@ -177,9 +177,9 @@ test('Finding 7: TokenBudgetGuard blocks payloads exceeding 64KB', () => {
   tokenBudgetGuard(safeReq, mockRes, () => { nextCalled = true; });
   assert.strictEqual(nextCalled, true);
 
-  // Exceeding 64KB
+  // Exceeding 128KB
   nextCalled = false;
-  const largeBlob = 'X'.repeat(65 * 1024);
+  const largeBlob = 'X'.repeat(129 * 1024);
   const oversizedReq = { body: { payload: largeBlob } };
   tokenBudgetGuard(oversizedReq, mockRes, () => { nextCalled = true; });
   assert.strictEqual(nextCalled, false);

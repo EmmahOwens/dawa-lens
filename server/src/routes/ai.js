@@ -210,8 +210,32 @@ router.post('/chat/stream', protect, tokenBudgetGuard, validate(aiValidation.cha
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Prevent Nginx / reverse-proxy buffering in production
+    if (typeof res.flushHeaders === 'function') {
+      res.flushHeaders();
+    }
 
-    // Pipe the axios stream to the response
+    // Guard against unhandled stream errors crashing the Node.js server
+    stream.on('error', (err) => {
+      console.error('Streaming response error:', err.message);
+      if (!res.headersSent) {
+        return next(err);
+      }
+      try {
+        res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "\n[Connection interrupted. Please try again.]" } }] })}\n\n`);
+        res.write('data: [DONE]\n\n');
+      } catch (_) {}
+      res.end();
+    });
+
+    // Clean up upstream streaming sockets when the client disconnects or navigates away
+    req.on('close', () => {
+      if (typeof stream.destroy === 'function' && !stream.destroyed) {
+        stream.destroy();
+      }
+    });
+
+    // Pipe the stream to the response
     stream.pipe(res);
   } catch (error) {
     next(error);

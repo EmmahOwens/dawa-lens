@@ -35,7 +35,7 @@ const sanitizeGeminiModel = (model) => {
   if (!model || typeof model !== 'string') return 'gemini-2.5-flash';
   const m = model.trim();
   const lower = m.toLowerCase();
-  if (lower.includes('gemini-2.0-flash') || lower.includes('gemini-1.0')) {
+  if (lower.includes('gemini-1.0')) {
     return 'gemini-2.5-flash';
   }
   return m;
@@ -172,7 +172,11 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
       const newline = rawSystemMsg.indexOf('\n');
       const firstParagraphEnd = rawSystemMsg.indexOf('\n\n') !== -1 ? rawSystemMsg.indexOf('\n\n') : (newline !== -1 ? newline : 1500);
       const distilledHead = rawSystemMsg.slice(0, Math.min(firstParagraphEnd + 1, 1500)).trim();
-      nativeSystemInstruction = `${distilledHead}\n\nFollow the complete detailed instructions provided in the first message of this conversation for all 13 mandatory agentic rules, Ugandan regional context, navigation links, action schemas, Med Vault calculations, and Family Hub intelligence.`;
+      const isDawaGpt = rawSystemMsg.includes('DawaGPT') || rawSystemMsg.includes('Dawa-Lens');
+      const guidance = isDawaGpt
+        ? 'Follow the complete detailed instructions provided in the first message of this conversation for all mandatory agentic rules, Ugandan regional context, navigation links, action schemas, Med Vault calculations, and Family Hub intelligence.'
+        : 'Follow the complete detailed operational instructions and format specifications provided in the first message of this conversation strictly.';
+      nativeSystemInstruction = `${distilledHead}\n\n${guidance}`;
       prependedSystemAsUserTurn = {
         role: 'user',
         parts: [{
@@ -234,7 +238,7 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
       };
     }
 
-    const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-1.5-flash']));
+    const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(Boolean)));
     let response = null;
     let lastGeminiErr = null;
 
@@ -739,7 +743,7 @@ export const callAiWithFallback = async (messages, options = {}) => {
     if (forceModel === 'zai' || forceModel === Z_AI_MODEL || forceModel === 'glm-4.7-flash') {
       return await callZaiChat(messages, responseFormat, Z_AI_MODEL, priority, maxTokens, false, temperature);
     }
-    if (forceModel === 'gemini' || forceModel === GEMINI_MODEL || forceModel === 'gemini-2.0-flash') {
+    if (forceModel === 'gemini' || forceModel === GEMINI_MODEL || forceModel === 'gemini-2.5-flash' || forceModel === 'gemini-2.0-flash') {
       return await callGeminiChat(messages, priority, maxTokens, temperature, null, isJson);
     }
   }
@@ -1541,8 +1545,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         read() {
           const metadata = JSON.stringify({ suggestions: EMERGENCY_RESPONSE.suggestions, source: EMERGENCY_RESPONSE.source, action: null });
           const data = JSON.stringify({ choices: [{ delta: { content: EMERGENCY_RESPONSE.text + "\n###METADATA###\n" + metadata } }] });
-          this.push(`data: ${data}\n`);
-          this.push(`data: [DONE]\n`);
+          this.push(`data: ${data}\n\n`);
+          this.push(`data: [DONE]\n\n`);
           this.push(null);
         }
       });
@@ -1580,8 +1584,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           const cleanText = rawText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
           const metadata = JSON.stringify({ suggestions: jsonResp.suggestions || [], source: jsonResp.source || "DawaGPT", action: jsonResp.action || null });
           const data = JSON.stringify({ choices: [{ delta: { content: cleanText + "\n###METADATA###\n" + metadata } }] });
-          this.push(`data: ${data}\n`);
-          this.push(`data: [DONE]\n`);
+          this.push(`data: ${data}\n\n`);
+          this.push(`data: [DONE]\n\n`);
           this.push(null);
         }
       });
@@ -1683,10 +1687,120 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 5. CRITICAL EARLY FALLBACK: Route through application-wide unified callAiWithFallback
-    // This is the EXACT SAME resilient multi-provider cascade that powers ALL other
-    // working AI features use (Adherence Coach, Wellness Insight, Safety checks, etc.)
-    // Previously positioned as #13 dead-last — now #4 so DawaGPT uses the proven-working cascade early.
+    // 5. Try SambaNova Cloud (70B)
+    if (SAMBANOVA_API_KEY) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(SAMBANOVA_API_URL, { model: SAMBANOVA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${SAMBANOVA_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'sambanova-70b', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: SambaNova failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 6. Try NVIDIA NIM
+    if (NVIDIA_API_KEY) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(NVIDIA_API_URL, { model: NVIDIA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: NVIDIA NIM failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 7. Try OpenRouter Free
+    if (OPENROUTER_API_KEY) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(OPENROUTER_API_URL, { model: OPENROUTER_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: {
+              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+              'HTTP-Referer': 'https://dawalens.web.app',
+              'X-Title': 'Dawa-Lens',
+              'Content-Type': 'application/json'
+            },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'openrouter-free', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: OpenRouter Free failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 8. Try Mistral AI
+    if (MISTRAL_API_KEY) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(MISTRAL_API_URL, { model: MISTRAL_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'mistral-small', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: Mistral AI failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 9. Try SiliconFlow
+    if (SILICONFLOW_API_KEY) {
+      try {
+        const modelId = SILICONFLOW_MODEL;
+        const fn = async () => {
+          const response = await axios.post(SILICONFLOW_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${SILICONFLOW_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: SiliconFlow failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 10. Try Z.ai
+    if (Z_AI_API_KEY) {
+      try {
+        const modelId = Z_AI_MODEL;
+        const fn = async () => {
+          const response = await axios.post(Z_AI_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${Z_AI_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: Z.ai GLM-5-Flash failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 11. Try Gemini direct with resilient Markdown/metadata handling (via single-chunk pseudo-stream)
+    try {
+      const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens, 0.7, null, false);
+      return createFakeStream(geminiResp);
+    } catch (err) {
+      console.warn("Stream Fallback: Direct Gemini streaming failed, cascading to unified AI API fallback...", err.response?.data?.error?.message || err.response?.data || err.message);
+    }
+
+    // 12. Final Resilient Fallback: Route through application-wide unified callAiWithFallback
+    // Guarantees DawaGPT follows the exact same resilient multi-provider AI API fallback
+    // as all other working AI features (Adherence Coach, Wellness Insight, Safety checks, etc.)
     try {
       console.log("Stream Fallback: Cascading DawaGPT to unified AI API fallback (callAiWithFallback)...");
       const fallbackResult = await callAiWithFallback(finalMessages, {
@@ -1719,118 +1833,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         });
       }
     } catch (unifiedCascadeErr) {
-      console.warn("Stream Fallback: Unified AI API fallback cascade failed, trying remaining individual providers...", unifiedCascadeErr.response?.data?.error?.message || unifiedCascadeErr.response?.data || unifiedCascadeErr.message);
-    }
-
-    // 6. Try Gemini direct with resilient Markdown/metadata handling
-    try {
-      const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens, 0.7, null, false);
-      return createFakeStream(geminiResp);
-    } catch (err) {
-      console.warn("Stream Fallback: Direct Gemini streaming failed, cascading to remaining individual providers...", err.response?.data?.error?.message || err.response?.data || err.message);
-    }
-
-    // 7. Try SambaNova Cloud (70B)
-    if (SAMBANOVA_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(SAMBANOVA_API_URL, { model: SAMBANOVA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${SAMBANOVA_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'sambanova-70b', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: SambaNova failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 8. Try NVIDIA NIM
-    if (NVIDIA_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(NVIDIA_API_URL, { model: NVIDIA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: NVIDIA NIM failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 9. Try OpenRouter Free
-    if (OPENROUTER_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(OPENROUTER_API_URL, { model: OPENROUTER_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: {
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-              'HTTP-Referer': 'https://dawalens.web.app',
-              'X-Title': 'Dawa-Lens',
-              'Content-Type': 'application/json'
-            },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'openrouter-free', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: OpenRouter Free failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 10. Try Mistral AI
-    if (MISTRAL_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(MISTRAL_API_URL, { model: MISTRAL_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'mistral-small', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Mistral AI failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 11. Try SiliconFlow
-    if (SILICONFLOW_API_KEY) {
-      try {
-        const modelId = SILICONFLOW_MODEL;
-        const fn = async () => {
-          const response = await axios.post(SILICONFLOW_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${SILICONFLOW_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: SiliconFlow failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 12. Try Z.ai
-    if (Z_AI_API_KEY) {
-      try {
-        const modelId = Z_AI_MODEL;
-        const fn = async () => {
-          const response = await axios.post(Z_AI_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${Z_AI_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Z.ai GLM-5-Flash failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
+      console.warn("Stream Fallback: Unified AI API fallback cascade also failed:", unifiedCascadeErr.response?.data?.error?.message || unifiedCascadeErr.response?.data || unifiedCascadeErr.message);
     }
 
     return createFakeStream({ text: "Sorry, I'm having trouble connecting. Please try again in a moment.", suggestions: ["Try again"], source: "System", action: null });
@@ -1838,8 +1841,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     return new Readable({
       read() {
         const data = JSON.stringify({ choices: [{ delta: { content: "Error starting chat stream." } }] });
-        this.push(`data: ${data}\n`);
-        this.push(`data: [DONE]\n`);
+        this.push(`data: ${data}\n\n`);
+        this.push(`data: [DONE]\n\n`);
         this.push(null);
       }
     });

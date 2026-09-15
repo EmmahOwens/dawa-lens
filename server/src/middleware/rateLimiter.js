@@ -125,11 +125,11 @@ export const tokenBudgetGuard = (req, res, next) => {
   const payloadString = JSON.stringify(body);
   const byteLength = Buffer.byteLength(payloadString, 'utf8');
 
-  // Hard payload cap (64 KB) to avoid prompt injection or resource exhaustion
-  if (byteLength > 64 * 1024) {
+  // Hard payload cap (128 KB) to avoid prompt injection or resource exhaustion while supporting up to 24,000 tokens
+  if (byteLength > 128 * 1024) {
     return res.status(413).json({
       status: 'fail',
-      message: 'Payload exceeds maximum permitted size (64KB).'
+      message: 'Payload exceeds maximum permitted size (128KB).'
     });
   }
 
