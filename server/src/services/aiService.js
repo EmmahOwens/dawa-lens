@@ -135,7 +135,8 @@ export const sanitizeJson = (text) => {
 const EMERGENCY_KEYWORDS = [
   'poison', 'suicide', 'kill myself', 'allergic reaction', 'chest pain',
   'difficulty breathing', 'can\'t breathe', 'stroke', 'seizure', 'unconscious',
-  'overdose', 'bleeding heavily', 'anaphylaxis'
+  'overdose', 'overdosed', 'took too many', 'swallowed too many', 'took too much',
+  'bleeding heavily', 'anaphylaxis'
 ];
 
 const detectEmergency = (text) => {
@@ -1378,10 +1379,10 @@ export const isLikelyActionRequest = (text) => {
   const pastDoseLog = /\b(i took|i've taken|i missed|i forgot|i skipped|i just took|i already took)\b/i;
 
   // Wellness / mood / energy / symptom logging phrases
-  const wellnessLog = /\b(feeling|feel|mood|energy|tired|fatigue|dizzy|nausea|headache|pain|sick|symptom|log (how|my|a)|wellness|check[- ]?in|log mood|log energy|log symptom|i am feeling|i feel|i'm feeling|i've been feeling)\b/i;
+  const wellnessLog = /\b(feeling|feel|mood|energy|tired|fatigue|dizzy|nausea|headache|pain|sick|symptom|log (how|my|a)|wellness|check[- ]?in|log mood|log energy|log symptom|i am feeling|i feel|i'm feeling|i've been feeling|omutwe\s+gunnuma|olubuto\s+lunnuma|musujja|hurt(s)?)\b/i;
 
   // Stock / refill phrases
-  const refillPhrase = /\b(refill|restock|top up|topped up|refilled|i have \d+ (pills?|tablets?|capsules?)|set stock|update stock|update quantity|bought|purchased)\b/i;
+  const refillPhrase = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|i have \d+ (pills?|tablets?|capsules?)|set stock|update stock|update quantity|bought|purchased)\b/i;
 
   // Reminder management phrases (stop, disable, enable, change time, move, snooze)
   const reminderManage = /\b(stop|disable|turn off|pause|mute|snooze|enable|turn on|change time|move|reschedule|update).{0,20}(reminder|alarm|notification|dose|schedule)/i;
@@ -1409,12 +1410,12 @@ export const shouldRetrieveMedicalKnowledge = (text) => {
 
   // Exclude typical app commands/action queries unless they explicitly request safety/medical information
   const isSimpleAction = /^(show|list|delete|remove|cancel|stop|add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust)\s/i.test(lower);
-  const asksForMedicalInfo = /(interact|safety|safe|side\s*effect|contraindication|warn|hazard|allergic|allergy|poison|overdose|symptom|pain|sick|hurt|doctor|disease|treat|cure|prevent|work|mechanism)/i.test(lower);
+  const asksForMedicalInfo = /(interact|safety|safe|side\s*effect|contraindication|warn|hazard|allergic|allergy|poison|overdose|symptom|pain|sick|hurt|doctor|disease|treat|cure|prevent|work|mechanism|bleed|ulcer|liver|kidney|heart|reaction)/i.test(lower);
 
   if (isSimpleAction && !asksForMedicalInfo) return false;
 
   // Check for medical keywords or general health topics
-  const medicalKeywords = /(interact|safety|safe|side\s*effect|contraindication|warn|hazard|allergic|allergy|poison|overdose|symptom|pain|sick|hurt|doctor|disease|treat|cure|prevent|dose|dosage|interaction|effect|medicine|medication|drug|pill|tablet)/i;
+  const medicalKeywords = /(interact|safety|safe|side\s*effect|contraindication|warn|hazard|allergic|allergy|poison|overdose|symptom|pain|sick|hurt|doctor|disease|treat|cure|prevent|dose|dosage|interaction|effect|medicine|medication|drug|pill|tablet|bleed|bleeding|ulcer|liver|kidney|heart|reaction|blood|pressure|diabetes|malaria|infection|fever)/i;
   return medicalKeywords.test(lower);
 };
 

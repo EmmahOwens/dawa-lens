@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789471297.9873745,
-    "ast_hash": "4d8b489e981b95f4f652eb98f4d97e70",
+    "mtime": 1789473861.2276378,
+    "ast_hash": "886bc5b6baa961a5d24f275db8202863",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -4222,6 +4222,16 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptUgandaSupport.test.ts": {
     "mtime": 1789378758.3088675,
     "ast_hash": "4b3d3ad78c8a93dc824f92b54cfd9499",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-prompts.js": {
+    "mtime": 1789472716.0049655,
+    "ast_hash": "bd9395af39a21259916cdb7a38128d2f",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-responses-comprehensive.js": {
+    "mtime": 1789473720.166181,
+    "ast_hash": "5fe19906a9eacf8df811e2cfb8d9c131",
     "semantic_hash": ""
   }
 }
