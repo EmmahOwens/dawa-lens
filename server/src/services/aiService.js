@@ -1545,6 +1545,9 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     });
 
     const chatMaxTokens = isComplex ? 8192 : 4096;
+    // For rate-limit estimation, use only the last user message (not the full context
+    // including the DawaGPT system prompt) to avoid false TPM budget exhaustion.
+    const lastUserMsgForRl = [{ role: 'user', content: lastUserMsg || 'hi' }];
 
     function createFakeStream(jsonResp) {
       return new Readable({
@@ -1570,7 +1573,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'cerebras-120b', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'cerebras-120b', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: Cerebras failed.", err.message);
       }
@@ -1597,7 +1600,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'groq-70b', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: Groq Primary failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
@@ -1623,7 +1626,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'groq-8b', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'groq-8b', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: Groq Light failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
@@ -1639,7 +1642,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'sambanova-70b', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'sambanova-70b', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: SambaNova failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
@@ -1655,7 +1658,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: NVIDIA NIM failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
@@ -1676,7 +1679,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'openrouter-free', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'openrouter-free', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: OpenRouter Free failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
@@ -1692,7 +1695,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'mistral-small', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'mistral-small', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: Mistral AI failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
@@ -1718,7 +1721,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'groq-70b', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'groq-70b', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: Groq Qwen failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
@@ -1735,7 +1738,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: SiliconFlow failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
@@ -1752,7 +1755,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', finalMessages, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: Z.ai GLM-5-Flash failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
