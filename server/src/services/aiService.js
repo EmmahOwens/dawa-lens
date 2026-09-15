@@ -160,6 +160,28 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
     throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
   }
 
+  const rawSystemMsg = customSystemPrompt || finalMessages.find(m => m.role === 'system')?.content;
+  const GEMINI_NATIVE_SYSTEM_INSTRUCTION_CHAR_LIMIT = 16000;
+  let nativeSystemInstruction = null;
+  let prependedSystemAsUserTurn = null;
+
+  if (rawSystemMsg && typeof rawSystemMsg === 'string' && rawSystemMsg.trim().length > 0) {
+    if (rawSystemMsg.length <= GEMINI_NATIVE_SYSTEM_INSTRUCTION_CHAR_LIMIT) {
+      nativeSystemInstruction = rawSystemMsg;
+    } else {
+      const newline = rawSystemMsg.indexOf('\n');
+      const firstParagraphEnd = rawSystemMsg.indexOf('\n\n') !== -1 ? rawSystemMsg.indexOf('\n\n') : (newline !== -1 ? newline : 1500);
+      const distilledHead = rawSystemMsg.slice(0, Math.min(firstParagraphEnd + 1, 1500)).trim();
+      nativeSystemInstruction = `${distilledHead}\n\nFollow the complete detailed instructions provided in the first message of this conversation for all 13 mandatory agentic rules, Ugandan regional context, navigation links, action schemas, Med Vault calculations, and Family Hub intelligence.`;
+      prependedSystemAsUserTurn = {
+        role: 'user',
+        parts: [{
+          text: `=== MANDATORY PERMANENT SYSTEM INSTRUCTIONS FOR THIS ENTIRE CONVERSATION - READ, INTERNALIZE, AND OBEY EVERY RULE FOR EVERY SUBSEQUENT TURN ===\n\n${rawSystemMsg}\n\n=== END OF SYSTEM INSTRUCTIONS - Proceed with the conversation below, strictly following every rule above ===`
+        }]
+      };
+    }
+  }
+
   // Transform OpenAI/Groq messages format to Gemini format
   const rawContents = finalMessages
     .filter(m => m.role !== 'system')
@@ -167,6 +189,13 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
       role: m.role === 'user' ? 'user' : 'model',
       parts: [{ text: (typeof m.content === 'string' && m.content.trim().length > 0) ? m.content : ' ' }]
     }));
+
+  // If system instruction was too large for the native field, inject the FULL copy
+  // as the very FIRST user-role chat context turn (bypasses ~16k systemInstruction cap;
+  // normal chat context supports 1M+ tokens for Gemini 2.5 Flash).
+  if (prependedSystemAsUserTurn) {
+    rawContents.unshift(prependedSystemAsUserTurn);
+  }
 
   // Merge consecutive turns with the same role for Gemini API compliance
   const contents = [];
@@ -185,8 +214,6 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
     contents.push({ role: 'user', parts: [{ text: 'Please continue.' }] });
   }
 
-  const systemMsg = customSystemPrompt || finalMessages.find(m => m.role === 'system')?.content;
-
   const fn = async () => {
     const generationConfig = {
       maxOutputTokens: Math.max(maxTokens, 4096),
@@ -201,9 +228,9 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
       generationConfig
     };
 
-    if (systemMsg) {
+    if (nativeSystemInstruction) {
       payload.systemInstruction = {
-        parts: [{ text: systemMsg }]
+        parts: [{ text: nativeSystemInstruction }]
       };
     }
 
