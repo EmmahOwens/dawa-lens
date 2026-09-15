@@ -570,7 +570,7 @@ export const chatWithDawaGPT = async (
 ): Promise<ChatMessage> => {
   try {
     const response = await aiApi.chat({
-      messages,
+      messages: messages.slice(-20),
       medicines,
       userProfile,
       doseLogs: doseLogs.slice(0, 20),
@@ -632,7 +632,7 @@ export const chatWithDawaGPTStream = async (
 ): Promise<ChatMessage> => {
   try {
     const stream = await aiApi.chatStream({
-      messages,
+      messages: messages.slice(-20),
       medicines,
       userProfile,
       doseLogs: doseLogs.slice(0, 20),

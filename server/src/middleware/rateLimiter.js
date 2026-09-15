@@ -142,7 +142,7 @@ export const tokenBudgetGuard = (req, res, next) => {
     JSON.stringify(body.patients || []).length / 3.7 +
     JSON.stringify(body.reminders || []).length / 3.7;
 
-  if (roughEstimate > 8000) {
+  if (roughEstimate > 24000) {
     return res.status(429).json({
       status: 'fail',
       message: 'Request context is too large. Please trim history or simplify query.'

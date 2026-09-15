@@ -1630,76 +1630,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 4. Try SambaNova Cloud (70B)
-    if (SAMBANOVA_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(SAMBANOVA_API_URL, { model: SAMBANOVA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${SAMBANOVA_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'sambanova-70b', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: SambaNova failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 5. Try NVIDIA NIM
-    if (NVIDIA_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(NVIDIA_API_URL, { model: NVIDIA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: NVIDIA NIM failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 6. Try OpenRouter Free
-    if (OPENROUTER_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(OPENROUTER_API_URL, { model: OPENROUTER_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: {
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-              'HTTP-Referer': 'https://dawalens.web.app',
-              'X-Title': 'Dawa-Lens',
-              'Content-Type': 'application/json'
-            },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'openrouter-free', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: OpenRouter Free failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 7. Try Mistral AI
-    if (MISTRAL_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(MISTRAL_API_URL, { model: MISTRAL_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'mistral-small', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Mistral AI failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 8. Try Groq Qwen (qwen/qwen3.6-27b) as last Groq fallback
+    // 4. Try Groq Qwen (qwen/qwen3.6-27b) as last Groq streaming fallback
     if (GROQ_API_KEY) {
       try {
         const modelId = 'qwen/qwen3.6-27b';
@@ -1725,51 +1656,10 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 10. Try SiliconFlow
-    if (SILICONFLOW_API_KEY) {
-      try {
-        const modelId = SILICONFLOW_MODEL;
-        const fn = async () => {
-          const response = await axios.post(SILICONFLOW_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${SILICONFLOW_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: SiliconFlow failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 11. Try Z.ai
-    if (Z_AI_API_KEY) {
-      try {
-        const modelId = Z_AI_MODEL;
-        const fn = async () => {
-          const response = await axios.post(Z_AI_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${Z_AI_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Z.ai GLM-5-Flash failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 12. Try Gemini with resilient Markdown/metadata handling
-    try {
-      const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens, 0.7, null, false);
-      return createFakeStream(geminiResp);
-    } catch (err) {
-      console.warn("Stream Fallback: Direct Gemini streaming failed, cascading to unified AI API fallback...", err.response?.data?.error?.message || err.response?.data || err.message);
-    }
-
-    // 13. Ultimate Fallback: Route through application-wide unified callAiWithFallback
-    // Guarantees DawaGPT follows the exact same resilient multi-provider AI API fallback
-    // as all other AI features (Adherence Coach, Wellness Insight, Safety checks, etc.)
+    // 5. CRITICAL EARLY FALLBACK: Route through application-wide unified callAiWithFallback
+    // This is the EXACT SAME resilient multi-provider cascade that powers ALL other
+    // working AI features use (Adherence Coach, Wellness Insight, Safety checks, etc.)
+    // Previously positioned as #13 dead-last — now #4 so DawaGPT uses the proven-working cascade early.
     try {
       console.log("Stream Fallback: Cascading DawaGPT to unified AI API fallback (callAiWithFallback)...");
       const fallbackResult = await callAiWithFallback(finalMessages, {
@@ -1801,8 +1691,119 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           action
         });
       }
-    } catch (finalCascadeErr) {
-      console.error("Stream Fallback: Unified AI API fallback cascade also failed:", finalCascadeErr.response?.data?.error?.message || finalCascadeErr.response?.data || finalCascadeErr.message);
+    } catch (unifiedCascadeErr) {
+      console.warn("Stream Fallback: Unified AI API fallback cascade failed, trying remaining individual providers...", unifiedCascadeErr.response?.data?.error?.message || unifiedCascadeErr.response?.data || unifiedCascadeErr.message);
+    }
+
+    // 6. Try Gemini direct with resilient Markdown/metadata handling
+    try {
+      const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens, 0.7, null, false);
+      return createFakeStream(geminiResp);
+    } catch (err) {
+      console.warn("Stream Fallback: Direct Gemini streaming failed, cascading to remaining individual providers...", err.response?.data?.error?.message || err.response?.data || err.message);
+    }
+
+    // 7. Try SambaNova Cloud (70B)
+    if (SAMBANOVA_API_KEY) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(SAMBANOVA_API_URL, { model: SAMBANOVA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${SAMBANOVA_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'sambanova-70b', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: SambaNova failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 8. Try NVIDIA NIM
+    if (NVIDIA_API_KEY) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(NVIDIA_API_URL, { model: NVIDIA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: NVIDIA NIM failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 9. Try OpenRouter Free
+    if (OPENROUTER_API_KEY) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(OPENROUTER_API_URL, { model: OPENROUTER_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: {
+              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+              'HTTP-Referer': 'https://dawalens.web.app',
+              'X-Title': 'Dawa-Lens',
+              'Content-Type': 'application/json'
+            },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'openrouter-free', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: OpenRouter Free failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 10. Try Mistral AI
+    if (MISTRAL_API_KEY) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(MISTRAL_API_URL, { model: MISTRAL_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'mistral-small', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: Mistral AI failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 11. Try SiliconFlow
+    if (SILICONFLOW_API_KEY) {
+      try {
+        const modelId = SILICONFLOW_MODEL;
+        const fn = async () => {
+          const response = await axios.post(SILICONFLOW_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${SILICONFLOW_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: SiliconFlow failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+
+    // 12. Try Z.ai
+    if (Z_AI_API_KEY) {
+      try {
+        const modelId = Z_AI_MODEL;
+        const fn = async () => {
+          const response = await axios.post(Z_AI_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+            headers: { 'Authorization': `Bearer ${Z_AI_API_KEY}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 10000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', lastUserMsgForRl, priority, 3, true);
+      } catch (err) {
+        console.warn("Stream Fallback: Z.ai GLM-5-Flash failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      }
     }
 
     return createFakeStream({ text: "Sorry, I'm having trouble connecting. Please try again in a moment.", suggestions: ["Try again"], source: "System", action: null });
