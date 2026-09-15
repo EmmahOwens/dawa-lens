@@ -62,6 +62,162 @@ const FAQ_RESPONSE_MAP: Record<string, string> = {
   "customer care": "For customer care and support in Uganda, email support@dawalens.ug. For official health helplines: MoH Toll-Free 0800 100 066, NDA Hotline 0800 101 622, or National Emergency 112.",
 };
 
+function formatTimeDisplay(timeStr?: string): string {
+  if (!timeStr) return "8:00 AM";
+  const [hStr, mStr] = timeStr.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr ? mStr.padStart(2, '0') : "00";
+  const ampm = h >= 12 ? "PM" : "AM";
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${ampm}`;
+}
+
+export const extractDeterministicAction = (
+  text: string,
+  medicines: Medicine[] = [],
+  reminders: Reminder[] = []
+): AIAction | null => {
+  if (!text) return null;
+  const lower = text.toLowerCase().trim();
+
+  // 1. ADD_REMINDER
+  const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(lower);
+  if (isReminderIntent) {
+    let time = "08:00";
+    const timeMatch = lower.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+      const meridiem = timeMatch[3]?.toLowerCase();
+
+      if (meridiem === 'pm' && hours < 12) hours += 12;
+      if (meridiem === 'am' && hours === 12) hours = 0;
+
+      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+        time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      }
+    }
+
+    const matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
+    let medName = matchedMed ? matchedMed.name : null;
+
+    if (!medName) {
+      const medMatch = lower.match(/(?:take|reminder\s+for|for)\s+([a-z0-9\-]+)/i);
+      if (medMatch && !['a', 'my', 'the', 'some', 'me', 'daily'].includes(medMatch[1].toLowerCase())) {
+        medName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
+      } else {
+        medName = medicines[0]?.name || "Medication";
+      }
+    }
+
+    const doseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?))\b/i);
+    const dose = doseMatch ? doseMatch[1] : (matchedMed?.dosagePerDose ? `${matchedMed.dosagePerDose} ${matchedMed.unit || 'tablets'}` : "1 tablet");
+
+    let repeatSchedule = "daily";
+    if (lower.includes("weekly")) repeatSchedule = "weekly";
+    else if (lower.includes("once")) repeatSchedule = "once";
+
+    return {
+      type: "ADD_REMINDER",
+      payload: {
+        medicineName: medName,
+        medicineId: matchedMed?.id || null,
+        dose,
+        time,
+        repeatSchedule
+      },
+      confirmMessage: `Reminder set for ${medName} (${dose}) at ${formatTimeDisplay(time)} ${repeatSchedule}.`
+    };
+  }
+
+  // 2. LOG_DOSE
+  const isDoseLogIntent = /\b(i took|i've taken|i just took|i already took|log (that )?i took|record (that )?i took|mark (my )?.* as taken|i missed|i skipped)\b/i.test(lower);
+  if (isDoseLogIntent) {
+    const isMissed = /\b(missed|skipped|forgot)\b/i.test(lower);
+    const status = isMissed ? "missed" : "taken";
+
+    let matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
+    let medName = matchedMed ? matchedMed.name : null;
+
+    if (!medName) {
+      const medMatch = lower.match(/(?:took|taken|missed|skipped)\s+(?:my\s+)?([a-z0-9\-]+)/i);
+      if (medMatch && !['my', 'the', 'a', 'dose', 'medicine', 'pills'].includes(medMatch[1].toLowerCase())) {
+        medName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
+      } else {
+        medName = medicines[0]?.name || "Medication";
+      }
+    }
+
+    return {
+      type: "LOG_DOSE",
+      payload: {
+        medicineName: medName,
+        medicineId: matchedMed?.id || null,
+        status,
+        timestamp: new Date().toISOString()
+      },
+      confirmMessage: `Logged ${medName} as ${status}.`
+    };
+  }
+
+  // 3. UPDATE_MEDICINE (Med Vault Refill)
+  const isRefillIntent = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|update stock|set stock)\b/i.test(lower);
+  if (isRefillIntent) {
+    const qtyMatch = lower.match(/\b(?:to|with|have)?\s*(\d+)\s*(?:pills?|tablets?|capsules?|units?)?\b/i);
+    const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : null;
+
+    let matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
+    if (!matchedMed && medicines.length === 1) matchedMed = medicines[0];
+
+    if (matchedMed && qty !== null) {
+      return {
+        type: "UPDATE_MEDICINE",
+        payload: {
+          id: matchedMed.id,
+          name: matchedMed.name,
+          currentQuantity: qty
+        },
+        confirmMessage: `Updated ${matchedMed.name} stock to ${qty}.`
+      };
+    }
+  }
+
+  // 4. LOG_WELLNESS
+  const isWellnessIntent = /\b(log (my )?mood|log (my )?symptoms?|feeling|i feel|i'm feeling|i have a headache|headache|stomach ache|dizzy|nausea|fatigue|fever)\b/i.test(lower);
+  if (isWellnessIntent) {
+    const symptoms: string[] = [];
+    if (lower.includes("headache") || lower.includes("omutwe")) symptoms.push("headache");
+    if (lower.includes("stomach") || lower.includes("olubuto")) symptoms.push("stomach ache");
+    if (lower.includes("fever") || lower.includes("musujja")) symptoms.push("fever");
+    if (lower.includes("dizzy") || lower.includes("dizziness")) symptoms.push("dizziness");
+    if (lower.includes("nausea") || lower.includes("vomiting")) symptoms.push("nausea");
+    if (lower.includes("tired") || lower.includes("fatigue")) symptoms.push("fatigue");
+    if (lower.includes("cough")) symptoms.push("cough");
+
+    let mood = "okay";
+    if (lower.includes("great") || lower.includes("good") || lower.includes("happy")) mood = "great";
+    else if (lower.includes("tired") || lower.includes("exhausted")) mood = "tired";
+    else if (lower.includes("sad") || lower.includes("down") || lower.includes("bad")) mood = "bad";
+    else if (lower.includes("stressed") || lower.includes("anxious")) mood = "stressed";
+
+    return {
+      type: "LOG_WELLNESS",
+      payload: {
+        type: "symptom",
+        data: {
+          mood,
+          symptoms,
+          notes: text
+        }
+      },
+      confirmMessage: `Recorded wellness check-in (mood: ${mood}, symptoms: ${symptoms.join(', ') || 'none'}).`
+    };
+  }
+
+  return null;
+};
+
 export const generateDawaGPTResponse = async (
   query: string,
   activeMedicine: Medicine | null,
@@ -74,6 +230,63 @@ export const generateDawaGPTResponse = async (
   currentPage: string | null = null
 ): Promise<ChatMessage> => {
   const normalizedQuery = query.toLowerCase().trim();
+
+  // 1. Action Dispatching (Adding reminders, logging doses, refilling stock, wellness tracking)
+  const action = extractDeterministicAction(query, allMedicines, reminders);
+  if (action) {
+    if (action.type === "ADD_REMINDER") {
+      const payload = action.payload as any;
+      const displayTime = formatTimeDisplay(payload?.time);
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: `I've set up a reminder for you to take **${payload?.medicineName}** (${payload?.dose}) ${payload?.repeatSchedule} at **${displayTime}**.\n\nYou can [view or manage your schedule in Medication Reminders](/reminders).`,
+        suggestions: ["View my reminders", "Check my medications", "How is my pill stock?"],
+        source: "System",
+        action
+      };
+    }
+    if (action.type === "LOG_DOSE") {
+      const payload = action.payload as any;
+      const statusVerb = payload?.status === 'taken' ? 'took' : 'missed';
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: `I've logged that you **${statusVerb}** your dose of **${payload?.medicineName}**.\n\nYou can [review your adherence streak in Dose History](/history).`,
+        suggestions: ["View dose history", "Check reminders", "How is my pill stock?"],
+        source: "System",
+        action
+      };
+    }
+    if (action.type === "UPDATE_MEDICINE") {
+      const payload = action.payload as any;
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: `I've updated your Med Vault: **${payload?.name}** stock is now set to **${payload?.currentQuantity} tablets**.\n\nYou can [view and track your pill supply in Med Vault](/medvault).`,
+        suggestions: ["Open Med Vault", "Check reminders", "View medications"],
+        source: "System",
+        action
+      };
+    }
+    if (action.type === "LOG_WELLNESS") {
+      const payload = action.payload as any;
+      const symStr = payload?.data?.symptoms?.join(', ') || 'general check-in';
+      const activeGender = (selectedPatientId && patients.length > 0
+        ? patients.find(p => p.id === selectedPatientId)?.gender
+        : undefined) || userProfile?.gender;
+      const honorific = resolveHonorific(activeGender);
+      const greeting = honorific ? ` ${honorific}` : "";
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: `I've recorded this in your Wellness Hub (Mood: **${payload?.data?.mood}**, Symptoms: **${symStr}**). Bambi${greeting}, please rest, stay well-hydrated, and consult a healthcare professional if symptoms persist.\n\nYou can [review your wellness logs in Wellness Hub](/wellness).`,
+        suggestions: ["Open Wellness Hub", "Check medications", "View reminders"],
+        source: "System",
+        action
+      };
+    }
+  }
 
   // Uganda Contact Support & Emergency Directory Resolution
   const isAskingForSupport = (
@@ -133,12 +346,86 @@ export const generateDawaGPTResponse = async (
     normalizedQuery.includes("take me to")
   );
 
+  // DawaGPT Persona & Capabilities ("who are you", "about yourself", etc.)
+  if (
+    normalizedQuery.includes("about yourself") ||
+    normalizedQuery.includes("who are you") ||
+    normalizedQuery.includes("what are you") ||
+    normalizedQuery.includes("what can you do") ||
+    normalizedQuery.includes("tell me about you") ||
+    normalizedQuery.includes("introduce yourself")
+  ) {
+    const activeGender = (selectedPatientId && patients.length > 0
+      ? patients.find(p => p.id === selectedPatientId)?.gender
+      : undefined) || userProfile?.gender;
+    const honorific = resolveHonorific(activeGender);
+    const greeting = honorific ? ` ${honorific}` : "";
+
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: `Oli otya${greeting}! I'm **DawaGPT**, your dedicated Ugandan AI health and medication companion built for DawaLens.\n\n` +
+        `Here is how I can support you:\n` +
+        `• 💊 **Medication Safety & Dosage**: Provide clear dosage explanations, side effect alerts, and National Drug Authority (NDA) Uganda standards.\n` +
+        `• ⚠️ **Drug & Food Interactions**: Screen your prescriptions against local foods (like *Matooke*, *Posho*, *G-nut sauce*) and alcohol (*Waragi*).\n` +
+        `• ⏰ **Smart Reminders**: Keep your schedule on track with alarms and dose alerts in [Medication Reminders](/reminders).\n` +
+        `• 📦 **Med Vault & Refill Tracking**: Monitor your exact pill count and calculate remaining days of supply in [Med Vault](/medvault).\n` +
+        `• 🩺 **Emergency Protocols**: Instantly surface Uganda emergency hotlines (999 / 112 / 0800-100-066) when safety risks are detected.\n\n` +
+        `What medication or health question can I help you with today?`,
+      source: "System",
+      suggestions: ["Check my medications", "How is my pill stock?", "Check drug interactions"]
+    };
+  }
+
   // Interactions & Drug-Food Safety Guard
   if (
-    normalizedQuery.includes("interaction") ||
+    normalizedQuery.includes("interact") ||
     normalizedQuery.includes("safety guard") ||
     (isAskingForPageLink && (normalizedQuery.includes("safety") || normalizedQuery.includes("food check") || normalizedQuery.includes("compatibility")))
   ) {
+    if (normalizedQuery.includes("metronidazole") || normalizedQuery.includes("flagyl")) {
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: "Yes, **Flagyl (Metronidazole)** has critical interactions you must watch out for:\n\n" +
+          "1. ⚠️ **Alcohol & Local Brews (Waragi, Beer, Kasese, Wine)** — **CRITICAL**: Metronidazole blocks alcohol breakdown, causing a severe **disulfiram-like reaction** with violent vomiting, rapid heartbeat (tachycardia), facial flushing, headache, and severe stomach cramps. **NEVER drink alcohol** while taking Metronidazole and for at least **48 hours** after finishing your course.\n" +
+          "2. ⚠️ **Blood Thinners (Warfarin)**: Metronidazole significantly increases Warfarin's anticoagulant effect, raising your risk of heavy bleeding.\n" +
+          "3. ⚠️ **Lithium**: Can cause toxic buildup of lithium in the body.\n" +
+          "4. ℹ️ **Food**: Taking Metronidazole with food or milk (such as *Matooke* or *Posho*) helps reduce stomach upset and metallic taste.\n\n" +
+          "You can [check your drug & food interactions](/interactions) anytime to verify how Metronidazole pairs with your active cabinet.",
+        source: "MoH",
+        suggestions: ["Metronidazole with alcohol", "Check my interactions", "View medicine cabinet"]
+      };
+    }
+
+    if (normalizedQuery.includes("coartem") || normalizedQuery.includes("artemether") || normalizedQuery.includes("lumefantrine")) {
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: "Here is crucial safety and interaction guidance for **Coartem (Artemether / Lumefantrine)**:\n\n" +
+          "1. 🍲 **Fatty Food Requirement**: Coartem **must** be taken with or immediately after food containing fat (e.g. *G-nut sauce*, milk, eggs, or avocado) to ensure proper absorption against malaria parasites.\n" +
+          "2. ⚠️ **Grapefruit Juice**: Avoid large amounts as it can increase drug blood levels.\n" +
+          "3. ⚠️ **Heart Medications / QT-prolonging drugs**: Avoid combining with medications that affect heart rhythm.\n\n" +
+          "You can [check your drug & food interactions](/interactions) to ensure your full malaria treatment is safe.",
+        source: "MoH",
+        suggestions: ["Best foods for Coartem", "Check drug interactions", "View reminders"]
+      };
+    }
+
+    if (normalizedQuery.includes("paracetamol") || normalizedQuery.includes("panadol")) {
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: "Here are important safety and interaction facts for **Panadol (Paracetamol)**:\n\n" +
+          "1. ⚠️ **Alcohol (Waragi, Beer)**: Regular or heavy alcohol use with Paracetamol increases the risk of acute liver toxicity.\n" +
+          "2. ⚠️ **Duplicate Paracetamol Products**: Many cold & flu remedies (e.g. Flucold, ColdCap) contain paracetamol. Avoid double-dosing. Never exceed **4,000mg (4g)** in 24 hours.\n" +
+          "3. ⚠️ **Blood Thinners (Warfarin)**: High daily paracetamol doses over several days can increase bleeding risks.\n\n" +
+          "You can [check your drug & food interactions](/interactions) to check all your medicines.",
+        source: "MoH",
+        suggestions: ["Safe daily Paracetamol dose", "Check drug interactions", "View medications"]
+      };
+    }
+
     return {
       id: Date.now().toString(),
       role: "assistant",
@@ -600,6 +887,26 @@ export const chatWithDawaGPT = async (
     };
   } catch (err: unknown) {
     console.error("DawaGPT Chat Error:", err);
+    try {
+      const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || "";
+      const localResponse = await generateDawaGPTResponse(
+        lastUserMsg,
+        null,
+        userProfile,
+        medicines,
+        doseLogs,
+        reminders,
+        patients,
+        selectedPatientId,
+        currentPage
+      );
+      if (localResponse && localResponse.text) {
+        return localResponse;
+      }
+    } catch (fallbackErr) {
+      console.error("[DawaGPT] Local fallback failed:", fallbackErr);
+    }
+
     const rawMsg = err instanceof Error ? err.message : "";
     const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
     const errorMessage = isTechnicalError
@@ -738,6 +1045,31 @@ export const chatWithDawaGPTStream = async (
       }
     }
 
+    // If the stream completed with a connection failure or empty text, activate local clinical fallback
+    if (!fullText || fullText.includes("trouble connecting") || fullText.includes("trouble processing that request") || fullText.includes("Error starting chat stream")) {
+      console.warn("[DawaGPT] Streaming delivered connection error, activating local clinical fallback...");
+      try {
+        const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || "";
+        const localResponse = await generateDawaGPTResponse(
+          lastUserMsg,
+          null,
+          userProfile,
+          medicines,
+          doseLogs,
+          reminders,
+          patients,
+          selectedPatientId,
+          currentPage
+        );
+        if (localResponse && localResponse.text) {
+          onChunk(localResponse.text);
+          return localResponse;
+        }
+      } catch (fallbackErr) {
+        console.error("[DawaGPT] Local clinical fallback error:", fallbackErr);
+      }
+    }
+
     return {
       id: Date.now().toString(),
       role: "assistant",
@@ -748,6 +1080,28 @@ export const chatWithDawaGPTStream = async (
     };
   } catch (err: unknown) {
     console.error("DawaGPT Streaming Error:", err);
+    try {
+      console.warn("[DawaGPT] Stream connection failed, activating local clinical fallback...");
+      const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || "";
+      const localResponse = await generateDawaGPTResponse(
+        lastUserMsg,
+        null,
+        userProfile,
+        medicines,
+        doseLogs,
+        reminders,
+        patients,
+        selectedPatientId,
+        currentPage
+      );
+      if (localResponse && localResponse.text) {
+        onChunk(localResponse.text);
+        return localResponse;
+      }
+    } catch (fallbackErr) {
+      console.error("[DawaGPT] Local clinical fallback failed:", fallbackErr);
+    }
+
     const rawMsg = err instanceof Error ? err.message : "";
     const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
     const errorMessage = isTechnicalError

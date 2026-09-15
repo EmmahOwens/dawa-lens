@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789473861.2276378,
-    "ast_hash": "886bc5b6baa961a5d24f275db8202863",
+    "mtime": 1789478219.9376912,
+    "ast_hash": "4f36c0b1b836d2c2946761f03fc8d747",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789465116.9765077,
-    "ast_hash": "d2074d96571715dccf619656d8ccb72a",
+    "mtime": 1789478344.8797576,
+    "ast_hash": "d54d43d1bd751671406c88d009027bef",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -4232,6 +4232,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-responses-comprehensive.js": {
     "mtime": 1789473720.166181,
     "ast_hash": "5fe19906a9eacf8df811e2cfb8d9c131",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-terminal-demo.js": {
+    "mtime": 1789474298.3859763,
+    "ast_hash": "3ab539c7e02988c0632607589b8c89dc",
     "semantic_hash": ""
   }
 }

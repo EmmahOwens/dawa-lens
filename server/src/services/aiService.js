@@ -1451,12 +1451,17 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
       });
     } catch (jsonErr) {
       console.warn("DawaGPT JSON mode failed, cascading to text mode in AI API fallback:", jsonErr.message);
-      result = await callAiWithFallback(finalMessages, {
-        isJson: false,
-        priority,
-        maxTokens: chatMaxTokens,
-        isComplex
-      });
+      try {
+        result = await callAiWithFallback(finalMessages, {
+          isJson: false,
+          priority,
+          maxTokens: chatMaxTokens,
+          isComplex
+        });
+      } catch (textErr) {
+        console.warn("All AI providers failed in chatWithDawaGPT, activating local clinical fallback:", textErr.message);
+        return generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile);
+      }
     }
 
     // Action execution is handled client-side by dispatchAIAction (useAIActions.tsx).
@@ -1531,6 +1536,383 @@ async function executeAiAction(action, userId, userMedicines = [], selectedPatie
     case 'ADD_PATIENT': return await patientService.createPatient(data);
     default: throw new Error(`Unknown action type: ${type}`);
   }
+}
+function formatTimeDisplay(timeStr) {
+  if (!timeStr) return "8:00 AM";
+  const [hStr, mStr] = timeStr.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr ? mStr.padStart(2, '0') : "00";
+  const ampm = h >= 12 ? "PM" : "AM";
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  return `${h}:${m} ${ampm}`;
+}
+
+export const extractDeterministicAction = (text, medicines = [], reminders = []) => {
+  if (!text) return null;
+  const lower = text.toLowerCase().trim();
+
+  // 1. ADD_REMINDER
+  const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(lower);
+  if (isReminderIntent) {
+    let time = "08:00";
+    const timeMatch = lower.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+      const meridiem = timeMatch[3]?.toLowerCase();
+
+      if (meridiem === 'pm' && hours < 12) hours += 12;
+      if (meridiem === 'am' && hours === 12) hours = 0;
+
+      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+        time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      }
+    }
+
+    let matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
+    let medName = matchedMed ? matchedMed.name : null;
+
+    if (!medName) {
+      const medMatch = lower.match(/(?:take|reminder\s+for|for)\s+([a-z0-9\-]+)/i);
+      if (medMatch && !['a', 'my', 'the', 'some', 'me', 'daily'].includes(medMatch[1].toLowerCase())) {
+        medName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
+      } else {
+        medName = medicines[0]?.name || "Medication";
+      }
+    }
+
+    const doseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?))\b/i);
+    const dose = doseMatch ? doseMatch[1] : (matchedMed?.dosagePerDose ? `${matchedMed.dosagePerDose} ${matchedMed.unit || 'tablets'}` : "1 tablet");
+
+    let repeatSchedule = "daily";
+    if (lower.includes("weekly")) repeatSchedule = "weekly";
+    else if (lower.includes("once")) repeatSchedule = "once";
+
+    return {
+      type: "ADD_REMINDER",
+      payload: {
+        medicineName: medName,
+        medicineId: matchedMed?.id || null,
+        dose,
+        time,
+        repeatSchedule
+      },
+      confirmMessage: `Reminder set for ${medName} (${dose}) at ${formatTimeDisplay(time)} ${repeatSchedule}.`
+    };
+  }
+
+  // 2. LOG_DOSE
+  const isDoseLogIntent = /\b(i took|i've taken|i just took|i already took|log (that )?i took|record (that )?i took|mark (my )?.* as taken|i missed|i skipped)\b/i.test(lower);
+  if (isDoseLogIntent) {
+    const isMissed = /\b(missed|skipped|forgot)\b/i.test(lower);
+    const status = isMissed ? "missed" : "taken";
+
+    let matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
+    let medName = matchedMed ? matchedMed.name : null;
+
+    if (!medName) {
+      const medMatch = lower.match(/(?:took|taken|missed|skipped)\s+(?:my\s+)?([a-z0-9\-]+)/i);
+      if (medMatch && !['my', 'the', 'a', 'dose', 'medicine', 'pills'].includes(medMatch[1].toLowerCase())) {
+        medName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
+      } else {
+        medName = medicines[0]?.name || "Medication";
+      }
+    }
+
+    return {
+      type: "LOG_DOSE",
+      payload: {
+        medicineName: medName,
+        medicineId: matchedMed?.id || null,
+        status,
+        timestamp: new Date().toISOString()
+      },
+      confirmMessage: `Logged ${medName} as ${status}.`
+    };
+  }
+
+  // 3. UPDATE_MEDICINE (Med Vault Refill)
+  const isRefillIntent = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|update stock|set stock)\b/i.test(lower);
+  if (isRefillIntent) {
+    const qtyMatch = lower.match(/\b(?:to|with|have)?\s*(\d+)\s*(?:pills?|tablets?|capsules?|units?)?\b/i);
+    const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : null;
+
+    let matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
+    if (!matchedMed && medicines.length === 1) matchedMed = medicines[0];
+
+    if (matchedMed && qty !== null) {
+      return {
+        type: "UPDATE_MEDICINE",
+        payload: {
+          id: matchedMed.id,
+          name: matchedMed.name,
+          currentQuantity: qty
+        },
+        confirmMessage: `Updated ${matchedMed.name} stock to ${qty}.`
+      };
+    }
+  }
+
+  // 4. LOG_WELLNESS
+  const isWellnessIntent = /\b(log (my )?mood|log (my )?symptoms?|feeling|i feel|i'm feeling|i have a headache|headache|stomach ache|dizzy|nausea|fatigue|fever)\b/i.test(lower);
+  if (isWellnessIntent) {
+    const symptoms = [];
+    if (lower.includes("headache") || lower.includes("omutwe")) symptoms.push("headache");
+    if (lower.includes("stomach") || lower.includes("olubuto")) symptoms.push("stomach ache");
+    if (lower.includes("fever") || lower.includes("musujja")) symptoms.push("fever");
+    if (lower.includes("dizzy") || lower.includes("dizziness")) symptoms.push("dizziness");
+    if (lower.includes("nausea") || lower.includes("vomiting")) symptoms.push("nausea");
+    if (lower.includes("tired") || lower.includes("fatigue")) symptoms.push("fatigue");
+    if (lower.includes("cough")) symptoms.push("cough");
+
+    let mood = "okay";
+    if (lower.includes("great") || lower.includes("good") || lower.includes("happy")) mood = "great";
+    else if (lower.includes("tired") || lower.includes("exhausted")) mood = "tired";
+    else if (lower.includes("sad") || lower.includes("down") || lower.includes("bad")) mood = "bad";
+    else if (lower.includes("stressed") || lower.includes("anxious")) mood = "stressed";
+
+    return {
+      type: "LOG_WELLNESS",
+      payload: {
+        type: "symptom",
+        data: {
+          mood,
+          symptoms,
+          notes: text
+        }
+      },
+      confirmMessage: `Recorded wellness check-in (mood: ${mood}, symptoms: ${symptoms.join(', ') || 'none'}).`
+    };
+  }
+
+  return null;
+};
+
+/**
+ * Intelligent Local Clinical Fallback
+ * Provides domain-specific, clinically accurate responses and action dispatching
+ * when cloud AI APIs are cold-starting, offline, rate-limited, or lack external API keys.
+ */
+export function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null) {
+  const norm = (lastUserMsg || '').toLowerCase().trim();
+  const gender = userProfile?.gender?.toLowerCase();
+  const salutation = gender === 'female' ? 'Nyabo' : gender === 'male' ? 'Ssebo' : '';
+  const greeting = salutation ? ` ${salutation}` : '';
+
+  // 1. Emergency / Overdose check
+  if (detectEmergency(norm)) {
+    return EMERGENCY_RESPONSE;
+  }
+
+  // 2. Deterministic Action Dispatching (Adding reminders, logging doses, refilling stock, wellness tracking)
+  const action = extractDeterministicAction(norm, medicines, reminders);
+  if (action) {
+    if (action.type === "ADD_REMINDER") {
+      const displayTime = action.payload.time ? formatTimeDisplay(action.payload.time) : "8:00 AM";
+      return {
+        text: `I've set up a reminder for you to take **${action.payload.medicineName}** (${action.payload.dose}) ${action.payload.repeatSchedule} at **${displayTime}**.\n\nYou can [view or manage your schedule in Medication Reminders](/reminders).`,
+        suggestions: ["View my reminders", "Check my medications", "How is my pill stock?"],
+        source: "Schedule Guard",
+        action
+      };
+    }
+    if (action.type === "LOG_DOSE") {
+      const statusVerb = action.payload.status === 'taken' ? 'took' : 'missed';
+      return {
+        text: `I've logged that you **${statusVerb}** your dose of **${action.payload.medicineName}**.\n\nYou can [review your adherence streak in Dose History](/history).`,
+        suggestions: ["View dose history", "Check reminders", "How is my pill stock?"],
+        source: "Adherence Guard",
+        action
+      };
+    }
+    if (action.type === "UPDATE_MEDICINE") {
+      return {
+        text: `I've updated your Med Vault: **${action.payload.name}** stock is now set to **${action.payload.currentQuantity} tablets**.\n\nYou can [view and track your pill supply in Med Vault](/medvault).`,
+        suggestions: ["Open Med Vault", "Check reminders", "View medications"],
+        source: "Med Vault",
+        action
+      };
+    }
+    if (action.type === "LOG_WELLNESS") {
+      const symStr = action.payload.data?.symptoms?.join(', ') || 'general check-in';
+      return {
+        text: `I've recorded this in your Wellness Hub (Mood: **${action.payload.data?.mood}**, Symptoms: **${symStr}**). Bambi${greeting}, please rest, stay well-hydrated, and consult a healthcare professional if symptoms persist.\n\nYou can [review your wellness logs in Wellness Hub](/wellness).`,
+        suggestions: ["Open Wellness Hub", "Check medications", "View reminders"],
+        source: "Wellness Guard",
+        action
+      };
+    }
+  }
+
+  // 3. Specific Drug & Food Interactions
+  if (norm.includes('interact') || norm.includes('safe') || norm.includes('side effect') || norm.includes('combine') || norm.includes('alcohol') || norm.includes('waragi') || norm.includes('food') || norm.includes('mukene') || norm.includes('milk') || norm.includes('matooke') || norm.includes('g-nut') || norm.includes('gnut') || norm.includes('posho') || norm.includes('kalo')) {
+    if (norm.includes('metronidazole') || norm.includes('flagyl')) {
+      return {
+        text: `Yes${greeting}, **Flagyl (Metronidazole)** has critical safety interactions:\n\n` +
+          `1. ⚠️ **Alcohol & Local Brews (Waragi, Beer, Kasese, Wine)** — **CRITICAL**: Metronidazole blocks alcohol metabolism, causing a severe **disulfiram-like reaction**. Symptoms include violent vomiting, rapid heart rate (tachycardia), facial flushing, headache, and severe abdominal cramps. **NEVER drink alcohol** while taking Metronidazole and for at least **48 hours** after your last dose.\n` +
+          `2. ⚠️ **Blood Thinners (Warfarin)**: Metronidazole significantly increases Warfarin's anticoagulant effect, raising your risk of heavy bleeding.\n` +
+          `3. ⚠️ **Lithium**: Can lead to toxic buildup of lithium in the body.\n` +
+          `4. ℹ️ **Food**: Taking Metronidazole with food or milk (such as *Matooke* or *Posho*) helps minimize stomach irritation.\n\n` +
+          `You can [check your drug & food interactions](/interactions) anytime to verify how Metronidazole pairs with your active cabinet.`,
+        suggestions: ["Metronidazole with alcohol", "Check my interactions", "View medicine cabinet"],
+        source: "MoH Safety Protocol",
+        action: null
+      };
+    }
+
+    if (norm.includes('coartem') || norm.includes('artemether') || norm.includes('lumefantrine')) {
+      return {
+        text: `Here is crucial safety and interaction guidance for **Coartem (Artemether / Lumefantrine)**${greeting}:\n\n` +
+          `1. 🍲 **Fatty Food Requirement**: Coartem **must** be taken with or immediately after food containing fat (e.g. *G-nut sauce*, milk, eggs, or avocado) to ensure proper absorption against malaria parasites.\n` +
+          `2. ⚠️ **Grapefruit Juice**: Avoid large amounts as it can increase drug blood levels.\n` +
+          `3. ⚠️ **Heart Medications / QT-prolonging drugs**: Avoid combining with medications that affect heart rhythm.\n\n` +
+          `You can [check your drug & food interactions](/interactions) to ensure your full malaria treatment is safe.`,
+        suggestions: ["Best foods for Coartem", "Check drug interactions", "View reminders"],
+        source: "MoH Safety Protocol",
+        action: null
+      };
+    }
+
+    if (norm.includes('paracetamol') || norm.includes('panadol')) {
+      return {
+        text: `Here are important safety and interaction facts for **Panadol (Paracetamol)**${greeting}:\n\n` +
+          `1. ⚠️ **Alcohol (Waragi, Beer)**: Regular or heavy alcohol use with Paracetamol increases the risk of acute liver toxicity.\n` +
+          `2. ⚠️ **Duplicate Paracetamol Products**: Many cold & flu remedies (e.g. Flucold, ColdCap) contain paracetamol. Avoid double-dosing. Never exceed **4,000mg (4g)** in 24 hours.\n` +
+          `3. ⚠️ **Blood Thinners (Warfarin)**: High daily paracetamol doses over several days can increase bleeding risks.\n\n` +
+          `You can [check your drug & food interactions](/interactions) to check all your medicines.`,
+        suggestions: ["Safe daily Paracetamol dose", "Check drug interactions", "View medications"],
+        source: "MoH Safety Protocol",
+        action: null
+      };
+    }
+
+    if (norm.includes('mukene') || norm.includes('milk') || norm.includes('calcium')) {
+      return {
+        text: `**Calcium Food Interactions (Mukene / Milk)**:\n\n` +
+          `• **Mukene** (silver fish) and **dairy milk** are rich in calcium.\n` +
+          `• Calcium binds strongly to certain antibiotics (such as **Ciprofloxacin**, **Tetracyclines**, and **Doxycycline**) forming unabsorbable complexes that reduce the antibiotic's effectiveness.\n` +
+          `• **Guideline**: Separate meals containing Mukene or milk by at least **2 hours** before or after taking these antibiotics.\n\n` +
+          `You can [check your drug & food interactions](/interactions) to verify your medications.`,
+        suggestions: ["Check drug interactions", "Is Matooke safe?", "Open Interactions"],
+        source: "MoH Safety Protocol",
+        action: null
+      };
+    }
+
+    return {
+      text: `You can [check your drug & food interactions](/interactions) to verify if your medicines are safe with meals like Matooke, G-nuts, or Waragi, and guard against duplicate therapies.`,
+      suggestions: ["Check drug interactions", "Is Matooke safe with my meds?", "Open Interactions"],
+      source: "System",
+      action: null
+    };
+  }
+
+  // 4. Persona / About DawaGPT
+  if (norm.includes('about yourself') || norm.includes('who are you') || norm.includes('what are you') || norm.includes('what can you do') || norm.includes('tell me about you') || norm.includes('introduce yourself')) {
+    return {
+      text: `Oli otya${greeting}! I'm **DawaGPT**, your dedicated Ugandan AI health and medication companion built for DawaLens.\n\n` +
+        `Here is how I can support you:\n` +
+        `• 💊 **Medication Safety & Dosage**: Provide clear dosage explanations, side effect alerts, and National Drug Authority (NDA) Uganda standards.\n` +
+        `• ⚠️ **Drug & Food Interactions**: Screen your prescriptions against local foods (like *Matooke*, *Posho*, *G-nut sauce*) and alcohol (*Waragi*).\n` +
+        `• ⏰ **Smart Reminders**: Keep your schedule on track with alarms and dose alerts in [Medication Reminders](/reminders).\n` +
+        `• 📦 **Med Vault & Refill Tracking**: Monitor your exact pill count and calculate remaining days of supply in [Med Vault](/medvault).\n` +
+        `• 🩺 **Emergency Protocols**: Instantly surface Uganda emergency hotlines (999 / 112 / 0800-100-066) when safety risks are detected.\n\n` +
+        `What medication or health question can I help you with today?`,
+      suggestions: ["Check my medications", "How is my pill stock?", "Check drug interactions"],
+      source: "DawaGPT",
+      action: null
+    };
+  }
+
+  // 5. Med Vault / Stock queries
+  if (norm.includes('vault') || norm.includes('stock') || norm.includes('days left') || norm.includes('doses left') || norm.includes('how many days') || norm.includes('how many doses') || norm.includes('refill')) {
+    const summary = buildMedVaultSummary(medicines, reminders);
+    return {
+      text: `Here is your current medication stock status:\n\n${summary}\n\nYou can [check your pill stock in Med Vault](/medvault) anytime to manage your supply.`,
+      suggestions: ["Open Med Vault", "Add a reminder", "Check medications"],
+      source: "Med Vault",
+      action: null
+    };
+  }
+
+  // 6. Greetings
+  if (norm.includes('oli otya') || norm.includes('wasuze otya') || norm.includes('osiibye otya') || norm.includes('ki kati') || norm.includes('gyebaleko') || /\b(hello|hi|hey|good morning|good afternoon|good evening)\b/i.test(norm)) {
+    return {
+      text: `Oli otya${greeting}! I'm DawaGPT, your health companion. How are you feeling today? You can ask me about medication doses, drug interactions, or [check your active medications](/medications).`,
+      suggestions: ["Check my reminders", "How is my pill stock?", "Log a dose"],
+      source: "DawaGPT",
+      action: null
+    };
+  }
+
+  // 7. Reminders / Schedule Inquiries
+  if (norm.includes('reminder') || norm.includes('schedule') || norm.includes('alarm') || norm.includes('dose time')) {
+    const remLines = reminders.length > 0
+      ? reminders.map(r => `• **${r.medicineName}**: ${r.dose} at ${formatTimeDisplay(r.time)} (${r.repeatSchedule || 'daily'})`).join('\n')
+      : 'You have no active reminders set.';
+    return {
+      text: `Here is your current medication schedule:\n\n${remLines}\n\nYou can [manage your reminders](/reminders) or [set up a new reminder](/reminders/new).`,
+      suggestions: ["View reminders", "Add new reminder", "Check Med Vault"],
+      source: "Schedule Guard",
+      action: null
+    };
+  }
+
+  // 8. Common Clinical Topics (Malaria, Antibiotics, Blood Pressure, Diabetes, Hydration)
+  if (norm.includes('malaria') || norm.includes('musujja')) {
+    return {
+      text: `**Malaria Information & Clinical Guidelines (Uganda MoH)**:\n\n` +
+        `• **Transmission**: Caused by Plasmodium parasites transmitted through bites of female *Anopheles* mosquitoes.\n` +
+        `• **First-Line Treatment**: Artemisinin-based Combination Therapy (**ACT**), primarily **Coartem (Artemether-Lumefantrine)**.\n` +
+        `• **Essential Rule**: Always take Coartem with fatty food (e.g. *G-nut sauce* or milk) to ensure proper bloodstream absorption.\n` +
+        `• **Diagnosis**: Always confirm with a Rapid Diagnostic Test (mRDT) or blood smear before treatment.\n\n` +
+        `You can [review your medications](/medications) or [check interactions](/interactions) for Coartem.`,
+      suggestions: ["Coartem food requirements", "Check drug interactions", "Set a reminder"],
+      source: "MoH Uganda Clinical Guidelines",
+      action: null
+    };
+  }
+
+  if (norm.includes('antibiotic') || norm.includes('resistance') || norm.includes('amoxicillin') || norm.includes('septrin')) {
+    return {
+      text: `**Antibiotic Safety & Stewardship Guidance**:\n\n` +
+        `• **Finish Full Course**: Even if you feel better after 2–3 days, continue taking your antibiotic until the prescribed duration finishes. Stopping early allows surviving bacteria to develop **antibiotic resistance**.\n` +
+        `• **Timing Consistency**: Take doses at evenly spaced intervals (e.g. every 8 or 12 hours) to maintain therapeutic drug levels in your blood.\n` +
+        `• **Water & Food**: Take with a full glass of water to avoid stomach irritation and protect kidney clearance.\n\n` +
+        `You can [set up dose alarms in Medication Reminders](/reminders) to never miss a dose.`,
+      suggestions: ["Set a reminder", "Check medications", "View dose history"],
+      source: "National Drug Authority (NDA)",
+      action: null
+    };
+  }
+
+  if (norm.includes('blood pressure') || norm.includes('hypertension') || norm.includes('bp')) {
+    return {
+      text: `**Blood Pressure & Hypertension Care**:\n\n` +
+        `• **Thresholds**: Normal BP is typically below 120/80 mmHg. Persistent readings above 140/90 mmHg indicate hypertension.\n` +
+        `• **Adherence**: Antihypertensive medications must be taken **every single day** without skipping, even when you feel completely fine.\n` +
+        `• **Lifestyle**: Minimize dietary sodium (table salt, processed seasonings like Royco), stay active, and stay hydrated.\n\n` +
+        `You can [manage your daily BP medication reminders](/reminders) to keep your numbers steady.`,
+      suggestions: ["View reminders", "Log my dose", "Check Med Vault"],
+      source: "Clinical Safety",
+      action: null
+    };
+  }
+
+  // 9. General Health / Navigation fallback
+  return {
+    text: `Oli otya${greeting}! I'm **DawaGPT**, your Ugandan health companion. I'm here to help you manage your health:\n\n` +
+      `• 💊 [Check active prescriptions in My Medications](/medications)\n` +
+      `• ⏰ [Manage your schedule in Medication Reminders](/reminders)\n` +
+      `• 📦 [Check pill counts and days of supply in Med Vault](/medvault)\n` +
+      `• ⚠️ [Screen drug & food interactions](/interactions)\n` +
+      `• 📊 [Review adherence streak in Dose History](/history)\n\n` +
+      `You can tell me things like *"Remind me to take Panadol at 8pm"*, *"I took my medication"*, or ask any drug safety question. How can I help you right now?`,
+    suggestions: ["Remind me to take Panadol at 8pm", "Check drug interactions", "How is my pill stock?"],
+    source: "DawaGPT",
+    action: null
+  };
 }
 
 export const streamChatWithDawaGPT = async (params, priority = 'high') => {
@@ -1837,7 +2219,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       console.warn("Stream Fallback: Unified AI API fallback cascade also failed:", unifiedCascadeErr.response?.data?.error?.message || unifiedCascadeErr.response?.data || unifiedCascadeErr.message);
     }
 
-    return createFakeStream({ text: "Sorry, I'm having trouble connecting. Please try again in a moment.", suggestions: ["Try again"], source: "System", action: null });
+    const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile);
+    return createFakeStream(fallbackResp);
   } catch (err) {
     return new Readable({
       read() {
