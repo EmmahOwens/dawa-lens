@@ -17,16 +17,18 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_API_KEY_2 = process.env.GROQ_API_KEY_2;
 const GROQ_API_KEY_3 = process.env.GROQ_API_KEY_3;
 const sanitizeGroqModel = (model) => {
-  if (!model || typeof model !== 'string') return 'openai/gpt-oss-120b';
+  if (!model || typeof model !== 'string') return 'llama-3.3-70b-versatile';
   const m = model.trim();
   const lower = m.toLowerCase();
-  // Groq officially decommissioned all Llama models (llama-3.3-70b-versatile, llama-3.1-8b-instant, etc.) in August 2026.
-  // Groq's official active production models are openai/gpt-oss-120b, openai/gpt-oss-20b, and qwen/qwen3.6-27b.
-  if (lower.includes('llama') || lower.includes('qwen3.8') || lower.includes('mixtral') || lower.includes('gemma')) {
-    if (lower.includes('8b') || lower.includes('light') || lower.includes('instant') || lower.includes('20b')) {
-      return 'openai/gpt-oss-20b';
-    }
-    return 'openai/gpt-oss-120b';
+  // Groq deprecated openai/gpt-oss-120b and openai/gpt-oss-20b in September 2026.
+  // Active production models: llama-3.3-70b-versatile (primary), qwen/qwen3.6-27b (medium).
+  if (lower.includes('gpt-oss-120b') || lower.includes('gpt-oss-20b')) {
+    // Replace deprecated gpt-oss models with their Groq-recommended successors
+    if (lower.includes('20b')) return 'qwen/qwen3.6-27b';
+    return 'llama-3.3-70b-versatile';
+  }
+  if (lower.includes('mixtral') || lower.includes('gemma')) {
+    return 'llama-3.3-70b-versatile';
   }
   return m;
 };
@@ -41,9 +43,9 @@ const sanitizeGeminiModel = (model) => {
   return m;
 };
 
-const GROQ_MODEL = sanitizeGroqModel(process.env.GROQ_MODEL || 'openai/gpt-oss-120b');
-const GROQ_SCOUT_MODEL = sanitizeGroqModel(process.env.GROQ_SCOUT_MODEL || 'openai/gpt-oss-120b');
-const GROQ_LIGHT_MODEL = sanitizeGroqModel(process.env.GROQ_LIGHT_MODEL || 'openai/gpt-oss-20b');
+const GROQ_MODEL = sanitizeGroqModel(process.env.GROQ_MODEL || 'llama-3.3-70b-versatile');
+const GROQ_SCOUT_MODEL = sanitizeGroqModel(process.env.GROQ_SCOUT_MODEL || 'llama-3.3-70b-versatile');
+const GROQ_LIGHT_MODEL = sanitizeGroqModel(process.env.GROQ_LIGHT_MODEL || 'qwen/qwen3.6-27b');
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
@@ -109,7 +111,7 @@ let groqKeyIndex = 0;
 
 const getGroqApiKey = (modelId) => {
   if (GROQ_KEYS.length === 0) return null;
-  if (modelId && (modelId.toLowerCase().includes('8b') || modelId.toLowerCase().includes('gpt-oss-20b')) && GROQ_API_KEY_2) {
+  if (modelId && (modelId.toLowerCase().includes('8b') || modelId.toLowerCase().includes('qwen3.6') || modelId.toLowerCase().includes('qwen/qwen')) && GROQ_API_KEY_2) {
     // Independent key for the lightweight model if available to avoid 70B limit sharing
     return GROQ_API_KEY_2;
   }
@@ -582,19 +584,18 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
       : 'groq-8b';
 
   const fn = async () => {
-    // Resilient candidate list: active Groq models (gpt-oss-120b, gpt-oss-20b, qwen3.6-27b)
+    // Resilient candidate list: active Groq models (Sep 2026 — gpt-oss-* deprecated)
     const rawCandidates = [
       modelId,
       GROQ_MODEL,
-      'openai/gpt-oss-120b',
-      'openai/gpt-oss-20b',
+      'llama-3.3-70b-versatile',
       'qwen/qwen3.6-27b'
     ];
-    // Filter out decommissioned Llama models and nonexistent models
+    // Filter out deprecated gpt-oss models
     const candidateModels = Array.from(new Set(rawCandidates))
-      .filter(m => typeof m === 'string' && !m.toLowerCase().includes('llama') && !m.toLowerCase().includes('qwen3.8'));
+      .filter(m => typeof m === 'string' && !m.toLowerCase().includes('gpt-oss') && !m.toLowerCase().includes('mixtral') && !m.toLowerCase().includes('gemma'));
     if (candidateModels.length === 0) {
-      candidateModels.push('openai/gpt-oss-120b', 'openai/gpt-oss-20b');
+      candidateModels.push('llama-3.3-70b-versatile', 'qwen/qwen3.6-27b');
     }
 
     let response = null;
@@ -602,13 +603,13 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
     let usedModel = modelId;
 
     for (const currentModel of candidateModels) {
-      const isReasoningModel = typeof currentModel === 'string' && (currentModel.includes('gpt-oss') || currentModel.includes('qwen') || currentModel.includes('deepseek-r1') || currentModel.includes('qwq'));
-      const effectiveMaxTokens = isReasoningModel ? Math.max(maxTokens, 4096) : Math.max(maxTokens, 2048);
+      // reasoning_format is supported by Qwen and deepseek-r1 on Groq, NOT by Llama models
+      const isReasoningModel = typeof currentModel === 'string' && (currentModel.includes('qwen') || currentModel.includes('deepseek-r1') || currentModel.includes('qwq'));
+      const effectiveMaxTokens = Math.max(maxTokens, 4096);
       const currentApiKey = getGroqApiKey(currentModel) || initialApiKey;
 
-      // Reasoning models (gpt-oss, qwen) support reasoning_format but do NOT
-      // reliably support response_format=json_object combined with reasoning_format.
-      // Use text mode for reasoning models and parse JSON manually from the response.
+      // Qwen reasoning models support reasoning_format but NOT response_format=json_object simultaneously.
+      // Llama models support response_format but NOT reasoning_format.
       const payload = {
         model: currentModel,
         messages,
@@ -617,7 +618,7 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
       };
       if (isReasoningModel) {
         payload.reasoning_format = 'hidden';
-        // Do NOT set response_format for reasoning models — they return JSON in text
+        // Do NOT set response_format for Qwen reasoning models — they return JSON in text
       } else if (responseFormat) {
         payload.response_format = responseFormat;
       }
@@ -1579,12 +1580,13 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 2. Try Groq Primary (openai/gpt-oss-120b) - 128k context, reasoning model
+    // 2. Try Groq Primary (llama-3.3-70b-versatile) - 128k context, fast
     if (GROQ_API_KEY) {
       try {
         const modelId = GROQ_MODEL;
         const apiKey = getGroqApiKey(modelId);
         const fn = async () => {
+          const isQwenModel = modelId.includes('qwen') || modelId.includes('deepseek-r1');
           const payload = {
             model: modelId,
             messages: finalMessages,
@@ -1592,8 +1594,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
             max_tokens: chatMaxTokens,
             temperature: 0.7
           };
-          // Streaming doesn't use response_format, so reasoning_format is safe here
-          payload.reasoning_format = 'hidden';
+          // Only Qwen/deepseek models support reasoning_format; Llama models do not
+          if (isQwenModel) payload.reasoning_format = 'hidden';
           const response = await axios.post(GROQ_API_URL, payload, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             responseType: 'stream', timeout: 12000
@@ -1606,12 +1608,13 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 3. Try Groq Light (openai/gpt-oss-20b) - fast fallback reasoning model
+    // 3. Try Groq Light (qwen/qwen3.6-27b) - medium fallback model
     if (GROQ_API_KEY) {
       try {
         const modelId = GROQ_LIGHT_MODEL;
         const apiKey = getGroqApiKey(modelId);
         const fn = async () => {
+          const isQwenModel = modelId.includes('qwen') || modelId.includes('deepseek-r1');
           const payload = {
             model: modelId,
             messages: finalMessages,
@@ -1619,7 +1622,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
             max_tokens: chatMaxTokens,
             temperature: 0.7
           };
-          payload.reasoning_format = 'hidden';
+          // Only Qwen/deepseek models support reasoning_format
+          if (isQwenModel) payload.reasoning_format = 'hidden';
           const response = await axios.post(GROQ_API_URL, payload, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             responseType: 'stream', timeout: 12000
@@ -1701,29 +1705,29 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 8. Try Groq Qwen (qwen/qwen3.6-27b)
+    // 8. Try Groq Llama Scout (llama-3.1-8b-instant) as last Groq fallback
     if (GROQ_API_KEY) {
       try {
-        const modelId = 'qwen/qwen3.6-27b';
+        const modelId = 'llama-3.1-8b-instant';
         const apiKey = getGroqApiKey(modelId);
         const fn = async () => {
           const payload = {
             model: modelId,
             messages: finalMessages,
             stream: true,
-            max_tokens: chatMaxTokens,
+            max_tokens: Math.min(chatMaxTokens, 4096), // 8b has lower token limits
             temperature: 0.7
           };
-          payload.reasoning_format = 'hidden';
+          // llama-3.1-8b-instant does NOT support reasoning_format
           const response = await axios.post(GROQ_API_URL, payload, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             responseType: 'stream', timeout: 12000
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'groq-70b', lastUserMsgForRl, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'groq-scout', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: Groq Qwen failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+        console.warn("Stream Fallback: Groq Scout (8b) failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
