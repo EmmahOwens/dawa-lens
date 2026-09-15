@@ -554,14 +554,55 @@ export default function DawaGPT() {
         }
       }
 
-    } catch (e) {
-      setMessages(prev => prev.map(msg =>
-        msg.id === botId ? {
-          ...msg,
-          text: "Connection lost. Please check your internet and try again.",
-          source: "System"
-        } : msg
-      ));
+    } catch (e: any) {
+      // Determine the most helpful error message based on error type
+      let errorText: string;
+
+      const isOffline = !navigator.onLine;
+      const isNetworkError =
+        e?.name === "TypeError" ||
+        e?.message?.toLowerCase().includes("failed to fetch") ||
+        e?.message?.toLowerCase().includes("network") ||
+        e?.message?.toLowerCase().includes("net::err");
+      const isTimeout =
+        e?.name === "AbortError" ||
+        e?.message?.toLowerCase().includes("timeout") ||
+        e?.statusCode === 408;
+      const isAuthError = e?.statusCode === 401 || e?.statusCode === 403;
+      const isRateLimit = e?.statusCode === 429;
+      const isServerError =
+        e?.statusCode >= 500 || e?.message?.toLowerCase().includes("server");
+
+      if (isOffline) {
+        errorText =
+          "You appear to be offline. Please check your internet connection and try again. 📡";
+      } else if (isNetworkError) {
+        errorText =
+          "I couldn't reach the server. Please check your connection and try again.";
+      } else if (isTimeout) {
+        errorText =
+          "The request timed out — the server took too long to respond. Please try again in a moment.";
+      } else if (isAuthError) {
+        errorText =
+          "Your session may have expired. Please refresh the page and sign in again.";
+      } else if (isRateLimit) {
+        errorText =
+          "I'm receiving too many requests right now. Please wait a moment and try again. ⏳";
+      } else if (isServerError) {
+        errorText =
+          "Something went wrong on our end. Our team has been notified. Please try again in a moment.";
+      } else {
+        errorText =
+          "Something unexpected happened. Please try again — if it keeps failing, refresh the page.";
+      }
+
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === botId
+            ? { ...msg, text: errorText, source: "System" }
+            : msg
+        )
+      );
     } finally {
       setIsTyping(false);
     }
