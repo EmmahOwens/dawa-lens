@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789560144.19613,
-    "ast_hash": "701505f8955ebe846d4a8d7efd0a9d6d",
+    "mtime": 1789562936.5995672,
+    "ast_hash": "9751ace06ac9fdf9b33fdf1500884967",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/localFoodService.js": {
-    "mtime": 1789025945.7351584,
-    "ast_hash": "e77776c2fbf122ccb168e23993e3965a",
+    "mtime": 1789562772.9907615,
+    "ast_hash": "70430f8f7027888e4f2e7980ef3e88c4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/medicineService.js": {
@@ -4257,6 +4257,16 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-unit-direct.js": {
     "mtime": 1789558107.4974039,
     "ast_hash": "e298e9639a147a86e347f5bab4a4153e",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-measure-context.js": {
+    "mtime": 1789562587.7467828,
+    "ast_hash": "f9329fa8df241834c9c377390d866340",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-reproduce-6meds.js": {
+    "mtime": 1789562530.8536122,
+    "ast_hash": "8c69ecabdb7ccd5fc6ee98aff0c05a9c",
     "semantic_hash": ""
   }
 }

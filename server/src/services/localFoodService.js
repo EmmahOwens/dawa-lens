@@ -91,11 +91,13 @@ export const LOCAL_FOODS = [
 ];
 
 export const getFoodKnowledgePrompt = () => {
-  return `
-    === LOCAL FOOD KNOWLEDGE (Uganda) ===
-    ${LOCAL_FOODS.map(f => `- ${f.name}: ${f.benefits} (${f.medicationContext})`).join('\n')}
-
-    Use this knowledge to provide specific, culturally relevant nutritional advice.
-    Encourage local staples when they aid recovery or medication absorption.
-  `;
+  return `=== LOCAL FOOD KNOWLEDGE (Uganda) ===
+- Matooke: High potassium, fiber, low GI, gentle on stomach.
+- Kalo (Millet): Rich in iron, calcium; great for anemia and bone health.
+- Posho: Neutral carbohydrate base before medications requiring food.
+- G-nut Sauce: Healthy fats aid absorption of fat-soluble meds (e.g., Artemether/Lumefantrine / Coartem).
+- Mukene (Silver fish): Extremely high calcium; take at least 2 hours apart from tetracycline antibiotics.
+- Nakati / Dodo / Bugga: Rich in Iron & Vitamin K; monitor closely with blood thinners (Warfarin).
+- Alcohol / Waragi: Severe liver toxicity risk when combined with Paracetamol/Panadol; amplifies CNS sedative effects.`;
 };
+
