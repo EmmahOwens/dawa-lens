@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789562936.5995672,
-    "ast_hash": "9751ace06ac9fdf9b33fdf1500884967",
+    "mtime": 1789565164.240576,
+    "ast_hash": "163b3adf685755b49966bba39df1c4d7",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -620,8 +620,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MessageRenderer.tsx": {
-    "mtime": 1787806407.150952,
-    "ast_hash": "3a78f95bb4fc4d8c6731eb6c10a2ca17",
+    "mtime": 1789564865.4074237,
+    "ast_hash": "ff9b933d6e1a005c79d4426c669c64e3",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/NavLink.tsx": {
@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useAIActions.tsx": {
-    "mtime": 1788437412.0683918,
-    "ast_hash": "acd5c3968dc4c06e42d3e9e149998ba7",
+    "mtime": 1789564954.620095,
+    "ast_hash": "9013496ec7bf71fdb6ff3e1be46b51bd",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useDrugData.ts": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789560171.969026,
-    "ast_hash": "27ffd921ff8c14983c6ac7ddf8ea4a15",
+    "mtime": 1789564937.1621141,
+    "ast_hash": "501238fc3a6119fb08e255badbe69d1d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -2495,8 +2495,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/test/crashResilience.test.tsx": {
-    "mtime": 1787806437.1447964,
-    "ast_hash": "024829f0eaa6b05ac33c448e1d7562fc",
+    "mtime": 1789565028.698834,
+    "ast_hash": "08ae093d81e28f4ec97fe468f8c168a4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/lazyWithRetry.ts": {
@@ -4265,8 +4265,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-reproduce-6meds.js": {
-    "mtime": 1789562530.8536122,
-    "ast_hash": "8c69ecabdb7ccd5fc6ee98aff0c05a9c",
+    "mtime": 1789563892.4116466,
+    "ast_hash": "5588ba30186cda204278199b5134960e",
     "semantic_hash": ""
   }
 }
