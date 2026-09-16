@@ -863,9 +863,17 @@ export const chatWithDawaGPT = async (
     const rawText = response.text || "";
     // Clean up any stray metadata markers or suggestion tags if they exist
     const cleanText = rawText
-      .split(/###METADATA###|---METADATA---/)[0]
+      .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
+      .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
       .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+      .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
       .trim();
+
+    const rawAction = response.action as any;
+    const actionObj = rawAction ? {
+      ...rawAction,
+      payload: rawAction.payload || rawAction.data
+    } : undefined;
 
     return {
       id: Date.now().toString(),
@@ -874,7 +882,7 @@ export const chatWithDawaGPT = async (
       source: (response.source as ChatMessage['source']) || "Gemini",
       suggestions: response.suggestions,
       // Include the action from the AI if present and meaningful
-      action: response.action?.type ? response.action : undefined,
+      action: actionObj?.type ? actionObj : undefined,
     };
   } catch (err: unknown) {
     console.error("DawaGPT Chat Error:", err);
@@ -895,7 +903,9 @@ export const chatWithDawaGPT = async (
 };
 
 /**
- * Streaming version of chat — provides real-time text updates.
+ * Streaming version of chatWithDawaGPT.
+ * Consumes SSE stream from the backend and calls `onChunk` with accumulated text as it arrives.
+ * Returns the final ChatMessage with parsed metadata (suggestions, source, action).
  */
 export const chatWithDawaGPTStream = async (
   messages: ChatMessage[],
@@ -907,7 +917,7 @@ export const chatWithDawaGPTStream = async (
   vitalitySummary: unknown[] = [],
   patients: Patient[] = [],
   selectedPatientId: string | null = null,
-  onChunk: (text: string) => void,
+  onChunk: (text: string) => void = () => {},
   currentPage: string | null = null
 ): Promise<ChatMessage> => {
   try {
@@ -947,11 +957,18 @@ export const chatWithDawaGPTStream = async (
             allText += content;
 
             // Strip metadata delimiter and JSON from visible text (Requirement 2.3)
-            const delimIdx = allText.lastIndexOf('###METADATA###');
-            const rawVisibleText = delimIdx !== -1
-              ? allText.substring(0, delimIdx)
-              : allText;
-            const visibleText = rawVisibleText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '');
+            const metaDelimRegex = /(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###METADATA###|---METADATA---)/i;
+            const delimMatch = allText.match(metaDelimRegex);
+            let rawVisibleText = allText;
+            if (delimMatch && delimMatch.index !== undefined) {
+              rawVisibleText = allText.substring(0, delimMatch.index);
+            } else {
+              // Guard against partial delimiter at the tail during active streaming
+              rawVisibleText = allText.replace(/(?:###|---|###\s*META?D?A?T?A?)\s*$/i, '');
+            }
+            const visibleText = rawVisibleText
+              .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+              .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '');
             onChunk(visibleText);
           } catch (e) {
             // Ignore parse errors
@@ -960,42 +977,42 @@ export const chatWithDawaGPTStream = async (
       }
     }
 
-    // Split on the ###METADATA### delimiter to separate display text from metadata (Requirement 2.3)
-    const METADATA_DELIMITER = '###METADATA###';
-    // Use a regex to find the last occurrence of the delimiter, handling potential whitespace/newlines
-    const delimMatch = allText.match(/[\s\S]*###METADATA###\s*([\s\S]*)$/);
+    // Split on any variant of the metadata delimiter to separate display text from metadata (Requirement 2.3)
+    const metaDelimRegex = /(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###METADATA###|---METADATA---)/i;
+    const delimMatch = allText.match(metaDelimRegex);
 
     let displayText: string;
-    let rawMetadata: string;
+    let rawMetadata: string = "";
 
-    if (delimMatch) {
-      const fullMatch = delimMatch[0];
-      const delimIndex = fullMatch.lastIndexOf(METADATA_DELIMITER);
-      displayText = allText.substring(0, delimIndex).replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
-      rawMetadata = delimMatch[1].trim();
+    if (delimMatch && delimMatch.index !== undefined) {
+      displayText = allText.substring(0, delimMatch.index)
+        .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+        .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
+        .trim();
+      rawMetadata = allText.substring(delimMatch.index + delimMatch[0].length).trim();
     } else {
       // Delimiter absent — try to extract a trailing JSON block as a secondary fallback.
       // Some models output valid JSON at the end of their response without the delimiter.
       const trailingJsonMatch = allText.match(/(\{[\s\S]*\})\s*$/);
-      if (trailingJsonMatch) {
+      if (trailingJsonMatch && trailingJsonMatch.index !== undefined) {
         try {
           const candidate = JSON.parse(trailingJsonMatch[1]);
           // Only use it as metadata if it has the expected shape
           if (candidate && (candidate.suggestions || candidate.action || candidate.source)) {
             rawMetadata = trailingJsonMatch[1];
-            displayText = allText.substring(0, allText.lastIndexOf(trailingJsonMatch[1])).replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
+            displayText = allText.substring(0, trailingJsonMatch.index)
+              .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+              .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
+              .trim();
           } else {
             displayText = allText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
-            rawMetadata = '';
           }
         } catch {
           displayText = allText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
-          rawMetadata = '';
         }
       } else {
         // No JSON found at all — treat entire text as display text, no metadata
         displayText = allText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
-        rawMetadata = '';
       }
     }
 
@@ -1011,7 +1028,14 @@ export const chatWithDawaGPTStream = async (
     let metadata: StreamMetadata = { suggestions: [], source: "Gemini", action: undefined };
     if (rawMetadata) {
       try {
-        metadata = JSON.parse(rawMetadata);
+        const sanitizedRaw = rawMetadata.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        metadata = JSON.parse(sanitizedRaw);
+        if (metadata.action) {
+          const rawAction = metadata.action as any;
+          if (!rawAction.payload && rawAction.data) {
+            rawAction.payload = rawAction.data;
+          }
+        }
       } catch (e) {
         console.warn('Failed to parse stream metadata JSON', e);
         // Graceful degradation: return text with empty metadata

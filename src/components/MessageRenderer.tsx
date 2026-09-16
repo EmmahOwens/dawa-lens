@@ -143,11 +143,14 @@ interface MessageRendererProps {
 }
 
 export default function MessageRenderer({ text, onNavigate, className }: MessageRendererProps) {
-  // Hide internal action execution metadata and previous suggestions offered from the user
+  // Defense-in-depth: Never render internal metadata delimiters, metadata JSON, action tags, or previous suggestions
   const safeText = typeof text === "string" ? text : "";
   const cleanText = safeText
+    .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
+    .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
     .replace(/\[ACTION EXECUTED:.*?\]/g, '')
     .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+    .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
     .trim();
 
   return (

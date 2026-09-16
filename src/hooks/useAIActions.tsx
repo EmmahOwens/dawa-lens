@@ -78,10 +78,12 @@ export function useAIActions() {
   const { toast } = useToast();
 
   const dispatchAIAction = async (action: AIAction) => {
-    if (!action.type || !action.payload) return;
+    const rawAction = action as any;
+    const actionType = action.type;
+    const payload = (action.payload || rawAction?.data) as any;
+    if (!actionType || !payload) return;
 
     try {
-      const payload = action.payload as any; // Temporary cast to fix unknown errors while keeping types clean in logic
       switch (action.type) {
         case "ADD_MEDICINE":
           if (!payload?.name) {

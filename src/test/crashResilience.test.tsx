@@ -81,6 +81,49 @@ describe("Crash Resilience Tests", () => {
       expect(screen.queryByText(/Previous suggestions offered/i)).not.toBeInTheDocument();
       expect(screen.queryByText(/Check my dose history/i)).not.toBeInTheDocument();
     });
+
+    it("never renders ###METADATA### or trailing JSON payload in the output", () => {
+      const textWithMetadata = `Bambi Ssebo, I'm sorry you're dealing with a headache.
+
+Quick relief tips
+- Hydrate - drink plenty of water.
+- Rest in a quiet room.
+
+---
+
+###METADATA###
+{"suggestions":["Log a dose taken","Check medication interactions","Set a headache reminder"],"source":"Groq","action":{"type":"LOG_WELLNESS","data":{"type":"symptom","data":{}}}}`;
+
+      render(
+        <BrowserRouter>
+          <MessageRenderer text={textWithMetadata} />
+        </BrowserRouter>
+      );
+
+      expect(screen.getByText(/Bambi Ssebo, I'm sorry you're dealing with a headache/)).toBeInTheDocument();
+      expect(screen.getByText(/Quick relief tips/)).toBeInTheDocument();
+      expect(screen.queryByText(/###METADATA###/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Log a dose taken/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/LOG_WELLNESS/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/suggestions/i)).not.toBeInTheDocument();
+    });
+
+    it("never renders ---METADATA--- or spaced ### METADATA ### delimiters", () => {
+      const textWithSpacedDelim = `Please take your prescribed dose.
+
+---METADATA---
+{"suggestions":["Check stock"],"source":"Groq"}`;
+
+      render(
+        <BrowserRouter>
+          <MessageRenderer text={textWithSpacedDelim} />
+        </BrowserRouter>
+      );
+
+      expect(screen.getByText("Please take your prescribed dose.")).toBeInTheDocument();
+      expect(screen.queryByText(/METADATA/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Check stock/i)).not.toBeInTheDocument();
+    });
   });
 
   describe("NotificationHandler Extra Parser", () => {

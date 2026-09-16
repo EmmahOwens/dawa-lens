@@ -264,11 +264,14 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
     if (!text) throw new AppError('Gemini returned an empty response.', 502);
 
     let parsed;
-    const metadataDelim = '###METADATA###';
-    if (text.includes(metadataDelim)) {
-      const delimIndex = text.lastIndexOf(metadataDelim);
-      const displayText = text.substring(0, delimIndex).replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
-      const rawMeta = text.substring(delimIndex + metadataDelim.length).trim();
+    const metaDelimRegex = /(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)/i;
+    const match = text.match(metaDelimRegex);
+    if (match && match.index !== undefined) {
+      const displayText = text.substring(0, match.index)
+        .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+        .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
+        .trim();
+      const rawMeta = text.substring(match.index + match[0].length).trim();
       let metaObj = {};
       try {
         metaObj = JSON.parse(sanitizeJson(rawMeta));
@@ -1470,13 +1473,23 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
     if (result && typeof result === 'object') {
       result.text = result.text || result.message || result.response || result.advice || "";
       if (typeof result.text === 'string') {
-        result.text = result.text.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
+        result.text = result.text
+          .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
+          .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
+          .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+          .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
+          .trim();
       }
       result.suggestions = Array.isArray(result.suggestions) ? result.suggestions : ["Check medications", "View reminders", "Drug safety"];
       result.action = result.action || null;
     } else if (typeof result === 'string') {
       result = {
-        text: result.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim(),
+        text: result
+          .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
+          .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
+          .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+          .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
+          .trim(),
         suggestions: ["Check medications", "View reminders", "Drug safety"],
         source: "AI Fallback",
         action: null
@@ -1849,8 +1862,18 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       return new Readable({
         read() {
           const rawText = jsonResp.text || "";
-          const cleanText = rawText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
-          const metadata = JSON.stringify({ suggestions: jsonResp.suggestions || [], source: jsonResp.source || "DawaGPT", action: jsonResp.action || null });
+          const cleanText = rawText
+            .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
+            .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
+            .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+            .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
+            .trim();
+          const normalizedAction = jsonResp.action ? {
+            type: jsonResp.action.type,
+            payload: jsonResp.action.payload || jsonResp.action.data || jsonResp.action,
+            confirmMessage: jsonResp.action.confirmMessage
+          } : null;
+          const metadata = JSON.stringify({ suggestions: jsonResp.suggestions || [], source: jsonResp.source || "DawaGPT", action: normalizedAction });
           const data = JSON.stringify({ choices: [{ delta: { content: cleanText + "\n###METADATA###\n" + metadata } }] });
           this.push(`data: ${data}\n\n`);
           this.push(`data: [DONE]\n\n`);
@@ -2488,7 +2511,7 @@ Embed fluent markdown links into sentence grammar (never use "click here" or raw
 - Low Stock Guidance: <= 2 days supply (CRITICAL LOW / OUT OF STOCK - urgent refill alert), <= 3 days supply (LOW STOCK - plan refill soon). Always link [Med Vault](/medvault).
 - Refill requests (e.g. "I refilled Panadol to 60"): Output UPDATE_MEDICINE with { id, currentQuantity: new_quantity }.
 
-=== FAMILY HUB & EMERGENCY DIRECTORY ===
+=== UGANDA CONTACT SUPPORT & EMERGENCY DIRECTORY & FAMILY HUB ===
 - Full read access to all registered profiles. Cross-reference recommendations against the specific patient's known chronic conditions and allergies.
 - For emergency or support contacts in Uganda, provide:
   * National Emergency Ambulance: 112 (Mobile Toll-Free) / 999 (Landline)
@@ -2496,6 +2519,7 @@ Embed fluent markdown links into sentence grammar (never use "click here" or raw
   * National Drug Authority (NDA) Uganda: Toll-Free 0800 101 622 | WhatsApp: +256 791 415 555
   * Mulago Referral Hospital (Casualty & Emergency): +256 414 554 008
   * Mental Health Crisis (Butabika Hospital): Toll-Free 0800 200 600
+  * Dawa-Lens Support: support@dawalens.ug
 
 === SUGGESTIONS (CRITICAL) ===
 - Generate EXACTLY 3 short follow-up prompts (<6 words each) in the suggestions field representing what the user would logically ask next.
@@ -2506,6 +2530,8 @@ ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
 Write your response in Markdown text first, then on a new line append EXACTLY:
 ###METADATA###
 {"suggestions":["s1","s2","s3"],"source":"Groq","action":null}
+- Do NOT output "---" or dividers before ###METADATA###.
+- The user must NEVER see ###METADATA### or JSON in the chat output.
 - action must be a populated object if you performed an action, or null if informational.` : `=== RESPONSE FORMAT ===
 Respond in JSON: {"text":"...","suggestions":["s1","s2","s3"],"source":"Groq","action":null}`}
 `;
