@@ -93,7 +93,7 @@ export const extractDeterministicAction = (
     let medName = matchedMed ? matchedMed.name : null;
 
     if (!medName) {
-      const medMatch = lower.match(/(?:take|reminder\s+for|for)\s+([a-z0-9\-]+)/i);
+      const medMatch = lower.match(/(?:take|reminder\s+for|for)\s+([a-z0-9-]+)/i);
       if (medMatch && !['a', 'my', 'the', 'some', 'me', 'daily'].includes(medMatch[1].toLowerCase())) {
         medName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
       } else {
@@ -127,11 +127,11 @@ export const extractDeterministicAction = (
     const isMissed = /\b(missed|skipped|forgot)\b/i.test(lower);
     const status = isMissed ? "missed" : "taken";
 
-    let matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
+    const matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
     let medName = matchedMed ? matchedMed.name : null;
 
     if (!medName) {
-      const medMatch = lower.match(/(?:took|taken|missed|skipped)\s+(?:my\s+)?([a-z0-9\-]+)/i);
+      const medMatch = lower.match(/(?:took|taken|missed|skipped)\s+(?:my\s+)?([a-z0-9-]+)/i);
       if (medMatch && !['my', 'the', 'a', 'dose', 'medicine', 'pills'].includes(medMatch[1].toLowerCase())) {
         medName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
       } else {
