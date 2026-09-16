@@ -87,15 +87,16 @@ export const visionLimiter = rateLimit({
 });
 
 // Heavy AI endpoints limiter (User-based with IPv6-safe IP fallback)
+// Sized for conversational assistants like DawaGPT (supports continuous dialogue)
 export const heavyAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // limit to 15 heavy requests per 15 minutes
+  max: 60, // allow up to 60 conversational requests per 15 minutes per user
   keyGenerator: (req) => {
     return req.user?.uid || ipKeyGenerator(req);
   },
   message: {
     status: 'fail',
-    message: 'Too many requests to heavy AI features. Please try again later.'
+    message: 'DawaGPT is currently experiencing high conversation volume. Please wait a moment before sending another message.'
   },
   standardHeaders: true,
   legacyHeaders: false,

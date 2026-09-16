@@ -39,22 +39,12 @@ export const resolveHonorific = (gender?: string | null): string => {
 };
 
 const FAQ_RESPONSE_MAP: Record<string, string> = {
-  "is this safe for me?": "Checking your health profile... Based on NDA Uganda guidelines, this medication is generally safe for you. However, please consult your doctor directly before making changes.",
-  "can i take this with milk?": "For Coartem (Artemether/Lumefantrine), it is recommended to take with a fatty meal or milk to increase absorption. For many other antibiotics, avoid milk as it can hinder absorption. Check your specific prescription.",
-  "is matooke safe?": "Matooke (steamed green bananas) is generally safe and very healthy (high in potassium). It's a great staple to have with your medications, especially if they require a meal.",
-  "what about g-nuts?": "G-nut sauce is rich in healthy fats and protein. The fats in G-nuts actually help your body absorb certain medications like Coartem better!",
-  "is kalo healthy?": "Kalo (millet bread) is excellent for you. It's rich in iron and calcium, which are great for your blood and bones.",
-  "can i eat nsenene?": "Yes! Nsenene (grasshoppers) are a great source of protein and healthy fats. Just ensure they are prepared hygienically.",
-  "what are the side effects?": "Common side effects for medications in this category include dizziness and nausea. If you experience severe rashes or palpitations, seek medical help immediately.",
-  "how do i take this?": "Always follow the dosage on your pill bottle or prescription. For acute cases, consistency is key to recovery.",
   "oli otya": "Oli otya! I am doing well{{salutation}}. How can DawaGPT help you with your health or medicines today?",
   "wasuze otya": "Wasuze otya! I hope you slept well and are ready for a healthy day. How can I help you today?",
   "osiibye otya": "Osiibye otya! How has your day been? Let's check your evening medication adherence.",
   "gyebaleko": "Gyebaleko! Thank you. I am here to help you manage your health. How are you feeling today?",
   "webale": "Kale! You're welcome. Let me know if you need help with reminders or safety checks.",
-  "eddagala": "Eddagala (medicine) is key to your health. Do you want to check details for one of your medicines, or set up a reminder?",
-  "omutwe gunnuma": "Bambi (oh dear), sorry about the headache. Ensure you are hydrated, and check if you have a pain reliever reminder like Panadol (Paracetamol) set up.",
-  "olubuto lunnuma": "Bambi, sorry about the stomach ache. Have you taken any medication recently, or eaten? Some medicines should be taken with food (like Matooke or Posho) to prevent stomach irritation.",
+  "eddagala": "Eddagala (medicine) is key to your health. You can [view your active medications](/medications) or [set up a dose reminder](/reminders/new).",
   "contact support": "For support in Uganda: 1) National Emergency & Ambulance: 112 (Mobile Toll-Free) or 999; 2) Ministry of Health (MoH) Uganda: 0800 100 066 / 0800 203 033; 3) National Drug Authority (NDA) Drug Safety: 0800 101 622 / WhatsApp +256 791 415 555; 4) Mulago Hospital Emergency: +256 414 554 008; 5) Butabika Crisis Hotline: 0800 200 600; 6) App Support: support@dawalens.ug.",
   "support uganda": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: support@dawalens.ug.",
   "uganda support": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: support@dawalens.ug.",
@@ -798,8 +788,9 @@ export const generateDawaGPTResponse = async (
   return {
     id: Date.now().toString(),
     role: "assistant",
-    text: "I am your Dawa-Lens assistant. You can ask about your medication logs, patterns in missing doses, Med Vault stock, family hub profiles, or general safety. For urgent medical issues, please contact a professional.",
-    source: "System"
+    text: "I'm DawaGPT, your Ugandan health companion. Ask me about your medications, reminders, drug interactions, or pill stock. For urgent medical issues, please call a professional.",
+    source: "System",
+    suggestions: ["Check my medications", "View my reminders", "Check drug interactions"]
   };
 };
 
@@ -887,36 +878,18 @@ export const chatWithDawaGPT = async (
     };
   } catch (err: unknown) {
     console.error("DawaGPT Chat Error:", err);
-    try {
-      const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || "";
-      const localResponse = await generateDawaGPTResponse(
-        lastUserMsg,
-        null,
-        userProfile,
-        medicines,
-        doseLogs,
-        reminders,
-        patients,
-        selectedPatientId,
-        currentPage
-      );
-      if (localResponse && localResponse.text) {
-        return localResponse;
-      }
-    } catch (fallbackErr) {
-      console.error("[DawaGPT] Local fallback failed:", fallbackErr);
-    }
 
     const rawMsg = err instanceof Error ? err.message : "";
     const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
     const errorMessage = isTechnicalError
-      ? "I had trouble processing that request. Please try again in a moment."
+      ? "⚠️ DawaGPT's AI service is temporarily unavailable. Please try again in a few minutes.\n\nFor urgent health questions, contact **NDA Uganda** toll-free: **0800 101 622** or **MoH Uganda**: **0800 100 066**."
       : rawMsg;
     return {
       id: Date.now().toString(),
       role: "assistant",
       text: errorMessage,
-      source: "System"
+      source: "System",
+      suggestions: ["Try again", "Check my medications", "Contact NDA Uganda"]
     };
   }
 };
@@ -1045,29 +1018,19 @@ export const chatWithDawaGPTStream = async (
       }
     }
 
-    // If the stream completed with a connection failure or empty text, activate local clinical fallback
+    // If the stream completed with a connection failure or empty text, show a clear service unavailability message
     if (!fullText || fullText.includes("trouble connecting") || fullText.includes("trouble processing that request") || fullText.includes("Error starting chat stream")) {
-      console.warn("[DawaGPT] Streaming delivered connection error, activating local clinical fallback...");
-      try {
-        const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || "";
-        const localResponse = await generateDawaGPTResponse(
-          lastUserMsg,
-          null,
-          userProfile,
-          medicines,
-          doseLogs,
-          reminders,
-          patients,
-          selectedPatientId,
-          currentPage
-        );
-        if (localResponse && localResponse.text) {
-          onChunk(localResponse.text);
-          return localResponse;
-        }
-      } catch (fallbackErr) {
-        console.error("[DawaGPT] Local clinical fallback error:", fallbackErr);
-      }
+      console.warn("[DawaGPT] Streaming delivered connection error. AI backend unreachable.");
+      const serviceDownMsg = "⚠️ DawaGPT's AI service is temporarily unavailable. Our backend AI providers are being restored. Please try again in a few minutes.\n\nFor urgent health questions, call the **Uganda National Drug Authority (NDA)** toll-free: **0800 101 622** or the **Ministry of Health**: **0800 100 066**.";
+      const offlineResp: ChatMessage = {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: serviceDownMsg,
+        source: "System",
+        suggestions: ["Try again", "Check my medications", "Contact NDA Uganda"]
+      };
+      onChunk(serviceDownMsg);
+      return offlineResp;
     }
 
     return {
@@ -1080,39 +1043,21 @@ export const chatWithDawaGPTStream = async (
     };
   } catch (err: unknown) {
     console.error("DawaGPT Streaming Error:", err);
-    try {
-      console.warn("[DawaGPT] Stream connection failed, activating local clinical fallback...");
-      const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || "";
-      const localResponse = await generateDawaGPTResponse(
-        lastUserMsg,
-        null,
-        userProfile,
-        medicines,
-        doseLogs,
-        reminders,
-        patients,
-        selectedPatientId,
-        currentPage
-      );
-      if (localResponse && localResponse.text) {
-        onChunk(localResponse.text);
-        return localResponse;
-      }
-    } catch (fallbackErr) {
-      console.error("[DawaGPT] Local clinical fallback failed:", fallbackErr);
-    }
 
     const rawMsg = err instanceof Error ? err.message : "";
-    const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
-    const errorMessage = isTechnicalError
-      ? "I had trouble processing that request. Please try again in a moment."
+    const isNetworkOrServerError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
+    const errorMessage = isNetworkOrServerError
+      ? "⚠️ DawaGPT's AI service is temporarily unavailable. Please try again in a few minutes.\n\nFor urgent health questions, contact **NDA Uganda** toll-free: **0800 101 622** or **MoH Uganda**: **0800 100 066**."
       : rawMsg;
-    return {
+    const errResp: ChatMessage = {
       id: Date.now().toString(),
       role: "assistant",
       text: errorMessage,
-      source: "System"
+      source: "System",
+      suggestions: ["Try again", "Check my medications", "Contact NDA Uganda"]
     };
+    onChunk(errorMessage);
+    return errResp;
   }
 };
 

@@ -47,7 +47,7 @@ const GROQ_LIGHT_MODEL = sanitizeGroqModel(process.env.GROQ_LIGHT_MODEL || 'open
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
-const CEREBRAS_MODEL = 'gpt-oss-120b'; // migrated from llama-3.3-70b (decommissioned Feb 16, 2026)
+const CEREBRAS_MODEL = process.env.CEREBRAS_MODEL || 'llama-3.3-70b';
 const CEREBRAS_API_URL = 'https://api.cerebras.ai/v1/chat/completions';
 
 const Z_AI_API_KEY = process.env.Z_AI_API_KEY;
@@ -246,7 +246,7 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
     for (const mId of candidateModels) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${mId}:generateContent?key=${activeGeminiKey}`;
-        response = await axios.post(url, payload, { timeout: 15000 });
+        response = await axios.post(url, payload, { timeout: 30000 });
         if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
           break;
         }
@@ -614,17 +614,18 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
       : 'groq-8b';
 
   const fn = async () => {
-    // Resilient candidate list: active Groq models (gpt-oss-120b, gpt-oss-20b, qwen3.6-27b)
+    // Resilient candidate list: active Groq models (gpt-oss-120b, gpt-oss-20b, qwen3.6-27b, llama-3.3-70b-versatile)
     const rawCandidates = [
       modelId,
       GROQ_MODEL,
       'openai/gpt-oss-120b',
       'openai/gpt-oss-20b',
+      'llama-3.3-70b-versatile',
       'qwen/qwen3.6-27b'
     ];
-    // Filter out decommissioned Llama models and deprecated models
+    // Filter out only truly decommissioned or deprecated legacy models
     const candidateModels = Array.from(new Set(rawCandidates))
-      .filter(m => typeof m === 'string' && !m.toLowerCase().includes('llama') && !m.toLowerCase().includes('qwen3-32b') && !m.toLowerCase().includes('qwen3.8') && !m.toLowerCase().includes('mixtral') && !m.toLowerCase().includes('gemma'));
+      .filter(m => typeof m === 'string' && !m.toLowerCase().includes('llama-3.1-70b') && !m.toLowerCase().includes('llama3-8b') && !m.toLowerCase().includes('llama3-70b') && !m.toLowerCase().includes('qwen3-32b') && !m.toLowerCase().includes('qwen3.8') && !m.toLowerCase().includes('mixtral') && !m.toLowerCase().includes('gemma'));
     if (candidateModels.length === 0) {
       candidateModels.push('openai/gpt-oss-120b', 'openai/gpt-oss-20b');
     }
@@ -657,7 +658,7 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
             'Authorization': `Bearer ${currentApiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 15000 // 15s timeout
+          timeout: 25000 // 25s timeout for reasoning models & deep contexts
         });
         if (response.data?.choices?.[0]?.message?.content) {
           usedModel = currentModel;
@@ -1745,65 +1746,18 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     }
   }
 
-  // 3. Specific Drug & Food Interactions
-  if (norm.includes('interact') || norm.includes('safe') || norm.includes('side effect') || norm.includes('combine') || norm.includes('alcohol') || norm.includes('waragi') || norm.includes('food') || norm.includes('mukene') || norm.includes('milk') || norm.includes('matooke') || norm.includes('g-nut') || norm.includes('gnut') || norm.includes('posho') || norm.includes('kalo')) {
-    if (norm.includes('metronidazole') || norm.includes('flagyl')) {
-      return {
-        text: `Yes${greeting}, **Flagyl (Metronidazole)** has critical safety interactions:\n\n` +
-          `1. ⚠️ **Alcohol & Local Brews (Waragi, Beer, Kasese, Wine)** — **CRITICAL**: Metronidazole blocks alcohol metabolism, causing a severe **disulfiram-like reaction**. Symptoms include violent vomiting, rapid heart rate (tachycardia), facial flushing, headache, and severe abdominal cramps. **NEVER drink alcohol** while taking Metronidazole and for at least **48 hours** after your last dose.\n` +
-          `2. ⚠️ **Blood Thinners (Warfarin)**: Metronidazole significantly increases Warfarin's anticoagulant effect, raising your risk of heavy bleeding.\n` +
-          `3. ⚠️ **Lithium**: Can lead to toxic buildup of lithium in the body.\n` +
-          `4. ℹ️ **Food**: Taking Metronidazole with food or milk (such as *Matooke* or *Posho*) helps minimize stomach irritation.\n\n` +
-          `You can [check your drug & food interactions](/interactions) anytime to verify how Metronidazole pairs with your active cabinet.`,
-        suggestions: ["Metronidazole with alcohol", "Check my interactions", "View medicine cabinet"],
-        source: "MoH Safety Protocol",
-        action: null
-      };
-    }
-
-    if (norm.includes('coartem') || norm.includes('artemether') || norm.includes('lumefantrine')) {
-      return {
-        text: `Here is crucial safety and interaction guidance for **Coartem (Artemether / Lumefantrine)**${greeting}:\n\n` +
-          `1. 🍲 **Fatty Food Requirement**: Coartem **must** be taken with or immediately after food containing fat (e.g. *G-nut sauce*, milk, eggs, or avocado) to ensure proper absorption against malaria parasites.\n` +
-          `2. ⚠️ **Grapefruit Juice**: Avoid large amounts as it can increase drug blood levels.\n` +
-          `3. ⚠️ **Heart Medications / QT-prolonging drugs**: Avoid combining with medications that affect heart rhythm.\n\n` +
-          `You can [check your drug & food interactions](/interactions) to ensure your full malaria treatment is safe.`,
-        suggestions: ["Best foods for Coartem", "Check drug interactions", "View reminders"],
-        source: "MoH Safety Protocol",
-        action: null
-      };
-    }
-
-    if (norm.includes('paracetamol') || norm.includes('panadol')) {
-      return {
-        text: `Here are important safety and interaction facts for **Panadol (Paracetamol)**${greeting}:\n\n` +
-          `1. ⚠️ **Alcohol (Waragi, Beer)**: Regular or heavy alcohol use with Paracetamol increases the risk of acute liver toxicity.\n` +
-          `2. ⚠️ **Duplicate Paracetamol Products**: Many cold & flu remedies (e.g. Flucold, ColdCap) contain paracetamol. Avoid double-dosing. Never exceed **4,000mg (4g)** in 24 hours.\n` +
-          `3. ⚠️ **Blood Thinners (Warfarin)**: High daily paracetamol doses over several days can increase bleeding risks.\n\n` +
-          `You can [check your drug & food interactions](/interactions) to check all your medicines.`,
-        suggestions: ["Safe daily Paracetamol dose", "Check drug interactions", "View medications"],
-        source: "MoH Safety Protocol",
-        action: null
-      };
-    }
-
-    if (norm.includes('mukene') || norm.includes('milk') || norm.includes('calcium')) {
-      return {
-        text: `**Calcium Food Interactions (Mukene / Milk)**:\n\n` +
-          `• **Mukene** (silver fish) and **dairy milk** are rich in calcium.\n` +
-          `• Calcium binds strongly to certain antibiotics (such as **Ciprofloxacin**, **Tetracyclines**, and **Doxycycline**) forming unabsorbable complexes that reduce the antibiotic's effectiveness.\n` +
-          `• **Guideline**: Separate meals containing Mukene or milk by at least **2 hours** before or after taking these antibiotics.\n\n` +
-          `You can [check your drug & food interactions](/interactions) to verify your medications.`,
-        suggestions: ["Check drug interactions", "Is Matooke safe?", "Open Interactions"],
-        source: "MoH Safety Protocol",
-        action: null
-      };
-    }
-
+  // 3. Official Uganda Healthcare & Emergency Directory
+  if (norm.includes('support') || norm.includes('emergency') || norm.includes('call') || norm.includes('help line') || norm.includes('helpline') || norm.includes('phone') || norm.includes('contact')) {
     return {
-      text: `You can [check your drug & food interactions](/interactions) to verify if your medicines are safe with meals like Matooke, G-nuts, or Waragi, and guard against duplicate therapies.`,
-      suggestions: ["Check drug interactions", "Is Matooke safe with my meds?", "Open Interactions"],
-      source: "System",
+      text: `Here is the official **Uganda Healthcare & Emergency Contact Directory**:\n\n` +
+        `• 🚨 **National Emergency & Ambulance**: Call **112** (Mobile Toll-Free on MTN/Airtel) or **999** (Landline)\n` +
+        `• 🏛️ **National Drug Authority (NDA) Uganda**: Toll-Free **0800 101 622** | WhatsApp: **+256 791 415 555** | Head Office: **+256 417 788 100** *(for reporting adverse drug reactions, counterfeit medicines, or safety alerts)*\n` +
+        `• 🏥 **Ministry of Health (MoH) Uganda**: Toll-Free **0800 100 066** or **0800 203 033** | Email: **info@health.go.ug**\n` +
+        `• 🩺 **Mulago National Referral Hospital (Casualty & Emergency)**: **+256 414 554 008** / **+256 414 554 001**\n` +
+        `• 🧠 **Mental Health Crisis Support (Butabika Hospital)**: Toll-Free **0800 200 600**\n` +
+        `• 📱 **Dawa-Lens App Support**: Email **support@dawalens.ug**`,
+      suggestions: ["Call Uganda Emergency (112)", "National Drug Authority Helpline", "Open Settings"],
+      source: "NDA / MoH Directory",
       action: null
     };
   }
@@ -1825,7 +1779,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     };
   }
 
-  // 5. Med Vault / Stock queries
+  // 5. Med Vault / Stock queries (Deterministic Calculation)
   if (norm.includes('vault') || norm.includes('stock') || norm.includes('days left') || norm.includes('doses left') || norm.includes('how many days') || norm.includes('how many doses') || norm.includes('refill')) {
     const summary = buildMedVaultSummary(medicines, reminders);
     return {
@@ -1846,7 +1800,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     };
   }
 
-  // 7. Reminders / Schedule Inquiries
+  // 7. Reminders / Schedule Inquiries (Deterministic Schedule)
   if (norm.includes('reminder') || norm.includes('schedule') || norm.includes('alarm') || norm.includes('dose time')) {
     const remLines = reminders.length > 0
       ? reminders.map(r => `• **${r.medicineName}**: ${r.dose} at ${formatTimeDisplay(r.time)} (${r.repeatSchedule || 'daily'})`).join('\n')
@@ -1859,58 +1813,21 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     };
   }
 
-  // 8. Common Clinical Topics (Malaria, Antibiotics, Blood Pressure, Diabetes, Hydration)
-  if (norm.includes('malaria') || norm.includes('musujja')) {
-    return {
-      text: `**Malaria Information & Clinical Guidelines (Uganda MoH)**:\n\n` +
-        `• **Transmission**: Caused by Plasmodium parasites transmitted through bites of female *Anopheles* mosquitoes.\n` +
-        `• **First-Line Treatment**: Artemisinin-based Combination Therapy (**ACT**), primarily **Coartem (Artemether-Lumefantrine)**.\n` +
-        `• **Essential Rule**: Always take Coartem with fatty food (e.g. *G-nut sauce* or milk) to ensure proper bloodstream absorption.\n` +
-        `• **Diagnosis**: Always confirm with a Rapid Diagnostic Test (mRDT) or blood smear before treatment.\n\n` +
-        `You can [review your medications](/medications) or [check interactions](/interactions) for Coartem.`,
-      suggestions: ["Coartem food requirements", "Check drug interactions", "Set a reminder"],
-      source: "MoH Uganda Clinical Guidelines",
-      action: null
-    };
-  }
-
-  if (norm.includes('antibiotic') || norm.includes('resistance') || norm.includes('amoxicillin') || norm.includes('septrin')) {
-    return {
-      text: `**Antibiotic Safety & Stewardship Guidance**:\n\n` +
-        `• **Finish Full Course**: Even if you feel better after 2–3 days, continue taking your antibiotic until the prescribed duration finishes. Stopping early allows surviving bacteria to develop **antibiotic resistance**.\n` +
-        `• **Timing Consistency**: Take doses at evenly spaced intervals (e.g. every 8 or 12 hours) to maintain therapeutic drug levels in your blood.\n` +
-        `• **Water & Food**: Take with a full glass of water to avoid stomach irritation and protect kidney clearance.\n\n` +
-        `You can [set up dose alarms in Medication Reminders](/reminders) to never miss a dose.`,
-      suggestions: ["Set a reminder", "Check medications", "View dose history"],
-      source: "National Drug Authority (NDA)",
-      action: null
-    };
-  }
-
-  if (norm.includes('blood pressure') || norm.includes('hypertension') || norm.includes('bp')) {
-    return {
-      text: `**Blood Pressure & Hypertension Care**:\n\n` +
-        `• **Thresholds**: Normal BP is typically below 120/80 mmHg. Persistent readings above 140/90 mmHg indicate hypertension.\n` +
-        `• **Adherence**: Antihypertensive medications must be taken **every single day** without skipping, even when you feel completely fine.\n` +
-        `• **Lifestyle**: Minimize dietary sodium (table salt, processed seasonings like Royco), stay active, and stay hydrated.\n\n` +
-        `You can [manage your daily BP medication reminders](/reminders) to keep your numbers steady.`,
-      suggestions: ["View reminders", "Log my dose", "Check Med Vault"],
-      source: "Clinical Safety",
-      action: null
-    };
-  }
-
-  // 9. General Health / Navigation fallback
+  // 8. Honest Service Status Notice (Replaces misleading static medical templates)
+  // Guarantees DawaGPT will NEVER output irrelevant canned medical advice pretending to be an AI response.
   return {
-    text: `Oli otya${greeting}! I'm **DawaGPT**, your Ugandan health companion. I'm here to help you manage your health:\n\n` +
-      `• 💊 [Check active prescriptions in My Medications](/medications)\n` +
+    text: `⚠️ I am currently experiencing difficulty reaching the live AI reasoning engine to answer your specific question.\n\n` +
+      `Our multi-model AI providers are reconnecting. While connectivity is restored, you can:\n` +
+      `• 💊 [Check your active prescriptions in My Medications](/medications)\n` +
       `• ⏰ [Manage your schedule in Medication Reminders](/reminders)\n` +
-      `• 📦 [Check pill counts and days of supply in Med Vault](/medvault)\n` +
-      `• ⚠️ [Screen drug & food interactions](/interactions)\n` +
-      `• 📊 [Review adherence streak in Dose History](/history)\n\n` +
-      `You can tell me things like *"Remind me to take Panadol at 8pm"*, *"I took my medication"*, or ask any drug safety question. How can I help you right now?`,
-    suggestions: ["Remind me to take Panadol at 8pm", "Check drug interactions", "How is my pill stock?"],
-    source: "DawaGPT",
+      `• 📦 [Check pill counts and supply in Med Vault](/medvault)\n` +
+      `• ⚠️ [Review drug & food interactions in Interactions Guard](/interactions)\n\n` +
+      `For urgent clinical guidance or adverse drug reactions in Uganda, please contact:\n` +
+      `• **National Drug Authority (NDA) Uganda**: Toll-Free **0800 101 622** | WhatsApp **+256 791 415 555**\n` +
+      `• **Ministry of Health (MoH) Uganda**: Toll-Free **0800 100 066** / **0800 203 033**\n` +
+      `• **Emergency Ambulance Dispatch**: **112** (Mobile Toll-Free) / **999**`,
+    suggestions: ["Try asking again", "Check my medications", "View reminders"],
+    source: "System (Reconnecting)",
     action: null
   };
 }
@@ -1980,7 +1897,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(CEREBRAS_API_URL, { model: CEREBRAS_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${CEREBRAS_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
+            responseType: 'stream', timeout: 20000
           });
           return response.data;
         };
@@ -2007,7 +1924,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           if (isReasoning) payload.reasoning_format = 'hidden';
           const response = await axios.post(GROQ_API_URL, payload, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 12000
+            responseType: 'stream', timeout: 25000 // 25s timeout for reasoning models & deep contexts
           });
           return response.data;
         };
@@ -2034,7 +1951,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           if (isReasoning) payload.reasoning_format = 'hidden';
           const response = await axios.post(GROQ_API_URL, payload, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 12000
+            responseType: 'stream', timeout: 25000 // 25s timeout
           });
           return response.data;
         };
@@ -2044,7 +1961,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 4. Try Groq Qwen (qwen/qwen3.6-27b) as last Groq streaming fallback
+    // 4. Try Groq Qwen (qwen/qwen3.6-27b) as Groq streaming fallback
     if (GROQ_API_KEY) {
       try {
         const modelId = 'qwen/qwen3.6-27b';
@@ -2060,11 +1977,11 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           payload.reasoning_format = 'hidden';
           const response = await axios.post(GROQ_API_URL, payload, {
             headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 12000
+            responseType: 'stream', timeout: 25000 // 25s timeout
           });
           return response.data;
         };
-        return await rateLimitManager.enqueue(fn, 'groq-70b', lastUserMsgForRl, priority, 3, true);
+        return await rateLimitManager.enqueue(fn, 'groq-qwen', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
         console.warn("Stream Fallback: Groq Qwen failed.", err.response?.data?.error?.message || err.response?.data || err.message);
       }

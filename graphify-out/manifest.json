@@ -320,8 +320,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/middleware/rateLimiter.js": {
-    "mtime": 1789470920.5082474,
-    "ast_hash": "d9d256f0d31a54195c9c6239dec7d1c3",
+    "mtime": 1789559987.4232426,
+    "ast_hash": "d31a5b3ab79065e23eaee4e762dd8258",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/middleware/validateMiddleware.js": {
@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789478219.9376912,
-    "ast_hash": "4f36c0b1b836d2c2946761f03fc8d747",
+    "mtime": 1789560144.19613,
+    "ast_hash": "701505f8955ebe846d4a8d7efd0a9d6d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -410,8 +410,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/rateLimitManager.js": {
-    "mtime": 1789372846.529117,
-    "ast_hash": "894a179ecc4bb9224be345e7338e3718",
+    "mtime": 1789560002.0110712,
+    "ast_hash": "212c7b1d75bda45ecfdf5314c831035d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/reminderService.js": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789478863.679066,
-    "ast_hash": "412260425c85bb0fb5255a236c64fed5",
+    "mtime": 1789560171.969026,
+    "ast_hash": "27ffd921ff8c14983c6ac7ddf8ea4a15",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -4237,6 +4237,26 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/useGeolocation-C0PirVl1.js": {
     "mtime": 1789479438.8162723,
     "ast_hash": "e3cedcd22a9920d858cf30ea3e6f82da",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-all-live-apis.js": {
+    "mtime": 1789559346.3418677,
+    "ast_hash": "1e331ea4f3d82a45a67d8795cbdf96f2",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-authenticated.js": {
+    "mtime": 1789556327.069919,
+    "ast_hash": "5e2158ea111a041fdd2f7bfab58eb0b3",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-live.js": {
+    "mtime": 1789556254.920881,
+    "ast_hash": "3563eba0c0253ecf78790a98744f606a",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-unit-direct.js": {
+    "mtime": 1789558107.4974039,
+    "ast_hash": "e298e9639a147a86e347f5bab4a4153e",
     "semantic_hash": ""
   }
 }

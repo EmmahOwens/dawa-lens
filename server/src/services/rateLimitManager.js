@@ -37,6 +37,12 @@ class RateLimitManager {
         rpd: 1000,
         tpd: 1000000,
       },
+      'groq-qwen': {
+        rpm: 30,
+        tpm: 200000,    // 200,000 TPM
+        rpd: 1000,
+        tpd: 1000000,
+      },
       'gemini': {
         rpm: 15,
         tpm: 1000000,   // Gemini 2.0 Flash: very generous TPM
