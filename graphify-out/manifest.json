@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1789459761.2400782,
-    "ast_hash": "1074e109602f86ad6da59842ad9c98ee",
+    "mtime": 1789626737.882223,
+    "ast_hash": "e94cf284505c0cfe5b0c85051bc0428b",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -740,8 +740,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/InteractionsWidget.tsx": {
-    "mtime": 1789114600.3392825,
-    "ast_hash": "6b10c23b71a9ea3e226801c48e24b228",
+    "mtime": 1789626626.1391363,
+    "ast_hash": "2d21e0a8cfb68bbf6aff2e3a2bf506f2",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/MedDetailsWidget.tsx": {
@@ -1205,8 +1205,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/InteractionsPage.tsx": {
-    "mtime": 1789114707.979311,
-    "ast_hash": "1457c654871688cefe7995db060ee57c",
+    "mtime": 1789626669.9877095,
+    "ast_hash": "44e3cbc32b161fd3f9e7b8703ec69e43",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicineInfoPage.tsx": {
@@ -2575,8 +2575,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/__tests__/InteractionsWidget.test.tsx": {
-    "mtime": 1787300149.7554681,
-    "ast_hash": "5cda1c0075760117d27e7a046b13f2d8",
+    "mtime": 1789626871.9373882,
+    "ast_hash": "2b9d1585973723bd3ab10ce6e4c1ba03",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/__tests__/TravelCompanionPage.test.tsx": {
@@ -4287,6 +4287,21 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/therapeuticDuplicationService.ts": {
     "mtime": 1789566857.2370927,
     "ast_hash": "887e9fd5f1559e1479abd3a1ee12a21e",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/__tests__/DawaGPTPrompt.test.tsx": {
+    "mtime": 1789626809.7099628,
+    "ast_hash": "cd8e83d65e512b12320739577c0d9553",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/__tests__/safetyPromptBuilder.test.ts": {
+    "mtime": 1789626582.342613,
+    "ast_hash": "3c7bb6685b33c24c1c1d0b19096185fc",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/safetyPromptBuilder.ts": {
+    "mtime": 1789626574.358341,
+    "ast_hash": "8a3b35acfca90bc81d7f71e93eba09bc",
     "semantic_hash": ""
   }
 }
