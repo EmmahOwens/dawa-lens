@@ -10,6 +10,15 @@ import * as patientService from './patientService.js';
 import { rateLimitManager } from './rateLimitManager.js';
 import { getFoodKnowledgePrompt, LOCAL_FOODS } from './localFoodService.js';
 import { fetchDrugLabel, checkDuplicateTherapy } from './openFdaService.js';
+import {
+  fetchClinicalGroundingForQuery,
+  formatDuplicateTherapyWatchdogContext,
+  isSameTaskOrDuplicateQuery,
+  detectDuplicateTherapiesSync,
+  generateDuplicateTherapyFallbackResponse,
+  findLocalTherapeuticClass,
+  extractDrugsFromQuery
+} from './therapeuticDuplicationService.js';
 
 dotenv.config();
 
@@ -1364,7 +1373,8 @@ export const isComplexTask = (text) => {
   const hasShowRemindersIntent = /(show|list|what\s+are|check|view)\s+\w*\s*reminders?/i.test(lower);
   if (hasShowRemindersIntent) return true;
   if (isActionRequest || isDataRequest) return true;
-  const isMedicalQuery = /(dose|dosage|effect|safe|interact|symptom|pain|sick|hurt|doctor|health)/i.test(lower);
+  if (isSameTaskOrDuplicateQuery(lower)) return true;
+  const isMedicalQuery = /(dose|dosage|effect|safe|interact|symptom|pain|sick|hurt|doctor|health|duplicate)/i.test(lower);
   if (isMedicalQuery && text.split(' ').length > 5) return true;
   return false;
 };
@@ -1668,7 +1678,10 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [])
     }
   }
 
-  // 4. LOG_WELLNESS
+  // 4. LOG_WELLNESS (Guard against medication questions or duplicate therapy queries being misrouted)
+  const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use)\b/i.test(lower) || isSameTaskOrDuplicateQuery(lower, medicines);
+  if (isMedQuestion) return null;
+
   const isWellnessIntent = /\b(log (my )?mood|log (my )?symptoms?|feeling|i feel|i'm feeling|i have a headache|headache|stomach ache|dizzy|nausea|fatigue|fever)\b/i.test(lower);
   if (isWellnessIntent) {
     const symptoms = [];
@@ -1792,7 +1805,48 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     };
   }
 
-
+  // 5. Therapeutic Duplication & Same-Task Medications Query Fallback
+  if (isSameTaskOrDuplicateQuery(norm) || (medicines.length >= 2 && detectDuplicateTherapiesSync(medicines).length > 0)) {
+    const cabinetDuplicates = detectDuplicateTherapiesSync(medicines);
+    const queryDrugs = extractDrugsFromQuery(norm, medicines);
+    const queryDuplicates = queryDrugs.length >= 2 ? detectDuplicateTherapiesSync(queryDrugs.map(name => ({ name }))) : [];
+    const activeDup = queryDuplicates[0] || cabinetDuplicates[0];
+    if (activeDup) {
+      return generateDuplicateTherapyFallbackResponse(activeDup, salutation);
+    }
+    if (queryDrugs.length >= 2) {
+      const class1 = findLocalTherapeuticClass(queryDrugs[0]);
+      const class2 = findLocalTherapeuticClass(queryDrugs[1]);
+      if (class1 && class2 && class1.id === class2.id) {
+        return generateDuplicateTherapyFallbackResponse({
+          drug1: queryDrugs[0],
+          drug2: queryDrugs[1],
+          sharedClass: class1.name,
+          sharedTask: class1.task,
+          warning: `Both ${queryDrugs[0]} and ${queryDrugs[1]} perform the same clinical task (${class1.task}). ${class1.summaryHazard}`,
+          dangers: class1.dangers,
+          guidance: class1.guidance,
+          source: 'NDA Uganda & FDA Safety Standards'
+        }, salutation);
+      }
+    }
+    return {
+      text: `⚠️ **Clinical Interaction Warning: Medications Performing the Same Task**\n\n` +
+        `Bambi${greeting}, taking more than one medication that performs the same clinical task is known as **Therapeutic Duplication**.\n\n` +
+        `**Key Clinical Facts**:\n` +
+        `• ⚠️ **The "Ceiling Effect"**: Doubling up on medicines that do the same thing does **not** give you double the pain relief or healing. Receptor targets in the body become saturated.\n` +
+        `• ⚠️ **Additive Toxicity**: While the therapeutic benefit hits a ceiling, the risk of toxic side effects and organ injury multiplies drastically. For example, taking two NSAIDs (like Ibuprofen and Diclofenac) severely damages the stomach lining and kidneys; taking two Paracetamol products causes acute toxic liver failure; combining multiple blood pressure medications causes dangerous hypotension and kidney shutdown.\n` +
+        `• ⚠️ **Hidden Ingredients**: Many over-the-counter cold and flu preparations already contain painkillers or antihistamines.\n\n` +
+        `**Recommended Next Steps**:\n` +
+        `1. **Never take both medications simultaneously** unless specifically instructed and monitored by your physician.\n` +
+        `2. Consult your doctor or pharmacist to determine the single most appropriate medicine for your condition.\n` +
+        `3. You can [check drug & food interactions in Interactions Guard](/interactions) or [review your active prescriptions in My Medications](/medications).\n\n` +
+        `*Sources: National Drug Authority (NDA) Uganda, NLM RxNorm & U.S. FDA Drug Safety.*`,
+      suggestions: ["Check drug interactions", "View my active medications", "Ask about my prescriptions"],
+      source: "NDA / openFDA Guard",
+      action: null
+    };
+  }
 
   // 8. Honest Service Status Notice (Replaces misleading static medical templates)
   // Guarantees DawaGPT will NEVER output irrelevant canned medical advice pretending to be an AI response.
@@ -2429,15 +2483,13 @@ export async function prepareDawaGPTContext({ messages, medicines, userProfile, 
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
   const lastAction = recentMessages.find(m => m.role === 'assistant' && (m.action || m.content?.includes('action')))?.action;
   const conversationPhase = messages.length === 0 ? 'opening' : messages.length < 4 ? 'discovery' : lastAction ? 'post-action' : 'ongoing';
-  const shouldRetrieve = shouldRetrieveMedicalKnowledge(lastUserMsg);
-  const knowledgePromise = shouldRetrieve ? retrieveMedicalKnowledge(lastUserMsg) : Promise.resolve([]);
-
   const { active: activeMedsList } = getActiveAndPastMedicines(medicines, reminders, doseLogs);
   const userRequestedAll = userAskedForAllMeds(lastUserMsg);
 
   // If user did not ask for all/past medicines, filter medicines and logs.
   // Retain all medicines if family members exist so cross-profile queries can be answered.
   const filteredMeds = (userRequestedAll || (patients && patients.length > 0)) ? medicines : activeMedsList;
+  const duplicateGroundingPromise = fetchClinicalGroundingForQuery(lastUserMsg, filteredMeds || medicines);
 
   // Filter doseLogs to only include logs for active medicines if user did not ask for all
   const filteredDoseLogs = (userRequestedAll || (patients && patients.length > 0))
@@ -2459,8 +2511,15 @@ export async function prepareDawaGPTContext({ messages, medicines, userProfile, 
   
   // Build full Family Hub summary with complete read access
   const familyHubSummary = buildFamilyHubSummary(patients, medicines, reminders, doseLogs, userProfile, selectedPatientId);
-  const knowledgeSnippets = await knowledgePromise;
+
+  const shouldRetrieve = shouldRetrieveMedicalKnowledge(lastUserMsg);
+  const knowledgePromise = shouldRetrieve ? retrieveMedicalKnowledge(lastUserMsg) : Promise.resolve([]);
+  const [knowledgeSnippets, duplicateGrounding] = await Promise.all([
+    knowledgePromise,
+    duplicateGroundingPromise
+  ]);
   const knowledgeContext = knowledgeSnippets.length > 0 ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n` : "";
+  const duplicateGroundingContext = formatDuplicateTherapyWatchdogContext(duplicateGrounding);
 
   const STATIC_SYSTEM_PROMPT = `You are "DawaGPT", a warm, empathetic medical AI assistant in the Dawa-Lens app (Uganda).
 All responses and actions must come dynamically from your clinical AI reasoning engine.
@@ -2521,6 +2580,26 @@ Embed fluent markdown links into sentence grammar (never use "click here" or raw
   * Mental Health Crisis (Butabika Hospital): Toll-Free 0800 200 600
   * Dawa-Lens Support: support@dawalens.ug
 
+=== RXNORM & OPENFDA CLINICAL GROUNDING & DUPLICATE THERAPY (SAME-TASK MEDICATIONS) ===
+When answering questions about medications performing the same task, duplicate therapies, or potential drug interactions:
+1. REGULATORY GROUNDING:
+   - Ground your clinical reasoning in the authoritative RxNorm concept names, active ingredients, and openFDA Established Pharmacologic Classes (EPC) provided in your session context.
+   - If two medications share the same active ingredient (e.g. both contain Acetaminophen / Paracetamol) or the same pharmacologic class (e.g. both are NSAIDs like Ibuprofen and Diclofenac, or both are ACE inhibitors like Lisinopril and Enalapril), explicitly identify that both medications perform the same clinical task.
+2. CLINICAL HAZARDS & CEILING EFFECT:
+   - Clearly inform the patient that taking two medications performing the same clinical task is a dangerous "Therapeutic Duplication".
+   - Explain the "Ceiling Effect" and additive toxicity: doubling medications that do the same thing does NOT provide double relief, but drastically increases the danger of organ damage.
+   - Specifically cite key organ hazards:
+     * Duplicate Paracetamol / Acetaminophen (Panadol, Flucold, ColdCap, Hedex, Cafenol, Co-codamol): Accidental overdose exceeding 4,000 mg (4g)/day causes acute toxic liver necrosis and fatal liver failure.
+     * Duplicate NSAIDs (Ibuprofen, Diclofenac, Naproxen, Meloxicam, Piroxicam, Aspirin): Extreme risk of stomach ulceration, severe gastrointestinal hemorrhage, acute renal failure, and cardiovascular events. Oral NSAIDs must NEVER be doubled up.
+     * Duplicate Blood Pressure / Dual RAAS Blockade (ACE Inhibitor + ARB, e.g. Lisinopril + Losartan): Causes life-threatening hyperkalemia, acute kidney shutdown, and severe hypotension.
+     * Duplicate Acid Reducers (PPIs, e.g. Omeprazole + Esomeprazole / Pantoprazole): No added acid suppression (ceiling reached), with elevated risk of hypomagnesemia, C. diff bowel infection, and bone fractures.
+     * Duplicate Antihistamines / Sedatives (e.g. Cetirizine + Piriton, or multiple sleep aids): Severe central nervous system depression, extreme drowsiness, respiratory depression, falls, and anticholinergic toxicity.
+     * Duplicate Blood Thinners (e.g. Warfarin + Rivaroxaban / Apixaban / Aspirin): High risk of catastrophic internal bleeding.
+3. ACTIONABLE ADVICE:
+   - Advise the user NEVER to take both medications concurrently unless explicitly directed and monitored by their prescribing physician.
+   - Recommend consulting a doctor or pharmacist to review their regimen and select the single best option.
+   - Embed markdown links: [check drug & food interactions](/interactions) and [check your active medications](/medications).
+
 === SUGGESTIONS (CRITICAL) ===
 - Generate EXACTLY 3 short follow-up prompts (<6 words each) in the suggestions field representing what the user would logically ask next.
 - NEVER output suggestions inside message text. They belong ONLY in the suggestions JSON/metadata field.
@@ -2555,6 +2634,7 @@ ${medVaultSummary}
     Wellness Logs: ${wellnessSummary}
     ${vitalityContext}
 
+${duplicateGroundingContext}
     === FAMILY HUB & CLIENT PROFILES (FULL READ ACCESS) ===
 ${familyHubSummary}
 

@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789565164.240576,
-    "ast_hash": "163b3adf685755b49966bba39df1c4d7",
+    "mtime": 1789567188.4725344,
+    "ast_hash": "a6652580ab4fc1763415907e053f0c2d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789564937.1621141,
-    "ast_hash": "501238fc3a6119fb08e255badbe69d1d",
+    "mtime": 1789567136.802908,
+    "ast_hash": "6409f7e3a06b1e75db528c39ae276dbf",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -2510,8 +2510,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/openFdaService.js": {
-    "mtime": 1789025968.5675895,
-    "ast_hash": "09b01c9d98a4a0d400450d304ee90787",
+    "mtime": 1789566509.6722932,
+    "ast_hash": "00f7776cefc6e7c225c7fed945654f1c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-openfda.js": {
@@ -2530,8 +2530,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/openFdaClient.ts": {
-    "mtime": 1788264901.9945648,
-    "ast_hash": "0fd8eaed17806a8cabc9e901f59aadf1",
+    "mtime": 1789567011.338755,
+    "ast_hash": "a55c757ba6d1934b67e926181469e6f8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-medvault-intelligence.js": {
@@ -4267,6 +4267,26 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-reproduce-6meds.js": {
     "mtime": 1789563892.4116466,
     "ast_hash": "5588ba30186cda204278199b5134960e",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/therapeuticDuplicationService.js": {
+    "mtime": 1789566750.5210125,
+    "ast_hash": "7b8377d3369958080db3b87395459c42",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-therapeutic-duplication.js": {
+    "mtime": 1789566682.4792883,
+    "ast_hash": "3a7fbc7c286c41cb931723c5354d3d73",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/therapeuticDuplication.test.ts": {
+    "mtime": 1789625447.7021182,
+    "ast_hash": "0313f10e9a30329754212d19501274ab",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/therapeuticDuplicationService.ts": {
+    "mtime": 1789566857.2370927,
+    "ast_hash": "887e9fd5f1559e1479abd3a1ee12a21e",
     "semantic_hash": ""
   }
 }

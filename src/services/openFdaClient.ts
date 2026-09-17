@@ -1,6 +1,7 @@
 import { storage } from '../lib/storage';
 import { Medicine } from '../contexts/AppContext';
 import { auth } from '../lib/firebase';
+import { detectDuplicateTherapies } from './therapeuticDuplicationService';
 
 async function authHeaders(): Promise<HeadersInit> {
   const headers: Record<string, string> = {
@@ -276,13 +277,19 @@ export async function checkFdaMultiSafety(
 
     return await res.json();
   } catch (err) {
-    console.warn('[openFdaClient] Multi safety check failed, falling back to local empty checks:', err);
+    console.warn('[openFdaClient] Multi safety check failed, falling back to local checks:', err);
+    const localDuplicates = detectDuplicateTherapies(medications);
     return {
-      hasCriticalAlert: false,
+      hasCriticalAlert: localDuplicates.length > 0,
       boxedWarnings: [],
       contraindicationAlerts: [],
       allergenAlerts: [],
-      duplicateTherapies: [],
+      duplicateTherapies: localDuplicates.map((d) => ({
+        drug1: d.drug1,
+        drug2: d.drug2,
+        sharedClass: d.sharedClass,
+        warning: d.warning,
+      })),
       recalls: [],
     };
   }

@@ -8,6 +8,13 @@ import { Medicine, Reminder, UserProfile, DoseLog, WellnessLog, Patient } from "
 import { checkConditionSafety } from "./conditionInteractionService";
 import { calculateRefillStatus, getDailyDoseRate } from "./refillService";
 import { aiApi } from "./api";
+import {
+  isSameTaskOrDuplicateQuery,
+  detectDuplicateTherapies,
+  extractDrugsFromQuery,
+  getDuplicateTherapyAdvice,
+  findLocalTherapeuticClass
+} from "./therapeuticDuplicationService";
 
 export interface AIAction {
   type: "ADD_REMINDER" | "LOG_DOSE" | "ADD_MEDICINE" | "UPDATE_REMINDER" | "REMOVE_REMINDER" | "LOG_WELLNESS" | "ADD_PATIENT" | "UPDATE_MEDICINE" | "REMOVE_MEDICINE" | null;
@@ -173,7 +180,10 @@ export const extractDeterministicAction = (
     }
   }
 
-  // 4. LOG_WELLNESS
+  // 4. LOG_WELLNESS (Guard against medication questions or duplicate therapy queries being misrouted)
+  const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use)\b/i.test(lower) || isSameTaskOrDuplicateQuery(lower, medicines);
+  if (isMedQuestion) return null;
+
   const isWellnessIntent = /\b(log (my )?mood|log (my )?symptoms?|feeling|i feel|i'm feeling|i have a headache|headache|stomach ache|dizzy|nausea|fatigue|fever)\b/i.test(lower);
   if (isWellnessIntent) {
     const symptoms: string[] = [];
@@ -364,6 +374,73 @@ export const generateDawaGPTResponse = async (
         `What medication or health question can I help you with today?`,
       source: "System",
       suggestions: ["Check my medications", "How is my pill stock?", "Check drug interactions"]
+    };
+  }
+
+  // Therapeutic Duplication & Same-Task Medication Intelligence
+  const isDupQuery = isSameTaskOrDuplicateQuery(normalizedQuery, allMedicines);
+  const activeGender = (selectedPatientId && patients.length > 0
+    ? patients.find(p => p.id === selectedPatientId)?.gender
+    : undefined) || userProfile?.gender;
+  const honorific = resolveHonorific(activeGender);
+
+  if (isDupQuery || (allMedicines.length >= 2 && detectDuplicateTherapies(allMedicines).length > 0 && (normalizedQuery.includes("interact") || normalizedQuery.includes("safe") || normalizedQuery.includes("conflict")))) {
+    const cabinetDuplicates = detectDuplicateTherapies(allMedicines);
+    const queryDrugs = extractDrugsFromQuery(normalizedQuery, allMedicines);
+    const queryDuplicates = queryDrugs.length >= 2 ? detectDuplicateTherapies(queryDrugs.map(name => ({ name }))) : [];
+    const activeDup = queryDuplicates[0] || cabinetDuplicates[0];
+
+    if (activeDup) {
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: getDuplicateTherapyAdvice(activeDup, honorific),
+        source: "NDA",
+        suggestions: ["Which one should I stop?", "Check drug interactions", "View active medications"]
+      };
+    }
+
+    if (queryDrugs.length >= 2) {
+      const class1 = findLocalTherapeuticClass(queryDrugs[0]);
+      const class2 = findLocalTherapeuticClass(queryDrugs[1]);
+      if (class1 && class2 && class1.id === class2.id) {
+        const customDup = {
+          drug1: queryDrugs[0],
+          drug2: queryDrugs[1],
+          sharedClass: class1.name,
+          sharedTask: class1.task,
+          warning: `Both ${queryDrugs[0]} and ${queryDrugs[1]} perform the same clinical task (${class1.task}). ${class1.summaryHazard}`,
+          dangers: class1.dangers,
+          guidance: class1.guidance,
+          source: "NDA Uganda & FDA Safety Standards"
+        };
+        return {
+          id: Date.now().toString(),
+          role: "assistant",
+          text: getDuplicateTherapyAdvice(customDup, honorific),
+          source: "NDA",
+          suggestions: ["Which one is safer for me?", "Check drug interactions", "View active medications"]
+        };
+      }
+    }
+
+    const greeting = honorific ? ` ${honorific}` : "";
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: `⚠️ **Clinical Interaction Warning: Medications Performing the Same Task**\n\n` +
+        `Bambi${greeting}, taking more than one medication that performs the same clinical task is known as **Therapeutic Duplication**.\n\n` +
+        `**Key Clinical Facts**:\n` +
+        `• ⚠️ **The "Ceiling Effect"**: Doubling up on medicines that do the same thing does **not** give you double the pain relief or healing. Receptor targets in the body become saturated.\n` +
+        `• ⚠️ **Additive Toxicity**: While the therapeutic benefit hits a ceiling, the risk of toxic side effects and organ injury multiplies drastically. For example, taking two NSAIDs (like Ibuprofen and Diclofenac) severely damages the stomach lining and kidneys; taking two Paracetamol products causes acute toxic liver failure; combining multiple blood pressure medications causes dangerous hypotension and kidney shutdown.\n` +
+        `• ⚠️ **Hidden Ingredients**: Many over-the-counter cold and flu preparations already contain painkillers or antihistamines.\n\n` +
+        `**Recommended Next Steps**:\n` +
+        `1. **Never take both medications simultaneously** unless specifically instructed and monitored by your physician.\n` +
+        `2. Consult your doctor or pharmacist to determine the single most appropriate medicine for your condition.\n` +
+        `3. You can [check drug & food interactions in Interactions Guard](/interactions) or [review your active prescriptions in My Medications](/medications).\n\n` +
+        `*Sources: National Drug Authority (NDA) Uganda, NLM RxNorm & U.S. FDA Drug Safety.*`,
+      source: "NDA",
+      suggestions: ["Check drug interactions", "View active medications", "Ask about my prescriptions"]
     };
   }
 

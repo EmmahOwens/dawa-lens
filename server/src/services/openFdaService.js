@@ -618,6 +618,21 @@ export const checkContraindicationConflicts = (label, patientConditions = []) =>
 export const checkDuplicateTherapy = async (medications = []) => {
   if (!medications || medications.length < 2) return [];
 
+  try {
+    const { detectDuplicateTherapiesWithApis } = await import('./therapeuticDuplicationService.js');
+    const apiDuplicates = await detectDuplicateTherapiesWithApis(medications);
+    if (apiDuplicates && apiDuplicates.length > 0) {
+      return apiDuplicates.map((d) => ({
+        drug1: d.drug1,
+        drug2: d.drug2,
+        sharedClass: d.sharedClass,
+        warning: d.warning,
+      }));
+    }
+  } catch (e) {
+    console.warn('[openFdaService] Dynamic duplication check fallback:', e.message);
+  }
+
   const medClasses = [];
   for (const med of medications) {
     const medName = med.name || med.genericName;
