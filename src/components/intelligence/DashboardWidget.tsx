@@ -1,13 +1,13 @@
 import React from "react";
 import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import { Clock, TrendingUp, Sparkles, Loader2 } from "@/lib/icons";
+import MessageRenderer from "@/components/MessageRenderer";
+import { Clock, TrendingUp, Sparkles, Loader2, Salad } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useIntelligenceContext } from "@/hooks/useIntelligenceContext";
 
 export function DashboardWidget() {
   const { reminders, doseLogs } = useApp();
-  const { insight, isLoading } = useIntelligenceContext();
+  const { insight, nutritionalTip, isLoading } = useIntelligenceContext();
 
   const nextReminder = reminders
     .filter(r => r.enabled)
@@ -107,27 +107,38 @@ export function DashboardWidget() {
           </div>
           <div className="flex-1">
             {isLoading ? (
-               <div className="flex items-center gap-2 text-muted-foreground">
-                 <Loader2 size={12} className="animate-spin" />
-                 <span className="text-[10px] font-bold uppercase tracking-wider">Analyzing logs...</span>
-               </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 size={12} className="animate-spin" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Analyzing logs...</span>
+                </div>
             ) : insight ? (
-               <div className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
-                 <ReactMarkdown
-                   components={{
-                     p: ({ children }) => <p className="mb-2 last:mb-0">"{children}"</p>,
-                   }}
-                 >
-                   {insight}
-                 </ReactMarkdown>
-               </div>
+                <div className="text-[11px] leading-relaxed text-foreground/80 font-medium">
+                  <MessageRenderer
+                    text={insight}
+                    className="text-[11px] leading-relaxed [&_strong]:text-primary"
+                  />
+                </div>
             ) : (
-               <p className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
-                 "Log your doses consistently to build your streak and receive personalized health insights."
-               </p>
+                <p className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
+                  Log your doses consistently to build your streak and receive personalized health insights.
+                </p>
             )}
           </div>
         </motion.div>
+
+        {nutritionalTip && (
+          <motion.div 
+            whileHover={{ y: -2 }}
+            className="mt-3 bg-primary/5 border border-primary/20 rounded-[1.5rem] p-4 flex items-start gap-3 shadow-sm"
+          >
+            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5 text-primary">
+               <Salad size={14} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <MessageRenderer text={nutritionalTip} className="text-[10px] leading-relaxed text-foreground/80" />
+            </div>
+          </motion.div>
+        )}
       </section>
     </div>
   );

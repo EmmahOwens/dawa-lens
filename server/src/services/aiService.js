@@ -963,7 +963,11 @@ export const getCoachAdvice = async (logs, medicines, userName, priority = 'high
     Respond in JSON format:
     { "advice": "text (Markdown formatted)", "patterns": ["list"], "adherenceScore": 0-100 }
   `;
-  return await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 800);
+  const result = await callGroq(prompt, true, GROQ_LIGHT_MODEL, priority, 800);
+  if (result && typeof result.advice === 'string') {
+    result.advice = result.advice.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '\n');
+  }
+  return result;
 };
 
 export const checkHolisticSafety = async (medicines, lifestyleFactors = [], priority = 'high') => {
@@ -1177,8 +1181,20 @@ export const getTravelAdvice = async ({ medicines, destination, currentCity, hom
     };
   });
 
+  const unescapeText = (val) => {
+    if (typeof val !== 'string') return val;
+    return val.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '\n');
+  };
+
   return {
     ...rawResult,
+    timezoneAdvice: unescapeText(rawResult?.timezoneAdvice),
+    customsNotes: unescapeText(rawResult?.customsNotes),
+    healthRisks: typeof rawResult?.healthRisks === 'string'
+      ? unescapeText(rawResult.healthRisks)
+      : Array.isArray(rawResult?.healthRisks)
+        ? rawResult.healthRisks.map(unescapeText)
+        : rawResult?.healthRisks,
     equivalents: finalEquivalents.length > 0 ? finalEquivalents : returnedEquivalents
   };
 };

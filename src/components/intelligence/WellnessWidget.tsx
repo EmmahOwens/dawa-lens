@@ -1,10 +1,23 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Heart, Activity, Brain, CheckCircle2 } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
+import MessageRenderer from "@/components/MessageRenderer";
 
 export function WellnessWidget() {
   const { t } = useTranslation();
+  const [insightText, setInsightText] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const cached = sessionStorage.getItem("dawa_ai_health_insight");
+      if (cached) {
+        setInsightText(cached);
+      }
+    } catch (_) {}
+  }, []);
+
+  const defaultInsight = "Your mood logs show a **15% improvement** on days where you log a high-protein breakfast.";
 
   return (
     <div className="space-y-8">
@@ -27,9 +40,9 @@ export function WellnessWidget() {
                 <p className="text-[9px] font-bold text-muted-foreground uppercase opacity-60">Insight Active</p>
              </div>
           </div>
-          <p className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
-            "Your mood logs show a <span className="text-primary font-black">15% improvement</span> on days where you log a high-protein breakfast."
-          </p>
+          <div className="text-[11px] leading-relaxed text-foreground/80 font-medium">
+            <MessageRenderer text={insightText || defaultInsight} className="text-[11px] leading-relaxed [&_strong]:text-primary" />
+          </div>
         </motion.div>
       </section>
 

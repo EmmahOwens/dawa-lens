@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import ReactMarkdown from "react-markdown";
+import MessageRenderer from "@/components/MessageRenderer";
 import { Sparkles, ArrowRight, TrendingUp, TrendingDown, Minus, Loader2 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
@@ -184,16 +184,10 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
           </div>
         ) : displayInsight ? (
           <div className="text-[15px] font-medium leading-relaxed mb-6 text-foreground/90">
-            <ReactMarkdown
-              components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0">"{children}"</p>,
-                strong: ({ children }) => <strong className="font-bold text-foreground">{children}</strong>,
-                ul: ({ children }) => <ul className="list-disc ml-4 mb-2 space-y-1">{children}</ul>,
-                li: ({ children }) => <li className="text-[13px] leading-tight">{children}</li>,
-              }}
-            >
-              {displayInsight}
-            </ReactMarkdown>
+            <MessageRenderer
+              text={displayInsight}
+              className="text-[15px] font-medium leading-relaxed text-foreground/90 [&_strong]:text-foreground"
+            />
           </div>
         ) : (
           <p className="text-[15px] font-medium leading-relaxed mb-6 text-muted-foreground italic">

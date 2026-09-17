@@ -142,28 +142,104 @@ interface MessageRendererProps {
   className?: string;
 }
 
+/**
+ * Normalizes raw or AI-generated markdown strings so that:
+ * 1. Escaped newlines ('\n', '\\n', '\r\n') from JSON/AI responses are converted to real line breaks.
+ * 2. Escaped quotes (\" or \') are converted to standard quotes.
+ * 3. Unicode bullets (•) and list items are normalized to markdown bullets.
+ * 4. List blocks that immediately follow non-empty paragraph text (e.g. "Timezone Shift\n- Nairobi...")
+ *    receive a preceding blank line so that markdown parsers treat them as true lists instead of inline text.
+ * 5. Internal metadata delimiters and action tags are cleanly stripped.
+ */
+export function normalizeMarkdown(text: string): string {
+  if (typeof text !== "string") return "";
+
+  // 1. Strip metadata blocks and internal action tags
+  let clean = text
+    .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, "")
+    .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, "")
+    .replace(/\[ACTION EXECUTED:.*?\]/g, "")
+    .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, "")
+    .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, "");
+
+  // 2. Unescape literal escape sequences commonly emitted by LLMs in JSON string values
+  clean = clean
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'");
+
+  // 3. Convert unicode bullets into standard markdown list syntax
+  clean = clean.replace(/(?:^|\n)\s*•\s*/g, "\n- ");
+
+  // 4. Ensure lists following a paragraph start on a new markdown block with a blank line separator
+  const rawLines = clean.split("\n");
+  const formattedLines: string[] = [];
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i];
+    const prevLine = i > 0 ? rawLines[i - 1] : "";
+    const isListItem = /^\s*([*•-]\s+|\d+[\.\)]\s+)/.test(line);
+    const prevIsListItem = /^\s*([*•-]\s+|\d+[\.\)]\s+)/.test(prevLine);
+
+    if (isListItem && !prevIsListItem && prevLine.trim().length > 0) {
+      formattedLines.push(""); // Add blank line before list start
+    }
+    formattedLines.push(line);
+  }
+
+  clean = formattedLines.join("\n");
+
+  return clean.trim();
+}
+
 export default function MessageRenderer({ text, onNavigate, className }: MessageRendererProps) {
-  // Defense-in-depth: Never render internal metadata delimiters, metadata JSON, action tags, or previous suggestions
-  const safeText = typeof text === "string" ? text : "";
-  const cleanText = safeText
-    .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
-    .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
-    .replace(/\[ACTION EXECUTED:.*?\]/g, '')
-    .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
-    .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
-    .trim();
+  const cleanText = normalizeMarkdown(text);
 
   return (
     <div className={`prose prose-sm dark:prose-invert max-w-none min-w-0 leading-[1.6] font-medium ${className || "text-[15px]"}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
-          ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-1">{children}</ul>,
-          ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-1">{children}</ol>,
-          li: ({ children }) => <li>{children}</li>,
+          h1: ({ children }) => (
+            <h1 className="text-base sm:text-lg font-black tracking-tight text-foreground mt-3 mb-2">
+              {children}
+            </h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-sm sm:text-base font-black tracking-tight text-foreground mt-2.5 mb-1.5">
+              {children}
+            </h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-foreground mt-2 mb-1">
+              {children}
+            </h3>
+          ),
+          h4: ({ children }) => (
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-1.5 mb-1">
+              {children}
+            </h4>
+          ),
+          p: ({ children }) => <p className="mb-2.5 last:mb-0 leading-relaxed">{children}</p>,
+          ul: ({ children }) => <ul className="list-disc pl-5 mb-3 last:mb-0 space-y-1">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 last:mb-0 space-y-1">{children}</ol>,
+          li: ({ children }) => <li className="leading-relaxed">{children}</li>,
           strong: ({ children }) => <strong className="font-black text-primary/90">{children}</strong>,
-           a: ({ href, children }) => {
+          blockquote: ({ children }) => (
+            <blockquote className="border-l-2 border-primary/40 pl-3 my-2 italic text-muted-foreground">
+              {children}
+            </blockquote>
+          ),
+          code: ({ children }) => (
+            <code className="bg-muted/60 text-primary text-[12px] font-mono px-1.5 py-0.5 rounded border border-border/40">
+              {children}
+            </code>
+          ),
+          hr: () => <hr className="my-3 border-border/50" />,
+          a: ({ href, children }) => {
             if (!href) return <span>{children}</span>;
             const label = String(children);
             

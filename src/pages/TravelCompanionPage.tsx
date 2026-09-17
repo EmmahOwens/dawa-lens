@@ -31,6 +31,20 @@ export default function TravelCompanionPage() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [showLocationPermission, setShowLocationPermission] = useState(false);
 
+  // Load cached advice if available
+  useEffect(() => {
+    try {
+      const cachedAdvice = sessionStorage.getItem("dawa_travel_advice");
+      const cachedDest = sessionStorage.getItem("dawa_travel_destination");
+      if (cachedAdvice && !advice) {
+        setAdvice(JSON.parse(cachedAdvice));
+        if (cachedDest && !destination) {
+          setDestination(cachedDest);
+        }
+      }
+    } catch (_) {}
+  }, []);
+
   // Show permission dialog if location was denied
   useEffect(() => {
     if (geoStatus === 'denied') {
@@ -108,6 +122,10 @@ export default function TravelCompanionPage() {
       // Small delay to let animation breathe
       setTimeout(() => {
         setAdvice(res);
+        try {
+          sessionStorage.setItem("dawa_travel_advice", JSON.stringify(res));
+          sessionStorage.setItem("dawa_travel_destination", destination);
+        } catch (_) {}
         setLoading(false);
         setIsAnimating(false);
       }, 1500);
@@ -320,7 +338,10 @@ export default function TravelCompanionPage() {
                      <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 mb-4">
                        Timezone Dosing Strategy
                      </h3>
-                     <MessageRenderer text={advice.timezoneAdvice} className="text-lg text-foreground/90 leading-relaxed font-bold tracking-tight" />
+                     <MessageRenderer 
+                       text={advice.timezoneAdvice} 
+                       className="text-[13.5px] sm:text-sm text-foreground/90 leading-relaxed font-normal [&_p]:font-normal [&_li]:font-normal [&_strong]:font-black [&_strong]:text-blue-600 dark:[&_strong]:text-blue-400" 
+                     />
                    </div>
                 </motion.div>
               )}
@@ -338,7 +359,10 @@ export default function TravelCompanionPage() {
                      <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600 mb-4">
                        Customs & Legal Notes
                      </h3>
-                     <MessageRenderer text={advice.customsNotes} className="text-lg text-foreground/90 leading-relaxed font-bold tracking-tight" />
+                     <MessageRenderer 
+                       text={advice.customsNotes} 
+                       className="text-[13.5px] sm:text-sm text-foreground/90 leading-relaxed font-normal [&_p]:font-normal [&_li]:font-normal [&_strong]:font-black [&_strong]:text-amber-600 dark:[&_strong]:text-amber-400" 
+                     />
                    </div>
                 </motion.div>
               )}
@@ -359,13 +383,18 @@ export default function TravelCompanionPage() {
                    </div>
                    <div className="px-2">
                       {typeof advice.healthRisks === 'string' ? (
-                        <MessageRenderer text={advice.healthRisks} className="text-foreground/90" />
+                        <MessageRenderer 
+                          text={advice.healthRisks} 
+                          className="text-[13.5px] sm:text-sm text-foreground/90 leading-relaxed font-normal [&_p]:font-normal [&_li]:font-normal [&_strong]:font-black [&_strong]:text-destructive" 
+                        />
                       ) : Array.isArray(advice.healthRisks) ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                           {advice.healthRisks.map((risk: string, i: number) => (
                             <div key={i} className="flex gap-4 p-4 rounded-2xl bg-background/40 border border-border/50">
                               <AlertCircle size={18} className="text-destructive shrink-0 mt-0.5" />
-                              <p className="text-sm font-bold leading-tight">{risk}</p>
+                              <div className="flex-1 min-w-0">
+                                <MessageRenderer text={risk} className="text-sm font-medium leading-snug" />
+                              </div>
                             </div>
                           ))}
                         </div>

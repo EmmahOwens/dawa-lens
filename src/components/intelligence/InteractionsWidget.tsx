@@ -13,6 +13,7 @@ import { checkInteractions } from "@/services/interactionChecker";
 import { ConditionSafetyCheck, ParsedInteraction } from "@/types/interactions";
 import { MobileWatchdogResolveButton } from "./MobileWatchdogResolveButton";
 import { buildSafetyConsultPrompt } from "@/lib/safetyPromptBuilder";
+import MessageRenderer from "@/components/MessageRenderer";
 
 export function InteractionsWidget() {
   const { t } = useTranslation();
@@ -531,9 +532,9 @@ export function InteractionsWidget() {
                 <p className="text-[11px] font-bold text-foreground">
                   {inter.drug1} + {inter.drug2}
                 </p>
-                <p className="text-[10px] text-muted-foreground line-clamp-2 leading-tight">
-                  {inter.description}
-                </p>
+                <div className="text-[10px] text-muted-foreground line-clamp-3 leading-tight">
+                  <MessageRenderer text={inter.description} className="text-[10px] text-muted-foreground" />
+                </div>
               </motion.div>
             ))}
 
@@ -547,9 +548,9 @@ export function InteractionsWidget() {
                   FDA Boxed Warning
                 </span>
                 <p className="text-[11px] font-bold text-foreground">{bw.drugName}</p>
-                <p className="text-[10px] text-muted-foreground line-clamp-2 leading-tight">
-                  {bw.warning}
-                </p>
+                <div className="text-[10px] text-muted-foreground line-clamp-3 leading-tight">
+                  <MessageRenderer text={bw.warning} className="text-[10px] text-muted-foreground" />
+                </div>
               </div>
             ))}
           </div>
