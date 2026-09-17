@@ -340,7 +340,7 @@ export default function WellnessPage() {
     {
       name: "Physical",
       icon: <Activity size={14} />,
-      options: ["Headache", "Nausea", "Dizziness", "Fatigue", "Pain", "Fever"]
+      options: ["Headache", "Stomach Ache", "Nausea", "Dizziness", "Fatigue", "Pain", "Fever"]
     },
     {
       name: "Mental",
@@ -495,15 +495,29 @@ export default function WellnessPage() {
                       <span>{cat.name}</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {cat.options.map(opt => (
-                        <button
-                          key={opt}
-                          onClick={() => setSymptoms(prev => prev.includes(opt) ? prev.filter(s => s !== opt) : [...prev, opt])}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-bold transition-all border ${symptoms.includes(opt) ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/10" : "bg-card border-border/50 text-muted-foreground hover:border-primary/30"}`}
-                        >
-                          {opt}
-                        </button>
-                      ))}
+                      {cat.options.map(opt => {
+                        const isSelected = symptoms.some(s =>
+                          s.toLowerCase() === opt.toLowerCase() ||
+                          (opt === "Stomach Ache" && s.toLowerCase() === "stomachache")
+                        );
+                        return (
+                          <button
+                            key={opt}
+                            onClick={() => setSymptoms(prev => {
+                              const alreadySelected = prev.some(s =>
+                                s.toLowerCase() === opt.toLowerCase() ||
+                                (opt === "Stomach Ache" && s.toLowerCase() === "stomachache")
+                              );
+                              return alreadySelected
+                                ? prev.filter(s => s.toLowerCase() !== opt.toLowerCase() && !(opt === "Stomach Ache" && s.toLowerCase() === "stomachache"))
+                                : [...prev, opt];
+                            })}
+                            className={`px-3 py-2 rounded-xl text-[10px] font-bold transition-all border ${isSelected ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/10" : "bg-card border-border/50 text-muted-foreground hover:border-primary/30"}`}
+                          >
+                            {opt}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789567188.4725344,
-    "ast_hash": "a6652580ab4fc1763415907e053f0c2d",
+    "mtime": 1789628105.6706393,
+    "ast_hash": "c502875403d52f60ddb3dd1efea8cab7",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useAIActions.tsx": {
-    "mtime": 1789564954.620095,
-    "ast_hash": "9013496ec7bf71fdb6ff3e1be46b51bd",
+    "mtime": 1789628060.774378,
+    "ast_hash": "b7f16623291b8964c14597379f14dd90",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useDrugData.ts": {
@@ -1280,8 +1280,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx": {
-    "mtime": 1789117754.8593888,
-    "ast_hash": "0fba37663e772afbe6021ea7ba67347a",
+    "mtime": 1789628127.6282687,
+    "ast_hash": "03b6e9976676810619c3628a8de5b903",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/app-updater.ts": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789567136.802908,
-    "ast_hash": "6409f7e3a06b1e75db528c39ae276dbf",
+    "mtime": 1789628035.894695,
+    "ast_hash": "88634eec952a492484d4df9763051349",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -4302,6 +4302,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/safetyPromptBuilder.ts": {
     "mtime": 1789626574.358341,
     "ast_hash": "8a3b35acfca90bc81d7f71e93eba09bc",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptWellnessLogging.test.ts": {
+    "mtime": 1789628149.8179128,
+    "ast_hash": "2f9972d03aec34006268989244f9647e",
     "semantic_hash": ""
   }
 }

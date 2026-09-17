@@ -287,17 +287,73 @@ export function useAIActions() {
           });
           break;
 
-        case "LOG_WELLNESS":
+        case "LOG_WELLNESS": {
+          const rawData = (payload.data && typeof payload.data === "object") ? payload.data : payload;
+          const rawMood = rawData.mood ?? payload.mood;
+          const rawEnergy = rawData.energy ?? payload.energy;
+          const rawSymptoms = rawData.symptoms ?? payload.symptoms;
+          const symptoms = Array.isArray(rawSymptoms)
+            ? rawSymptoms.map((s: unknown) => String(s).trim()).filter(Boolean)
+            : [];
+
+          // Normalize mood: 1-5 integer scale
+          let normalizedMood = 3;
+          if (typeof rawMood === "number" && !isNaN(rawMood)) {
+            normalizedMood = Math.max(1, Math.min(5, Math.round(rawMood)));
+          } else if (typeof rawMood === "string") {
+            const parsed = parseInt(rawMood, 10);
+            if (!isNaN(parsed)) {
+              normalizedMood = Math.max(1, Math.min(5, parsed));
+            } else {
+              const lower = rawMood.toLowerCase();
+              if (lower.includes("ecstatic") || lower.includes("great") || lower.includes("5")) normalizedMood = 5;
+              else if (lower.includes("good") || lower.includes("happy") || lower.includes("4")) normalizedMood = 4;
+              else if (lower.includes("okay") || lower.includes("fine") || lower.includes("3")) normalizedMood = 3;
+              else if (lower.includes("meh") || lower.includes("bad") || lower.includes("stressed") || lower.includes("2")) normalizedMood = 2;
+              else if (lower.includes("low") || lower.includes("terrible") || lower.includes("1")) normalizedMood = 1;
+            }
+          }
+
+          // Normalize energy: 1-5 integer scale (1 = 20%, 5 = 100%)
+          let normalizedEnergy = 3;
+          if (typeof rawEnergy === "number" && !isNaN(rawEnergy)) {
+            normalizedEnergy = Math.max(1, Math.min(5, Math.round(rawEnergy)));
+          } else if (typeof rawEnergy === "string") {
+            const parsed = parseInt(rawEnergy, 10);
+            if (!isNaN(parsed)) {
+              normalizedEnergy = Math.max(1, Math.min(5, parsed));
+            } else {
+              const lower = rawEnergy.toLowerCase();
+              if (lower.includes("100") || lower.includes("ecstatic") || lower.includes("full") || lower.includes("5")) normalizedEnergy = 5;
+              else if (lower.includes("high") || lower.includes("strong") || lower.includes("4")) normalizedEnergy = 4;
+              else if (lower.includes("moderate") || lower.includes("normal") || lower.includes("3")) normalizedEnergy = 3;
+              else if (lower.includes("low") || lower.includes("tired") || lower.includes("2")) normalizedEnergy = 2;
+              else if (lower.includes("drained") || lower.includes("exhausted") || lower.includes("1")) normalizedEnergy = 1;
+            }
+          }
+
           await addWellnessLog({
-            type: payload.type || "symptom",
-            data: payload.data || {},
-            patientId: payload.patientId
+            type: payload.type || rawData.type || "symptom",
+            data: {
+              ...rawData,
+              mood: normalizedMood,
+              energy: normalizedEnergy,
+              symptoms,
+              notes: rawData.notes || payload.notes || ""
+            },
+            patientId: payload.patientId || rawData.patientId
           });
+
+          const moodEmojis: Record<number, string> = { 1: "😔", 2: "😕", 3: "😐", 4: "🙂", 5: "🤩" };
+          const emoji = moodEmojis[normalizedMood] || "✨";
+          const symSummary = symptoms.length > 0 ? ` • ${symptoms.join(", ")}` : "";
+
           toast({
-            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Wellness logged</span>,
-            description: action.confirmMessage || "Your health data has been recorded.",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Wellness logged {emoji}</span>,
+            description: action.confirmMessage || `Mood: ${normalizedMood}/5 • Vitality: ${normalizedEnergy * 20}%${symSummary}`,
           });
           break;
+        }
 
         case "ADD_PATIENT":
           await addPatient({

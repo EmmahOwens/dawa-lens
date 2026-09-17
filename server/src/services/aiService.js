@@ -1393,7 +1393,7 @@ export const isLikelyActionRequest = (text) => {
   const pastDoseLog = /\b(i took|i've taken|i missed|i forgot|i skipped|i just took|i already took)\b/i;
 
   // Wellness / mood / energy / symptom logging phrases
-  const wellnessLog = /\b(feeling|feel|mood|energy|tired|fatigue|dizzy|nausea|headache|pain|sick|symptom|log (how|my|a)|wellness|check[- ]?in|log mood|log energy|log symptom|i am feeling|i feel|i'm feeling|i've been feeling|omutwe\s+gunnuma|olubuto\s+lunnuma|musujja|hurt(s)?)\b/i;
+  const wellnessLog = /\b(feeling|feel|mood|energy|tired|fatigue|dizzy|nausea|headache|stomachache|stomach\s*ache|cramps?|ecstatic|very\s*happy|super\s*happy|so\s*happy|happy|joyful|delighted|thrilled|overjoyed|pain|sick|unwell|symptom|log (how|my|a)|wellness|check[- ]?in|log mood|log energy|log symptom|i am feeling|i feel|i'm feeling|i've been feeling|i have (a|an)?\s*(headache|stomachache|stomach\s*ache|fever|cough|migraine|pain)|omutwe\s*(gunnuma|gunuma)?|olubuto\s*(lunnuma|lunuma)?|musujja|hurt(s)?)\b/i;
 
   // Stock / refill phrases
   const refillPhrase = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|i have \d+ (pills?|tablets?|capsules?)|set stock|update stock|update quantity|bought|purchased)\b/i;
@@ -1682,39 +1682,137 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [])
   const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use)\b/i.test(lower) || isSameTaskOrDuplicateQuery(lower, medicines);
   if (isMedQuestion) return null;
 
-  const isWellnessIntent = /\b(log (my )?mood|log (my )?symptoms?|feeling|i feel|i'm feeling|i have a headache|headache|stomach ache|dizzy|nausea|fatigue|fever)\b/i.test(lower);
-  if (isWellnessIntent) {
-    const symptoms = [];
-    if (lower.includes("headache") || lower.includes("omutwe")) symptoms.push("headache");
-    if (lower.includes("stomach") || lower.includes("olubuto")) symptoms.push("stomach ache");
-    if (lower.includes("fever") || lower.includes("musujja")) symptoms.push("fever");
-    if (lower.includes("dizzy") || lower.includes("dizziness")) symptoms.push("dizziness");
-    if (lower.includes("nausea") || lower.includes("vomiting")) symptoms.push("nausea");
-    if (lower.includes("tired") || lower.includes("fatigue")) symptoms.push("fatigue");
-    if (lower.includes("cough")) symptoms.push("cough");
-
-    let mood = "okay";
-    if (lower.includes("great") || lower.includes("good") || lower.includes("happy")) mood = "great";
-    else if (lower.includes("tired") || lower.includes("exhausted")) mood = "tired";
-    else if (lower.includes("sad") || lower.includes("down") || lower.includes("bad")) mood = "bad";
-    else if (lower.includes("stressed") || lower.includes("anxious")) mood = "stressed";
+  const wellnessData = extractWellnessData(text);
+  if (wellnessData) {
+    const moodLabels = { 1: "Low", 2: "Meh", 3: "Okay", 4: "Good", 5: "Great" };
+    const moodStr = moodLabels[wellnessData.mood] || `${wellnessData.mood}/5`;
+    const symSummary = wellnessData.symptoms.length > 0 ? wellnessData.symptoms.join(', ') : 'none';
 
     return {
       type: "LOG_WELLNESS",
       payload: {
         type: "symptom",
         data: {
-          mood,
-          symptoms,
-          notes: text
+          mood: wellnessData.mood,
+          energy: wellnessData.energy,
+          symptoms: wellnessData.symptoms,
+          notes: wellnessData.notes
         }
       },
-      confirmMessage: `Recorded wellness check-in (mood: ${mood}, symptoms: ${symptoms.join(', ') || 'none'}).`
+      confirmMessage: `Recorded wellness check-in (mood: ${moodStr} [${wellnessData.mood}/5], vitality: ${wellnessData.energy * 20}%, symptoms: ${symSummary}).`
     };
   }
 
   return null;
 };
+
+export function extractWellnessData(text) {
+  if (!text) return null;
+  const lower = text.toLowerCase().trim();
+
+  // Guard against medication questions
+  const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use)\b/i.test(lower);
+  if (isMedQuestion) return null;
+
+  const isWellnessIntent = /\b(log (my )?(mood|symptoms?|wellness|energy)|feeling|i feel|i'm feeling|i am feeling|i have (a|an)?\s*(headache|stomachache|stomach\s*ache|migraine|fever|cough|cramp|pain)|headache|stomachache|stomach\s*ache|dizzy|dizziness|nausea|fatigue|fever|ecstatic|thrilled|overjoyed|very\s*happy|super\s*happy|so\s*happy|extremely\s*happy|happy|delighted|joyful|depressed|sad|unwell|sick|omutwe|olubuto|musujja)\b/i.test(lower);
+
+  if (!isWellnessIntent) return null;
+
+  const symptoms = [];
+
+  // Physical symptoms (aligned with Wellness Hub standard categories)
+  if (/\b(headache|migraine|omutwe|head\s*ache|head\s*hurts?)\b/i.test(lower)) {
+    symptoms.push("Headache");
+  }
+  if (/\b(stomachache|stomach\s*ache|olubuto|tummy\s*ache|belly\s*ache|abdominal\s*pain|cramps?|indigestion)\b/i.test(lower)) {
+    symptoms.push("Stomach Ache");
+  }
+  if (/\b(fever|musujja|high\s*temp(erature)?|feverish|chills)\b/i.test(lower)) {
+    symptoms.push("Fever");
+  }
+  if (/\b(dizzy|dizziness|lightheaded(ness)?|vertigo)\b/i.test(lower)) {
+    symptoms.push("Dizziness");
+  }
+  if (/\b(nausea|nauseous|vomit(ing)?|throwing\s*up|queasy)\b/i.test(lower)) {
+    symptoms.push("Nausea");
+  }
+  if (/\b(fatigue|exhaust(ed|ion)?|tired|weak(ness)?|drained|worn\s*out|no\s*energy|low\s*energy)\b/i.test(lower)) {
+    symptoms.push("Fatigue");
+  }
+  if (/\b(pain|hurts?|aching|sore|obulumi|body\s*ache)\b/i.test(lower)) {
+    if (!symptoms.includes("Headache") && !symptoms.includes("Stomach Ache")) {
+      symptoms.push("Pain");
+    }
+  }
+  if (/\b(cough(ing)?|ekifuba)\b/i.test(lower)) {
+    symptoms.push("Cough");
+  }
+
+  // Mental / Emotional symptoms (aligned with Wellness Hub standard categories)
+  const isEcstatic = /\b(ecstatic|thrilled|overjoyed|on\s*cloud\s*nine|blissful|extremely\s*happy|so\s*happy|super\s*happy|very\s*happy)\b/i.test(lower);
+  const isHappy = isEcstatic || /\b(happy|cheerful|joyful|delighted|in\s*a\s*great\s*mood|feeling\s*great|amazing|fantastic)\b/i.test(lower);
+  const isRelaxed = /\b(relaxed|calm|peaceful|serene|chill)\b/i.test(lower);
+  const isFocused = /\b(good\s*focus|focused|sharp|productive)\b/i.test(lower);
+  const isAnxious = /\b(anxious|anxiety|nervous|worried|panicky)\b/i.test(lower);
+  const isStressed = /\b(stressed|stress|overwhelmed|under\s*pressure)\b/i.test(lower);
+  const isIrritable = /\b(irritable|irritated|annoyed|cranky|grumpy)\b/i.test(lower);
+
+  if (isHappy) symptoms.push("Happy");
+  if (isRelaxed) symptoms.push("Relaxed");
+  if (isFocused) symptoms.push("Good Focus");
+  if (isAnxious) symptoms.push("Anxious");
+  if (isStressed) symptoms.push("Stressed");
+  if (isIrritable) symptoms.push("Irritable");
+
+  // Determine Mood (1 to 5 scale)
+  let mood = 3;
+  const isSevere = /\b(severe|terrible|awful|unbearable|horrible|excruciating|depressed|miserable|agony)\b/i.test(lower);
+  const hasPhysicalIllness = symptoms.some(s => ["Headache", "Stomach Ache", "Fever", "Nausea", "Dizziness", "Pain", "Cough"].includes(s));
+
+  if (isEcstatic) {
+    mood = 5;
+  } else if (isHappy) {
+    mood = 4;
+  } else if (isRelaxed || isFocused) {
+    mood = 4;
+  } else if (isSevere) {
+    mood = 1;
+  } else if (hasPhysicalIllness || isAnxious || isStressed || isIrritable || /\b(sad|down|bad|unwell|sick)\b/i.test(lower)) {
+    mood = 2;
+  } else if (/\b(okay|fine|alright|neutral|meh)\b/i.test(lower)) {
+    mood = lower.includes("meh") ? 2 : 3;
+  }
+
+  // Determine Energy (1 to 5 scale)
+  let energy = 3;
+  const isExhausted = /\b(exhaust(ed|ion)?|drained|fatigued|depleted|no\s*energy|burned\s*out|completely\s*tired|dead\s*tired)\b/i.test(lower);
+  const isHighEnergy = /\b(full\s*of\s*energy|bursting\s*with\s*energy|super\s*energetic|hyper|invigorated|high\s*energy|energetic|feeling\s*strong)\b/i.test(lower);
+
+  if (isEcstatic || isHighEnergy) {
+    energy = 5;
+  } else if (isExhausted) {
+    energy = 1;
+  } else if (mood === 5) {
+    energy = isHighEnergy ? 5 : 4;
+  } else if (mood === 4) {
+    energy = isRelaxed ? 3 : 4;
+  } else if (isSevere) {
+    energy = 1;
+  } else if (hasPhysicalIllness || symptoms.includes("Fatigue") || /\b(tired|sluggish|weak|low\s*energy)\b/i.test(lower)) {
+    energy = 2;
+  } else if (mood === 2) {
+    energy = 2;
+  } else {
+    energy = 3;
+  }
+
+  return {
+    mood,
+    energy,
+    symptoms,
+    notes: text,
+  };
+}
 
 /**
  * Intelligent Local Clinical Fallback
@@ -1762,9 +1860,21 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
       };
     }
     if (action.type === "LOG_WELLNESS") {
-      const symStr = action.payload.data?.symptoms?.join(', ') || 'general check-in';
+      const moodVal = Number(action.payload.data?.mood) || 3;
+      const energyVal = Number(action.payload.data?.energy) || 3;
+      const symptomsList = action.payload.data?.symptoms || [];
+      const symStr = symptomsList.length > 0 ? symptomsList.join(', ') : 'general check-in';
+      const moodLabels = { 1: "Low", 2: "Meh", 3: "Okay", 4: "Good", 5: "Great / Ecstatic" };
+      const moodDisplay = moodLabels[moodVal] || `${moodVal}/5`;
+
+      const isPositiveVibe = moodVal >= 4 && !symptomsList.some(s => ["Headache", "Stomach Ache", "Fever", "Nausea", "Dizziness", "Pain", "Cough"].includes(s));
+
+      const responseText = isPositiveVibe
+        ? `That's wonderful to hear${greeting}! 🌟 I've recorded your positive vibe in the Wellness Hub (Mood: **${moodDisplay}**, Vitality: **${energyVal * 20}%**). Keep embracing that great vitality!\n\nYou can [review your wellness logs in Wellness Hub](/wellness).`
+        : `I've recorded this in your Wellness Hub (Mood: **${moodDisplay}**, Vitality: **${energyVal * 20}%**, Symptoms: **${symStr}**). Bambi${greeting}, please rest, stay well-hydrated, and consult a healthcare professional if symptoms persist.\n\nYou can [review your wellness logs in Wellness Hub](/wellness).`;
+
       return {
-        text: `I've recorded this in your Wellness Hub (Mood: **${action.payload.data?.mood}**, Symptoms: **${symStr}**). Bambi${greeting}, please rest, stay well-hydrated, and consult a healthcare professional if symptoms persist.\n\nYou can [review your wellness logs in Wellness Hub](/wellness).`,
+        text: responseText,
         suggestions: ["Open Wellness Hub", "Check medications", "View reminders"],
         source: "Wellness Guard",
         action
@@ -2554,7 +2664,9 @@ ${getFoodKnowledgePrompt()}
   * ADD_PATIENT: { name, age?, gender?, relation?, type: 'family'|'client', conditions?: string[], allergies?: string[], bloodType?, notes? }
 - NATURAL SPEECH SHORTCUTS:
   * "I took my [med]" -> emit LOG_DOSE action: "taken". "I missed/forgot" -> action: "skipped".
-  * User reports mood, energy, symptoms, pain, sickness (e.g. "Omutwe gunuma", "feeling exhausted", "dizzy") -> emit LOG_WELLNESS symptom action immediately with mapped 1-5 scale and aiReflection.
+  * User reports symptoms, sickness, pain (e.g. "headache", "stomachache", "Omutwe gunnuma", "olubuto lunnuma", "feeling exhausted", "dizzy", "nausea") -> emit LOG_WELLNESS symptom action immediately with mapped 1-5 scale (mood 1-2, energy 1-2, symptoms array like ['Headache', 'Stomach Ache']) and aiReflection.
+  * User reports positive vibes (e.g. "very happy", "ecstatic", "thrilled", "feeling great") -> emit LOG_WELLNESS symptom action immediately with mood 4-5, energy 4-5, symptoms array (e.g. ['Happy']), and encouraging aiReflection.
+  * Always emit mood (1-5) and energy (1-5) as integers in data.
 
 === APPLICATION NAVIGATION (NATURAL MID-SENTENCE LINKS) ===
 Embed fluent markdown links into sentence grammar (never use "click here" or raw URLs):
