@@ -98,6 +98,7 @@ export interface FdaSafetyAlerts {
 export interface FdaDrugProfile {
   query: string;
   resolvedName: string;
+  brandName?: string;
   rxcui?: string | null;
   unii?: string | null;
   activeIngredients?: string[];

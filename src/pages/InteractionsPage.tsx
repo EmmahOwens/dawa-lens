@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { useApp } from "@/contexts/AppContext";
 import { checkInteractions, getRxCUI, getSpellingSuggestions } from "@/services/interactionChecker";
 import { HolisticInteraction, ParsedInteraction } from "@/types/interactions";
+import { isSameDrugSubstance, deduplicateMedicationList } from "@/services/clinicalInteractionsData";
 import { 
   ShieldAlert, AlertTriangle, Info, CheckCircle2, 
   Search, Plus, Trash2, Share2, X, Coffee, Wine, 
@@ -32,11 +33,20 @@ export default function InteractionsPage() {
   const [activeTab, setActiveTab] = useState<"cabinet" | "sandbox">("cabinet");
   const { t } = useTranslation();
 
+  // Active medications filtered by selected patient context
+  const activeMeds = selectedPatientId
+    ? medicines.filter(m => m.patientId === selectedPatientId)
+    : medicines;
+
+  // Deduplicate active medications so duplicates like Ibuprofen + Ibuprofen are neglected
+  const { distinctMedications, neglectedDuplicatesCount } = deduplicateMedicationList(activeMeds);
+
   // Cabinet State
   const [interactions, setInteractions] = useState<ParsedInteraction[]>([]);
-  const [loading, setLoading] = useState(medicines.length >= 2);
+  const [loading, setLoading] = useState(activeMeds.length >= 2 && distinctMedications.length >= 2);
   const [animationComplete, setAnimationComplete] = useState(false);
   const [fdaSafety, setFdaSafety] = useState<FdaMultiSafetyResult | null>(null);
+  const [neglectedCount, setNeglectedCount] = useState(neglectedDuplicatesCount);
 
   const hasFdaAlerts = Boolean(
     fdaSafety && (
@@ -49,10 +59,21 @@ export default function InteractionsPage() {
 
   const handleConsultAllAlerts = () => {
     const prompt = buildSafetyConsultPrompt({
-      medNames: medicines.map(m => m.name),
+      medNames: distinctMedications.map(m => m.name),
       fdaSafety,
       interactions,
     });
+    openDawaGPTWithPrompt(prompt);
+  };
+
+  const handleConsultSingleInteraction = (interaction: ParsedInteraction) => {
+    const prompt = `I noticed a potential clinical medication interaction between **${interaction.drug1}** and **${interaction.drug2}** (Severity: ${interaction.severity.toUpperCase()}).
+Description: "${interaction.description}"
+
+Please provide concise, patient-friendly guidance:
+1. What is the real pharmacological risk in simple terms?
+2. Can I take these safely with proper spacing (e.g. 2-4 hours apart), or should one be avoided or substituted?
+3. What warning symptoms should I watch for, and when should I contact my doctor?`;
     openDawaGPTWithPrompt(prompt);
   };
 
@@ -222,8 +243,13 @@ export default function InteractionsPage() {
   useEffect(() => {
     let isMounted = true;
     const fetchInteractions = async () => {
-      const rxcuis = medicines.map(m => m.rxcui).filter((id): id is string => !!id);
-      
+      const currentActiveMeds = selectedPatientId
+        ? medicines.filter(m => m.patientId === selectedPatientId)
+        : medicines;
+
+      const { distinctMedications: distinctMeds, neglectedDuplicatesCount: negCount } = deduplicateMedicationList(currentActiveMeds);
+      setNeglectedCount(negCount);
+
       const currentPatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
       const patientCtx = {
         age: currentPatient?.age || undefined,
@@ -232,7 +258,7 @@ export default function InteractionsPage() {
         allergies: currentPatient?.allergies || [],
       };
 
-      if (medicines.length < 2) {
+      if (currentActiveMeds.length < 2 || distinctMeds.length < 2) {
         if (isMounted) {
           setInteractions([]);
           setFdaSafety(null);
@@ -244,8 +270,8 @@ export default function InteractionsPage() {
       setLoading(true);
       try {
         const [fdaRes, rxNavRes] = await Promise.allSettled([
-          checkFdaMultiSafety(medicines, patientCtx),
-          rxcuis.length >= 2 ? checkInteractions(rxcuis) : Promise.resolve([] as ParsedInteraction[])
+          checkFdaMultiSafety(distinctMeds, patientCtx),
+          checkInteractions(distinctMeds)
         ]);
 
         if (isMounted) {
@@ -283,7 +309,7 @@ export default function InteractionsPage() {
   // Sandbox Safety Fetch
   useEffect(() => {
     const fetchSandboxInteractions = async () => {
-      const rxcuis = sandboxDrugs.map(d => d.rxcui);
+      const { distinctMedications: distinctSandbox } = deduplicateMedicationList(sandboxDrugs);
 
       const currentPatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
       const patientCtx = {
@@ -293,22 +319,22 @@ export default function InteractionsPage() {
         allergies: currentPatient?.allergies || [],
       };
 
-      if (sandboxDrugs.length > 0) {
-        checkFdaMultiSafety(sandboxDrugs.map(d => ({ name: d.name })), patientCtx)
+      if (distinctSandbox.length > 0) {
+        checkFdaMultiSafety(distinctSandbox.map(d => ({ name: d.name })), patientCtx)
           .then(setFdaSafety)
           .catch(err => console.warn('Sandbox FDA safety check failed:', err));
       } else {
         setFdaSafety(null);
       }
 
-      if (rxcuis.length < 2) {
+      if (distinctSandbox.length < 2) {
         setSandboxInteractions([]);
         return;
       }
       
       setSandboxLoading(true);
       try {
-        const results = await checkInteractions(rxcuis);
+        const results = await checkInteractions(distinctSandbox);
         setSandboxInteractions(results);
       } catch (error) {
         console.error("Failed to load sandbox interactions", error);
@@ -340,23 +366,19 @@ export default function InteractionsPage() {
     const cleanName = drugName.trim();
     if (!cleanName) return;
 
-    if (sandboxDrugs.some(d => d.name.toLowerCase() === cleanName.toLowerCase())) {
-      toast.warning(`${cleanName} is already in the sandbox.`);
+    if (sandboxDrugs.some(d => isSameDrugSubstance(d.name, cleanName))) {
+      toast.warning(`"${cleanName}" (or a duplicate) is already in the sandbox.`);
       return;
     }
 
     setSearchingDrug(true);
     try {
       const rxcui = await getRxCUI(cleanName);
-      if (rxcui) {
-        NativeService.haptics.impact(ImpactStyle.Medium);
-        setSandboxDrugs(prev => [...prev, { name: cleanName, rxcui }]);
-        setSearchQuery("");
-        setSuggestions([]);
-        toast.success(`Added ${cleanName} to sandbox.`);
-      } else {
-        toast.error(`Could not find "${cleanName}" in drug registry.`);
-      }
+      NativeService.haptics.impact(ImpactStyle.Medium);
+      setSandboxDrugs(prev => [...prev, { name: cleanName, rxcui: rxcui || "" }]);
+      setSearchQuery("");
+      setSuggestions([]);
+      toast.success(`Added ${cleanName} to sandbox.`);
     } catch (error) {
       console.error(error);
       toast.error("Search failed. Check your internet connection.");
@@ -365,27 +387,27 @@ export default function InteractionsPage() {
     }
   };
 
-  const removeSandboxDrug = (rxcui: string) => {
+  const removeSandboxDrug = (target: string) => {
     NativeService.haptics.impact(ImpactStyle.Light);
-    setSandboxDrugs(prev => prev.filter(d => d.rxcui !== rxcui));
+    setSandboxDrugs(prev => prev.filter(d => d.name !== target && d.rxcui !== target));
   };
 
   const loadCabinetMeds = () => {
     const added: { name: string; rxcui: string }[] = [];
-    medicines.forEach(m => {
-      if (m.rxcui && !sandboxDrugs.some(d => d.rxcui === m.rxcui)) {
-        added.push({ name: m.name, rxcui: m.rxcui });
+    distinctMedications.forEach(m => {
+      if (!sandboxDrugs.some(d => isSameDrugSubstance(d.name, m.name))) {
+        added.push({ name: m.name, rxcui: m.rxcui || "" });
       }
     });
 
     if (added.length === 0) {
-      toast.info("No new cabinet medicines with valid RxCUIs to load.");
+      toast.info("No new unique cabinet medicines to load.");
       return;
     }
 
     NativeService.haptics.impact(ImpactStyle.Medium);
     setSandboxDrugs(prev => [...prev, ...added]);
-    toast.success(`Loaded ${added.length} medicines from cabinet.`);
+    toast.success(`Loaded ${added.length} unique medicine${added.length > 1 ? 's' : ''} from cabinet.`);
   };
 
   const clearSandbox = () => {
@@ -723,7 +745,27 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
             </motion.div>
           )}
 
-          {medicines.length < 2 && (
+          {/* Smart Deduplication Notice */}
+          {neglectedCount > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-primary/20 bg-primary/5 p-3.5 flex items-center justify-between gap-3 shadow-sm"
+            >
+              <div className="flex items-start gap-2.5">
+                <Info size={16} className="text-primary mt-0.5 shrink-0" />
+                <div className="text-xs text-foreground leading-relaxed">
+                  <span className="font-bold text-primary mr-1">Smart Deduplication:</span>
+                  Neglected {neglectedCount} duplicate medication {neglectedCount === 1 ? 'entry' : 'entries'} (e.g. same active drug substance). Evaluating interactions across your distinct medications.
+                </div>
+              </div>
+              <Badge variant="outline" className="hidden sm:inline-flex text-[9px] font-bold uppercase tracking-wider text-primary border-primary/30 shrink-0">
+                Duplicates Neglected
+              </Badge>
+            </motion.div>
+          )}
+
+          {activeMeds.length < 2 && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -738,14 +780,32 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
             </motion.div>
           )}
 
-          {medicines.length >= 2 && loading && (
+          {activeMeds.length >= 2 && distinctMedications.length < 2 && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-dashed border-amber-500/30 bg-amber-500/5 p-8 text-center"
+            >
+              <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center mb-3 text-amber-500">
+                <Info size={22} />
+              </div>
+              <h4 className="font-bold text-sm text-foreground mb-1">
+                Single Unique Medication Detected
+              </h4>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+                Your cabinet contains duplicate records of the same medication ({distinctMedications[0]?.name}). Duplicates were neglected. Add another different medication to evaluate drug-drug interactions.
+              </p>
+            </motion.div>
+          )}
+
+          {distinctMedications.length >= 2 && loading && (
             <div className="space-y-4">
               <Skeleton className="h-[100px] w-full rounded-2xl" />
               <Skeleton className="h-[100px] w-full rounded-2xl" />
             </div>
           )}
 
-          {medicines.length >= 2 && !loading && interactions.length === 0 && !hasFdaAlerts && (
+          {distinctMedications.length >= 2 && !loading && interactions.length === 0 && !hasFdaAlerts && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -756,7 +816,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
             </motion.div>
           )}
 
-          {medicines.length >= 2 && !loading && interactions.length > 0 && (
+          {distinctMedications.length >= 2 && !loading && interactions.length > 0 && (
             <motion.div 
               variants={container} 
               initial="hidden" 
@@ -790,21 +850,57 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                         <Badge variant="secondary" className="bg-warning/10 text-amber-800 dark:text-amber-300 px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.warning")}</Badge>
                       )}
                     </div>
+
+                    {/* Clinical Details Badges */}
+                    {interaction.clinicalDetails && (
+                      <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+                        {interaction.clinicalDetails.title && (
+                          <span className="text-xs font-bold text-foreground mr-1">
+                            {interaction.clinicalDetails.title}
+                          </span>
+                        )}
+                        {interaction.clinicalDetails.spacingHours !== undefined ? (
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                            ⏰ Space by {interaction.clinicalDetails.spacingHours}+ hours
+                          </span>
+                        ) : interaction.severity === 'high' ? (
+                          <span className="text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-md">
+                            🚫 Avoid Combination
+                          </span>
+                        ) : null}
+                        {interaction.clinicalDetails.organRisk && (
+                          <span className="text-[10px] font-semibold text-muted-foreground bg-muted/40 border border-border/40 px-2 py-0.5 rounded-md">
+                            Target: {interaction.clinicalDetails.organRisk}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <p className="text-xs text-muted-foreground leading-relaxed font-medium mb-3">
                       {interaction.description}
                     </p>
 
-                    <button
-                      onClick={() => translateExplanation(key, interaction.drug1, interaction.drug2, interaction.description)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider transition-all"
-                    >
-                      {explanations[key]?.loading ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <Sparkles size={12} />
-                      )}
-                      {isExpanded ? "Close Breakdown" : "AI Plain English Translation"}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => translateExplanation(key, interaction.drug1, interaction.drug2, interaction.description)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider transition-all"
+                      >
+                        {explanations[key]?.loading ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Sparkles size={12} />
+                        )}
+                        {isExpanded ? "Close Breakdown" : "AI Plain English Translation"}
+                      </button>
+
+                      <button
+                        onClick={() => handleConsultSingleInteraction(interaction)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/80 hover:bg-secondary text-secondary-foreground text-[10px] font-bold uppercase tracking-wider transition-all"
+                      >
+                        <Brain size={12} />
+                        Consult DawaGPT
+                      </button>
+                    </div>
 
                     <AnimatePresence>
                       {isExpanded && (
@@ -929,9 +1025,9 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                 className="flex flex-wrap gap-2 mb-4 bg-card border border-border/40 p-4 rounded-xl shadow-sm"
               >
                 <p className="w-full text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Sandbox Drugs ({sandboxDrugs.length})</p>
-                {sandboxDrugs.map(d => (
+                {sandboxDrugs.map((d, index) => (
                   <motion.div
-                    key={d.rxcui}
+                    key={`${d.name}-${index}`}
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
@@ -939,7 +1035,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                   >
                     <span className="text-xs font-semibold lowercase capitalize">{d.name}</span>
                     <button
-                      onClick={() => removeSandboxDrug(d.rxcui)}
+                      onClick={() => removeSandboxDrug(d.name)}
                       className="text-muted-foreground hover:text-destructive transition-colors ml-1"
                     >
                       <X size={12} />
@@ -994,21 +1090,57 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                         <Badge variant="secondary" className="bg-warning/10 text-amber-800 dark:text-amber-300 px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.warning")}</Badge>
                       )}
                     </div>
+
+                    {/* Clinical Details Badges */}
+                    {interaction.clinicalDetails && (
+                      <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+                        {interaction.clinicalDetails.title && (
+                          <span className="text-xs font-bold text-foreground mr-1">
+                            {interaction.clinicalDetails.title}
+                          </span>
+                        )}
+                        {interaction.clinicalDetails.spacingHours !== undefined ? (
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                            ⏰ Space by {interaction.clinicalDetails.spacingHours}+ hours
+                          </span>
+                        ) : interaction.severity === 'high' ? (
+                          <span className="text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-md">
+                            🚫 Avoid Combination
+                          </span>
+                        ) : null}
+                        {interaction.clinicalDetails.organRisk && (
+                          <span className="text-[10px] font-semibold text-muted-foreground bg-muted/40 border border-border/40 px-2 py-0.5 rounded-md">
+                            Target: {interaction.clinicalDetails.organRisk}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <p className="text-xs text-muted-foreground leading-relaxed font-medium mb-3">
                       {interaction.description}
                     </p>
 
-                    <button
-                      onClick={() => translateExplanation(key, interaction.drug1, interaction.drug2, interaction.description)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider transition-all"
-                    >
-                      {explanations[key]?.loading ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <Sparkles size={12} />
-                      )}
-                      {isExpanded ? "Close Breakdown" : "AI Plain English Translation"}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => translateExplanation(key, interaction.drug1, interaction.drug2, interaction.description)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider transition-all"
+                      >
+                        {explanations[key]?.loading ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Sparkles size={12} />
+                        )}
+                        {isExpanded ? "Close Breakdown" : "AI Plain English Translation"}
+                      </button>
+
+                      <button
+                        onClick={() => handleConsultSingleInteraction(interaction)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/80 hover:bg-secondary text-secondary-foreground text-[10px] font-bold uppercase tracking-wider transition-all"
+                      >
+                        <Brain size={12} />
+                        Consult DawaGPT
+                      </button>
+                    </div>
 
                     <AnimatePresence>
                       {isExpanded && (

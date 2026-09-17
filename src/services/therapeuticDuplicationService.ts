@@ -4,6 +4,7 @@
  */
 
 import { Medicine } from "../contexts/AppContext";
+import { normalizeDrugString } from "./clinicalInteractionsData";
 
 export interface TherapeuticClassDef {
   id: string;
@@ -240,6 +241,15 @@ export function detectDuplicateTherapies(medications: Partial<Medicine>[] = []):
       const b = classified[j];
       const pairKey = [a.name.toLowerCase(), b.name.toLowerCase()].sort().join('::');
       if (seenPairs.has(pairKey)) continue;
+
+      // Neglect duplicates of the exact same medication (e.g. Ibuprofen and Ibuprofen)
+      if (
+        a.name.toLowerCase().trim() === b.name.toLowerCase().trim() ||
+        normalizeDrug(a.name) === normalizeDrug(b.name) ||
+        normalizeDrugString(a.name) === normalizeDrugString(b.name)
+      ) {
+        continue;
+      }
 
       if (a.localClass && b.localClass && a.localClass.id === b.localClass.id) {
         seenPairs.add(pairKey);

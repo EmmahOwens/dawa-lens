@@ -740,8 +740,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/InteractionsWidget.tsx": {
-    "mtime": 1789629390.0772839,
-    "ast_hash": "13fe11a560ee29396f4017816ff64653",
+    "mtime": 1789634221.5674527,
+    "ast_hash": "9e1969de27de2298fb0534939f48d1a1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/MedDetailsWidget.tsx": {
@@ -1205,13 +1205,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/InteractionsPage.tsx": {
-    "mtime": 1789626669.9877095,
-    "ast_hash": "44e3cbc32b161fd3f9e7b8703ec69e43",
+    "mtime": 1789633765.74018,
+    "ast_hash": "ddf43a5d34cd96e68a9e503c3a787e36",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicineInfoPage.tsx": {
-    "mtime": 1789031205.829898,
-    "ast_hash": "e374cf61f69791920183162aeed0e308",
+    "mtime": 1789634682.9122949,
+    "ast_hash": "dfebee7e357ec8d9b2e4bcd85b7fe904",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/NotFound.tsx": {
@@ -1390,8 +1390,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/interactionChecker.ts": {
-    "mtime": 1779532151.1690514,
-    "ast_hash": "764c772ad8259629817f275c2c39274b",
+    "mtime": 1789634979.191728,
+    "ast_hash": "2eb1451d7df52b05e8c1d434129870b1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/localPersistence.ts": {
@@ -1460,8 +1460,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/types/interactions.ts": {
-    "mtime": 1787296574.2024114,
-    "ast_hash": "d0b847552425ad908f05194e176cc282",
+    "mtime": 1789633439.5356088,
+    "ast_hash": "26778a82389788c7079984481f505e03",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/types/updates.ts": {
@@ -2510,8 +2510,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/openFdaService.js": {
-    "mtime": 1789566509.6722932,
-    "ast_hash": "00f7776cefc6e7c225c7fed945654f1c",
+    "mtime": 1789633505.4311614,
+    "ast_hash": "920c25da746536f6da49316221862ca1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-openfda.js": {
@@ -2530,8 +2530,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/openFdaClient.ts": {
-    "mtime": 1789567011.338755,
-    "ast_hash": "a55c757ba6d1934b67e926181469e6f8",
+    "mtime": 1789634624.8093843,
+    "ast_hash": "9b8f77358dd43932e4b2192a90d76355",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-medvault-intelligence.js": {
@@ -4270,8 +4270,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/therapeuticDuplicationService.js": {
-    "mtime": 1789566750.5210125,
-    "ast_hash": "7b8377d3369958080db3b87395459c42",
+    "mtime": 1789633492.2300494,
+    "ast_hash": "aef79f41b74f16f2c77fa9c330d4abfa",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-therapeutic-duplication.js": {
@@ -4285,8 +4285,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/therapeuticDuplicationService.ts": {
-    "mtime": 1789566857.2370927,
-    "ast_hash": "887e9fd5f1559e1479abd3a1ee12a21e",
+    "mtime": 1789634464.5037756,
+    "ast_hash": "12510b71a3f79016353673d9e9290f16",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/__tests__/DawaGPTPrompt.test.tsx": {
@@ -4327,6 +4327,16 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptAgeFoodGuidance.test.ts": {
     "mtime": 1789632112.074789,
     "ast_hash": "878ac463b45f30910edb3bcdf2784618",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/clinicalInteractions.test.ts": {
+    "mtime": 1789634524.8197756,
+    "ast_hash": "5ac1a071824e36cfad4ae3a9396b1297",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/clinicalInteractionsData.ts": {
+    "mtime": 1789634441.7233915,
+    "ast_hash": "5aa7627ff073ab1c90824b53901965f7",
     "semantic_hash": ""
   }
 }

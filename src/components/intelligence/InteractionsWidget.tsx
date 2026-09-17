@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { checkConditionSafety } from "@/services/conditionInteractionService";
 import { checkFdaMultiSafety, FdaMultiSafetyResult } from "@/services/openFdaClient";
 import { checkInteractions } from "@/services/interactionChecker";
+import { deduplicateMedicationList } from "@/services/clinicalInteractionsData";
 import { ConditionSafetyCheck, ParsedInteraction } from "@/types/interactions";
 import { MobileWatchdogResolveButton } from "./MobileWatchdogResolveButton";
 import { buildSafetyConsultPrompt } from "@/lib/safetyPromptBuilder";
@@ -65,12 +66,12 @@ export function InteractionsWidget() {
       }
 
       setLoading(true);
-      const rxcuis = activeMeds.map(m => m.rxcui).filter((id): id is string => !!id);
+      const { distinctMedications } = deduplicateMedicationList(activeMeds);
 
       try {
         const [fdaRes, rxNavRes] = await Promise.allSettled([
-          checkFdaMultiSafety(activeMeds, patientCtx),
-          rxcuis.length >= 2 ? checkInteractions(rxcuis) : Promise.resolve([] as ParsedInteraction[])
+          checkFdaMultiSafety(distinctMedications, patientCtx),
+          distinctMedications.length >= 2 ? checkInteractions(distinctMedications) : Promise.resolve([] as ParsedInteraction[])
         ]);
 
         // Regional comorbidity & condition checks

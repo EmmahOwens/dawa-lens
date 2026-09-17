@@ -40,6 +40,13 @@ export interface ParsedInteraction {
   drug2: string;
   severity: string;
   description: string;
+  clinicalDetails?: {
+    title?: string;
+    mechanism?: string;
+    actionAdvice?: string;
+    spacingHours?: number;
+    organRisk?: string;
+  };
 }
 
 export interface ConditionSafetyCheck {

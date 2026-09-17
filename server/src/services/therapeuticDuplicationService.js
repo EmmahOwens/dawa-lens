@@ -394,6 +394,12 @@ export const detectDuplicateTherapiesWithApis = async (medications = []) => {
       const pairKey = [pA.queryName.toLowerCase(), pB.queryName.toLowerCase()].sort().join('::');
       if (seenPairs.has(pairKey)) continue;
 
+      // Neglect duplicates of the exact same medication (e.g. Ibuprofen and Ibuprofen)
+      if (pA.queryName.toLowerCase().trim() === pB.queryName.toLowerCase().trim() ||
+          normalizeDrugString(pA.queryName) === normalizeDrugString(pB.queryName)) {
+        continue;
+      }
+
       let detected = false;
       let sharedClass = '';
       let sharedTask = '';

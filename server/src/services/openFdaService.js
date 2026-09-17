@@ -651,6 +651,7 @@ export const checkDuplicateTherapy = async (medications = []) => {
     for (let j = i + 1; j < medClasses.length; j++) {
       const medA = medClasses[i];
       const medB = medClasses[j];
+      if (medA.name.toLowerCase().trim() === medB.name.toLowerCase().trim()) continue;
       const sharedClasses = medA.classes.filter((c) => medB.classes.includes(c));
 
       // Filter for Established Pharmacologic Class (EPC)

@@ -59,16 +59,21 @@ export default function MedicineInfoPage() {
         setInteractions([]);
         return;
       }
-      
-      const targetRxcui = fdaProfile?.rxcui || (info?.name ? await getRxCUI(info.name) : null);
-      if (!targetRxcui) return;
+      const targetDrug =
+        fdaProfile?.resolvedName ||
+        fdaProfile?.label?.brandName ||
+        fdaProfile?.brandSynonyms?.[0] ||
+        fdaProfile?.brandName ||
+        info?.name ||
+        fdaProfile?.rxcui;
+      if (!targetDrug) return;
 
-      const savedRxcuis = medicines.map(m => m.rxcui).filter((id): id is string => !!id);
-      if (savedRxcuis.length === 0) return;
+      const savedMeds = medicines.map(m => m.name || m.genericName || m.rxcui).filter((id): id is string => !!id);
+      if (savedMeds.length === 0) return;
 
-      const allRxcuis = [...savedRxcuis, targetRxcui];
-      const results = await checkInteractions(allRxcuis);
-      const preExisting = await checkInteractions(savedRxcuis);
+      const allMeds = [...savedMeds, targetDrug];
+      const results = await checkInteractions(allMeds);
+      const preExisting = await checkInteractions(savedMeds);
       
       const newInteractions = results.filter(r => 
         !preExisting.some(pre => (pre.drug1 === r.drug1 && pre.drug2 === r.drug2) || (pre.drug1 === r.drug2 && pre.drug2 === r.drug1))
@@ -77,7 +82,7 @@ export default function MedicineInfoPage() {
       setInteractions(newInteractions);
     }
     checkCurrentDrug();
-  }, [info?.name, fdaProfile?.rxcui, fdaProfile?.resolvedName, medicines]);
+  }, [info?.name, fdaProfile, medicines]);
 
   const handleSearch = () => {
     if (!searchInput.trim()) return;
