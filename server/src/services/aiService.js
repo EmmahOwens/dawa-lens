@@ -1390,8 +1390,8 @@ export const isComplexTask = (text) => {
   if (hasShowRemindersIntent) return true;
   if (isActionRequest || isDataRequest) return true;
   if (isSameTaskOrDuplicateQuery(lower)) return true;
-  const isMedicalQuery = /(dose|dosage|effect|safe|interact|symptom|pain|sick|hurt|doctor|health|duplicate)/i.test(lower);
-  if (isMedicalQuery && text.split(' ').length > 5) return true;
+  const isMedicalQuery = /(dose|dosage|effect|safe|interact|symptom|pain|sick|hurt|doctor|health|duplicate|food|chew|chewable|drink|beverage|swallow|eat)/i.test(lower);
+  if (isMedicalQuery && text.split(' ').length > 4) return true;
   return false;
 };
 
@@ -1490,7 +1490,8 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
         });
       } catch (textErr) {
         console.warn("All AI providers failed in chatWithDawaGPT, activating local clinical fallback:", textErr.message);
-        return generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile);
+        const targetPatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
+        return generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient);
       }
     }
 
@@ -1835,9 +1836,10 @@ export function extractWellnessData(text) {
  * Provides domain-specific, clinically accurate responses and action dispatching
  * when cloud AI APIs are cold-starting, offline, rate-limited, or lack external API keys.
  */
-export function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null) {
+export function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null, targetPatient = null) {
   const norm = (lastUserMsg || '').toLowerCase().trim();
-  const gender = userProfile?.gender?.toLowerCase();
+  const activeGender = targetPatient?.gender || userProfile?.gender;
+  const gender = activeGender?.toLowerCase();
   const salutation = gender === 'female' ? 'Nyabo' : gender === 'male' ? 'Ssebo' : '';
   const greeting = salutation ? ` ${salutation}` : '';
 
@@ -1970,6 +1972,109 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
         `*Sources: National Drug Authority (NDA) Uganda, NLM RxNorm & U.S. FDA Drug Safety.*`,
       suggestions: ["Check drug interactions", "View my active medications", "Ask about my prescriptions"],
       source: "NDA / openFDA Guard",
+      action: null
+    };
+  }
+
+  // 6. Age-Aware Food, Chewables & Drinks Clinical Guidance (Local & Global Foods)
+  const isFoodDrinkQuery = (
+    norm.includes('food') ||
+    norm.includes('eat') ||
+    norm.includes('drink') ||
+    norm.includes('chew') ||
+    norm.includes('chewable') ||
+    norm.includes('swallow') ||
+    norm.includes('meal') ||
+    norm.includes('take with') ||
+    norm.includes('beverage') ||
+    norm.includes('applesauce') ||
+    norm.includes('yogurt') ||
+    norm.includes('oatmeal') ||
+    norm.includes('bushera') ||
+    norm.includes('matooke') ||
+    norm.includes('g-nut') ||
+    norm.includes('posho')
+  );
+
+  if (isFoodDrinkQuery) {
+    const queryAge = extractAgeFromQuery(norm);
+    const profileAge = calculateAge(targetPatient?.age ?? targetPatient?.dateOfBirth ?? userProfile?.age ?? userProfile?.dateOfBirth);
+    const resolvedAge = queryAge !== null ? queryAge : profileAge;
+
+    // Detect target drug
+    let matchedMed = (medicines || []).find(m => m.name && norm.includes(m.name.toLowerCase()));
+    if (!matchedMed) {
+      if (norm.includes('panadol') || norm.includes('paracetamol')) matchedMed = { name: 'Panadol (Paracetamol)' };
+      else if (norm.includes('coartem') || norm.includes('artemether') || norm.includes('lumefantrine')) matchedMed = { name: 'Coartem (Artemether/Lumefantrine)' };
+      else if (norm.includes('ibuprofen') || norm.includes('nurofen')) matchedMed = { name: 'Nurofen (Ibuprofen)' };
+      else if (norm.includes('flagyl') || norm.includes('metronidazole')) matchedMed = { name: 'Flagyl (Metronidazole)' };
+      else if (norm.includes('amoxicillin') || norm.includes('augmentin')) matchedMed = { name: 'Amoxicillin' };
+      else if (norm.includes('ciprofloxacin') || norm.includes('cipro')) matchedMed = { name: 'Ciprofloxacin' };
+      else if (norm.includes('metformin')) matchedMed = { name: 'Metformin' };
+      else if (medicines && medicines.length > 0) matchedMed = medicines[0];
+    }
+    const medName = matchedMed?.name || 'your medication';
+
+    // Pediatric guidance (< 12 yrs or explicitly for child/baby/infant)
+    if (resolvedAge !== null && resolvedAge < 12) {
+      const ageDetail = resolvedAge === 0 ? 'an infant' : resolvedAge <= 3 ? `a toddler (${resolvedAge} yrs)` : `a child (${resolvedAge} yrs)`;
+      return {
+        text: `Here is age-tailored food, chewables, and drink guidance for **${medName}** for ${ageDetail}${greeting}:\n\n` +
+          `• 🍬 **Chewable & Liquid Alternatives**: Swallowing whole pills is a serious choking risk for young children. Ask your pharmacist or clinician for **chewable tablets**, **orally dispersible tablets (ODTs)**, or **oral syrups/suspensions**.\n` +
+          `• 🥣 **Soft Food Vehicles for Crushed Meds**: If the tablet is approved by a doctor or pharmacist to be crushed (never crush extended-release or coated pills), mix the dose into 1–2 teaspoons of smooth, palatable food:\n` +
+          `  - **Everyday options**: Smooth applesauce, plain yogurt, fruit puree, or oatmeal.\n` +
+          `  - **Local Ugandan options**: Warm smooth *Bushera* (millet porridge) or mashed soft *Matooke*.\n` +
+          `  - *Instruction*: Have the child take the spoonful immediately without chewing, followed by a drink.\n` +
+          `• 💧 **Safe Drinks**: Ample water, breast milk, infant formula, or oral rehydration solution (ORS). If taking antibiotics like Ciprofloxacin, space high-calcium dairy by at least 2 hours.\n` +
+          `• ⚠️ **Critical Pediatric Warning**: **NEVER give honey** to infants under 1 year of age due to the severe risk of infant botulism. Avoid whole nuts, crunchy raw vegetables, or hard chewables due to choking hazards.\n\n` +
+          `You can [check drug & food interactions in Interactions Guard](/interactions) or [review active medications](/medications).`,
+        suggestions: ["Chewable medication options", "Safe drinks with medication", "Check drug interactions"],
+        source: "Clinical Pediatric Guard",
+        action: null
+      };
+    }
+
+    // Geriatric guidance (65+ yrs or elderly)
+    if (resolvedAge !== null && resolvedAge >= 65) {
+      return {
+        text: `Here is age-tailored food and beverage guidance for **${medName}** for seniors (Age: ${resolvedAge} yrs)${greeting}:\n\n` +
+          `• 🥣 **Soft & Moist Foods (Swallowing Ease)**: To prevent swallowing difficulties (presbyphagia) and soothe the stomach:\n` +
+          `  - **Local Ugandan options**: Steamed soft *Matooke*, warm smooth *Bushera* (millet/sorghum porridge), or steamed *Luwombo*.\n` +
+          `  - **Everyday staples**: Warm oatmeal, Greek yogurt, soft scrambled eggs, applesauce, or pureed vegetable soups.\n` +
+          `• 💧 **Swallowing Technique & Drinks**: Take a sip of water first to lubricate your throat, swallow the pill with a full glass of water (250ml) while sitting upright, and **remain sitting or standing upright for at least 30 minutes** to avoid esophageal irritation.\n` +
+          `• ⚠️ **Nutritional & Drug Cautions**:\n` +
+          `  - *Potassium*: If taking blood pressure or heart medications (ACE inhibitors like Lisinopril, ARBs, or Spironolactone), avoid excessive high-potassium foods (*Matooke*, bananas, avocados) or potassium salt substitutes.\n` +
+          `  - *Calcium Spacing*: Space high-calcium foods (*Mukene*, dairy, fortified milks) at least 2 hours apart from thyroid medications (Levothyroxine) or certain antibiotics.\n` +
+          `  - *Grapefruit & Alcohol*: Strictly avoid grapefruit juice and alcohol/Waragi.\n\n` +
+          `You can [check drug & food interactions in Interactions Guard](/interactions) or [review active medications](/medications).`,
+        suggestions: ["Safe foods for seniors", "Check drug interactions", "View active medications"],
+        source: "Clinical Geriatric Guard",
+        action: null
+      };
+    }
+
+    // Adult / General guidance
+    const isFatSoluble = /coartem|artemether|lumefantrine|griseofulvin|isotretinoin|vitamin d/i.test(medName);
+    const fatGuidance = isFatSoluble
+      ? `• 🥑 **Healthy Fats for Absorption (Crucial)**: **${medName}** requires dietary fats to be absorbed effectively into the bloodstream:\n` +
+        `  - **Local options**: *G-nut sauce* (groundnut stew) or *Eshabwe*.\n` +
+        `  - **Everyday options**: Fresh avocado, whole milk, eggs, peanut butter, or yogurt.\n`
+      : `• 🍲 **Stomach Buffers**: To buffer the stomach lining and prevent gastric irritation:\n` +
+        `  - **Local options**: Steamed *Matooke*, *Posho*, or *Kalo*.\n` +
+        `  - **Everyday staples**: Plain oatmeal, white rice, toast, crackers, or plain yogurt.\n`;
+
+    return {
+      text: `Here is recommended food, chewables, and drink guidance for **${medName}**${greeting}:\n\n` +
+        fatGuidance +
+        `• 💧 **Drink Pairings & Hydration**: Always take your medication with a **full glass of plain water** (250ml+) to ensure the tablet dissolves smoothly in your stomach and prevents esophageal irritation.\n` +
+        `• 🍬 **Chewables & Formulation Notes**: If you struggle with swallowing solid tablets, ask your doctor or pharmacist about chewable tablets, dispersible tablets, or smooth oral suspensions.\n` +
+        `• ⚠️ **Key Dietary Warnings**:\n` +
+        `  - **Alcohol & Waragi**: Strictly avoid with Paracetamol (liver damage) and Metronidazole (severe violent reaction).\n` +
+        `  - **Grapefruit & Grapefruit Juice**: Avoid with statins and blood pressure medications (blocks CYP3A4 enzyme).\n` +
+        `  - **Calcium & Mukene**: Space calcium-rich foods and dairy at least 2 hours away from fluoroquinolone (Ciprofloxacin) and tetracycline antibiotics.\n\n` +
+        `You can [check your drug & food interactions in Interactions Guard](/interactions) to test specific dishes.`,
+      suggestions: ["What foods should I avoid?", "Can I take with milk?", "Check drug interactions"],
+      source: "Dietary Safety Guard",
       action: null
     };
   }
@@ -2307,7 +2412,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       console.warn("Stream Fallback: Unified AI API fallback cascade also failed:", unifiedCascadeErr.response?.data?.error?.message || unifiedCascadeErr.response?.data || unifiedCascadeErr.message);
     }
 
-    const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile);
+    const targetPatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
+    const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient);
     return createFakeStream(fallbackResp);
   } catch (err) {
     return new Readable({
@@ -2565,6 +2671,56 @@ export function buildMedVaultSummary(medicines = [], reminders = []) {
 }
 
 /**
+ * Resolves exact age in years from either a numeric age or a date-of-birth string.
+ */
+export function calculateAge(dobOrAge) {
+  if (dobOrAge === null || dobOrAge === undefined || dobOrAge === '') return null;
+  if (typeof dobOrAge === 'number' && !isNaN(dobOrAge)) {
+    return (dobOrAge >= 0 && dobOrAge <= 150) ? dobOrAge : null;
+  }
+  if (typeof dobOrAge === 'string') {
+    const trimmed = dobOrAge.trim();
+    const num = Number(trimmed);
+    if (!isNaN(num) && num >= 0 && num <= 150) return num;
+    const dob = new Date(trimmed);
+    if (!isNaN(dob.getTime())) {
+      const now = new Date();
+      let age = now.getFullYear() - dob.getFullYear();
+      const m = now.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) {
+        age--;
+      }
+      return age >= 0 ? age : null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Extracts explicit age or demographic keywords from a user query.
+ */
+export function extractAgeFromQuery(query) {
+  if (!query || typeof query !== 'string') return null;
+  const lower = query.toLowerCase();
+
+  if (/\b(infant|baby|newborn)\b/i.test(lower)) return 0;
+  if (/\b(toddler)\b/i.test(lower)) return 2;
+
+  const ageMatch = lower.match(/\b(?:age|aged)\s*(\d{1,2})\b/) ||
+                   lower.match(/\b(\d{1,2})\s*(?:years?\s*old|yrs?\s*old|yo|-year-old|-yr-old)\b/) ||
+                   lower.match(/\b(?:child|kid|boy|girl)\s*(?:of|aged)?\s*(\d{1,2})\b/);
+  if (ageMatch && ageMatch[1]) {
+    const val = parseInt(ageMatch[1], 10);
+    if (!isNaN(val) && val >= 0 && val <= 120) return val;
+  }
+
+  if (/\b(child|kid)\b/i.test(lower)) return 7;
+  if (/\b(elderly|senior|geriatric|old person|older adult|grandma|grandpa|granny|jajja)\b/i.test(lower)) return 72;
+
+  return null;
+}
+
+/**
  * Formats comprehensive Family Hub & Client profiles summary for DawaGPT context,
  * providing read access to demographics, conditions, allergies, clinical notes,
  * assigned medications, and reminders without duplicate account owner bloat.
@@ -2728,6 +2884,39 @@ When answering questions about medications performing the same task, duplicate t
    - Recommend consulting a doctor or pharmacist to review their regimen and select the single best option.
    - Embed markdown links: [check drug & food interactions](/interactions) and [check your active medications](/medications).
 
+=== AGE-AWARE FOOD, CHEWABLES & DRINK GUIDANCE (LOCAL & GLOBAL NUTRITION) ===
+When advising on foods, chewables, or beverages to pair with medications:
+1. AGE STRATIFICATION & GROUNDING:
+   - Identify patient age from "Active Target Age" in CURRENT SESSION CONTEXT, or any age explicitly stated in the conversation (e.g., "for my 4-year-old child", "I am 72"). Any age stated directly in conversation takes immediate priority.
+   - PEDIATRICS (0 - 12 years: Infants, Toddlers, Children):
+     * Swallowing safety: Solid tablets and capsules are serious choking hazards for young children. Dysphagia and pill swallowing fear are common.
+     * Formulation options: Proactively recommend chewable tablets, oral syrups/suspensions, or dispersible tablets when available.
+     * Safe food carriers/vehicles: If a tablet is safe to crush (NEVER crush extended-release, enteric-coated, or sustained-release formulations), suggest mixing the crushed dose with a small spoonful (1-2 teaspoons) of smooth, palatable food: smooth applesauce, plain yogurt, mashed banana, smooth warm porridge (Bushera or maize porridge), or pudding. Instruct to swallow immediately without chewing and follow with a drink.
+     * Safe drinks: Ample water, breast milk, infant formula, oral rehydration solutions (ORS), diluted apple juice.
+     * CRITICAL INFANT CONTRAINDICATION: NEVER recommend honey for infants under 1 year of age due to the fatal risk of infant botulism!
+     * Avoid choking hazards: NEVER suggest whole nuts, crunchy raw vegetables, seeds, or hard chewable candies for young children.
+   * ADOLESCENTS & ADULTS (13 - 64 years):
+     * Gastric lining buffers: For medications that irritate the gastric mucosa or carry ulcer risks (NSAIDs like Ibuprofen/Diclofenac, corticosteroids, antibiotics like Augmentin/Doxycycline), recommend pairing with stomach-buffering carbohydrates: steamed Matooke, Posho, oatmeal, toast, crackers, or rice.
+     * Fat-soluble absorption: Lipophilic medications (e.g. Coartem / Artemether-Lumefantrine, Griseofulvin, Isotretinoin, fat-soluble vitamins) REQUIRE co-administration with dietary fats (G-nut sauce, avocado, whole milk, eggs, peanut butter, yogurt, olive oil) for proper therapeutic absorption and clinical efficacy.
+     * Hydration: Full glass of water (250ml+) with each dose to ensure passage into the stomach, preventing pill-induced esophageal ulceration (especially Doxycycline, bisphosphonates) and renal crystal deposition (Ciprofloxacin, Sulfamethoxazole/Trimethoprim).
+   * GERIATRIC / OLDER ADULTS (65+ years):
+     * Physiological factors: Presbyphagia (swallowing difficulties in seniors), dry mouth (xerostomia), delayed gastric emptying, altered renal/hepatic drug clearance, and polypharmacy.
+     * Soft & moist foods: Steamed soft Matooke, warm Bushera/porridge, soft scrambled eggs, Greek yogurt, pureed vegetable soups, applesauce, steamed fish.
+     * Swallowing ergonomics: Take a sip of water before the pill to lubricate the mouth; swallow with a full glass of water sitting upright; remain upright (sitting or standing) for at least 30 minutes after taking pills.
+     * Metabolic cautions: Watch high-potassium foods (excess Matooke, bananas, avocados, salt substitutes) if taking ACE inhibitors, ARBs, or potassium-sparing diuretics; space calcium-rich foods/Mukene/dairy 2 hours apart from thyroid medications (Levothyroxine) or Fluoroquinolones/Tetracyclines.
+   * AGE NOT SPECIFIED: Provide clear adult guidance while adding an age-aware note: "If this is for a child who struggles with pills, chewables or mixing crushed tablets into soft applesauce/porridge can be considered if the medication is safe to crush."
+
+2. NUTRITIONAL SCOPE (LOCAL UGANDAN FOODS & GLOBAL/EVERYDAY FOODS OUTSIDE KNOWLEDGE BASE):
+   - The Ugandan local food knowledge base is a cultural baseline and clinical reference, NOT an exclusive boundary.
+   - You MUST seamlessly combine and recommend BOTH:
+     a) Local Ugandan staples: Matooke (soothing, soft, low GI), Kalo (iron/calcium rich), Bushera (warm, easily swallowable liquid/porridge), Posho (neutral stomach buffer), G-nut sauce (healthy lipids for fat-soluble drugs), Mukene (calcium & omega-3; space 2h from antibiotics), Luwombo, Katogo.
+     b) Foods & drinks OUTSIDE the local database: Plain oatmeal, applesauce, Greek yogurt, white or brown rice, plain toast, saltine crackers, fruit smoothies, vegetable or chicken broth, peanut butter, avocados, chamomile or ginger tea, electrolyte water, and chewable options.
+
+3. CRITICAL BEVERAGE & DIETARY CONTRAINDICATIONS:
+   - Grapefruit & Grapefruit juice: Potent CYP3A4 inhibitor; dangerously spikes levels of statins (Atorvastatin, Simvastatin), calcium channel blockers (Amlodipine, Nifedipine), and immunosuppressants.
+   - Dairy, Fortified Milks & Mukene: High calcium binds to Fluoroquinolones (Ciprofloxacin) and Tetracyclines; separate by at least 2 hours.
+   - Alcohol & Waragi / Local Spirits: Severe liver necrosis with Paracetamol/Panadol; violent disulfiram reaction (vomiting, palpitations, flushing) with Metronidazole (Flagyl); severe CNS sedation and respiratory depression with antihistamines, benzodiazepines, or opioids.
+
 === SUGGESTIONS (CRITICAL) ===
 - Generate EXACTLY 3 short follow-up prompts (<6 words each) in the suggestions field representing what the user would logically ask next.
 - NEVER output suggestions inside message text. They belong ONLY in the suggestions JSON/metadata field.
@@ -2744,16 +2933,36 @@ Respond in JSON: {"text":"...","suggestions":["s1","s2","s3"],"source":"Groq","a
 `;
 
   const activePatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
+  const targetEntity = activePatient || userProfile;
+  const targetAge = calculateAge(targetEntity?.age ?? targetEntity?.dateOfBirth);
+  const ownerAge = calculateAge(userProfile?.age ?? userProfile?.dateOfBirth);
+
+  const formatAgeLabel = (age) => {
+    if (age === null || age === undefined) return 'Age not specified';
+    if (age <= 1) return `${age} yrs (Pediatric: Infant <1 yr)`;
+    if (age <= 3) return `${age} yrs (Pediatric: Toddler 1-3 yrs)`;
+    if (age <= 12) return `${age} yrs (Pediatric: Child 4-12 yrs)`;
+    if (age <= 18) return `${age} yrs (Adolescent 13-18 yrs)`;
+    if (age < 65) return `${age} yrs (Adult 19-64 yrs)`;
+    return `${age} yrs (Geriatric: Older Adult 65+ yrs)`;
+  };
+
+  const activeAgeStr = formatAgeLabel(targetAge);
+  const ownerAgeStr = ownerAge !== null ? `${ownerAge} yrs` : 'Not specified';
+
   const activeProfileStr = activePatient
-    ? `${activePatient.name} (${activePatient.relation || (activePatient.type === 'client' ? 'Client' : 'Family Member')}, Gender: ${activePatient.gender || 'Not specified'})`
-    : `Self (${userProfile?.name || 'Account Owner'}, Gender: ${userProfile?.gender || 'Not specified'})`;
+    ? `${activePatient.name} (${activePatient.relation || (activePatient.type === 'client' ? 'Client' : 'Family Member')}, Age: ${activeAgeStr}, Gender: ${activePatient.gender || 'Not specified'})`
+    : `Self (${userProfile?.name || 'Account Owner'}, Age: ${activeAgeStr}, Gender: ${userProfile?.gender || 'Not specified'})`;
 
   const dynamicContextBlock = `
     === CURRENT SESSION CONTEXT ===
     Current Active Route: ${currentPage || 'Not specified'}
     ${currentPage ? `Situational Awareness: The user is currently on "${currentPage}". If they ask about the feature on their active page, acknowledge their location naturally and do not redundantly ask them to navigate to it.` : ''}
-    User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'} | Gender: ${userProfile?.gender || 'Not specified'}
+    User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'} | Age: ${ownerAgeStr} | Gender: ${userProfile?.gender || 'Not specified'}
     Active Profile: ${activeProfileStr}
+    Active Target Age: ${activeAgeStr}
+    ${targetAge !== null && targetAge < 12 ? `⚠️ CLINICAL AGE NOTICE: Patient is a pediatric child (${targetAge} yrs). Avoid choking hazards, prioritize chewables/liquids or safe soft food vehicles (applesauce/Bushera/yogurt), and NEVER recommend honey for infants <1 yr.` : ''}
+    ${targetAge !== null && targetAge >= 65 ? `⚠️ CLINICAL AGE NOTICE: Patient is an older adult (${targetAge} yrs). Watch for presbyphagia/swallowing difficulties; prioritize soft, moist foods (steamed soft Matooke, Bushera, soups); advise taking pills upright with a full glass of water; monitor potassium/calcium interactions.` : ''}
     Active Medications: ${activeMeds}
     Med Vault Inventory:
 ${medVaultSummary}

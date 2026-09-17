@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789629512.3607,
-    "ast_hash": "e312e7f77e1997bba14a52fe3a7c2f7b",
+    "mtime": 1789631472.378768,
+    "ast_hash": "81edec8f6d61c16bdfa45b039040a309",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -390,8 +390,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/localFoodService.js": {
-    "mtime": 1789562772.9907615,
-    "ast_hash": "70430f8f7027888e4f2e7980ef3e88c4",
+    "mtime": 1789631286.907654,
+    "ast_hash": "b040c037a77167e36900329624d26495",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/medicineService.js": {
@@ -465,8 +465,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/validations/aiValidation.js": {
-    "mtime": 1789371837.7515721,
-    "ast_hash": "89ca5948485452de8c7efee1ff6fae2e",
+    "mtime": 1789631297.5789363,
+    "ast_hash": "3cbb131f443afe02305d092fdf205492",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/validations/doseLogValidation.js": {
@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1789626737.882223,
-    "ast_hash": "e94cf284505c0cfe5b0c85051bc0428b",
+    "mtime": 1789631561.5949352,
+    "ast_hash": "0d7247ed955abc4b4a191dd62f1111c8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789628035.894695,
-    "ast_hash": "88634eec952a492484d4df9763051349",
+    "mtime": 1789631772.7793498,
+    "ast_hash": "9c5690a1772b8fbeaa2c403343a0f75c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -4317,6 +4317,16 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/draDatabase.test.ts": {
     "mtime": 1789630544.483737,
     "ast_hash": "5e83a2e7f97d4a7ffd03946cf6c36880",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-dawagpt-food-age.js": {
+    "mtime": 1789631629.2015948,
+    "ast_hash": "a0339a3ab8ae00a9b899245b78be07f6",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptAgeFoodGuidance.test.ts": {
+    "mtime": 1789632112.074789,
+    "ast_hash": "878ac463b45f30910edb3bcdf2784618",
     "semantic_hash": ""
   }
 }

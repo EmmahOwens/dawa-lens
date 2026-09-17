@@ -561,6 +561,148 @@ export const generateDawaGPTResponse = async (
     };
   }
 
+  // Age-Aware Food, Chewables & Drinks Guidance (Local Ugandan & Global Scope)
+  const isFoodDrinkQuery = !isAskingForPageLink && (
+    normalizedQuery.includes("food") ||
+    normalizedQuery.includes("eat") ||
+    normalizedQuery.includes("drink") ||
+    normalizedQuery.includes("chew") ||
+    normalizedQuery.includes("chewable") ||
+    normalizedQuery.includes("swallow") ||
+    normalizedQuery.includes("meal") ||
+    normalizedQuery.includes("take with") ||
+    normalizedQuery.includes("beverage") ||
+    normalizedQuery.includes("applesauce") ||
+    normalizedQuery.includes("yogurt") ||
+    normalizedQuery.includes("oatmeal") ||
+    normalizedQuery.includes("bushera") ||
+    normalizedQuery.includes("matooke") ||
+    normalizedQuery.includes("g-nut") ||
+    normalizedQuery.includes("posho")
+  );
+
+  if (isFoodDrinkQuery) {
+    // 1. Resolve age from explicit query text or active patient / user profile
+    let queryAge: number | null = null;
+    if (/\b(infant|baby|newborn)\b/i.test(normalizedQuery)) queryAge = 0;
+    else if (/\b(toddler)\b/i.test(normalizedQuery)) queryAge = 2;
+    else {
+      const match = normalizedQuery.match(/\b(?:age|aged)\s*(\d{1,2})\b/) ||
+                    normalizedQuery.match(/\b(\d{1,2})\s*(?:years?\s*old|yrs?\s*old|yo|-year-old|-yr-old)\b/) ||
+                    normalizedQuery.match(/\b(?:child|kid|boy|girl)\s*(?:of|aged)?\s*(\d{1,2})\b/);
+      if (match && match[1]) {
+        const parsed = parseInt(match[1], 10);
+        if (!isNaN(parsed) && parsed >= 0 && parsed <= 120) queryAge = parsed;
+      }
+    }
+    if (queryAge === null) {
+      if (/\b(child|kid)\b/i.test(normalizedQuery)) queryAge = 7;
+      else if (/\b(elderly|senior|geriatric|old person|older adult|grandma|grandpa|granny|jajja)\b/i.test(normalizedQuery)) queryAge = 72;
+    }
+
+    const activePatient = selectedPatientId && patients.length > 0 ? patients.find(p => p.id === selectedPatientId) : null;
+    const targetEntity = activePatient || userProfile;
+    let profileAge: number | null = null;
+    if (targetEntity) {
+      if (typeof (targetEntity as any).age === 'number') {
+        profileAge = (targetEntity as any).age;
+      } else if (targetEntity.dateOfBirth) {
+        const dob = new Date(targetEntity.dateOfBirth);
+        if (!isNaN(dob.getTime())) {
+          const now = new Date();
+          let age = now.getFullYear() - dob.getFullYear();
+          const m = now.getMonth() - dob.getMonth();
+          if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+          if (age >= 0 && age <= 150) profileAge = age;
+        }
+      }
+    }
+
+    const resolvedAge = queryAge !== null ? queryAge : profileAge;
+    const greeting = honorific ? ` ${honorific}` : "";
+
+    // 2. Identify target medication
+    let matchedMed = (allMedicines || []).find(m => m.name && normalizedQuery.includes(m.name.toLowerCase()));
+    if (!matchedMed) {
+      if (normalizedQuery.includes("panadol") || normalizedQuery.includes("paracetamol")) matchedMed = { name: "Panadol (Paracetamol)" } as any;
+      else if (normalizedQuery.includes("coartem") || normalizedQuery.includes("artemether") || normalizedQuery.includes("lumefantrine")) matchedMed = { name: "Coartem (Artemether/Lumefantrine)" } as any;
+      else if (normalizedQuery.includes("ibuprofen") || normalizedQuery.includes("nurofen")) matchedMed = { name: "Nurofen (Ibuprofen)" } as any;
+      else if (normalizedQuery.includes("flagyl") || normalizedQuery.includes("metronidazole")) matchedMed = { name: "Flagyl (Metronidazole)" } as any;
+      else if (normalizedQuery.includes("amoxicillin") || normalizedQuery.includes("augmentin")) matchedMed = { name: "Amoxicillin" } as any;
+      else if (normalizedQuery.includes("ciprofloxacin") || normalizedQuery.includes("cipro")) matchedMed = { name: "Ciprofloxacin" } as any;
+      else if (normalizedQuery.includes("metformin")) matchedMed = { name: "Metformin" } as any;
+      else if (activeMedicine) matchedMed = activeMedicine;
+      else if (allMedicines && allMedicines.length > 0) matchedMed = allMedicines[0];
+    }
+    const medName = matchedMed?.name || "your medication";
+
+    // 3. Pediatric guidance (< 12 years)
+    if (resolvedAge !== null && resolvedAge < 12) {
+      const ageDetail = resolvedAge === 0 ? "an infant" : resolvedAge <= 3 ? `a toddler (${resolvedAge} yrs)` : `a child (${resolvedAge} yrs)`;
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: `Here is age-tailored food, chewables, and drink guidance for **${medName}** for ${ageDetail}${greeting}:\n\n` +
+          `• 🍬 **Chewable & Liquid Alternatives**: Swallowing whole pills is a serious choking risk for young children. Ask your pharmacist or clinician for **chewable tablets**, **orally dispersible tablets (ODTs)**, or **oral syrups/suspensions**.\n` +
+          `• 🥣 **Soft Food Vehicles for Crushed Meds**: If the tablet is approved by a doctor or pharmacist to be crushed (never crush extended-release or coated pills), mix the dose into 1–2 teaspoons of smooth, palatable food:\n` +
+          `  - **Everyday options**: Smooth applesauce, plain yogurt, fruit puree, or oatmeal.\n` +
+          `  - **Local Ugandan options**: Warm smooth *Bushera* (millet porridge) or mashed soft *Matooke*.\n` +
+          `  - *Instruction*: Have the child take the spoonful immediately without chewing, followed by a drink.\n` +
+          `• 💧 **Safe Drinks**: Ample water, breast milk, infant formula, or oral rehydration solution (ORS). If taking antibiotics like Ciprofloxacin, space high-calcium dairy by at least 2 hours.\n` +
+          `• ⚠️ **Critical Pediatric Warning**: **NEVER give honey** to infants under 1 year of age due to the severe risk of infant botulism. Avoid whole nuts, crunchy raw vegetables, or hard chewables due to choking hazards.\n\n` +
+          `You can [check your drug & food interactions](/interactions) or [review active medications](/medications).`,
+        suggestions: ["Chewable medication options", "Safe drinks with medication", "Check drug interactions"],
+        source: "MoH"
+      };
+    }
+
+    // 4. Geriatric guidance (65+ years)
+    if (resolvedAge !== null && resolvedAge >= 65) {
+      return {
+        id: Date.now().toString(),
+        role: "assistant",
+        text: `Here is age-tailored food and beverage guidance for **${medName}** for seniors (Age: ${resolvedAge} yrs)${greeting}:\n\n` +
+          `• 🥣 **Soft & Moist Foods (Swallowing Ease)**: To prevent swallowing difficulties (presbyphagia) and soothe the stomach:\n` +
+          `  - **Local Ugandan options**: Steamed soft *Matooke*, warm smooth *Bushera* (millet/sorghum porridge), or steamed *Luwombo*.\n` +
+          `  - **Everyday staples**: Warm oatmeal, Greek yogurt, soft scrambled eggs, applesauce, or pureed vegetable soups.\n` +
+          `• 💧 **Swallowing Technique & Drinks**: Take a sip of water first to lubricate your throat, swallow the pill with a full glass of water (250ml) while sitting upright, and **remain sitting or standing upright for at least 30 minutes** to avoid esophageal irritation.\n` +
+          `• ⚠️ **Nutritional & Drug Cautions**:\n` +
+          `  - *Potassium*: If taking blood pressure or heart medications (ACE inhibitors like Lisinopril, ARBs, or Spironolactone), avoid excessive high-potassium foods (*Matooke*, bananas, avocados) or potassium salt substitutes.\n` +
+          `  - *Calcium Spacing*: Space high-calcium foods (*Mukene*, dairy, fortified milks) at least 2 hours apart from thyroid medications (Levothyroxine) or certain antibiotics.\n` +
+          `  - *Grapefruit & Alcohol*: Strictly avoid grapefruit juice and alcohol/Waragi.\n\n` +
+          `You can [check your drug & food interactions](/interactions) or [review active medications](/medications).`,
+        suggestions: ["Safe foods for seniors", "Check drug interactions", "View active medications"],
+        source: "MoH"
+      };
+    }
+
+    // 5. Adult / General guidance
+    const isFatSoluble = /coartem|artemether|lumefantrine|griseofulvin|isotretinoin|vitamin d/i.test(medName);
+    const fatGuidance = isFatSoluble
+      ? `• 🥑 **Healthy Fats for Absorption (Crucial)**: **${medName}** requires dietary fats to be absorbed effectively into the bloodstream:\n` +
+        `  - **Local options**: *G-nut sauce* (groundnut stew) or *Eshabwe*.\n` +
+        `  - **Everyday options**: Fresh avocado, whole milk, eggs, peanut butter, or yogurt.\n`
+      : `• 🍲 **Stomach Buffers**: To buffer the stomach lining and prevent gastric irritation:\n` +
+        `  - **Local options**: Steamed *Matooke*, *Posho*, or *Kalo*.\n` +
+        `  - **Everyday staples**: Plain oatmeal, white rice, toast, crackers, or plain yogurt.\n`;
+
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text: `Here is recommended food, chewables, and drink guidance for **${medName}**${greeting}:\n\n` +
+        fatGuidance +
+        `• 💧 **Drink Pairings & Hydration**: Always take your medication with a **full glass of plain water** (250ml+) to ensure the tablet dissolves smoothly in your stomach and prevents esophageal irritation.\n` +
+        `• 🍬 **Chewables & Formulation Notes**: If you struggle with swallowing solid tablets, ask your doctor or pharmacist about chewable tablets, dispersible tablets, or smooth oral suspensions.\n` +
+        `• ⚠️ **Key Dietary Warnings**:\n` +
+        `  - **Alcohol & Waragi**: Strictly avoid with Paracetamol (liver damage) and Metronidazole (severe violent reaction).\n` +
+        `  - **Grapefruit & Grapefruit Juice**: Avoid with statins and blood pressure medications (blocks CYP3A4 enzyme).\n` +
+        `  - **Calcium & Mukene**: Space calcium-rich foods and dairy at least 2 hours away from fluoroquinolone (Ciprofloxacin) and tetracycline antibiotics.\n\n` +
+        `You can [check your drug & food interactions](/interactions) to test specific dishes.`,
+      suggestions: ["What foods should I avoid?", "Can I take with milk?", "Check drug interactions"],
+      source: "MoH"
+    };
+  }
+
   // Interactions & Drug-Food Safety Guard
   if (
     normalizedQuery.includes("interact") ||

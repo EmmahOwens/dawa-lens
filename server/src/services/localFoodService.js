@@ -87,17 +87,26 @@ export const LOCAL_FOODS = [
     description: "Roasted or steamed sweet plantains.",
     benefits: "High in potassium, fiber, and Vitamin C. Provides quick energy.",
     medicationContext: "Safe with most medications. Good for quick energy boost."
+  },
+  {
+    name: "Bushera",
+    description: "Traditional fermented or non-fermented millet or sorghum porridge drink.",
+    benefits: "Rich in minerals, easy to digest, warm and hydrating.",
+    medicationContext: "Gentle liquid/porridge vehicle; excellent for swallowing assistance in children and elderly patients."
   }
 ];
 
 export const getFoodKnowledgePrompt = () => {
-  return `=== LOCAL FOOD KNOWLEDGE (Uganda) ===
-- Matooke: High potassium, fiber, low GI, gentle on stomach.
+  return `=== LOCAL FOOD KNOWLEDGE BASE (Uganda Baseline) ===
+- Matooke: High potassium, fiber, low GI, gentle on stomach lining.
 - Kalo (Millet): Rich in iron, calcium; great for anemia and bone health.
+- Bushera (Millet/Sorghum porridge drink): Warm, easily digestible liquid or semi-solid; ideal soothing vehicle for swallowing difficulties in children and seniors.
 - Posho: Neutral carbohydrate base before medications requiring food.
-- G-nut Sauce: Healthy fats aid absorption of fat-soluble meds (e.g., Artemether/Lumefantrine / Coartem).
-- Mukene (Silver fish): Extremely high calcium; take at least 2 hours apart from tetracycline antibiotics.
+- G-nut Sauce: Healthy fats aid absorption of fat-soluble meds (e.g., Artemether/Lumefantrine / Coartem, Griseofulvin).
+- Mukene (Silver fish): Extremely high calcium; take at least 2 hours apart from tetracycline and fluoroquinolone antibiotics.
 - Nakati / Dodo / Bugga: Rich in Iron & Vitamin K; monitor closely with blood thinners (Warfarin).
-- Alcohol / Waragi: Severe liver toxicity risk when combined with Paracetamol/Panadol; amplifies CNS sedative effects.`;
+- Alcohol / Waragi: Severe liver toxicity risk when combined with Paracetamol/Panadol; severe disulfiram reaction with Metronidazole (Flagyl); amplifies CNS sedative effects.
+
+NOTE ON NUTRITIONAL SCOPE: This Ugandan local food knowledge base is a cultural baseline and clinical reference, NOT an exclusive list. You are expected to recommend safe foods, chewables, and drinks outside of this list (such as applesauce, oatmeal, plain yogurt, crackers, toast, white/brown rice, fruit smoothies, broths, avocados, peanut butter, and chewable options) whenever clinically suitable for the patient's age and medication.`;
 };
 

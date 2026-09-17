@@ -54,9 +54,15 @@ export const patientInputSchema = z.object({
   id: z.string().max(100).optional(),
   name: z.string().max(100).optional(),
   age: z.number().min(0).max(150).nullable().optional(),
+  dateOfBirth: z.string().max(100).nullable().optional(),
   gender: z.string().max(50).nullable().optional(),
   relation: z.string().max(50).optional(),
   relationship: z.string().max(50).optional(),
+  type: z.string().max(50).optional(),
+  conditions: z.array(z.string().max(200)).max(50).optional(),
+  allergies: z.array(z.string().max(200)).max(50).optional(),
+  bloodType: z.string().max(50).optional(),
+  notes: z.string().max(1000).optional(),
 }).strip();
 
 export const userProfileInputSchema = z.object({

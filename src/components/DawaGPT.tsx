@@ -18,6 +18,8 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 const SAMPLE_PROMPTS = [
   "Does Panadol interact with Ibuprofen?",
+  "What food or drinks go well with my medicine?",
+  "What chewables or soft foods can a child take with this?",
   "How many days of meds do I have left?",
   "Add a medicine reminder for 8:00 AM...",
   "Is it safe to take my pills with milk?",
@@ -461,10 +463,20 @@ export default function DawaGPT() {
 
     try {
       const history = messagesRef.current.length > 0 ? messagesRef.current : messages;
+      const targetAge = resolvedPatient.isOwner
+        ? resolvedPatient.age
+        : (userProfile?.dateOfBirth
+            ? new Date().getFullYear() - new Date(userProfile.dateOfBirth).getFullYear()
+            : (userProfile as any)?.age);
+
+      const enrichedUserProfile = userProfile
+        ? { ...userProfile, age: targetAge ?? undefined }
+        : null;
+
       const response = await chatWithDawaGPTStream(
         [...history, userMsg],
         allMedicines,
-        userProfile,
+        enrichedUserProfile,
         allDoseLogs,
         allReminders,
         allWellnessLogs,
@@ -513,7 +525,7 @@ export default function DawaGPT() {
           const retryResponse = await chatWithDawaGPTStream(
             retryMessages,
             allMedicines,
-            userProfile,
+            enrichedUserProfile,
             allDoseLogs,
             allReminders,
             allWellnessLogs,
