@@ -1265,8 +1265,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
-    "mtime": 1789629303.786144,
-    "ast_hash": "e4ba65d84187ff06dff96485a8c697a4",
+    "mtime": 1789630503.6389155,
+    "ast_hash": "2d1c1b594f91a1c7a14e47dab58e61c4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/VerifyEmailPage.tsx": {
@@ -1350,8 +1350,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/draDatabase.ts": {
-    "mtime": 1789026183.7080798,
-    "ast_hash": "5f6c7cf25de8122eaef2d6bb45a9ac5b",
+    "mtime": 1789630488.9806275,
+    "ast_hash": "5e5c2ad8e6193e37b393bd79d447646e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/drugInfoProvider.ts": {
@@ -4312,6 +4312,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/__tests__/MessageRenderer.test.tsx": {
     "mtime": 1789629543.3048048,
     "ast_hash": "56c9b3a3b91f36ad6b9f51a83e876ec7",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/draDatabase.test.ts": {
+    "mtime": 1789630544.483737,
+    "ast_hash": "5e83a2e7f97d4a7ffd03946cf6c36880",
     "semantic_hash": ""
   }
 }

@@ -405,13 +405,15 @@ export default function TravelCompanionPage() {
 
               {/* Emergency Contacts */}
               {(advice.emergencyContacts?.length > 0 || destination) && (() => {
-                // Pull ambulance from AI response
-                const ambulance = advice.emergencyContacts?.find(
-                  (c: any) => c.type === 'ambulance' || /ambulance|emergency|ems/i.test(c.service)
-                ) || advice.emergencyContacts?.[0];
-
-                // Drug authority: static DB first (most accurate), fall back to AI
+                // Drug authority & verified ambulance: static DB first (most accurate), fall back to AI
                 const staticDRA = lookupDRA(destination);
+                const aiAmbulance = advice.emergencyContacts?.find(
+                  (c: any) => c.type === 'ambulance' || /ambulance|emergency|ems/i.test(c.service)
+                );
+                const ambulance = (staticDRA?.ambulance
+                  ? { service: staticDRA.ambulanceService || 'Ambulance / EMS', number: staticDRA.ambulance }
+                  : null) || aiAmbulance || advice.emergencyContacts?.[0];
+
                 const aiDRA = advice.emergencyContacts?.find(
                   (c: any) => c.type === 'drug_authority'
                 );
