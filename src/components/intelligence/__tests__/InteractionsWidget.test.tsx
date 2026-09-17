@@ -177,6 +177,11 @@ describe("InteractionsWidget — Global Watchdog", () => {
     });
 
     expect(screen.getByText("Ask DawaGPT to Resolve")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Ask DawaGPT to Resolve"));
+    expect(mockOpenDawaGPTWithPrompt).toHaveBeenCalledTimes(1);
+    expect(mockOpenDawaGPTWithPrompt.mock.calls[0][0]).toContain("FDA Boxed Warning: Warfarin");
+    expect(mockOpenDawaGPTWithPrompt.mock.calls[0][0]).toContain("Can you explain what these risks mean in plain language");
   });
 
   it("renders Cabinet 100% Secure when no interactions or alerts exist with >= 2 meds", async () => {

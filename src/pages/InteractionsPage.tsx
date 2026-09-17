@@ -22,6 +22,7 @@ import { ImpactStyle } from "@capacitor/haptics";
 import { checkFdaMultiSafety, FdaMultiSafetyResult } from "@/services/openFdaClient";
 import FdaBoxedWarningBadge from "@/components/fda/FdaBoxedWarningBadge";
 import { MobileWatchdogResolveButton } from "@/components/intelligence/MobileWatchdogResolveButton";
+import { buildSafetyConsultPrompt } from "@/lib/safetyPromptBuilder";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -47,19 +48,12 @@ export default function InteractionsPage() {
   );
 
   const handleConsultAllAlerts = () => {
-    const medNames = medicines.map(m => m.name).join(", ");
-    let query = `I have active safety alerts in my cabinet (${medNames}). `;
-    if (fdaSafety?.duplicateTherapies && fdaSafety.duplicateTherapies.length > 0) {
-      query += `Specifically, duplicate therapies detected: ${fdaSafety.duplicateTherapies.map(d => `${d.drug1} + ${d.drug2} (${d.sharedClass})`).join("; ")}. `;
-    }
-    if (fdaSafety?.boxedWarnings && fdaSafety.boxedWarnings.length > 0) {
-      query += `FDA Boxed Warnings: ${fdaSafety.boxedWarnings.map(b => `${b.drugName}: ${b.warning}`).join("; ")}. `;
-    }
-    if (interactions.length > 0) {
-      query += `Also drug interactions: ${interactions.map(i => `${i.drug1} + ${i.drug2}`).join("; ")}. `;
-    }
-    query += "Please advise on how I should manage this safely and whether I should space them out or talk to a doctor.";
-    openDawaGPTWithPrompt(query);
+    const prompt = buildSafetyConsultPrompt({
+      medNames: medicines.map(m => m.name),
+      fdaSafety,
+      interactions,
+    });
+    openDawaGPTWithPrompt(prompt);
   };
 
   // Sandbox State

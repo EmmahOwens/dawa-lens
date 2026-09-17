@@ -158,6 +158,10 @@ export default function DawaGPT() {
   const panelSwipe = useSwipeToDismiss(() => setIsOpen(false), 60);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -278,7 +282,7 @@ export default function DawaGPT() {
   }, [checkIfLatestMessageInView, messages.length]);
 
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
+    if (isOpen && messages.length === 0 && !dawaGPTInitialPrompt) {
       const name = resolvedPatient?.name || userProfile?.name || 'you';
       const reminderCount = reminders?.length || 0;
       const nextReminder = reminders?.[0];
@@ -436,26 +440,7 @@ export default function DawaGPT() {
         source: "System",
       }]);
     }
-  }, [isOpen, messages.length, reminders, userProfile?.name, userProfile?.gender, resolvedPatient, activeMedicines, patients]);
-
-  useEffect(() => {
-    if (isOpen) {
-      if (dawaGPTInitialPrompt) {
-        const promptToSend = dawaGPTInitialPrompt;
-        setDawaGPTInitialPrompt(null);
-        const timer = setTimeout(() => {
-          handleSend(promptToSend);
-        }, 150);
-        return () => clearTimeout(timer);
-      } else {
-        const timer = setTimeout(() => {
-          textareaRef.current?.focus();
-        }, 150);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [isOpen, dawaGPTInitialPrompt]);
-
+  }, [isOpen, messages.length, reminders, userProfile?.name, userProfile?.gender, resolvedPatient, activeMedicines, patients, dawaGPTInitialPrompt]);
 
   const handleSend = async (text: string) => {
     if (!text.trim() || isTyping) return;
@@ -475,8 +460,9 @@ export default function DawaGPT() {
     setIsTyping(true);
 
     try {
+      const history = messagesRef.current.length > 0 ? messagesRef.current : messages;
       const response = await chatWithDawaGPTStream(
-        [...messages, userMsg],
+        [...history, userMsg],
         allMedicines,
         userProfile,
         allDoseLogs,
@@ -607,6 +593,25 @@ export default function DawaGPT() {
       setIsTyping(false);
     }
   };
+
+  // Auto-send initial prompt if provided when DawaGPT is opened
+  useEffect(() => {
+    if (isOpen && dawaGPTInitialPrompt) {
+      const promptToSend = dawaGPTInitialPrompt;
+      setDawaGPTInitialPrompt(null);
+      handleSend(promptToSend);
+    }
+  }, [isOpen, dawaGPTInitialPrompt]);
+
+  // Focus textarea when DawaGPT is opened without an initial prompt
+  useEffect(() => {
+    if (isOpen && !dawaGPTInitialPrompt) {
+      const timer = setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, dawaGPTInitialPrompt]);
 
   const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email", "/scan"];
   if (hiddenPaths.includes(location.pathname)) return null;

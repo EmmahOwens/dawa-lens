@@ -12,6 +12,7 @@ import { checkFdaMultiSafety, FdaMultiSafetyResult } from "@/services/openFdaCli
 import { checkInteractions } from "@/services/interactionChecker";
 import { ConditionSafetyCheck, ParsedInteraction } from "@/types/interactions";
 import { MobileWatchdogResolveButton } from "./MobileWatchdogResolveButton";
+import { buildSafetyConsultPrompt } from "@/lib/safetyPromptBuilder";
 
 export function InteractionsWidget() {
   const { t } = useTranslation();
@@ -137,16 +138,12 @@ export function InteractionsWidget() {
   };
 
   const handleConsultAllAlerts = () => {
-    const medNames = activeMeds.map(m => m.name).join(", ");
-    let query = `I have active safety alerts in my cabinet (${medNames}). `;
-    if (duplicateTherapies.length > 0) {
-      query += `Specifically, duplicate therapies detected: ${duplicateTherapies.map(d => `${d.drug1} + ${d.drug2} (${d.sharedClass})`).join("; ")}. `;
-    }
-    if (interactions.length > 0) {
-      query += `Also drug interactions: ${interactions.map(i => `${i.drug1} + ${i.drug2}`).join("; ")}. `;
-    }
-    query += "Please advise on how I should manage this safely and whether I should space them out or talk to a doctor.";
-    openDawaGPTWithPrompt(query);
+    const prompt = buildSafetyConsultPrompt({
+      medNames: activeMeds.map(m => m.name),
+      fdaSafety,
+      interactions,
+    });
+    openDawaGPTWithPrompt(prompt);
   };
 
   const dietaryItems = [
