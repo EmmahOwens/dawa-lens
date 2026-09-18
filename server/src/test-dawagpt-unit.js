@@ -5,12 +5,12 @@ import { isComplexTask, isLikelyActionRequest, sanitizeJson } from './services/a
 
 console.log("=== Running DawaGPT Unit & Regression Tests ===");
 
-// 1. Test rateLimitManager limits
+// 1. Test rateLimitManager limits (matching Groq's official live free plan: 8k TPM, 200k TPD, 30 RPM, 1000 RPD)
 console.log("\n1. Verifying RateLimitManager TPM configurations...");
-assert.strictEqual(rateLimitManager.configs['groq-70b'].tpm, 200000, "groq-70b TPM should be 200,000");
-assert.strictEqual(rateLimitManager.configs['groq-scout'].tpm, 60000, "groq-scout TPM should be 60,000");
-assert.strictEqual(rateLimitManager.configs['groq-8b'].tpm, 60000, "groq-8b TPM should be 60,000");
-console.log("✔ RateLimitManager TPM limits verified (groq-70b: 200k, groq-scout: 60k, groq-8b: 60k).");
+assert.strictEqual(rateLimitManager.configs['groq-70b'].tpm, 8000, "groq-70b TPM should be 8,000");
+assert.strictEqual(rateLimitManager.configs['groq-scout'].tpm, 8000, "groq-scout TPM should be 8,000");
+assert.strictEqual(rateLimitManager.configs['groq-8b'].tpm, 8000, "groq-8b TPM should be 8,000");
+console.log("✔ RateLimitManager TPM limits verified (groq-70b: 8k, groq-scout: 8k, groq-8b: 8k).");
 
 // 1b. Test reasoning token estimation
 const estStandard = rateLimitManager.estimateTokens([{ role: 'user', content: 'hello' }], false);

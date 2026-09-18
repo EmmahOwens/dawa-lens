@@ -12,74 +12,186 @@ class RateLimitManager {
     this.inFlight = {};
 
     // Model limit configurations (RPM, TPM, RPD, TPD)
+    // All limits reflect verified free-tier quotas per provider (September 2026).
+    // IMPORTANT: Groq limits are per-ORGANIZATION (shared across all keys in the same account).
+    // Since GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3 are from DIFFERENT accounts,
+    // each key gets its own independent counter bucket with the full free-tier quota.
     this.configs = {
+      // ── Cerebras ────────────────────────────────────────────────────────────────
+      // Free tier: ~30 RPM, 1M TPD (llama-4-scout, qwen3-32b etc.)
+      // NOTE: llama-3.3-70b was deprecated Feb 2026; CEREBRAS_MODEL env should be updated.
       'cerebras-120b': {
         rpm: 30,
-        tpm: 60000,     // 60,000 TPM
-        rpd: 1000,      // 1,000 RPD
-        tpd: 1000000,   // 1M tokens/day
+        tpm: 60000,     // Conservative 60k TPM to avoid burst errors
+        rpd: 1440,      // ~30 RPM × 48 active mins/hr × 1 hr = generous daily estimate
+        tpd: 1000000,   // 1M tokens/day (free tier)
       },
+
+      // ── Groq Account 1 (GROQ_API_KEY) — 30 RPM, 8k TPM per model ───────────
+      // openai/gpt-oss-120b: 30 RPM, 8,000 TPM, 200,000 TPD
       'groq-70b': {
         rpm: 30,
-        tpm: 200000,    // 200,000 TPM (qwen/qwen3.8-27b / llama-3.3-70b)
-        rpd: 1000,
-        tpd: 1000000,
+        tpm: 8000,      // 8,000 TPM per Groq free tier (org-level)
+        rpd: 1440,      // Conservative daily req estimate
+        tpd: 200000,    // 200,000 TPD
       },
+      // openai/gpt-oss-120b (scout alias — same model)
+      'groq-scout': {
+        rpm: 30,
+        tpm: 8000,
+        rpd: 1440,
+        tpd: 200000,
+      },
+      // openai/gpt-oss-20b (light)
       'groq-8b': {
         rpm: 30,
-        tpm: 60000,     // 60,000 TPM (allows reasoning tokens for openai/gpt-oss-20b)
-        rpd: 14400,     // 14,400 RPD
-        tpd: 2000000,
+        tpm: 8000,      // 8,000 TPM
+        rpd: 1440,
+        tpd: 200000,
       },
-      'groq-scout': {   // gpt-oss-120b (replaced llama-4-scout deprecated June 2026)
-        rpm: 30,
-        tpm: 60000,     // 60,000 TPM
-        rpd: 1000,
-        tpd: 1000000,
-      },
+      // qwen/qwen3.6-27b
       'groq-qwen': {
         rpm: 30,
-        tpm: 200000,    // 200,000 TPM
-        rpd: 1000,
-        tpd: 1000000,
+        tpm: 8000,      // 8,000 TPM
+        rpd: 1440,
+        tpd: 200000,
       },
+
+      // ── Groq Account 2 (GROQ_API_KEY_2) — independent org, same limits ──────
+      'groq-70b-key2': {
+        rpm: 30,
+        tpm: 8000,
+        rpd: 1440,
+        tpd: 200000,
+      },
+      'groq-scout-key2': {
+        rpm: 30,
+        tpm: 8000,
+        rpd: 1440,
+        tpd: 200000,
+      },
+      'groq-8b-key2': {
+        rpm: 30,
+        tpm: 8000,
+        rpd: 1440,
+        tpd: 200000,
+      },
+      'groq-qwen-key2': {
+        rpm: 30,
+        tpm: 8000,
+        rpd: 1440,
+        tpd: 200000,
+      },
+
+      // ── Groq Account 3 (GROQ_API_KEY_3) — independent org, same limits ──────
+      'groq-70b-key3': {
+        rpm: 30,
+        tpm: 8000,
+        rpd: 1440,
+        tpd: 200000,
+      },
+      'groq-scout-key3': {
+        rpm: 30,
+        tpm: 8000,
+        rpd: 1440,
+        tpd: 200000,
+      },
+      'groq-8b-key3': {
+        rpm: 30,
+        tpm: 8000,
+        rpd: 1440,
+        tpd: 200000,
+      },
+      'groq-qwen-key3': {
+        rpm: 30,
+        tpm: 8000,
+        rpd: 1440,
+        tpd: 200000,
+      },
+
+      // ── Gemini (Google AI Studio free tier) ──────────────────────────────────
+      // gemini-2.5-flash: 10 RPM, 250,000 TPM, 1,500 RPD
       'gemini': {
-        rpm: 15,
-        tpm: 1000000,   // Gemini 2.0 Flash: very generous TPM
+        rpm: 10,
+        tpm: 250000,
         rpd: 1500,
-        tpd: 5000000,
+        tpd: 50000000,  // Very generous — no published hard TPD cap for flash
       },
       'gemini-2.5-flash': {
-        rpm: 15,
-        tpm: 1000000,   // Gemini 2.5 Flash Free Tier
+        rpm: 10,
+        tpm: 250000,
         rpd: 1500,
-        tpd: 5000000,
+        tpd: 50000000,
       },
       'gemini-3.5-flash': {
-        rpm: 15,
-        tpm: 1000000,   // Gemini 3.5 Flash Free Tier
+        rpm: 10,
+        tpm: 250000,
         rpd: 1500,
-        tpd: 5000000,
+        tpd: 50000000,
       },
-      'gemini-pro':    { rpm: 15,  tpm: 360000,  rpd: 1000,  tpd: 3000000  },
+      'gemini-pro': { rpm: 10, tpm: 250000, rpd: 1500, tpd: 50000000 },
+
+      // ── Z.ai (GLM models) ────────────────────────────────────────────────────
       'zai-glm-5-flash': {
         rpm: 15,
-        tpm: 100000,    // 100k TPM
-        rpd: 1000,      // 1,000 RPD
-        tpd: 1000000,   // 1M tokens/day
+        tpm: 100000,
+        rpd: 1000,
+        tpd: 1000000,
       },
       'zai-glm-4.7-flash': {
         rpm: 15,
-        tpm: 100000,    // 100k TPM
-        rpd: 1000,      // 1,000 RPD
-        tpd: 1000000,   // 1M tokens/day
+        tpm: 100000,
+        rpd: 1000,
+        tpd: 1000000,
       },
-      'sambanova-70b': { rpm: 30, tpm: 100000, rpd: 1000, tpd: 1000000 },
-      'nvidia-nemotron': { rpm: 40, tpm: 100000, rpd: 1000, tpd: 1000000 },
-      'siliconflow-qwen': { rpm: 60, tpm: 100000, rpd: 2000, tpd: 2000000 },
-      'openrouter-free': { rpm: 20, tpm: 100000, rpd: 200, tpd: 500000 },
-      'mistral-small': { rpm: 30, tpm: 100000, rpd: 1000, tpd: 1000000 },
-      'cloudflare-llama-3.2-vision': { rpm: 50,  tpm: 100000, rpd: 1000,  tpd: 1000000  },
+
+      // ── SambaNova Cloud (free tier) ──────────────────────────────────────────
+      // Meta-Llama-3.3-70B-Instruct: 240 RPM, 48,000 RPD
+      'sambanova-70b': {
+        rpm: 240,
+        tpm: 600000,    // No published TPM cap — use generous estimate
+        rpd: 48000,
+        tpd: 20000000,
+      },
+
+      // ── NVIDIA NIM (build.nvidia.com free tier) ──────────────────────────────
+      // ~40 RPM reported, credit-based (not TPD); use conservative estimates
+      'nvidia-nemotron': {
+        rpm: 40,
+        tpm: 100000,
+        rpd: 1000,
+        tpd: 5000000,
+      },
+
+      // ── SiliconFlow (permanently free tier) ─────────────────────────────────
+      // 1,000 RPM, 50,000 TPM
+      'siliconflow-qwen': {
+        rpm: 1000,
+        tpm: 50000,
+        rpd: 100000,
+        tpd: 5000000,
+      },
+
+      // ── OpenRouter (free :free models) ──────────────────────────────────────
+      // Standard: 20 RPM, 50 RPD. With ≥$10 lifetime credits: 20 RPM, 1,000 RPD
+      'openrouter-free': {
+        rpm: 20,
+        tpm: 200000,    // No hard TPM limit published — set generous estimate
+        rpd: 1000,      // Assumes account has ≥$10 lifetime credits
+        tpd: 10000000,
+      },
+
+      // ── Mistral AI (free/La Plateforme tier) ─────────────────────────────────
+      // ~30 RPM (community reports) — verify in Mistral admin console
+      'mistral-small': {
+        rpm: 30,
+        tpm: 100000,
+        rpd: 1000,
+        tpd: 5000000,
+      },
+
+      // ── Cloudflare AI ────────────────────────────────────────────────────────
+      'cloudflare-llama-3.2-vision': { rpm: 50, tpm: 100000, rpd: 1000, tpd: 1000000 },
     };
 
     // Budgets / Counters
@@ -121,9 +233,33 @@ class RateLimitManager {
     if (existsSync(STATE_FILE)) {
       try {
         const saved = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
-        if (saved.counters)     this.counters     = { ...this.counters,     ...saved.counters };
+        const now = Date.now();
+
+        if (saved.counters) {
+          // Stale counter validation: if lastDayReset for a model is older than 24h,
+          // reset its counters so restarted servers don't inherit exhausted daily budgets.
+          for (const k of Object.keys(saved.counters)) {
+            const savedDayReset = saved.lastDayReset?.[k] || 0;
+            if (now - savedDayReset >= 86400000) {
+              // Day has rolled over since last save — reset day counters
+              if (saved.counters[k]) {
+                saved.counters[k].reqDay = 0;
+                saved.counters[k].tokensDay = 0;
+              }
+              if (saved.lastDayReset) {
+                saved.lastDayReset[k] = now;
+              }
+            }
+            // Also reset minute counters on startup (minute window always starts fresh)
+            if (saved.counters[k]) {
+              saved.counters[k].reqMinute = 0;
+              saved.counters[k].tokensMinute = 0;
+            }
+          }
+          this.counters     = { ...this.counters,     ...saved.counters };
+        }
         if (saved.lastDayReset) this.lastDayReset = { ...this.lastDayReset, ...saved.lastDayReset };
-        console.log('[RateLimitManager] Loaded persisted state from', STATE_FILE);
+        console.log('[RateLimitManager] Loaded and validated persisted state from', STATE_FILE);
       } catch (err) {
         console.error('[RateLimitManager] Failed to load state:', err.message);
       }

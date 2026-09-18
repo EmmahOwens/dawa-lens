@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { X, Send, Bot, Sparkles, ChevronDown } from "@/lib/icons";
+import { X, Send, Bot, Sparkles, ChevronDown, RotateCcw } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
@@ -167,6 +167,10 @@ export default function DawaGPT() {
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  // Track which bot message ID needs the visible "Retry Action" button
+  const [actionMissingBotId, setActionMissingBotId] = useState<string | null>(null);
+  // Store the original user message text for the retry
+  const retryUserTextRef = useRef<string | null>(null);
 
   const placeholder = useTypewriterPlaceholder(SAMPLE_PROMPTS, {
     isPaused: isFocused || inputValue !== "" || isTyping
@@ -462,7 +466,8 @@ export default function DawaGPT() {
     setIsTyping(true);
 
     try {
-      const history = messagesRef.current.length > 0 ? messagesRef.current : messages;
+      const rawHistory = messagesRef.current.length > 0 ? messagesRef.current : messages;
+      const history = rawHistory.filter(m => !m.text?.includes("[SYSTEM RETRY"));
       const targetAge = resolvedPatient.isOwner
         ? resolvedPatient.age
         : (userProfile?.dateOfBirth
@@ -503,53 +508,20 @@ export default function DawaGPT() {
             ? { ...msg, text: msg.text }
             : msg
         ));
+        setActionMissingBotId(null);
       } else if (
         response.text &&
         /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved|refilled)\b/i.test(response.text)
       ) {
-        // AI claimed to perform an action but returned no action object.
-        // Silent retry: re-send with an explicit instruction to include the action.
+        // FIX (Bug 3): Instead of a silent auto-retry (which used stale state and often failed),
+        // show a visible "Retry Action" button. This is more transparent and avoids double API calls.
         console.warn(
-          "[DawaGPT] ⚠️ AI claimed an action but returned no action object. Retrying with explicit instruction...",
+          "[DawaGPT] ⚠️ AI claimed an action but returned no action object. Showing retry button.",
           response.text.slice(0, 200)
         );
-        try {
-          const retryUserMsg: ChatMessage = {
-            id: (Date.now() + 2).toString(),
-            role: "user",
-            text: `[SYSTEM RETRY — ACTION MISSING]: Your previous response claimed to perform an action but did not include a valid action object. ` +
-              `Re-process the original user request and this time you MUST include a populated 'action' field with the correct type and payload. ` +
-              `Do NOT say you're retrying. Just respond naturally with the action included.`
-          };
-          const retryMessages = [...messages, userMsg, response, retryUserMsg];
-          const retryResponse = await chatWithDawaGPTStream(
-            retryMessages,
-            allMedicines,
-            enrichedUserProfile,
-            allDoseLogs,
-            allReminders,
-            allWellnessLogs,
-            vitalitySummary,
-            patients,
-            resolvedPatient.id,
-            (streamedText) => {
-              setMessages(prev => prev.map(msg =>
-                msg.id === botId ? { ...msg, text: streamedText } : msg
-              ));
-            },
-            location.pathname
-          );
-          setMessages(prev => prev.map(msg =>
-            msg.id === botId ? retryResponse : msg
-          ));
-          if (retryResponse.action) {
-            await dispatchAIAction(retryResponse.action);
-          } else {
-            console.warn("[DawaGPT] ⚠️ Retry also returned no action. Giving up.");
-          }
-        } catch (retryErr) {
-          console.error("[DawaGPT] Retry failed:", retryErr);
-        }
+        // Store the original user text so the retry button can re-send it
+        retryUserTextRef.current = text;
+        setActionMissingBotId(botId);
       }
 
     } catch (e: any) {
@@ -605,6 +577,20 @@ export default function DawaGPT() {
       setIsTyping(false);
     }
   };
+
+  /**
+   * FIX (Bug 3): Handles the visible "Retry Action" button click.
+   * Re-sends the original user message so the server-side deterministic extraction
+   * and LLM produce a proper action object this time.
+   */
+  const handleRetryAction = useCallback(() => {
+    const originalText = retryUserTextRef.current;
+    if (!originalText) return;
+    setActionMissingBotId(null);
+    retryUserTextRef.current = null;
+    handleSend(originalText);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-send initial prompt if provided when DawaGPT is opened
   useEffect(() => {
@@ -807,6 +793,23 @@ export default function DawaGPT() {
                                     text={m.text}
                                     onNavigate={() => setIsOpen(false)}
                                   />
+                                  {/* FIX (Bug 3): Visible retry button when action object was missing */}
+                                  {m.id === actionMissingBotId && !isTyping && (
+                                    <motion.div
+                                      initial={{ opacity: 0, y: 6 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      className="mt-3 flex items-start"
+                                    >
+                                      <button
+                                        onClick={handleRetryAction}
+                                        disabled={isTyping}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors cursor-pointer"
+                                      >
+                                        <RotateCcw className="w-3 h-3" />
+                                        Complete action
+                                      </button>
+                                    </motion.div>
+                                  )}
                                 </div>
                               ) : (
                                 <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.text}</p>

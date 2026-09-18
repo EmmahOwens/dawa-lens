@@ -109,24 +109,26 @@ export function handleAiError(err) {
 }
 
 /**
- * Determines which API key to use based on the model ID.
- * Implements round-robin rotation across available keys for 70B.
- * For 8B, prefer KEY_2 if available.
+ * Determines which API key and rate-limit bucket to use for a Groq request.
+ * Since each GROQ_API_KEY comes from a DIFFERENT Groq organization/account, each
+ * has its own independent rate-limit quota and must be tracked separately.
+ * Returns { key, keySuffix } where keySuffix is '' | '-key2' | '-key3'.
  */
 const GROQ_KEYS = [GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3].filter(Boolean);
+const GROQ_KEY_SUFFIXES = ['', '-key2', '-key3'];
 let groqKeyIndex = 0;
 
+const getGroqKeyInfo = () => {
+  if (GROQ_KEYS.length === 0) return { key: null, keySuffix: '' };
+  const idx = groqKeyIndex % GROQ_KEYS.length;
+  groqKeyIndex++;
+  return { key: GROQ_KEYS[idx], keySuffix: GROQ_KEY_SUFFIXES[idx] || '' };
+};
+
+// Legacy compat shim — keeps existing callGroq/callGemini callers that pass a modelId working
 const getGroqApiKey = (modelId) => {
   if (GROQ_KEYS.length === 0) return null;
-  if (modelId && (modelId.toLowerCase().includes('20b') || modelId.toLowerCase().includes('qwen3.6') || modelId.toLowerCase().includes('qwen/qwen')) && GROQ_API_KEY_2) {
-    // Independent key for the lightweight model if available to avoid 120B limit sharing
-    return GROQ_API_KEY_2;
-  }
-
-  // Round-robin across all available keys
-  const key = GROQ_KEYS[groqKeyIndex % GROQ_KEYS.length];
-  groqKeyIndex++;
-  return key;
+  return GROQ_KEYS[groqKeyIndex % GROQ_KEYS.length];
 };
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -616,28 +618,31 @@ const callMistralChat = async (messages, responseFormat = { type: 'json_object' 
  * Standard chat completion call to Groq routed via rate limit queue
  */
 const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, modelId = GROQ_MODEL, priority = 'high', maxTokens = 4096, failFast = false, temperature = 0.7) => {
-  const initialApiKey = getGroqApiKey(modelId);
+  const { key: initialApiKey, keySuffix } = getGroqKeyInfo();
   if (!initialApiKey) {
     throw new AppError('Groq API key not configured', 401);
   }
 
-  const modelKey = modelId === GROQ_MODEL ? 'groq-70b'
+  const baseModelKey = modelId === GROQ_MODEL ? 'groq-70b'
     : modelId === GROQ_SCOUT_MODEL ? 'groq-scout'
-      : 'groq-8b';
+      : modelId === 'qwen/qwen3.6-27b' ? 'groq-qwen'
+        : 'groq-8b';
+  const modelKey = `${baseModelKey}${keySuffix}`;
 
   const fn = async () => {
-    // Resilient candidate list: active Groq models (gpt-oss-120b, gpt-oss-20b, qwen3.6-27b, llama-3.3-70b-versatile)
+    // Resilient candidate list: active Groq production models (gpt-oss-120b, gpt-oss-20b, qwen3.6-27b)
+    // Note: Groq officially deprecated all Llama models (llama-3.3-70b-versatile, llama-3.1-8b-instant, etc.)
+    // on June 17, 2026 for free/developer tiers, migrating to openai/gpt-oss-* and qwen/qwen3.6-27b.
     const rawCandidates = [
-      modelId,
+      sanitizeGroqModel(modelId),
       GROQ_MODEL,
       'openai/gpt-oss-120b',
       'openai/gpt-oss-20b',
-      'llama-3.3-70b-versatile',
       'qwen/qwen3.6-27b'
     ];
-    // Filter out only truly decommissioned or deprecated legacy models
+    // Filter out decommissioned or deprecated legacy models (all Llama models, qwen3-32b, etc.)
     const candidateModels = Array.from(new Set(rawCandidates))
-      .filter(m => typeof m === 'string' && !m.toLowerCase().includes('llama-3.1-70b') && !m.toLowerCase().includes('llama3-8b') && !m.toLowerCase().includes('llama3-70b') && !m.toLowerCase().includes('qwen3-32b') && !m.toLowerCase().includes('qwen3.8') && !m.toLowerCase().includes('mixtral') && !m.toLowerCase().includes('gemma'));
+      .filter(m => typeof m === 'string' && !m.toLowerCase().includes('llama') && !m.toLowerCase().includes('qwen3-32b') && !m.toLowerCase().includes('qwen3.8') && !m.toLowerCase().includes('mixtral') && !m.toLowerCase().includes('gemma'));
     if (candidateModels.length === 0) {
       candidateModels.push('openai/gpt-oss-120b', 'openai/gpt-oss-20b');
     }
@@ -649,7 +654,7 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
     for (const currentModel of candidateModels) {
       const isReasoningModel = typeof currentModel === 'string' && (currentModel.includes('gpt-oss') || currentModel.includes('qwen') || currentModel.includes('deepseek-r1') || currentModel.includes('qwq'));
       const effectiveMaxTokens = isReasoningModel ? Math.max(maxTokens, 4096) : Math.max(maxTokens, 2048);
-      const currentApiKey = getGroqApiKey(currentModel) || initialApiKey;
+      const currentApiKey = initialApiKey;
 
       const payload = {
         model: currentModel,
@@ -794,12 +799,14 @@ export const callAiWithFallback = async (messages, options = {}) => {
     }
   }
 
-  // 2. Try Groq Primary (qwen/qwen3.8-27b) - High capacity 200k TPM
-  if (GROQ_API_KEY && preferredModel !== GROQ_MODEL && preferredModel !== 'groq-70b') {
-    try {
-      return await callGroqChat(messages, responseFormat, GROQ_MODEL, priority, maxTokens, true, temperature);
-    } catch (err) {
-      console.warn("Fallback: Groq Primary failed, trying SambaNova 70B...", err.message);
+  // 2. Try Groq Primary across independent accounts
+  if (GROQ_KEYS.length > 0 && preferredModel !== GROQ_MODEL && preferredModel !== 'groq-70b') {
+    for (let i = 0; i < GROQ_KEYS.length; i++) {
+      try {
+        return await callGroqChat(messages, responseFormat, GROQ_MODEL, priority, maxTokens, true, temperature);
+      } catch (err) {
+        console.warn(`Fallback: Groq Primary key attempt ${i + 1} failed.`, err.message);
+      }
     }
   }
 
@@ -840,29 +847,35 @@ export const callAiWithFallback = async (messages, options = {}) => {
   }
 
   // 7. Try Groq Scout (openai/gpt-oss-120b)
-  if (GROQ_API_KEY && preferredModel !== GROQ_SCOUT_MODEL && preferredModel !== 'groq-scout') {
-    try {
-      return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, true, temperature);
-    } catch (err) {
-      console.warn("Fallback: Groq Scout failed, trying Groq Light...", err.message);
+  if (GROQ_KEYS.length > 0 && preferredModel !== GROQ_SCOUT_MODEL && preferredModel !== 'groq-scout') {
+    for (let i = 0; i < GROQ_KEYS.length; i++) {
+      try {
+        return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, true, temperature);
+      } catch (err) {
+        console.warn(`Fallback: Groq Scout key attempt ${i + 1} failed.`, err.message);
+      }
     }
   }
 
   // 8. Try Groq Light (openai/gpt-oss-20b or light model)
-  if ((GROQ_API_KEY_2 || GROQ_API_KEY) && preferredModel !== GROQ_LIGHT_MODEL && preferredModel !== 'groq-8b') {
-    try {
-      return await callGroqChat(messages, responseFormat, GROQ_LIGHT_MODEL, priority, maxTokens, true, temperature);
-    } catch (err) {
-      console.warn("Fallback: Groq Light failed, trying Groq Qwen...", err.message);
+  if (GROQ_KEYS.length > 0 && preferredModel !== GROQ_LIGHT_MODEL && preferredModel !== 'groq-8b') {
+    for (let i = 0; i < GROQ_KEYS.length; i++) {
+      try {
+        return await callGroqChat(messages, responseFormat, GROQ_LIGHT_MODEL, priority, maxTokens, true, temperature);
+      } catch (err) {
+        console.warn(`Fallback: Groq Light key attempt ${i + 1} failed.`, err.message);
+      }
     }
   }
 
   // 8b. Try Groq Qwen (qwen/qwen3.6-27b)
-  if (GROQ_API_KEY) {
-    try {
-      return await callGroqChat(messages, responseFormat, 'qwen/qwen3.6-27b', priority, maxTokens, true, temperature);
-    } catch (err) {
-      console.warn("Fallback: Groq Qwen failed, trying SiliconFlow...", err.message);
+  if (GROQ_KEYS.length > 0) {
+    for (let i = 0; i < GROQ_KEYS.length; i++) {
+      try {
+        return await callGroqChat(messages, responseFormat, 'qwen/qwen3.6-27b', priority, maxTokens, true, temperature);
+      } catch (err) {
+        console.warn(`Fallback: Groq Qwen key attempt ${i + 1} failed.`, err.message);
+      }
     }
   }
 
@@ -1461,6 +1474,21 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
 
     if (detectEmergency(lastUserMsg)) {
       return EMERGENCY_RESPONSE;
+    }
+
+    // FIX (Bug 3): Deterministic pre-LLM action extraction.
+    // For clear, unambiguous action requests (set reminder, log dose, refill stock),
+    // return the action immediately without burning an LLM API call.
+    // This guarantees the action object is always present for these simple cases.
+    const deterministicAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || []);
+    if (deterministicAction) {
+      const targetPatientForFallback = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
+      // Use generateBackendClinicalFallback to get a nicely formatted confirmation message
+      const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatientForFallback);
+      // Only use the deterministic path if the fallback actually matched and returned an action
+      if (fallbackResp && fallbackResp.action) {
+        return fallbackResp;
+      }
     }
 
     const isComplex = isComplexTask(lastUserMsg);
@@ -2183,83 +2211,97 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 2. Try Groq Primary (openai/gpt-oss-120b) - 128k context, reasoning model
-    if (GROQ_API_KEY) {
-      try {
-        const modelId = GROQ_MODEL;
-        const apiKey = getGroqApiKey(modelId);
-        const fn = async () => {
-          const isReasoning = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
-          const payload = {
-            model: modelId,
-            messages: finalMessages,
-            stream: true,
-            max_tokens: chatMaxTokens,
-            temperature: 0.7
+    // 2. Try Groq Primary (openai/gpt-oss-120b) across all 3 independent accounts
+    // failFast=false so the request queues if one account is at RPM, not hard-rejected.
+    if (GROQ_KEYS.length > 0) {
+      for (let keyIdx = 0; keyIdx < GROQ_KEYS.length; keyIdx++) {
+        try {
+          const groqKey = GROQ_KEYS[keyIdx];
+          const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
+          const modelId = GROQ_MODEL;
+          const modelKey = `groq-70b${keySuffix}`;
+          const fn = async () => {
+            const isReasoning = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
+            const payload = {
+              model: modelId,
+              messages: finalMessages,
+              stream: true,
+              max_tokens: chatMaxTokens,
+              temperature: 0.7
+            };
+            if (isReasoning) payload.reasoning_format = 'hidden';
+            const response = await axios.post(GROQ_API_URL, payload, {
+              headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+              responseType: 'stream', timeout: 25000
+            });
+            return response.data;
           };
-          if (isReasoning) payload.reasoning_format = 'hidden';
-          const response = await axios.post(GROQ_API_URL, payload, {
-            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 25000 // 25s timeout for reasoning models & deep contexts
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'groq-70b', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Groq Primary failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+          // failFast=false: queue rather than immediately reject if RPM counter is full
+          return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 2, false);
+        } catch (err) {
+          console.warn(`Stream Fallback: Groq Primary key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+        }
       }
     }
 
-    // 3. Try Groq Light (openai/gpt-oss-20b)
-    if (GROQ_API_KEY) {
-      try {
-        const modelId = GROQ_LIGHT_MODEL;
-        const apiKey = getGroqApiKey(modelId);
-        const fn = async () => {
-          const isReasoning = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
-          const payload = {
-            model: modelId,
-            messages: finalMessages,
-            stream: true,
-            max_tokens: chatMaxTokens,
-            temperature: 0.7
+    // 3. Try Groq Light (openai/gpt-oss-20b) across all 3 independent accounts
+    if (GROQ_KEYS.length > 0) {
+      for (let keyIdx = 0; keyIdx < GROQ_KEYS.length; keyIdx++) {
+        try {
+          const groqKey = GROQ_KEYS[keyIdx];
+          const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
+          const modelId = GROQ_LIGHT_MODEL;
+          const modelKey = `groq-8b${keySuffix}`;
+          const fn = async () => {
+            const isReasoning = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
+            const payload = {
+              model: modelId,
+              messages: finalMessages,
+              stream: true,
+              max_tokens: chatMaxTokens,
+              temperature: 0.7
+            };
+            if (isReasoning) payload.reasoning_format = 'hidden';
+            const response = await axios.post(GROQ_API_URL, payload, {
+              headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+              responseType: 'stream', timeout: 25000
+            });
+            return response.data;
           };
-          if (isReasoning) payload.reasoning_format = 'hidden';
-          const response = await axios.post(GROQ_API_URL, payload, {
-            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 25000 // 25s timeout
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'groq-8b', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Groq Light failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+          return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 2, false);
+        } catch (err) {
+          console.warn(`Stream Fallback: Groq Light key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+        }
       }
     }
 
-    // 4. Try Groq Qwen (qwen/qwen3.6-27b) as Groq streaming fallback
-    if (GROQ_API_KEY) {
-      try {
-        const modelId = 'qwen/qwen3.6-27b';
-        const apiKey = getGroqApiKey(modelId);
-        const fn = async () => {
-          const payload = {
-            model: modelId,
-            messages: finalMessages,
-            stream: true,
-            max_tokens: chatMaxTokens,
-            temperature: 0.7
+    // 4. Try Groq Qwen (qwen/qwen3.6-27b) across all 3 independent accounts
+    if (GROQ_KEYS.length > 0) {
+      for (let keyIdx = 0; keyIdx < GROQ_KEYS.length; keyIdx++) {
+        try {
+          const groqKey = GROQ_KEYS[keyIdx];
+          const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
+          const modelId = 'qwen/qwen3.6-27b';
+          const modelKey = `groq-qwen${keySuffix}`;
+          const fn = async () => {
+            const payload = {
+              model: modelId,
+              messages: finalMessages,
+              stream: true,
+              max_tokens: chatMaxTokens,
+              temperature: 0.7,
+              reasoning_format: 'hidden'
+            };
+            const response = await axios.post(GROQ_API_URL, payload, {
+              headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+              responseType: 'stream', timeout: 25000
+            });
+            return response.data;
           };
-          payload.reasoning_format = 'hidden';
-          const response = await axios.post(GROQ_API_URL, payload, {
-            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 25000 // 25s timeout
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'groq-qwen', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Groq Qwen failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+          return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 2, false);
+        } catch (err) {
+          console.warn(`Stream Fallback: Groq Qwen key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+        }
       }
     }
 
@@ -2823,8 +2865,8 @@ ${getFoodKnowledgePrompt()}
 - MEDICINE NAME FORMAT: Always brand name first, followed by chemical/generic name in brackets: e.g. "Panadol (Paracetamol)", "Nurofen (Ibuprofen)", "Flagyl (Metronidazole)", "Prilosec (Omeprazole)".
 - AGENTIC ACTION RULES:
   1. PERFORM ACTIONS IMMEDIATELY: When the user asks to add, update, delete, log, or refill ANYTHING, include a populated 'action' object in your response. Never say "I'll do that" or ask permission if info is sufficient.
-  2. NEVER LIE: Confirm an action in past tense ("I've added...", "I've logged...") ONLY if you include a valid, non-null action object.
-  3. FIRST ATTEMPT SUCCESS: Execute on first request.
+  2. NEVER LIE / CRITICAL ACTION RULE: If your response text uses past tense confirmation ("I've added", "I have logged", "I've set up", "I have updated", "Refilled", "Recorded", "Done!"), you MUST include the populated 'action' JSON object in your response. If you cannot produce the action object or information is missing, you MUST NOT use past tense — ask for the missing details in the present tense instead.
+  3. FIRST ATTEMPT SUCCESS: Execute on first request without asking for confirmation if basic parameters are provided.
 - ACTION SCHEMAS:
   * ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, frequencyPerDay?, patientId? }
   * UPDATE_MEDICINE: { id, name?, dosage?, notes?, currentQuantity?, totalQuantity?, dosagePerDose?, frequencyPerDay?, unit? }
@@ -2983,22 +3025,40 @@ ${familyHubSummary}
     const content = rawContent.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
     return { role: msg.role === 'assistant' ? 'assistant' : 'user', content };
   });
-  const cleanedMessages = [];
-  let lastRole = null;
-  for (const msg of formattedMessages) {
-    if (msg.role === lastRole) cleanedMessages[cleanedMessages.length - 1].content += "\n\n" + msg.content;
-    else { cleanedMessages.push(msg); lastRole = msg.role; }
-  }
-  if (cleanedMessages.length === 0 && lastUserMsg) cleanedMessages.push({ role: 'user', content: lastUserMsg });
   const primingMessage = buildPrimingMessage(reminders, filteredMeds, patients, selectedPatientId, isStreaming);
 
+  const formattedMessages2 = formattedMessages
+    // Remove any [SYSTEM RETRY] internal messages that should never reach the LLM
+    .filter(msg => !msg.content.includes('[SYSTEM RETRY'))
+    // Also strip leftover suggestion brackets not already cleaned
+    .map(msg => ({ ...msg, content: msg.content.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim() }));
+
+  const cleanedMessages2 = [];
+  let lastRole2 = null;
+  for (const msg of formattedMessages2) {
+    if (msg.role === lastRole2) cleanedMessages2[cleanedMessages2.length - 1].content += "\n\n" + msg.content;
+    else { cleanedMessages2.push(msg); lastRole2 = msg.role; }
+  }
+  if (cleanedMessages2.length === 0 && lastUserMsg) cleanedMessages2.push({ role: 'user', content: lastUserMsg });
+
+  // FIX (Bug 4): Merge dynamicContextBlock INTO the system role instead of injecting
+  // it as a separate user-role message. Injecting context as a user message disrupted
+  // conversation role ordering and caused models to respond to the context data instead
+  // of the real user question.
+  const combinedSystemContent = `${STATIC_SYSTEM_PROMPT}\n\n${dynamicContextBlock}`;
+
+  // FIX (Bug 4): Only inject priming message for brand-new conversations (0 turns).
+  // Injecting it in mid-conversation created a stale artificial assistant turn that
+  // contradicted the real conversation history.
+  const isNewConversation = cleanedMessages2.length === 0 ||
+    (cleanedMessages2.length === 1 && cleanedMessages2[0].role === 'user');
+
   const finalMessages = [
-    { role: 'system', content: STATIC_SYSTEM_PROMPT },
-    { role: 'user', content: dynamicContextBlock },
-    ...(cleanedMessages.length === 0 || cleanedMessages[0].role !== 'assistant' ? [{ role: 'assistant', content: primingMessage }] : []),
-    ...cleanedMessages
+    { role: 'system', content: combinedSystemContent },
+    ...(isNewConversation ? [{ role: 'assistant', content: primingMessage }] : []),
+    ...cleanedMessages2
   ];
-  return { finalMessages, systemInstruction: STATIC_SYSTEM_PROMPT };
+  return { finalMessages, systemInstruction: combinedSystemContent };
 }
 
 export const getEmotionReflection = async (mood, energy, symptoms, medicines = [], priority = 'high') => {
