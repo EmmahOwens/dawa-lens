@@ -18,6 +18,7 @@ import {
   findLocalTherapeuticClass,
   extractDrugsFromQuery
 } from './therapeuticDuplicationService.js';
+import { generateContextualSuggestions, isGenericBoilerplate } from '../utils/contextualSuggestions.js';
 
 dotenv.config();
 
@@ -299,9 +300,7 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
       }
       parsed = {
         text: displayText,
-        suggestions: Array.isArray(metaObj.suggestions) && metaObj.suggestions.length > 0
-          ? metaObj.suggestions
-          : ["Check medications", "View reminders", "Drug safety"],
+        suggestions: Array.isArray(metaObj.suggestions) ? metaObj.suggestions : [],
         source: "Gemini (Fallback)",
         action: metaObj.action || null
       };
@@ -311,12 +310,12 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
         if (typeof parsed === 'object' && parsed !== null) {
           parsed.text = parsed.text || parsed.message || parsed.response || parsed.advice || text;
           parsed.source = "Gemini (Fallback)";
-          parsed.suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : ["Check medications", "View reminders", "Drug safety"];
+          parsed.suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
           parsed.action = parsed.action || null;
         } else {
           parsed = {
             text: String(parsed),
-            suggestions: ["Check medications", "View reminders", "Drug safety"],
+            suggestions: [],
             source: "Gemini (Fallback)",
             action: null
           };
@@ -324,12 +323,22 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
       } catch (err) {
         parsed = {
           text: text.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim(),
-          suggestions: ["Check medications", "View reminders", "Drug safety"],
+          suggestions: [],
           source: "Gemini (Fallback)",
           action: null
         };
       }
     }
+
+    const lastUserQuery = Array.isArray(messages) ? messages.filter(m => m.role === 'user').pop()?.content || "" : "";
+    parsed.suggestions = generateContextualSuggestions({
+      messages,
+      userQuery: lastUserQuery,
+      assistantText: parsed.text,
+      existingSuggestions: parsed.suggestions,
+      action: parsed.action
+    });
+
     return parsed;
   };
 
@@ -1423,7 +1432,7 @@ export const isLikelyActionRequest = (text) => {
   }
 
   // Direct action verbs with word boundaries (e.g. "add reminder", "set stock")
-  const directVerbs = /\b(add|create|schedule|register|log|record|refill|restock|delete|remove|reschedule)\b/i;
+  const directVerbs = /\b(add|create|schedule|register|log|record|refill|restock|delete|remove|reschedule|remind|set)\b/i;
 
   // Indirect / polite action requests ("please add", "help me set a reminder")
   const indirectAction = /(i need|i want|i'd like|i would like|can you|could you|please|help me|let's|let us)\s.{0,30}\b(add|create|set|log|record|track|update|delete|remove|refill|schedule|register)\b/i;
@@ -1529,9 +1538,11 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
       } catch (textErr) {
         console.warn("All AI providers failed in chatWithDawaGPT, activating local clinical fallback:", textErr.message);
         const targetPatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
-        return generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient);
+        return generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage);
       }
     }
+
+    const targetPatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
 
     // Action execution is handled client-side by dispatchAIAction (useAIActions.tsx).
     // The server's role is to generate the action intent and return it in result.action.
@@ -1545,17 +1556,38 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
           .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
           .trim();
       }
-      result.suggestions = Array.isArray(result.suggestions) ? result.suggestions : ["Check medications", "View reminders", "Drug safety"];
+      result.suggestions = generateContextualSuggestions({
+        messages,
+        userQuery: lastUserMsg,
+        assistantText: result.text,
+        medicines,
+        reminders,
+        userProfile,
+        activePatient: targetPatient,
+        currentPage,
+        action: result.action,
+        existingSuggestions: Array.isArray(result.suggestions) ? result.suggestions : []
+      });
       result.action = result.action || null;
     } else if (typeof result === 'string') {
+      const cleanText = result
+        .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
+        .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
+        .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+        .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
+        .trim();
       result = {
-        text: result
-          .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
-          .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
-          .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
-          .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
-          .trim(),
-        suggestions: ["Check medications", "View reminders", "Drug safety"],
+        text: cleanText,
+        suggestions: generateContextualSuggestions({
+          messages,
+          userQuery: lastUserMsg,
+          assistantText: cleanText,
+          medicines,
+          reminders,
+          userProfile,
+          activePatient: targetPatient,
+          currentPage
+        }),
         source: "AI Fallback",
         action: null
       };
@@ -1874,7 +1906,7 @@ export function extractWellnessData(text) {
  * Provides domain-specific, clinically accurate responses and action dispatching
  * when cloud AI APIs are cold-starting, offline, rate-limited, or lack external API keys.
  */
-export function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null, targetPatient = null) {
+export function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null, targetPatient = null, currentPage = null) {
   const norm = (lastUserMsg || '').toLowerCase().trim();
   const activeGender = targetPatient?.gender || userProfile?.gender;
   const gender = activeGender?.toLowerCase();
@@ -1893,7 +1925,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
       const displayTime = action.payload.time ? formatTimeDisplay(action.payload.time) : "8:00 AM";
       return {
         text: `I've set up a reminder for you to take **${action.payload.medicineName}** (${action.payload.dose}) ${action.payload.repeatSchedule} at **${displayTime}**.\n\nYou can [view or manage your schedule in Medication Reminders](/reminders).`,
-        suggestions: ["View my reminders", "Check my medications", "How is my pill stock?"],
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
         source: "Schedule Guard",
         action
       };
@@ -1902,7 +1934,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
       const statusVerb = action.payload.status === 'taken' ? 'took' : 'missed';
       return {
         text: `I've logged that you **${statusVerb}** your dose of **${action.payload.medicineName}**.\n\nYou can [review your adherence streak in Dose History](/history).`,
-        suggestions: ["View dose history", "Check reminders", "How is my pill stock?"],
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
         source: "Adherence Guard",
         action
       };
@@ -1910,7 +1942,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     if (action.type === "UPDATE_MEDICINE") {
       return {
         text: `I've updated your Med Vault: **${action.payload.name}** stock is now set to **${action.payload.currentQuantity} tablets**.\n\nYou can [view and track your pill supply in Med Vault](/medvault).`,
-        suggestions: ["Open Med Vault", "Check reminders", "View medications"],
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
         source: "Med Vault",
         action
       };
@@ -1931,7 +1963,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
 
       return {
         text: responseText,
-        suggestions: ["Open Wellness Hub", "Check medications", "View reminders"],
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
         source: "Wellness Guard",
         action
       };
@@ -1968,7 +2000,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
       `• **National Drug Authority (NDA) Uganda**: Toll-Free **0800 101 622** | WhatsApp **+256 791 415 555**\n` +
       `• **Ministry of Health (MoH) Uganda**: Toll-Free **0800 100 066** / **0800 203 033**\n` +
       `• **Emergency Ambulance Dispatch**: **112** (Mobile Toll-Free) / **999**`,
-    suggestions: ["Try asking again", "Check my medications", "View reminders"],
+    suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, userProfile, activePatient: targetPatient, currentPage }),
     source: "System (Reconnecting)",
     action: null
   };
@@ -1981,6 +2013,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     if (!Array.isArray(messages)) throw new AppError('Invalid messages format.', 400);
 
     const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || messages.filter(m => m.role === 'user').pop()?.content;
+    const targetPatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
 
     if (detectEmergency(lastUserMsg)) {
       return new Readable({
@@ -2005,7 +2038,12 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const result = await chatWithDawaGPT(params, priority);
         return createFakeStream(result);
       } catch (err) {
-        return createFakeStream({ text: err.message || "I encountered an error.", suggestions: ["Try again"], source: "System", action: null });
+        return createFakeStream({
+          text: err.message || "I encountered an error.",
+          suggestions: generateContextualSuggestions({ messages, userQuery: lastUserMsg, medicines, reminders, userProfile, activePatient: targetPatient, currentPage }),
+          source: "System",
+          action: null
+        });
       }
     }
 
@@ -2034,7 +2072,19 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
             payload: jsonResp.action.payload || jsonResp.action.data || jsonResp.action,
             confirmMessage: jsonResp.action.confirmMessage
           } : null;
-          const metadata = JSON.stringify({ suggestions: jsonResp.suggestions || [], source: jsonResp.source || "DawaGPT", action: normalizedAction });
+          const enrichedSuggestions = generateContextualSuggestions({
+            messages,
+            userQuery: lastUserMsg,
+            assistantText: cleanText,
+            medicines,
+            reminders,
+            userProfile,
+            activePatient: targetPatient,
+            currentPage,
+            action: normalizedAction,
+            existingSuggestions: jsonResp.suggestions
+          });
+          const metadata = JSON.stringify({ suggestions: enrichedSuggestions, source: jsonResp.source || "DawaGPT", action: normalizedAction });
           const data = JSON.stringify({ choices: [{ delta: { content: cleanText + "\n###METADATA###\n" + metadata } }] });
           this.push(`data: ${data}\n\n`);
           this.push(`data: [DONE]\n\n`);
@@ -2230,7 +2280,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       });
 
       let displayText = "";
-      let suggestions = ["Check medications", "View reminders", "Drug safety"];
+      let suggestions = [];
       let source = "AI Fallback";
       let action = null;
 
@@ -2255,8 +2305,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       console.warn("Stream Fallback: Unified AI API fallback cascade also failed:", unifiedCascadeErr.response?.data?.error?.message || unifiedCascadeErr.response?.data || unifiedCascadeErr.message);
     }
 
-    const targetPatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
-    const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient);
+    const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage);
     return createFakeStream(fallbackResp);
   } catch (err) {
     return new Readable({
@@ -2270,21 +2319,21 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
   }
 };
 
-function buildPrimingMessage(reminders, medicines, patients, selectedPatientId, isStreaming = false) {
+function buildPrimingMessage(reminders, medicines, patients, selectedPatientId, isStreaming = false, currentPage = null) {
   const activePatient = patients?.find(p => p.id === selectedPatientId);
   const name = activePatient?.name || 'you';
   const reminderCount = reminders?.length || 0;
   const nextReminder = reminders?.[0];
   let opening = `Hi! I'm DawaGPT.`;
   if (reminderCount > 0 && nextReminder) opening += ` ${name === 'you' ? 'You have' : `${name} has`} ${reminderCount} reminder${reminderCount > 1 ? 's' : ''} set up.`;
-  let firstSuggestions = [];
-  if (nextReminder) firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
-  if (medicines?.length > 0) firstSuggestions.push(`Does ${medicines[0].name} interact with anything?`);
-  if (patients?.length > 0) {
-    firstSuggestions.push(`Check family medications`);
-  } else {
-    firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
-  }
+  
+  const firstSuggestions = generateContextualSuggestions({
+    medicines,
+    reminders,
+    activePatient,
+    currentPage
+  });
+
   if (isStreaming) {
     return opening;
   }
@@ -2760,9 +2809,19 @@ When advising on foods, chewables, or beverages to pair with medications:
    - Dairy, Fortified Milks & Mukene: High calcium binds to Fluoroquinolones (Ciprofloxacin) and Tetracyclines; separate by at least 2 hours.
    - Alcohol & Waragi / Local Spirits: Severe liver necrosis with Paracetamol/Panadol; violent disulfiram reaction (vomiting, palpitations, flushing) with Metronidazole (Flagyl); severe CNS sedation and respiratory depression with antihistamines, benzodiazepines, or opioids.
 
-=== SUGGESTIONS (CRITICAL) ===
-- Generate EXACTLY 3 short follow-up prompts (<6 words each) in the suggestions field representing what the user would logically ask next.
-- NEVER output suggestions inside message text. They belong ONLY in the suggestions JSON/metadata field.
+=== CONTEXTUAL SUGGESTIONS (MANDATORY & CRITICAL) ===
+- In the metadata "suggestions" array, provide EXACTLY 3 short follow-up prompts (<6 words each).
+- RELEVANCE REQUIREMENT: Every single suggestion MUST directly relate to the immediate topic, medications, symptoms, questions, or actions discussed in this conversation turn.
+- CONVERSATIONAL FLOW: Suggestions must represent natural follow-up questions the user would ask next about what you just explained:
+  * If discussing a medication (e.g. Metformin, Panadol, Coartem, Amoxicillin): suggest specific clinical follow-ups (e.g. "Can I take it with food?", "What if I miss a dose?", "Are there side effects?", "Can I take with milk?").
+  * If discussing interactions or drug safety: suggest specific interaction follow-ups (e.g. "Can I alternate them safely?", "Safe dose spacing", "Which one is safer?").
+  * If discussing symptoms or wellness (e.g. headache, fever, fatigue): suggest symptom relief and clinical precautions (e.g. "Safe home remedies", "When should I see a doctor?", "Safe pain relief options").
+  * If an action was performed (e.g. reminder added, dose logged, stock updated): suggest immediate next steps (e.g. "Set another reminder", "When is my next dose?", "How many doses left in vault?").
+  * If discussing a child or senior: suggest age-tailored guidance (e.g. "Chewable medication options", "Safe drinks for children", "Swallowing tips for seniors").
+- STRICT PROHIBITIONS:
+  * NEVER output generic boilerplate suggestions (such as "Check medications", "View reminders", "Drug safety", "Open Med Vault", "Contact support", "Open Settings") unless that specific screen or topic was explicitly the subject of the immediate conversation.
+  * NEVER duplicate or re-ask the exact question the user just asked.
+  * NEVER output suggestions inside the visible message text; they belong ONLY in the metadata JSON "suggestions" array.
 
 CONVERSATION PHASE: ${conversationPhase}
 ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
@@ -2826,7 +2885,7 @@ ${familyHubSummary}
     const content = rawContent.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
     return { role: msg.role === 'assistant' ? 'assistant' : 'user', content };
   });
-  const primingMessage = buildPrimingMessage(reminders, filteredMeds, patients, selectedPatientId, isStreaming);
+  const primingMessage = buildPrimingMessage(reminders, filteredMeds, patients, selectedPatientId, isStreaming, currentPage);
 
   const formattedMessages2 = formattedMessages
     // Remove any [SYSTEM RETRY] internal messages that should never reach the LLM

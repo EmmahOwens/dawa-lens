@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789817530.2760968,
-    "ast_hash": "6213dfd14f7663c793e4db719790bb4a",
+    "mtime": 1789818761.2712898,
+    "ast_hash": "8332999309ee6a23bab8416d94812738",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1789713343.5598474,
-    "ast_hash": "04b91fd87507c25e28aa93794df33c00",
+    "mtime": 1789819140.7575805,
+    "ast_hash": "697997890b04cdfcfee16d65af7151bf",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789817101.738781,
-    "ast_hash": "f2a9c072a38d89505854a7a2a2173fa2",
+    "mtime": 1789820198.8906596,
+    "ast_hash": "e94b41a9e3f257a2ef342689b2a00f51",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -4342,6 +4342,26 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/server/verify-fallback-and-prompts.js": {
     "mtime": 1789817305.6726747,
     "ast_hash": "53f81f34ffca3afa266e1998f1b6dd33",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-contextual-suggestions.js": {
+    "mtime": 1789818414.4697754,
+    "ast_hash": "da1c00a1a6e568f15db94d8460ac913f",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/server/src/utils/contextualSuggestions.js": {
+    "mtime": 1789818402.1197503,
+    "ast_hash": "3ac210da81eb3b1cb8a2a00567c95223",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/__tests__/contextualSuggestions.test.ts": {
+    "mtime": 1789820028.6420078,
+    "ast_hash": "915ab4e33de91c642693c9a5627e48e1",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/contextualSuggestions.ts": {
+    "mtime": 1789820212.7977066,
+    "ast_hash": "4ad88ca2860dcc90bc3aaf97035e7b27",
     "semantic_hash": ""
   }
 }

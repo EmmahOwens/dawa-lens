@@ -15,6 +15,7 @@ import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { calculateRefillStatus } from "@/services/refillService";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { getContextualSuggestions, isGenericBoilerplate } from "@/lib/contextualSuggestions";
 
 const SAMPLE_PROMPTS = [
   "Does Panadol interact with Ibuprofen?",
@@ -424,19 +425,16 @@ export default function DawaGPT() {
         opening += reminderPhrases[Math.floor(Math.random() * reminderPhrases.length)];
       }
 
-      // Generate first suggestions based on actual state
-      const firstSuggestions: string[] = [];
-      if (nextReminder) {
-        firstSuggestions.push(`Log ${nextReminder.medicineName} as taken`);
-      }
-      if (activeMedicines?.length > 0) {
-        firstSuggestions.push(`Does ${activeMedicines[0].name} interact with anything?`);
-      }
-      if (patients?.length > 0) {
-        firstSuggestions.push("Check family medications");
-      } else {
-        firstSuggestions.push(reminderCount === 0 ? 'Add my first medicine reminder' : 'Add another medicine');
-      }
+      // Generate first suggestions based on actual state and active route/context
+      const firstSuggestions = getContextualSuggestions({
+        messages: [],
+        assistantText: opening,
+        medicines: activeMedicines || [],
+        reminders: reminders || [],
+        userProfile,
+        activePatient: resolvedPatient,
+        currentPage: location.pathname,
+      });
 
       setMessages([{
         id: "welcome",
@@ -446,7 +444,7 @@ export default function DawaGPT() {
         source: "System",
       }]);
     }
-  }, [isOpen, messages.length, reminders, userProfile?.name, userProfile?.gender, resolvedPatient, activeMedicines, patients, dawaGPTInitialPrompt]);
+  }, [isOpen, messages.length, reminders, userProfile?.name, userProfile?.gender, resolvedPatient, activeMedicines, patients, dawaGPTInitialPrompt, location.pathname]);
 
   const handleSend = async (text: string) => {
     if (!text.trim() || isTyping) return;
@@ -569,7 +567,22 @@ export default function DawaGPT() {
       setMessages(prev =>
         prev.map(msg =>
           msg.id === botId
-            ? { ...msg, text: errorText, source: "System" }
+            ? {
+                ...msg,
+                text: errorText,
+                source: "System",
+                suggestions: getContextualSuggestions({
+                  messages: prev,
+                  userQuery: text,
+                  assistantText: errorText,
+                  medicines: activeMedicines || medicines,
+                  reminders,
+                  userProfile,
+                  activePatient: resolvedPatient,
+                  currentPage: location.pathname,
+                  existingSuggestions: ["Try again", "Contact NDA Uganda"]
+                })
+              }
             : msg
         )
       );
@@ -616,65 +629,24 @@ export default function DawaGPT() {
 
   const lastMsg = messages[messages.length - 1];
 
-  // Smart Fallback Suggestions logic
-  const getSmartFallbacks = () => {
-    const fallbacks: string[] = [];
+  // Smart Fallback Suggestions logic grounded in active conversation context
+  const getSmartFallbacks = useCallback(() => {
+    return getContextualSuggestions({
+      messages,
+      medicines: activeMedicines || medicines,
+      reminders,
+      userProfile,
+      activePatient: resolvedPatient,
+      currentPage: location.pathname,
+    });
+  }, [messages, activeMedicines, medicines, reminders, userProfile, resolvedPatient, location.pathname]);
 
-    // 0. Check for critically low stock in Med Vault (daysRemaining <= 2)
-    if (medicines && reminders) {
-      const lowMeds = medicines.filter(m => {
-        const status = calculateRefillStatus(m, reminders);
-        return status && status.isLow;
-      });
-      if (lowMeds.length > 0) {
-        fallbacks.push(`Refill my ${lowMeds[0].name}`);
-        fallbacks.push("How many days of meds do I have left?");
-      }
-    }
+  const rawLastSuggestions = lastMsg?.suggestions && Array.isArray(lastMsg.suggestions) ? lastMsg.suggestions : [];
+  const hasValidSuggestions = rawLastSuggestions.length > 0 && !isGenericBoilerplate(rawLastSuggestions);
 
-    // 1. Check for due reminders
-    if (reminders && reminders.length > 0) {
-      const nextReminder = reminders.find(r => r.enabled);
-      if (nextReminder && !fallbacks.includes(`Log ${nextReminder.medicineName} as taken`)) {
-        fallbacks.push(`Log ${nextReminder.medicineName} as taken`);
-      }
-    }
-
-    // 2. Check for medicines
-    if (activeMedicines && activeMedicines.length > 0) {
-      const firstMed = activeMedicines[0];
-      if (fallbacks.length < 3) {
-        fallbacks.push(`When should I take ${firstMed.name}?`);
-      }
-      if (fallbacks.length < 3) {
-        fallbacks.push(`Does ${firstMed.name} have side effects?`);
-      }
-    }
-
-    // 3. Default generic ones
-    if (fallbacks.length < 3) {
-      const generic = [
-        "Open my Med Vault",
-        "What are my reminders?",
-        "Contact support for Uganda",
-        "Add a new medicine",
-        "Is Matooke safe with my meds?",
-      ];
-      while (fallbacks.length < 3 && generic.length > 0) {
-        const item = generic.shift();
-        if (item && !fallbacks.includes(item)) fallbacks.push(item);
-      }
-    }
-
-    return fallbacks.slice(0, 3);
-  };
-
-  const activeSuggestions =
-    messages.length === 0
-      ? getSmartFallbacks() // Use smart fallbacks for empty state too
-      : (lastMsg?.suggestions && lastMsg.suggestions.length > 0
-        ? lastMsg.suggestions.slice(0, 3)
-        : getSmartFallbacks());
+  const activeSuggestions = hasValidSuggestions
+    ? rawLastSuggestions.slice(0, 3)
+    : getSmartFallbacks().slice(0, 3);
 
   return (
     <>
@@ -862,7 +834,7 @@ export default function DawaGPT() {
               <div className="p-4 md:p-8 bg-transparent">
                 <div className="max-w-2xl mx-auto w-full space-y-4">
                   {/* Prompt Suggestions */}
-                  {(messages.length === 0 || lastMsg?.suggestions) && (
+                  {(messages.length === 0 || lastMsg?.role === "assistant") && activeSuggestions.length > 0 && !isTyping && (
                     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
                       {activeSuggestions.map((suggestion, i) => (
                         <button
@@ -891,7 +863,9 @@ export default function DawaGPT() {
                       placeholder={
                         !isOnline
                           ? "DawaGPT is unavailable offline..."
-                          : (placeholder || "Send a message...")
+                          : messages.length > 1
+                            ? "Ask a follow-up question..."
+                            : (placeholder || "Send a message...")
                       }
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}

@@ -14,6 +14,7 @@ import {
   extractDrugsFromQuery,
   findLocalTherapeuticClass
 } from "./therapeuticDuplicationService";
+import { getContextualSuggestions, isGenericBoilerplate } from "@/lib/contextualSuggestions";
 
 export interface AIAction {
   type: "ADD_REMINDER" | "LOG_DOSE" | "ADD_MEDICINE" | "UPDATE_REMINDER" | "REMOVE_REMINDER" | "LOG_WELLNESS" | "ADD_PATIENT" | "UPDATE_MEDICINE" | "REMOVE_MEDICINE" | null;
@@ -345,7 +346,7 @@ export const generateDawaGPTResponse = async (
         id: Date.now().toString(),
         role: "assistant",
         text: `I've set up a reminder for you to take **${payload?.medicineName}** (${payload?.dose}) ${payload?.repeatSchedule} at **${displayTime}**.\n\nYou can [view or manage your schedule in Medication Reminders](/reminders).`,
-        suggestions: ["View my reminders", "Check my medications", "How is my pill stock?"],
+        suggestions: getContextualSuggestions({ userQuery: query, action, medicines: allMedicines, reminders }),
         source: "System",
         action
       };
@@ -357,7 +358,7 @@ export const generateDawaGPTResponse = async (
         id: Date.now().toString(),
         role: "assistant",
         text: `I've logged that you **${statusVerb}** your dose of **${payload?.medicineName}**.\n\nYou can [review your adherence streak in Dose History](/history).`,
-        suggestions: ["View dose history", "Check reminders", "How is my pill stock?"],
+        suggestions: getContextualSuggestions({ userQuery: query, action, medicines: allMedicines, reminders }),
         source: "System",
         action
       };
@@ -368,7 +369,7 @@ export const generateDawaGPTResponse = async (
         id: Date.now().toString(),
         role: "assistant",
         text: `I've updated your Med Vault: **${payload?.name}** stock is now set to **${payload?.currentQuantity} tablets**.\n\nYou can [view and track your pill supply in Med Vault](/medvault).`,
-        suggestions: ["Open Med Vault", "Check reminders", "View medications"],
+        suggestions: getContextualSuggestions({ userQuery: query, action, medicines: allMedicines, reminders }),
         source: "System",
         action
       };
@@ -397,7 +398,7 @@ export const generateDawaGPTResponse = async (
         id: Date.now().toString(),
         role: "assistant",
         text: responseText,
-        suggestions: ["Open Wellness Hub", "Check medications", "View reminders"],
+        suggestions: getContextualSuggestions({ userQuery: query, action, medicines: allMedicines, reminders }),
         source: "System",
         action
       };
@@ -1136,7 +1137,14 @@ export const generateDawaGPTResponse = async (
     role: "assistant",
     text: "I'm DawaGPT, your Ugandan health companion. Ask me about your medications, reminders, drug interactions, or pill stock. For urgent medical issues, please call a professional.",
     source: "System",
-    suggestions: ["Check my medications", "View my reminders", "Check drug interactions"]
+    suggestions: getContextualSuggestions({
+      userQuery: query,
+      medicines: allMedicines,
+      reminders,
+      userProfile,
+      activePatient: patients.find(p => p.id === selectedPatientId) || null,
+      currentPage
+    })
   };
 };
 
@@ -1221,18 +1229,36 @@ export const chatWithDawaGPT = async (
       payload: rawAction.payload || rawAction.data
     } : undefined;
 
+    const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
+    const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.text || '';
+
+    const enrichedSuggestions = getContextualSuggestions({
+      messages,
+      userQuery: lastUserQuery,
+      assistantText: cleanText,
+      medicines,
+      reminders,
+      userProfile,
+      activePatient,
+      currentPage,
+      action: actionObj?.type ? actionObj : undefined,
+      existingSuggestions: response.suggestions
+    });
+
     return {
       id: Date.now().toString(),
       role: "assistant",
       text: cleanText,
       source: (response.source as ChatMessage['source']) || "Gemini",
-      suggestions: response.suggestions,
+      suggestions: enrichedSuggestions,
       // Include the action from the AI if present and meaningful
       action: actionObj?.type ? actionObj : undefined,
     };
   } catch (err: unknown) {
     console.error("DawaGPT Chat Error:", err);
 
+    const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
+    const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.text || '';
     const rawMsg = err instanceof Error ? err.message : "";
     const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
     const errorMessage = isTechnicalError
@@ -1243,7 +1269,17 @@ export const chatWithDawaGPT = async (
       role: "assistant",
       text: errorMessage,
       source: "System",
-      suggestions: ["Try again", "Check my medications", "Contact NDA Uganda"]
+      suggestions: getContextualSuggestions({
+        messages,
+        userQuery: lastUserQuery,
+        assistantText: errorMessage,
+        medicines,
+        reminders,
+        userProfile,
+        activePatient,
+        currentPage,
+        existingSuggestions: ["Try again", "Contact NDA Uganda"]
+      })
     };
   }
 };
@@ -1388,6 +1424,9 @@ export const chatWithDawaGPTStream = async (
       }
     }
 
+    const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
+    const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.text || '';
+
     // If the stream completed with a connection failure or empty text, show a clear service unavailability message
     if (!fullText || fullText.includes("trouble connecting") || fullText.includes("trouble processing that request") || fullText.includes("Error starting chat stream")) {
       console.warn("[DawaGPT] Streaming delivered connection error. AI backend unreachable.");
@@ -1397,23 +1436,48 @@ export const chatWithDawaGPTStream = async (
         role: "assistant",
         text: serviceDownMsg,
         source: "System",
-        suggestions: ["Try again", "Check my medications", "Contact NDA Uganda"]
+        suggestions: getContextualSuggestions({
+          messages,
+          userQuery: lastUserQuery,
+          assistantText: serviceDownMsg,
+          medicines,
+          reminders,
+          userProfile,
+          activePatient,
+          currentPage,
+          existingSuggestions: ["Try again", "Contact NDA Uganda"]
+        })
       };
       onChunk(serviceDownMsg);
       return offlineResp;
     }
+
+    const resolvedSuggestions = getContextualSuggestions({
+      messages,
+      userQuery: lastUserQuery,
+      assistantText: fullText,
+      medicines,
+      reminders,
+      userProfile,
+      activePatient,
+      currentPage,
+      action: metadata.action?.type ? metadata.action : undefined,
+      existingSuggestions: metadata.suggestions
+    });
 
     return {
       id: Date.now().toString(),
       role: "assistant",
       text: fullText,
       source: metadata.source,
-      suggestions: metadata.suggestions,
+      suggestions: resolvedSuggestions,
       action: metadata.action?.type ? metadata.action : undefined,
     };
   } catch (err: unknown) {
     console.error("DawaGPT Streaming Error:", err);
 
+    const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
+    const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.text || '';
     const rawMsg = err instanceof Error ? err.message : "";
     const isNetworkOrServerError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
     const errorMessage = isNetworkOrServerError
@@ -1424,7 +1488,17 @@ export const chatWithDawaGPTStream = async (
       role: "assistant",
       text: errorMessage,
       source: "System",
-      suggestions: ["Try again", "Check my medications", "Contact NDA Uganda"]
+      suggestions: getContextualSuggestions({
+        messages,
+        userQuery: lastUserQuery,
+        assistantText: errorMessage,
+        medicines,
+        reminders,
+        userProfile,
+        activePatient,
+        currentPage,
+        existingSuggestions: ["Try again", "Contact NDA Uganda"]
+      })
     };
     onChunk(errorMessage);
     return errResp;
