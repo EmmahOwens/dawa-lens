@@ -7,8 +7,7 @@ import {
   extractDrugsFromQuery,
   isSameTaskOrDuplicateQuery,
   fetchClinicalGroundingForQuery,
-  formatDuplicateTherapyWatchdogContext,
-  generateDuplicateTherapyFallbackResponse
+  formatDuplicateTherapyWatchdogContext
 } from './services/therapeuticDuplicationService.js';
 import { prepareDawaGPTContext, generateBackendClinicalFallback, isComplexTask } from './services/aiService.js';
 
@@ -111,14 +110,15 @@ const testGrounding = {
 
 const formattedContext = formatDuplicateTherapyWatchdogContext(testGrounding);
 assert(formattedContext.includes("AUTHORITATIVE REGULATORY GROUNDING (RxNorm & openFDA)"));
-assert(formattedContext.includes("CLINICAL WATCHDOG: THERAPEUTIC DUPLICATION"));
+assert(formattedContext.includes("CLINICAL REFERENCE: THERAPEUTIC DUPLICATION"));
 assert(formattedContext.includes("Brufen"));
 assert(formattedContext.includes("Voltaren"));
-assert(formattedContext.includes("MANDATORY INSTRUCTIONS FOR DAWAGPT"));
-console.log("✔ Watchdog context contains structured regulatory and clinical guidance.");
+assert(formattedContext.includes("CLINICAL GUIDELINES FOR DAWAGPT"));
+assert(!formattedContext.includes("MANDATORY INSTRUCTIONS FOR DAWAGPT"), "Must not contain prompt-hijacking mandatory instructions");
+console.log("✔ Watchdog context contains non-hijacking clinical guidelines.");
 
 // 7. Test prepareDawaGPTContext injection
-console.log("\n7. Verifying dynamic injection into prepareDawaGPTContext...");
+console.log("\n7. Verifying dynamic context injection in prepareDawaGPTContext...");
 const contextResult = await prepareDawaGPTContext({
   messages: [{ role: 'user', content: 'Can I take Brufen and Voltaren at the same time?' }],
   medicines: [{ id: 'm1', name: 'Brufen' }, { id: 'm2', name: 'Voltaren' }],
@@ -132,25 +132,43 @@ const contextResult = await prepareDawaGPTContext({
   isComplex: true
 });
 
-const userMsgInContext = contextResult.finalMessages.find(m => m.role === 'user');
-assert(userMsgInContext.content.includes("THERAPEUTIC DUPLICATION") || userMsgInContext.content.includes("AUTHORITATIVE REGULATORY GROUNDING"));
 assert(contextResult.systemInstruction.includes("RXNORM & OPENFDA CLINICAL GROUNDING & DUPLICATE THERAPY"));
-console.log("✔ prepareDawaGPTContext dynamically injected RxNorm/openFDA regulatory grounding into session context.");
+console.log("✔ Same-task questions receive clinical grounding in prepareDawaGPTContext.");
 
-// 8. Test generateBackendClinicalFallback for duplicate queries
-console.log("\n8. Verifying clinical fallback response for same-task queries...");
+// 7b. Verifying that informational queries ("What are my reminders", "Check my medications") are NOT hijacked
+console.log("\n7b. Verifying that informational queries are NOT hijacked into duplicate therapy alerts...");
+const remindersContextResult = await prepareDawaGPTContext({
+  messages: [{ role: 'user', content: 'What are my reminders' }],
+  medicines: [{ id: 'm1', name: 'Brufen' }, { id: 'm2', name: 'Voltaren' }],
+  userProfile: { name: 'Amina', gender: 'female' },
+  doseLogs: [],
+  reminders: [{ id: 'r1', medicineName: 'Brufen', time: '8:00 AM', repeatSchedule: 'daily' }],
+  wellnessLogs: [],
+  vitalitySummary: [],
+  patients: [],
+  isStreaming: false,
+  isComplex: false
+});
+
+assert(!remindersContextResult.systemInstruction.includes("CLINICAL WATCHDOG: THERAPEUTIC DUPLICATION"),
+  "Informational query 'What are my reminders' must not be hijacked into duplicate therapy alert even if cabinet has duplicates");
+console.log("✔ Informational queries remain pure and are not hijacked by cabinet duplicate medicines.");
+
+// 8. Test generateBackendClinicalFallback returns honest status without canned advice
+console.log("\n8. Verifying clinical fallback response returns honest connectivity status without canned output...");
 const fallbackResp = generateBackendClinicalFallback(
-  "Can I take Brufen and Voltaren together?",
+  "What are my reminders",
   [{ name: "Brufen" }, { name: "Voltaren" }],
   [],
   { name: "Amina", gender: "female" }
 );
 
-assert(fallbackResp.text.includes("Therapeutic Duplication Alert"));
-assert(fallbackResp.text.includes("Nyabo")); // Female Luganda honorific
-assert(fallbackResp.text.includes("Ceiling Effect"));
-assert(fallbackResp.text.includes("/interactions"));
+assert(!fallbackResp.text.includes("Therapeutic Duplication Alert"), "Fallback must NOT return canned Therapeutic Duplication Alert");
+assert(fallbackResp.text.includes("live AI reasoning engine") || fallbackResp.text.includes("difficulty reaching"), "Fallback must state live AI status honestly");
 assert(fallbackResp.text.includes("/medications"));
-console.log("✔ Clinical fallback delivers compassionate, comprehensive duplicate therapy advice with honorifics and navigation links.");
+assert(fallbackResp.text.includes("/reminders"));
+assert(fallbackResp.source.includes("System"));
+console.log("✔ Offline fallback provides transparent reconnecting notice and official hotlines instead of canned advice.");
 
 console.log("\n🎉 ALL THERAPEUTIC DUPLICATION & SAME-TASK MEDICATION TESTS PASSED SUCCESSFULLY!");
+

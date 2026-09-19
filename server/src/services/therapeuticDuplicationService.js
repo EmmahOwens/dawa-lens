@@ -613,11 +613,13 @@ export const isSameTaskOrDuplicateQuery = (query, activeMeds = []) => {
  */
 export const fetchClinicalGroundingForQuery = async (query, activeMeds = []) => {
   const extractedDrugs = extractDrugsFromQuery(query, activeMeds);
+  const asksAboutDuplicates = isSameTaskOrDuplicateQuery(query, activeMeds);
 
-  // If no drugs mentioned in query, consider active medicines if user asked generally about same task
+  // Only check full cabinet for duplicates if the query specifically asks about duplicate therapies,
+  // combining medications, or same tasks; or if multiple drugs were extracted directly from the prompt.
   const targetDrugs = extractedDrugs.length >= 2
     ? extractedDrugs.map((name) => ({ name }))
-    : activeMeds.length >= 2
+    : asksAboutDuplicates && activeMeds.length >= 2
     ? activeMeds
     : extractedDrugs.map((name) => ({ name }));
 
@@ -670,10 +672,10 @@ export const formatDuplicateTherapyWatchdogContext = (grounding) => {
     if (p.localClass) context += `  - Clinical Indication / Task: ${p.localClass.task}\n`;
   }
 
-  // Format detected duplicates watchdog
+  // Format detected duplicates watchdog as clinical advisory reference (not imperative override)
   if (duplicates.length > 0) {
-    context += '\n=== CLINICAL WATCHDOG: THERAPEUTIC DUPLICATION (SAME-TASK MEDICATIONS DETECTED) ===\n';
-    context += '⚠️ CRITICAL ALERT: The patient has or asked about medications that perform the exact same clinical task:\n';
+    context += '\n=== CLINICAL REFERENCE: THERAPEUTIC DUPLICATION (SAME-TASK MEDICATIONS) ===\n';
+    context += 'Notice: The patient cabinet or query contains medications that perform the same clinical task:\n';
     for (const dup of duplicates) {
       context += `\n[DUPLICATE THERAPY]: ${dup.drug1} + ${dup.drug2}\n`;
       context += `• Shared Pharmacologic Class: ${dup.sharedClass}\n`;
@@ -683,40 +685,11 @@ export const formatDuplicateTherapyWatchdogContext = (grounding) => {
       context += `• Safe Recommendation: ${dup.guidance}\n`;
       context += `• Evidence Sources: ${dup.source}\n`;
     }
-    context += '\nMANDATORY INSTRUCTIONS FOR DAWAGPT:\n';
-    context += '1. Proactively and clearly inform the user that these medications perform the exact same task.\n';
-    context += '2. Explain the "Ceiling Effect" and additive toxicity: doubling medications that do the same thing does NOT provide double relief, but drastically increases the danger of organ damage (e.g. liver toxicity for paracetamol, severe GI bleeding/kidney damage for NSAIDs, hyperkalemia for blood pressure pills).\n';
-    context += '3. Firmly advise NOT taking both simultaneously. Recommend speaking with their doctor or pharmacist to pick one.\n';
-    context += '4. Embed links: [check drug & food interactions](/interactions) and [check your active medications](/medications).\n';
+    context += '\nCLINICAL GUIDELINES FOR DAWAGPT:\n';
+    context += '- ALWAYS answer the user\'s primary question first (e.g. if they ask about reminders, doses, or schedule, answer that directly).\n';
+    context += '- If and only if the user asks about taking these medications together, asks about drug safety/interactions, or if directly relevant to their query, advise them that these medications perform the same task, explain the ceiling effect/toxicity risks, and recommend consulting a doctor or pharmacist.\n';
   }
 
   return context.trim() + '\n\n';
 };
 
-/**
- * Generates an authoritative, patient-friendly clinical response for offline / fallback mode.
- */
-export const generateDuplicateTherapyFallbackResponse = (duplicate, honorific = '') => {
-  const salutation = honorific ? ` ${honorific}` : '';
-  const dangersFormatted = duplicate.dangers.map((d) => `• ⚠️ **${d}**`).join('\n');
-
-  return {
-    text: `⚠️ **Therapeutic Duplication Alert**:\n\n` +
-      `Bambi${salutation}, taking **${duplicate.drug1}** and **${duplicate.drug2}** together is dangerous because **both medications perform the exact same clinical task** (${duplicate.sharedTask}).\n\n` +
-      `**Why this is harmful (Additive Toxicity & Ceiling Effect)**:\n` +
-      `Doubling up on medicines from the same class (${duplicate.sharedClass}) **does not give you double the relief**. Instead, it severely multiplies the risk of toxic side effects and organ injury:\n` +
-      `${dangersFormatted}\n\n` +
-      `**Recommended Next Steps**:\n` +
-      `1. **Do not take both medicines at the same time**.\n` +
-      `2. ${duplicate.guidance}\n` +
-      `3. You can [check your full cabinet in Drug & Food Interactions](/interactions) or [review your prescriptions in My Medications](/medications).\n\n` +
-      `*Source: National Drug Authority (NDA) Uganda & U.S. FDA Drug Safety.*`,
-    suggestions: [
-      `Which one is safer for me?`,
-      'Check drug interactions',
-      'View my active medications'
-    ],
-    source: 'NDA / openFDA Guard',
-    action: null
-  };
-};

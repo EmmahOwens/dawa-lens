@@ -3,8 +3,7 @@ import {
   findLocalTherapeuticClass,
   detectDuplicateTherapies,
   isSameTaskOrDuplicateQuery,
-  extractDrugsFromQuery,
-  getDuplicateTherapyAdvice
+  extractDrugsFromQuery
 } from "../therapeuticDuplicationService";
 import { generateDawaGPTResponse } from "../aiAssistantService";
 import { Medicine, UserProfile } from "../../contexts/AppContext";
@@ -59,25 +58,16 @@ describe("therapeuticDuplicationService (Client)", () => {
     expect(extracted).toContain("Flucold");
   });
 
-  it("formats clinical duplicate therapy advice with ceiling effect and organ hazard details", () => {
-    const testDup = {
-      drug1: "Brufen",
-      drug2: "Voltaren",
-      sharedClass: "Non-Steroidal Anti-Inflammatory Drugs (NSAIDs)",
-      sharedTask: "relieving pain, reducing inflammation, and swelling",
-      warning: "Concurrent use multiplies ulcer risks.",
-      dangers: ["Severe gastrointestinal ulceration", "Acute kidney injury"],
-      guidance: "Do NOT take two NSAIDs together.",
-      source: "NDA Uganda"
-    };
-
-    const advice = getDuplicateTherapyAdvice(testDup, "Nyabo");
-    expect(advice).toContain("Nyabo");
-    expect(advice).toContain("Brufen");
-    expect(advice).toContain("Voltaren");
-    expect(advice).toContain("Ceiling Effect");
-    expect(advice).toContain("/interactions");
-    expect(advice).toContain("/medications");
+  it("extracts clinical duplicate therapy metadata with organ hazard details and guidance", () => {
+    const cabinetWithNsaids: Partial<Medicine>[] = [
+      { name: "Brufen", dosage: "400mg" },
+      { name: "Voltaren", dosage: "50mg" },
+    ];
+    const dups = detectDuplicateTherapies(cabinetWithNsaids);
+    expect(dups[0].drug1).toBe("Brufen");
+    expect(dups[0].drug2).toBe("Voltaren");
+    expect(dups[0].dangers.length).toBeGreaterThan(0);
+    expect(dups[0].guidance).toContain("Do NOT take two NSAIDs together");
   });
 });
 

@@ -12,7 +12,6 @@ import {
   isSameTaskOrDuplicateQuery,
   detectDuplicateTherapies,
   extractDrugsFromQuery,
-  getDuplicateTherapyAdvice,
   findLocalTherapeuticClass
 } from "./therapeuticDuplicationService";
 
@@ -507,11 +506,22 @@ export const generateDawaGPTResponse = async (
     const queryDuplicates = queryDrugs.length >= 2 ? detectDuplicateTherapies(queryDrugs.map(name => ({ name }))) : [];
     const activeDup = queryDuplicates[0] || cabinetDuplicates[0];
 
+    const salutation = honorific ? ` ${honorific}` : "";
     if (activeDup) {
+      const dangersList = activeDup.dangers.map((d: string) => `• ⚠️ **${d}**`).join('\n');
       return {
         id: Date.now().toString(),
         role: "assistant",
-        text: getDuplicateTherapyAdvice(activeDup, honorific),
+        text: `⚠️ **Therapeutic Duplication Alert**:\n\n` +
+          `Bambi${salutation}, taking **${activeDup.drug1}** and **${activeDup.drug2}** together is dangerous because **both medications perform the exact same clinical task** (${activeDup.sharedTask}).\n\n` +
+          `**Why this is harmful (Additive Toxicity & Ceiling Effect)**:\n` +
+          `Doubling up on medicines from the same class (${activeDup.sharedClass}) **does not give you double the relief**. Instead, it severely multiplies the risk of toxic side effects and organ injury:\n` +
+          `${dangersList}\n\n` +
+          `**Recommended Next Steps**:\n` +
+          `1. **Do not take both medicines at the same time**.\n` +
+          `2. ${activeDup.guidance}\n` +
+          `3. You can [check your full cabinet in Drug & Food Interactions](/interactions) or [review your active prescriptions in My Medications](/medications).\n\n` +
+          `*Source: National Drug Authority (NDA) Uganda & U.S. FDA Drug Safety.*`,
         source: "NDA",
         suggestions: ["Which one should I stop?", "Check drug interactions", "View active medications"]
       };
@@ -521,20 +531,20 @@ export const generateDawaGPTResponse = async (
       const class1 = findLocalTherapeuticClass(queryDrugs[0]);
       const class2 = findLocalTherapeuticClass(queryDrugs[1]);
       if (class1 && class2 && class1.id === class2.id) {
-        const customDup = {
-          drug1: queryDrugs[0],
-          drug2: queryDrugs[1],
-          sharedClass: class1.name,
-          sharedTask: class1.task,
-          warning: `Both ${queryDrugs[0]} and ${queryDrugs[1]} perform the same clinical task (${class1.task}). ${class1.summaryHazard}`,
-          dangers: class1.dangers,
-          guidance: class1.guidance,
-          source: "NDA Uganda & FDA Safety Standards"
-        };
+        const dangersList = class1.dangers.map((d: string) => `• ⚠️ **${d}**`).join('\n');
         return {
           id: Date.now().toString(),
           role: "assistant",
-          text: getDuplicateTherapyAdvice(customDup, honorific),
+          text: `⚠️ **Therapeutic Duplication Alert**:\n\n` +
+            `Bambi${salutation}, taking **${queryDrugs[0]}** and **${queryDrugs[1]}** together is dangerous because **both medications perform the exact same clinical task** (${class1.task}).\n\n` +
+            `**Why this is harmful (Additive Toxicity & Ceiling Effect)**:\n` +
+            `Doubling up on medicines from the same class (${class1.name}) **does not give you double the relief**. Instead, it severely multiplies the risk of toxic side effects and organ injury:\n` +
+            `${dangersList}\n\n` +
+            `**Recommended Next Steps**:\n` +
+            `1. **Do not take both medicines at the same time**.\n` +
+            `2. ${class1.guidance}\n` +
+            `3. You can [check your full cabinet in Drug & Food Interactions](/interactions) or [review your active prescriptions in My Medications](/medications).\n\n` +
+            `*Source: National Drug Authority (NDA) Uganda & U.S. FDA Drug Safety.*`,
           source: "NDA",
           suggestions: ["Which one is safer for me?", "Check drug interactions", "View active medications"]
         };

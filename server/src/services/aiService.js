@@ -15,7 +15,6 @@ import {
   formatDuplicateTherapyWatchdogContext,
   isSameTaskOrDuplicateQuery,
   detectDuplicateTherapiesSync,
-  generateDuplicateTherapyFallbackResponse,
   findLocalTherapeuticClass,
   extractDrugsFromQuery
 } from './therapeuticDuplicationService.js';
@@ -29,14 +28,23 @@ const sanitizeGroqModel = (model) => {
   if (!model || typeof model !== 'string') return 'openai/gpt-oss-120b';
   const m = model.trim();
   const lower = m.toLowerCase();
-  // Groq officially decommissioned all Llama models (llama-3.3-70b-versatile, llama-3.1-8b-instant, etc.) and qwen3-32b.
-  // Groq's active production models are openai/gpt-oss-120b, openai/gpt-oss-20b, and qwen/qwen3.6-27b.
-  if (lower.includes('llama') || lower.includes('qwen3-32b') || lower.includes('qwen3.8') || lower.includes('mixtral') || lower.includes('gemma')) {
-    if (lower.includes('8b') || lower.includes('light') || lower.includes('instant') || lower.includes('20b')) {
-      return 'openai/gpt-oss-20b';
-    }
+
+  // Active production Groq models (official current recommendations)
+  if (lower.includes('gpt-oss') || lower.includes('qwen3.6')) {
+    return m;
+  }
+
+  // Deprecated Groq models mapped to active recommended replacements:
+  // - Llama-3.1-8B, Gemma, Light/Instant models -> openai/gpt-oss-20b
+  if (lower.includes('8b') || lower.includes('light') || lower.includes('instant') || lower.includes('gemma')) {
+    return 'openai/gpt-oss-20b';
+  }
+
+  // - Llama-3.3-70B, Llama-4, Kimi, Mixtral, Qwen3-32B -> openai/gpt-oss-120b
+  if (lower.includes('llama') || lower.includes('70b') || lower.includes('qwen') || lower.includes('mixtral') || lower.includes('kimi')) {
     return 'openai/gpt-oss-120b';
   }
+
   return m;
 };
 
@@ -630,22 +638,17 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
   const modelKey = `${baseModelKey}${keySuffix}`;
 
   const fn = async () => {
-    // Resilient candidate list: active Groq production models (gpt-oss-120b, gpt-oss-20b, qwen3.6-27b)
-    // Note: Groq officially deprecated all Llama models (llama-3.3-70b-versatile, llama-3.1-8b-instant, etc.)
-    // on June 17, 2026 for free/developer tiers, migrating to openai/gpt-oss-* and qwen/qwen3.6-27b.
+    // Resilient candidate list: active Groq production models first, legacy as tail fallback
     const rawCandidates = [
       sanitizeGroqModel(modelId),
       GROQ_MODEL,
       'openai/gpt-oss-120b',
+      'qwen/qwen3.6-27b',
       'openai/gpt-oss-20b',
-      'qwen/qwen3.6-27b'
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant'
     ];
-    // Filter out decommissioned or deprecated legacy models (all Llama models, qwen3-32b, etc.)
-    const candidateModels = Array.from(new Set(rawCandidates))
-      .filter(m => typeof m === 'string' && !m.toLowerCase().includes('llama') && !m.toLowerCase().includes('qwen3-32b') && !m.toLowerCase().includes('qwen3.8') && !m.toLowerCase().includes('mixtral') && !m.toLowerCase().includes('gemma'));
-    if (candidateModels.length === 0) {
-      candidateModels.push('openai/gpt-oss-120b', 'openai/gpt-oss-20b');
-    }
+    const candidateModels = Array.from(new Set(rawCandidates.filter(Boolean)));
 
     let response = null;
     let lastErr = null;
@@ -1410,13 +1413,20 @@ export const isComplexTask = (text) => {
 
 export const isLikelyActionRequest = (text) => {
   if (!text) return false;
-  const lower = text.toLowerCase();
+  const lower = text.toLowerCase().trim();
 
-  // Direct action verbs (broad — catches "add", "log", "refill", "delete", etc.)
-  const directVerbs = /(add|create|set|put|new|remind|schedule|register|log|record|track|save|update|change|modify|edit|adjust|delete|remove|stop|cancel|clear|refill|reset|enable|disable|snooze|mute)/i;
+  // Pure inquiry / informational questions should NEVER be diverted into action execution mode:
+  // e.g. "What are my reminders", "Check my medications", "Show my reminders", "List my pills"
+  const isQuestionOrInquiry = /^(what|which|how|tell me|show me|list|check|view|display|can you tell|do i have|are there|when is|when are)\b/i.test(lower);
+  if (isQuestionOrInquiry) {
+    return false;
+  }
 
-  // Indirect / polite phrasing (e.g. "I need to log", "can you add", "help me set")
-  const indirectAction = /(i need|i want|i'd like|i would like|can you|could you|please|help me|let's|let us)\s.{0,30}(add|create|set|remind|log|record|track|update|delete|remove|refill|schedule|register)/i;
+  // Direct action verbs with word boundaries (e.g. "add reminder", "set stock")
+  const directVerbs = /\b(add|create|schedule|register|log|record|refill|restock|delete|remove|reschedule)\b/i;
+
+  // Indirect / polite action requests ("please add", "help me set a reminder")
+  const indirectAction = /(i need|i want|i'd like|i would like|can you|could you|please|help me|let's|let us)\s.{0,30}\b(add|create|set|log|record|track|update|delete|remove|refill|schedule|register)\b/i;
 
   // First-person past-tense dose log ("I took my...", "I missed my...", "I forgot to take", "I skipped")
   const pastDoseLog = /\b(i took|i've taken|i missed|i forgot|i skipped|i just took|i already took)\b/i;
@@ -1425,7 +1435,7 @@ export const isLikelyActionRequest = (text) => {
   const wellnessLog = /\b(feeling|feel|mood|energy|tired|fatigue|dizzy|nausea|headache|stomachache|stomach\s*ache|cramps?|ecstatic|very\s*happy|super\s*happy|so\s*happy|happy|joyful|delighted|thrilled|overjoyed|pain|sick|unwell|symptom|log (how|my|a)|wellness|check[- ]?in|log mood|log energy|log symptom|i am feeling|i feel|i'm feeling|i've been feeling|i have (a|an)?\s*(headache|stomachache|stomach\s*ache|fever|cough|migraine|pain)|omutwe\s*(gunnuma|gunuma)?|olubuto\s*(lunnuma|lunuma)?|musujja|hurt(s)?)\b/i;
 
   // Stock / refill phrases
-  const refillPhrase = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|i have \d+ (pills?|tablets?|capsules?)|set stock|update stock|update quantity|bought|purchased)\b/i;
+  const refillPhrase = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|set stock|update stock|update quantity)\b/i;
 
   // Reminder management phrases (stop, disable, enable, change time, move, snooze)
   const reminderManage = /\b(stop|disable|turn off|pause|mute|snooze|enable|turn on|change time|move|reschedule|update).{0,20}(reminder|alarm|notification|dose|schedule)/i;
@@ -1928,7 +1938,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     }
   }
 
-  // 3. Official Uganda Healthcare & Emergency Directory
+  // 3. Official Uganda Healthcare & Emergency Directory (only if explicitly asked for contacts/support)
   if (norm.includes('support') || norm.includes('emergency') || norm.includes('call') || norm.includes('help line') || norm.includes('helpline') || norm.includes('phone') || norm.includes('contact')) {
     return {
       text: `Here is the official **Uganda Healthcare & Emergency Contact Directory**:\n\n` +
@@ -1944,171 +1954,9 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     };
   }
 
-  // 4. Persona / About DawaGPT
-  if (norm.includes('about yourself') || norm.includes('who are you') || norm.includes('what are you') || norm.includes('what can you do') || norm.includes('tell me about you') || norm.includes('introduce yourself')) {
-    return {
-      text: `Oli otya${greeting}! I'm **DawaGPT**, your dedicated Ugandan AI health and medication companion built for DawaLens.\n\n` +
-        `Here is how I can support you:\n` +
-        `• 💊 **Medication Safety & Dosage**: Provide clear dosage explanations, side effect alerts, and National Drug Authority (NDA) Uganda standards.\n` +
-        `• ⚠️ **Drug & Food Interactions**: Screen your prescriptions against local foods (like *Matooke*, *Posho*, *G-nut sauce*) and alcohol (*Waragi*).\n` +
-        `• ⏰ **Smart Reminders**: Keep your schedule on track with alarms and dose alerts in [Medication Reminders](/reminders).\n` +
-        `• 📦 **Med Vault & Refill Tracking**: Monitor your exact pill count and calculate remaining days of supply in [Med Vault](/medvault).\n` +
-        `• 🩺 **Emergency Protocols**: Instantly surface Uganda emergency hotlines (999 / 112 / 0800-100-066) when safety risks are detected.\n\n` +
-        `What medication or health question can I help you with today?`,
-      suggestions: ["Check my medications", "How is my pill stock?", "Check drug interactions"],
-      source: "DawaGPT",
-      action: null
-    };
-  }
-
-  // 5. Therapeutic Duplication & Same-Task Medications Query Fallback
-  if (isSameTaskOrDuplicateQuery(norm) || (medicines.length >= 2 && detectDuplicateTherapiesSync(medicines).length > 0)) {
-    const cabinetDuplicates = detectDuplicateTherapiesSync(medicines);
-    const queryDrugs = extractDrugsFromQuery(norm, medicines);
-    const queryDuplicates = queryDrugs.length >= 2 ? detectDuplicateTherapiesSync(queryDrugs.map(name => ({ name }))) : [];
-    const activeDup = queryDuplicates[0] || cabinetDuplicates[0];
-    if (activeDup) {
-      return generateDuplicateTherapyFallbackResponse(activeDup, salutation);
-    }
-    if (queryDrugs.length >= 2) {
-      const class1 = findLocalTherapeuticClass(queryDrugs[0]);
-      const class2 = findLocalTherapeuticClass(queryDrugs[1]);
-      if (class1 && class2 && class1.id === class2.id) {
-        return generateDuplicateTherapyFallbackResponse({
-          drug1: queryDrugs[0],
-          drug2: queryDrugs[1],
-          sharedClass: class1.name,
-          sharedTask: class1.task,
-          warning: `Both ${queryDrugs[0]} and ${queryDrugs[1]} perform the same clinical task (${class1.task}). ${class1.summaryHazard}`,
-          dangers: class1.dangers,
-          guidance: class1.guidance,
-          source: 'NDA Uganda & FDA Safety Standards'
-        }, salutation);
-      }
-    }
-    return {
-      text: `⚠️ **Clinical Interaction Warning: Medications Performing the Same Task**\n\n` +
-        `Bambi${greeting}, taking more than one medication that performs the same clinical task is known as **Therapeutic Duplication**.\n\n` +
-        `**Key Clinical Facts**:\n` +
-        `• ⚠️ **The "Ceiling Effect"**: Doubling up on medicines that do the same thing does **not** give you double the pain relief or healing. Receptor targets in the body become saturated.\n` +
-        `• ⚠️ **Additive Toxicity**: While the therapeutic benefit hits a ceiling, the risk of toxic side effects and organ injury multiplies drastically. For example, taking two NSAIDs (like Ibuprofen and Diclofenac) severely damages the stomach lining and kidneys; taking two Paracetamol products causes acute toxic liver failure; combining multiple blood pressure medications causes dangerous hypotension and kidney shutdown.\n` +
-        `• ⚠️ **Hidden Ingredients**: Many over-the-counter cold and flu preparations already contain painkillers or antihistamines.\n\n` +
-        `**Recommended Next Steps**:\n` +
-        `1. **Never take both medications simultaneously** unless specifically instructed and monitored by your physician.\n` +
-        `2. Consult your doctor or pharmacist to determine the single most appropriate medicine for your condition.\n` +
-        `3. You can [check drug & food interactions in Interactions Guard](/interactions) or [review your active prescriptions in My Medications](/medications).\n\n` +
-        `*Sources: National Drug Authority (NDA) Uganda, NLM RxNorm & U.S. FDA Drug Safety.*`,
-      suggestions: ["Check drug interactions", "View my active medications", "Ask about my prescriptions"],
-      source: "NDA / openFDA Guard",
-      action: null
-    };
-  }
-
-  // 6. Age-Aware Food, Chewables & Drinks Clinical Guidance (Local & Global Foods)
-  const isFoodDrinkQuery = (
-    norm.includes('food') ||
-    norm.includes('eat') ||
-    norm.includes('drink') ||
-    norm.includes('chew') ||
-    norm.includes('chewable') ||
-    norm.includes('swallow') ||
-    norm.includes('meal') ||
-    norm.includes('take with') ||
-    norm.includes('beverage') ||
-    norm.includes('applesauce') ||
-    norm.includes('yogurt') ||
-    norm.includes('oatmeal') ||
-    norm.includes('bushera') ||
-    norm.includes('matooke') ||
-    norm.includes('g-nut') ||
-    norm.includes('posho')
-  );
-
-  if (isFoodDrinkQuery) {
-    const queryAge = extractAgeFromQuery(norm);
-    const profileAge = calculateAge(targetPatient?.age ?? targetPatient?.dateOfBirth ?? userProfile?.age ?? userProfile?.dateOfBirth);
-    const resolvedAge = queryAge !== null ? queryAge : profileAge;
-
-    // Detect target drug
-    let matchedMed = (medicines || []).find(m => m.name && norm.includes(m.name.toLowerCase()));
-    if (!matchedMed) {
-      if (norm.includes('panadol') || norm.includes('paracetamol')) matchedMed = { name: 'Panadol (Paracetamol)' };
-      else if (norm.includes('coartem') || norm.includes('artemether') || norm.includes('lumefantrine')) matchedMed = { name: 'Coartem (Artemether/Lumefantrine)' };
-      else if (norm.includes('ibuprofen') || norm.includes('nurofen')) matchedMed = { name: 'Nurofen (Ibuprofen)' };
-      else if (norm.includes('flagyl') || norm.includes('metronidazole')) matchedMed = { name: 'Flagyl (Metronidazole)' };
-      else if (norm.includes('amoxicillin') || norm.includes('augmentin')) matchedMed = { name: 'Amoxicillin' };
-      else if (norm.includes('ciprofloxacin') || norm.includes('cipro')) matchedMed = { name: 'Ciprofloxacin' };
-      else if (norm.includes('metformin')) matchedMed = { name: 'Metformin' };
-      else if (medicines && medicines.length > 0) matchedMed = medicines[0];
-    }
-    const medName = matchedMed?.name || 'your medication';
-
-    // Pediatric guidance (< 12 yrs or explicitly for child/baby/infant)
-    if (resolvedAge !== null && resolvedAge < 12) {
-      const ageDetail = resolvedAge === 0 ? 'an infant' : resolvedAge <= 3 ? `a toddler (${resolvedAge} yrs)` : `a child (${resolvedAge} yrs)`;
-      return {
-        text: `Here is age-tailored food, chewables, and drink guidance for **${medName}** for ${ageDetail}${greeting}:\n\n` +
-          `• 🍬 **Chewable & Liquid Alternatives**: Swallowing whole pills is a serious choking risk for young children. Ask your pharmacist or clinician for **chewable tablets**, **orally dispersible tablets (ODTs)**, or **oral syrups/suspensions**.\n` +
-          `• 🥣 **Soft Food Vehicles for Crushed Meds**: If the tablet is approved by a doctor or pharmacist to be crushed (never crush extended-release or coated pills), mix the dose into 1–2 teaspoons of smooth, palatable food:\n` +
-          `  - **Everyday options**: Smooth applesauce, plain yogurt, fruit puree, or oatmeal.\n` +
-          `  - **Local Ugandan options**: Warm smooth *Bushera* (millet porridge) or mashed soft *Matooke*.\n` +
-          `  - *Instruction*: Have the child take the spoonful immediately without chewing, followed by a drink.\n` +
-          `• 💧 **Safe Drinks**: Ample water, breast milk, infant formula, or oral rehydration solution (ORS). If taking antibiotics like Ciprofloxacin, space high-calcium dairy by at least 2 hours.\n` +
-          `• ⚠️ **Critical Pediatric Warning**: **NEVER give honey** to infants under 1 year of age due to the severe risk of infant botulism. Avoid whole nuts, crunchy raw vegetables, or hard chewables due to choking hazards.\n\n` +
-          `You can [check drug & food interactions in Interactions Guard](/interactions) or [review active medications](/medications).`,
-        suggestions: ["Chewable medication options", "Safe drinks with medication", "Check drug interactions"],
-        source: "Clinical Pediatric Guard",
-        action: null
-      };
-    }
-
-    // Geriatric guidance (65+ yrs or elderly)
-    if (resolvedAge !== null && resolvedAge >= 65) {
-      return {
-        text: `Here is age-tailored food and beverage guidance for **${medName}** for seniors (Age: ${resolvedAge} yrs)${greeting}:\n\n` +
-          `• 🥣 **Soft & Moist Foods (Swallowing Ease)**: To prevent swallowing difficulties (presbyphagia) and soothe the stomach:\n` +
-          `  - **Local Ugandan options**: Steamed soft *Matooke*, warm smooth *Bushera* (millet/sorghum porridge), or steamed *Luwombo*.\n` +
-          `  - **Everyday staples**: Warm oatmeal, Greek yogurt, soft scrambled eggs, applesauce, or pureed vegetable soups.\n` +
-          `• 💧 **Swallowing Technique & Drinks**: Take a sip of water first to lubricate your throat, swallow the pill with a full glass of water (250ml) while sitting upright, and **remain sitting or standing upright for at least 30 minutes** to avoid esophageal irritation.\n` +
-          `• ⚠️ **Nutritional & Drug Cautions**:\n` +
-          `  - *Potassium*: If taking blood pressure or heart medications (ACE inhibitors like Lisinopril, ARBs, or Spironolactone), avoid excessive high-potassium foods (*Matooke*, bananas, avocados) or potassium salt substitutes.\n` +
-          `  - *Calcium Spacing*: Space high-calcium foods (*Mukene*, dairy, fortified milks) at least 2 hours apart from thyroid medications (Levothyroxine) or certain antibiotics.\n` +
-          `  - *Grapefruit & Alcohol*: Strictly avoid grapefruit juice and alcohol/Waragi.\n\n` +
-          `You can [check drug & food interactions in Interactions Guard](/interactions) or [review active medications](/medications).`,
-        suggestions: ["Safe foods for seniors", "Check drug interactions", "View active medications"],
-        source: "Clinical Geriatric Guard",
-        action: null
-      };
-    }
-
-    // Adult / General guidance
-    const isFatSoluble = /coartem|artemether|lumefantrine|griseofulvin|isotretinoin|vitamin d/i.test(medName);
-    const fatGuidance = isFatSoluble
-      ? `• 🥑 **Healthy Fats for Absorption (Crucial)**: **${medName}** requires dietary fats to be absorbed effectively into the bloodstream:\n` +
-        `  - **Local options**: *G-nut sauce* (groundnut stew) or *Eshabwe*.\n` +
-        `  - **Everyday options**: Fresh avocado, whole milk, eggs, peanut butter, or yogurt.\n`
-      : `• 🍲 **Stomach Buffers**: To buffer the stomach lining and prevent gastric irritation:\n` +
-        `  - **Local options**: Steamed *Matooke*, *Posho*, or *Kalo*.\n` +
-        `  - **Everyday staples**: Plain oatmeal, white rice, toast, crackers, or plain yogurt.\n`;
-
-    return {
-      text: `Here is recommended food, chewables, and drink guidance for **${medName}**${greeting}:\n\n` +
-        fatGuidance +
-        `• 💧 **Drink Pairings & Hydration**: Always take your medication with a **full glass of plain water** (250ml+) to ensure the tablet dissolves smoothly in your stomach and prevents esophageal irritation.\n` +
-        `• 🍬 **Chewables & Formulation Notes**: If you struggle with swallowing solid tablets, ask your doctor or pharmacist about chewable tablets, dispersible tablets, or smooth oral suspensions.\n` +
-        `• ⚠️ **Key Dietary Warnings**:\n` +
-        `  - **Alcohol & Waragi**: Strictly avoid with Paracetamol (liver damage) and Metronidazole (severe violent reaction).\n` +
-        `  - **Grapefruit & Grapefruit Juice**: Avoid with statins and blood pressure medications (blocks CYP3A4 enzyme).\n` +
-        `  - **Calcium & Mukene**: Space calcium-rich foods and dairy at least 2 hours away from fluoroquinolone (Ciprofloxacin) and tetracycline antibiotics.\n\n` +
-        `You can [check your drug & food interactions in Interactions Guard](/interactions) to test specific dishes.`,
-      suggestions: ["What foods should I avoid?", "Can I take with milk?", "Check drug interactions"],
-      source: "Dietary Safety Guard",
-      action: null
-    };
-  }
-
-  // 8. Honest Service Status Notice (Replaces misleading static medical templates)
-  // Guarantees DawaGPT will NEVER output irrelevant canned medical advice pretending to be an AI response.
+  // 4. Honest Service Status Notice
+  // When cloud AI reasoning engines are offline or reconnecting, DawaGPT returns an honest status notice
+  // instead of outputting canned medical advice pretending to answer the prompt.
   return {
     text: `⚠️ I am currently experiencing difficulty reaching the live AI reasoning engine to answer your specific question.\n\n` +
       `Our multi-model AI providers are reconnecting. While connectivity is restored, you can:\n` +
@@ -2211,101 +2059,54 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 2. Try Groq Primary (openai/gpt-oss-120b) across all 3 independent accounts
-    // failFast=false so the request queues if one account is at RPM, not hard-rejected.
+    // 2. Try Groq across candidate models (gpt-oss-120b, llama-3.3-70b, gpt-oss-20b, qwen3.6-27b, llama-3.1-8b) and all independent accounts
     if (GROQ_KEYS.length > 0) {
-      for (let keyIdx = 0; keyIdx < GROQ_KEYS.length; keyIdx++) {
-        try {
-          const groqKey = GROQ_KEYS[keyIdx];
-          const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
-          const modelId = GROQ_MODEL;
-          const modelKey = `groq-70b${keySuffix}`;
-          const fn = async () => {
-            const isReasoning = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
-            const payload = {
-              model: modelId,
-              messages: finalMessages,
-              stream: true,
-              max_tokens: chatMaxTokens,
-              temperature: 0.7
+      const groqCandidateModels = Array.from(new Set([
+        GROQ_MODEL,
+        'openai/gpt-oss-120b',
+        'qwen/qwen3.6-27b',
+        GROQ_LIGHT_MODEL,
+        'openai/gpt-oss-20b',
+        'llama-3.3-70b-versatile',
+        'llama-3.1-8b-instant'
+      ].filter(Boolean)));
+
+      for (const modelId of groqCandidateModels) {
+        const isReasoning = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
+        const effectiveTokens = isReasoning ? Math.max(chatMaxTokens, 4096) : chatMaxTokens;
+
+        for (let keyIdx = 0; keyIdx < GROQ_KEYS.length; keyIdx++) {
+          try {
+            const groqKey = GROQ_KEYS[keyIdx];
+            const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
+            const baseModelKey = modelId.includes('70b') ? 'groq-70b' : modelId.includes('20b') || modelId.includes('8b') ? 'groq-8b' : 'groq-qwen';
+            const modelKey = `${baseModelKey}${keySuffix}`;
+
+            const fn = async () => {
+              const payload = {
+                model: modelId,
+                messages: finalMessages,
+                stream: true,
+                max_tokens: effectiveTokens,
+                temperature: 0.7
+              };
+              if (isReasoning) payload.reasoning_format = 'hidden';
+              const response = await axios.post(GROQ_API_URL, payload, {
+                headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+                responseType: 'stream', timeout: 25000
+              });
+              return response.data;
             };
-            if (isReasoning) payload.reasoning_format = 'hidden';
-            const response = await axios.post(GROQ_API_URL, payload, {
-              headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-              responseType: 'stream', timeout: 25000
-            });
-            return response.data;
-          };
-          // failFast=false: queue rather than immediately reject if RPM counter is full
-          return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 2, false);
-        } catch (err) {
-          console.warn(`Stream Fallback: Groq Primary key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+            return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 2, false);
+          } catch (err) {
+            console.warn(`Stream Fallback: Groq (${modelId}) key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+          }
         }
       }
+      console.warn("Stream Fallback: All Groq models and keys exhausted. Cascading to SambaNova Cloud...");
     }
 
-    // 3. Try Groq Light (openai/gpt-oss-20b) across all 3 independent accounts
-    if (GROQ_KEYS.length > 0) {
-      for (let keyIdx = 0; keyIdx < GROQ_KEYS.length; keyIdx++) {
-        try {
-          const groqKey = GROQ_KEYS[keyIdx];
-          const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
-          const modelId = GROQ_LIGHT_MODEL;
-          const modelKey = `groq-8b${keySuffix}`;
-          const fn = async () => {
-            const isReasoning = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
-            const payload = {
-              model: modelId,
-              messages: finalMessages,
-              stream: true,
-              max_tokens: chatMaxTokens,
-              temperature: 0.7
-            };
-            if (isReasoning) payload.reasoning_format = 'hidden';
-            const response = await axios.post(GROQ_API_URL, payload, {
-              headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-              responseType: 'stream', timeout: 25000
-            });
-            return response.data;
-          };
-          return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 2, false);
-        } catch (err) {
-          console.warn(`Stream Fallback: Groq Light key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
-        }
-      }
-    }
-
-    // 4. Try Groq Qwen (qwen/qwen3.6-27b) across all 3 independent accounts
-    if (GROQ_KEYS.length > 0) {
-      for (let keyIdx = 0; keyIdx < GROQ_KEYS.length; keyIdx++) {
-        try {
-          const groqKey = GROQ_KEYS[keyIdx];
-          const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
-          const modelId = 'qwen/qwen3.6-27b';
-          const modelKey = `groq-qwen${keySuffix}`;
-          const fn = async () => {
-            const payload = {
-              model: modelId,
-              messages: finalMessages,
-              stream: true,
-              max_tokens: chatMaxTokens,
-              temperature: 0.7,
-              reasoning_format: 'hidden'
-            };
-            const response = await axios.post(GROQ_API_URL, payload, {
-              headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-              responseType: 'stream', timeout: 25000
-            });
-            return response.data;
-          };
-          return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 2, false);
-        } catch (err) {
-          console.warn(`Stream Fallback: Groq Qwen key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
-        }
-      }
-    }
-
-    // 5. Try SambaNova Cloud (70B)
+    // 3. Try SambaNova Cloud (70B)
     if (SAMBANOVA_API_KEY) {
       try {
         const fn = async () => {
@@ -2317,7 +2118,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         };
         return await rateLimitManager.enqueue(fn, 'sambanova-70b', lastUserMsgForRl, priority, 3, true);
       } catch (err) {
-        console.warn("Stream Fallback: SambaNova failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+        console.warn("Stream Fallback: SambaNova failed, trying NVIDIA NIM...", err.response?.data?.error?.message || err.response?.data || err.message);
       }
     }
 
@@ -2967,11 +2768,11 @@ CONVERSATION PHASE: ${conversationPhase}
 ${isStreaming ? `=== STREAMING RESPONSE FORMAT ===
 Write your response in Markdown text first, then on a new line append EXACTLY:
 ###METADATA###
-{"suggestions":["s1","s2","s3"],"source":"Groq","action":null}
+{"suggestions":["s1","s2","s3"],"source":"DawaGPT","action":null}
 - Do NOT output "---" or dividers before ###METADATA###.
 - The user must NEVER see ###METADATA### or JSON in the chat output.
 - action must be a populated object if you performed an action, or null if informational.` : `=== RESPONSE FORMAT ===
-Respond in JSON: {"text":"...","suggestions":["s1","s2","s3"],"source":"Groq","action":null}`}
+Respond in JSON: {"text":"...","suggestions":["s1","s2","s3"],"source":"DawaGPT","action":null}`}
 `;
 
   const activePatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;

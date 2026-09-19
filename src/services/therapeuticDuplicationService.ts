@@ -326,18 +326,3 @@ export function extractDrugsFromQuery(query?: string | null, activeMeds: Partial
   return Array.from(matched);
 }
 
-export function getDuplicateTherapyAdvice(duplicate: DuplicateTherapyResult, honorific = ''): string {
-  const salutation = honorific ? ` ${honorific}` : '';
-  const dangersList = duplicate.dangers.map((d) => `• ⚠️ **${d}**`).join('\n');
-
-  return `⚠️ **Therapeutic Duplication Alert**:\n\n` +
-    `Bambi${salutation}, taking **${duplicate.drug1}** and **${duplicate.drug2}** together is dangerous because **both medications perform the exact same clinical task** (${duplicate.sharedTask}).\n\n` +
-    `**Why this is harmful (Additive Toxicity & Ceiling Effect)**:\n` +
-    `Doubling up on medicines from the same class (${duplicate.sharedClass}) **does not give you double the relief**. Instead, it severely multiplies the risk of toxic side effects and organ injury:\n` +
-    `${dangersList}\n\n` +
-    `**Recommended Next Steps**:\n` +
-    `1. **Do not take both medicines at the same time**.\n` +
-    `2. ${duplicate.guidance}\n` +
-    `3. You can [check your full cabinet in Drug & Food Interactions](/interactions) or [review your active prescriptions in My Medications](/medications).\n\n` +
-    `*Source: National Drug Authority (NDA) Uganda & U.S. FDA Drug Safety.*`;
-}
