@@ -90,7 +90,7 @@ export const visionLimiter = rateLimit({
 // Sized for conversational assistants like DawaGPT (supports continuous dialogue)
 export const heavyAiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 60, // allow up to 60 conversational requests per 15 minutes per user
+  max: 120, // allow up to 120 conversational requests per 15 minutes per user
   keyGenerator: (req) => {
     return req.user?.uid || ipKeyGenerator(req);
   },

@@ -27,86 +27,86 @@ class RateLimitManager {
         tpd: 1000000,   // 1M tokens/day (free tier)
       },
 
-      // ── Groq Account 1 (GROQ_API_KEY) — 30 RPM, 8k TPM per model ───────────
-      // openai/gpt-oss-120b: 30 RPM, 8,000 TPM, 200,000 TPD
+      // ── Groq Account 1 (GROQ_API_KEY) — Active Models: gpt-oss-120b, qwen3.6-27b, gpt-oss-20b ──
+      // Official Groq Free Plan Quotas: 30 RPM, 8,000 TPM, 1,000 RPD, 200,000 TPD (Developer Tier up to 250,000 TPM)
       'groq-70b': {
         rpm: 30,
-        tpm: 8000,      // 8,000 TPM per Groq free tier (org-level)
-        rpd: 1440,      // Conservative daily req estimate
-        tpd: 200000,    // 200,000 TPD
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
-      // openai/gpt-oss-120b (scout alias — same model)
+      // openai/gpt-oss-120b (scout alias)
       'groq-scout': {
         rpm: 30,
-        tpm: 8000,
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
-      // openai/gpt-oss-20b (light)
+      // openai/gpt-oss-20b (light model)
       'groq-8b': {
         rpm: 30,
-        tpm: 8000,      // 8,000 TPM
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
-      // qwen/qwen3.6-27b
+      // qwen/qwen3.6-27b (balanced reasoning model)
       'groq-qwen': {
         rpm: 30,
-        tpm: 8000,      // 8,000 TPM
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
 
       // ── Groq Account 2 (GROQ_API_KEY_2) — independent org, same limits ──────
       'groq-70b-key2': {
         rpm: 30,
-        tpm: 8000,
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
       'groq-scout-key2': {
         rpm: 30,
-        tpm: 8000,
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
       'groq-8b-key2': {
         rpm: 30,
-        tpm: 8000,
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
       'groq-qwen-key2': {
         rpm: 30,
-        tpm: 8000,
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
 
       // ── Groq Account 3 (GROQ_API_KEY_3) — independent org, same limits ──────
       'groq-70b-key3': {
         rpm: 30,
-        tpm: 8000,
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
       'groq-scout-key3': {
         rpm: 30,
-        tpm: 8000,
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
       'groq-8b-key3': {
         rpm: 30,
-        tpm: 8000,
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
       'groq-qwen-key3': {
         rpm: 30,
-        tpm: 8000,
-        rpd: 1440,
-        tpd: 200000,
+        tpm: parseInt(process.env.GROQ_TPM_LIMIT || '8000', 10),
+        rpd: parseInt(process.env.GROQ_RPD_LIMIT || '1000', 10),
+        tpd: parseInt(process.env.GROQ_TPD_LIMIT || '200000', 10),
       },
 
       // ── Gemini (Google AI Studio free tier) ──────────────────────────────────

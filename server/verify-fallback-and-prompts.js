@@ -97,28 +97,25 @@ console.log("--- TEST 2: Multi-Provider Fallback Cascade Simulation ---");
 
 // Demonstrate that the cascade mechanism tests each provider sequentially:
 // 1. Cerebras (if complex)
+// 1. Cerebras (if complex)
 // 2. Groq Primary (gpt-oss-120b)
-// 3. Groq Llama (llama-3.3-70b)
+// 3. Groq Balanced (qwen/qwen3.6-27b)
 // 4. Groq Light (gpt-oss-20b)
-// 5. Groq Qwen (qwen3.6-27b)
-// 6. Groq Llama Light (llama-3.1-8b)
-// 7. SambaNova Cloud (Llama-3.3-70B)
-// 8. NVIDIA NIM (Nemotron-Super-49B)
-// 9. OpenRouter Free (Llama-3.3-70B)
-// 10. Mistral AI (Mistral Small)
-// 11. SiliconFlow (Qwen-2.5-7B)
-// 12. Z.ai (GLM-5-Flash)
-// 13. Gemini (Flash)
-// 14. Local Clinical Reconnecting Status
+// 5. SambaNova Cloud (Llama-3.3-70B)
+// 6. NVIDIA NIM (Nemotron-Super-49B)
+// 7. OpenRouter Free (Llama-3.3-70B)
+// 8. Mistral AI (Mistral Small)
+// 9. SiliconFlow (Qwen-2.5-7B)
+// 10. Z.ai (GLM-5-Flash)
+// 11. Gemini (Flash)
+// 12. Local Clinical Reconnecting Status
 
 console.log("Simulating provider failure cascade to verify multi-provider traversal:");
 const providerSequence = [
   "Cerebras",
   "Groq Primary (gpt-oss-120b)",
-  "Groq Llama (llama-3.3-70b)",
+  "Groq Balanced (qwen/qwen3.6-27b)",
   "Groq Light (gpt-oss-20b)",
-  "Groq Qwen (qwen/qwen3.6-27b)",
-  "Groq Llama Light (llama-3.1-8b)",
   "SambaNova Cloud (Meta-Llama-3.3-70B-Instruct)",
   "NVIDIA NIM (nvidia/llama-3.3-nemotron-super-49b-instruct)",
   "OpenRouter Free (meta-llama/llama-3.3-70b-instruct:free)",
@@ -158,15 +155,15 @@ const resA = await mockCascadeTest(1, providerSequence.length);
 assert.strictEqual(resA.source, providerSequence[1], "Should fallback to second provider");
 console.log(`\n✔ Scenario A Passed: When Step 1 (${providerSequence[0]}) fails, DawaGPT cascades to Step 2 (${providerSequence[1]}).`);
 
-// Test B: First 6 providers fail, SambaNova (Step 7) succeeds
-const resB = await mockCascadeTest(6, providerSequence.length);
-assert.strictEqual(resB.source, providerSequence[6], "Should fallback across 6 providers to SambaNova");
-console.log(`✔ Scenario B Passed: When all Groq & Cerebras tiers fail, DawaGPT cascades across 6 tiers to SambaNova (${providerSequence[6]}).`);
+// Test B: First 4 providers fail, SambaNova (Step 5) succeeds
+const resB = await mockCascadeTest(4, providerSequence.length);
+assert.strictEqual(resB.source, providerSequence[4], "Should fallback across 4 tiers to SambaNova");
+console.log(`✔ Scenario B Passed: When all Groq & Cerebras tiers fail, DawaGPT cascades across 4 tiers to SambaNova (${providerSequence[4]}).`);
 
-// Test C: First 11 providers fail, Z.ai (Step 12) succeeds
-const resC = await mockCascadeTest(11, providerSequence.length);
-assert.strictEqual(resC.source, providerSequence[11], "Should fallback to Z.ai");
-console.log(`✔ Scenario C Passed: When 11 providers fail, DawaGPT cascades to Z.ai (${providerSequence[11]}).`);
+// Test C: First 9 providers fail, Z.ai (Step 10) succeeds
+const resC = await mockCascadeTest(9, providerSequence.length);
+assert.strictEqual(resC.source, providerSequence[9], "Should fallback to Z.ai");
+console.log(`✔ Scenario C Passed: When 9 providers fail, DawaGPT cascades to Z.ai (${providerSequence[9]}).`);
 
 // Test D: ALL providers fail -> transparent reconnecting notice (NOT canned advice)
 try {

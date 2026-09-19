@@ -176,8 +176,8 @@ const EMERGENCY_RESPONSE = {
  * Fallback chat / completion with Gemini (supports dynamic prompt & schema)
  */
 const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096, temperature = 0.7, customSystemPrompt = null, isJson = true) => {
-  const activeGeminiKey = GEMINI_API_KEY || process.env.GEMINI_API_KEY_2;
-  if (!activeGeminiKey) {
+  const geminiKeys = [GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean);
+  if (geminiKeys.length === 0) {
     throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
   }
 
@@ -263,16 +263,18 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
     let response = null;
     let lastGeminiErr = null;
 
-    for (const mId of candidateModels) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${mId}:generateContent?key=${activeGeminiKey}`;
-        response = await axios.post(url, payload, { timeout: 30000 });
-        if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          break;
+    keyLoop: for (const gKey of geminiKeys) {
+      for (const mId of candidateModels) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${mId}:generateContent?key=${gKey}`;
+          response = await axios.post(url, payload, { timeout: 30000 });
+          if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+            break keyLoop;
+          }
+        } catch (gErr) {
+          lastGeminiErr = gErr;
+          console.warn(`Gemini (${mId}) key attempt failed:`, gErr.response?.data?.error?.message || gErr.message);
         }
-      } catch (gErr) {
-        lastGeminiErr = gErr;
-        console.warn(`Gemini (${mId}) failed:`, gErr.response?.data?.error?.message || gErr.message);
       }
     }
 
@@ -330,9 +332,9 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
       }
     }
 
-    const lastUserQuery = Array.isArray(messages) ? messages.filter(m => m.role === 'user').pop()?.content || "" : "";
+    const lastUserQuery = Array.isArray(finalMessages) ? finalMessages.filter(m => m.role === 'user').pop()?.content || "" : "";
     parsed.suggestions = generateContextualSuggestions({
-      messages,
+      messages: finalMessages,
       userQuery: lastUserQuery,
       assistantText: parsed.text,
       existingSuggestions: parsed.suggestions,
@@ -640,22 +642,20 @@ const callGroqChat = async (messages, responseFormat = { type: 'json_object' }, 
     throw new AppError('Groq API key not configured', 401);
   }
 
-  const baseModelKey = modelId === GROQ_MODEL ? 'groq-70b'
-    : modelId === GROQ_SCOUT_MODEL ? 'groq-scout'
-      : modelId === 'qwen/qwen3.6-27b' ? 'groq-qwen'
-        : 'groq-8b';
+  const baseModelKey = (modelId.includes('120b') || modelId.includes('70b') || modelId === GROQ_MODEL || modelId === GROQ_SCOUT_MODEL) ? 'groq-70b'
+    : (modelId.includes('20b') || modelId.includes('8b') || modelId === GROQ_LIGHT_MODEL) ? 'groq-8b'
+    : 'groq-qwen';
   const modelKey = `${baseModelKey}${keySuffix}`;
 
   const fn = async () => {
-    // Resilient candidate list: active Groq production models first, legacy as tail fallback
+    // Resilient candidate list: active Groq production models (deprecated Llama 3.1/3.3 were shut down Aug 16, 2026)
     const rawCandidates = [
       sanitizeGroqModel(modelId),
       GROQ_MODEL,
       'openai/gpt-oss-120b',
       'qwen/qwen3.6-27b',
-      'openai/gpt-oss-20b',
-      'llama-3.3-70b-versatile',
-      'llama-3.1-8b-instant'
+      GROQ_LIGHT_MODEL,
+      'openai/gpt-oss-20b'
     ];
     const candidateModels = Array.from(new Set(rawCandidates.filter(Boolean)));
 
@@ -2109,16 +2109,14 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 2. Try Groq across candidate models (gpt-oss-120b, llama-3.3-70b, gpt-oss-20b, qwen3.6-27b, llama-3.1-8b) and all independent accounts
+    // 2. Try Groq across candidate active models (gpt-oss-120b, qwen3.6-27b, gpt-oss-20b) and all independent accounts
     if (GROQ_KEYS.length > 0) {
       const groqCandidateModels = Array.from(new Set([
         GROQ_MODEL,
         'openai/gpt-oss-120b',
         'qwen/qwen3.6-27b',
         GROQ_LIGHT_MODEL,
-        'openai/gpt-oss-20b',
-        'llama-3.3-70b-versatile',
-        'llama-3.1-8b-instant'
+        'openai/gpt-oss-20b'
       ].filter(Boolean)));
 
       for (const modelId of groqCandidateModels) {
@@ -2129,7 +2127,9 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           try {
             const groqKey = GROQ_KEYS[keyIdx];
             const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
-            const baseModelKey = modelId.includes('70b') ? 'groq-70b' : modelId.includes('20b') || modelId.includes('8b') ? 'groq-8b' : 'groq-qwen';
+            const baseModelKey = (modelId.includes('120b') || modelId.includes('70b') || modelId === GROQ_MODEL || modelId === GROQ_SCOUT_MODEL) ? 'groq-70b'
+              : (modelId.includes('20b') || modelId.includes('8b') || modelId === GROQ_LIGHT_MODEL) ? 'groq-8b'
+              : 'groq-qwen';
             const modelKey = `${baseModelKey}${keySuffix}`;
 
             const fn = async () => {
@@ -2147,7 +2147,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
               });
               return response.data;
             };
-            return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 2, false);
+            // failFast MUST be true so any rate limit (429/TPM) immediately cascades to the next key/model/provider
+            return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 1, true);
           } catch (err) {
             console.warn(`Stream Fallback: Groq (${modelId}) key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
           }
@@ -2172,7 +2173,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 6. Try NVIDIA NIM
+    // 4. Try NVIDIA NIM
     if (NVIDIA_API_KEY) {
       try {
         const fn = async () => {
@@ -2188,74 +2189,110 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 7. Try OpenRouter Free
+    // 5. Try OpenRouter Free across candidate models
     if (OPENROUTER_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(OPENROUTER_API_URL, { model: OPENROUTER_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: {
-              'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-              'HTTP-Referer': 'https://dawalens.web.app',
-              'X-Title': 'Dawa-Lens',
-              'Content-Type': 'application/json'
-            },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'openrouter-free', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: OpenRouter Free failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      const openRouterCandidates = Array.from(new Set([
+        OPENROUTER_MODEL,
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'meta-llama/llama-3.1-8b-instruct:free',
+        'mistralai/mistral-7b-instruct:free',
+        'google/gemma-2-9b-it:free'
+      ].filter(Boolean)));
+
+      for (const orModel of openRouterCandidates) {
+        try {
+          const fn = async () => {
+            const response = await axios.post(OPENROUTER_API_URL, { model: orModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+              headers: {
+                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                'HTTP-Referer': 'https://dawalens.web.app',
+                'X-Title': 'Dawa-Lens',
+                'Content-Type': 'application/json'
+              },
+              responseType: 'stream', timeout: 10000
+            });
+            return response.data;
+          };
+          return await rateLimitManager.enqueue(fn, 'openrouter-free', lastUserMsgForRl, priority, 3, true);
+        } catch (err) {
+          console.warn(`Stream Fallback: OpenRouter (${orModel}) failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+        }
       }
     }
 
-    // 8. Try Mistral AI
+    // 6. Try Mistral AI across candidate models
     if (MISTRAL_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(MISTRAL_API_URL, { model: MISTRAL_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'mistral-small', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Mistral AI failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      const mistralCandidates = Array.from(new Set([
+        MISTRAL_MODEL,
+        'mistral-small-latest',
+        'open-mistral-nemo',
+        'open-mistral-7b'
+      ].filter(Boolean)));
+
+      for (const mistralModel of mistralCandidates) {
+        try {
+          const fn = async () => {
+            const response = await axios.post(MISTRAL_API_URL, { model: mistralModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+              headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
+              responseType: 'stream', timeout: 10000
+            });
+            return response.data;
+          };
+          return await rateLimitManager.enqueue(fn, 'mistral-small', lastUserMsgForRl, priority, 3, true);
+        } catch (err) {
+          console.warn(`Stream Fallback: Mistral AI (${mistralModel}) failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+        }
       }
     }
 
-    // 9. Try SiliconFlow
+    // 7. Try SiliconFlow across candidate models
     if (SILICONFLOW_API_KEY) {
-      try {
-        const modelId = SILICONFLOW_MODEL;
-        const fn = async () => {
-          const response = await axios.post(SILICONFLOW_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${SILICONFLOW_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: SiliconFlow failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      const siliconCandidates = Array.from(new Set([
+        SILICONFLOW_MODEL,
+        'Qwen/Qwen2.5-7B-Instruct',
+        'deepseek-ai/DeepSeek-V3',
+        'meta-llama/Meta-Llama-3.1-8B-Instruct'
+      ].filter(Boolean)));
+
+      for (const sfModel of siliconCandidates) {
+        try {
+          const fn = async () => {
+            const response = await axios.post(SILICONFLOW_API_URL, { model: sfModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+              headers: { 'Authorization': `Bearer ${SILICONFLOW_API_KEY}`, 'Content-Type': 'application/json' },
+              responseType: 'stream', timeout: 10000
+            });
+            return response.data;
+          };
+          return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', lastUserMsgForRl, priority, 3, true);
+        } catch (err) {
+          console.warn(`Stream Fallback: SiliconFlow (${sfModel}) failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+        }
       }
     }
 
-    // 10. Try Z.ai
+    // 8. Try Z.ai across candidate endpoints and models
     if (Z_AI_API_KEY) {
-      try {
-        const modelId = Z_AI_MODEL;
-        const fn = async () => {
-          const response = await axios.post(Z_AI_API_URL, { model: modelId, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${Z_AI_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Z.ai GLM-5-Flash failed.", err.response?.data?.error?.message || err.response?.data || err.message);
+      const zaiEndpointsToTry = zaiWorkingEndpoint ? [zaiWorkingEndpoint] : Z_AI_ENDPOINTS;
+      const zaiModelsToTry = zaiWorkingModel ? [zaiWorkingModel] : Array.from(new Set([Z_AI_MODEL, ...Z_AI_MODELS]));
+
+      for (const url of zaiEndpointsToTry) {
+        for (const targetModel of zaiModelsToTry) {
+          try {
+            const fn = async () => {
+              const response = await axios.post(url, { model: targetModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
+                headers: { 'Authorization': `Bearer ${Z_AI_API_KEY}`, 'Content-Type': 'application/json' },
+                responseType: 'stream', timeout: 10000
+              });
+              return response.data;
+            };
+            const stream = await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', lastUserMsgForRl, priority, 3, true);
+            zaiWorkingEndpoint = url;
+            zaiWorkingModel = targetModel;
+            return stream;
+          } catch (err) {
+            console.warn(`Stream Fallback: Z.ai (${targetModel} @ ${url}) failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+          }
+        }
       }
     }
 

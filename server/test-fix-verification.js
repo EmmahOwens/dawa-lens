@@ -32,8 +32,8 @@ async function runTest() {
   ];
 
   try {
-    // 1. Test Groq (Llama 3.3 70B)
-    console.log("\n--- Testing Groq (llama-3.3-70b-versatile) ---");
+    // 1. Test Groq (OpenAI GPT-OSS 120B)
+    console.log("\n--- Testing Groq (openai/gpt-oss-120b) ---");
     const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -41,7 +41,7 @@ async function runTest() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         messages,
         response_format: { type: 'json_object' }
       })
