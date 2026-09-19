@@ -266,8 +266,17 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
     keyLoop: for (const gKey of geminiKeys) {
       for (const mId of candidateModels) {
         try {
+          const modelGenConfig = { ...generationConfig };
+          if (mId.includes('2.') || mId.includes('flash')) {
+            modelGenConfig.thinkingConfig = { thinkingBudget: 0 };
+          }
+          const modelPayload = {
+            ...payload,
+            generationConfig: modelGenConfig
+          };
+
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${mId}:generateContent?key=${gKey}`;
-          response = await axios.post(url, payload, { timeout: 30000 });
+          response = await axios.post(url, modelPayload, { timeout: 15000 });
           if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
             break keyLoop;
           }
@@ -350,6 +359,148 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
     console.error("Gemini Fallback Error:", err.response?.data?.error?.message || err.response?.data || err.message);
     throw new AppError('All AI services are currently unavailable. Please try again later.', 503);
   }
+};
+
+/**
+ * Native SSE streaming chat completion call to Gemini.
+ * Uses streamGenerateContent?alt=sse with thinkingBudget: 0 for low TTFT,
+ * transforming chunks into OpenAI-compatible SSE format for client streaming.
+ */
+const callGeminiChatStream = async (finalMessages, priority = 'high', maxTokens = 4096, temperature = 0.7, customSystemPrompt = null) => {
+  const geminiKeys = [GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean);
+  if (geminiKeys.length === 0) return null;
+
+  const rawSystemMsg = customSystemPrompt || finalMessages.find(m => m.role === 'system')?.content;
+  const GEMINI_NATIVE_SYSTEM_INSTRUCTION_CHAR_LIMIT = 16000;
+  let nativeSystemInstruction = null;
+  let prependedSystemAsUserTurn = null;
+
+  if (rawSystemMsg && typeof rawSystemMsg === 'string' && rawSystemMsg.trim().length > 0) {
+    if (rawSystemMsg.length <= GEMINI_NATIVE_SYSTEM_INSTRUCTION_CHAR_LIMIT) {
+      nativeSystemInstruction = rawSystemMsg;
+    } else {
+      const newline = rawSystemMsg.indexOf('\n');
+      const firstParagraphEnd = rawSystemMsg.indexOf('\n\n') !== -1 ? rawSystemMsg.indexOf('\n\n') : (newline !== -1 ? newline : 1500);
+      const distilledHead = rawSystemMsg.slice(0, Math.min(firstParagraphEnd + 1, 1500)).trim();
+      nativeSystemInstruction = `${distilledHead}\n\nFollow all detailed clinical instructions strictly.`;
+      prependedSystemAsUserTurn = {
+        role: 'user',
+        parts: [{ text: `=== SYSTEM INSTRUCTIONS ===\n\n${rawSystemMsg}\n\n=== END OF INSTRUCTIONS ===` }]
+      };
+    }
+  }
+
+  const rawContents = finalMessages
+    .filter(m => m.role !== 'system')
+    .map(m => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: (typeof m.content === 'string' && m.content.trim().length > 0) ? m.content : ' ' }]
+    }));
+
+  if (prependedSystemAsUserTurn) {
+    rawContents.unshift(prependedSystemAsUserTurn);
+  }
+
+  const contents = [];
+  for (const c of rawContents) {
+    if (contents.length > 0 && contents[contents.length - 1].role === c.role) {
+      contents[contents.length - 1].parts[0].text += '\n\n' + c.parts[0].text;
+    } else {
+      contents.push(c);
+    }
+  }
+
+  if (contents.length === 0) {
+    contents.push({ role: 'user', parts: [{ text: 'Hello' }] });
+  } else if (contents[contents.length - 1].role !== 'user') {
+    contents.push({ role: 'user', parts: [{ text: 'Please continue.' }] });
+  }
+
+  const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(Boolean)));
+
+  for (const gKey of geminiKeys) {
+    for (const mId of candidateModels) {
+      try {
+        const generationConfig = {
+          maxOutputTokens: Math.max(maxTokens, 4096),
+          temperature
+        };
+        if (mId.includes('2.') || mId.includes('flash')) {
+          generationConfig.thinkingConfig = { thinkingBudget: 0 };
+        }
+
+        const payload = {
+          contents,
+          generationConfig
+        };
+        if (nativeSystemInstruction) {
+          payload.systemInstruction = { parts: [{ text: nativeSystemInstruction }] };
+        }
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${mId}:streamGenerateContent?alt=sse&key=${gKey}`;
+        const resp = await axios.post(url, payload, {
+          headers: { 'Content-Type': 'application/json' },
+          responseType: 'stream',
+          timeout: 8000
+        });
+
+        const outputStream = new Readable({
+          read() {}
+        });
+
+        let sseBuffer = '';
+        let allEmittedText = '';
+
+        resp.data.on('data', (chunk) => {
+          sseBuffer += chunk.toString();
+          const lines = sseBuffer.split('\n');
+          sseBuffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            try {
+              const parsed = JSON.parse(trimmed.slice(6));
+              const textChunk = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (textChunk) {
+                allEmittedText += textChunk;
+                const openAiChunk = JSON.stringify({
+                  choices: [{ delta: { content: textChunk } }]
+                });
+                outputStream.push(`data: ${openAiChunk}\n\n`);
+              }
+            } catch (_) {}
+          }
+        });
+
+        resp.data.on('end', () => {
+          const metaDelimRegex = /(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###METADATA###|---METADATA---)/i;
+          if (!metaDelimRegex.test(allEmittedText)) {
+            const metaJson = JSON.stringify({
+              suggestions: [],
+              source: "Gemini",
+              action: null
+            });
+            const trailing = JSON.stringify({
+              choices: [{ delta: { content: "\n###METADATA###\n" + metaJson } }]
+            });
+            outputStream.push(`data: ${trailing}\n\n`);
+          }
+          outputStream.push('data: [DONE]\n\n');
+          outputStream.push(null);
+        });
+
+        resp.data.on('error', (err) => {
+          outputStream.destroy(err);
+        });
+
+        return outputStream;
+      } catch (err) {
+        console.warn(`Gemini Stream (${mId}) key attempt failed:`, err.response?.data?.error?.message || err.message);
+      }
+    }
+  }
+  return null;
 };
 
 /**
@@ -1986,7 +2137,110 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     };
   }
 
-  // 4. Honest Service Status Notice
+  // 4. Age-Aware Food, Chewables & Drinks Clinical Guidance (Local & Global Foods)
+  const isFoodDrinkQuery = (
+    norm.includes('food') ||
+    norm.includes('eat') ||
+    norm.includes('drink') ||
+    norm.includes('chew') ||
+    norm.includes('chewable') ||
+    norm.includes('swallow') ||
+    norm.includes('meal') ||
+    norm.includes('take with') ||
+    norm.includes('beverage') ||
+    norm.includes('applesauce') ||
+    norm.includes('yogurt') ||
+    norm.includes('oatmeal') ||
+    norm.includes('bushera') ||
+    norm.includes('matooke') ||
+    norm.includes('g-nut') ||
+    norm.includes('posho')
+  );
+
+  if (isFoodDrinkQuery) {
+    const queryAge = extractAgeFromQuery(norm);
+    const profileAge = calculateAge(targetPatient?.age ?? targetPatient?.dateOfBirth ?? userProfile?.age ?? userProfile?.dateOfBirth);
+    const resolvedAge = queryAge !== null ? queryAge : profileAge;
+
+    // Detect target drug
+    let matchedMed = (medicines || []).find(m => m.name && norm.includes(m.name.toLowerCase()));
+    if (!matchedMed) {
+      if (norm.includes('panadol') || norm.includes('paracetamol')) matchedMed = { name: 'Panadol (Paracetamol)' };
+      else if (norm.includes('coartem') || norm.includes('artemether') || norm.includes('lumefantrine')) matchedMed = { name: 'Coartem (Artemether/Lumefantrine)' };
+      else if (norm.includes('ibuprofen') || norm.includes('nurofen')) matchedMed = { name: 'Nurofen (Ibuprofen)' };
+      else if (norm.includes('flagyl') || norm.includes('metronidazole')) matchedMed = { name: 'Flagyl (Metronidazole)' };
+      else if (norm.includes('amoxicillin') || norm.includes('augmentin')) matchedMed = { name: 'Amoxicillin' };
+      else if (norm.includes('ciprofloxacin') || norm.includes('cipro')) matchedMed = { name: 'Ciprofloxacin' };
+      else if (norm.includes('metformin')) matchedMed = { name: 'Metformin' };
+      else if (medicines && medicines.length > 0) matchedMed = medicines[0];
+    }
+    const medName = matchedMed?.name || 'your medication';
+
+    // Pediatric guidance (< 12 yrs or explicitly for child/baby/infant)
+    if (resolvedAge !== null && resolvedAge < 12) {
+      const ageDetail = resolvedAge === 0 ? 'an infant' : resolvedAge <= 3 ? `a toddler (${resolvedAge} yrs)` : `a child (${resolvedAge} yrs)`;
+      return {
+        text: `Here is age-tailored food, chewables, and drink guidance for **${medName}** for ${ageDetail}${greeting}:\n\n` +
+          `• 🍬 **Chewable & Liquid Alternatives**: Swallowing whole pills is a serious choking risk for young children. Ask your pharmacist or clinician for **chewable tablets**, **orally dispersible tablets (ODTs)**, or **oral syrups/suspensions**.\n` +
+          `• 🥣 **Soft Food Vehicles for Crushed Meds**: If the tablet is approved by a doctor or pharmacist to be crushed (never crush extended-release or coated pills), mix the dose into 1–2 teaspoons of smooth, palatable food:\n` +
+          `  - **Everyday options**: Smooth applesauce, plain yogurt, fruit puree, or oatmeal.\n` +
+          `  - **Local Ugandan options**: Warm smooth *Bushera* (millet porridge) or mashed soft *Matooke*.\n` +
+          `  - *Instruction*: Have the child take the spoonful immediately without chewing, followed by a drink.\n` +
+          `• 💧 **Safe Drinks**: Ample water, breast milk, infant formula, or oral rehydration solution (ORS). If taking antibiotics like Ciprofloxacin, space high-calcium dairy by at least 2 hours.\n` +
+          `• ⚠️ **Critical Pediatric Warning**: **NEVER give honey** to infants under 1 year of age due to the severe risk of infant botulism. Avoid whole nuts, crunchy raw vegetables, or hard chewables due to choking hazards.\n\n` +
+          `You can [check drug & food interactions in Interactions Guard](/interactions) or [review active medications](/medications).`,
+        suggestions: ["Chewable medication options", "Safe drinks with medication", "Check drug interactions"],
+        source: "Clinical Pediatric Guard",
+        action: null
+      };
+    }
+
+    // Geriatric guidance (65+ yrs or elderly)
+    if (resolvedAge !== null && resolvedAge >= 65) {
+      return {
+        text: `Here is age-tailored food and beverage guidance for **${medName}** for seniors (Age: ${resolvedAge} yrs)${greeting}:\n\n` +
+          `• 🥣 **Soft & Moist Foods (Swallowing Ease)**: To prevent swallowing difficulties (presbyphagia) and soothe the stomach:\n` +
+          `  - **Local Ugandan options**: Steamed soft *Matooke*, warm smooth *Bushera* (millet/sorghum porridge), or steamed *Luwombo*.\n` +
+          `  - **Everyday staples**: Warm oatmeal, Greek yogurt, soft scrambled eggs, applesauce, or pureed vegetable soups.\n` +
+          `• 💧 **Swallowing Technique & Drinks**: Take a sip of water first to lubricate your throat, swallow the pill with a full glass of water (250ml) while sitting upright, and **remain sitting or standing upright for at least 30 minutes** to avoid esophageal irritation.\n` +
+          `• ⚠️ **Nutritional & Drug Cautions**:\n` +
+          `  - *Potassium*: If taking blood pressure or heart medications (ACE inhibitors like Lisinopril, ARBs, or Spironolactone), avoid excessive high-potassium foods (*Matooke*, bananas, avocados) or potassium salt substitutes.\n` +
+          `  - *Calcium Spacing*: Space high-calcium foods (*Mukene*, dairy, fortified milks) at least 2 hours apart from thyroid medications (Levothyroxine) or certain antibiotics.\n` +
+          `  - *Grapefruit & Alcohol*: Strictly avoid grapefruit juice and alcohol/Waragi.\n\n` +
+          `You can [check drug & food interactions in Interactions Guard](/interactions) or [review active medications](/medications).`,
+        suggestions: ["Safe foods for seniors", "Check drug interactions", "View active medications"],
+        source: "Clinical Geriatric Guard",
+        action: null
+      };
+    }
+
+    // Adult / General guidance
+    const isFatSoluble = /coartem|artemether|lumefantrine|griseofulvin|isotretinoin|vitamin d/i.test(medName);
+    const fatGuidance = isFatSoluble
+      ? `• 🥑 **Healthy Fats for Absorption (Crucial)**: **${medName}** requires dietary fats to be absorbed effectively into the bloodstream:\n` +
+        `  - **Local options**: *G-nut sauce* (groundnut stew) or *Eshabwe*.\n` +
+        `  - **Everyday options**: Fresh avocado, whole milk, eggs, peanut butter, or yogurt.\n`
+      : `• 🍲 **Stomach Buffers**: To buffer the stomach lining and prevent gastric irritation:\n` +
+        `  - **Local options**: Steamed *Matooke*, *Posho*, or *Kalo*.\n` +
+        `  - **Everyday staples**: Plain oatmeal, white rice, toast, crackers, or plain yogurt.\n`;
+
+    return {
+      text: `Here is recommended food, chewables, and drink guidance for **${medName}**${greeting}:\n\n` +
+        fatGuidance +
+        `• 💧 **Drink Pairings & Hydration**: Always take your medication with a **full glass of plain water** (250ml+) to ensure the tablet dissolves smoothly in your stomach and prevents esophageal irritation.\n` +
+        `• 🍬 **Chewables & Formulation Notes**: If you struggle with swallowing solid tablets, ask your doctor or pharmacist about chewable tablets, dispersible tablets, or smooth oral suspensions.\n` +
+        `• ⚠️ **Key Dietary Warnings**:\n` +
+        `  - **Alcohol & Waragi**: Strictly avoid with Paracetamol (liver damage) and Metronidazole (severe violent reaction).\n` +
+        `  - **Grapefruit & Grapefruit Juice**: Avoid with statins and blood pressure medications (blocks CYP3A4 enzyme).\n` +
+        `  - **Calcium & Mukene**: Space calcium-rich foods and dairy at least 2 hours away from fluoroquinolone (Ciprofloxacin) and tetracycline antibiotics.\n\n` +
+        `You can [check your drug & food interactions in Interactions Guard](/interactions) to test specific dishes.`,
+      suggestions: ["What foods should I avoid?", "Can I take with milk?", "Check drug interactions"],
+      source: "Dietary Safety Guard",
+      action: null
+    };
+  }
+
+  // 5. Honest Service Status Notice
   // When cloud AI reasoning engines are offline or reconnecting, DawaGPT returns an honest status notice
   // instead of outputting canned medical advice pretending to answer the prompt.
   return {
@@ -2028,6 +2282,15 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     }
 
     const isComplex = isComplexTask(lastUserMsg);
+
+    // Fast-path: Instant (<20ms) execution for clear deterministic action requests
+    const deterministicAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || []);
+    if (deterministicAction) {
+      const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage);
+      if (fallbackResp && fallbackResp.action) {
+        return createFakeStream(fallbackResp);
+      }
+    }
 
     // Route ALL action-intent requests to JSON mode (chatWithDawaGPT) where the
     // action object is reliably structured. Raw streaming mode is unreliable for
@@ -2099,7 +2362,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(CEREBRAS_API_URL, { model: CEREBRAS_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${CEREBRAS_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 20000
+            responseType: 'stream', timeout: 7000
           });
           return response.data;
         };
@@ -2143,7 +2406,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
               if (isReasoning) payload.reasoning_format = 'hidden';
               const response = await axios.post(GROQ_API_URL, payload, {
                 headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-                responseType: 'stream', timeout: 25000
+                responseType: 'stream', timeout: 6000
               });
               return response.data;
             };
@@ -2163,7 +2426,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(SAMBANOVA_API_URL, { model: SAMBANOVA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${SAMBANOVA_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
+            responseType: 'stream', timeout: 6000
           });
           return response.data;
         };
@@ -2179,7 +2442,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         const fn = async () => {
           const response = await axios.post(NVIDIA_API_URL, { model: NVIDIA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
             headers: { 'Authorization': `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 10000
+            responseType: 'stream', timeout: 6000
           });
           return response.data;
         };
@@ -2209,7 +2472,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
                 'X-Title': 'Dawa-Lens',
                 'Content-Type': 'application/json'
               },
-              responseType: 'stream', timeout: 10000
+              responseType: 'stream', timeout: 6000
             });
             return response.data;
           };
@@ -2234,7 +2497,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           const fn = async () => {
             const response = await axios.post(MISTRAL_API_URL, { model: mistralModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
               headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
-              responseType: 'stream', timeout: 10000
+              responseType: 'stream', timeout: 6000
             });
             return response.data;
           };
@@ -2259,7 +2522,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           const fn = async () => {
             const response = await axios.post(SILICONFLOW_API_URL, { model: sfModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
               headers: { 'Authorization': `Bearer ${SILICONFLOW_API_KEY}`, 'Content-Type': 'application/json' },
-              responseType: 'stream', timeout: 10000
+              responseType: 'stream', timeout: 6000
             });
             return response.data;
           };
@@ -2281,7 +2544,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
             const fn = async () => {
               const response = await axios.post(url, { model: targetModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
                 headers: { 'Authorization': `Bearer ${Z_AI_API_KEY}`, 'Content-Type': 'application/json' },
-                responseType: 'stream', timeout: 10000
+                responseType: 'stream', timeout: 6000
               });
               return response.data;
             };
@@ -2296,7 +2559,13 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // 11. Try Gemini direct with resilient Markdown/metadata handling (via single-chunk pseudo-stream)
+    // 11. Try Gemini direct with native SSE streaming and zero-thinking budget
+    try {
+      const geminiStream = await callGeminiChatStream(finalMessages, priority, chatMaxTokens, 0.7, null);
+      if (geminiStream) return geminiStream;
+    } catch (streamErr) {
+      console.warn("Stream Fallback: Native Gemini streaming failed, attempting pseudo-stream...", streamErr.message);
+    }
     try {
       const geminiResp = await callGeminiChat(finalMessages, priority, chatMaxTokens, 0.7, null, false);
       return createFakeStream(geminiResp);
@@ -2715,16 +2984,21 @@ export async function prepareDawaGPTContext({ messages, medicines, userProfile, 
   const medVaultSummary = buildMedVaultSummary(medicines, reminders);
   const activeMeds = filteredMeds?.length ? filteredMeds.map(m => `${m.name}${m.genericName ? ` (${m.genericName})` : ''} — ${m.dosage}`).join('; ') : 'None';
   const safeFormatDate = (val) => typeof val !== 'string' ? val : val.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ');
-  const recentLogs = filteredDoseLogs ? JSON.stringify(filteredDoseLogs.slice(0, isComplex ? 15 : 8).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
-  const remindersSummary = reminders?.length ? JSON.stringify(reminders.map(r => ({ id: r.id, medicineName: r.medicineName, dose: r.dose, time: r.time, repeat: r.repeatSchedule, enabled: r.enabled, patientId: r.patientId })).slice(0, isComplex ? 20 : 10)) : 'No reminders set';
-  const wellnessSummary = wellnessLogs?.length ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 10 : 5).map(l => ({ ...l, timestamp: safeFormatDate(l.timestamp) }))) : 'No wellness logs';
+  const recentLogs = filteredDoseLogs ? JSON.stringify(filteredDoseLogs.slice(0, isComplex ? 8 : 4).map(l => ({ ...l, actionTime: safeFormatDate(l.actionTime), scheduledTime: safeFormatDate(l.scheduledTime) }))) : 'No logs';
+  const remindersSummary = reminders?.length ? JSON.stringify(reminders.map(r => ({ id: r.id, medicineName: r.medicineName, dose: r.dose, time: r.time, repeat: r.repeatSchedule, enabled: r.enabled, patientId: r.patientId })).slice(0, isComplex ? 10 : 5)) : 'No reminders set';
+  const wellnessSummary = wellnessLogs?.length ? JSON.stringify(wellnessLogs.slice(0, isComplex ? 5 : 3).map(l => ({ ...l, timestamp: safeFormatDate(l.timestamp) }))) : 'No wellness logs';
   const vitalityContext = vitalitySummary?.length ? `Vitality Trends (Last 7 Days): ${JSON.stringify(vitalitySummary.map(d => ({ day: d.name, adherence: `${d.adherence}%`, energy: d.energy ? `${(d.energy / 20).toFixed(1)}/5` : 'N/A', mood: d.mood ? `${(d.mood / 20).toFixed(1)}/5` : 'N/A' })))}` : 'No vitality trends available';
   
   // Build full Family Hub summary with complete read access
   const familyHubSummary = buildFamilyHubSummary(patients, medicines, reminders, doseLogs, userProfile, selectedPatientId);
 
   const shouldRetrieve = shouldRetrieveMedicalKnowledge(lastUserMsg);
-  const knowledgePromise = shouldRetrieve ? retrieveMedicalKnowledge(lastUserMsg) : Promise.resolve([]);
+  const knowledgePromise = shouldRetrieve
+    ? Promise.race([
+        retrieveMedicalKnowledge(lastUserMsg),
+        new Promise(resolve => setTimeout(() => resolve([]), 800))
+      ])
+    : Promise.resolve([]);
   const [knowledgeSnippets, duplicateGrounding] = await Promise.all([
     knowledgePromise,
     duplicateGroundingPromise
@@ -2937,6 +3211,23 @@ ${familyHubSummary}
     else { cleanedMessages2.push(msg); lastRole2 = msg.role; }
   }
   if (cleanedMessages2.length === 0 && lastUserMsg) cleanedMessages2.push({ role: 'user', content: lastUserMsg });
+
+  // Enrich user message turn with active patient clinical age context and alerts
+  if (targetAge !== null) {
+    const userAgeAlerts = [
+      `Active Target Age: ${activeAgeStr}`,
+      targetAge < 12 ? `⚠️ CLINICAL AGE NOTICE: Patient is a pediatric child (${targetAge} yrs). Avoid choking hazards, prioritize chewables/liquids or safe soft food vehicles (applesauce/Bushera/yogurt), and NEVER recommend honey for infants <1 yr.` : '',
+      targetAge >= 65 ? `⚠️ CLINICAL AGE NOTICE: Patient is an older adult (${targetAge} yrs). Watch for presbyphagia/swallowing difficulties; prioritize soft, moist foods (steamed soft Matooke, Bushera, soups); advise taking pills upright with a full glass of water; monitor potassium/calcium interactions.` : ''
+    ].filter(Boolean).join('\n');
+
+    const firstUserIdx = cleanedMessages2.findIndex(m => m.role === 'user');
+    if (firstUserIdx !== -1 && userAgeAlerts) {
+      cleanedMessages2[firstUserIdx] = {
+        ...cleanedMessages2[firstUserIdx],
+        content: `[Patient Clinical Context: ${userAgeAlerts}]\n\n${cleanedMessages2[firstUserIdx].content}`
+      };
+    }
+  }
 
   // FIX (Bug 4): Merge dynamicContextBlock INTO the system role instead of injecting
   // it as a separate user-role message. Injecting context as a user message disrupted

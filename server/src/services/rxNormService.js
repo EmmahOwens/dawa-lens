@@ -40,7 +40,7 @@ const makeRxNavRequest = async (endpoint, params = {}) => {
   try {
     const response = await axios.get(`${RXNORM_BASE_URL}${endpoint}`, {
       params,
-      timeout: 8000,
+      timeout: 2500,
       httpsAgent,
       headers: {
         Accept: 'application/json',

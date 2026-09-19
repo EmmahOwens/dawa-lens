@@ -608,8 +608,34 @@ export const isSameTaskOrDuplicateQuery = (query, activeMeds = []) => {
   return false;
 };
 
+const buildLocalClinicalProfile = (clean) => {
+  const localClass = findLocalTherapeuticClass(clean);
+  return {
+    queryName: clean,
+    rxNorm: null,
+    openFdaNdc: null,
+    openFdaLabel: null,
+    pharmClasses: localClass?.epcKeyword ? [`${localClass.epcKeyword} [EPC]`] : [],
+    activeIngredients: localClass ? [clean.toLowerCase()] : [],
+    localClass: localClass || null
+  };
+};
+
+const withTimeout = (promise, ms, fallbackValue) => {
+  let timer;
+  const timeoutPromise = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(fallbackValue), ms);
+  });
+  return Promise.race([
+    promise.then((val) => { clearTimeout(timer); return val; }).catch(() => fallbackValue),
+    timeoutPromise
+  ]);
+};
+
 /**
  * Fetches clinical grounding from RxNorm and openFDA for medications relevant to a query.
+ * Leverages local synchronous clinical intelligence first with a 500ms timeout for
+ * external government APIs to guarantee low conversational latency.
  */
 export const fetchClinicalGroundingForQuery = async (query, activeMeds = []) => {
   const extractedDrugs = extractDrugsFromQuery(query, activeMeds);
@@ -626,24 +652,47 @@ export const fetchClinicalGroundingForQuery = async (query, activeMeds = []) => 
   if (targetDrugs.length < 2) {
     // If only one drug or general query, fetch profile for whatever was found
     if (targetDrugs.length === 1) {
-      const singleProfile = await resolveMedicationClinicalProfile(targetDrugs[0].name);
+      const drugName = targetDrugs[0].name;
+      const cached = clinicalLookupCache.get(`clinical_profile:${drugName.toLowerCase()}`);
+      if (cached && Date.now() < cached.expiresAt) {
+        return { profiles: [cached.data], duplicates: [] };
+      }
+      const localProfile = buildLocalClinicalProfile(drugName);
+      const singleProfile = await withTimeout(
+        resolveMedicationClinicalProfile(drugName),
+        500,
+        localProfile
+      );
       return {
-        profiles: singleProfile ? [singleProfile] : [],
+        profiles: singleProfile ? [singleProfile] : (localProfile ? [localProfile] : []),
         duplicates: []
       };
     }
     return { profiles: [], duplicates: [] };
   }
 
-  // Detect duplicate therapies with live RxNorm and openFDA APIs
-  const [profiles, duplicates] = await Promise.all([
+  // 1. Immediately run synchronous check (<1ms)
+  const syncDuplicates = detectDuplicateTherapiesSync(targetDrugs);
+  const localProfiles = targetDrugs.map(d => buildLocalClinicalProfile(d.name));
+
+  // 2. Race external APIs with a 500ms timeout
+  const apiCallPromise = Promise.all([
     Promise.all(targetDrugs.map((d) => resolveMedicationClinicalProfile(d.name))),
     detectDuplicateTherapiesWithApis(targetDrugs)
   ]);
 
+  const [apiProfiles, apiDuplicates] = await withTimeout(
+    apiCallPromise,
+    500,
+    [localProfiles, syncDuplicates]
+  );
+
+  const finalDuplicates = (apiDuplicates && apiDuplicates.length > 0) ? apiDuplicates : syncDuplicates;
+  const finalProfiles = (apiProfiles && apiProfiles.filter(Boolean).length > 0) ? apiProfiles.filter(Boolean) : localProfiles.filter(Boolean);
+
   return {
-    profiles: profiles.filter(Boolean),
-    duplicates
+    profiles: finalProfiles,
+    duplicates: finalDuplicates
   };
 };
 

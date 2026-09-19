@@ -173,7 +173,7 @@ const makeOpenFdaRequest = async (endpoint, params = {}) => {
     const url = `${OPENFDA_BASE_URL}${endpoint}`;
     const response = await axios.get(url, {
       params: queryParams,
-      timeout: 10000,
+      timeout: 2500,
       httpsAgent,
       headers: {
         'User-Agent': 'DawaLens/1.6 (Healthcare Informatics Platform)',

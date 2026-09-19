@@ -476,6 +476,9 @@ export default function DawaGPT() {
         ? { ...userProfile, age: targetAge ?? undefined }
         : null;
 
+      let pendingStreamedText: string | null = null;
+      let rafId: number | null = null;
+
       const response = await chatWithDawaGPTStream(
         [...history, userMsg],
         allMedicines,
@@ -487,12 +490,26 @@ export default function DawaGPT() {
         patients,
         resolvedPatient.id,
         (streamedText) => {
-          setMessages(prev => prev.map(msg =>
-            msg.id === botId ? { ...msg, text: streamedText } : msg
-          ));
+          pendingStreamedText = streamedText;
+          if (rafId === null) {
+            rafId = requestAnimationFrame(() => {
+              rafId = null;
+              if (pendingStreamedText !== null) {
+                const textToRender = pendingStreamedText;
+                setMessages(prev => prev.map(msg =>
+                  msg.id === botId ? { ...msg, text: textToRender } : msg
+                ));
+              }
+            });
+          }
         },
         location.pathname
       );
+
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
 
       setMessages(prev => prev.map(msg =>
         msg.id === botId ? response : msg
