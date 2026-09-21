@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import MessageRenderer from "@/components/MessageRenderer";
 import { Clock, TrendingUp, Sparkles, Loader2, Salad, Check, AlertCircle, RefreshCw } from "@/lib/icons";
@@ -14,13 +14,20 @@ export function DashboardWidget() {
   const { logDose } = useApp();
   const { scopedReminders, scopedDoseLogs } = usePatientScope();
   const { insight, nutritionalTip, isLoading } = useIntelligenceContext();
+  const [now, setNow] = useState(() => new Date());
 
-  const { overallNextSlot } = useMemo(() => {
-    return computeDailyTimelineSlots(scopedReminders, scopedDoseLogs);
-  }, [scopedReminders, scopedDoseLogs]);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const { overallNextSlot, slots } = useMemo(() => {
+    return computeDailyTimelineSlots(scopedReminders, scopedDoseLogs, now);
+  }, [scopedReminders, scopedDoseLogs, now]);
 
   const hasReminders = scopedReminders.some((r) => r.enabled);
-  const nowMs = new Date().getTime();
+  const hasScheduledDosesToday = slots.length > 0;
+  const nowMs = now.getTime();
   const isOverdue = overallNextSlot ? overallNextSlot.scheduledDate.getTime() <= nowMs : false;
 
   const handleAction = async (
@@ -159,7 +166,7 @@ export function DashboardWidget() {
                   </motion.button>
                 </div>
               </>
-            ) : hasReminders ? (
+            ) : hasScheduledDosesToday ? (
               <div className="flex items-center gap-3 py-1">
                 <div className="w-9 h-9 rounded-xl bg-success/15 border border-success/30 flex items-center justify-center text-success shrink-0">
                   <Check size={18} />
@@ -171,8 +178,30 @@ export function DashboardWidget() {
                   </p>
                 </div>
               </div>
+            ) : hasReminders ? (
+              <div className="flex items-center gap-3 py-1">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <Clock size={18} />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-foreground">No Doses Today</p>
+                  <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+                    No medication doses scheduled for today
+                  </p>
+                </div>
+              </div>
             ) : (
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No Reminders</p>
+              <div className="flex items-center gap-3 py-1">
+                <div className="w-9 h-9 rounded-xl bg-muted/30 border border-border/50 flex items-center justify-center text-muted-foreground/60 shrink-0">
+                  <Clock size={18} />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-foreground">No Reminders</p>
+                  <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+                    No active medication reminders
+                  </p>
+                </div>
+              </div>
             )}
           </div>
           <motion.div 

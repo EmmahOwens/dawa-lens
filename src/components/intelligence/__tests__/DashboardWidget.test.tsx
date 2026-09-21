@@ -201,6 +201,28 @@ describe("DashboardWidget Component", () => {
     expect(screen.getByText("All Doses Complete")).toBeInTheDocument();
   });
 
+  it("should display No Doses Today when reminders exist but none are scheduled for today", () => {
+    const today = new Date();
+    const otherDay = (today.getDay() + 3) % 7;
+    mockScopedReminders = [
+      {
+        id: "rem-custom",
+        medicineName: "Omega 3",
+        dose: "1 capsule",
+        time: "10:00",
+        repeatSchedule: "custom",
+        repeatDays: [otherDay],
+        enabled: true,
+        createdAt: today.toISOString(),
+      },
+    ];
+    mockScopedDoseLogs = [];
+
+    render(<DashboardWidget />);
+
+    expect(screen.getByText("No Doses Today")).toBeInTheDocument();
+  });
+
   it("should display No Reminders when no active reminders exist", () => {
     mockScopedReminders = [];
     mockScopedDoseLogs = [];
