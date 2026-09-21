@@ -1794,7 +1794,9 @@ export const chatWithDawaGPT = async (
     const rawAction = response.action as any;
     const actionObj = rawAction ? {
       ...rawAction,
-      payload: rawAction.payload || rawAction.data
+      // Bug fix: only use action.payload or action.data; do NOT fall back to the full action
+      // object itself, which would inject type/confirmMessage into the payload and corrupt dispatchers.
+      payload: rawAction.payload || rawAction.data || {}
     } : undefined;
 
     const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
@@ -1984,6 +1986,10 @@ export const chatWithDawaGPTStream = async (
           const rawAction = metadata.action as any;
           if (!rawAction.payload && rawAction.data) {
             rawAction.payload = rawAction.data;
+          }
+          // Ensure payload is always an object, never undefined
+          if (!rawAction.payload) {
+            rawAction.payload = {};
           }
         }
       } catch (e) {

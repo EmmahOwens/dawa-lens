@@ -1600,8 +1600,8 @@ export const isLikelyActionRequest = (text) => {
   // Reminder management phrases (stop, disable, enable, change time, move, snooze)
   const reminderManage = /\b(stop|disable|turn off|pause|mute|snooze|enable|turn on|change time|move|reschedule|update).{0,20}(reminder|alarm|notification|dose|schedule)/i;
 
-  // Patient / Family Hub phrases
-  const patientManage = /\b(add|create|register|switch to|switch context|switch profile)\s.{0,25}\b(patient|family member|dependent|client|child|mother|father|son|daughter|[a-z0-9-]+)\b/i;
+  // Patient / Family Hub phrases — including remove/update which were previously missing
+  const patientManage = /\b(add|create|register|switch to|switch context|switch profile|remove|delete|update|edit)\s.{0,25}\b(patient|family member|dependent|client|child|mother|father|son|daughter|[a-z0-9-]+)\b/i;
 
   // Undo phrases
   const undoPhrase = /\b(undo|revert|cancel)\s.{0,20}(dose|log)\b/i;
@@ -2908,7 +2908,10 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
             .trim());
           const normalizedAction = jsonResp.action ? {
             type: jsonResp.action.type,
-            payload: jsonResp.action.payload || jsonResp.action.data || jsonResp.action,
+            // Bug fix: if payload is missing but action itself has been used as the payload object,
+            // do NOT set payload = the full action object (which includes type, confirmMessage etc).
+            // Only use action.payload or action.data; fall back to {} so the action still dispatches.
+            payload: jsonResp.action.payload || jsonResp.action.data || {},
             confirmMessage: jsonResp.action.confirmMessage
           } : null;
           const enrichedSuggestions = generateContextualSuggestions({

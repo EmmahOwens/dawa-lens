@@ -157,15 +157,21 @@ export function useAIActions() {
           let targetMedId = payload.id;
           if (!targetMedId && payload.name && medicines.length > 0) {
             const match = medicines.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
-            if (match) targetMedId = match.id;
+            // Also try partial match for common name variations
+            if (!match) {
+              const fuzzy = medicines.find(m => m.name.toLowerCase().includes((payload.name as string).toLowerCase()) || (payload.name as string).toLowerCase().includes(m.name.toLowerCase()));
+              if (fuzzy) targetMedId = fuzzy.id;
+            } else {
+              targetMedId = match.id;
+            }
           }
           if (!targetMedId) {
-            throw new Error(`Could not find medicine ${payload.name || ""} to remove`);
+            throw new Error(`Could not find "${payload.name || 'the medicine'}" in your cabinet. Please check the name and try again.`);
           }
           await deleteMedicine(targetMedId);
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine removed</span>,
-            description: action.confirmMessage || "The medicine has been removed from your cabinet.",
+            description: action.confirmMessage || `${payload.name || 'Medicine'} has been removed from your cabinet.`,
           });
           break;
         }
@@ -295,37 +301,50 @@ export function useAIActions() {
             const match = reminders.find(r =>
               r.medicineName.toLowerCase() === payload.medicineName.toLowerCase()
             );
-            if (match) targetId = match.id;
+            // Also try partial match
+            if (!match) {
+              const fuzzy = reminders.find(r =>
+                r.medicineName.toLowerCase().includes((payload.medicineName as string).toLowerCase()) ||
+                (payload.medicineName as string).toLowerCase().includes(r.medicineName.toLowerCase())
+              );
+              if (fuzzy) targetId = fuzzy.id;
+            } else {
+              targetId = match.id;
+            }
           }
 
           if (!targetId) {
             throw new Error(
-              `Could not find a reminder for ${payload.medicineName || 'the specified medicine'}`
+              `Could not find a reminder for "${payload.medicineName || 'the specified medicine'}". Please check the name and try again.`
             );
           }
 
           await deleteReminder(targetId);
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Reminder removed</span>,
-            description: action.confirmMessage || "The reminder has been deleted.",
+            description: action.confirmMessage || `Reminder for ${payload.medicineName || 'medicine'} has been deleted.`,
           });
           break;
         }
 
-        case "LOG_DOSE":
+        case "LOG_DOSE": {
+          // Bug fix: server sends `status` field, but legacy fallback also uses `action`.
+          // Normalize both so either field works.
+          const doseStatus = (payload.status || payload.action || "taken") as string;
           await logDose({
-            reminderId: payload.reminderId || "",
-            medicineName: payload.medicineName,
-            dose: payload.dose,
-            scheduledTime: payload.scheduledTime || new Date().toISOString(),
-            action: payload.action || "taken",
-            patientId: payload.patientId || undefined
+            reminderId: payload.reminderId as string || "",
+            medicineName: payload.medicineName as string,
+            dose: payload.dose as string,
+            scheduledTime: payload.scheduledTime as string || new Date().toISOString(),
+            action: doseStatus as "taken" | "missed" | "snoozed",
+            patientId: payload.patientId as string | undefined || undefined
           });
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Dose logged</span>,
-            description: action.confirmMessage || `Logged ${payload.medicineName} as ${payload.action || 'taken'}.`,
+            description: action.confirmMessage || `Logged ${payload.medicineName} as ${doseStatus}.`,
           });
           break;
+        }
 
         case "LOG_WELLNESS": {
           const rawData = (payload.data && typeof payload.data === "object") ? payload.data : payload;
@@ -430,15 +449,21 @@ export function useAIActions() {
           let targetId = payload.id;
           if (!targetId && payload.name && patients.length > 0) {
             const match = patients.find(p => p.name.toLowerCase() === payload.name.toLowerCase());
-            if (match) targetId = match.id;
+            if (!match) {
+              const fuzzy = patients.find(p => p.name.toLowerCase().includes((payload.name as string).toLowerCase()));
+              if (fuzzy) targetId = fuzzy.id;
+            } else {
+              targetId = match.id;
+            }
           }
-          if (targetId) {
-            await deletePatient(targetId);
-            toast({
-              title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Profile removed</span>,
-              description: action.confirmMessage || `Removed ${payload.name || "member"} from Family Hub.`,
-            });
+          if (!targetId) {
+            throw new Error(`Could not find "${payload.name || 'the member'}" in your Family Hub. Please check the name and try again.`);
           }
+          await deletePatient(targetId);
+          toast({
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Profile removed</span>,
+            description: action.confirmMessage || `Removed ${payload.name || "member"} from Family Hub.`,
+          });
           break;
         }
 

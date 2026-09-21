@@ -534,14 +534,28 @@ export default function DawaGPT() {
       ));
 
       if (response.action) {
-        await dispatchAIAction(response.action);
-        // Visually confirm the action was performed in the chat message
-        setMessages(prev => prev.map(msg =>
-          msg.id === botId
-            ? { ...msg, text: msg.text }
-            : msg
-        ));
-        setActionMissingBotId(null);
+        try {
+          await dispatchAIAction(response.action);
+          // Visually confirm the action was performed — no text change needed (toast handles it)
+          setActionMissingBotId(null);
+        } catch (actionErr: any) {
+          // The action dispatch failed (e.g. medicine not found, ID null, etc.)
+          // Show the real error message in the chat rather than a generic network error.
+          const actionErrMsg = actionErr?.message || "The action could not be completed. Please try rephrasing or do it manually.";
+          console.error("[DawaGPT] Action dispatch failed:", actionErrMsg);
+          setMessages(prev => prev.map(msg =>
+            msg.id === botId
+              ? {
+                  ...msg,
+                  text: `${msg.text}\n\n⚠️ **Action failed**: ${actionErrMsg}`,
+                  source: "System" as const,
+                }
+              : msg
+          ));
+          // Show retry button so user can try again
+          retryUserTextRef.current = text;
+          setActionMissingBotId(botId);
+        }
       } else if (
         response.text &&
         /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved|refilled)\b/i.test(response.text)
