@@ -1,17 +1,67 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import MessageRenderer from "@/components/MessageRenderer";
-import { Clock, TrendingUp, Sparkles, Loader2, Salad } from "@/lib/icons";
+import { Clock, TrendingUp, Sparkles, Loader2, Salad, Check, AlertCircle, RefreshCw } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
+import { usePatientScope } from "@/hooks/usePatientScope";
 import { useIntelligenceContext } from "@/hooks/useIntelligenceContext";
+import { computeDailyTimelineSlots } from "@/lib/timelineSchedule";
+import confetti from "canvas-confetti";
+import { toast } from "sonner";
+import { Reminder } from "@/contexts/AppContext";
 
 export function DashboardWidget() {
-  const { reminders, doseLogs } = useApp();
+  const { logDose } = useApp();
+  const { scopedReminders, scopedDoseLogs } = usePatientScope();
   const { insight, nutritionalTip, isLoading } = useIntelligenceContext();
 
-  const nextReminder = reminders
-    .filter(r => r.enabled)
-    .sort((a, b) => a.time.localeCompare(b.time))[0];
+  const { overallNextSlot } = useMemo(() => {
+    return computeDailyTimelineSlots(scopedReminders, scopedDoseLogs);
+  }, [scopedReminders, scopedDoseLogs]);
+
+  const hasReminders = scopedReminders.some((r) => r.enabled);
+  const nowMs = new Date().getTime();
+  const isOverdue = overallNextSlot ? overallNextSlot.scheduledDate.getTime() <= nowMs : false;
+
+  const handleAction = async (
+    reminder: Reminder,
+    action: "taken" | "skipped",
+    scheduledTime: string
+  ) => {
+    try {
+      await logDose({
+        reminderId: reminder.id,
+        medicineName: reminder.medicineName,
+        dose: reminder.dose,
+        scheduledTime,
+        action,
+      });
+      toast.success(action === "taken" ? "Dose logged!" : "Dose skipped.");
+    } catch {
+      toast.error("Failed to update dose");
+    }
+  };
+
+  const handleActionWithConfetti = (
+    e: React.MouseEvent,
+    reminder: Reminder,
+    action: "taken" | "skipped",
+    scheduledISO: string
+  ) => {
+    if (action === "taken") {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = (rect.left + rect.width / 2) / (window.innerWidth || 1);
+      const y = (rect.top + rect.height / 2) / (window.innerHeight || 1);
+      confetti({
+        particleCount: 30,
+        spread: 60,
+        origin: { x, y },
+        colors: ["#3b82f6", "#10b981", "#8b5cf6", "#e05c30"],
+        zIndex: 150,
+      });
+    }
+    handleAction(reminder, action, scheduledISO);
+  };
 
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
@@ -23,7 +73,7 @@ export function DashboardWidget() {
   });
 
   const dailyStatus = last7Days.map(({ dateStr, letter }) => {
-    const logsForDay = doseLogs.filter(l => new Date(l.actionTime).toDateString() === dateStr);
+    const logsForDay = scopedDoseLogs.filter(l => new Date(l.actionTime).toDateString() === dateStr);
     let status: "success" | "missed" | "none" = "none";
     if (logsForDay.length > 0) {
       const takenLogs = logsForDay.filter(l => l.action === "taken");
@@ -41,21 +91,86 @@ export function DashboardWidget() {
           <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
         </div>
         <motion.div 
-          whileHover={{ scale: 1.02 }}
+          whileHover={{ scale: 1.01 }}
           className="bg-primary/5 backdrop-blur-md border border-primary/20 rounded-[2rem] p-6 relative overflow-hidden group shadow-sm hover:shadow-primary/5 transition-all"
         >
           <div className="z-10 relative">
-            {nextReminder ? (
+            {overallNextSlot ? (
               <>
-                <div className="flex items-baseline gap-2">
-                   <p className="text-3xl font-black tracking-tighter text-foreground">{nextReminder.time}</p>
-                   <span className="text-[10px] font-black text-primary/60 uppercase tracking-widest">Upcoming</span>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-3xl font-black tracking-tighter text-foreground">{overallNextSlot.displayTime}</p>
+                    {overallNextSlot.offsetMinutes !== 0 && (
+                      <span className={`inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                        overallNextSlot.offsetMinutes > 0
+                          ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                          : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                      }`}>
+                        <RefreshCw size={8} />
+                        {overallNextSlot.offsetMinutes > 0 ? "+" : ""}{overallNextSlot.offsetMinutes}m
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                    isOverdue
+                      ? "bg-destructive/15 text-destructive border border-destructive/20"
+                      : "bg-primary text-primary-foreground shadow-xs"
+                  }`}>
+                    {isOverdue ? "Overdue" : "Next Dose"}
+                  </span>
                 </div>
+
                 <div className="flex items-center gap-2 mt-2">
-                   <Clock size={12} className="text-muted-foreground" />
-                   <p className="text-[11px] font-black text-muted-foreground uppercase tracking-tight">{nextReminder.medicineName} • {nextReminder.dose}</p>
+                  <Clock size={12} className="text-muted-foreground shrink-0" />
+                  <p className="text-[11px] font-black text-muted-foreground uppercase tracking-tight truncate">
+                    {overallNextSlot.reminder.medicineName} • {overallNextSlot.reminder.dose}
+                  </p>
+                </div>
+
+                {overallNextSlot.reminder.patientName && (
+                  <span className="inline-block text-[9px] font-bold text-primary/80 truncate max-w-full mt-0.5">
+                    For {overallNextSlot.reminder.patientName}
+                  </span>
+                )}
+
+                {/* Quick Actions (Take / Skip) */}
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-primary/10">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={(e) => handleActionWithConfetti(e, overallNextSlot.reminder, "taken", overallNextSlot.scheduledISO)}
+                    className="flex-1 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center gap-1.5 text-[11px] font-bold shadow-sm hover:bg-primary/90 transition-colors"
+                    title="Take dose"
+                    aria-label="Take dose"
+                  >
+                    <Check size={14} />
+                    <span>Take Dose</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleAction(overallNextSlot.reminder, "skipped", overallNextSlot.scheduledISO)}
+                    className="h-8 px-3 rounded-xl bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center gap-1 text-[11px] font-semibold transition-colors border border-border/40"
+                    title="Skip dose"
+                    aria-label="Skip dose"
+                  >
+                    <AlertCircle size={14} />
+                    <span>Skip</span>
+                  </motion.button>
                 </div>
               </>
+            ) : hasReminders ? (
+              <div className="flex items-center gap-3 py-1">
+                <div className="w-9 h-9 rounded-xl bg-success/15 border border-success/30 flex items-center justify-center text-success shrink-0">
+                  <Check size={18} />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-foreground">All Doses Complete</p>
+                  <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+                    All scheduled doses completed for today
+                  </p>
+                </div>
+              </div>
             ) : (
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">No Reminders</p>
             )}

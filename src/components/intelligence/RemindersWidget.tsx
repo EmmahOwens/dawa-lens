@@ -4,6 +4,7 @@ import { Clock, CheckCircle2 } from "@/lib/icons";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { isReminderScheduledOnDate } from "@/services/reminderService";
 import { parseReminderTimes } from "@/lib/dynamicSchedule";
+import { computeDailyTimelineSlots } from "@/lib/timelineSchedule";
 import { useTranslation } from "react-i18next";
 
 export function RemindersWidget() {
@@ -18,7 +19,9 @@ export function RemindersWidget() {
   }, [scopedReminders, scopedDoseLogs, now]);
 
   const activeReminders = scopedReminders.filter((r) => r.enabled);
-  const nextReminder = todayReminders.sort((a, b) => a.time.localeCompare(b.time))[0];
+  const { overallNextSlot } = useMemo(() => {
+    return computeDailyTimelineSlots(scopedReminders, scopedDoseLogs);
+  }, [scopedReminders, scopedDoseLogs]);
 
   const totalPlannedDoses = useMemo(() => {
     return todayReminders.reduce((acc, r) => acc + parseReminderTimes(r.time).length, 0);
@@ -51,9 +54,14 @@ export function RemindersWidget() {
             </div>
             <div>
               <p className="text-[12px] font-black text-foreground uppercase tracking-tight">Active Reminders</p>
-              {nextReminder ? (
-                <p className="text-[10px] font-medium text-muted-foreground mt-1 uppercase tracking-wider">
-                  Next: {nextReminder.time}
+              {overallNextSlot ? (
+                <p className="text-[10px] font-medium text-muted-foreground mt-1 uppercase tracking-wider flex items-center gap-1">
+                  <span>Next: {overallNextSlot.displayTime}</span>
+                  {overallNextSlot.offsetMinutes !== 0 && (
+                    <span className="text-[9px] font-bold text-primary">
+                      ({overallNextSlot.offsetMinutes > 0 ? "+" : ""}{overallNextSlot.offsetMinutes}m)
+                    </span>
+                  )}
                 </p>
               ) : (
                 <p className="text-[10px] font-medium text-muted-foreground mt-1 uppercase tracking-wider">
