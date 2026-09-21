@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789994792.1349912,
-    "ast_hash": "1c90aae38f5597b780461e1dc2112f5b",
+    "mtime": 1789998114.261442,
+    "ast_hash": "51effd444b2a43a3900ba5711909ae3a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -590,8 +590,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1789994580.5530455,
-    "ast_hash": "b7d8705b079c89aa97e3bebb1dc4288d",
+    "mtime": 1789998326.0886526,
+    "ast_hash": "3d03cc2f8c4ed90aef9e2117d24ca501",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -1075,8 +1075,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useAIActions.tsx": {
-    "mtime": 1789994153.3456452,
-    "ast_hash": "75f93eb25edd9fd0408d94aa32e2de29",
+    "mtime": 1789997574.4329848,
+    "ast_hash": "931b32bd1a0f67e8df1739d8631eb51b",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useDrugData.ts": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789995057.8462439,
-    "ast_hash": "9ed47913bf4e3b9da315e6f218a39625",
+    "mtime": 1789998650.8768148,
+    "ast_hash": "a696f8304dbd2523683e1898980b9bac",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -4175,8 +4175,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptAgenticActions.test.ts": {
-    "mtime": 1789994647.654258,
-    "ast_hash": "04c4e0a69cedcf4c427066425dea6393",
+    "mtime": 1789998665.517061,
+    "ast_hash": "6c53d5814a5143c813c98564b15e8631",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/AddReminderPage-oXfoM8cB.js": {

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   extractDeterministicAction,
-  generateDawaGPTResponse
+  generateDawaGPTResponse,
+  normalizeAIAction
 } from "../aiAssistantService";
 import { renderHook, act } from "@testing-library/react";
 import { useAIActions } from "@/hooks/useAIActions";
@@ -235,13 +236,26 @@ describe("DawaGPT Full-System Agentic Actions Suite", () => {
 
     it("extracts ADD_REMINDER in multi-turn conversation when user provides time answering prompt", () => {
       const history = [
-        { sender: "user" as const, text: "Remind me to take Amoxicillin" },
-        { sender: "dawagpt" as const, text: "What time would you like to take your first dose of Amoxicillin?" }
+        { id: "msg-1", role: "user" as const, sender: "user" as const, text: "Remind me to take Amoxicillin" },
+        { id: "msg-2", role: "assistant" as const, sender: "dawagpt" as const, text: "What time would you like to take your first dose of Amoxicillin?" }
       ];
       const action = extractDeterministicAction("Start at 8:00 AM", sampleMedicines, sampleReminders, samplePatients, history);
       expect(action).not.toBeNull();
       expect(action?.type).toBe("ADD_REMINDER");
       expect(action?.payload.medicineName).toBe("Amoxicillin");
+    });
+
+    it("extracts ADD_REMINDER in multi-turn conversation for Panadol starting at 17:00 (user screenshot case)", () => {
+      const history = [
+        { id: "msg-1", role: "user" as const, sender: "user" as const, text: "I need a reminder for Panadol" },
+        { id: "msg-2", role: "assistant" as const, sender: "dawagpt" as const, text: "Oli otya Ssebo Mbayo! I can help you set up a reminder for Panadol (Paracetamol). I see from your Med Vault that Panadol is prescribed as 2 tablets, 3 times a day. What time would you like to take your first dose?" }
+      ];
+      const action = extractDeterministicAction("I want to start the first dose at 17:00", sampleMedicines, sampleReminders, samplePatients, history);
+      expect(action).not.toBeNull();
+      expect(action?.type).toBe("ADD_REMINDER");
+      expect(action?.payload.medicineName).toBe("Panadol");
+      expect(action?.payload.dose).toBe("2 tablets");
+      expect(action?.payload.time).toBe("17:00,01:00,09:00");
     });
 
     it("extracts UPDATE_MEDICINE for refill requests with quantity", () => {
@@ -524,6 +538,71 @@ describe("DawaGPT Full-System Agentic Actions Suite", () => {
           }
         })
       ).rejects.toThrow('Could not find "NonExistentPillXYZ" in your cabinet');
+    });
+
+    it("dispatches flat action objects emitted by LLMs (normalizing to ADD_REMINDER)", async () => {
+      const { result } = renderHook(() => useAIActions());
+      await act(async () => {
+        await result.current.dispatchAIAction({
+          medicineName: "Panadol",
+          dose: "2 tablets",
+          time: "17:00,01:00,09:00",
+          repeatSchedule: "custom",
+          patientName: "Mbayo Emmanuel Owen"
+        } as any);
+      });
+
+      expect(mockAddReminder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          medicineName: "Panadol",
+          dose: "2 tablets",
+          time: "17:00,01:00,09:00",
+          repeatSchedule: "custom"
+        })
+      );
+      expect(mockToast).toHaveBeenCalled();
+    });
+  });
+
+  describe("4. normalizeAIAction Schema Conversion", () => {
+    it("normalizes flat action dictionary without type or payload", () => {
+      const flatAction = {
+        medicineName: "Panadol",
+        dose: "2 tablets",
+        time: "17:00,01:00,09:00",
+        repeatSchedule: "custom",
+        patientName: "Mbayo Emmanuel Owen"
+      };
+      const normalized = normalizeAIAction(flatAction);
+      expect(normalized).not.toBeNull();
+      expect(normalized?.type).toBe("ADD_REMINDER");
+      expect(normalized?.payload.medicineName).toBe("Panadol");
+      expect(normalized?.payload.time).toBe("17:00,01:00,09:00");
+    });
+
+    it("normalizes action where type is missing but payload has currentQuantity (UPDATE_MEDICINE)", () => {
+      const flatAction = {
+        name: "Panadol",
+        currentQuantity: 50
+      };
+      const normalized = normalizeAIAction(flatAction);
+      expect(normalized).not.toBeNull();
+      expect(normalized?.type).toBe("UPDATE_MEDICINE");
+      expect(normalized?.payload.name).toBe("Panadol");
+      expect(normalized?.payload.currentQuantity).toBe(50);
+    });
+
+    it("leaves already standard action unchanged", () => {
+      const standardAction = {
+        type: "ADD_REMINDER" as const,
+        payload: {
+          medicineName: "Panadol",
+          dose: "2 tablets",
+          time: "08:00"
+        }
+      };
+      const normalized = normalizeAIAction(standardAction);
+      expect(normalized).toEqual(standardAction);
     });
   });
 });

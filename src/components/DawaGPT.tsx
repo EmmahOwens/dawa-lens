@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
-import { ChatMessage, chatWithDawaGPTStream, resolveHonorific, extractDeterministicAction } from "@/services/aiAssistantService";
+import { ChatMessage, chatWithDawaGPTStream, resolveHonorific, extractDeterministicAction, normalizeAIAction } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { calculateVitalitySummary } from "@/lib/vitalityUtils";
@@ -533,9 +533,27 @@ export default function DawaGPT() {
         msg.id === botId ? response : msg
       ));
 
-      if (response.action) {
+      const normalizedAction = normalizeAIAction(response.action);
+      const isPastTenseClaim = response.text &&
+        /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved|refilled|discontinued)\b/i.test(response.text);
+
+      let effectiveAction = normalizedAction;
+      if (!effectiveAction) {
+        const fromUserText = extractDeterministicAction(text, allMedicines, allReminders, patients, [...history, userMsg]);
+        if (fromUserText) {
+          effectiveAction = normalizeAIAction(fromUserText);
+        }
+      }
+      if (!effectiveAction && response.text) {
+        const fromAiText = extractDeterministicAction(response.text, allMedicines, allReminders, patients, [...history, userMsg]);
+        if (fromAiText) {
+          effectiveAction = normalizeAIAction(fromAiText);
+        }
+      }
+
+      if (effectiveAction) {
         try {
-          await dispatchAIAction(response.action);
+          await dispatchAIAction(effectiveAction);
           // Visually confirm the action was performed — no text change needed (toast handles it)
           setActionMissingBotId(null);
         } catch (actionErr: any) {
@@ -556,33 +574,9 @@ export default function DawaGPT() {
           retryUserTextRef.current = text;
           setActionMissingBotId(botId);
         }
-      } else if (
-        response.text &&
-        /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved|refilled|discontinued)\b/i.test(response.text)
-      ) {
-        // Attempt immediate local recovery using multi-turn deterministic extraction
-        const localExtracted = extractDeterministicAction(text, allMedicines, allReminders, patients, [...history, userMsg]);
-        if (localExtracted) {
-          try {
-            await dispatchAIAction(localExtracted);
-            setActionMissingBotId(null);
-          } catch (dispatchErr: any) {
-            const errDetail = dispatchErr?.message || "Action failed during execution.";
-            setMessages(prev => prev.map(msg =>
-              msg.id === botId
-                ? {
-                    ...msg,
-                    text: `${msg.text}\n\n⚠️ **Action failed**: ${errDetail}\n\nYou can perform this manually in [My Medications](/medications) or [Med Vault](/medvault).`,
-                    source: "System" as const,
-                  }
-                : msg
-            ));
-            retryUserTextRef.current = text;
-            setActionMissingBotId(botId);
-          }
-        } else {
-          // Neither LLM nor local extractor produced an action, but LLM text claimed success.
-          // Update the message so DawaGPT is truthful and does not deceive the user!
+      } else if (isPastTenseClaim) {
+        // Neither LLM nor local extractor produced an action, but LLM text claimed success.
+        // Update the message so DawaGPT is truthful and does not deceive the user!
           console.warn(
             "[DawaGPT] ⚠️ AI claimed an action but returned no action object and local extraction found none.",
             response.text.slice(0, 200)
@@ -596,10 +590,9 @@ export default function DawaGPT() {
                 }
               : msg
           ));
-          // Store the original user text so the retry button can re-send it
-          retryUserTextRef.current = text;
-          setActionMissingBotId(botId);
-        }
+        // Store the original user text so the retry button can re-send it
+        retryUserTextRef.current = text;
+        setActionMissingBotId(botId);
       }
 
     } catch (e: any) {

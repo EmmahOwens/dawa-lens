@@ -46,6 +46,80 @@ export interface AIAction {
   requiresConfirmation?: boolean;
 }
 
+/**
+ * Normalizes an AI action into standard { type, payload, confirmMessage } format.
+ * Infers missing 'type' and unwraps root-level properties into 'payload'
+ * when smaller or alternative LLMs emit unnested action objects.
+ */
+export function normalizeAIAction(rawAction: any): AIAction | null {
+  if (!rawAction || typeof rawAction !== "object") return null;
+
+  let type: AIActionType = rawAction.type || null;
+  let payload: Record<string, any>;
+
+  if (rawAction.payload && typeof rawAction.payload === "object" && !Array.isArray(rawAction.payload)) {
+    payload = { ...rawAction.payload };
+  } else if (rawAction.data && typeof rawAction.data === "object" && !Array.isArray(rawAction.data)) {
+    payload = { ...rawAction.data };
+  } else {
+    payload = { ...rawAction };
+  }
+
+  delete payload.type;
+  delete payload.confirmMessage;
+  delete payload.requiresConfirmation;
+
+  const timeVal = payload.time || payload.times || payload.reminderTime;
+  const medNameVal = payload.medicineName || payload.name || payload.medication;
+  if (!payload.medicineName && medNameVal) payload.medicineName = medNameVal;
+  if (!payload.time && timeVal) payload.time = timeVal;
+  if (payload.currentQuantity === undefined) {
+    if (payload.quantity !== undefined) payload.currentQuantity = payload.quantity;
+    else if (payload.stock !== undefined) payload.currentQuantity = payload.stock;
+  }
+
+  // Infer missing action type based on recognized field signatures
+  if (!type) {
+    if (payload.time && (payload.medicineName || payload.medicineId || payload.dose)) {
+      type = "ADD_REMINDER";
+    } else if (payload.currentQuantity !== undefined) {
+      type = "UPDATE_MEDICINE";
+    } else if (payload.targetRoute) {
+      type = "NAVIGATE_PAGE";
+    } else if (payload.snoozeMinutes !== undefined) {
+      type = "SNOOZE_REMINDER";
+    } else if (payload.status === "taken" || payload.status === "missed" || payload.scheduledTime || payload.action === "taken" || payload.action === "skipped") {
+      type = "LOG_DOSE";
+    } else if (payload.mood !== undefined || payload.energy !== undefined || payload.symptoms || payload.aiReflection) {
+      type = "LOG_WELLNESS";
+    } else if (payload.patientName && (payload.relation || payload.age || payload.gender || payload.dateOfBirth)) {
+      type = "ADD_PATIENT";
+    } else if (payload.patientId !== undefined || (payload.patientName !== undefined && !payload.dose && !payload.time && !payload.dosage)) {
+      type = "SWITCH_PATIENT_SCOPE";
+    } else if ((payload.name || payload.medicineName) && (payload.dosage || payload.dosagePerDose || payload.unit)) {
+      type = "ADD_MEDICINE";
+    }
+  }
+
+  if (!payload.name && (type === "ADD_MEDICINE" || type === "UPDATE_MEDICINE" || type === "REMOVE_MEDICINE") && medNameVal) {
+    payload.name = medNameVal;
+  }
+
+  if (!type) return null;
+
+  const normalized: AIAction = {
+    type,
+    payload
+  };
+  if (rawAction.confirmMessage !== undefined) {
+    normalized.confirmMessage = rawAction.confirmMessage;
+  }
+  if (rawAction.requiresConfirmation !== undefined) {
+    normalized.requiresConfirmation = rawAction.requiresConfirmation;
+  }
+  return normalized;
+}
+
 export type ChatMessageSource =
   | "NDA"
   | "ANDA"
@@ -160,20 +234,29 @@ export function formatTimeDisplay(timeStr?: string): string {
   return `${h}:${m} ${ampm}`;
 }
 
+export type ChatHistoryItem = ChatMessage | {
+  id?: string;
+  role?: "user" | "assistant" | string;
+  sender?: "user" | "dawagpt" | "assistant" | string;
+  text?: string;
+  content?: string;
+  [key: string]: any;
+};
+
 export const extractDeterministicAction = (
   text: string,
   medicines: Medicine[] = [],
   reminders: Reminder[] = [],
   patients: Patient[] = [],
-  history: ChatMessage[] = []
+  history: ChatHistoryItem[] = []
 ): AIAction | null => {
   if (!text) return null;
   const lower = text.toLowerCase().trim();
 
   // Multi-turn synthesis if text is short (<100 chars) and answering a previous question
   let effectiveText = lower;
-  if (Array.isArray(history) && history.length >= 2) {
-    const isAssistant = (m: any) => m.role === "assistant" || m.sender === "dawagpt";
+  if (Array.isArray(history) && history.length >= 1) {
+    const isAssistant = (m: any) => m && (m.role === "assistant" || m.sender === "dawagpt" || m.sender === "assistant");
     const isUser = (m: any) => m.role === "user" || m.sender === "user";
     const getMsgText = (m: any) => String(m.text || m.content || "").trim();
 
@@ -192,6 +275,8 @@ export const extractDeterministicAction = (
 
     if (prevAssistant && originalUser) {
       effectiveText = `${getMsgText(originalUser)} ${getMsgText(prevAssistant)} ${lower}`.toLowerCase().trim();
+    } else if (prevAssistant) {
+      effectiveText = `${getMsgText(prevAssistant)} ${lower}`.toLowerCase().trim();
     } else if (originalUser) {
       effectiveText = `${getMsgText(originalUser)} ${lower}`.toLowerCase().trim();
     }
@@ -393,7 +478,7 @@ export const extractDeterministicAction = (
   }
 
   // 12. ADD_REMINDER
-  const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(effectiveText);
+  const isReminderIntent = /\b(remind(\s+me)?|set(\s*up)?(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for|reminder\s+schedule|medication\s+reminder|reminders?\b)/i.test(effectiveText);
   if (isReminderIntent) {
     const timeMatch = lower.match(/\b(?:at\s+|start\s+at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i) ||
                       effectiveText.match(/\b(?:at\s+|start\s+at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
@@ -1829,29 +1914,33 @@ export const chatWithDawaGPT = async (
     });
 
     const rawText = response.text || "";
-    // Clean up any stray metadata markers or suggestion tags if they exist
-    const cleanText = sanitizeMarkdownLinks(rawText
+    // Clean up any stray metadata markers, suggestion tags, or leaked JSON if they exist
+    let cleanText = sanitizeMarkdownLinks(rawText
       .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
-      .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
+      .replace(/\n\s*\{\s*"(?:text|message|response|suggestions|source|action)"[\s\S]*\}\s*$/i, '')
       .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
       .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
       .trim());
 
-    const rawAction = response.action as any;
-    let actionObj = rawAction ? {
-      ...rawAction,
-      // Bug fix: only use action.payload or action.data; do NOT fall back to the full action
-      // object itself, which would inject type/confirmMessage into the payload and corrupt dispatchers.
-      payload: rawAction.payload || rawAction.data || {}
-    } : undefined;
+    if (!cleanText && typeof rawText === 'string') {
+      try {
+        const parsed = JSON.parse(rawText.trim());
+        if (parsed?.text) cleanText = parsed.text;
+      } catch (_) {}
+    }
+
+    let actionObj = normalizeAIAction(response.action);
 
     const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
     const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.text || '';
 
     if (!actionObj?.type) {
-      const fallbackAction = extractDeterministicAction(lastUserQuery, medicines, reminders, patients, messages);
+      let fallbackAction = extractDeterministicAction(lastUserQuery, medicines, reminders, patients, messages);
+      if (!fallbackAction && cleanText) {
+        fallbackAction = extractDeterministicAction(cleanText, medicines, reminders, patients, messages);
+      }
       if (fallbackAction) {
-        actionObj = fallbackAction as any;
+        actionObj = normalizeAIAction(fallbackAction);
       }
     }
 
@@ -1970,6 +2059,11 @@ export const chatWithDawaGPTStream = async (
             } else {
               // Guard against partial delimiter at the tail during active streaming
               rawVisibleText = allText.replace(/(?:###|---|###\s*META?D?A?T?A?)\s*$/i, '');
+              // Also guard against trailing JSON block being streamed into visible text
+              const trailingJsonIdx = rawVisibleText.search(/\n\s*\{\s*"(?:text|message|response|suggestions|source|action)"/i);
+              if (trailingJsonIdx !== -1) {
+                rawVisibleText = rawVisibleText.substring(0, trailingJsonIdx);
+              }
             }
             const visibleText = rawVisibleText
               .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
@@ -1992,6 +2086,7 @@ export const chatWithDawaGPTStream = async (
     if (delimMatch && delimMatch.index !== undefined) {
       displayText = sanitizeMarkdownLinks(allText.substring(0, delimMatch.index)
         .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+        .replace(/\n\s*\{\s*"(?:text|message|response|suggestions|source|action)"[\s\S]*\}\s*$/i, '')
         .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
         .trim());
       rawMetadata = allText.substring(delimMatch.index + delimMatch[0].length).trim();
@@ -2003,12 +2098,16 @@ export const chatWithDawaGPTStream = async (
         try {
           const candidate = JSON.parse(trailingJsonMatch[1]);
           // Only use it as metadata if it has the expected shape
-          if (candidate && (candidate.suggestions || candidate.action || candidate.source)) {
+          if (candidate && (candidate.suggestions || candidate.action || candidate.source || candidate.text)) {
             rawMetadata = trailingJsonMatch[1];
             displayText = allText.substring(0, trailingJsonMatch.index)
               .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+              .replace(/\n\s*\{\s*"(?:text|message|response|suggestions|source|action)"[\s\S]*\}\s*$/i, '')
               .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
               .trim();
+            if (!displayText && candidate.text) {
+              displayText = candidate.text;
+            }
           } else {
             displayText = allText.replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '').trim();
           }
@@ -2036,14 +2135,7 @@ export const chatWithDawaGPTStream = async (
         const sanitizedRaw = rawMetadata.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
         metadata = JSON.parse(sanitizedRaw);
         if (metadata.action) {
-          const rawAction = metadata.action as any;
-          if (!rawAction.payload && rawAction.data) {
-            rawAction.payload = rawAction.data;
-          }
-          // Ensure payload is always an object, never undefined
-          if (!rawAction.payload) {
-            rawAction.payload = {};
-          }
+          metadata.action = normalizeAIAction(metadata.action) || undefined;
         }
       } catch (e) {
         console.warn('Failed to parse stream metadata JSON', e);
@@ -2054,29 +2146,40 @@ export const chatWithDawaGPTStream = async (
     const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
     const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.text || '';
 
-    // If metadata action is missing from server stream, attempt local deterministic fallback
-    const localAction = !metadata.action?.type
-      ? extractDeterministicAction(lastUserQuery, medicines, reminders, patients, messages)
-      : undefined;
-    const resolvedAction = metadata.action?.type ? metadata.action : (localAction || undefined);
+    // If metadata action is missing or malformed from server stream, attempt local deterministic fallback
+    let candidateAction = normalizeAIAction(metadata.action);
+    if (!candidateAction) {
+      let fallback = extractDeterministicAction(lastUserQuery, medicines, reminders, patients, messages);
+      if (!fallback && fullText) {
+        fallback = extractDeterministicAction(fullText, medicines, reminders, patients, messages);
+      }
+      if (fallback) {
+        candidateAction = normalizeAIAction(fallback);
+      }
+    }
+    const resolvedAction = candidateAction || undefined;
 
     // If the stream completed with a connection failure or empty text, attempt offline clinical response
     if (!fullText || fullText.includes("trouble connecting") || fullText.includes("trouble processing that request") || fullText.includes("Error starting chat stream")) {
       console.warn("[DawaGPT] Streaming delivered connection error. Attempting local clinical fallback.");
-      if (localAction) {
-        const offlineResp = await generateDawaGPTResponse(
-          lastUserQuery,
-          null,
-          userProfile,
-          medicines,
-          doseLogs,
-          reminders,
-          patients,
-          selectedPatientId,
-          currentPage
-        );
-        onChunk(offlineResp.text);
-        return offlineResp;
+      if (resolvedAction) {
+        try {
+          const offlineResp = await generateDawaGPTResponse(
+            lastUserQuery,
+            null,
+            userProfile,
+            medicines,
+            doseLogs,
+            reminders,
+            patients,
+            selectedPatientId,
+            currentPage
+          );
+          onChunk(offlineResp.text);
+          return offlineResp;
+        } catch (localErr) {
+          console.warn("[DawaGPT] Offline action generation failed:", localErr);
+        }
       }
 
       const serviceDownMsg = "⚠️ DawaGPT's AI service is temporarily unavailable. Our backend AI providers are being restored. Please try again in a few minutes.\n\nFor urgent health questions, call the **Uganda National Drug Authority (NDA)** toll-free: **0800 101 999** (WhatsApp: **+256 791 415 555**) or **Mental Health Support**: **0800 200 600**.";

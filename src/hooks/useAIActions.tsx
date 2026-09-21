@@ -1,6 +1,6 @@
 import { useApp, Medicine, Patient, Reminder } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
-import { AIAction } from "@/services/aiAssistantService";
+import { AIAction, normalizeAIAction } from "@/services/aiAssistantService";
 import { RiveMoji } from "@/components/rive/RiveMoji";
 import { useNavigate } from "react-router-dom";
 import React from "react";
@@ -69,6 +69,8 @@ export function normalizeTimeStr(timeStr: string): string {
     })
     .join(",");
 }
+
+export { normalizeAIAction };
 
 export function useAIActions() {
   const { 
@@ -186,13 +188,18 @@ export function useAIActions() {
   };
 
   const dispatchAIAction = async (action: AIAction) => {
-    const rawAction = action as any;
-    const actionType = action.type;
-    const payload = (action.payload || rawAction?.data) as any;
-    if (!actionType || !payload) return;
+    const normalized = normalizeAIAction(action);
+    if (!normalized || !normalized.type) {
+      console.warn("[useAIActions] Invalid or unresolvable action passed to dispatchAIAction:", action);
+      return;
+    }
+
+    const actionType = normalized.type;
+    const payload = normalized.payload as any;
+    const confirmMessage = normalized.confirmMessage;
 
     try {
-      switch (action.type) {
+      switch (actionType) {
         case "ADD_MEDICINE": {
           if (!payload?.name) {
             throw new Error("Medicine name is required");

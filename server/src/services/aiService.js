@@ -1575,12 +1575,12 @@ export const isLikelyActionRequest = (text, messagesContext = []) => {
   if (!text) return false;
   const lower = text.toLowerCase().trim();
 
-  // Multi-turn check: if user's response is short (<50 chars) and answering a previous assistant question about time, dose, medicine, stock, or profile
-  if (Array.isArray(messagesContext) && messagesContext.length >= 2 && lower.length < 50) {
-    const prevAssistantMsg = messagesContext.filter(m => m.role === 'assistant').pop();
+  // Multi-turn check: if user's response is answering a previous assistant question about time, dose, medicine, stock, or profile
+  if (Array.isArray(messagesContext) && messagesContext.length >= 1) {
+    const prevAssistantMsg = messagesContext.filter(m => m && (m.role === 'assistant' || m.sender === 'dawagpt' || m.sender === 'assistant')).pop();
     const prevText = (prevAssistantMsg?.text || prevAssistantMsg?.content || '').toLowerCase();
     const asksAboutActionParam = /\b(what time|starting time|first dose|what dose|what dosage|how many|times a day|when would you|schedule|refill|which patient|which member|what medicine)\b/i.test(prevText);
-    const answersParam = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d+\s*(?:pills?|tablets?|capsules?|mg|ml)?|daily|twice|thrice|morning|evening|night|yes|please|add it|do it)\b/i.test(lower);
+    const answersParam = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d{1,2}:\d{2}|\d+\s*(?:pills?|tablets?|capsules?|mg|ml)?|daily|twice|thrice|morning|evening|night|yes|please|add it|do it)\b/i.test(lower);
     if (asksAboutActionParam && answersParam) {
       return true;
     }
@@ -1765,11 +1765,11 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
     // For clear, unambiguous action requests (set reminder, log dose, refill stock),
     // return the action immediately without burning an LLM API call.
     // This guarantees the action object is always present for these simple cases.
-    const deterministicAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || []);
+    const deterministicAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
     if (deterministicAction) {
       const targetPatientForFallback = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
       // Use generateBackendClinicalFallback to get a nicely formatted confirmation message
-      const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatientForFallback);
+      const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatientForFallback, currentPage, patients || [], messages || []);
       // Only use the deterministic path if the fallback actually matched and returned an action
       if (fallbackResp && fallbackResp.action) {
         return fallbackResp;
@@ -1804,7 +1804,7 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
       } catch (textErr) {
         console.warn("All AI providers failed in chatWithDawaGPT, activating local clinical fallback:", textErr.message);
         const targetPatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
-        return generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage);
+        return generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage, patients || [], messages || []);
       }
     }
 
@@ -1815,12 +1815,29 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
     if (result && typeof result === 'object') {
       result.text = result.text || result.message || result.response || result.advice || "";
       if (typeof result.text === 'string') {
-        result.text = sanitizeMarkdownLinks(result.text
+        let clean = sanitizeMarkdownLinks(result.text
           .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
-          .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
+          .replace(/\n\s*\{\s*"(?:text|message|response|suggestions|source|action)"[\s\S]*\}\s*$/i, '')
           .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
           .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
           .trim());
+        if (!clean) {
+          try {
+            const parsed = JSON.parse(result.text.trim());
+            if (parsed && parsed.text) clean = parsed.text;
+          } catch (_) {}
+        }
+        result.text = clean || result.text;
+      }
+      result.action = normalizeAIAction(result.action);
+      if (!result.action) {
+        let fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
+        if (!fallbackAction && result.text) {
+          fallbackAction = extractDeterministicAction(result.text, medicines || [], reminders || [], patients || [], messages || []);
+        }
+        if (fallbackAction) {
+          result.action = normalizeAIAction(fallbackAction);
+        }
       }
       result.suggestions = generateContextualSuggestions({
         messages,
@@ -1834,36 +1851,37 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
         action: result.action,
         existingSuggestions: Array.isArray(result.suggestions) ? result.suggestions : []
       });
-      if (!result.action) {
-        const fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || []);
-        if (fallbackAction) {
-          result.action = fallbackAction;
-        }
-      }
       result.action = result.action || null;
     } else if (typeof result === 'string') {
-      const cleanText = sanitizeMarkdownLinks(result
+      let cleanText = sanitizeMarkdownLinks(result
         .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
-        .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
+        .replace(/\n\s*\{\s*"(?:text|message|response|suggestions|source|action)"[\s\S]*\}\s*$/i, '')
         .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
         .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
         .trim());
-      const fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || []);
+      if (!cleanText) {
+        try {
+          const parsed = JSON.parse(result.trim());
+          if (parsed && parsed.text) cleanText = parsed.text;
+        } catch (_) {}
+      }
+      const fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
+      const normFallback = normalizeAIAction(fallbackAction);
       result = {
-        text: cleanText,
+        text: cleanText || result,
         suggestions: generateContextualSuggestions({
           messages,
           userQuery: lastUserMsg,
-          assistantText: cleanText,
+          assistantText: cleanText || result,
           medicines,
           reminders,
           userProfile,
           activePatient: targetPatient,
           currentPage,
-          action: fallbackAction || null
+          action: normFallback || null
         }),
         source: "AI Fallback",
-        action: fallbackAction || null
+        action: normFallback || null
       };
     }
 
@@ -1961,14 +1979,88 @@ export function formatTimeDisplay(timeStr) {
   return `${h}:${m} ${ampm}`;
 }
 
+/**
+ * Normalizes an AI action into standard { type, payload, confirmMessage } format.
+ * Infers missing 'type' and unwraps root-level properties into 'payload'
+ * when smaller or alternative LLMs emit unnested action objects.
+ */
+export const normalizeAIAction = (rawAction) => {
+  if (!rawAction || typeof rawAction !== "object") return null;
+
+  let type = rawAction.type || null;
+  let payload;
+
+  if (rawAction.payload && typeof rawAction.payload === "object" && !Array.isArray(rawAction.payload)) {
+    payload = { ...rawAction.payload };
+  } else if (rawAction.data && typeof rawAction.data === "object" && !Array.isArray(rawAction.data)) {
+    payload = { ...rawAction.data };
+  } else {
+    payload = { ...rawAction };
+  }
+
+  delete payload.type;
+  delete payload.confirmMessage;
+  delete payload.requiresConfirmation;
+
+  const timeVal = payload.time || payload.times || payload.reminderTime;
+  const medNameVal = payload.medicineName || payload.name || payload.medication;
+  if (!payload.medicineName && medNameVal) payload.medicineName = medNameVal;
+  if (!payload.time && timeVal) payload.time = timeVal;
+  if (payload.currentQuantity === undefined) {
+    if (payload.quantity !== undefined) payload.currentQuantity = payload.quantity;
+    else if (payload.stock !== undefined) payload.currentQuantity = payload.stock;
+  }
+
+  // Infer missing action type based on recognized field signatures
+  if (!type) {
+    if (payload.time && (payload.medicineName || payload.medicineId || payload.dose)) {
+      type = "ADD_REMINDER";
+    } else if (payload.currentQuantity !== undefined) {
+      type = "UPDATE_MEDICINE";
+    } else if (payload.targetRoute) {
+      type = "NAVIGATE_PAGE";
+    } else if (payload.snoozeMinutes !== undefined) {
+      type = "SNOOZE_REMINDER";
+    } else if (payload.status === "taken" || payload.status === "missed" || payload.scheduledTime || payload.action === "taken" || payload.action === "skipped") {
+      type = "LOG_DOSE";
+    } else if (payload.mood !== undefined || payload.energy !== undefined || payload.symptoms || payload.aiReflection) {
+      type = "LOG_WELLNESS";
+    } else if (payload.patientName && (payload.relation || payload.age || payload.gender || payload.dateOfBirth)) {
+      type = "ADD_PATIENT";
+    } else if (payload.patientId !== undefined || (payload.patientName !== undefined && !payload.dose && !payload.time && !payload.dosage)) {
+      type = "SWITCH_PATIENT_SCOPE";
+    } else if ((payload.name || payload.medicineName) && (payload.dosage || payload.dosagePerDose || payload.unit)) {
+      type = "ADD_MEDICINE";
+    }
+  }
+
+  if (!payload.name && (type === "ADD_MEDICINE" || type === "UPDATE_MEDICINE" || type === "REMOVE_MEDICINE") && medNameVal) {
+    payload.name = medNameVal;
+  }
+
+  if (!type) return null;
+
+  const normalized = {
+    type,
+    payload
+  };
+  if (rawAction.confirmMessage !== undefined) {
+    normalized.confirmMessage = rawAction.confirmMessage;
+  }
+  if (rawAction.requiresConfirmation !== undefined) {
+    normalized.requiresConfirmation = rawAction.requiresConfirmation;
+  }
+  return normalized;
+};
+
 export const extractDeterministicAction = (text, medicines = [], reminders = [], patients = [], history = []) => {
   if (!text) return null;
   const lower = text.toLowerCase().trim();
 
   // Multi-turn synthesis if text is short (<100 chars) and answering a previous assistant prompt
   let effectiveText = lower;
-  if (Array.isArray(history) && history.length >= 2) {
-    const isAssistant = (m) => m && (m.role === "assistant" || m.sender === "dawagpt");
+  if (Array.isArray(history) && history.length >= 1) {
+    const isAssistant = (m) => m && (m.role === "assistant" || m.sender === "dawagpt" || m.sender === "assistant");
     const isUser = (m) => m && (m.role === "user" || m.sender === "user");
     const getMsgText = (m) => String(m.text || m.content || "").trim();
 
@@ -1987,6 +2079,8 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
 
     if (prevAssistant && originalUser) {
       effectiveText = `${getMsgText(originalUser)} ${getMsgText(prevAssistant)} ${lower}`.toLowerCase().trim();
+    } else if (prevAssistant) {
+      effectiveText = `${getMsgText(prevAssistant)} ${lower}`.toLowerCase().trim();
     } else if (originalUser) {
       effectiveText = `${getMsgText(originalUser)} ${lower}`.toLowerCase().trim();
     }
@@ -2188,7 +2282,7 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
   }
 
   // 12. ADD_REMINDER
-  const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(effectiveText);
+  const isReminderIntent = /\b(remind(\s+me)?|set(\s*up)?(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for|reminder\s+schedule|medication\s+reminder|reminders?\b)/i.test(effectiveText);
   if (isReminderIntent) {
     const timeMatch = lower.match(/\b(?:at\s+|start\s+at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i) ||
                       effectiveText.match(/\b(?:at\s+|start\s+at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
@@ -2548,7 +2642,7 @@ export function extractWellnessData(text) {
  * Provides domain-specific, clinically accurate responses and action dispatching
  * when cloud AI APIs are cold-starting, offline, rate-limited, or lack external API keys.
  */
-export function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null, targetPatient = null, currentPage = null) {
+export function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null, targetPatient = null, currentPage = null, patients = [], messages = []) {
   const norm = (lastUserMsg || '').toLowerCase().trim();
   const activeGender = targetPatient?.gender || userProfile?.gender;
   const gender = activeGender?.toLowerCase();
@@ -2561,7 +2655,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
   }
 
   // 2. Deterministic Action Dispatching (All full-system agentic actions)
-  const action = extractDeterministicAction(norm, medicines, reminders);
+  const action = normalizeAIAction(extractDeterministicAction(norm, medicines, reminders, patients, messages));
   if (action) {
     if (action.type === "ADD_MEDICINE") {
       const remText = action.payload.reminderSchedule ? ` Companion reminder set for **${formatTimeDisplay(action.payload.reminderSchedule.time)}**.` : "";
@@ -2927,9 +3021,9 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     const isComplex = isComplexTask(lastUserMsg);
 
     // Fast-path: Instant (<20ms) execution for clear deterministic action requests
-    const deterministicAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || []);
+    const deterministicAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
     if (deterministicAction) {
-      const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage);
+      const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage, patients || [], messages || []);
       if (fallbackResp && fallbackResp.action) {
         return createFakeStream(fallbackResp);
       }
@@ -2967,26 +3061,34 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       return new Readable({
         read() {
           const rawText = jsonResp.text || "";
-          const cleanText = sanitizeMarkdownLinks(rawText
+          let cleanText = sanitizeMarkdownLinks(rawText
             .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
-            .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
+            .replace(/\n\s*\{\s*"(?:text|message|response|suggestions|source|action)"[\s\S]*\}\s*$/i, '')
             .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
             .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
             .trim());
 
-          let candidateAction = jsonResp.action;
+          if (!cleanText && rawText) {
+            try {
+              const parsed = JSON.parse(rawText.trim());
+              if (parsed && (parsed.text || parsed.message || parsed.response)) {
+                cleanText = sanitizeMarkdownLinks((parsed.text || parsed.message || parsed.response).trim());
+              }
+            } catch (_) {}
+          }
+
+          let candidateAction = normalizeAIAction(jsonResp.action);
           if (!candidateAction) {
-            const fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || []);
+            let fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
+            if (!fallbackAction && cleanText) {
+              fallbackAction = extractDeterministicAction(cleanText, medicines || [], reminders || [], patients || [], messages || []);
+            }
             if (fallbackAction) {
-              candidateAction = fallbackAction;
+              candidateAction = normalizeAIAction(fallbackAction);
             }
           }
 
-          const normalizedAction = candidateAction ? {
-            type: candidateAction.type,
-            payload: candidateAction.payload || candidateAction.data || {},
-            confirmMessage: candidateAction.confirmMessage
-          } : null;
+          const normalizedAction = candidateAction || null;
           const enrichedSuggestions = generateContextualSuggestions({
             messages,
             userQuery: lastUserMsg,
@@ -3263,7 +3365,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       console.warn("Stream Fallback: Unified AI API fallback cascade also failed:", unifiedCascadeErr.response?.data?.error?.message || unifiedCascadeErr.response?.data || unifiedCascadeErr.message);
     }
 
-    const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage);
+    const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage, patients || [], messages || []);
     return createFakeStream(fallbackResp);
   } catch (err) {
     return new Readable({
@@ -3681,11 +3783,13 @@ ${getFoodKnowledgePrompt()}
   1. PERFORM ACTIONS IMMEDIATELY: When the user asks to add, update, delete, log, or refill ANYTHING, include a populated 'action' object in your response. Never say "I'll do that" or ask permission if info is sufficient.
   2. NEVER LIE / CRITICAL ACTION RULE: If your response text uses past tense confirmation ("I've added", "I have logged", "I've set up", "I have updated", "Refilled", "Recorded", "Done!"), you MUST include the populated 'action' JSON object in your response. If you cannot produce the action object or information is missing, you MUST NOT use past tense — ask for the missing details in the present tense instead.
   3. FIRST ATTEMPT SUCCESS: Execute on first request without asking for confirmation if basic parameters are provided.
+  4. EMIT ACTIONS ON MULTI-TURN CONFIRMATION: When the user supplies the starting time, dosage, or parameter that you previously asked for (e.g. user says "at 17:00" or "start at 5pm"), you MUST immediately emit the complete 'action' object (e.g. ADD_REMINDER) with the configured parameters. Do not just verbally acknowledge without the action!
 - ACTION SCHEMAS:
-  * ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, frequencyPerDay?, patientId?, patientName? }
-  * UPDATE_MEDICINE: { id?, name, currentQuantity?, totalQuantity?, dosage?, notes?, dosagePerDose?, frequencyPerDay?, unit?, patientId? } -> Use this whenever user wants to edit a medicine OR refill/update stock in Med Vault (e.g. { name: "Panadol", currentQuantity: 50 }).
-  * REMOVE_MEDICINE: { id?, name } -> Remove a medicine from the user's cabinet.
-  * ADD_REMINDER: { medicineName, dose, time, repeatSchedule: "daily"|"weekly"|"custom", patientId?, patientName?, medicineId? } -> time MUST be comma-separated HH:mm (e.g. "08:00,20:00").
+  * STRUCTURE: Every action MUST be an object with "type" and "payload": { "type": "<ACTION_NAME>", "payload": { ... } }.
+  * ADD_MEDICINE: { "type": "ADD_MEDICINE", "payload": { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, frequencyPerDay?, patientId?, patientName? } }
+  * UPDATE_MEDICINE: { "type": "UPDATE_MEDICINE", "payload": { id?, name, currentQuantity?, totalQuantity?, dosage?, notes?, dosagePerDose?, frequencyPerDay?, unit?, patientId? } } -> Use this whenever user wants to edit a medicine OR refill/update stock in Med Vault (e.g. { name: "Panadol", currentQuantity: 50 }).
+  * REMOVE_MEDICINE: { "type": "REMOVE_MEDICINE", "payload": { id?, name } } -> Remove a medicine from the user's cabinet.
+  * ADD_REMINDER: { "type": "ADD_REMINDER", "payload": { medicineName, dose, time, repeatSchedule: "daily"|"weekly"|"custom", patientId?, patientName?, medicineId? } } -> time MUST be comma-separated HH:mm (e.g. "08:00,20:00").
     - MED VAULT / MEDICATIONS REGIMEN LOOKUP (MANDATORY):
       1. Check the user's Med Vault / active medications list in context for the requested medicine.
       2. IF THE MEDICATION EXISTS IN THE SYSTEM:
@@ -3822,8 +3926,12 @@ Write your response in Markdown text first, then on a new line append EXACTLY:
 {"suggestions":["s1","s2","s3"],"source":"DawaGPT","action":null}
 - Do NOT output "---" or dividers before ###METADATA###.
 - The user must NEVER see ###METADATA### or JSON in the chat output.
-- action must be a populated object if you performed an action, or null if informational.` : `=== RESPONSE FORMAT ===
-Respond in JSON: {"text":"...","suggestions":["s1","s2","s3"],"source":"DawaGPT","action":null}`}
+- ACTION STRUCTURE: If performing an action, action MUST have "type" and "payload":
+  e.g. {"suggestions":["s1","s2","s3"],"source":"DawaGPT","action":{"type":"ADD_REMINDER","payload":{"medicineName":"Panadol","dose":"2 tablets","time":"17:00,01:00,09:00","repeatSchedule":"custom"}}}` : `=== RESPONSE FORMAT ===
+Respond in EXACT JSON:
+{"text":"...","suggestions":["s1","s2","s3"],"source":"DawaGPT","action":null}
+- ACTION STRUCTURE: If performing an action, action MUST have "type" and "payload":
+  e.g. {"text":"...","suggestions":["..."],"source":"DawaGPT","action":{"type":"ADD_REMINDER","payload":{"medicineName":"Panadol","dose":"2 tablets","time":"17:00,01:00,09:00","repeatSchedule":"custom"}}}`}
 `;
 
   const activePatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
