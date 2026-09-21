@@ -19,7 +19,7 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
   // ── AFRICA ──────────────────────────────────────────────────────────────────
   uganda: {
     authority: 'National Drug Authority (NDA)',
-    number: '0800 101 622',
+    number: '0800 101 999',
     website: 'https://www.nda.or.ug',
     ambulance: '112 / 999',
     ambulanceService: 'National Emergency & Ambulance Service',

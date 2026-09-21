@@ -101,15 +101,14 @@ const contextOutput = await prepareDawaGPTContext({
 assert(contextOutput.finalMessages.length >= 15, `Context window should preserve at least 15 messages, got ${contextOutput.finalMessages.length}`);
 console.log(`✔ Context window retains multi-turn history (${contextOutput.finalMessages.length} messages) for thinking models.`);
 
-// 7. Test Uganda Contact Support & Emergency Directory in DawaGPT
-console.log("\n7. Verifying Uganda Contact Support & Emergency Directory in DawaGPT...");
+// 7. Test Uganda Support Directory in DawaGPT
+console.log("\n7. Verifying Uganda Support Directory (NDA & Mental Health) in DawaGPT...");
 const systemInstruction = contextOutput.systemInstruction;
-assert(systemInstruction.includes("UGANDA CONTACT SUPPORT & EMERGENCY DIRECTORY"), "System prompt must include Uganda Contact Support directory");
-assert(systemInstruction.includes("112"), "System prompt must include national emergency number 112");
-assert(systemInstruction.includes("999"), "System prompt must include landline emergency 999");
-assert(systemInstruction.includes("0800 100 066"), "System prompt must include Ministry of Health toll-free hotline");
-assert(systemInstruction.includes("0800 101 622"), "System prompt must include National Drug Authority toll-free hotline");
-assert(systemInstruction.includes("/settings"), "System prompt must include Dawa-Lens in-app Settings support link");
+assert(systemInstruction.includes("UGANDA SUPPORT DIRECTORY"), "System prompt must include Uganda Support directory");
+assert(systemInstruction.includes("0800 101 999"), "System prompt must include National Drug Authority toll-free hotline 0800 101 999");
+assert(systemInstruction.includes("+256 791 415 555"), "System prompt must include NDA WhatsApp hotline");
+assert(systemInstruction.includes("0800 200 600"), "System prompt must include mental health support hotline");
+assert(systemInstruction.includes("Butabika National Referral Mental Hospital"), "System prompt must include Butabika hospital");
 assert(!systemInstruction.includes("support@dawalens.ug"), "System prompt must NOT include dawalens.ug email");
 
 // Verify Emergency Response incorporates Uganda-specific emergency services

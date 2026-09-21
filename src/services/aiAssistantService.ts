@@ -61,7 +61,8 @@ export type ChatMessageSource =
   | "Family Hub Guard"
   | "Navigator Guard"
   | "NDA Locator Guard"
-  | "Wellness Guard";
+  | "Wellness Guard"
+  | "NDA / Mental Health Support";
 
 export interface ChatMessage {
   id: string;
@@ -113,11 +114,11 @@ const FAQ_RESPONSE_MAP: Record<string, string> = {
   "gyebaleko": "Gyebaleko! Thank you. I am here to help you manage your health. How are you feeling today?",
   "webale": "Kale! You're welcome. Let me know if you need help with reminders or safety checks.",
   "eddagala": "Eddagala (medicine) is key to your health. You can [view your active medications](/medications) or [set up a dose reminder](/reminders/new).",
-  "contact support": "For support in Uganda: 1) National Emergency & Ambulance: 112 (Mobile Toll-Free) or 999; 2) Ministry of Health (MoH) Uganda: 0800 100 066 / 0800 203 033; 3) National Drug Authority (NDA) Drug Safety: 0800 101 622 / WhatsApp +256 791 415 555; 4) Mulago Hospital Emergency: +256 414 554 008; 5) Butabika Crisis Hotline: 0800 200 600; 6) App Support: [manage your profile and support in Settings](/settings).",
-  "support uganda": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: [manage your profile and support in Settings](/settings).",
-  "uganda support": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: [manage your profile and support in Settings](/settings).",
-  "emergency contact": "Official Uganda Emergency Contacts: Emergency/Ambulance: 112 (Mobile) / 999 (Landline); Police Toll-Free: 0800 199 699; MoH: 0800 100 066; Mulago Emergency: +256 414 554 008; Butabika Crisis: 0800 200 600.",
-  "customer care": "For customer care and support in Uganda, you can [manage your emergency contacts and support in Settings](/settings). For official health helplines: MoH Toll-Free 0800 100 066, NDA Hotline 0800 101 622, or National Emergency 112.",
+  "contact support": "Official Uganda Support Contacts:\n• National Drug Authority (NDA) Uganda: Toll-Free 0800 101 999 | WhatsApp +256 791 415 555 (for drug safety, side effects & fake medicines)\n• Mental Health Support in Uganda: Toll-Free 0800 200 600 (StrongMinds psychosocial support) | Butabika National Referral Mental Hospital: Toll-Free 0800 211 306 / +256 414 504 375",
+  "support uganda": "Uganda Support:\n• National Drug Authority (NDA) Uganda: Toll-Free 0800 101 999 | WhatsApp +256 791 415 555\n• Mental Health Support in Uganda: Toll-Free 0800 200 600 | Butabika Hospital: Toll-Free 0800 211 306",
+  "uganda support": "Uganda Support:\n• National Drug Authority (NDA) Uganda: Toll-Free 0800 101 999 | WhatsApp +256 791 415 555\n• Mental Health Support in Uganda: Toll-Free 0800 200 600 | Butabika Hospital: Toll-Free 0800 211 306",
+  "emergency contact": "Official Uganda Support Contacts:\n• National Drug Authority (NDA) Uganda: Toll-Free 0800 101 999 | WhatsApp +256 791 415 555\n• Mental Health Support in Uganda: Toll-Free 0800 200 600 (StrongMinds) | Butabika Hospital: Toll-Free 0800 211 306",
+  "customer care": "For support in Uganda:\n• National Drug Authority (NDA) Uganda: Toll-Free 0800 101 999 | WhatsApp +256 791 415 555\n• Mental Health Support in Uganda: Toll-Free 0800 200 600 | Butabika Hospital: Toll-Free 0800 211 306",
 };
 
 export function distributeTimes(startTime: string = "08:00", freq: number = 1): string[] {
@@ -1002,17 +1003,18 @@ export const generateDawaGPTResponse = async (
     return {
       id: Date.now().toString(),
       role: "assistant",
-      text: "Here is the official **Contact Support Directory for Uganda**:\n\n" +
-        "• **National Medical Emergency & Ambulance**: Call **112** (Toll-Free Mobile on MTN/Airtel) or **999** (Landline)\n" +
-        "• **Ministry of Health (MoH) Uganda**: Toll-Free **0800 100 066** or **0800 203 033** | Email: info@health.go.ug\n" +
-        "• **National Drug Authority (NDA) Uganda**: Toll-Free **0800 101 622** | WhatsApp: **+256 791 415 555** | Head Office: **+256 417 788 100** *(for medicine safety, adverse reactions & reporting fake drugs)*\n" +
-        "• **Mulago National Referral Hospital (Casualty & Emergency)**: **+256 414 554 008** / **+256 414 554 001**\n" +
-        "• **Mental Health & Crisis Hotline (Butabika Hospital)**: Toll-Free **0800 200 600**\n" +
-        "• **Uganda Police Emergency Dispatch**: Toll-Free **0800 199 699** / **0800 199 399**\n" +
-        "• **Dawa-Lens App Support**: [manage your emergency contacts and profile in Settings](/settings).\n\n" +
-        "If you are experiencing an acute medical emergency or severe reaction, please call **112** or proceed immediately to the nearest healthcare facility.",
-      source: "MoH",
-      suggestions: ["Call Uganda Emergency (112)", "National Drug Authority Helpline", "Open Settings"]
+      text: "Here is the official **Support Directory for Uganda**:\n\n" +
+        "• **National Drug Authority (NDA) Uganda** *(for medicine safety, adverse drug reactions & reporting counterfeit drugs)*:\n" +
+        "  - **Toll-Free Line**: **0800 101 999**\n" +
+        "  - **WhatsApp**: **+256 791 415 555**\n" +
+        "  - **Head Office**: **+256 417 788 100**\n" +
+        "  - **Email**: **ndaug@nda.or.ug** | Pharmacovigilance: **druginfo@nda.or.ug**\n\n" +
+        "• **Mental Health Support in Uganda** *(for psychosocial support, depression, anxiety & psychiatric care)*:\n" +
+        "  - **Mental Health & Psychosocial Support (StrongMinds)**: Toll-Free **0800 200 600**\n" +
+        "  - **Butabika National Referral Mental Hospital**: Toll-Free **0800 211 306** | General Line: **+256 414 504 375**\n" +
+        "  - **Mental Health Uganda (MHU)**: Toll-Free **0800 21 21 21**",
+      source: "NDA / Mental Health Support",
+      suggestions: ["National Drug Authority Helpline", "Mental Health Support Uganda"]
     };
   }
 
@@ -1053,7 +1055,7 @@ export const generateDawaGPTResponse = async (
         `• ⚠️ **Drug & Food Interactions**: Screen your prescriptions against local foods (like *Matooke*, *Posho*, *G-nut sauce*) and alcohol (*Waragi*).\n` +
         `• ⏰ **Smart Reminders**: Keep your schedule on track with alarms and dose alerts in [Medication Reminders](/reminders).\n` +
         `• 📦 **Med Vault & Refill Tracking**: Monitor your exact pill count and calculate remaining days of supply in [Med Vault](/medvault).\n` +
-        `• 🩺 **Emergency Protocols**: Instantly surface Uganda emergency hotlines (999 / 112 / 0800-100-066) when safety risks are detected.\n\n` +
+        `• 🩺 **Verified Support**: Instantly surface Uganda support contacts for the National Drug Authority (NDA 0800 101 999) and Mental Health Support (0800 200 600).\n\n` +
         `What medication or health question can I help you with today?`,
       source: "System",
       suggestions: ["Check my medications", "How is my pill stock?", "Check drug interactions"]
@@ -1828,7 +1830,7 @@ export const chatWithDawaGPT = async (
     const rawMsg = err instanceof Error ? err.message : "";
     const isTechnicalError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
     const errorMessage = isTechnicalError
-      ? "⚠️ DawaGPT's AI service is temporarily unavailable. Please try again in a few minutes.\n\nFor urgent health questions, contact **NDA Uganda** toll-free: **0800 101 622** or **MoH Uganda**: **0800 100 066**."
+      ? "⚠️ DawaGPT's AI service is temporarily unavailable. Please try again in a few minutes.\n\nFor urgent health questions, contact **NDA Uganda** toll-free: **0800 101 999** (WhatsApp: **+256 791 415 555**) or Mental Health Support: **0800 200 600**."
       : rawMsg;
     return {
       id: Date.now().toString(),
@@ -2018,7 +2020,7 @@ export const chatWithDawaGPTStream = async (
         return offlineResp;
       }
 
-      const serviceDownMsg = "⚠️ DawaGPT's AI service is temporarily unavailable. Our backend AI providers are being restored. Please try again in a few minutes.\n\nFor urgent health questions, call the **Uganda National Drug Authority (NDA)** toll-free: **0800 101 622** or the **Ministry of Health**: **0800 100 066**.";
+      const serviceDownMsg = "⚠️ DawaGPT's AI service is temporarily unavailable. Our backend AI providers are being restored. Please try again in a few minutes.\n\nFor urgent health questions, call the **Uganda National Drug Authority (NDA)** toll-free: **0800 101 999** (WhatsApp: **+256 791 415 555**) or **Mental Health Support**: **0800 200 600**.";
       const offlineResp: ChatMessage = {
         id: Date.now().toString(),
         role: "assistant",
@@ -2092,7 +2094,7 @@ export const chatWithDawaGPTStream = async (
     const rawMsg = err instanceof Error ? err.message : "";
     const isNetworkOrServerError = !rawMsg || /body\.messages|\bvalidation\b|\bstatus\b|\bfailed\b|expected string|internal server error|json|_zod|cannot read|undefined|typeerror|null|fetch|network|econnrefused/i.test(rawMsg);
     const errorMessage = isNetworkOrServerError
-      ? "⚠️ DawaGPT's AI service is temporarily unavailable. Please try again in a few minutes.\n\nFor urgent health questions, contact **NDA Uganda** toll-free: **0800 101 622** or **MoH Uganda**: **0800 100 066**."
+      ? "⚠️ DawaGPT's AI service is temporarily unavailable. Please try again in a few minutes.\n\nFor urgent health questions, contact **NDA Uganda** toll-free: **0800 101 999** (WhatsApp: **+256 791 415 555**) or Mental Health Support: **0800 200 600**."
       : rawMsg;
     const errResp: ChatMessage = {
       id: Date.now().toString(),

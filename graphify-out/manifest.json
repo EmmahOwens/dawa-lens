@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789980417.0958934,
-    "ast_hash": "dad70bd2573cedfabe64d82e53ce2d4f",
+    "mtime": 1789981406.1550946,
+    "ast_hash": "9d8f2424289be97c8934e55accfe104a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789980724.706945,
-    "ast_hash": "ef20bc7a875e7b3c8df98ef2b7e7cb5c",
+    "mtime": 1789981696.998568,
+    "ast_hash": "6e4cf14c6acfacb66119a77ac3b6d03b",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -1350,8 +1350,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/draDatabase.ts": {
-    "mtime": 1789630488.9806275,
-    "ast_hash": "5e5c2ad8e6193e37b393bd79d447646e",
+    "mtime": 1789981300.6840427,
+    "ast_hash": "e6d7596a247ce1f8e5cf3c5e14a4b04e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/drugInfoProvider.ts": {
@@ -4045,13 +4045,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-dawagpt-unit.js": {
-    "mtime": 1789980283.8147795,
-    "ast_hash": "7184e98992368f156da571217312dfff",
+    "mtime": 1789981420.3901074,
+    "ast_hash": "5982bda79b7d0bc0ec72d58ce8a2dda1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptUgandaSupport.test.ts": {
-    "mtime": 1789980646.8166645,
-    "ast_hash": "1516bd4bcebaaecd8194655e55fc5d7b",
+    "mtime": 1789981354.2110593,
+    "ast_hash": "4624972868b582e926ae16344a0f58eb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-prompts.js": {
@@ -4150,8 +4150,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/draDatabase.test.ts": {
-    "mtime": 1789630544.483737,
-    "ast_hash": "5e83a2e7f97d4a7ffd03946cf6c36880",
+    "mtime": 1789981309.880044,
+    "ast_hash": "4d8bb760254e2d5e1357d3f7ecc2c38a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/test-dawagpt-food-age.js": {

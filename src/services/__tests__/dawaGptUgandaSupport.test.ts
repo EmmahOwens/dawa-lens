@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { generateDawaGPTResponse } from "../aiAssistantService";
 import { UserProfile } from "@/contexts/AppContext";
 
-describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
+describe("DawaGPT Uganda Support Directory (NDA & Mental Health Support)", () => {
   const dummyProfile: UserProfile = {
     id: "user-test",
     name: "Mukasa Ivan",
@@ -10,7 +10,7 @@ describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
     gender: "male",
   };
 
-  it("provides Uganda contact support when asked 'contact support'", async () => {
+  it("provides Uganda support leaving only verified NDA and Mental Health support when asked 'contact support'", async () => {
     const response = await generateDawaGPTResponse(
       "contact support",
       null,
@@ -22,18 +22,33 @@ describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
       null
     );
 
-    expect(response.text).toContain("Contact Support Directory for Uganda");
-    expect(response.text).toContain("112");
-    expect(response.text).toContain("999");
-    expect(response.text).toContain("0800 100 066");
-    expect(response.text).toContain("0800 101 622");
-    expect(response.text).toContain("Mulago National Referral Hospital");
+    expect(response.text).toContain("Support Directory for Uganda");
+    expect(response.text).toContain("National Drug Authority (NDA) Uganda");
+    expect(response.text).toContain("0800 101 999");
+    expect(response.text).toContain("+256 791 415 555");
+    expect(response.text).toContain("Mental Health Support in Uganda");
+    expect(response.text).toContain("0800 200 600");
+    expect(response.text).toContain("Butabika National Referral Mental Hospital");
+    expect(response.text).toContain("0800 211 306");
+    
+    // Strict removal assertions
+    expect(response.text).not.toContain("112");
+    expect(response.text).not.toContain("999 (Landline)");
+    expect(response.text).not.toContain("or 999");
+    expect(response.text).not.toContain("0800 100 066");
+    expect(response.text).not.toContain("0800 101 622");
+    expect(response.text).not.toContain("Mulago");
+    expect(response.text).not.toContain("0800 199 699");
+    expect(response.text).not.toContain("/settings");
     expect(response.text).not.toContain("support@dawalens.ug");
-    expect(response.text).toContain("[manage your emergency contacts and profile in Settings](/settings)");
-    expect(response.suggestions).toContain("Call Uganda Emergency (112)");
+
+    // Suggestions check
+    expect(response.suggestions).toContain("National Drug Authority Helpline");
+    expect(response.suggestions).toContain("Mental Health Support Uganda");
+    expect(response.suggestions).not.toContain("Call Uganda Emergency (112)");
   });
 
-  it("provides Uganda contact support when asked 'support for Uganda'", async () => {
+  it("provides NDA and Mental Health support when asked 'support for Uganda'", async () => {
     const response = await generateDawaGPTResponse(
       "support for Uganda",
       null,
@@ -45,12 +60,14 @@ describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
       null
     );
 
-    expect(response.text).toContain("112");
+    expect(response.text).toContain("0800 101 999");
     expect(response.text).toContain("National Drug Authority");
-    expect(response.text).toContain("Ministry of Health");
+    expect(response.text).toContain("Mental Health Support");
+    expect(response.text).not.toContain("112");
+    expect(response.text).not.toContain("Ministry of Health");
   });
 
-  it("provides emergency contacts when asked 'who can I call for emergency in Uganda?'", async () => {
+  it("provides NDA and Mental Health support when asked 'who can I call for emergency in Uganda?'", async () => {
     const response = await generateDawaGPTResponse(
       "who can I call for emergency in Uganda?",
       null,
@@ -62,12 +79,16 @@ describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
       null
     );
 
-    expect(response.text).toContain("112");
-    expect(response.text).toContain("999");
-    expect(response.text).toContain("National Medical Emergency & Ambulance");
+    expect(response.text).toContain("0800 101 999");
+    expect(response.text).toContain("National Drug Authority");
+    expect(response.text).toContain("Mental Health Support");
+    expect(response.text).not.toContain("112");
+    expect(response.text).not.toContain("999 (Landline)");
+    expect(response.text).not.toContain("or 999");
+    expect(response.text).not.toContain("National Medical Emergency & Ambulance");
   });
 
-  it("provides support contact when asked 'customer care'", async () => {
+  it("provides NDA and Mental Health support when asked 'customer care'", async () => {
     const response = await generateDawaGPTResponse(
       "customer care",
       null,
@@ -79,12 +100,15 @@ describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
       null
     );
 
-    expect(response.text).toContain("112");
+    expect(response.text).toContain("0800 101 999");
+    expect(response.text).toContain("National Drug Authority");
+    expect(response.text).toContain("Mental Health Support");
+    expect(response.text).not.toContain("112");
     expect(response.text).not.toContain("support@dawalens.ug");
-    expect(response.text).toContain("/settings");
+    expect(response.text).not.toContain("/settings");
   });
 
-  it("provides NDA contact when asked 'NDA hotline'", async () => {
+  it("provides verified NDA contact when asked 'NDA hotline'", async () => {
     const response = await generateDawaGPTResponse(
       "what is the NDA hotline in Uganda?",
       null,
@@ -96,7 +120,7 @@ describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
       null
     );
 
-    expect(response.text).toContain("0800 101 622");
+    expect(response.text).toContain("0800 101 999");
     expect(response.text).toContain("National Drug Authority");
   });
 
@@ -112,6 +136,6 @@ describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
       null
     );
 
-    expect(response.text).not.toContain("Contact Support Directory for Uganda");
+    expect(response.text).not.toContain("Support Directory for Uganda");
   });
 });

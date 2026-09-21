@@ -21,7 +21,7 @@ describe('DRA Database & Emergency Ambulance Contacts', () => {
       const uganda = lookupDRA('Uganda');
       expect(uganda).toBeDefined();
       expect(uganda?.authority).toBe('National Drug Authority (NDA)');
-      expect(uganda?.number).toContain('0800 101 622');
+      expect(uganda?.number).toContain('0800 101 999');
       expect(uganda?.ambulance).toBe('112 / 999');
       expect(uganda?.website).toBe('https://www.nda.or.ug');
     });

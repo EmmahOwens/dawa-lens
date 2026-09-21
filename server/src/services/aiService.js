@@ -166,7 +166,7 @@ const detectEmergency = (text) => {
 };
 
 const EMERGENCY_RESPONSE = {
-  text: "🚨 **EMERGENCY ALERT (Uganda)**: I've detected a potentially life-threatening situation in your message. \n\n**PLEASE SEEK IMMEDIATE EMERGENCY MEDICAL HELP IN UGANDA:**\n- **National Emergency & Ambulance (Uganda)**: Call **112** (Mobile Toll-Free on MTN/Airtel) or **999** (Landline)\n- **Ministry of Health (MoH) Uganda Toll-Free Helpline**: **0800 100 066** / **0800 203 033**\n- **Mulago National Referral Hospital (Casualty & Emergency)**: **+256 414 554 008** / **+256 414 554 001**\n- **National Drug Authority (NDA) Poison & Drug Safety**: **0800 101 622** (Toll-Free)\n- **Mental Health & Crisis Hotline (Butabika Hospital)**: **0800 200 600** (Toll-Free)\n\nIf this is an overdose or severe allergic reaction, proceed immediately to the nearest hospital or clinic and inform the medical team exactly what was taken.\n\nI am an AI, not a doctor. Please contact emergency services right away.",
+  text: "🚨 **EMERGENCY ALERT (Uganda)**: I've detected a potentially life-threatening situation in your message. \n\n**PLEASE SEEK IMMEDIATE EMERGENCY MEDICAL HELP IN UGANDA:**\n- **National Emergency & Ambulance (Uganda)**: Call **112** (Mobile Toll-Free on MTN/Airtel) or **999** (Landline)\n- **Ministry of Health (MoH) Uganda Toll-Free Helpline**: **0800 100 066** / **0800 203 033**\n- **Mulago National Referral Hospital (Casualty & Emergency)**: **+256 414 554 008** / **+256 414 554 001**\n- **National Drug Authority (NDA) Poison & Drug Safety**: **0800 101 999** (Toll-Free)\n- **Mental Health & Crisis Hotline (StrongMinds / Butabika Hospital)**: **0800 200 600** / **0800 211 306** (Toll-Free)\n\nIf this is an overdose or severe allergic reaction, proceed immediately to the nearest hospital or clinic and inform the medical team exactly what was taken.\n\nI am an AI, not a doctor. Please contact emergency services right away.",
   suggestions: ["Call Uganda Emergency (112)", "National Drug Authority Helpline", "I'm okay now"],
   source: "System Safety",
   action: null
@@ -2695,18 +2695,21 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     };
   }
 
-  // 3. Official Uganda Healthcare & Emergency Directory (only if explicitly asked for contacts/support)
+  // 3. Official Uganda Support Directory (only if explicitly asked for contacts/support)
   if (norm.includes('support') || norm.includes('emergency') || norm.includes('call') || norm.includes('help line') || norm.includes('helpline') || norm.includes('phone') || norm.includes('contact')) {
     return {
-      text: `Here is the official **Uganda Healthcare & Emergency Contact Directory**:\n\n` +
-        `• 🚨 **National Emergency & Ambulance**: Call **112** (Mobile Toll-Free on MTN/Airtel) or **999** (Landline)\n` +
-        `• 🏛️ **National Drug Authority (NDA) Uganda**: Toll-Free **0800 101 622** | WhatsApp: **+256 791 415 555** | Head Office: **+256 417 788 100** *(for reporting adverse drug reactions, counterfeit medicines, or safety alerts)*\n` +
-        `• 🏥 **Ministry of Health (MoH) Uganda**: Toll-Free **0800 100 066** or **0800 203 033** | Email: **info@health.go.ug**\n` +
-        `• 🩺 **Mulago National Referral Hospital (Casualty & Emergency)**: **+256 414 554 008** / **+256 414 554 001**\n` +
-        `• 🧠 **Mental Health Crisis Support (Butabika Hospital)**: Toll-Free **0800 200 600**\n` +
-        `• ⚙️ **Dawa-Lens In-App Support**: [manage your emergency contacts and support in Settings](/settings)`,
-      suggestions: ["Call Uganda Emergency (112)", "National Drug Authority Helpline", "Open Settings"],
-      source: "NDA / MoH Directory",
+      text: `Here is the official **Support Directory for Uganda**:\n\n` +
+        `• 🏛️ **National Drug Authority (NDA) Uganda** *(for medicine safety, adverse reactions & reporting counterfeit drugs)*:\n` +
+        `  - **Toll-Free Hotline**: **0800 101 999**\n` +
+        `  - **WhatsApp**: **+256 791 415 555**\n` +
+        `  - **Head Office**: **+256 417 788 100**\n` +
+        `  - **Email**: **ndaug@nda.or.ug** | Pharmacovigilance: **druginfo@nda.or.ug**\n\n` +
+        `• 🧠 **Mental Health Support in Uganda** *(for psychosocial counseling, depression, anxiety & psychiatric care)*:\n` +
+        `  - **Mental Health & Psychosocial Support (StrongMinds)**: Toll-Free **0800 200 600**\n` +
+        `  - **Butabika National Referral Mental Hospital**: Toll-Free **0800 211 306** | General: **+256 414 504 375**\n` +
+        `  - **Mental Health Uganda (MHU)**: Toll-Free **0800 21 21 21**`,
+      suggestions: ["National Drug Authority Helpline", "Mental Health Support Uganda"],
+      source: "NDA / Mental Health Support",
       action: null
     };
   }
@@ -2825,9 +2828,8 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
       `• 📦 [Check pill counts and supply in Med Vault](/medvault)\n` +
       `• ⚠️ [Review drug & food interactions in Interactions Guard](/interactions)\n\n` +
       `For urgent clinical guidance or adverse drug reactions in Uganda, please contact:\n` +
-      `• **National Drug Authority (NDA) Uganda**: Toll-Free **0800 101 622** | WhatsApp **+256 791 415 555**\n` +
-      `• **Ministry of Health (MoH) Uganda**: Toll-Free **0800 100 066** / **0800 203 033**\n` +
-      `• **Emergency Ambulance Dispatch**: **112** (Mobile Toll-Free) / **999**`,
+      `• **National Drug Authority (NDA) Uganda**: Toll-Free **0800 101 999** | WhatsApp **+256 791 415 555**\n` +
+      `• **Mental Health Support in Uganda**: Toll-Free **0800 200 600** / **0800 211 306**`,
     suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, userProfile, activePatient: targetPatient, currentPage }),
     source: "System (Reconnecting)",
     action: null
@@ -3660,15 +3662,11 @@ CRITICAL LINKING & NAVIGATION RULES:
 - Low Stock Guidance: <= 2 days supply (CRITICAL LOW / OUT OF STOCK - urgent refill alert), <= 3 days supply (LOW STOCK - plan refill soon). Always link [Med Vault](/medvault).
 - Refill requests (e.g. "I refilled Panadol to 60"): Output UPDATE_MEDICINE with { id, currentQuantity: new_quantity }.
 
-=== UGANDA CONTACT SUPPORT & EMERGENCY DIRECTORY & FAMILY HUB ===
+=== UGANDA SUPPORT DIRECTORY & FAMILY HUB ===
 - Full read access to all registered profiles. Cross-reference recommendations against the specific patient's known chronic conditions and allergies.
-- For emergency or support contacts in Uganda, provide:
-  * National Emergency Ambulance: 112 (Mobile Toll-Free) / 999 (Landline)
-  * Ministry of Health (MoH) Uganda: Toll-Free 0800 100 066 / 0800 203 033 | info@health.go.ug
-  * National Drug Authority (NDA) Uganda: Toll-Free 0800 101 622 | WhatsApp: +256 791 415 555
-  * Mulago Referral Hospital (Casualty & Emergency): +256 414 554 008
-  * Mental Health Crisis (Butabika Hospital): Toll-Free 0800 200 600
-  * Dawa-Lens In-App Support: [manage your profile and support in Settings](/settings)
+- For contact support in Uganda, provide ONLY the following verified organizations (do NOT provide general emergency 112/999, police, MoH, or Mulago hospital):
+  * National Drug Authority (NDA) Uganda: Toll-Free 0800 101 999 | WhatsApp: +256 791 415 555 | Head Office: +256 417 788 100 | Email: ndaug@nda.or.ug (for medicine safety, reporting adverse drug reactions & counterfeit medicines)
+  * Mental Health Support in Uganda: Toll-Free 0800 200 600 (StrongMinds psychosocial support) | Toll-Free 0800 211 306 / +256 414 504 375 (Butabika National Referral Mental Hospital) | Toll-Free 0800 21 21 21 (Mental Health Uganda)
 
 === RXNORM & OPENFDA CLINICAL GROUNDING & DUPLICATE THERAPY (SAME-TASK MEDICATIONS) ===
 When answering questions about medications performing the same task, duplicate therapies, or potential drug interactions:
