@@ -109,7 +109,8 @@ assert(systemInstruction.includes("112"), "System prompt must include national e
 assert(systemInstruction.includes("999"), "System prompt must include landline emergency 999");
 assert(systemInstruction.includes("0800 100 066"), "System prompt must include Ministry of Health toll-free hotline");
 assert(systemInstruction.includes("0800 101 622"), "System prompt must include National Drug Authority toll-free hotline");
-assert(systemInstruction.includes("support@dawalens.ug"), "System prompt must include Dawa-Lens support email");
+assert(systemInstruction.includes("/settings"), "System prompt must include Dawa-Lens in-app Settings support link");
+assert(!systemInstruction.includes("support@dawalens.ug"), "System prompt must NOT include dawalens.ug email");
 
 // Verify Emergency Response incorporates Uganda-specific emergency services
 const { chatWithDawaGPT } = await import('./services/aiService.js');

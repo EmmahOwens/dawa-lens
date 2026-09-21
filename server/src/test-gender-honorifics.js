@@ -24,8 +24,8 @@ async function runTests() {
     currentPage: '/dashboard'
   });
 
-  const femalePrompt = femaleContext.finalMessages[0].content;
-  const femaleSessionContext = femaleContext.finalMessages[1].content;
+  const femalePrompt = femaleContext.systemInstruction || femaleContext.finalMessages[0].content;
+  const femaleSessionContext = femaleContext.systemInstruction || femaleContext.finalMessages[0].content;
 
   // Verify static prompt contains strict Nyabo / Ssebo rules
   assert(femalePrompt.includes('"Nyabo" -> "Madam"'), 'STATIC_SYSTEM_PROMPT missing Nyabo definition');
@@ -57,7 +57,7 @@ async function runTests() {
     currentPage: '/dashboard'
   });
 
-  const maleSessionContext = maleContext.finalMessages[1].content;
+  const maleSessionContext = maleContext.systemInstruction || maleContext.finalMessages[0].content;
   assert(maleSessionContext.includes('Gender: male'), `Dynamic context missing male gender: ${maleSessionContext}`);
   console.log('✔ Male user context verified.');
 
@@ -80,7 +80,7 @@ async function runTests() {
     currentPage: '/dashboard'
   });
 
-  const unspecSessionContext = unspecContext.finalMessages[1].content;
+  const unspecSessionContext = unspecContext.systemInstruction || unspecContext.finalMessages[0].content;
   assert(unspecSessionContext.includes('Gender: Not specified'), `Dynamic context missing Not specified: ${unspecSessionContext}`);
   console.log('✔ Unspecified gender context verified.');
 
@@ -105,8 +105,8 @@ async function runTests() {
     currentPage: '/family'
   });
 
-  const familySessionContext = familyContext.finalMessages[1].content;
-  assert(familySessionContext.includes('Grace Nabirye (Mother, Gender: female)'), `Dynamic context missing active patient gender: ${familySessionContext}`);
+  const familySessionContext = familyContext.systemInstruction || familyContext.finalMessages[0].content;
+  assert(familySessionContext.includes('Grace Nabirye (Mother') && familySessionContext.includes('Gender: female'), `Dynamic context missing active patient gender: ${familySessionContext}`);
   console.log('✔ Active patient in Family Hub gender context verified.');
 
   console.log('\nAll Server-Side Gender-Aware Context & Salutation tests PASSED successfully!');

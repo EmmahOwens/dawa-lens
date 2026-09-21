@@ -15,6 +15,7 @@ import {
   findLocalTherapeuticClass
 } from "./therapeuticDuplicationService";
 import { getContextualSuggestions, isGenericBoilerplate } from "@/lib/contextualSuggestions";
+import { resolveToInternalRoute } from "@/components/MessageRenderer";
 
 export type AIActionType =
   | "ADD_REMINDER"
@@ -85,6 +86,26 @@ export const resolveHonorific = (gender?: string | null): string => {
   return "";
 };
 
+/**
+ * Sanitizes markdown links in DawaGPT assistant text to ensure all links resolve
+ * strictly to internal in-app routes and strips non-existent or external URLs.
+ */
+export function sanitizeMarkdownLinks(text: string): string {
+  if (typeof text !== "string") return "";
+
+  // Remove support@dawalens.ug and any dawalens.ug references
+  let cleaned = text.replace(/support@dawalens\.ug/gi, "[Settings](/settings)");
+  cleaned = cleaned.replace(/https?:\/\/(?:www\.)?dawalens\.ug[^\s)\]]*/gi, "/settings");
+
+  return cleaned.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, rawHref) => {
+    const resolved = resolveToInternalRoute(rawHref, label);
+    if (resolved) {
+      return `[${label}](${resolved})`;
+    }
+    return `[${label}](/)`;
+  });
+}
+
 const FAQ_RESPONSE_MAP: Record<string, string> = {
   "oli otya": "Oli otya! I am doing well{{salutation}}. How can DawaGPT help you with your health or medicines today?",
   "wasuze otya": "Wasuze otya! I hope you slept well and are ready for a healthy day. How can I help you today?",
@@ -92,11 +113,11 @@ const FAQ_RESPONSE_MAP: Record<string, string> = {
   "gyebaleko": "Gyebaleko! Thank you. I am here to help you manage your health. How are you feeling today?",
   "webale": "Kale! You're welcome. Let me know if you need help with reminders or safety checks.",
   "eddagala": "Eddagala (medicine) is key to your health. You can [view your active medications](/medications) or [set up a dose reminder](/reminders/new).",
-  "contact support": "For support in Uganda: 1) National Emergency & Ambulance: 112 (Mobile Toll-Free) or 999; 2) Ministry of Health (MoH) Uganda: 0800 100 066 / 0800 203 033; 3) National Drug Authority (NDA) Drug Safety: 0800 101 622 / WhatsApp +256 791 415 555; 4) Mulago Hospital Emergency: +256 414 554 008; 5) Butabika Crisis Hotline: 0800 200 600; 6) App Support: support@dawalens.ug.",
-  "support uganda": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: support@dawalens.ug.",
-  "uganda support": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: support@dawalens.ug.",
+  "contact support": "For support in Uganda: 1) National Emergency & Ambulance: 112 (Mobile Toll-Free) or 999; 2) Ministry of Health (MoH) Uganda: 0800 100 066 / 0800 203 033; 3) National Drug Authority (NDA) Drug Safety: 0800 101 622 / WhatsApp +256 791 415 555; 4) Mulago Hospital Emergency: +256 414 554 008; 5) Butabika Crisis Hotline: 0800 200 600; 6) App Support: [manage your profile and support in Settings](/settings).",
+  "support uganda": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: [manage your profile and support in Settings](/settings).",
+  "uganda support": "Uganda Support Directory: National Emergency: 112 / 999; MoH Helplines: 0800 100 066 / 0800 203 033; NDA Hotline: 0800 101 622; Mulago Casualty: +256 414 554 008; App Support: [manage your profile and support in Settings](/settings).",
   "emergency contact": "Official Uganda Emergency Contacts: Emergency/Ambulance: 112 (Mobile) / 999 (Landline); Police Toll-Free: 0800 199 699; MoH: 0800 100 066; Mulago Emergency: +256 414 554 008; Butabika Crisis: 0800 200 600.",
-  "customer care": "For customer care and support in Uganda, email support@dawalens.ug. For official health helplines: MoH Toll-Free 0800 100 066, NDA Hotline 0800 101 622, or National Emergency 112.",
+  "customer care": "For customer care and support in Uganda, you can [manage your emergency contacts and support in Settings](/settings). For official health helplines: MoH Toll-Free 0800 100 066, NDA Hotline 0800 101 622, or National Emergency 112.",
 };
 
 export function distributeTimes(startTime: string = "08:00", freq: number = 1): string[] {
@@ -988,7 +1009,7 @@ export const generateDawaGPTResponse = async (
         "• **Mulago National Referral Hospital (Casualty & Emergency)**: **+256 414 554 008** / **+256 414 554 001**\n" +
         "• **Mental Health & Crisis Hotline (Butabika Hospital)**: Toll-Free **0800 200 600**\n" +
         "• **Uganda Police Emergency Dispatch**: Toll-Free **0800 199 699** / **0800 199 399**\n" +
-        "• **Dawa-Lens App Support**: Email **support@dawalens.ug** or [manage your emergency contacts in Settings](/settings).\n\n" +
+        "• **Dawa-Lens App Support**: [manage your emergency contacts and profile in Settings](/settings).\n\n" +
         "If you are experiencing an acute medical emergency or severe reaction, please call **112** or proceed immediately to the nearest healthcare facility.",
       source: "MoH",
       suggestions: ["Call Uganda Emergency (112)", "National Drug Authority Helpline", "Open Settings"]
@@ -1761,12 +1782,12 @@ export const chatWithDawaGPT = async (
 
     const rawText = response.text || "";
     // Clean up any stray metadata markers or suggestion tags if they exist
-    const cleanText = rawText
+    const cleanText = sanitizeMarkdownLinks(rawText
       .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
       .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
       .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
       .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
-      .trim();
+      .trim());
 
     const rawAction = response.action as any;
     const actionObj = rawAction ? {
@@ -1912,10 +1933,10 @@ export const chatWithDawaGPTStream = async (
     let rawMetadata: string = "";
 
     if (delimMatch && delimMatch.index !== undefined) {
-      displayText = allText.substring(0, delimMatch.index)
+      displayText = sanitizeMarkdownLinks(allText.substring(0, delimMatch.index)
         .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
         .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
-        .trim();
+        .trim());
       rawMetadata = allText.substring(delimMatch.index + delimMatch[0].length).trim();
     } else {
       // Delimiter absent — try to extract a trailing JSON block as a secondary fallback.

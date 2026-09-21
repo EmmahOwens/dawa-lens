@@ -1648,6 +1648,91 @@ export const shouldRetrieveMedicalKnowledge = (text) => {
   return medicalKeywords.test(lower);
 };
 
+/**
+ * Sanitizes markdown links in DawaGPT outputs to ensure all links resolve
+ * strictly to internal in-app routes and strips non-existent or external URLs.
+ */
+export function sanitizeMarkdownLinks(text) {
+  if (typeof text !== 'string') return text;
+
+  // Remove support@dawalens.ug and any dawalens.ug references
+  let cleaned = text.replace(/support@dawalens\.ug/gi, '[Settings](/settings)');
+  cleaned = cleaned.replace(/https?:\/\/(?:www\.)?dawalens\.ug[^\s)\]]*/gi, '/settings');
+
+  // Match markdown links [label](url)
+  return cleaned.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, rawHref) => {
+    let href = (rawHref || '').trim();
+
+    // Strip http/https domain if present
+    if (/^https?:\/\//i.test(href)) {
+      try {
+        const parsed = new URL(href);
+        href = parsed.pathname;
+      } catch {
+        href = href.replace(/^https?:\/\/[^/]+/i, '');
+      }
+    }
+
+    // Strip query and hash
+    href = href.split('?')[0].split('#')[0].trim();
+
+    // Ensure leading slash
+    if (href && !href.startsWith('/')) {
+      href = `/${href}`;
+    }
+
+    const norm = (href + ' ' + label).toLowerCase();
+
+    // Resolve known routes
+    if ((norm.includes('reminder') || norm.includes('alarm')) && (norm.includes('new') || norm.includes('create') || norm.includes('add') || norm.includes('set') || norm.includes('first'))) {
+      return `[${label}](/reminders/new)`;
+    }
+    if (norm.includes('reminder') || norm.includes('alarm') || norm.includes('schedule')) {
+      return `[${label}](/reminders)`;
+    }
+    if (norm.includes('vault') || norm.includes('stock') || norm.includes('inventory') || norm.includes('refill') || norm.includes('supplies')) {
+      return `[${label}](/medvault)`;
+    }
+    if (norm.includes('interaction') || norm.includes('safety') || norm.includes('conflict')) {
+      return `[${label}](/interactions)`;
+    }
+    if (norm.includes('family') || norm.includes('dependent') || norm.includes('child') || norm.includes('client') || norm.includes('patient')) {
+      return `[${label}](/family)`;
+    }
+    if (norm.includes('history') || norm.includes('dose-log') || norm.includes('past-dose') || norm.includes('adherence') || norm.includes('streak')) {
+      return `[${label}](/history)`;
+    }
+    if (norm.includes('wellness') || norm.includes('symptom') || norm.includes('mood') || norm.includes('vibe')) {
+      return `[${label}](/wellness)`;
+    }
+    if (norm.includes('travel') || norm.includes('flight') || norm.includes('trip') || norm.includes('timezone')) {
+      return `[${label}](/travel)`;
+    }
+    if (norm.includes('report') || norm.includes('doctor') || norm.includes('export') || norm.includes('pdf')) {
+      return `[${label}](/report)`;
+    }
+    if (norm.includes('scan') || norm.includes('camera') || norm.includes('ocr')) {
+      return `[${label}](/scan)`;
+    }
+    if (norm.includes('search') || norm.includes('lookup') || norm.includes('monograph')) {
+      return `[${label}](/search)`;
+    }
+    if (norm.includes('setting') || norm.includes('profile') || norm.includes('preference') || norm.includes('account')) {
+      return `[${label}](/settings)`;
+    }
+    if (norm.includes('medication') || norm.includes('medicine') || norm.includes('cabinet') || norm.includes('prescription') || norm.includes('pill')) {
+      return `[${label}](/medications)`;
+    }
+
+    const validRoutes = ['/', '/reminders', '/reminders/new', '/medications', '/history', '/interactions', '/family', '/travel', '/wellness', '/report', '/settings', '/scan', '/search', '/results', '/medvault'];
+    if (validRoutes.includes(href.toLowerCase())) {
+      return `[${label}](${href.toLowerCase()})`;
+    }
+
+    return `[${label}](/)`;
+  });
+}
+
 export const chatWithDawaGPT = async (params, priority = 'high') => {
   try {
     const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, selectedPatientId, currentPage } = params;
@@ -1716,12 +1801,12 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
     if (result && typeof result === 'object') {
       result.text = result.text || result.message || result.response || result.advice || "";
       if (typeof result.text === 'string') {
-        result.text = result.text
+        result.text = sanitizeMarkdownLinks(result.text
           .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
           .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
           .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
           .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
-          .trim();
+          .trim());
       }
       result.suggestions = generateContextualSuggestions({
         messages,
@@ -1737,12 +1822,12 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
       });
       result.action = result.action || null;
     } else if (typeof result === 'string') {
-      const cleanText = result
+      const cleanText = sanitizeMarkdownLinks(result
         .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
         .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
         .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
         .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
-        .trim();
+        .trim());
       result = {
         text: cleanText,
         suggestions: generateContextualSuggestions({
@@ -2619,7 +2704,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
         `• 🏥 **Ministry of Health (MoH) Uganda**: Toll-Free **0800 100 066** or **0800 203 033** | Email: **info@health.go.ug**\n` +
         `• 🩺 **Mulago National Referral Hospital (Casualty & Emergency)**: **+256 414 554 008** / **+256 414 554 001**\n` +
         `• 🧠 **Mental Health Crisis Support (Butabika Hospital)**: Toll-Free **0800 200 600**\n` +
-        `• 📱 **Dawa-Lens App Support**: Email **support@dawalens.ug**`,
+        `• ⚙️ **Dawa-Lens In-App Support**: [manage your emergency contacts and support in Settings](/settings)`,
       suggestions: ["Call Uganda Emergency (112)", "National Drug Authority Helpline", "Open Settings"],
       source: "NDA / MoH Directory",
       action: null
@@ -2813,12 +2898,12 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       return new Readable({
         read() {
           const rawText = jsonResp.text || "";
-          const cleanText = rawText
+          const cleanText = sanitizeMarkdownLinks(rawText
             .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
             .replace(/\n\s*\{\s*"(?:suggestions|source|action)"[\s\S]*\}\s*$/i, '')
             .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
             .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
-            .trim();
+            .trim());
           const normalizedAction = jsonResp.action ? {
             type: jsonResp.action.type,
             payload: jsonResp.action.payload || jsonResp.action.data || jsonResp.action,
@@ -3504,9 +3589,10 @@ ${getFoodKnowledgePrompt()}
 - VOICE: Empathetic health companion and knowledgeable pharmacist. Natural contractions, warm and practical.
 - GREETINGS: "Oli otya" / "Muli mutya" (How are you), "Wasuze otya" (Good morning), "Osiibye otya" (Good afternoon/evening), "Gyebaleko" (Well done), "Ki kati" (What's up), "Webale" / "Webale nnyo" (Thank you / very much), "Kale" (Okay/welcome), "Bambi" (Empathy: I'm so sorry / please).
 - MANDATORY GENDER HONORIFICS (CRITICAL):
+  * "Nyabo" -> "Madam" (female honorific of respect), "Ssebo" (or "Sebbo") -> "Sir" (male honorific of respect).
   * Check the active user/profile gender in CURRENT SESSION CONTEXT:
-  * FEMALE: You MUST address them as "Nyabo" (e.g., "Oli otya Nyabo", "Kale Nyabo", "Webale Nyabo", "Bambi Nyabo"). You MUST NEVER call a female "Ssebo" or "Sebbo".
-  * MALE: You MUST address them as "Ssebo" (e.g., "Oli otya Ssebo", "Kale Ssebo", "Webale Ssebo"). You MUST NEVER call a male "Nyabo".
+  * If the user/profile is FEMALE: You MUST address them as "Nyabo" (e.g., "Oli otya Nyabo", "Kale Nyabo", "Webale Nyabo", "Bambi Nyabo"). You MUST NEVER call a female "Ssebo" or "Sebbo".
+  * If the user/profile is MALE: You MUST address them as "Ssebo" (e.g., "Oli otya Ssebo", "Kale Ssebo", "Webale Ssebo"). You MUST NEVER call a male "Nyabo".
   * GENDER NOT SPECIFIED / UNKNOWN: Use first name or friendly neutral phrasing. NEVER guess or default to "Ssebo".
 - HEALTH REFERENCE: "Eddagala" (Medicine), "Obulwadde" (Sickness), "Obulumi" (Pain), "Omutwe" (Head, e.g. "Omutwe gunnuma" -> headache), "Olubuto" (Stomach), "Ekifuba" (Cough/chest), "Musujja" (Fever).
 - EMPATHY: When user reports symptoms, pain ("gunuma"), or fatigue, acknowledge with warmth ("Bambi") first.
@@ -3544,12 +3630,28 @@ ${getFoodKnowledgePrompt()}
   * User reports positive vibes (e.g. "very happy", "ecstatic", "thrilled", "feeling great") -> emit LOG_WELLNESS symptom action immediately with mood 4-5, energy 4-5, symptoms array (e.g. ['Happy']), and encouraging aiReflection.
   * Always emit mood (1-5) and energy (1-5) as integers in data.
 
-=== APPLICATION NAVIGATION (NATURAL MID-SENTENCE LINKS) ===
-Embed fluent markdown links into sentence grammar (never use "click here" or raw URLs):
-- [check your active medications](/medications) | [manage your reminders](/reminders) | [set up a new reminder](/reminders/new)
-- [check your pill stock in Med Vault](/medvault) | [check drug & food interactions](/interactions)
-- [manage profiles in Family Hub](/family) | [review dose history](/history) | [log wellness & symptoms](/wellness)
-- [plan travel medication](/travel) | [export doctor report](/report) | [visual pill scanner](/scan) | [settings](/settings)
+=== APPLICATION NAVIGATION (STRICT IN-APP INTERNAL LINKS ONLY) ===
+CRITICAL LINKING & NAVIGATION RULES:
+1. ALL markdown links MUST strictly be internal relative routes starting with "/" leading to pages within the Dawa-Lens application.
+2. NEVER output external URLs, website domains (no "http://", "https://", "dawalens.ug", or any external websites), non-existent routes, or anchor tags (#).
+3. The ONLY allowed navigation routes are:
+   - /medications: Active prescriptions, medication cabinet, and adding medications (e.g. [check your active medications](/medications) or [add medication in My Medications](/medications))
+   - /reminders: Managing active medication reminders and alarm schedules (e.g. [manage your reminders](/reminders))
+   - /reminders/new: Creating or setting up a new dose reminder (e.g. [set up a new reminder](/reminders/new) or [create reminder](/reminders/new))
+   - /medvault: Med Vault pill inventory, stock levels, and refills (e.g. [check your pill stock in Med Vault](/medvault))
+   - /interactions: Drug & food interaction checker and safety warnings (e.g. [check drug & food interactions](/interactions))
+   - /family: Family Hub, managing family members, children, and dependent profiles (e.g. [manage profiles in Family Hub](/family))
+   - /history: Dose history logs and adherence streak (e.g. [review dose history](/history))
+   - /wellness: Wellness Hub and daily mood/symptom logging (e.g. [log wellness & symptoms](/wellness))
+   - /travel: Travel Companion and timezone adjustments (e.g. [plan travel medication](/travel))
+   - /report: Doctor report export (e.g. [export doctor report](/report))
+   - /scan: Visual pill camera scanner (e.g. [visual pill scanner](/scan))
+   - /search: Medication search and drug facts (e.g. [look up drug facts](/search))
+   - /settings: Settings, user profile, preferences, and app support (e.g. [settings](/settings))
+   - /: Dashboard / Home (e.g. [return to Dashboard](/))
+4. When suggesting the user add a medication, link to [My Medications](/medications).
+5. When suggesting the user create or set up a reminder, link to [set up a new reminder](/reminders/new).
+6. When suggesting the user manage family/child profiles, link to [Family Hub](/family).
 
 === MED VAULT & INVENTORY REASONING ===
 - Doses Remaining = Stock ÷ Dosage per dose.
@@ -3566,7 +3668,7 @@ Embed fluent markdown links into sentence grammar (never use "click here" or raw
   * National Drug Authority (NDA) Uganda: Toll-Free 0800 101 622 | WhatsApp: +256 791 415 555
   * Mulago Referral Hospital (Casualty & Emergency): +256 414 554 008
   * Mental Health Crisis (Butabika Hospital): Toll-Free 0800 200 600
-  * Dawa-Lens Support: support@dawalens.ug
+  * Dawa-Lens In-App Support: [manage your profile and support in Settings](/settings)
 
 === RXNORM & OPENFDA CLINICAL GROUNDING & DUPLICATE THERAPY (SAME-TASK MEDICATIONS) ===
 When answering questions about medications performing the same task, duplicate therapies, or potential drug interactions:

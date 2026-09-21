@@ -495,5 +495,4 @@ Dawa Lens follows strict software craftsmanship principles:
 
 *Built with passion to elevate medication safety, health literacy, and coordinated care across Uganda and the globe.*
 
-For inquiries, support, or partnership opportunities, visit [dawalens.web.app](https://dawalens.web.app).
 

@@ -120,4 +120,71 @@ describe("MessageRenderer Component", () => {
     const { container: c3 } = render(<MemoryRouter><MessageRenderer text={undefined as any} /></MemoryRouter>);
     expect(c3).toBeInTheDocument();
   });
+
+  it("resolves links without leading slash to valid in-app routes", () => {
+    const text = "Go to [Meds](medications) or [Add Reminder](reminders/new) or [Vault](medvault).";
+
+    render(
+      <MemoryRouter>
+        <MessageRenderer text={text} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole("link", { name: /Meds/i })).toHaveAttribute("href", "/medications");
+    expect(screen.getByRole("link", { name: /Add Reminder/i })).toHaveAttribute("href", "/reminders/new");
+    expect(screen.getByRole("link", { name: /Vault/i })).toHaveAttribute("href", "/medvault");
+  });
+
+  it("resolves action aliases and semantic screenshot links into in-app page routes", () => {
+    const text = `
+      Action:
+      [Add his medication here](add-his-medication-here)
+      [Create Owen's first reminder here](create-owens-first-reminder-here)
+    `;
+
+    render(
+      <MemoryRouter>
+        <MessageRenderer text={text} />
+      </MemoryRouter>
+    );
+
+    const medLink = screen.getByRole("link", { name: /Add his medication here/i });
+    expect(medLink).toHaveAttribute("href", "/medications");
+
+    const reminderLink = screen.getByRole("link", { name: /Create Owen's first reminder here/i });
+    expect(reminderLink).toHaveAttribute("href", "/reminders/new");
+  });
+
+  it("resolves full URLs and dawalens.ug URLs to internal app routes", () => {
+    const text = `
+      Check [Active Meds](https://dawalens.ug/medications) and
+      [Set Reminder](https://dawalens.app/reminders/new).
+    `;
+
+    render(
+      <MemoryRouter>
+        <MessageRenderer text={text} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByRole("link", { name: /Active Meds/i })).toHaveAttribute("href", "/medications");
+    expect(screen.getByRole("link", { name: /Set Reminder/i })).toHaveAttribute("href", "/reminders/new");
+  });
+
+  it("never renders external links to non-existent URLs and safely renders unmapped links as formatted text", () => {
+    const text = "Here is [Completely Unrelated Information](https://nonexistent-random-domain.xyz/random-path).";
+
+    const { container } = render(
+      <MemoryRouter>
+        <MessageRenderer text={text} />
+      </MemoryRouter>
+    );
+
+    // Should NOT have an <a> tag linking to nonexistent URL
+    const links = screen.queryAllByRole("link");
+    expect(links.length).toBe(0);
+    // Should render the text safely
+    expect(container.textContent).toContain("Completely Unrelated Information");
+  });
 });
+

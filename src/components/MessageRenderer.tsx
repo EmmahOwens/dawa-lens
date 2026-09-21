@@ -14,61 +14,340 @@ import {
   Settings,
   ScanLine,
   PlusCircle,
-  ExternalLink,
   LucideIcon,
   Package,
   Pill,
   Search,
 } from "@/lib/icons";
 
+/** Valid internal application routes that can be navigated to. */
+export const VALID_APP_ROUTES = new Set([
+  "/",
+  "/reminders",
+  "/reminders/new",
+  "/medications",
+  "/history",
+  "/interactions",
+  "/family",
+  "/travel",
+  "/wellness",
+  "/report",
+  "/settings",
+  "/scan",
+  "/search",
+  "/results",
+  "/medvault",
+]);
+
 /** Maps DawaGPT custom/alias routes to actual application page routes. */
-const GPT_ROUTE_MAP: Record<string, string> = {
+export const GPT_ROUTE_MAP: Record<string, string> = {
+  // Home / Dashboard
+  "/": "/",
   "/dashboard": "/",
   "/home": "/",
-  "/reminders": "/reminders",
+  "/main": "/",
+  "/index": "/",
+
+  // Medications / Cabinet / Prescriptions / Add Medicine
   "/medications": "/medications",
+  "/medication": "/medications",
   "/meds": "/medications",
+  "/medicine": "/medications",
+  "/medicines": "/medications",
   "/medicine-list": "/medications",
+  "/medication-list": "/medications",
   "/cabinet": "/medications",
-  "/medication-info": "/search",
-  "/search": "/search",
+  "/my-medications": "/medications",
+  "/my-meds": "/medications",
+  "/prescriptions": "/medications",
+  "/add-medication": "/medications",
+  "/add-medicine": "/medications",
+  "/add-meds": "/medications",
+  "/new-medication": "/medications",
+  "/new-medicine": "/medications",
+  "/add-prescriptions": "/medications",
+
+  // Reminders - List
+  "/reminders": "/reminders",
+  "/reminder": "/reminders",
+  "/alarms": "/reminders",
+  "/alarm": "/reminders",
+  "/schedule": "/reminders",
+  "/schedules": "/reminders",
+  "/my-reminders": "/reminders",
+  "/dose-reminders": "/reminders",
+
+  // Reminders - Add / New / Create
   "/reminders/new": "/reminders/new",
+  "/reminder/new": "/reminders/new",
   "/new-reminder": "/reminders/new",
   "/add-reminder": "/reminders/new",
-  "/history": "/history",
-  "/logs": "/history",
-  "/interactions": "/interactions",
-  "/safety": "/interactions",
-  "/drug-interactions": "/interactions",
-  "/food-interactions": "/interactions",
-  "/safety-guard": "/interactions",
-  "/family": "/family",
-  "/family-hub": "/family",
-  "/clients": "/family",
-  "/travel": "/travel",
-  "/travel-companion": "/travel",
-  "/wellness": "/wellness",
-  "/wellness-hub": "/wellness",
-  "/report": "/report",
-  "/reports": "/report",
-  "/care-report": "/report",
-  "/doctor-report": "/report",
-  "/doctor-reports": "/report",
-  "/export-report": "/report",
-  "/settings": "/settings",
-  "/profile": "/settings",
-  "/preferences": "/settings",
-  "/scan": "/scan",
-  "/scan-medicine": "/scan",
-  "/scanner": "/scan",
-  "/scan-pill": "/scan",
+  "/create-reminder": "/reminders/new",
+  "/set-reminder": "/reminders/new",
+  "/remind": "/reminders/new",
+  "/new-alarm": "/reminders/new",
+  "/add-alarm": "/reminders/new",
+  "/create-alarm": "/reminders/new",
+  "/schedule-reminder": "/reminders/new",
+  "/schedule-dose": "/reminders/new",
+  "/reminders/add": "/reminders/new",
+  "/reminders/create": "/reminders/new",
+
+  // Med Vault / Stock / Inventory
   "/medvault": "/medvault",
   "/med-vault": "/medvault",
   "/vault": "/medvault",
   "/stock": "/medvault",
   "/inventory": "/medvault",
   "/pill-tracker": "/medvault",
+  "/pills": "/medvault",
+  "/refill": "/medvault",
+  "/refills": "/medvault",
+  "/restock": "/medvault",
+  "/supplies": "/medvault",
+
+  // Interactions & Safety
+  "/interactions": "/interactions",
+  "/interaction": "/interactions",
+  "/safety": "/interactions",
+  "/drug-interactions": "/interactions",
+  "/food-interactions": "/interactions",
+  "/safety-guard": "/interactions",
+  "/side-effects": "/interactions",
+  "/conflicts": "/interactions",
+
+  // Family Hub / Dependents / Profiles
+  "/family": "/family",
+  "/family-hub": "/family",
+  "/clients": "/family",
+  "/client": "/family",
+  "/patients": "/family",
+  "/patient": "/family",
+  "/dependents": "/family",
+  "/dependent": "/family",
+  "/profiles": "/family",
+  "/child": "/family",
+  "/children": "/family",
+  "/add-family": "/family",
+  "/add-dependent": "/family",
+  "/add-patient": "/family",
+
+  // Dose History & Logs
+  "/history": "/history",
+  "/logs": "/history",
+  "/dose-history": "/history",
+  "/dose-logs": "/history",
+  "/past-doses": "/history",
+  "/adherence": "/history",
+  "/streak": "/history",
+
+  // Wellness Hub
+  "/wellness": "/wellness",
+  "/wellness-hub": "/wellness",
+  "/symptoms": "/wellness",
+  "/symptom": "/wellness",
+  "/mood": "/wellness",
+  "/vibe": "/wellness",
+  "/vitality": "/wellness",
+  "/meal-journal": "/wellness",
+
+  // Travel Companion
+  "/travel": "/travel",
+  "/travel-companion": "/travel",
+  "/trip": "/travel",
+  "/flight": "/travel",
+  "/timezone": "/travel",
+
+  // Doctor-Ready Reports
+  "/report": "/report",
+  "/reports": "/report",
+  "/care-report": "/report",
+  "/doctor-report": "/report",
+  "/doctor-reports": "/report",
+  "/export-report": "/report",
+  "/export": "/report",
+  "/pdf": "/report",
+
+  // Visual Scanner
+  "/scan": "/scan",
+  "/scan-medicine": "/scan",
+  "/scanner": "/scan",
+  "/scan-pill": "/scan",
+  "/camera": "/scan",
+  "/ocr": "/scan",
+
+  // Search & Monographs
+  "/search": "/search",
+  "/medication-info": "/search",
+  "/lookup": "/search",
+  "/drug-info": "/search",
+  "/results": "/results",
+
+  // Settings
+  "/settings": "/settings",
+  "/profile": "/settings",
+  "/preferences": "/settings",
+  "/account": "/settings",
 };
+
+/**
+ * Resolves any href or link text to a valid internal application route.
+ * Handles full URLs (e.g. https://dawalens.app/medications), URLs without leading slashes,
+ * custom alias slugs, and semantic keyword matching on both href and link label.
+ * Returns null if the link cannot be safely mapped to an application page.
+ */
+export function resolveToInternalRoute(rawHref: string, label: string = ""): string | null {
+  if (!rawHref && !label) return null;
+
+  let cleaned = (rawHref || "").trim();
+
+  // Strip mailto:, tel:, or javascript:
+  if (/^(?:javascript|mailto|tel):/i.test(cleaned)) {
+    return null;
+  }
+
+  // Parse if it's an absolute URL
+  if (/^https?:\/\//i.test(cleaned)) {
+    try {
+      const parsed = new URL(cleaned);
+      cleaned = parsed.pathname;
+    } catch {
+      cleaned = cleaned.replace(/^https?:\/\/[^/]+/i, "");
+    }
+  }
+
+  // Strip hash and query strings
+  cleaned = cleaned.split("?")[0].split("#")[0].trim();
+
+  // Strip any trailing slashes except for root
+  if (cleaned.length > 1 && cleaned.endsWith("/")) {
+    cleaned = cleaned.slice(0, -1);
+  }
+
+  // Ensure leading slash for route matching
+  if (cleaned && !cleaned.startsWith("/")) {
+    cleaned = `/${cleaned}`;
+  }
+
+  const normalizedLower = cleaned.toLowerCase();
+
+  // 1. Direct dictionary match
+  if (GPT_ROUTE_MAP[normalizedLower]) {
+    return GPT_ROUTE_MAP[normalizedLower];
+  }
+
+  // 2. Direct match against valid routes
+  if (VALID_APP_ROUTES.has(normalizedLower)) {
+    return normalizedLower;
+  }
+
+  // 3. Semantic keyword resolution across href and label text
+  const semantic = `${cleaned} ${label}`.toLowerCase();
+
+  // Reminders - new / create / add
+  if (
+    (semantic.includes("reminder") || semantic.includes("alarm") || semantic.includes("schedule")) &&
+    (semantic.includes("new") || semantic.includes("create") || semantic.includes("set") || semantic.includes("add") || semantic.includes("first"))
+  ) {
+    return "/reminders/new";
+  }
+
+  // Reminders - general
+  if (semantic.includes("reminder") || semantic.includes("alarm") || semantic.includes("schedule")) {
+    return "/reminders";
+  }
+
+  // Vault / stock / inventory / refill
+  if (
+    semantic.includes("vault") ||
+    semantic.includes("stock") ||
+    semantic.includes("inventory") ||
+    semantic.includes("refill") ||
+    semantic.includes("supplies")
+  ) {
+    return "/medvault";
+  }
+
+  // Medications / cabinet / prescriptions / pills
+  if (
+    semantic.includes("medication") ||
+    semantic.includes("medicine") ||
+    semantic.includes("meds") ||
+    semantic.includes("cabinet") ||
+    semantic.includes("prescription") ||
+    semantic.includes("pill") ||
+    semantic.includes("drug")
+  ) {
+    if (semantic.includes("search") || semantic.includes("lookup") || semantic.includes("fact") || semantic.includes("monograph")) {
+      return "/search";
+    }
+    return "/medications";
+  }
+
+  // Interactions & safety
+  if (semantic.includes("interaction") || semantic.includes("safety") || semantic.includes("conflict") || semantic.includes("side effect")) {
+    return "/interactions";
+  }
+
+  // Family Hub / dependents / children
+  if (
+    semantic.includes("family") ||
+    semantic.includes("dependent") ||
+    semantic.includes("child") ||
+    semantic.includes("patient") ||
+    semantic.includes("client")
+  ) {
+    return "/family";
+  }
+
+  // Dose History & logs
+  if (semantic.includes("history") || semantic.includes("log") || semantic.includes("streak") || semantic.includes("adherence")) {
+    return "/history";
+  }
+
+  // Wellness Hub / symptoms
+  if (
+    semantic.includes("wellness") ||
+    semantic.includes("symptom") ||
+    semantic.includes("mood") ||
+    semantic.includes("vibe") ||
+    semantic.includes("vitality")
+  ) {
+    return "/wellness";
+  }
+
+  // Travel
+  if (semantic.includes("travel") || semantic.includes("trip") || semantic.includes("flight") || semantic.includes("timezone")) {
+    return "/travel";
+  }
+
+  // Doctor Report
+  if (semantic.includes("report") || semantic.includes("doctor") || semantic.includes("pdf") || semantic.includes("export")) {
+    return "/report";
+  }
+
+  // Scanner
+  if (semantic.includes("scan") || semantic.includes("camera") || semantic.includes("ocr")) {
+    return "/scan";
+  }
+
+  // Search
+  if (semantic.includes("search") || semantic.includes("lookup")) {
+    return "/search";
+  }
+
+  // Settings
+  if (semantic.includes("setting") || semantic.includes("preference") || semantic.includes("profile") || semantic.includes("account")) {
+    return "/settings";
+  }
+
+  // Home / Dashboard
+  if (semantic.includes("home") || semantic.includes("dashboard")) {
+    return "/";
+  }
+
+  return null;
+}
 
 /** Maps known internal routes to an icon for the link chip. */
 const ROUTE_ICONS: Record<string, LucideIcon> = {
@@ -106,25 +385,6 @@ function InternalLinkChip({ to, label, onClick }: InternalLinkChipProps) {
       <Icon size={11} className="shrink-0 text-primary" />
       <span>{label}</span>
     </Link>
-  );
-}
-
-interface ExternalLinkChipProps {
-  href: string;
-  label: string;
-}
-
-function ExternalLinkChip({ href, label }: ExternalLinkChipProps) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-background border border-border/60 text-muted-foreground text-[12px] font-semibold hover:bg-muted/50 active:scale-95 transition-all mx-0.5 no-underline shadow-sm"
-    >
-      {label}
-      <ExternalLink size={10} className="shrink-0 opacity-40" />
-    </a>
   );
 }
 
@@ -240,46 +500,22 @@ export default function MessageRenderer({ text, onNavigate, className }: Message
           ),
           hr: () => <hr className="my-3 border-border/50" />,
           a: ({ href, children }) => {
-            if (!href) return <span>{children}</span>;
-            const label = String(children);
-            
-            if (href.startsWith("/")) {
-              // Resolve the custom route to an actual page route using GPT_ROUTE_MAP
-              const resolvedRoute = GPT_ROUTE_MAP[href] || href;
-              
-              // Whitelist of valid routes existing in the application
-              const validRoutes = [
-                "/",
-                "/reminders",
-                "/reminders/new",
-                "/medications",
-                "/history",
-                "/interactions",
-                "/family",
-                "/travel",
-                "/wellness",
-                "/report",
-                "/settings",
-                "/scan",
-                "/search",
-                "/results",
-                "/medvault"
-              ];
-              
-              if (validRoutes.includes(resolvedRoute)) {
-                return (
-                  <InternalLinkChip 
-                    to={resolvedRoute} 
-                    label={label} 
-                    onClick={onNavigate} 
-                  />
-                );
-              }
-              
-              // If it's an invalid internal route, render it as plain text to prevent broken links
-              return <span className="font-medium text-foreground">{label}</span>;
+            const label = String(children || "");
+            const internalRoute = resolveToInternalRoute(href || "", label);
+
+            if (internalRoute && VALID_APP_ROUTES.has(internalRoute)) {
+              return (
+                <InternalLinkChip 
+                  to={internalRoute} 
+                  label={label || internalRoute} 
+                  onClick={onNavigate} 
+                />
+              );
             }
-            return <ExternalLinkChip href={href} label={label} />;
+
+            // Never render external links or non-existent URLs in DawaGPT.
+            // If unmapped, render safe formatted text.
+            return <span className="font-semibold text-foreground">{children}</span>;
           },
           table: ({ children }) => (
             <div className="overflow-x-auto my-4 rounded-xl border border-border/50">

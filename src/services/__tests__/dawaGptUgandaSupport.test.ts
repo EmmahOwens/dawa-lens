@@ -28,8 +28,8 @@ describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
     expect(response.text).toContain("0800 100 066");
     expect(response.text).toContain("0800 101 622");
     expect(response.text).toContain("Mulago National Referral Hospital");
-    expect(response.text).toContain("support@dawalens.ug");
-    expect(response.text).toContain("[manage your emergency contacts in Settings](/settings)");
+    expect(response.text).not.toContain("support@dawalens.ug");
+    expect(response.text).toContain("[manage your emergency contacts and profile in Settings](/settings)");
     expect(response.suggestions).toContain("Call Uganda Emergency (112)");
   });
 
@@ -80,7 +80,8 @@ describe("DawaGPT Uganda Contact Support & Emergency Directory", () => {
     );
 
     expect(response.text).toContain("112");
-    expect(response.text).toContain("support@dawalens.ug");
+    expect(response.text).not.toContain("support@dawalens.ug");
+    expect(response.text).toContain("/settings");
   });
 
   it("provides NDA contact when asked 'NDA hotline'", async () => {
