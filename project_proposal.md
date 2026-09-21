@@ -703,7 +703,7 @@ sequenceDiagram
     deactivate GPS
     App->>NDAService: Query Licensed Outlets within Radius (Haversine)
     activate NDAService
-    NDAService-->>App: Return Verified NDA Pharmacies, Distances & Routes
+    NDAService-->>App: Return Verified , Distances & Routes
     deactivate NDAService
     App->>User: Render Interactive Map with Route & Pharmacist Info
     User->>App: Selects Outlet & Logs Refill Confirmation
@@ -881,15 +881,15 @@ flowchart TD
 
 ## 13. Comprehensive Risk Assessment & Mitigation Framework
 
-| Risk Identifier | Domain | Probability | Impact | Mitigation Strategy |
-| :--- | :--- | :---: | :---: | :--- |
-| **OCR Misclassification on Faded Packaging** | Technical | Medium | High | Implement mandatory human-in-the-loop verification screen with confidence scores, editable entity fields, and scratch-code fallback validation. |
-| **Aggressive Android OS Background App Killing** | Hardware / OS | High | Critical | Deploy `AdherenceGuardianService` as a persistent foreground service, utilize `AlarmManager.setExactAndAllowWhileIdle()`, and prompt OEM autostart intents via `BatteryOptimizationGate`. |
-| **Prolonged Cellular Network Blackouts** | Infrastructure | High | Medium | Implement complete offline-first architecture using IndexedDB, native SQLite, and TanStack Query; alarms and local features execute indefinitely without internet. |
-| **Race Conditions During Multi-Device Reconnect** | Software | Medium | Medium | Utilize client-side Distributed Lock Manager (`distributedLock.ts`) to serialize delta sync operations across offline queues. |
-| **AI Hallucination on Dosage Instructions** | Clinical | Low | Critical | Enforce strict prompt boundary constraints, zero-shot entity validation against OpenFDA/RxNorm databases, and prohibition of generative dosage recommendations. |
-| **API Latency & Rate Limit Exhaustion** | Infrastructure | Medium | Medium | Employ client-side Tesseract.js for initial OCR passes, implement backend Token Bucket rate limiting, and maintain in-memory response caches for OpenFDA lookups. |
-| **Linguistic & Cultural Disconnect** | Operational | Low | Medium | Localize conversational models with authentic Luganda honorifics (*Ssebo*, *Nyabo*) and regional dietary terminology (*Matooke*, *Mukene*, *G-nuts*). |
+| Risk Identifier                                   | Domain         | Probability |  Impact  | Mitigation Strategy                                                                                                                                                                       |
+| :------------------------------------------------ | :------------- | :---------: | :------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **OCR Misclassification on Faded Packaging**      | Technical      |   Medium    |   High   | Implement mandatory human-in-the-loop verification screen with confidence scores, editable entity fields, and scratch-code fallback validation.                                           |
+| **Aggressive Android OS Background App Killing**  | Hardware / OS  |    High     | Critical | Deploy `AdherenceGuardianService` as a persistent foreground service, utilize `AlarmManager.setExactAndAllowWhileIdle()`, and prompt OEM autostart intents via `BatteryOptimizationGate`. |
+| **Prolonged Cellular Network Blackouts**          | Infrastructure |    High     |  Medium  | Implement complete offline-first architecture using IndexedDB, native SQLite, and TanStack Query; alarms and local features execute indefinitely without internet.                        |
+| **Race Conditions During Multi-Device Reconnect** | Software       |   Medium    |  Medium  | Utilize client-side Distributed Lock Manager (`distributedLock.ts`) to serialize delta sync operations across offline queues.                                                             |
+| **AI Hallucination on Dosage Instructions**       | Clinical       |     Low     | Critical | Enforce strict prompt boundary constraints, zero-shot entity validation against OpenFDA/RxNorm databases, and prohibition of generative dosage recommendations.                           |
+| **API Latency & Rate Limit Exhaustion**           | Infrastructure |   Medium    |  Medium  | Employ client-side Tesseract.js for initial OCR passes, implement backend Token Bucket rate limiting, and maintain in-memory response caches for OpenFDA lookups.                         |
+| **Linguistic & Cultural Disconnect**              | Operational    |     Low     |  Medium  | Localize conversational models with authentic Luganda honorifics (*Ssebo*, *Nyabo*) and regional dietary terminology (*Matooke*, *Mukene*, *G-nuts*).                                     |
 
 ---
 
@@ -965,16 +965,16 @@ gantt
 
 The following budget outlines the financial resources required for the development, testing, and pilot deployment of Dawa Lens, optimized for an Android-first and PWA deployment model.
 
-| Category | Item Description | Unit Cost | Total (UGX) | Total (USD) |
-| :--- | :--- | :---: | :---: | :---: |
-| **Cloud Infrastructure** | Firebase Blaze Plan (Firestore reads/writes, Auth, Hosting) | $15 / month | 513,000 UGX | ~$135 |
-| **Artificial Intelligence** | Groq Cloud & Google Gemini Token Allocation (Vision + Chat) | $20 / month | 684,000 UGX | ~$180 |
-| **Developer Accounts** | Google Play Console Developer License (One-time registration) | $25 | 95,000 UGX | $25 |
-| **Pilot Hardware Testing** | Test Android Devices (Entry-tier Transsion & Mid-tier Samsung) | *Provided / Shared* | 0 UGX | $0 |
-| **Field Pilot & User Study** | Data Stipends for 50 Pilot Beta Testers (Kampala & Wakiso) | 15,000 UGX / tester | 750,000 UGX | ~$200 |
-| **Connectivity & Utilities**| Broadband Internet & Research Utilities (9 Months) | 100,000 UGX / month | 900,000 UGX | ~$237 |
-| **Contingency** | Miscellaneous Technical Contingency Fund (~10%) | — | 294,000 UGX | ~$77 |
-| **TOTAL ESTIMATED BUDGET**| | | **3,236,000 UGX** | **~$852** |
+| Category                     | Item Description                                               |      Unit Cost      |    Total (UGX)    | Total (USD) |
+| :--------------------------- | :------------------------------------------------------------- | :-----------------: | :---------------: | :---------: |
+| **Cloud Infrastructure**     | Firebase Blaze Plan (Firestore reads/writes, Auth, Hosting)    |     $15 / month     |    513,000 UGX    |    ~$135    |
+| **Artificial Intelligence**  | Groq Cloud & Google Gemini Token Allocation (Vision + Chat)    |     $20 / month     |    684,000 UGX    |    ~$180    |
+| **Developer Accounts**       | Google Play Console Developer License (One-time registration)  |         $25         |    95,000 UGX     |     $25     |
+| **Pilot Hardware Testing**   | Test Android Devices (Entry-tier Transsion & Mid-tier Samsung) | *Provided / Shared* |       0 UGX       |     $0      |
+| **Field Pilot & User Study** | Data Stipends for 50 Pilot Beta Testers (Kampala & Wakiso)     | 15,000 UGX / tester |    750,000 UGX    |    ~$200    |
+| **Connectivity & Utilities** | Broadband Internet & Research Utilities (9 Months)             | 100,000 UGX / month |    900,000 UGX    |    ~$237    |
+| **Contingency**              | Miscellaneous Technical Contingency Fund (~10%)                |          —          |    294,000 UGX    |    ~$77     |
+| **TOTAL ESTIMATED BUDGET**   |                                                                |                     | **3,236,000 UGX** |  **~$852**  |
 
 ---
 
