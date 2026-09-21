@@ -920,10 +920,12 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                                 <Skeleton className="h-3 w-5/6" />
                               </div>
                             ) : (
-                              <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm max-w-none">
+                              <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm dark:prose-invert max-w-none">
                                 <ReactMarkdown
                                   components={{
                                     p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                                    strong: ({ children }) => <strong className="font-bold text-foreground">{children}</strong>,
+                                    b: ({ children }) => <b className="font-bold text-foreground">{children}</b>,
                                     ul: ({ children }) => <ul className="list-disc pl-4 space-y-1 my-1">{children}</ul>,
                                     li: ({ children }) => <li className="text-muted-foreground">{children}</li>,
                                   }}
@@ -1160,10 +1162,12 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                                 <Skeleton className="h-3 w-5/6" />
                               </div>
                             ) : (
-                              <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm max-w-none">
+                              <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm dark:prose-invert max-w-none">
                                 <ReactMarkdown
                                   components={{
                                     p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                                    strong: ({ children }) => <strong className="font-bold text-foreground">{children}</strong>,
+                                    b: ({ children }) => <b className="font-bold text-foreground">{children}</b>,
                                     ul: ({ children }) => <ul className="list-disc pl-4 space-y-1 my-1">{children}</ul>,
                                     li: ({ children }) => <li className="text-muted-foreground">{children}</li>,
                                   }}

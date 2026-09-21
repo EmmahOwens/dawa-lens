@@ -803,12 +803,30 @@ export default function ReportPage() {
             {insights ? (
               <div className="space-y-6">
                 <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10 relative">
-                  <div className="text-sm font-semibold text-foreground leading-relaxed prose prose-sm max-w-none">
+                  <div className="text-sm font-semibold text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
                         p: ({ children }) => (
-                          <p className="mb-2 last:mb-0">{children}</p>
+                          <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>
+                        ),
+                        strong: ({ children }) => (
+                          <strong className="font-bold text-foreground">{children}</strong>
+                        ),
+                        b: ({ children }) => (
+                          <b className="font-bold text-foreground">{children}</b>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="list-disc ml-4 my-2 space-y-1">{children}</ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="list-decimal ml-4 my-2 space-y-1">{children}</ol>
+                        ),
+                        li: ({ children }) => (
+                          <li className="leading-relaxed">{children}</li>
+                        ),
+                        code: ({ children }) => (
+                          <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-xs font-mono">{children}</code>
                         ),
                         table: ({ children }) => (
                           <div className="overflow-x-auto my-3 rounded-xl border border-primary/20">
@@ -816,23 +834,41 @@ export default function ReportPage() {
                           </div>
                         ),
                         thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
-                        th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap">{children}</th>,
-                        td: ({ children }) => <td className="px-3 py-2 border-b border-border/30">{children}</td>,
+                        th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap text-foreground">{children}</th>,
+                        td: ({ children }) => <td className="px-3 py-2 border-b border-border/30 text-foreground">{children}</td>,
                       }}
                     >
                       {insights.summary}
                     </ReactMarkdown>
                   </div>
                   {insights.dosagePatterns && (
-                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm max-w-none">
-                      <strong className="text-foreground">
+                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm dark:prose-invert max-w-none">
+                      <strong className="text-foreground font-bold">
                         Dosage Patterns:
                       </strong>
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({ children }) => (
-                            <span className="ml-1">{children}</span>
+                            <span className="ml-1 leading-relaxed">{children}</span>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="font-bold text-foreground">{children}</strong>
+                          ),
+                          b: ({ children }) => (
+                            <b className="font-bold text-foreground">{children}</b>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="list-disc ml-4 my-2 space-y-1 text-muted-foreground">{children}</ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="list-decimal ml-4 my-2 space-y-1 text-muted-foreground">{children}</ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="leading-relaxed marker:text-primary/70">{children}</li>
+                          ),
+                          code: ({ children }) => (
+                            <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-xs font-mono">{children}</code>
                           ),
                           table: ({ children }) => (
                             <div className="overflow-x-auto my-3 rounded-xl border border-primary/20">
@@ -840,8 +876,8 @@ export default function ReportPage() {
                             </div>
                           ),
                           thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
-                          th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap">{children}</th>,
-                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/30">{children}</td>,
+                          th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap text-foreground">{children}</th>,
+                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/30 text-foreground">{children}</td>,
                         }}
                       >
                         {insights.dosagePatterns}
@@ -849,15 +885,33 @@ export default function ReportPage() {
                     </div>
                   )}
                   {insights.lifestyleAnalysis && (
-                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm max-w-none">
-                      <strong className="text-foreground">
+                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm dark:prose-invert max-w-none">
+                      <strong className="text-foreground font-bold">
                         Lifestyle & Symptoms:
                       </strong>
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={{
                           p: ({ children }) => (
-                            <span className="ml-1">{children}</span>
+                            <span className="ml-1 leading-relaxed">{children}</span>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="font-bold text-foreground">{children}</strong>
+                          ),
+                          b: ({ children }) => (
+                            <b className="font-bold text-foreground">{children}</b>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="list-disc ml-4 my-2 space-y-1 text-muted-foreground">{children}</ul>
+                          ),
+                          ol: ({ children }) => (
+                            <ol className="list-decimal ml-4 my-2 space-y-1 text-muted-foreground">{children}</ol>
+                          ),
+                          li: ({ children }) => (
+                            <li className="leading-relaxed marker:text-primary/70">{children}</li>
+                          ),
+                          code: ({ children }) => (
+                            <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-xs font-mono">{children}</code>
                           ),
                           table: ({ children }) => (
                             <div className="overflow-x-auto my-3 rounded-xl border border-primary/20">
@@ -865,8 +919,8 @@ export default function ReportPage() {
                             </div>
                           ),
                           thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
-                          th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap">{children}</th>,
-                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/30">{children}</td>,
+                          th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap text-foreground">{children}</th>,
+                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/30 text-foreground">{children}</td>,
                         }}
                       >
                         {insights.lifestyleAnalysis}
@@ -888,12 +942,18 @@ export default function ReportPage() {
                         <div className="w-5 h-5 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0 mt-0.5">
                           <CheckCircle2 size={12} className="text-indigo-500" />
                         </div>
-                        <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm max-w-none">
+                        <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm dark:prose-invert max-w-none">
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
                               p: ({ children }) => (
                                 <p className="m-0">{children}</p>
+                              ),
+                              strong: ({ children }) => (
+                                <strong className="font-bold text-foreground">{children}</strong>
+                              ),
+                              b: ({ children }) => (
+                                <b className="font-bold text-foreground">{children}</b>
                               ),
                             }}
                           >
@@ -915,12 +975,18 @@ export default function ReportPage() {
                         key={idx}
                         className="flex items-center justify-between p-3.5 rounded-xl bg-warning/5 border border-warning/20"
                       >
-                        <div className="text-xs font-semibold text-amber-900 dark:text-amber-200 leading-snug pr-4 prose prose-sm max-w-none">
+                        <div className="text-xs font-semibold text-amber-900 dark:text-amber-200 leading-snug pr-4 prose prose-sm dark:prose-invert max-w-none">
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
                               p: ({ children }) => (
                                 <p className="m-0">{children}</p>
+                              ),
+                              strong: ({ children }) => (
+                                <strong className="font-bold text-amber-950 dark:text-amber-100">{children}</strong>
+                              ),
+                              b: ({ children }) => (
+                                <b className="font-bold text-amber-950 dark:text-amber-100">{children}</b>
                               ),
                             }}
                           >

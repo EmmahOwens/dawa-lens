@@ -329,6 +329,8 @@ export const MedicalReportContent = ({
                   remarkPlugins={[remarkGfm]}
                   components={{
                     p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    strong: ({ children }) => <strong className="font-black text-white">{children}</strong>,
+                    b: ({ children }) => <b className="font-black text-white">{children}</b>,
                     table: ({ children }) => (
                       <div className="overflow-x-auto my-3 rounded-xl border border-white/20">
                         <table className="w-full text-sm text-left border-collapse text-white">{children}</table>
@@ -354,6 +356,8 @@ export const MedicalReportContent = ({
                       remarkPlugins={[remarkGfm]}
                       components={{
                         p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        strong: ({ children }) => <strong className="font-black text-slate-900">{children}</strong>,
+                        b: ({ children }) => <b className="font-black text-slate-900">{children}</b>,
                         ul: ({ children }) => <ul className="list-disc ml-4 mb-2 space-y-1">{children}</ul>,
                         li: ({ children }) => <li className="text-[12px]">{children}</li>,
                         table: ({ children }) => (
@@ -379,6 +383,8 @@ export const MedicalReportContent = ({
                       remarkPlugins={[remarkGfm]}
                       components={{
                         p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        strong: ({ children }) => <strong className="font-black text-slate-900">{children}</strong>,
+                        b: ({ children }) => <b className="font-black text-slate-900">{children}</b>,
                         table: ({ children }) => (
                           <div className="overflow-x-auto my-3 rounded-xl border border-slate-200">
                             <table className="w-full text-xs text-left border-collapse">{children}</table>
@@ -412,6 +418,8 @@ export const MedicalReportContent = ({
                           remarkPlugins={[remarkGfm]}
                           components={{
                             p: ({ children }) => <span className="m-0">{children}</span>,
+                            strong: ({ children }) => <strong className="font-black text-slate-900">{children}</strong>,
+                            b: ({ children }) => <b className="font-black text-slate-900">{children}</b>,
                           }}
                         >
                           {insight}
@@ -439,6 +447,8 @@ export const MedicalReportContent = ({
                           remarkPlugins={[remarkGfm]}
                           components={{
                             p: ({ children }) => <span className="m-0">{children}</span>,
+                            strong: ({ children }) => <strong className="font-black text-slate-900">{children}</strong>,
+                            b: ({ children }) => <b className="font-black text-slate-900">{children}</b>,
                           }}
                         >
                           {action}
