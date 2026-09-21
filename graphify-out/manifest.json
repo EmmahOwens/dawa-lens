@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789998650.8768148,
-    "ast_hash": "a696f8304dbd2523683e1898980b9bac",
+    "mtime": 1789999181.4472795,
+    "ast_hash": "b752dc398177d7c6c1364d46512c4655",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -1450,8 +1450,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/test/setup.ts": {
-    "mtime": 1783706039.392867,
-    "ast_hash": "0317ad5e6b7564f2e2e10a7ded0d1e6f",
+    "mtime": 1789999367.3007736,
+    "ast_hash": "e795986c321dac9530c7420c7db75226",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/types/api.ts": {
@@ -2765,8 +2765,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/__tests__/DawaGPTOffline.test.tsx": {
-    "mtime": 1789029316.8002713,
-    "ast_hash": "372597bbca6231e09cf62c0607cbd2ee",
+    "mtime": 1789999469.153497,
+    "ast_hash": "1aba045addb01a50d79c5381191e4a8f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useNearbyPharmacies.test.ts": {

@@ -19,3 +19,13 @@ window.HTMLMediaElement.prototype.play = () => Promise.resolve();
 window.HTMLMediaElement.prototype.pause = () => {};
 window.HTMLMediaElement.prototype.load = () => {};
 
+// Mock URL methods for jsdom (required by maplibre-gl and blob workers)
+if (typeof window !== "undefined") {
+  if (!window.URL.createObjectURL) {
+    window.URL.createObjectURL = () => "mock-url";
+  }
+  if (!window.URL.revokeObjectURL) {
+    window.URL.revokeObjectURL = () => {};
+  }
+}
+

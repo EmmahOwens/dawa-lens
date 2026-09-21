@@ -849,12 +849,14 @@ export const generateDawaGPTResponse = async (
   reminders: Reminder[] = [],
   patients: Patient[] = [],
   selectedPatientId: string | null = null,
-  currentPage: string | null = null
+  currentPage: string | null = null,
+  history: ChatHistoryItem[] = [],
+  preResolvedAction: AIAction | null = null
 ): Promise<ChatMessage> => {
   const normalizedQuery = query.toLowerCase().trim();
 
   // 1. Action Dispatching (All full-system agentic actions)
-  const action = extractDeterministicAction(query, allMedicines, reminders, patients);
+  const action = preResolvedAction || extractDeterministicAction(query, allMedicines, reminders, patients, history);
   if (action) {
     if (action.type === "ADD_MEDICINE") {
       const payload = action.payload as any;
@@ -2173,10 +2175,15 @@ export const chatWithDawaGPTStream = async (
             reminders,
             patients,
             selectedPatientId,
-            currentPage
+            currentPage,
+            messages,
+            resolvedAction
           );
           onChunk(offlineResp.text);
-          return offlineResp;
+          return {
+            ...offlineResp,
+            action: resolvedAction
+          };
         } catch (localErr) {
           console.warn("[DawaGPT] Offline action generation failed:", localErr);
         }
@@ -2244,10 +2251,15 @@ export const chatWithDawaGPTStream = async (
           reminders,
           patients,
           selectedPatientId,
-          currentPage
+          currentPage,
+          messages,
+          localAction
         );
         onChunk(offlineResp.text);
-        return offlineResp;
+        return {
+          ...offlineResp,
+          action: localAction
+        };
       } catch (localErr) {
         console.warn("Offline action generation failed:", localErr);
       }

@@ -130,7 +130,7 @@ describe("DawaGPT Offline Behavior", () => {
     expect(triggerBtn).not.toBeInTheDocument();
   });
 
-  it("displays offline badge and disables input when chat is open while offline", () => {
+  it("displays offline badge and offline action indicator when chat is open while offline", () => {
     mockIsOnline = false;
     mockAppState.isDawaGPTOpen = true;
 
@@ -141,8 +141,6 @@ describe("DawaGPT Offline Behavior", () => {
     );
 
     expect(screen.getByText("Offline")).toBeInTheDocument();
-    const textarea = screen.getByPlaceholderText("DawaGPT is unavailable offline...");
-    expect(textarea).toBeDisabled();
-    expect(screen.getByText(/Internet connection required for AI responses/i)).toBeInTheDocument();
+    expect(screen.getByText(/Offline mode active\. Dose logging, reminders, and cabinet actions work offline\./i)).toBeInTheDocument();
   });
 });
