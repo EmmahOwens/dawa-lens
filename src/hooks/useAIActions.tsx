@@ -1,4 +1,4 @@
-import { useApp } from "@/contexts/AppContext";
+import { useApp, Medicine, Patient, Reminder } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { AIAction } from "@/services/aiAssistantService";
 import { RiveMoji } from "@/components/rive/RiveMoji";
@@ -89,6 +89,102 @@ export function useAIActions() {
     };
   }
 
+  // Helper to resolve patient ID from patientId, patientName, patient, or target member
+  const resolvePatientId = (rawIdOrName?: string | null): string | undefined => {
+    if (!rawIdOrName || typeof rawIdOrName !== "string") return undefined;
+    const clean = rawIdOrName.trim();
+    if (!clean) return undefined;
+    if (["self", "me", "myself", "owner", "personal", "host", "null", "undefined"].includes(clean.toLowerCase())) {
+      return undefined;
+    }
+    // Direct ID match
+    const byId = patients.find(p => p.id === clean);
+    if (byId) return byId.id;
+    // Exact name match
+    const byName = patients.find(p => p.name.toLowerCase() === clean.toLowerCase());
+    if (byName) return byName.id;
+    // Fuzzy name match
+    const fuzzy = patients.find(p =>
+      p.name.toLowerCase().includes(clean.toLowerCase()) ||
+      clean.toLowerCase().includes(p.name.toLowerCase())
+    );
+    if (fuzzy) return fuzzy.id;
+    return clean;
+  };
+
+  // Helper to resolve medicine by ID, name, or generic name with bidirectional fuzzy matching
+  const findMedicine = (id?: string, name?: string): Medicine | undefined => {
+    if (id) {
+      const byId = medicines.find(m => m.id === id);
+      if (byId) return byId;
+    }
+    if (!name || medicines.length === 0) return undefined;
+    const cleanName = name.trim().toLowerCase();
+    // 1. Exact match on name or genericName
+    const exact = medicines.find(m =>
+      m.name.toLowerCase() === cleanName ||
+      (m.genericName && m.genericName.toLowerCase() === cleanName)
+    );
+    if (exact) return exact;
+
+    // 2. Substring / bidirectional partial match
+    const partial = medicines.find(m => {
+      const medName = m.name.toLowerCase();
+      const genName = m.genericName?.toLowerCase() || "";
+      return medName.includes(cleanName) || cleanName.includes(medName) ||
+             (genName && (genName.includes(cleanName) || cleanName.includes(genName)));
+    });
+    if (partial) return partial;
+
+    // 3. Word-token overlap (e.g. "Panadol 500mg" vs "Panadol")
+    const searchTokens = cleanName.split(/\s+/).filter(t => t.length > 2 && !/^\d+mg$/i.test(t));
+    if (searchTokens.length > 0) {
+      const tokenMatch = medicines.find(m => {
+        const medLower = m.name.toLowerCase();
+        return searchTokens.some(token => medLower.includes(token));
+      });
+      if (tokenMatch) return tokenMatch;
+    }
+
+    return undefined;
+  };
+
+  // Helper to resolve reminder by ID or medicineName
+  const findReminder = (id?: string, medicineName?: string): Reminder | undefined => {
+    if (id) {
+      const byId = reminders.find(r => r.id === id);
+      if (byId) return byId;
+    }
+    if (!medicineName || reminders.length === 0) return undefined;
+    const clean = medicineName.trim().toLowerCase();
+    const exact = reminders.find(r => r.medicineName.toLowerCase() === clean);
+    if (exact) return exact;
+    const partial = reminders.find(r =>
+      r.medicineName.toLowerCase().includes(clean) ||
+      clean.includes(r.medicineName.toLowerCase())
+    );
+    if (partial) return partial;
+    return undefined;
+  };
+
+  // Helper to resolve patient by ID or name
+  const findPatient = (id?: string, name?: string): Patient | undefined => {
+    if (id) {
+      const byId = patients.find(p => p.id === id);
+      if (byId) return byId;
+    }
+    if (!name || patients.length === 0) return undefined;
+    const clean = name.trim().toLowerCase();
+    const exact = patients.find(p => p.name.toLowerCase() === clean);
+    if (exact) return exact;
+    const partial = patients.find(p =>
+      p.name.toLowerCase().includes(clean) ||
+      clean.includes(p.name.toLowerCase())
+    );
+    if (partial) return partial;
+    return undefined;
+  };
+
   const dispatchAIAction = async (action: AIAction) => {
     const rawAction = action as any;
     const actionType = action.type;
@@ -101,18 +197,22 @@ export function useAIActions() {
           if (!payload?.name) {
             throw new Error("Medicine name is required");
           }
+          const targetPatientId = resolvePatientId(payload.patientId || payload.patientName || payload.patient);
+          const initialQty = payload.currentQuantity ?? payload.quantity ?? payload.totalQuantity;
+          const initialTotal = payload.totalQuantity ?? initialQty;
+
           const createdMed = await addMedicine({
             name: payload.name,
             dosage: payload.dosage || "500mg",
             genericName: payload.genericName,
             dosagePerDose: payload.dosagePerDose || 1,
             frequencyPerDay: payload.frequencyPerDay || 1,
-            totalQuantity: payload.totalQuantity,
-            currentQuantity: payload.currentQuantity ?? payload.totalQuantity,
+            totalQuantity: initialTotal,
+            currentQuantity: initialQty,
             unit: payload.unit || "tablets",
             notes: payload.notes || "",
-            patientId: payload.patientId || undefined
-          }, payload.patientId);
+            patientId: targetPatientId
+          }, targetPatientId);
 
           // If companion reminder schedule is requested, create it automatically
           if (payload.reminderSchedule) {
@@ -125,7 +225,7 @@ export function useAIActions() {
               time: normalizedTime,
               repeatSchedule: remSched.repeatSchedule || (normalizedTime.includes(",") ? "custom" : "daily"),
               enabled: true,
-              patientId: payload.patientId || undefined
+              patientId: targetPatientId
             });
           }
 
@@ -136,56 +236,65 @@ export function useAIActions() {
           break;
         }
 
-        case "UPDATE_MEDICINE": {
-          let targetMedId = payload.id;
-          if (!targetMedId && payload.name && medicines.length > 0) {
-            const match = medicines.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
-            if (match) targetMedId = match.id;
+        case "UPDATE_MEDICINE":
+        case "REFILL_MEDICINE" as any:
+        case "UPDATE_STOCK" as any:
+        case "RESTOCK" as any: {
+          const targetMed = findMedicine(payload.id, payload.name);
+          if (!targetMed) {
+            throw new Error(`Could not find "${payload.name || 'the medicine'}" in your cabinet to update. Please check the name and try again.`);
           }
-          if (!targetMedId) {
-            throw new Error(`Could not find medicine ${payload.name || ""} to update`);
+
+          const updates: Partial<Medicine> = { ...payload };
+          delete (updates as any).id;
+
+          // Med Vault stock / refill quantity synchronization
+          const newQty = payload.currentQuantity ?? payload.quantity ?? payload.stock;
+          if (newQty !== undefined && typeof newQty === "number" && !isNaN(newQty)) {
+            updates.currentQuantity = newQty;
+            const currentTotal = targetMed.totalQuantity ?? 0;
+            updates.totalQuantity = Math.max(currentTotal, newQty, payload.totalQuantity || 0);
+            if (targetMed.dosagePerDose === undefined) updates.dosagePerDose = payload.dosagePerDose || 1;
+            if (targetMed.frequencyPerDay === undefined) updates.frequencyPerDay = payload.frequencyPerDay || 1;
+            if (targetMed.unit === undefined) updates.unit = payload.unit || "tablets";
           }
-          await updateMedicine(targetMedId, payload);
+
+          // Patient scope resolution if provided
+          if (payload.patientId || payload.patientName || payload.patient) {
+            updates.patientId = resolvePatientId(payload.patientId || payload.patientName || payload.patient);
+          }
+
+          await updateMedicine(targetMed.id, updates);
+          const isRefill = newQty !== undefined;
           toast({
-            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine updated</span>,
-            description: action.confirmMessage || "Changes applied to your medicine.",
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> {isRefill ? "Stock updated" : "Medicine updated"}</span>,
+            description: action.confirmMessage || (isRefill ? `Updated ${targetMed.name} stock to ${newQty} ${updates.unit || targetMed.unit || "tablets"}.` : `Changes applied to ${targetMed.name}.`),
           });
           break;
         }
 
-        case "REMOVE_MEDICINE": {
-          let targetMedId = payload.id;
-          if (!targetMedId && payload.name && medicines.length > 0) {
-            const match = medicines.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
-            // Also try partial match for common name variations
-            if (!match) {
-              const fuzzy = medicines.find(m => m.name.toLowerCase().includes((payload.name as string).toLowerCase()) || (payload.name as string).toLowerCase().includes(m.name.toLowerCase()));
-              if (fuzzy) targetMedId = fuzzy.id;
-            } else {
-              targetMedId = match.id;
-            }
-          }
-          if (!targetMedId) {
+        case "REMOVE_MEDICINE":
+        case "DELETE_MEDICINE" as any: {
+          const targetMed = findMedicine(payload.id, payload.name);
+          if (!targetMed) {
             throw new Error(`Could not find "${payload.name || 'the medicine'}" in your cabinet. Please check the name and try again.`);
           }
-          await deleteMedicine(targetMedId);
+          await deleteMedicine(targetMed.id);
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine removed</span>,
-            description: action.confirmMessage || `${payload.name || 'Medicine'} has been removed from your cabinet.`,
+            description: action.confirmMessage || `${targetMed.name} has been removed from your cabinet.`,
           });
           break;
         }
 
         case "ADD_REMINDER": {
+          const targetPatientId = resolvePatientId(payload.patientId || payload.patientName || payload.patient);
           let medicineId = payload.medicineId;
           let color = payload.color;
           let icon = payload.icon;
 
-          if (!medicineId && payload.medicineName && medicines.length > 0) {
-            const match = medicines.find(m => 
-              m.name.toLowerCase() === payload.medicineName.toLowerCase() ||
-              (m.genericName && m.genericName.toLowerCase() === payload.medicineName.toLowerCase())
-            );
+          if (!medicineId && payload.medicineName) {
+            const match = findMedicine(undefined, payload.medicineName);
             if (match) {
               medicineId = match.id;
               if (!color) color = match.color;
@@ -193,7 +302,7 @@ export function useAIActions() {
             }
           }
 
-          const normalizedTime = payload.time ? normalizeTimeStr(payload.time) : "";
+          const normalizedTime = payload.time ? normalizeTimeStr(payload.time) : "08:00";
           let repeatSchedule = payload.repeatSchedule;
 
           if (typeof repeatSchedule === "string") {
@@ -212,10 +321,8 @@ export function useAIActions() {
           }
 
           // If multiple times are set, use "custom" repeatSchedule to match AddReminderPage behavior
-          if (normalizedTime.includes(",")) {
-            if (repeatSchedule !== "custom" && repeatSchedule !== "daily") {
-              repeatSchedule = "custom";
-            }
+          if (normalizedTime.includes(",") && repeatSchedule !== "custom" && repeatSchedule !== "daily") {
+            repeatSchedule = "custom";
           }
 
           if (!repeatSchedule) {
@@ -225,7 +332,7 @@ export function useAIActions() {
           await addReminder({
             medicineId: medicineId || undefined,
             medicineName: payload.medicineName,
-            dose: payload.dose,
+            dose: payload.dose || "1 dose",
             time: normalizedTime,
             repeatSchedule: repeatSchedule,
             repeatDays: payload.repeatDays || undefined,
@@ -233,7 +340,7 @@ export function useAIActions() {
             enabled: true,
             color: color || "blue",
             icon: icon || "pill",
-            patientId: payload.patientId || undefined,
+            patientId: targetPatientId,
             patientName: payload.patientName || undefined
           });
           toast({
@@ -244,21 +351,13 @@ export function useAIActions() {
         }
 
         case "UPDATE_REMINDER": {
-          let targetId = payload.id;
-          
-          // If ID is missing, try to find by name (case insensitive)
-          if (!targetId && payload.medicineName) {
-            const match = reminders.find(r => 
-              r.medicineName.toLowerCase() === payload.medicineName.toLowerCase()
-            );
-            if (match) targetId = match.id;
-          }
-
-          if (!targetId) {
-            throw new Error(`Could not find reminder for ${payload.medicineName || "specified medicine"}`);
+          const targetRem = findReminder(payload.id, payload.medicineName);
+          if (!targetRem) {
+            throw new Error(`Could not find reminder for "${payload.medicineName || 'the specified medicine'}". Please check the name and try again.`);
           }
 
           const reminderUpdates = { ...payload };
+          delete reminderUpdates.id;
           if (reminderUpdates.time) {
             reminderUpdates.time = normalizeTimeStr(reminderUpdates.time);
           }
@@ -282,62 +381,44 @@ export function useAIActions() {
             }
           }
 
-          await updateReminder(targetId, {
+          await updateReminder(targetRem.id, {
             ...reminderUpdates,
-            enabled: payload.enabled !== undefined ? payload.enabled : true
+            enabled: payload.enabled !== undefined ? payload.enabled : targetRem.enabled
           });
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Reminder updated</span>,
-            description: action.confirmMessage || `Changes applied to ${payload.medicineName || "your reminder"}.`,
+            description: action.confirmMessage || `Changes applied to reminder for ${targetRem.medicineName}.`,
           });
           break;
         }
 
-        case "REMOVE_REMINDER": {
-          let targetId = payload.id;
-
-          // Fuzzy fallback: if id is absent, search by medicineName (case-insensitive)
-          if (!targetId && payload.medicineName) {
-            const match = reminders.find(r =>
-              r.medicineName.toLowerCase() === payload.medicineName.toLowerCase()
-            );
-            // Also try partial match
-            if (!match) {
-              const fuzzy = reminders.find(r =>
-                r.medicineName.toLowerCase().includes((payload.medicineName as string).toLowerCase()) ||
-                (payload.medicineName as string).toLowerCase().includes(r.medicineName.toLowerCase())
-              );
-              if (fuzzy) targetId = fuzzy.id;
-            } else {
-              targetId = match.id;
-            }
-          }
-
-          if (!targetId) {
+        case "REMOVE_REMINDER":
+        case "DELETE_REMINDER" as any: {
+          const targetRem = findReminder(payload.id, payload.medicineName);
+          if (!targetRem) {
             throw new Error(
               `Could not find a reminder for "${payload.medicineName || 'the specified medicine'}". Please check the name and try again.`
             );
           }
 
-          await deleteReminder(targetId);
+          await deleteReminder(targetRem.id);
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Reminder removed</span>,
-            description: action.confirmMessage || `Reminder for ${payload.medicineName || 'medicine'} has been deleted.`,
+            description: action.confirmMessage || `Reminder for ${targetRem.medicineName} has been deleted.`,
           });
           break;
         }
 
         case "LOG_DOSE": {
-          // Bug fix: server sends `status` field, but legacy fallback also uses `action`.
-          // Normalize both so either field works.
+          const targetPatientId = resolvePatientId(payload.patientId || payload.patientName || payload.patient);
           const doseStatus = (payload.status || payload.action || "taken") as string;
           await logDose({
             reminderId: payload.reminderId as string || "",
             medicineName: payload.medicineName as string,
-            dose: payload.dose as string,
+            dose: payload.dose as string || "1 dose",
             scheduledTime: payload.scheduledTime as string || new Date().toISOString(),
             action: doseStatus as "taken" | "missed" | "snoozed",
-            patientId: payload.patientId as string | undefined || undefined
+            patientId: targetPatientId
           });
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Dose logged</span>,
@@ -347,6 +428,7 @@ export function useAIActions() {
         }
 
         case "LOG_WELLNESS": {
+          const targetPatientId = resolvePatientId(payload.patientId || payload.patientName || payload.patient);
           const rawData = (payload.data && typeof payload.data === "object") ? payload.data : payload;
           const rawMood = rawData.mood ?? payload.mood;
           const rawEnergy = rawData.energy ?? payload.energy;
@@ -400,7 +482,7 @@ export function useAIActions() {
               symptoms,
               notes: rawData.notes || payload.notes || ""
             },
-            patientId: payload.patientId || rawData.patientId
+            patientId: targetPatientId
           });
 
           const moodEmojis: Record<number, string> = { 1: "😔", 2: "😕", 3: "😐", 4: "🙂", 5: "🤩" };
@@ -415,6 +497,9 @@ export function useAIActions() {
         }
 
         case "ADD_PATIENT":
+          if (!payload.name) {
+            throw new Error("Patient name is required to create a profile.");
+          }
           await addPatient({
             name: payload.name,
             age: payload.age,
@@ -435,42 +520,39 @@ export function useAIActions() {
           break;
 
         case "UPDATE_PATIENT": {
-          if (payload.id) {
-            await updatePatient(payload.id, payload);
-            toast({
-              title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Profile updated</span>,
-              description: action.confirmMessage || `Updated health profile for ${payload.name || "dependent"}.`,
-            });
+          const targetPatient = findPatient(payload.id, payload.name);
+          if (!targetPatient) {
+            throw new Error(`Could not find "${payload.name || 'the member'}" in your Family Hub to update. Please check the name and try again.`);
           }
+          const updates = { ...payload };
+          delete updates.id;
+          await updatePatient(targetPatient.id, updates);
+          toast({
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Profile updated</span>,
+            description: action.confirmMessage || `Updated health profile for ${targetPatient.name}.`,
+          });
           break;
         }
 
-        case "REMOVE_PATIENT": {
-          let targetId = payload.id;
-          if (!targetId && payload.name && patients.length > 0) {
-            const match = patients.find(p => p.name.toLowerCase() === payload.name.toLowerCase());
-            if (!match) {
-              const fuzzy = patients.find(p => p.name.toLowerCase().includes((payload.name as string).toLowerCase()));
-              if (fuzzy) targetId = fuzzy.id;
-            } else {
-              targetId = match.id;
-            }
-          }
-          if (!targetId) {
+        case "REMOVE_PATIENT":
+        case "DELETE_PATIENT" as any: {
+          const targetPatient = findPatient(payload.id, payload.name);
+          if (!targetPatient) {
             throw new Error(`Could not find "${payload.name || 'the member'}" in your Family Hub. Please check the name and try again.`);
           }
-          await deletePatient(targetId);
+          await deletePatient(targetPatient.id);
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Profile removed</span>,
-            description: action.confirmMessage || `Removed ${payload.name || "member"} from Family Hub.`,
+            description: action.confirmMessage || `Removed ${targetPatient.name} from Family Hub.`,
           });
           break;
         }
 
         case "SWITCH_PATIENT_SCOPE": {
-          const targetId = payload.patientId ?? null;
-          setSelectedPatientId(targetId);
-          const targetName = payload.patientName || (targetId ? (patients.find(p => p.id === targetId)?.name || "Family Member") : "Personal Profile");
+          const rawTarget = payload.patientId || payload.patientName || payload.name;
+          const targetId = resolvePatientId(rawTarget);
+          setSelectedPatientId(targetId ?? null);
+          const targetName = targetId ? (patients.find(p => p.id === targetId)?.name || "Family Member") : "Personal Profile";
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="👤" size={16} /> Context switched</span>,
             description: action.confirmMessage || `Now viewing health records for ${targetName}.`,
@@ -483,7 +565,7 @@ export function useAIActions() {
           if (payload.id) {
             await updateReminder(payload.id, { enabled: shouldEnable });
           } else if (payload.medicineName) {
-            const match = reminders.find(r => r.medicineName.toLowerCase() === payload.medicineName.toLowerCase());
+            const match = findReminder(undefined, payload.medicineName);
             if (match) await updateReminder(match.id, { enabled: shouldEnable });
           } else {
             // Toggle all reminders
@@ -539,6 +621,7 @@ export function useAIActions() {
 
         case "BATCH_ADD_REGIMEN": {
           const medName = payload.medicineName || "Treatment Medication";
+          const targetPatientId = resolvePatientId(payload.patientId || payload.patientName || payload.patient);
           const newMed = await addMedicine({
             name: medName,
             dosage: payload.dosage || "1 course",
@@ -547,8 +630,8 @@ export function useAIActions() {
             unit: "tablets",
             currentQuantity: payload.totalQuantity || 24,
             totalQuantity: payload.totalQuantity || 24,
-            patientId: payload.patientId || undefined
-          }, payload.patientId);
+            patientId: targetPatientId
+          }, targetPatientId);
 
           const normalizedTime = payload.times ? normalizeTimeStr(payload.times) : "08:00,20:00";
           await addReminder({
@@ -558,7 +641,7 @@ export function useAIActions() {
             time: normalizedTime,
             repeatSchedule: "custom",
             enabled: true,
-            patientId: payload.patientId || undefined
+            patientId: targetPatientId
           });
 
           toast({
@@ -589,24 +672,21 @@ export function useAIActions() {
         }
 
         case "DISCONTINUE_MEDICINE": {
-          let targetMedId = payload.id;
-          if (!targetMedId && payload.name && medicines.length > 0) {
-            const match = medicines.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
-            if (match) targetMedId = match.id;
+          const targetMed = findMedicine(payload.id, payload.name);
+          if (!targetMed) {
+            throw new Error(`Could not find "${payload.name || 'the medicine'}" in your cabinet to discontinue.`);
           }
-          if (targetMedId) {
-            await updateMedicine(targetMedId, {
-              notes: `Discontinued: ${payload.reason || "Doctor recommendation"} (${new Date().toLocaleDateString()})`
-            });
-            const relatedReminders = reminders.filter(r => r.medicineId === targetMedId || r.medicineName.toLowerCase() === (payload.name || "").toLowerCase());
-            for (const r of relatedReminders) {
-              await updateReminder(r.id, { enabled: false });
-            }
-            toast({
-              title: <span className="flex items-center gap-2"><RiveMoji emoji="🛑" size={16} /> Medicine discontinued</span>,
-              description: action.confirmMessage || `Discontinued ${payload.name || "medicine"} and paused related reminders.`,
-            });
+          await updateMedicine(targetMed.id, {
+            notes: `Discontinued: ${payload.reason || "Doctor recommendation"} (${new Date().toLocaleDateString()})`
+          });
+          const relatedReminders = reminders.filter(r => r.medicineId === targetMed.id || r.medicineName.toLowerCase() === targetMed.name.toLowerCase());
+          for (const r of relatedReminders) {
+            await updateReminder(r.id, { enabled: false });
           }
+          toast({
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="🛑" size={16} /> Medicine discontinued</span>,
+            description: action.confirmMessage || `Discontinued ${targetMed.name} and paused related reminders.`,
+          });
           break;
         }
 
@@ -614,9 +694,10 @@ export function useAIActions() {
           console.warn("Unknown AI action type:", action.type);
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="⚠️" size={16} /> Unsupported action</span>,
-            description: "DawaGPT tried an unsupported action. Please try rephrasing your request.",
+            description: `DawaGPT tried an unsupported action type "${action.type}". Please try rephrasing your request.`,
             variant: "destructive",
           });
+          throw new Error(`Unsupported action type "${action.type}".`);
       }
     } catch (e) {
       console.error("AI Action Dispatch Error:", e);
@@ -625,6 +706,7 @@ export function useAIActions() {
         description: (e as Error).message || "Action failed. Please try again or do it manually.",
         variant: "destructive",
       });
+      throw e;
     }
   };
 

@@ -232,6 +232,25 @@ describe("DawaGPT Full-System Agentic Actions Suite", () => {
       const action = extractDeterministicAction("Set a reminder for Aspirin at 8am", sampleMedicines, sampleReminders, samplePatients);
       expect(action).toBeNull();
     });
+
+    it("extracts ADD_REMINDER in multi-turn conversation when user provides time answering prompt", () => {
+      const history = [
+        { sender: "user" as const, text: "Remind me to take Amoxicillin" },
+        { sender: "dawagpt" as const, text: "What time would you like to take your first dose of Amoxicillin?" }
+      ];
+      const action = extractDeterministicAction("Start at 8:00 AM", sampleMedicines, sampleReminders, samplePatients, history);
+      expect(action).not.toBeNull();
+      expect(action?.type).toBe("ADD_REMINDER");
+      expect(action?.payload.medicineName).toBe("Amoxicillin");
+    });
+
+    it("extracts UPDATE_MEDICINE for refill requests with quantity", () => {
+      const action = extractDeterministicAction("Refill Panadol with 30 tablets", sampleMedicines, sampleReminders, samplePatients);
+      expect(action).not.toBeNull();
+      expect(action?.type).toBe("UPDATE_MEDICINE");
+      expect(action?.payload.name).toBe("Panadol");
+      expect(action?.payload.currentQuantity).toBe(30);
+    });
   });
 
   describe("2. Conversational Response Formatting (generateDawaGPTResponse)", () => {
@@ -432,6 +451,79 @@ describe("DawaGPT Full-System Agentic Actions Suite", () => {
       // Added paired custom reminder with times 08:00,20:00
       expect(mockAddReminder).toHaveBeenCalledTimes(1);
       expect(mockToast).toHaveBeenCalled();
+    });
+
+    it("dispatches UPDATE_MEDICINE matching fuzzy medicine name", async () => {
+      const { result } = renderHook(() => useAIActions());
+      await act(async () => {
+        await result.current.dispatchAIAction({
+          type: "UPDATE_MEDICINE",
+          payload: {
+            name: "Amoxicillin 500mg",
+            notes: "Take after food"
+          }
+        });
+      });
+
+      expect(mockUpdateMedicine).toHaveBeenCalledWith("med-3", expect.objectContaining({
+        notes: "Take after food"
+      }));
+      expect(mockToast).toHaveBeenCalled();
+    });
+
+    it("dispatches REFILL_MEDICINE alias and expands totalQuantity capacity", async () => {
+      const { result } = renderHook(() => useAIActions());
+      await act(async () => {
+        await result.current.dispatchAIAction({
+          type: "REFILL_MEDICINE" as any,
+          payload: {
+            name: "Panadol",
+            currentQuantity: 50
+          }
+        });
+      });
+
+      // Panadol initial totalQuantity was 20, new currentQuantity is 50, so totalQuantity expands to 50
+      expect(mockUpdateMedicine).toHaveBeenCalledWith("med-2", expect.objectContaining({
+        currentQuantity: 50,
+        totalQuantity: 50
+      }));
+      expect(mockToast).toHaveBeenCalled();
+    });
+
+    it("resolves patientName to patientId when adding medicine for family member", async () => {
+      const { result } = renderHook(() => useAIActions());
+      await act(async () => {
+        await result.current.dispatchAIAction({
+          type: "ADD_MEDICINE",
+          payload: {
+            name: "Calpol",
+            dosage: "120mg/5ml",
+            patientName: "Babirye Mukasa"
+          }
+        });
+      });
+
+      expect(mockAddMedicine).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Calpol",
+          patientId: "pat-1"
+        }),
+        "pat-1"
+      );
+    });
+
+    it("throws descriptive error when target medicine is not found", async () => {
+      const { result } = renderHook(() => useAIActions());
+      await expect(
+        result.current.dispatchAIAction({
+          type: "UPDATE_MEDICINE",
+          payload: {
+            name: "NonExistentPillXYZ",
+            currentQuantity: 10
+          }
+        })
+      ).rejects.toThrow('Could not find "NonExistentPillXYZ" in your cabinet');
     });
   });
 });

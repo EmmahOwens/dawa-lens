@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
-import { ChatMessage, chatWithDawaGPTStream, resolveHonorific } from "@/services/aiAssistantService";
+import { ChatMessage, chatWithDawaGPTStream, resolveHonorific, extractDeterministicAction } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { calculateVitalitySummary } from "@/lib/vitalityUtils";
@@ -547,7 +547,7 @@ export default function DawaGPT() {
             msg.id === botId
               ? {
                   ...msg,
-                  text: `${msg.text}\n\n⚠️ **Action failed**: ${actionErrMsg}`,
+                  text: `${msg.text}\n\n⚠️ **Action failed**: ${actionErrMsg}\n\nYou can perform this manually in [My Medications](/medications) or [Med Vault](/medvault).`,
                   source: "System" as const,
                 }
               : msg
@@ -558,17 +558,48 @@ export default function DawaGPT() {
         }
       } else if (
         response.text &&
-        /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved|refilled)\b/i.test(response.text)
+        /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved|refilled|discontinued)\b/i.test(response.text)
       ) {
-        // FIX (Bug 3): Instead of a silent auto-retry (which used stale state and often failed),
-        // show a visible "Retry Action" button. This is more transparent and avoids double API calls.
-        console.warn(
-          "[DawaGPT] ⚠️ AI claimed an action but returned no action object. Showing retry button.",
-          response.text.slice(0, 200)
-        );
-        // Store the original user text so the retry button can re-send it
-        retryUserTextRef.current = text;
-        setActionMissingBotId(botId);
+        // Attempt immediate local recovery using multi-turn deterministic extraction
+        const localExtracted = extractDeterministicAction(text, allMedicines, allReminders, patients, [...history, userMsg]);
+        if (localExtracted) {
+          try {
+            await dispatchAIAction(localExtracted);
+            setActionMissingBotId(null);
+          } catch (dispatchErr: any) {
+            const errDetail = dispatchErr?.message || "Action failed during execution.";
+            setMessages(prev => prev.map(msg =>
+              msg.id === botId
+                ? {
+                    ...msg,
+                    text: `${msg.text}\n\n⚠️ **Action failed**: ${errDetail}\n\nYou can perform this manually in [My Medications](/medications) or [Med Vault](/medvault).`,
+                    source: "System" as const,
+                  }
+                : msg
+            ));
+            retryUserTextRef.current = text;
+            setActionMissingBotId(botId);
+          }
+        } else {
+          // Neither LLM nor local extractor produced an action, but LLM text claimed success.
+          // Update the message so DawaGPT is truthful and does not deceive the user!
+          console.warn(
+            "[DawaGPT] ⚠️ AI claimed an action but returned no action object and local extraction found none.",
+            response.text.slice(0, 200)
+          );
+          setMessages(prev => prev.map(msg =>
+            msg.id === botId
+              ? {
+                  ...msg,
+                  text: `${msg.text}\n\n⚠️ **Action note**: I was unable to automatically apply this change to your account. Please verify details or perform it directly in [My Medications](/medications) or [Med Vault](/medvault).`,
+                  source: "System" as const,
+                }
+              : msg
+          ));
+          // Store the original user text so the retry button can re-send it
+          retryUserTextRef.current = text;
+          setActionMissingBotId(botId);
+        }
       }
 
     } catch (e: any) {
@@ -827,7 +858,7 @@ export default function DawaGPT() {
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors cursor-pointer"
                                       >
                                         <RotateCcw className="w-3 h-3" />
-                                        Complete action
+                                        Retry action
                                       </button>
                                     </motion.div>
                                   )}

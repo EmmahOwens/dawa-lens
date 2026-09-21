@@ -1571,14 +1571,28 @@ export const isComplexTask = (text) => {
   return false;
 };
 
-export const isLikelyActionRequest = (text) => {
+export const isLikelyActionRequest = (text, messagesContext = []) => {
   if (!text) return false;
   const lower = text.toLowerCase().trim();
 
-  // Pure inquiry / informational questions should NEVER be diverted into action execution mode:
+  // Multi-turn check: if user's response is short (<50 chars) and answering a previous assistant question about time, dose, medicine, stock, or profile
+  if (Array.isArray(messagesContext) && messagesContext.length >= 2 && lower.length < 50) {
+    const prevAssistantMsg = messagesContext.filter(m => m.role === 'assistant').pop();
+    const prevText = (prevAssistantMsg?.text || prevAssistantMsg?.content || '').toLowerCase();
+    const asksAboutActionParam = /\b(what time|starting time|first dose|what dose|what dosage|how many|times a day|when would you|schedule|refill|which patient|which member|what medicine)\b/i.test(prevText);
+    const answersParam = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d+\s*(?:pills?|tablets?|capsules?|mg|ml)?|daily|twice|thrice|morning|evening|night|yes|please|add it|do it)\b/i.test(lower);
+    if (asksAboutActionParam && answersParam) {
+      return true;
+    }
+  }
+
+  // Action commands that should NEVER be filtered out by inquiry prefixes
+  const isActionCommand = /\b(add|create|delete|remove|refill|restock|schedule|log|record|update|change|reschedule|pause|resume|undo)\b/i.test(lower);
+
+  // Pure inquiry / informational questions should NEVER be diverted into action execution mode UNLESS they contain an action command:
   // e.g. "What are my reminders", "Check my medications", "Show my reminders", "List my pills"
   const isQuestionOrInquiry = /^(what|which|how|tell me|show me|list|check|view|display|can you tell|do i have|are there|when is|when are)\b/i.test(lower);
-  if (isQuestionOrInquiry) {
+  if (isQuestionOrInquiry && !isActionCommand) {
     return false;
   }
 
@@ -1820,6 +1834,12 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
         action: result.action,
         existingSuggestions: Array.isArray(result.suggestions) ? result.suggestions : []
       });
+      if (!result.action) {
+        const fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || []);
+        if (fallbackAction) {
+          result.action = fallbackAction;
+        }
+      }
       result.action = result.action || null;
     } else if (typeof result === 'string') {
       const cleanText = sanitizeMarkdownLinks(result
@@ -1828,6 +1848,7 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
         .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
         .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
         .trim());
+      const fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || []);
       result = {
         text: cleanText,
         suggestions: generateContextualSuggestions({
@@ -1838,10 +1859,11 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
           reminders,
           userProfile,
           activePatient: targetPatient,
-          currentPage
+          currentPage,
+          action: fallbackAction || null
         }),
         source: "AI Fallback",
-        action: null
+        action: fallbackAction || null
       };
     }
 
@@ -1939,12 +1961,39 @@ export function formatTimeDisplay(timeStr) {
   return `${h}:${m} ${ampm}`;
 }
 
-export const extractDeterministicAction = (text, medicines = [], reminders = [], patients = []) => {
+export const extractDeterministicAction = (text, medicines = [], reminders = [], patients = [], history = []) => {
   if (!text) return null;
   const lower = text.toLowerCase().trim();
 
+  // Multi-turn synthesis if text is short (<100 chars) and answering a previous assistant prompt
+  let effectiveText = lower;
+  if (Array.isArray(history) && history.length >= 2) {
+    const isAssistant = (m) => m && (m.role === "assistant" || m.sender === "dawagpt");
+    const isUser = (m) => m && (m.role === "user" || m.sender === "user");
+    const getMsgText = (m) => String(m.text || m.content || "").trim();
+
+    const prevAssistant = [...history].reverse().find(isAssistant);
+    const userMsgs = history.filter(isUser);
+
+    let originalUser = null;
+    if (userMsgs.length > 0) {
+      const lastUserMsg = userMsgs[userMsgs.length - 1];
+      if (getMsgText(lastUserMsg).toLowerCase() === lower && userMsgs.length >= 2) {
+        originalUser = userMsgs[userMsgs.length - 2];
+      } else {
+        originalUser = lastUserMsg;
+      }
+    }
+
+    if (prevAssistant && originalUser) {
+      effectiveText = `${getMsgText(originalUser)} ${getMsgText(prevAssistant)} ${lower}`.toLowerCase().trim();
+    } else if (originalUser) {
+      effectiveText = `${getMsgText(originalUser)} ${lower}`.toLowerCase().trim();
+    }
+  }
+
   // Guard: if it's purely an informational/safety question, do not misroute to actions
-  const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use|side effects?|what is|tell me about)\b/i.test(lower) || isSameTaskOrDuplicateQuery(lower, medicines);
+  const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use|side effects?|what is|tell me about)\b/i.test(effectiveText) || isSameTaskOrDuplicateQuery(effectiveText, medicines);
 
   // 1. UNDO_DOSE_LOG
   const isUndoDose = /\b(undo(\s+my)?(\s+last)?\s+(dose|log|record)|revert(\s+my)?\s+dose|cancel(\s+my)?(\s+last)?\s+dose|i didn't take|didn't take my dose|made a mistake.*take)\b/i.test(lower);
@@ -2139,11 +2188,12 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
   }
 
   // 12. ADD_REMINDER
-  const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(lower);
+  const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(effectiveText);
   if (isReminderIntent) {
-    const timeMatch = lower.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
+    const timeMatch = lower.match(/\b(?:at\s+|start\s+at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i) ||
+                      effectiveText.match(/\b(?:at\s+|start\s+at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
     let explicitTime = null;
-    if (timeMatch && (timeMatch[3] || lower.includes("at ") || timeMatch[2])) {
+    if (timeMatch && (timeMatch[3] || lower.includes("at ") || effectiveText.includes("at ") || timeMatch[2])) {
       let hours = parseInt(timeMatch[1], 10);
       const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
       const meridiem = timeMatch[3]?.toLowerCase();
@@ -2156,9 +2206,15 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
       }
     }
 
-    const matchedMed = medicines
+    let matchedMed = medicines
       .filter(m => (m.name && lower.includes(m.name.toLowerCase())) || (m.genericName && lower.includes(m.genericName.toLowerCase())))
       .sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0))[0];
+
+    if (!matchedMed) {
+      matchedMed = medicines
+        .filter(m => (m.name && effectiveText.includes(m.name.toLowerCase())) || (m.genericName && effectiveText.includes(m.genericName.toLowerCase())))
+        .sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0))[0];
+    }
 
     // If medication exists in Med Vault / Medications:
     if (matchedMed) {
@@ -2167,31 +2223,33 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
         return null;
       }
 
-      // Read dosage from user prompt or Med Vault / Medications
-      const doseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?))\b/i);
+      // Read dosage from user prompt or effectiveText or Med Vault / Medications
+      const doseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?))\b/i) ||
+                        effectiveText.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?))\b/i);
       const dose = doseMatch ? doseMatch[1] : (
         matchedMed.dosagePerDose
           ? `${matchedMed.dosagePerDose} ${matchedMed.unit || 'tablets'}`
           : (matchedMed.dosage || "1 tablet")
       );
 
-      // Read daily frequency from user prompt or Med Vault / Medications
+      // Read daily frequency from user prompt or effectiveText or Med Vault / Medications
       let freq = matchedMed.frequencyPerDay && matchedMed.frequencyPerDay > 0 ? matchedMed.frequencyPerDay : 1;
       let repeatSchedule = freq > 1 ? "custom" : "daily";
 
-      if (lower.includes("weekly")) {
+      const freqSource = lower.includes("twice") || lower.includes("thrice") || lower.includes("times") ? lower : effectiveText;
+      if (freqSource.includes("weekly")) {
         repeatSchedule = "weekly";
         freq = 1;
-      } else if (lower.includes("once")) {
+      } else if (freqSource.includes("once")) {
         repeatSchedule = "once";
         freq = 1;
-      } else if (lower.includes("twice") || lower.includes("2 times") || lower.includes("2x") || lower.includes("two times")) {
+      } else if (freqSource.includes("twice") || freqSource.includes("2 times") || freqSource.includes("2x") || freqSource.includes("two times")) {
         freq = 2;
         repeatSchedule = "custom";
-      } else if (lower.includes("three times") || lower.includes("thrice") || lower.includes("3 times") || lower.includes("3x")) {
+      } else if (freqSource.includes("three times") || freqSource.includes("thrice") || freqSource.includes("3 times") || freqSource.includes("3x")) {
         freq = 3;
         repeatSchedule = "custom";
-      } else if (lower.includes("four times") || lower.includes("4 times") || lower.includes("4x")) {
+      } else if (freqSource.includes("four times") || freqSource.includes("4 times") || freqSource.includes("4x")) {
         freq = 4;
         repeatSchedule = "custom";
       }
@@ -2250,12 +2308,20 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
   }
 
   // 14. UPDATE_MEDICINE (Med Vault Refill)
-  const isRefillIntent = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|update stock|set stock|purchased|bought)\b/i.test(lower);
+  const isRefillIntent = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|update stock|set stock|purchased|bought|added\s+\d+\s*(?:more\s+)?(?:pills?|tablets?))\b/i.test(lower);
   if (isRefillIntent) {
-    const qtyMatch = lower.match(/\b(?:to|with|have)?\s*(\d+)\s*(?:pills?|tablets?|capsules?|units?)?\b/i);
+    const qtyMatch = lower.match(/\b(?:to|with|by|have|bought|purchased|added)?\s*(\d+)\s*(?:pills?|tablets?|capsules?|units?|bottles?)?\b/i) ||
+                     lower.match(/(\d+)\s*(?:pills?|tablets?|capsules?|units?|bottles?)/i);
     const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : null;
 
-    let matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
+    let matchedMed = medicines.find(m => {
+      if (!m.name) return false;
+      const medLower = m.name.toLowerCase();
+      const genLower = m.genericName ? m.genericName.toLowerCase() : "";
+      if (lower.includes(medLower) || (genLower && lower.includes(genLower))) return true;
+      const tokens = medLower.split(/\s+/).filter(t => t.length > 2 && !/^\d+mg$/i.test(t));
+      return tokens.some(tok => lower.includes(tok));
+    });
     if (!matchedMed && medicines.length === 1) matchedMed = medicines[0];
 
     if (matchedMed && qty !== null) {
@@ -2264,7 +2330,8 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
         payload: {
           id: matchedMed.id,
           name: matchedMed.name,
-          currentQuantity: qty
+          currentQuantity: qty,
+          totalQuantity: Math.max(matchedMed.totalQuantity || 0, qty)
         },
         confirmMessage: `Updated ${matchedMed.name} stock to ${qty}.`
       };
@@ -2872,7 +2939,7 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     // action object is reliably structured. Raw streaming mode is unreliable for
     // actions because smaller fallback models often fail to produce valid
     // ###METADATA### JSON — silently dropping the action object.
-    if (isLikelyActionRequest(lastUserMsg)) {
+    if (isLikelyActionRequest(lastUserMsg, messages)) {
       try {
         const result = await chatWithDawaGPT(params, priority);
         return createFakeStream(result);
@@ -2906,13 +2973,19 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
             .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
             .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
             .trim());
-          const normalizedAction = jsonResp.action ? {
-            type: jsonResp.action.type,
-            // Bug fix: if payload is missing but action itself has been used as the payload object,
-            // do NOT set payload = the full action object (which includes type, confirmMessage etc).
-            // Only use action.payload or action.data; fall back to {} so the action still dispatches.
-            payload: jsonResp.action.payload || jsonResp.action.data || {},
-            confirmMessage: jsonResp.action.confirmMessage
+
+          let candidateAction = jsonResp.action;
+          if (!candidateAction) {
+            const fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || []);
+            if (fallbackAction) {
+              candidateAction = fallbackAction;
+            }
+          }
+
+          const normalizedAction = candidateAction ? {
+            type: candidateAction.type,
+            payload: candidateAction.payload || candidateAction.data || {},
+            confirmMessage: candidateAction.confirmMessage
           } : null;
           const enrichedSuggestions = generateContextualSuggestions({
             messages,
@@ -3609,9 +3682,10 @@ ${getFoodKnowledgePrompt()}
   2. NEVER LIE / CRITICAL ACTION RULE: If your response text uses past tense confirmation ("I've added", "I have logged", "I've set up", "I have updated", "Refilled", "Recorded", "Done!"), you MUST include the populated 'action' JSON object in your response. If you cannot produce the action object or information is missing, you MUST NOT use past tense — ask for the missing details in the present tense instead.
   3. FIRST ATTEMPT SUCCESS: Execute on first request without asking for confirmation if basic parameters are provided.
 - ACTION SCHEMAS:
-  * ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, frequencyPerDay?, patientId? }
-  * UPDATE_MEDICINE: { id, name?, dosage?, notes?, currentQuantity?, totalQuantity?, dosagePerDose?, frequencyPerDay?, unit? }
-  * ADD_REMINDER: { medicineName, dose, time, repeatSchedule: "daily"|"weekly"|"custom", patientId?, medicineId? } -> time MUST be comma-separated HH:mm (e.g. "08:00,20:00").
+  * ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, frequencyPerDay?, patientId?, patientName? }
+  * UPDATE_MEDICINE: { id?, name, currentQuantity?, totalQuantity?, dosage?, notes?, dosagePerDose?, frequencyPerDay?, unit?, patientId? } -> Use this whenever user wants to edit a medicine OR refill/update stock in Med Vault (e.g. { name: "Panadol", currentQuantity: 50 }).
+  * REMOVE_MEDICINE: { id?, name } -> Remove a medicine from the user's cabinet.
+  * ADD_REMINDER: { medicineName, dose, time, repeatSchedule: "daily"|"weekly"|"custom", patientId?, patientName?, medicineId? } -> time MUST be comma-separated HH:mm (e.g. "08:00,20:00").
     - MED VAULT / MEDICATIONS REGIMEN LOOKUP (MANDATORY):
       1. Check the user's Med Vault / active medications list in context for the requested medicine.
       2. IF THE MEDICATION EXISTS IN THE SYSTEM:
@@ -3624,11 +3698,14 @@ ${getFoodKnowledgePrompt()}
          - Inform the user that the medication was not found in their Medications or Med Vault cabinet.
          - ASK the user for their prescribed dosage (how many tablets/mg per dose) and how many times a day / what times they should take it.
          - Provide markdown links to [view your active prescriptions in My Medications](/medications) or [track stock in Med Vault](/medvault).
-  * UPDATE_REMINDER: { id, enabled?, time?, dose? }
-  * REMOVE_REMINDER: { id }
-  * LOG_DOSE: { reminderId?, medicineName, dose, scheduledTime, action: "taken"|"skipped", patientId? }
-  * LOG_WELLNESS: { type: 'symptom'|'food', data: { mood: 1-5, energy: 1-5, symptoms: string[], meal?: string, aiReflection: { reflection, affirmation, tip } }, patientId? }
+  * UPDATE_REMINDER: { id?, medicineName?, enabled?, time?, dose? }
+  * REMOVE_REMINDER: { id?, medicineName? }
+  * LOG_DOSE: { reminderId?, medicineName, dose, scheduledTime, action: "taken"|"skipped", patientId?, patientName? }
+  * LOG_WELLNESS: { type: 'symptom'|'food', data: { mood: 1-5, energy: 1-5, symptoms: string[], meal?: string, aiReflection: { reflection, affirmation, tip } }, patientId?, patientName? }
   * ADD_PATIENT: { name, age?, gender?, relation?, type: 'family'|'client', conditions?: string[], allergies?: string[], bloodType?, notes? }
+  * UPDATE_PATIENT: { id?, name, age?, conditions?, notes? }
+  * REMOVE_PATIENT: { id?, name }
+  * SWITCH_PATIENT_SCOPE: { patientId?, patientName }
 - NATURAL SPEECH SHORTCUTS:
   * "I took my [med]" -> emit LOG_DOSE action: "taken". "I missed/forgot" -> action: "skipped".
   * User reports symptoms, sickness, pain (e.g. "headache", "stomachache", "Omutwe gunnuma", "olubuto lunnuma", "feeling exhausted", "dizzy", "nausea") -> emit LOG_WELLNESS symptom action immediately with mapped 1-5 scale (mood 1-2, energy 1-2, symptoms array like ['Headache', 'Stomach Ache']) and aiReflection.
