@@ -1815,8 +1815,36 @@ async function executeAiAction(action, userId, userMedicines = [], selectedPatie
     default: throw new Error(`Unknown action type: ${type}`);
   }
 }
-function formatTimeDisplay(timeStr) {
+export function distributeTimes(startTime = "08:00", freq = 1) {
+  if (!startTime || !startTime.includes(":")) return [startTime || "08:00"];
+  const [hStr, mStr] = startTime.split(":");
+  const h = Number(hStr);
+  const m = Number(mStr);
+  if (isNaN(h) || isNaN(m)) return [startTime];
+  if (freq <= 1) {
+    const hh = String(h % 24).padStart(2, "0");
+    const mm = String(m % 60).padStart(2, "0");
+    return [`${hh}:${mm}`];
+  }
+  const intervalHours = 24 / freq;
+  const newTimes = [];
+  for (let i = 0; i < freq; i++) {
+    const totalMinutes = Math.round(h * 60 + m + i * intervalHours * 60) % (24 * 60);
+    const newH = Math.floor(totalMinutes / 60);
+    const newM = Math.floor(totalMinutes % 60);
+    newTimes.push(`${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`);
+  }
+  return newTimes;
+}
+
+export function formatTimeDisplay(timeStr) {
   if (!timeStr) return "8:00 AM";
+  if (timeStr.includes(",")) {
+    const parts = timeStr.split(",").map(t => formatTimeDisplay(t.trim()));
+    if (parts.length === 1) return parts[0];
+    if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+    return `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
+  }
   const [hStr, mStr] = timeStr.split(':');
   let h = parseInt(hStr, 10);
   const m = mStr ? mStr.padStart(2, '0') : "00";
@@ -2028,9 +2056,9 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
   // 12. ADD_REMINDER
   const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(lower);
   if (isReminderIntent) {
-    let time = "08:00";
     const timeMatch = lower.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
-    if (timeMatch) {
+    let explicitTime = null;
+    if (timeMatch && (timeMatch[3] || lower.includes("at ") || timeMatch[2])) {
       let hours = parseInt(timeMatch[1], 10);
       const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
       const meridiem = timeMatch[3]?.toLowerCase();
@@ -2039,40 +2067,71 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
       if (meridiem === 'am' && hours === 12) hours = 0;
 
       if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-        time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        explicitTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
       }
     }
 
-    let matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
-    let medName = matchedMed ? matchedMed.name : null;
+    const matchedMed = medicines
+      .filter(m => (m.name && lower.includes(m.name.toLowerCase())) || (m.genericName && lower.includes(m.genericName.toLowerCase())))
+      .sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0))[0];
 
-    if (!medName) {
-      const medMatch = lower.match(/(?:take|reminder\s+for|for)\s+([a-z0-9\-]+)/i);
-      if (medMatch && !['a', 'my', 'the', 'some', 'me', 'daily'].includes(medMatch[1].toLowerCase())) {
-        medName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
-      } else {
-        medName = medicines[0]?.name || "Medication";
+    // If medication exists in Med Vault / Medications:
+    if (matchedMed) {
+      // If user did not provide a starting time, return null so DawaGPT asks for the starting time
+      if (!explicitTime) {
+        return null;
       }
+
+      // Read dosage from user prompt or Med Vault / Medications
+      const doseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?))\b/i);
+      const dose = doseMatch ? doseMatch[1] : (
+        matchedMed.dosagePerDose
+          ? `${matchedMed.dosagePerDose} ${matchedMed.unit || 'tablets'}`
+          : (matchedMed.dosage || "1 tablet")
+      );
+
+      // Read daily frequency from user prompt or Med Vault / Medications
+      let freq = matchedMed.frequencyPerDay && matchedMed.frequencyPerDay > 0 ? matchedMed.frequencyPerDay : 1;
+      let repeatSchedule = freq > 1 ? "custom" : "daily";
+
+      if (lower.includes("weekly")) {
+        repeatSchedule = "weekly";
+        freq = 1;
+      } else if (lower.includes("once")) {
+        repeatSchedule = "once";
+        freq = 1;
+      } else if (lower.includes("twice") || lower.includes("2 times") || lower.includes("2x") || lower.includes("two times")) {
+        freq = 2;
+        repeatSchedule = "custom";
+      } else if (lower.includes("three times") || lower.includes("thrice") || lower.includes("3 times") || lower.includes("3x")) {
+        freq = 3;
+        repeatSchedule = "custom";
+      } else if (lower.includes("four times") || lower.includes("4 times") || lower.includes("4x")) {
+        freq = 4;
+        repeatSchedule = "custom";
+      }
+
+      const timesList = distributeTimes(explicitTime, freq);
+      const finalTimeStr = timesList.join(",");
+      const freqDesc = freq > 1 ? `${freq} times a day` : repeatSchedule;
+
+      return {
+        type: "ADD_REMINDER",
+        payload: {
+          medicineName: matchedMed.name,
+          medicineId: matchedMed.id,
+          dose,
+          time: finalTimeStr,
+          repeatSchedule,
+          frequencyPerDay: freq
+        },
+        confirmMessage: `Reminder set for ${matchedMed.name} (${dose}) at ${formatTimeDisplay(finalTimeStr)} (${freqDesc}).`
+      };
     }
 
-    const doseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?))\b/i);
-    const dose = doseMatch ? doseMatch[1] : (matchedMed?.dosagePerDose ? `${matchedMed.dosagePerDose} ${matchedMed.unit || 'tablets'}` : "1 tablet");
-
-    let repeatSchedule = "daily";
-    if (lower.includes("weekly")) repeatSchedule = "weekly";
-    else if (lower.includes("once")) repeatSchedule = "once";
-
-    return {
-      type: "ADD_REMINDER",
-      payload: {
-        medicineName: medName,
-        medicineId: matchedMed?.id || null,
-        dose,
-        time,
-        repeatSchedule
-      },
-      confirmMessage: `Reminder set for ${medName} (${dose}) at ${formatTimeDisplay(time)} ${repeatSchedule}.`
-    };
+    // Medication does NOT exist in the cabinet/vault.
+    // Return null so DawaGPT can ask for dosage and frequency.
+    return null;
   }
 
   // 13. LOG_DOSE
@@ -2371,8 +2430,10 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     }
     if (action.type === "ADD_REMINDER") {
       const displayTime = action.payload.time ? formatTimeDisplay(action.payload.time) : "8:00 AM";
+      const freqCount = action.payload.time?.includes(",") ? action.payload.time.split(",").length : (action.payload.frequencyPerDay || 1);
+      const freqText = freqCount > 1 ? ` ${freqCount} times a day` : ` ${action.payload.repeatSchedule || "daily"}`;
       return {
-        text: `I've set up a reminder for you to take **${action.payload.medicineName}** (${action.payload.dose}) ${action.payload.repeatSchedule} at **${displayTime}**.\n\nYou can [view or manage your schedule in Medication Reminders](/reminders).`,
+        text: `I've set up a reminder for you to take **${action.payload.medicineName}** (${action.payload.dose})${freqText} at **${displayTime}**.\n\nYou can [view or manage your schedule in Medication Reminders](/reminders) or [check stock in Med Vault](/medvault).`,
         suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
         source: "Schedule Guard",
         action
@@ -2503,6 +2564,49 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
       suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
       source: "Clinical Guard",
       action
+    };
+  }
+
+  // 2.5 Handle Reminder Intent when no action was generated (clarification needed)
+  const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(norm);
+  if (isReminderIntent) {
+    const matchedMed = (medicines || [])
+      .filter(m => (m.name && norm.includes(m.name.toLowerCase())) || (m.genericName && norm.includes(m.genericName.toLowerCase())))
+      .sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0))[0];
+
+    if (matchedMed) {
+      // Case 1: Medicine exists in Med Vault / Medications, but user didn't provide starting time
+      const doseStr = matchedMed.dosagePerDose
+        ? `${matchedMed.dosagePerDose} ${matchedMed.unit || "tablets"}`
+        : (matchedMed.dosage || "1 tablet");
+      const freqVal = matchedMed.frequencyPerDay && matchedMed.frequencyPerDay > 0 ? matchedMed.frequencyPerDay : 1;
+      const freqStr = freqVal > 1 ? `${freqVal} times a day` : "once daily";
+
+      return {
+        text: `I found **${matchedMed.name}** in your Med Vault, prescribed as **${doseStr}, ${freqStr}**.\n\nWhat time would you like to take your first dose so I can set up your reminder schedule?`,
+        suggestions: ["Start at 7:00 AM", "Start at 8:00 AM", "Start at 9:00 AM", "Take at 8:00 PM"],
+        source: "Schedule Guard",
+        action: null
+      };
+    }
+
+    // Case 2: Medicine does NOT exist in Med Vault / Medications
+    let targetMedName = "this medication";
+    const medMatch = norm.match(/(?:take|reminder\s+for|set\s+a\s+reminder\s+for|add\s+a\s+reminder\s+for|remind\s+me\s+to\s+take|remind\s+me\s+for|alarm\s+for|for)\s+([a-z0-9-]+)/i);
+    if (medMatch && !['a', 'my', 'the', 'some', 'me', 'daily', 'twice', 'an', 'once', 'alarm'].includes(medMatch[1].toLowerCase())) {
+      targetMedName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
+    }
+
+    return {
+      text: `I couldn't find **${targetMedName}** in your Medications or Med Vault cabinet.\n\nTo set up the right reminder schedule for you, could you please tell me:\n1. **What is your prescribed dosage** (e.g., *1 tablet*, *500mg*, or *10ml*)?\n2. **How often should you take it** (e.g., *once daily*, *twice a day*, or *3 times a day*) and at what preferred times?\n\nYou can also [add it to your medicine cabinet](/medications) or [track stock in Med Vault](/medvault) so I can automatically sync your dosage and refill alerts.`,
+      suggestions: [
+        "1 tablet once daily at 8am",
+        "2 tablets twice daily at 8am",
+        "2 tablets 3 times daily at 8am",
+        `Add ${targetMedName} to cabinet`
+      ],
+      source: "Schedule Guard",
+      action: null
     };
   }
 
@@ -3417,6 +3521,18 @@ ${getFoodKnowledgePrompt()}
   * ADD_MEDICINE: { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, frequencyPerDay?, patientId? }
   * UPDATE_MEDICINE: { id, name?, dosage?, notes?, currentQuantity?, totalQuantity?, dosagePerDose?, frequencyPerDay?, unit? }
   * ADD_REMINDER: { medicineName, dose, time, repeatSchedule: "daily"|"weekly"|"custom", patientId?, medicineId? } -> time MUST be comma-separated HH:mm (e.g. "08:00,20:00").
+    - MED VAULT / MEDICATIONS REGIMEN LOOKUP (MANDATORY):
+      1. Check the user's Med Vault / active medications list in context for the requested medicine.
+      2. IF THE MEDICATION EXISTS IN THE SYSTEM:
+         - Read the defined dosage: use dosagePerDose and unit (e.g., "2 tablets") as the reminder dose unless the user explicitly specified a different amount.
+         - Read the defined daily frequency: use frequencyPerDay (e.g., 3 times/day).
+         - IF user provided a starting time (e.g., "at 8am"): distribute the reminder times evenly throughout the day (e.g., 3 times a day starting at 8:00 AM -> "08:00,16:00,00:00" with repeatSchedule: "custom"). Output the ADD_REMINDER action immediately.
+         - IF user did NOT provide a starting time: DO NOT guess or assume a default time! Acknowledge the medication regimen from Med Vault (e.g., "I found Metformin in your Med Vault, prescribed as 2 tablets, 3 times a day") and ASK the user what time they would like to take their first dose. DO NOT emit an action until starting time is provided.
+      3. IF THE MEDICATION DOES NOT EXIST IN THE SYSTEM:
+         - DO NOT fabricate a dosage or frequency and DO NOT emit an ADD_REMINDER action!
+         - Inform the user that the medication was not found in their Medications or Med Vault cabinet.
+         - ASK the user for their prescribed dosage (how many tablets/mg per dose) and how many times a day / what times they should take it.
+         - Provide markdown links to [view your active prescriptions in My Medications](/medications) or [track stock in Med Vault](/medvault).
   * UPDATE_REMINDER: { id, enabled?, time?, dose? }
   * REMOVE_REMINDER: { id }
   * LOG_DOSE: { reminderId?, medicineName, dose, scheduledTime, action: "taken"|"skipped", patientId? }

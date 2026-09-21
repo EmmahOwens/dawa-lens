@@ -41,6 +41,17 @@ const sampleMedicines = [
     totalQuantity: 20,
     unit: "tablets",
     addedAt: "2026-01-01T00:00:00.000Z"
+  },
+  {
+    id: "med-3",
+    name: "Amoxicillin",
+    dosage: "500mg",
+    dosagePerDose: 2,
+    frequencyPerDay: 3,
+    currentQuantity: 60,
+    totalQuantity: 60,
+    unit: "tablets",
+    addedAt: "2026-01-01T00:00:00.000Z"
   }
 ];
 
@@ -200,9 +211,85 @@ describe("DawaGPT Full-System Agentic Actions Suite", () => {
       expect(action?.type).toBe("OPEN_PHARMACY_MODAL");
       expect(action?.payload.medicineName).toBe("Metformin");
     });
+
+    it("extracts ADD_REMINDER using Med Vault dosage and multi-dose frequency (2 tablets 3x daily)", () => {
+      const action = extractDeterministicAction("Add a reminder for Amoxicillin at 8am", sampleMedicines, sampleReminders, samplePatients);
+      expect(action).not.toBeNull();
+      expect(action?.type).toBe("ADD_REMINDER");
+      expect(action?.payload.medicineName).toBe("Amoxicillin");
+      expect(action?.payload.dose).toBe("2 tablets");
+      expect(action?.payload.time).toBe("08:00,16:00,00:00");
+      expect(action?.payload.repeatSchedule).toBe("custom");
+      expect(action?.payload.medicineId).toBe("med-3");
+    });
+
+    it("returns null for ADD_REMINDER when medicine exists in Med Vault but starting time is missing", () => {
+      const action = extractDeterministicAction("Remind me to take Amoxicillin", sampleMedicines, sampleReminders, samplePatients);
+      expect(action).toBeNull();
+    });
+
+    it("returns null for ADD_REMINDER when medicine does not exist in Med Vault", () => {
+      const action = extractDeterministicAction("Set a reminder for Aspirin at 8am", sampleMedicines, sampleReminders, samplePatients);
+      expect(action).toBeNull();
+    });
   });
 
   describe("2. Conversational Response Formatting (generateDawaGPTResponse)", () => {
+    it("formats ADD_REMINDER using Med Vault dosage (2 tablets) and distributed times", async () => {
+      const resp = await generateDawaGPTResponse(
+        "Add a reminder for Amoxicillin at 8am",
+        null,
+        null,
+        sampleMedicines,
+        sampleDoseLogs,
+        sampleReminders,
+        samplePatients
+      );
+      expect(resp.action?.type).toBe("ADD_REMINDER");
+      expect(resp.text).toContain("Amoxicillin");
+      expect(resp.text).toContain("2 tablets");
+      expect(resp.text).toContain("3 times a day");
+      expect(resp.text).toContain("8:00 AM, 4:00 PM, and 12:00 AM");
+      expect(resp.source).toBe("Schedule Guard");
+    });
+
+    it("asks for starting time when medicine exists in Med Vault but user did not provide time", async () => {
+      const resp = await generateDawaGPTResponse(
+        "Remind me to take Amoxicillin",
+        null,
+        null,
+        sampleMedicines,
+        sampleDoseLogs,
+        sampleReminders,
+        samplePatients
+      );
+      expect(resp.action).toBeUndefined();
+      expect(resp.text).toContain("found **Amoxicillin** in your Med Vault");
+      expect(resp.text).toContain("2 tablets, 3 times a day");
+      expect(resp.text).toContain("What time would you like to take your first dose");
+      expect(resp.suggestions).toContain("Start at 8:00 AM");
+      expect(resp.source).toBe("Schedule Guard");
+    });
+
+    it("asks for dosage and frequency when medicine does not exist in Med Vault", async () => {
+      const resp = await generateDawaGPTResponse(
+        "Set a reminder for Aspirin",
+        null,
+        null,
+        sampleMedicines,
+        sampleDoseLogs,
+        sampleReminders,
+        samplePatients
+      );
+      expect(resp.action).toBeUndefined();
+      expect(resp.text).toContain("couldn't find **Aspirin** in your Medications or Med Vault");
+      expect(resp.text).toContain("What is your prescribed dosage");
+      expect(resp.text).toContain("How often should you take it");
+      expect(resp.text).toContain("/medications");
+      expect(resp.text).toContain("/medvault");
+      expect(resp.source).toBe("Schedule Guard");
+    });
+
     it("formats ADD_MEDICINE response with links and suggestions", async () => {
       const resp = await generateDawaGPTResponse(
         "Add Amoxicillin 500mg to my cabinet",

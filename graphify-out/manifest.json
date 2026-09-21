@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789976623.4807591,
-    "ast_hash": "603f00338b98739cb68ffb1e665a8552",
+    "mtime": 1789978271.3457456,
+    "ast_hash": "9932a4ecce8bab353d44b2602d01250c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789976883.2422924,
-    "ast_hash": "e51046e025cb6a069c1d5389961c0313",
+    "mtime": 1789978155.614945,
+    "ast_hash": "e0fdc09f7cd767e79f303521dfb1350f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -4365,8 +4365,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptAgenticActions.test.ts": {
-    "mtime": 1789977267.0802453,
-    "ast_hash": "069f227ca7b1d817eee3f4c13ce3e8e5",
+    "mtime": 1789978379.1426609,
+    "ast_hash": "79b6a4394c68ce0492abbf40ee515c55",
     "semantic_hash": ""
   }
 }
