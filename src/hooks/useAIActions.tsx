@@ -2,6 +2,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { AIAction } from "@/services/aiAssistantService";
 import { RiveMoji } from "@/components/rive/RiveMoji";
+import { useNavigate } from "react-router-dom";
 import React from "react";
 
 export function normalizeTimeStr(timeStr: string): string {
@@ -72,10 +73,21 @@ export function normalizeTimeStr(timeStr: string): string {
 export function useAIActions() {
   const { 
     addMedicine, updateMedicine, deleteMedicine, deleteReminder, 
-    addReminder, updateReminder, logDose, 
-    addWellnessLog, addPatient, reminders, medicines
+    addReminder, updateReminder, logDose, deleteDoseLog,
+    addWellnessLog, addPatient, updatePatient, deletePatient,
+    setSelectedPatientId, reminders, medicines, doseLogs, patients
   } = useApp();
   const { toast } = useToast();
+  let navigate: (to: string) => void;
+  try {
+    navigate = useNavigate();
+  } catch {
+    navigate = (to: string) => {
+      if (typeof window !== "undefined") {
+        window.location.href = to;
+      }
+    };
+  }
 
   const dispatchAIAction = async (action: AIAction) => {
     const rawAction = action as any;
@@ -85,16 +97,44 @@ export function useAIActions() {
 
     try {
       switch (action.type) {
-        case "ADD_MEDICINE":
+        case "ADD_MEDICINE": {
           if (!payload?.name) {
             throw new Error("Medicine name is required");
           }
-          await addMedicine(payload, payload.patientId);
+          const createdMed = await addMedicine({
+            name: payload.name,
+            dosage: payload.dosage || "500mg",
+            genericName: payload.genericName,
+            dosagePerDose: payload.dosagePerDose || 1,
+            frequencyPerDay: payload.frequencyPerDay || 1,
+            totalQuantity: payload.totalQuantity,
+            currentQuantity: payload.currentQuantity ?? payload.totalQuantity,
+            unit: payload.unit || "tablets",
+            notes: payload.notes || "",
+            patientId: payload.patientId || undefined
+          }, payload.patientId);
+
+          // If companion reminder schedule is requested, create it automatically
+          if (payload.reminderSchedule) {
+            const remSched = payload.reminderSchedule;
+            const normalizedTime = remSched.time ? normalizeTimeStr(remSched.time) : "08:00";
+            await addReminder({
+              medicineId: createdMed?.id || undefined,
+              medicineName: payload.name,
+              dose: remSched.dose || `${payload.dosagePerDose || 1} ${payload.unit || 'tablets'}`,
+              time: normalizedTime,
+              repeatSchedule: remSched.repeatSchedule || (normalizedTime.includes(",") ? "custom" : "daily"),
+              enabled: true,
+              patientId: payload.patientId || undefined
+            });
+          }
+
           toast({ 
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Medicine added</span>,
             description: action.confirmMessage || `${payload.name} added to your cabinet.`,
           });
           break;
+        }
 
         case "UPDATE_MEDICINE": {
           let targetMedId = payload.id;
@@ -374,6 +414,176 @@ export function useAIActions() {
             description: action.confirmMessage || `${payload.name} is now part of your health hub.`,
           });
           break;
+
+        case "UPDATE_PATIENT": {
+          if (payload.id) {
+            await updatePatient(payload.id, payload);
+            toast({
+              title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Profile updated</span>,
+              description: action.confirmMessage || `Updated health profile for ${payload.name || "dependent"}.`,
+            });
+          }
+          break;
+        }
+
+        case "REMOVE_PATIENT": {
+          let targetId = payload.id;
+          if (!targetId && payload.name && patients.length > 0) {
+            const match = patients.find(p => p.name.toLowerCase() === payload.name.toLowerCase());
+            if (match) targetId = match.id;
+          }
+          if (targetId) {
+            await deletePatient(targetId);
+            toast({
+              title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Profile removed</span>,
+              description: action.confirmMessage || `Removed ${payload.name || "member"} from Family Hub.`,
+            });
+          }
+          break;
+        }
+
+        case "SWITCH_PATIENT_SCOPE": {
+          const targetId = payload.patientId ?? null;
+          setSelectedPatientId(targetId);
+          const targetName = payload.patientName || (targetId ? (patients.find(p => p.id === targetId)?.name || "Family Member") : "Personal Profile");
+          toast({
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="👤" size={16} /> Context switched</span>,
+            description: action.confirmMessage || `Now viewing health records for ${targetName}.`,
+          });
+          break;
+        }
+
+        case "TOGGLE_REMINDER": {
+          const shouldEnable = payload.enabled !== undefined ? Boolean(payload.enabled) : true;
+          if (payload.id) {
+            await updateReminder(payload.id, { enabled: shouldEnable });
+          } else if (payload.medicineName) {
+            const match = reminders.find(r => r.medicineName.toLowerCase() === payload.medicineName.toLowerCase());
+            if (match) await updateReminder(match.id, { enabled: shouldEnable });
+          } else {
+            // Toggle all reminders
+            for (const r of reminders) {
+              await updateReminder(r.id, { enabled: shouldEnable });
+            }
+          }
+          toast({
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="🔔" size={16} /> Reminders {shouldEnable ? "resumed" : "paused"}</span>,
+            description: action.confirmMessage || (shouldEnable ? "Alarms are now active." : "Alarms have been paused."),
+          });
+          break;
+        }
+
+        case "SNOOZE_REMINDER": {
+          const snoozeMins = payload.snoozeMinutes || 15;
+          toast({
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="⏰" size={16} /> Reminder snoozed</span>,
+            description: action.confirmMessage || `Snoozed for ${snoozeMins} minutes.`,
+          });
+          break;
+        }
+
+        case "UNDO_DOSE_LOG": {
+          let targetLog = payload.id ? doseLogs.find(l => l.id === payload.id) : undefined;
+          if (!targetLog && doseLogs.length > 0) {
+            targetLog = doseLogs[doseLogs.length - 1];
+          }
+          if (targetLog) {
+            await deleteDoseLog(targetLog.id);
+            if (targetLog.action === "taken" || (targetLog as any).status === "taken") {
+              const targetMedicineId = (targetLog as any).medicineId;
+              const matchedMed = medicines.find(m => (targetMedicineId && m.id === targetMedicineId) || (m.name && m.name.toLowerCase() === targetLog.medicineName.toLowerCase()));
+              if (matchedMed && typeof matchedMed.currentQuantity === "number") {
+                const restoreQty = matchedMed.dosagePerDose || 1;
+                await updateMedicine(matchedMed.id, {
+                  currentQuantity: Math.min(matchedMed.totalQuantity || (matchedMed.currentQuantity + restoreQty), matchedMed.currentQuantity + restoreQty)
+                });
+              }
+            }
+            toast({
+              title: <span className="flex items-center gap-2"><RiveMoji emoji="↩️" size={16} /> Dose log reverted</span>,
+              description: action.confirmMessage || `Reverted dose log for ${targetLog.medicineName}.`,
+            });
+          } else {
+            toast({
+              title: <span className="flex items-center gap-2"><RiveMoji emoji="ℹ️" size={16} /> No dose to revert</span>,
+              description: "No recent dose logs found to undo.",
+            });
+          }
+          break;
+        }
+
+        case "BATCH_ADD_REGIMEN": {
+          const medName = payload.medicineName || "Treatment Medication";
+          const newMed = await addMedicine({
+            name: medName,
+            dosage: payload.dosage || "1 course",
+            frequencyPerDay: payload.frequencyPerDay || 2,
+            dosagePerDose: 1,
+            unit: "tablets",
+            currentQuantity: payload.totalQuantity || 24,
+            totalQuantity: payload.totalQuantity || 24,
+            patientId: payload.patientId || undefined
+          }, payload.patientId);
+
+          const normalizedTime = payload.times ? normalizeTimeStr(payload.times) : "08:00,20:00";
+          await addReminder({
+            medicineId: newMed?.id || undefined,
+            medicineName: medName,
+            dose: payload.dose || "1 tablet",
+            time: normalizedTime,
+            repeatSchedule: "custom",
+            enabled: true,
+            patientId: payload.patientId || undefined
+          });
+
+          toast({
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="📋" size={16} /> Regimen scheduled</span>,
+            description: action.confirmMessage || `Scheduled course and reminders for ${medName}.`,
+          });
+          break;
+        }
+
+        case "NAVIGATE_PAGE": {
+          if (payload.targetRoute) {
+            navigate(payload.targetRoute);
+            toast({
+              title: <span className="flex items-center gap-2"><RiveMoji emoji="🧭" size={16} /> Navigating</span>,
+              description: `Opened ${payload.targetRoute}.`,
+            });
+          }
+          break;
+        }
+
+        case "OPEN_PHARMACY_MODAL": {
+          window.dispatchEvent(new CustomEvent("open-pharmacy-modal", { detail: { medicineName: payload.medicineName } }));
+          toast({
+            title: <span className="flex items-center gap-2"><RiveMoji emoji="🏥" size={16} /> NDA Pharmacy Locator</span>,
+            description: "Opening licensed pharmacy map...",
+          });
+          break;
+        }
+
+        case "DISCONTINUE_MEDICINE": {
+          let targetMedId = payload.id;
+          if (!targetMedId && payload.name && medicines.length > 0) {
+            const match = medicines.find(m => m.name.toLowerCase() === payload.name.toLowerCase());
+            if (match) targetMedId = match.id;
+          }
+          if (targetMedId) {
+            await updateMedicine(targetMedId, {
+              notes: `Discontinued: ${payload.reason || "Doctor recommendation"} (${new Date().toLocaleDateString()})`
+            });
+            const relatedReminders = reminders.filter(r => r.medicineId === targetMedId || r.medicineName.toLowerCase() === (payload.name || "").toLowerCase());
+            for (const r of relatedReminders) {
+              await updateReminder(r.id, { enabled: false });
+            }
+            toast({
+              title: <span className="flex items-center gap-2"><RiveMoji emoji="🛑" size={16} /> Medicine discontinued</span>,
+              description: action.confirmMessage || `Discontinued ${payload.name || "medicine"} and paused related reminders.`,
+            });
+          }
+          break;
+        }
 
         default:
           console.warn("Unknown AI action type:", action.type);

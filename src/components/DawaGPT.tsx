@@ -16,6 +16,8 @@ import { calculateRefillStatus } from "@/services/refillService";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { getContextualSuggestions, isGenericBoilerplate } from "@/lib/contextualSuggestions";
+import { PharmacyFinderModal } from "@/components/pharmacy/PharmacyFinderModal";
+import { Medicine } from "@/contexts/AppContext";
 
 const SAMPLE_PROMPTS = [
   "Does Panadol interact with Ibuprofen?",
@@ -172,6 +174,22 @@ export default function DawaGPT() {
   const [actionMissingBotId, setActionMissingBotId] = useState<string | null>(null);
   // Store the original user message text for the retry
   const retryUserTextRef = useRef<string | null>(null);
+
+  // NDA Pharmacy Locator modal state for DawaGPT
+  const [pharmacyModalMed, setPharmacyModalMed] = useState<Medicine | null>(null);
+  const [isPharmacyModalOpen, setIsPharmacyModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenPharmacy = (e: Event) => {
+      const customEvent = e as CustomEvent<{ medicineName?: string }>;
+      const medName = customEvent.detail?.medicineName;
+      const matched = medName ? allMedicines.find(m => m.name.toLowerCase().includes(medName.toLowerCase())) : (allMedicines[0] || null);
+      setPharmacyModalMed(matched || ({ name: medName || "Medication", dosage: "" } as any));
+      setIsPharmacyModalOpen(true);
+    };
+    window.addEventListener("open-pharmacy-modal", handleOpenPharmacy);
+    return () => window.removeEventListener("open-pharmacy-modal", handleOpenPharmacy);
+  }, [allMedicines]);
 
   const placeholder = useTypewriterPlaceholder(SAMPLE_PROMPTS, {
     isPaused: isFocused || inputValue !== "" || isTyping
@@ -873,16 +891,13 @@ export default function DawaGPT() {
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.shiftKey) {
                           e.preventDefault();
-                          if (isOnline) handleSend(inputValue);
+                          handleSend(inputValue);
                         }
                       }}
-                      disabled={!isOnline}
                       placeholder={
-                        !isOnline
-                          ? "DawaGPT is unavailable offline..."
-                          : messages.length > 1
-                            ? "Ask a follow-up question..."
-                            : (placeholder || "Send a message...")
+                        messages.length > 1
+                          ? "Ask a follow-up or command..."
+                          : (placeholder || "Send a message or action...")
                       }
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}
@@ -891,7 +906,7 @@ export default function DawaGPT() {
                     />
                     <Button
                       onClick={() => handleSend(inputValue)}
-                      disabled={isTyping || !inputValue.trim() || !isOnline}
+                      disabled={isTyping || !inputValue.trim()}
                       size="icon"
                       className="rounded-xl h-10 w-10 shrink-0 bg-primary hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -900,7 +915,7 @@ export default function DawaGPT() {
                   </div>
                   <p className="text-[10px] text-center text-muted-foreground/60 px-4">
                     {!isOnline
-                      ? "Internet connection required for AI responses. Reminders are accessible offline."
+                      ? "Offline mode active. Dose logging, reminders, and cabinet actions work offline."
                       : "DawaGPT can make mistakes. Please verify important medical information."}
                   </p>
                 </div>
@@ -909,6 +924,13 @@ export default function DawaGPT() {
           </div>
         )}
       </AnimatePresence>
+
+      {isPharmacyModalOpen && (
+        <PharmacyFinderModal
+          medicine={pharmacyModalMed}
+          onClose={() => setIsPharmacyModalOpen(false)}
+        />
+      )}
     </>
   );
 }

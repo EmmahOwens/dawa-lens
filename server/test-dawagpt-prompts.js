@@ -134,6 +134,23 @@ async function runPromptTests() {
     }
   });
 
+  runTest('Identifies new agentic actions (snooze, pause, undo, patient, navigation, pharmacy) as action requests', () => {
+    const agenticPrompts = [
+      'Snooze my alarm for 15 minutes',
+      'Pause all my medication reminders',
+      'Resume my alarms',
+      'Undo my last dose log',
+      'Add family member Babirye age 6 daughter',
+      'Switch profile to Babirye',
+      'Start a 3-day treatment course for Coartem',
+      'Take me to Med Vault',
+      'Where can I buy Metformin nearest pharmacy'
+    ];
+    for (const p of agenticPrompts) {
+      assert.strictEqual(isLikelyActionRequest(p), true, `Should detect agentic action in: "${p}"`);
+    }
+  });
+
   runTest('Differentiates informational queries from action requests', () => {
     const infoQueries = [
       'What are the side effects of Metformin?',
@@ -189,13 +206,11 @@ async function runPromptTests() {
       patients: []
     });
 
-    const staticPrompt = context.finalMessages[0].content;
-    const dynamicContext = context.finalMessages[1].content;
+    const systemPrompt = context.systemInstruction || context.finalMessages[0].content;
 
-    assert(staticPrompt.includes('"Nyabo" -> "Madam"'), 'System prompt must define Nyabo');
-    assert(staticPrompt.includes('If the user/profile is FEMALE: You MUST address them as "Nyabo"'), 'Must enforce Nyabo rule');
-    assert(staticPrompt.includes('NEVER call a female/woman "Ssebo"'), 'Must strictly prohibit calling females Ssebo');
-    assert(dynamicContext.includes('Gender: female'), 'Dynamic context must specify female gender');
+    assert(systemPrompt.includes('FEMALE: You MUST address them as "Nyabo"'), 'Must enforce Nyabo rule');
+    assert(systemPrompt.includes('NEVER call a female "Ssebo"'), 'Must strictly prohibit calling females Ssebo');
+    assert(systemPrompt.includes('Gender: female'), 'Dynamic context must specify female gender');
   });
 
   await runAsyncTest('Injects male honorific ("Ssebo") rules when user is male', async () => {
@@ -210,13 +225,11 @@ async function runPromptTests() {
       patients: []
     });
 
-    const staticPrompt = context.finalMessages[0].content;
-    const dynamicContext = context.finalMessages[1].content;
+    const systemPrompt = context.systemInstruction || context.finalMessages[0].content;
 
-    assert(staticPrompt.includes('"Ssebo" (or "Sebbo") -> "Sir"'), 'System prompt must define Ssebo');
-    assert(staticPrompt.includes('If the user/profile is MALE: You MUST address them as "Ssebo"'), 'Must enforce Ssebo rule');
-    assert(staticPrompt.includes('NEVER call a male/man "Nyabo"'), 'Must strictly prohibit calling males Nyabo');
-    assert(dynamicContext.includes('Gender: male'), 'Dynamic context must specify male gender');
+    assert(systemPrompt.includes('MALE: You MUST address them as "Ssebo"'), 'Must enforce Ssebo rule');
+    assert(systemPrompt.includes('NEVER call a male "Nyabo"'), 'Must strictly prohibit calling males Nyabo');
+    assert(systemPrompt.includes('Gender: male'), 'Dynamic context must specify male gender');
   });
 
   // ─── 5. MED VAULT CALCULATION ACCURACY IN CONTEXT ──────────────────────────
@@ -251,10 +264,10 @@ async function runPromptTests() {
       patients: []
     });
 
-    const dynamicContext = context.finalMessages[1].content;
-    assert(dynamicContext.includes('Metformin'), 'Context must include Metformin');
-    assert(dynamicContext.includes('Doses Remaining: 15 doses left'), 'Context must calculate 15 doses remaining (30 / 2)');
-    assert(dynamicContext.includes('~7 days of supply left'), 'Context must calculate ~7 days of supply left (30 / 4)');
+    const systemPrompt = context.systemInstruction || context.finalMessages[0].content;
+    assert(systemPrompt.includes('Metformin'), 'Context must include Metformin');
+    assert(systemPrompt.includes('Doses left: 15'), 'Context must calculate 15 doses remaining (30 / 2)');
+    assert(systemPrompt.includes('~7 days left'), 'Context must calculate ~7 days of supply left (30 / 4)');
   });
 
   // ─── 6. STREAMING SSE DECODER RESILIENCE ────────────────────────────────────

@@ -1582,30 +1582,46 @@ export const isLikelyActionRequest = (text) => {
     return false;
   }
 
-  // Direct action verbs with word boundaries (e.g. "add reminder", "set stock")
-  const directVerbs = /\b(add|create|schedule|register|log|record|refill|restock|delete|remove|reschedule|remind|set)\b/i;
+  // Direct action verbs with word boundaries (e.g. "add reminder", "set stock", "start regimen")
+  const directVerbs = /\b(add|start|create|schedule|register|log|record|refill|restock|delete|remove|reschedule|remind|set|purchased|bought|snooze|pause|resume|undo|revert|switch)\b/i;
 
   // Indirect / polite action requests ("please add", "help me set a reminder")
-  const indirectAction = /(i need|i want|i'd like|i would like|can you|could you|please|help me|let's|let us)\s.{0,30}\b(add|create|set|log|record|track|update|delete|remove|refill|schedule|register)\b/i;
+  const indirectAction = /(i need|i want|i'd like|i would like|can you|could you|please|help me|let's|let us)\s.{0,30}\b(add|start|create|set|log|record|track|update|delete|remove|refill|schedule|register|snooze|pause|undo)\b/i;
 
   // First-person past-tense dose log ("I took my...", "I missed my...", "I forgot to take", "I skipped")
-  const pastDoseLog = /\b(i took|i've taken|i missed|i forgot|i skipped|i just took|i already took)\b/i;
+  const pastDoseLog = /\b(i took|i've taken|i missed|i forgot|i skipped|i just took|i already took|i didn't take|i made a mistake)\b/i;
 
   // Wellness / mood / energy / symptom logging phrases
   const wellnessLog = /\b(feeling|feel|mood|energy|tired|fatigue|dizzy|nausea|headache|stomachache|stomach\s*ache|cramps?|ecstatic|very\s*happy|super\s*happy|so\s*happy|happy|joyful|delighted|thrilled|overjoyed|pain|sick|unwell|symptom|log (how|my|a)|wellness|check[- ]?in|log mood|log energy|log symptom|i am feeling|i feel|i'm feeling|i've been feeling|i have (a|an)?\s*(headache|stomachache|stomach\s*ache|fever|cough|migraine|pain)|omutwe\s*(gunnuma|gunuma)?|olubuto\s*(lunnuma|lunuma)?|musujja|hurt(s)?)\b/i;
 
   // Stock / refill phrases
-  const refillPhrase = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|set stock|update stock|update quantity)\b/i;
+  const refillPhrase = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|set stock|update stock|update quantity|purchased|bought)\b/i;
 
   // Reminder management phrases (stop, disable, enable, change time, move, snooze)
   const reminderManage = /\b(stop|disable|turn off|pause|mute|snooze|enable|turn on|change time|move|reschedule|update).{0,20}(reminder|alarm|notification|dose|schedule)/i;
+
+  // Patient / Family Hub phrases
+  const patientManage = /\b(add|create|register|switch to|switch context|switch profile)\s.{0,25}\b(patient|family member|dependent|client|child|mother|father|son|daughter|[a-z0-9-]+)\b/i;
+
+  // Undo phrases
+  const undoPhrase = /\b(undo|revert|cancel)\s.{0,20}(dose|log)\b/i;
+
+  // Navigation phrases
+  const navPhrase = /\b(go to|take me to|open|navigate to)\s.{0,25}(med\s*vault|cabinet|reminders?|wellness|family|settings?|history|interactions?|scanner|pharmacy)\b/i;
+
+  // Pharmacy finder phrases
+  const pharmacyPhrase = /\b(find\s+(?:a\s+)?pharmacy|where\s+(?:can\s+i|to)\s+buy|nearest\s+pharmacy|pharmacies\s+near\s+me|pharmacy\s+finder)\b/i;
 
   return directVerbs.test(lower)
     || indirectAction.test(lower)
     || pastDoseLog.test(lower)
     || wellnessLog.test(lower)
     || refillPhrase.test(lower)
-    || reminderManage.test(lower);
+    || reminderManage.test(lower)
+    || patientManage.test(lower)
+    || undoPhrase.test(lower)
+    || navPhrase.test(lower)
+    || pharmacyPhrase.test(lower);
 };
 
 /**
@@ -1810,11 +1826,206 @@ function formatTimeDisplay(timeStr) {
   return `${h}:${m} ${ampm}`;
 }
 
-export const extractDeterministicAction = (text, medicines = [], reminders = []) => {
+export const extractDeterministicAction = (text, medicines = [], reminders = [], patients = []) => {
   if (!text) return null;
   const lower = text.toLowerCase().trim();
 
-  // 1. ADD_REMINDER
+  // Guard: if it's purely an informational/safety question, do not misroute to actions
+  const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use|side effects?|what is|tell me about)\b/i.test(lower) || isSameTaskOrDuplicateQuery(lower, medicines);
+
+  // 1. UNDO_DOSE_LOG
+  const isUndoDose = /\b(undo(\s+my)?(\s+last)?\s+(dose|log|record)|revert(\s+my)?\s+dose|cancel(\s+my)?(\s+last)?\s+dose|i didn't take|didn't take my dose|made a mistake.*take)\b/i.test(lower);
+  if (isUndoDose) {
+    return {
+      type: "UNDO_DOSE_LOG",
+      payload: {},
+      confirmMessage: "Reverted your last dose log and restored your Med Vault inventory."
+    };
+  }
+
+  // 2. SWITCH_PATIENT_SCOPE
+  const switchMatch = lower.match(/\b(?:switch\s+(?:to|context\s+to|profile\s+to)|view\s+profile\s+(?:for|of)|show\s+me\s+profile\s+(?:for|of))\s+([a-z0-9\s'-]+)/i);
+  if (switchMatch) {
+    const rawTarget = switchMatch[1].replace(/'s.*/, '').trim();
+    if (['me', 'myself', 'self', 'my account', 'my profile'].includes(rawTarget)) {
+      return {
+        type: "SWITCH_PATIENT_SCOPE",
+        payload: { patientId: null, patientName: "Self" },
+        confirmMessage: "Switched context back to your personal health profile."
+      };
+    }
+    const matchedPatient = patients.find(p => p.name.toLowerCase().includes(rawTarget) || rawTarget.includes(p.name.toLowerCase()));
+    if (matchedPatient) {
+      return {
+        type: "SWITCH_PATIENT_SCOPE",
+        payload: { patientId: matchedPatient.id, patientName: matchedPatient.name },
+        confirmMessage: `Switched active context to ${matchedPatient.name}.`
+      };
+    }
+  }
+
+  // 3. SNOOZE_REMINDER
+  const snoozeMatch = lower.match(/\bsnooze(?:\s+my)?(?:\s+[a-z0-9-]+)?(?:\s+reminder|\s+alarm)?\s+(?:for\s+)?(\d+)\s*(?:mins?|minutes?)\b/i);
+  if (snoozeMatch) {
+    const snoozeMinutes = parseInt(snoozeMatch[1], 10) || 15;
+    return {
+      type: "SNOOZE_REMINDER",
+      payload: { snoozeMinutes },
+      confirmMessage: `Snoozed your reminder for ${snoozeMinutes} minutes.`
+    };
+  }
+
+  // 4. TOGGLE_REMINDER (Pause/Resume)
+  const isPause = /\b(pause|turn off|disable|mute)\s+(?:all\s+)?(?:my\s+)?(?:medication\s+|medicine\s+)?(?:reminders?|alarms?)\b/i.test(lower);
+  const isResume = /\b(resume|turn on|enable|unmute)\s+(?:all\s+)?(?:my\s+)?(?:medication\s+|medicine\s+)?(?:reminders?|alarms?)\b/i.test(lower);
+  if (isPause || isResume) {
+    const enabled = isResume;
+    return {
+      type: "TOGGLE_REMINDER",
+      payload: { enabled },
+      confirmMessage: enabled ? "All active medication reminders have been resumed." : "Your medication reminders have been paused."
+    };
+  }
+
+  // 5. REMOVE_REMINDER
+  const removeRemMatch = lower.match(/\b(?:delete|remove|cancel|stop)\s+(?:my\s+)?(?:reminder|alarm)\s*(?:for\s+([a-z0-9-]+))?\b/i) ||
+                         lower.match(/\bstop\s+reminding\s+me\s+(?:about|for|to\s+take)\s+([a-z0-9-]+)\b/i);
+  if (removeRemMatch) {
+    const medQuery = (removeRemMatch[1] || "").trim();
+    let matchedReminder = reminders.find(r => medQuery && r.medicineName.toLowerCase().includes(medQuery.toLowerCase()));
+    if (!matchedReminder && medQuery) {
+      matchedReminder = reminders.find(r => r.medicineName.toLowerCase() === medQuery.toLowerCase());
+    }
+    return {
+      type: "REMOVE_REMINDER",
+      payload: {
+        id: matchedReminder?.id || null,
+        medicineName: matchedReminder?.medicineName || medQuery || "Medication"
+      },
+      confirmMessage: `Removed reminder for ${matchedReminder?.medicineName || medQuery || "the medication"}.`
+    };
+  }
+
+  // 6. UPDATE_REMINDER (Reschedule/Change time)
+  const updateRemMatch = lower.match(/\b(?:change|move|reschedule|update|shift)\s+(?:my\s+)?([a-z0-9-]+)?\s*(?:reminder|alarm|schedule)\s*(?:to|for|at)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i);
+  if (updateRemMatch) {
+    const medQuery = (updateRemMatch[1] || "").trim();
+    const rawTime = updateRemMatch[2];
+    const normalizedTime = rawTime ? formatTimeDisplay(rawTime) : "08:00";
+    let matchedReminder = reminders.find(r => medQuery && r.medicineName.toLowerCase().includes(medQuery.toLowerCase()));
+    return {
+      type: "UPDATE_REMINDER",
+      payload: {
+        id: matchedReminder?.id || null,
+        medicineName: matchedReminder?.medicineName || medQuery || "Reminder",
+        time: rawTime
+      },
+      confirmMessage: `Updated reminder time for ${matchedReminder?.medicineName || medQuery || "your medication"} to ${normalizedTime}.`
+    };
+  }
+
+  // 7. REMOVE_MEDICINE
+  const removeMedMatch = lower.match(/\b(?:delete|remove|archive|stop\s+taking)\s+(?:the\s+|my\s+)?(?:medicine|medication|drug|pill)?\s*([a-z0-9-]+)(?:\s+from\s+(?:my\s+)?(?:cabinet|medications?|meds?|vault))?\b/i);
+  if (removeMedMatch && !lower.includes("reminder") && !lower.includes("alarm") && !lower.includes("patient") && !lower.includes("member")) {
+    const medQuery = removeMedMatch[1].trim();
+    if (!['a', 'the', 'my', 'some', 'this'].includes(medQuery.toLowerCase())) {
+      const matchedMed = medicines.find(m => m.name.toLowerCase().includes(medQuery.toLowerCase()));
+      return {
+        type: "REMOVE_MEDICINE",
+        payload: {
+          id: matchedMed?.id || null,
+          name: matchedMed?.name || (medQuery.charAt(0).toUpperCase() + medQuery.slice(1))
+        },
+        confirmMessage: `Removed ${matchedMed?.name || medQuery} from your medicine cabinet.`
+      };
+    }
+  }
+
+  // 8. ADD_PATIENT
+  const addPatientMatch = lower.match(/\b(?:add|create|register)\s+(?:a\s+|my\s+)?(?:family\s+member|dependent|client|patient|child|parent|mother|father|son|daughter|relative)\s+([a-z0-9\s'-]+)/i);
+  if (addPatientMatch) {
+    const rawInfo = addPatientMatch[1].trim();
+    const ageMatch = lower.match(/\bage\s+(\d{1,3})\b/i) || lower.match(/\b(\d{1,3})\s*(?:years?\s*old|yrs?\s*old|yo)\b/i);
+    const age = ageMatch ? parseInt(ageMatch[1], 10) : undefined;
+    const gender = /\b(female|mother|daughter|girl|woman)\b/i.test(lower) ? 'female' : /\b(male|father|son|boy|man)\b/i.test(lower) ? 'male' : undefined;
+    const cleanName = rawInfo.split(/,\s*|\s+(?:age|\d+|who|with)\b/i)[0].trim();
+    const formattedName = cleanName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    let relation = "Family";
+    if (lower.includes("mother") || lower.includes("mama")) relation = "Mother";
+    else if (lower.includes("father") || lower.includes("baba")) relation = "Father";
+    else if (lower.includes("son")) relation = "Son";
+    else if (lower.includes("daughter")) relation = "Daughter";
+    else if (lower.includes("child") || lower.includes("baby")) relation = "Child";
+    else if (lower.includes("client")) relation = "Client";
+
+    return {
+      type: "ADD_PATIENT",
+      payload: {
+        name: formattedName || "New Member",
+        age,
+        gender,
+        relation,
+        type: lower.includes("client") ? "client" : "family"
+      },
+      confirmMessage: `Added ${formattedName || "family member"} to your Family Hub.`
+    };
+  }
+
+  // 9. BATCH_ADD_REGIMEN (e.g. Coartem 3-day treatment)
+  const isRegimen = /\b(?:add|start|set up)\s+(?:a\s+)?(?:\d+[- ]day\s+)?(?:treatment|regimen|course|treatment\s+regimen|malaria\s*treatment)\s*(?:of|for)?\s*([a-z0-9-]+)\b/i.test(lower);
+  if (isRegimen) {
+    const regMatch = lower.match(/\b(?:of|for)\s+([a-z0-9-]+)/i);
+    const medName = regMatch ? (regMatch[1].charAt(0).toUpperCase() + regMatch[1].slice(1)) : "Coartem (Artemether/Lumefantrine)";
+    return {
+      type: "BATCH_ADD_REGIMEN",
+      payload: {
+        medicineName: medName,
+        dosage: "20/120mg",
+        durationDays: 3,
+        frequency: "twice daily",
+        times: "08:00,20:00"
+      },
+      confirmMessage: `Set up 3-day treatment regimen and reminders for ${medName}.`
+    };
+  }
+
+  // 10. NAVIGATE_PAGE
+  const navMatch = lower.match(/\b(?:go to|take me to|open|navigate to)\s+(?:the\s+|my\s+)?(medvault|med\s*vault|inventory|stock|reminders?|alarms?|medications?|cabinet|history|logs|wellness|wellness\s*hub|family|family\s*hub|dependents?|interactions?|safety|safety\s*guard|travel|travel\s*companion|reports?|doctor\s*report|scanner|scan|settings?)\b/i);
+  if (navMatch && !lower.includes("page") && !lower.includes("how") && !lower.includes("link") && !lower.startsWith("show") && !lower.includes("add") && !lower.includes("remind me") && !lower.includes("log") && !lower.includes("refill")) {
+    const rawTarget = navMatch[1].toLowerCase().replace(/\s+/g, '');
+    let targetRoute = "/";
+    if (rawTarget.includes("medvault") || rawTarget.includes("inventory") || rawTarget.includes("stock")) targetRoute = "/medvault";
+    else if (rawTarget.includes("reminder") || rawTarget.includes("alarm")) targetRoute = "/reminders";
+    else if (rawTarget.includes("medication") || rawTarget.includes("cabinet")) targetRoute = "/medications";
+    else if (rawTarget.includes("history") || rawTarget.includes("log")) targetRoute = "/history";
+    else if (rawTarget.includes("wellness")) targetRoute = "/wellness";
+    else if (rawTarget.includes("family") || rawTarget.includes("dependent")) targetRoute = "/family";
+    else if (rawTarget.includes("interaction") || rawTarget.includes("safety")) targetRoute = "/interactions";
+    else if (rawTarget.includes("travel")) targetRoute = "/travel";
+    else if (rawTarget.includes("report")) targetRoute = "/report";
+    else if (rawTarget.includes("scan")) targetRoute = "/scan";
+    else if (rawTarget.includes("setting")) targetRoute = "/settings";
+
+    return {
+      type: "NAVIGATE_PAGE",
+      payload: { targetRoute },
+      confirmMessage: `Navigating to ${targetRoute}.`
+    };
+  }
+
+  // 11. OPEN_PHARMACY_MODAL
+  const isPharmacyFinder = /\b(find\s+(?:a\s+)?pharmacy|where\s+(?:can\s+i|to)\s+buy|nearest\s+pharmacy|pharmacies\s+near\s+me|open\s+pharmacy\s+finder|locate\s+pharmacy)\b/i.test(lower);
+  if (isPharmacyFinder) {
+    const medMatch = lower.match(/\b(?:buy|find|for)\s+([a-z0-9-]+)\b/i);
+    const targetMed = medMatch && !['a', 'the', 'some', 'me', 'pharmacy', 'medicine', 'pills'].includes(medMatch[1].toLowerCase()) ? (medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1)) : undefined;
+    return {
+      type: "OPEN_PHARMACY_MODAL",
+      payload: { medicineName: targetMed },
+      confirmMessage: `Opening National Drug Authority (NDA) pharmacy locator${targetMed ? ` for ${targetMed}` : ""}.`
+    };
+  }
+
+  // 12. ADD_REMINDER
   const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(lower);
   if (isReminderIntent) {
     let time = "08:00";
@@ -1864,7 +2075,7 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [])
     };
   }
 
-  // 2. LOG_DOSE
+  // 13. LOG_DOSE
   const isDoseLogIntent = /\b(i took|i've taken|i just took|i already took|log (that )?i took|record (that )?i took|mark (my )?.* as taken|i missed|i skipped)\b/i.test(lower);
   if (isDoseLogIntent) {
     const isMissed = /\b(missed|skipped|forgot)\b/i.test(lower);
@@ -1894,8 +2105,8 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [])
     };
   }
 
-  // 3. UPDATE_MEDICINE (Med Vault Refill)
-  const isRefillIntent = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|update stock|set stock)\b/i.test(lower);
+  // 14. UPDATE_MEDICINE (Med Vault Refill)
+  const isRefillIntent = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|update stock|set stock|purchased|bought)\b/i.test(lower);
   if (isRefillIntent) {
     const qtyMatch = lower.match(/\b(?:to|with|have)?\s*(\d+)\s*(?:pills?|tablets?|capsules?|units?)?\b/i);
     const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : null;
@@ -1916,8 +2127,77 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [])
     }
   }
 
-  // 4. LOG_WELLNESS (Guard against medication questions or duplicate therapy queries being misrouted)
-  const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use)\b/i.test(lower) || isSameTaskOrDuplicateQuery(lower, medicines);
+  // 15. ADD_MEDICINE (Direct Cabinet Addition)
+  const isAddMedIntent = !isMedQuestion && (
+    /\b(?:add|put|register|save)\s+(?:a\s+|my\s+)?(?:new\s+)?(?:medicine|medication|pill|drug|tablet|prescription)\b/i.test(lower) ||
+    /\b(?:add|put)\s+([a-z0-9-]+(?:\s+[a-z0-9-]+)?)\s+(?:to\s+(?:my\s+)?(?:cabinet|medications?|meds?|vault|inventory))\b/i.test(lower) ||
+    (/\b(?:add|register)\s+([a-z0-9-]+)\s+(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?|mcg))\b/i.test(lower) && !isReminderIntent)
+  );
+  if (isAddMedIntent) {
+    let name = "Medication";
+    const nameMatch = lower.match(/\b(?:add|put|register|new)\s+(?:a\s+|my\s+)?(?:new\s+)?(?:medicine|medication|pill|drug|tablet)?\s*(?:called\s+|named\s+)?([a-z0-9-]+(?:\s+[a-z0-9-]+)?)/i);
+    if (nameMatch && !['a', 'the', 'my', 'some', 'new', 'to', 'in'].includes(nameMatch[1].toLowerCase())) {
+      name = nameMatch[1].split(/\s+(?:to|in|at|dosage|\d+mg|\d+\s*mg)/)[0].trim();
+      name = name.charAt(0).toUpperCase() + name.slice(1);
+    }
+
+    const doseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|mcg|tablets?|pills?|capsules?|drops?|puffs?))\b/i);
+    const dosage = doseMatch ? doseMatch[1] : "500mg";
+
+    let dosagePerDose = 1;
+    const dosagePerDoseMatch = lower.match(/\b(\d+)\s*(?:tablets?|pills?|capsules?|drops?|puffs?)\s*(?:per\s+dose|each\s+time|twice|three|daily|per\s+day)?\b/i);
+    if (dosagePerDoseMatch) {
+      dosagePerDose = parseInt(dosagePerDoseMatch[1], 10) || 1;
+    }
+
+    let frequencyPerDay = 1;
+    if (lower.includes("twice") || lower.includes("2x") || lower.includes("2 times") || lower.includes("two times")) frequencyPerDay = 2;
+    else if (lower.includes("three times") || lower.includes("3x") || lower.includes("thrice") || lower.includes("3 times")) frequencyPerDay = 3;
+    else if (lower.includes("four times") || lower.includes("4x") || lower.includes("4 times")) frequencyPerDay = 4;
+
+    let unit = "tablets";
+    if (lower.includes("capsule")) unit = "capsules";
+    else if (lower.includes("ml") || lower.includes("syrup") || lower.includes("liquid")) unit = "ml";
+    else if (lower.includes("puff") || lower.includes("inhaler")) unit = "puffs";
+    else if (lower.includes("drop")) unit = "drops";
+
+    const qtyMatch = lower.match(/\b(?:with|have|total\s+of)?\s*(\d+)\s*(?:pills?|tablets?|capsules?|units?|bottles?)\b/i);
+    const totalQuantity = qtyMatch ? parseInt(qtyMatch[1], 10) : 30;
+
+    let time = null;
+    const timeMatch = lower.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+      const meridiem = timeMatch[3]?.toLowerCase();
+      if (meridiem === 'pm' && hours < 12) hours += 12;
+      if (meridiem === 'am' && hours === 12) hours = 0;
+      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+        time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      }
+    }
+
+    return {
+      type: "ADD_MEDICINE",
+      payload: {
+        name,
+        dosage,
+        dosagePerDose,
+        frequencyPerDay,
+        totalQuantity,
+        currentQuantity: totalQuantity,
+        unit,
+        reminderSchedule: time ? {
+          time,
+          dose: `${dosagePerDose} ${unit}`,
+          repeatSchedule: frequencyPerDay === 2 ? "custom" : "daily"
+        } : undefined
+      },
+      confirmMessage: `Added **${name}** (${dosage}) to your medicine cabinet.`
+    };
+  }
+
+  // 16. LOG_WELLNESS (Guard against medication questions)
   if (isMedQuestion) return null;
 
   const wellnessData = extractWellnessData(text);
@@ -2069,13 +2349,64 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
     return EMERGENCY_RESPONSE;
   }
 
-  // 2. Deterministic Action Dispatching (Adding reminders, logging doses, refilling stock, wellness tracking)
+  // 2. Deterministic Action Dispatching (All full-system agentic actions)
   const action = extractDeterministicAction(norm, medicines, reminders);
   if (action) {
+    if (action.type === "ADD_MEDICINE") {
+      const remText = action.payload.reminderSchedule ? ` Companion reminder set for **${formatTimeDisplay(action.payload.reminderSchedule.time)}**.` : "";
+      return {
+        text: `I've added **${action.payload.name}** (${action.payload.dosage}) to your medicine cabinet.${remText}\n\nYou can [view your active prescriptions in My Medications](/medications) or [track stock in Med Vault](/medvault).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Cabinet Guard",
+        action
+      };
+    }
+    if (action.type === "REMOVE_MEDICINE") {
+      return {
+        text: `I've removed **${action.payload.name}** from your active medicine cabinet.\n\nYou can [review your updated cabinet in My Medications](/medications).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Cabinet Guard",
+        action
+      };
+    }
     if (action.type === "ADD_REMINDER") {
       const displayTime = action.payload.time ? formatTimeDisplay(action.payload.time) : "8:00 AM";
       return {
         text: `I've set up a reminder for you to take **${action.payload.medicineName}** (${action.payload.dose}) ${action.payload.repeatSchedule} at **${displayTime}**.\n\nYou can [view or manage your schedule in Medication Reminders](/reminders).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Schedule Guard",
+        action
+      };
+    }
+    if (action.type === "UPDATE_REMINDER") {
+      const displayTime = action.payload.time ? formatTimeDisplay(action.payload.time) : "new time";
+      return {
+        text: `I've updated your reminder for **${action.payload.medicineName}** to **${displayTime}**.\n\nYou can [review all alarms in Medication Reminders](/reminders).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Schedule Guard",
+        action
+      };
+    }
+    if (action.type === "REMOVE_REMINDER") {
+      return {
+        text: `I've removed the reminder for **${action.payload.medicineName}**.\n\nYou can [manage remaining alarms in Medication Reminders](/reminders).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Schedule Guard",
+        action
+      };
+    }
+    if (action.type === "TOGGLE_REMINDER") {
+      const statusText = action.payload.enabled ? "resumed" : "paused";
+      return {
+        text: `I have **${statusText}** your medication reminders.\n\nYou can [view or toggle individual alarms in Medication Reminders](/reminders).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Schedule Guard",
+        action
+      };
+    }
+    if (action.type === "SNOOZE_REMINDER") {
+      return {
+        text: `Snoozed your medication reminder for **${action.payload.snoozeMinutes || 15} minutes**. I'll alert you again shortly!`,
         suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
         source: "Schedule Guard",
         action
@@ -2090,11 +2421,59 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
         action
       };
     }
+    if (action.type === "UNDO_DOSE_LOG") {
+      return {
+        text: `I've reverted your last logged dose and restored your pill count in Med Vault.\n\nYou can [check your updated logs in Dose History](/history).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Adherence Guard",
+        action
+      };
+    }
     if (action.type === "UPDATE_MEDICINE") {
       return {
         text: `I've updated your Med Vault: **${action.payload.name}** stock is now set to **${action.payload.currentQuantity} tablets**.\n\nYou can [view and track your pill supply in Med Vault](/medvault).`,
         suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
         source: "Med Vault",
+        action
+      };
+    }
+    if (action.type === "ADD_PATIENT") {
+      return {
+        text: `I've added **${action.payload.name}**${action.payload.relation ? ` (${action.payload.relation})` : ""} to your Family Hub.\n\nYou can [manage multi-dependent profiles in Family Hub](/family).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Family Hub Guard",
+        action
+      };
+    }
+    if (action.type === "SWITCH_PATIENT_SCOPE") {
+      return {
+        text: `Active context switched to **${action.payload.patientName || "Personal Profile"}**.\n\nAll subsequent queries and schedules are now scoped to this profile. You can [view family profiles in Family Hub](/family).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Family Hub Guard",
+        action
+      };
+    }
+    if (action.type === "BATCH_ADD_REGIMEN") {
+      return {
+        text: `I've configured the 3-day treatment course and alarms for **${action.payload.medicineName}** (${action.payload.frequency} at ${action.payload.times}).\n\nYou can [manage these alarms in Medication Reminders](/reminders).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Schedule Guard",
+        action
+      };
+    }
+    if (action.type === "NAVIGATE_PAGE") {
+      return {
+        text: `Navigating directly to [${action.payload.targetRoute}](${action.payload.targetRoute}).`,
+        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+        source: "Navigator Guard",
+        action
+      };
+    }
+    if (action.type === "OPEN_PHARMACY_MODAL") {
+      return {
+        text: `Opening the official **NDA Uganda Pharmacy Finder**${action.payload.medicineName ? ` for **${action.payload.medicineName}**` : ""}. Locating licensed dispensaries near you...`,
+        suggestions: ["Find 24/7 pharmacies", "Call nearest pharmacy", "Check pill stock"],
+        source: "NDA Locator Guard",
         action
       };
     }
@@ -2119,6 +2498,12 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
         action
       };
     }
+    return {
+      text: action.confirmMessage || "Action completed.",
+      suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+      source: "Clinical Guard",
+      action
+    };
   }
 
   // 3. Official Uganda Healthcare & Emergency Directory (only if explicitly asked for contacts/support)
