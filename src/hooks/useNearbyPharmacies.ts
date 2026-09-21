@@ -5,10 +5,13 @@ import {
   NdaPharmacy,
   PharmacyRoute,
   findTopNearestPharmacies,
+  findTopNearestDrugShops,
   findNearbyPharmacies,
+  findNearbyDrugShops,
   getPharmacyRoute,
   fetchTopPharmaciesRoadDistances,
   getAllDistricts,
+  getAllDrugShopDistricts,
   resolvePharmacyCoordinates,
   saveLastKnownLocation,
   DEFAULT_KAMPALA_COORDS,
@@ -44,51 +47,60 @@ export function useNearbyPharmacies() {
     }
   }, [location, geoStatus, isNetworkIssue]);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDistrict, setSelectedDistrict] = useState("ALL");
-  const [radiusKm, setRadiusKm] = useState(25);
+  // ── Shared state ─────────────────────────────────────────────────────────────
   const [transportMode, setTransportMode] = useState<"driving" | "walking">("driving");
   const [selectedPharmacy, setSelectedPharmacy] = useState<NdaPharmacy | null>(null);
   const [route, setRoute] = useState<PharmacyRoute | null>(null);
   const [isRouteLoading, setIsRouteLoading] = useState(false);
 
-  // Top 5 nearest pharmacies reactive state
+  // ── Pharmacy (outlet) state ───────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("ALL");
+  const [radiusKm] = useState(25);
+
   const [rawTopPharmacies, setRawTopPharmacies] = useState<NdaPharmacy[]>(() =>
     findTopNearestPharmacies(userCoords[1], userCoords[0], 5, true)
   );
 
-  // Always enforce strict ascending order from nearest distance to farthest
   const top5Pharmacies = useMemo(() => {
     return [...rawTopPharmacies].sort(
       (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
     );
   }, [rawTopPharmacies]);
 
-  // Immediately compute initial candidates by geographic proximity, then enrich and sort by live road distances
+  // ── Drug Shop state ───────────────────────────────────────────────────────────
+  const [dsSearchQuery, setDsSearchQuery] = useState("");
+  const [dsSelectedDistrict, setDsSelectedDistrict] = useState("ALL");
+
+  const [rawTopDrugShops, setRawTopDrugShops] = useState<NdaPharmacy[]>(() =>
+    findTopNearestDrugShops(userCoords[1], userCoords[0], 5)
+  );
+
+  const top5DrugShops = useMemo(() => {
+    return [...rawTopDrugShops].sort(
+      (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+    );
+  }, [rawTopDrugShops]);
+
+  // ── Pharmacy enrichment effect ───────────────────────────────────────────────
   useEffect(() => {
-    // Check top 10 candidates by proximity to ensure true top 5 nearest road routes are selected
     const initialCandidates = findTopNearestPharmacies(userCoords[1], userCoords[0], 10, true);
     setRawTopPharmacies(initialCandidates.slice(0, 5));
 
-    if (!isOnline) {
-      // In offline / network issue mode, use direct proximity calculations without blocking network calls
-      return;
-    }
+    if (!isOnline) return;
 
     let isCancelled = false;
     fetchTopPharmaciesRoadDistances(userCoords, initialCandidates, transportMode)
       .then((enriched) => {
         if (!isCancelled && enriched.length > 0) {
-          // Sort strictly in ascending order from nearest road distance to farthest, take top 5
           const sorted = [...enriched]
             .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
             .slice(0, 5);
 
           setRawTopPharmacies(sorted);
 
-          // Auto-select the nearest pharmacy if none selected yet
           setSelectedPharmacy((prev) => {
-            if (!prev) return sorted[0];
+            if (!prev || prev.outletType === "drug_shop") return prev;
             const updated = sorted.find((p) => p.id === prev.id);
             return updated || prev;
           });
@@ -98,30 +110,70 @@ export function useNearbyPharmacies() {
         console.warn("[useNearbyPharmacies] Error enriching top road distances:", err);
       });
 
-    return () => {
-      isCancelled = true;
-    };
+    return () => { isCancelled = true; };
   }, [userCoords, transportMode, isOnline]);
 
-  // Filtered / searched list of pharmacies
-  const filteredPharmacies = useMemo(() => {
-    return findNearbyPharmacies(userCoords[1], userCoords[0], {
+  // ── Drug shop top-5 effect ────────────────────────────────────────────────────
+  useEffect(() => {
+    const initialDsTop10 = findTopNearestDrugShops(userCoords[1], userCoords[0], 10);
+    setRawTopDrugShops(initialDsTop10.slice(0, 5));
+
+    if (!isOnline) return;
+
+    let isCancelled = false;
+    fetchTopPharmaciesRoadDistances(userCoords, initialDsTop10, transportMode)
+      .then((enriched) => {
+        if (!isCancelled && enriched.length > 0) {
+          const sorted = [...enriched]
+            .sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
+            .slice(0, 5);
+
+          setRawTopDrugShops(sorted);
+
+          setSelectedPharmacy((prev) => {
+            if (!prev || prev.outletType === "pharmacy") return prev;
+            const updated = sorted.find((d) => d.id === prev.id);
+            return updated || prev;
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("[useNearbyPharmacies] Error enriching drug shop road distances:", err);
+      });
+
+    return () => { isCancelled = true; };
+  }, [userCoords, transportMode, isOnline]);
+
+  // ── Filtered lists ────────────────────────────────────────────────────────────
+  const filteredPharmacies = useMemo(() =>
+    findNearbyPharmacies(userCoords[1], userCoords[0], {
       radiusKm,
       district: selectedDistrict,
       query: searchQuery,
       onlyRetail: true,
       limit: 60,
-    });
-  }, [userCoords, radiusKm, selectedDistrict, searchQuery]);
+    }),
+    [userCoords, radiusKm, selectedDistrict, searchQuery]
+  );
 
-  // Auto-select the top 1 nearest pharmacy on initial load if none selected
+  const filteredDrugShops = useMemo(() =>
+    findNearbyDrugShops(userCoords[1], userCoords[0], {
+      radiusKm: 100,
+      district: dsSelectedDistrict,
+      query: dsSearchQuery,
+      limit: 60,
+    }),
+    [userCoords, dsSelectedDistrict, dsSearchQuery]
+  );
+
+  // ── Auto-select nearest on load ───────────────────────────────────────────────
   useEffect(() => {
     if (!selectedPharmacy && top5Pharmacies.length > 0) {
       setSelectedPharmacy(top5Pharmacies[0]);
     }
   }, [top5Pharmacies, selectedPharmacy]);
 
-  // Fetch / update road route when selected pharmacy or transport mode changes
+  // ── Route computation ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!selectedPharmacy) {
       setRoute(null);
@@ -142,47 +194,66 @@ export function useNearbyPharmacies() {
           setRoute(res);
           setIsRouteLoading(false);
 
-          // Synchronize selectedPharmacy and rawTopPharmacies with actual road route distance
           setSelectedPharmacy((prev) => {
             if (!prev) return prev;
-            return {
-              ...prev,
-              distanceKm: res.distanceKm,
-              durationMinutes: res.durationMinutes,
-            };
+            return { ...prev, distanceKm: res.distanceKm, durationMinutes: res.durationMinutes };
           });
 
-          setRawTopPharmacies((prev) => {
+          // Update appropriate top-5 list
+          const updateList = (
+            prev: NdaPharmacy[],
+            setter: React.Dispatch<React.SetStateAction<NdaPharmacy[]>>
+          ) => {
             const updated = prev.map((p) =>
               p.id === selectedPharmacy.id
                 ? { ...p, distanceKm: res.distanceKm, durationMinutes: res.durationMinutes }
                 : p
             );
-            return [...updated].sort(
-              (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+            setter(
+              [...updated].sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity))
             );
-          });
+          };
+
+          if (selectedPharmacy.outletType === "drug_shop") {
+            setRawTopDrugShops((prev) => {
+              const updated = prev.map((p) =>
+                p.id === selectedPharmacy.id
+                  ? { ...p, distanceKm: res.distanceKm, durationMinutes: res.durationMinutes }
+                  : p
+              );
+              return [...updated].sort(
+                (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+              );
+            });
+          } else {
+            setRawTopPharmacies((prev) => {
+              const updated = prev.map((p) =>
+                p.id === selectedPharmacy.id
+                  ? { ...p, distanceKm: res.distanceKm, durationMinutes: res.durationMinutes }
+                  : p
+              );
+              return [...updated].sort(
+                (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+              );
+            });
+          }
         }
       })
       .catch((err) => {
         console.warn("[useNearbyPharmacies] Failed to compute route:", err);
-        if (!isCancelled) {
-          setIsRouteLoading(false);
-        }
+        if (!isCancelled) setIsRouteLoading(false);
       });
 
-    return () => {
-      isCancelled = true;
-    };
+    return () => { isCancelled = true; };
   }, [selectedPharmacy?.id, userCoords, transportMode]);
 
+  // ── District lists ────────────────────────────────────────────────────────────
   const allDistricts = useMemo(() => getAllDistricts(), []);
+  const allDrugShopDistricts = useMemo(() => getAllDrugShopDistricts(), []);
 
   const selectTopPharmacyByIndex = useCallback(
     (index: number) => {
-      if (top5Pharmacies[index]) {
-        setSelectedPharmacy(top5Pharmacies[index]);
-      }
+      if (top5Pharmacies[index]) setSelectedPharmacy(top5Pharmacies[index]);
     },
     [top5Pharmacies]
   );
@@ -195,8 +266,23 @@ export function useNearbyPharmacies() {
     isNetworkIssue,
     geoStatus,
     requestLocation,
+    // Pharmacies (outlets)
     top5Pharmacies,
     filteredPharmacies,
+    searchQuery,
+    setSearchQuery,
+    selectedDistrict,
+    setSelectedDistrict,
+    allDistricts,
+    // Drug shops
+    top5DrugShops,
+    filteredDrugShops,
+    dsSearchQuery,
+    setDsSearchQuery,
+    dsSelectedDistrict,
+    setDsSelectedDistrict,
+    allDrugShopDistricts,
+    // Shared
     selectedPharmacy,
     setSelectedPharmacy,
     selectTopPharmacyByIndex,
@@ -204,12 +290,5 @@ export function useNearbyPharmacies() {
     isRouteLoading,
     transportMode,
     setTransportMode,
-    radiusKm,
-    setRadiusKm,
-    searchQuery,
-    setSearchQuery,
-    selectedDistrict,
-    setSelectedDistrict,
-    allDistricts,
   };
 }

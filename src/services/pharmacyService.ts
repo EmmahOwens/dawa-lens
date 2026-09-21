@@ -1,10 +1,13 @@
 import rawNdaData from "../data/ndaPharmacies.json";
+import rawDrugShopData from "../data/ndaDrugShops.json";
 
 export interface NdaPharmacy {
   id: string;
   name: string;
   premiseNo: string;
   premiseType: string;
+  /** "pharmacy" for licensed outlets/pharmacies; "drug_shop" for NDA-licensed drug shops */
+  outletType?: "pharmacy" | "drug_shop";
   isRetail: boolean;
   isWholesale: boolean;
   expiryDate: string;
@@ -200,7 +203,13 @@ export function resolvePharmacyCoordinates(
 // In-memory cache for road routes: `${lng1},${lat1}->${lng2},${lat2}:${mode}`
 const routeCache = new Map<string, PharmacyRoute>();
 
-const PHARMACIES: NdaPharmacy[] = (rawNdaData?.pharmacies || []) as NdaPharmacy[];
+const PHARMACIES: NdaPharmacy[] = ((rawNdaData?.pharmacies || []) as NdaPharmacy[]).map(
+  (p) => ({ ...p, outletType: "pharmacy" as const })
+);
+
+const DRUG_SHOPS: NdaPharmacy[] = ((rawDrugShopData?.drugShops || []) as NdaPharmacy[]).map(
+  (d) => ({ ...d, outletType: "drug_shop" as const })
+);
 
 /**
  * Calculates the great-circle distance between two points on Earth in kilometers using the Haversine formula.
@@ -493,6 +502,69 @@ export async function fetchTopPharmaciesRoadDistances(
 }
 
 /**
+ * Returns the Top N nearest licensed drug shops relative to the user's GPS coordinates.
+ */
+export function findTopNearestDrugShops(
+  userLat: number,
+  userLng: number,
+  count = 5
+): NdaPharmacy[] {
+  if (!DRUG_SHOPS || DRUG_SHOPS.length === 0) return [];
+
+  const withDist = DRUG_SHOPS
+    .filter((d) => typeof d.latitude === "number" && typeof d.longitude === "number")
+    .map((d) => ({
+      ...d,
+      distanceKm: calculateHaversineDistance(userLat, userLng, d.latitude, d.longitude),
+    }));
+
+  withDist.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+  return withDist.slice(0, count);
+}
+
+/**
+ * Searches and filters licensed drug shops by distance radius, district, and search query.
+ */
+export function findNearbyDrugShops(
+  userLat: number,
+  userLng: number,
+  options: PharmacyFilterOptions = {}
+): NdaPharmacy[] {
+  const { radiusKm = 50, district = "", query = "", limit = 60 } = options;
+
+  let results = DRUG_SHOPS.filter((d) => {
+    if (district && district !== "ALL" && d.district.toLowerCase() !== district.toLowerCase()) {
+      return false;
+    }
+    if (query.trim()) {
+      const q = query.toLowerCase().trim();
+      if (
+        !d.name.toLowerCase().includes(q) &&
+        !d.district.toLowerCase().includes(q) &&
+        !(d.address || "").toLowerCase().includes(q) &&
+        !(d.region || "").toLowerCase().includes(q)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const withDist = results.map((d) => ({
+    ...d,
+    distanceKm: calculateHaversineDistance(userLat, userLng, d.latitude, d.longitude),
+  }));
+
+  const filtered =
+    radiusKm && radiusKm < 1000
+      ? withDist.filter((d) => (d.distanceKm ?? Infinity) <= radiusKm)
+      : withDist;
+
+  filtered.sort((a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity));
+  return filtered.slice(0, limit);
+}
+
+/**
  * Returns a sorted list of unique Ugandan districts present in the NDA dataset.
  */
 export function getAllDistricts(): string[] {
@@ -501,6 +573,17 @@ export function getAllDistricts(): string[] {
     if (p.district && p.district !== "\\N") {
       set.add(p.district);
     }
+  }
+  return Array.from(set).sort();
+}
+
+/**
+ * Returns a sorted list of unique districts present in the drug shops dataset.
+ */
+export function getAllDrugShopDistricts(): string[] {
+  const set = new Set<string>();
+  for (const d of DRUG_SHOPS) {
+    if (d.district) set.add(d.district);
   }
   return Array.from(set).sort();
 }

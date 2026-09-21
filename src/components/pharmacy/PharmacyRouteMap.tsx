@@ -221,7 +221,23 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
 
     topPharmacies.forEach((pharmacy, index) => {
       const isSelected = selectedPharmacy?.id === pharmacy.id;
+      const isDrugShop = pharmacy.outletType === "drug_shop";
       const rank = index + 1;
+
+      // Colour scheme: teal for pharmacies, amber for drug shops
+      const activeBg = isDrugShop
+        ? "linear-gradient(135deg, #d97706 0%, #b45309 100%)"
+        : "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)";
+      const inactiveBg = isDrugShop
+        ? "linear-gradient(135deg, #78350f 0%, #451a03 100%)"
+        : "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)";
+      const activeBorder = isDrugShop ? "#fcd34d" : "#5eead4";
+      const inactiveBorder = isDrugShop ? "#fbbf24" : "#cbd5e1";
+      const activeTip = isDrugShop ? "#b45309" : "#0f766e";
+      const inactiveTip = isDrugShop ? "#78350f" : "#0f172a";
+      const activeShadow = isDrugShop
+        ? "0 4px 14px rgba(217, 119, 6, 0.5)"
+        : "0 4px 14px rgba(13, 148, 136, 0.5)";
 
       const el = document.createElement("div");
       el.className = `pharmacy-pin-marker ${isSelected ? "selected" : ""}`;
@@ -244,32 +260,23 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         height: ${isSelected ? "34px" : "28px"};
         padding: 0 4px;
         border-radius: 9999px;
-        background: ${
-          isSelected
-            ? "linear-gradient(135deg, #0d9488 0%, #0f766e 100%)"
-            : "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"
-        };
+        background: ${isSelected ? activeBg : inactiveBg};
         color: #ffffff;
         font-family: inherit;
         font-size: ${isSelected ? "12px" : "11px"};
         font-weight: 900;
-        border: 2px solid ${isSelected ? "#5eead4" : "#cbd5e1"};
-        box-shadow: ${
-          isSelected
-            ? "0 4px 14px rgba(13, 148, 136, 0.5)"
-            : "0 2px 6px rgba(0,0,0,0.25)"
-        };
+        border: 2px solid ${isSelected ? activeBorder : inactiveBorder};
+        box-shadow: ${isSelected ? activeShadow : "0 2px 6px rgba(0,0,0,0.25)"};
       `;
       badge.innerText = `#${rank}`;
 
-      // Arrow tip under pin
       const tip = document.createElement("div");
       tip.style.cssText = `
         width: 0;
         height: 0;
         border-left: 5px solid transparent;
         border-right: 5px solid transparent;
-        border-top: 6px solid ${isSelected ? "#0f766e" : "#0f172a"};
+        border-top: 6px solid ${isSelected ? activeTip : inactiveTip};
         margin-top: -1px;
       `;
 
@@ -402,12 +409,20 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         </button>
       </div>
 
-      {/* NDA License Verified Tag (Bottom Left) */}
-      <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 rounded-xl bg-card/90 backdrop-blur-md px-2.5 py-1.5 border border-border/60 shadow-sm pointer-events-none">
-        <CheckCircle className="size-3 text-emerald-500 shrink-0" />
-        <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">
-          Source: NDA Uganda Outlets
-        </span>
+      {/* Legend + NDA verified (Bottom Left) */}
+      <div className="absolute bottom-3 left-3 z-20 flex flex-col gap-1.5">
+        <div className="flex items-center gap-2 rounded-xl bg-card/90 backdrop-blur-md px-2.5 py-1.5 border border-border/60 shadow-sm pointer-events-none">
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-teal-600 shrink-0" />
+          <span className="text-[9px] font-bold text-muted-foreground">Pharmacy</span>
+          <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0 ml-1" />
+          <span className="text-[9px] font-bold text-muted-foreground">Drug Shop</span>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-xl bg-card/90 backdrop-blur-md px-2.5 py-1.5 border border-border/60 shadow-sm pointer-events-none">
+          <CheckCircle className="size-3 text-emerald-500 shrink-0" />
+          <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">
+            NDA Uganda Licensed
+          </span>
+        </div>
       </div>
     </div>
   );
