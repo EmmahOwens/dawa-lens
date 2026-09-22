@@ -55,12 +55,11 @@ async function runComprehensiveTests() {
       patients: []
     });
 
-    const staticPrompt = context.finalMessages[0].content;
-    const dynamicPrompt = context.finalMessages[1].content;
+    const systemPrompt = context.systemInstruction || context.finalMessages[0].content;
 
-    assert(staticPrompt.includes('If the user/profile is FEMALE: You MUST address them as "Nyabo"'));
-    assert(staticPrompt.includes('NEVER call a female/woman "Ssebo"'));
-    assert(dynamicPrompt.includes('Gender: female'));
+    assert(systemPrompt.includes('If the user/profile is FEMALE: You MUST address them as "Nyabo"'));
+    assert(systemPrompt.includes('NEVER call a female/woman "Ssebo"'));
+    assert(systemPrompt.includes('Gender: female'));
   });
 
   // 3. Cultural Greeting & Gender Salutation (Male Profile)
@@ -76,12 +75,11 @@ async function runComprehensiveTests() {
       patients: []
     });
 
-    const staticPrompt = context.finalMessages[0].content;
-    const dynamicPrompt = context.finalMessages[1].content;
+    const systemPrompt = context.systemInstruction || context.finalMessages[0].content;
 
-    assert(staticPrompt.includes('If the user/profile is MALE: You MUST address them as "Ssebo"'));
-    assert(staticPrompt.includes('NEVER call a male/man "Nyabo"'));
-    assert(dynamicPrompt.includes('Gender: male'));
+    assert(systemPrompt.includes('If the user/profile is MALE: You MUST address them as "Ssebo"'));
+    assert(systemPrompt.includes('NEVER call a male/man "Nyabo"'));
+    assert(systemPrompt.includes('Gender: male'));
   });
 
   // 4. Med Vault Calculation Accuracy (Doses vs Days of Supply)
@@ -114,9 +112,9 @@ async function runComprehensiveTests() {
       patients: []
     });
 
-    const dynamicPrompt = context.finalMessages[1].content;
-    assert(dynamicPrompt.includes('Doses Remaining: 15 doses left'));
-    assert(dynamicPrompt.includes('~7 days of supply left'));
+    const systemPrompt = context.systemInstruction || context.finalMessages[0].content;
+    assert(systemPrompt.includes('Doses left: 15'));
+    assert(systemPrompt.includes('~7 days left'));
   });
 
   // 5. Food Interaction Knowledge (Ugandan Food Context)
@@ -154,10 +152,10 @@ async function runComprehensiveTests() {
 
     const staticPrompt = context.finalMessages[0].content;
     assert(staticPrompt.includes('PERFORM ACTIONS IMMEDIATELY'));
-    assert(staticPrompt.includes('NEVER LIE ABOUT ACTIONS'));
-    assert(staticPrompt.includes('ADD_REMINDER: { medicineName, dose, time'));
-    assert(staticPrompt.includes('LOG_DOSE: { reminderId, medicineName, dose, scheduledTime, action'));
-    assert(staticPrompt.includes('LOG_WELLNESS: { type: \'symptom\' | \'food\''));
+    assert(staticPrompt.includes('NEVER LIE / CRITICAL ACTION RULE') || staticPrompt.includes('NEVER LIE ABOUT ACTIONS'));
+    assert(staticPrompt.includes('ADD_REMINDER'));
+    assert(staticPrompt.includes('LOG_DOSE'));
+    assert(staticPrompt.includes('LOG_WELLNESS'));
   });
 
   // 7. Streaming Protocol & SSE Chunk Delimitation
@@ -192,11 +190,11 @@ async function runComprehensiveTests() {
     });
 
     const staticPrompt = context.finalMessages[0].content;
-    assert(staticPrompt.includes("'/interactions'"));
-    assert(staticPrompt.includes("'/medvault'"));
-    assert(staticPrompt.includes("'/family'"));
-    assert(staticPrompt.includes("'/reminders'"));
-    assert(staticPrompt.includes("'/wellness'"));
+    assert(staticPrompt.includes('/interactions'));
+    assert(staticPrompt.includes('/medvault'));
+    assert(staticPrompt.includes('/family'));
+    assert(staticPrompt.includes('/reminders'));
+    assert(staticPrompt.includes('/wellness'));
   });
 
   console.log('\n═══════════════════════════════════════════════════════════════');

@@ -1747,6 +1747,54 @@ export function sanitizeMarkdownLinks(text) {
   });
 }
 
+/**
+ * Deterministic cultural honorific guardrail.
+ * Ensures DawaGPT strictly respects patient gender and never misgenders
+ * male users as "Nyabo" or female users as "Ssebo".
+ */
+export function enforceGenderHonorifics(text, gender, userName = '') {
+  if (!text || typeof text !== 'string') return text || '';
+  const normGender = typeof gender === 'string' ? gender.trim().toLowerCase() : null;
+  const isMale = normGender === 'male' || normGender === 'man' || normGender === 'm';
+  const isFemale = normGender === 'female' || normGender === 'woman' || normGender === 'f';
+
+  let result = text;
+  const nonNameWords = new Set(['is', 'means', 'refers', 'represents', 'translates', 'stands', 'defined', 'can', 'should', 'would', 'will', 'and', 'or', 'to', 'for', 'in']);
+
+  if (isMale) {
+    result = result.replace(/\bNyabo\s+([A-Z][a-zA-Z'-]*)/g, (match, p1) => {
+      if (nonNameWords.has(p1.toLowerCase())) return match;
+      return `Ssebo ${p1}`;
+    });
+    result = result.replace(/\b(Oli\s+otya|Wasuze\s+otya|Osiibye\s+otya|Gyebaleko|Bambi|Webale(?:\s+nnyo)?|Kale|Ki\s+kati)(?:,\s*|\s+)Nyabo\b/gi, (match, greet) => {
+      const hasComma = match.includes(',');
+      return `${greet}${hasComma ? ', ' : ' '}Ssebo`;
+    });
+    result = result.replace(/\bNyabo\s*([,!:?])/g, 'Ssebo$1');
+    result = result.replace(/\bnyabo\s*([,!:?])/g, 'ssebo$1');
+  } else if (isFemale) {
+    result = result.replace(/\b(?:Ssebo|Sebbo)\s+([A-Z][a-zA-Z'-]*)/g, (match, p1) => {
+      if (nonNameWords.has(p1.toLowerCase())) return match;
+      return `Nyabo ${p1}`;
+    });
+    result = result.replace(/\b(Oli\s+otya|Wasuze\s+otya|Osiibye\s+otya|Gyebaleko|Bambi|Webale(?:\s+nnyo)?|Kale|Ki\s+kati)(?:,\s*|\s+)(?:Ssebo|Sebbo)\b/gi, (match, greet) => {
+      const hasComma = match.includes(',');
+      return `${greet}${hasComma ? ', ' : ' '}Nyabo`;
+    });
+    result = result.replace(/\b(?:Ssebo|Sebbo)\s*([,!:?])/g, 'Nyabo$1');
+    result = result.replace(/\b(?:ssebo|sebbo)\s*([,!:?])/g, 'nyabo$1');
+  } else {
+    result = result.replace(/\b(?:Nyabo|Ssebo|Sebbo)\s+([A-Z][a-zA-Z'-]*)/g, (match, p1) => {
+      if (nonNameWords.has(p1.toLowerCase())) return match;
+      return p1;
+    });
+    result = result.replace(/\b(Oli\s+otya|Wasuze\s+otya|Osiibye\s+otya|Gyebaleko|Bambi|Webale(?:\s+nnyo)?|Kale|Ki\s+kati)\s+(?:Nyabo|Ssebo|Sebbo)\b/gi, '$1');
+    result = result.replace(/^(?:Nyabo|Ssebo|Sebbo),\s*/gim, '');
+  }
+
+  return result;
+}
+
 export const chatWithDawaGPT = async (params, priority = 'high') => {
   try {
     const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, selectedPatientId, currentPage } = params;
@@ -1827,7 +1875,9 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
             if (parsed && parsed.text) clean = parsed.text;
           } catch (_) {}
         }
-        result.text = clean || result.text;
+        const activeGender = targetPatient?.gender || userProfile?.gender;
+        const activeName = targetPatient?.name || userProfile?.name || '';
+        result.text = enforceGenderHonorifics(clean || result.text, activeGender, activeName);
       }
       result.action = normalizeAIAction(result.action);
       if (!result.action) {
@@ -2645,8 +2695,10 @@ export function extractWellnessData(text) {
 export function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null, targetPatient = null, currentPage = null, patients = [], messages = []) {
   const norm = (lastUserMsg || '').toLowerCase().trim();
   const activeGender = targetPatient?.gender || userProfile?.gender;
-  const gender = activeGender?.toLowerCase();
-  const salutation = gender === 'female' ? 'Nyabo' : gender === 'male' ? 'Ssebo' : '';
+  const normGender = typeof activeGender === 'string' ? activeGender.trim().toLowerCase() : '';
+  const isMale = normGender === 'male' || normGender === 'man' || normGender === 'm';
+  const isFemale = normGender === 'female' || normGender === 'woman' || normGender === 'f';
+  const salutation = isFemale ? 'Nyabo' : isMale ? 'Ssebo' : '';
   const greeting = salutation ? ` ${salutation}` : '';
 
   // 1. Emergency / Overdose check
@@ -3076,6 +3128,9 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
               }
             } catch (_) {}
           }
+          const activeGender = targetPatient?.gender || userProfile?.gender;
+          const activeName = targetPatient?.name || userProfile?.name || '';
+          cleanText = enforceGenderHonorifics(cleanText, activeGender, activeName);
 
           let candidateAction = normalizeAIAction(jsonResp.action);
           if (!candidateAction) {
@@ -3771,9 +3826,9 @@ ${getFoodKnowledgePrompt()}
 - MANDATORY GENDER HONORIFICS (CRITICAL):
   * "Nyabo" -> "Madam" (female honorific of respect), "Ssebo" (or "Sebbo") -> "Sir" (male honorific of respect).
   * Check the active user/profile gender in CURRENT SESSION CONTEXT:
-  * If the user/profile is FEMALE: You MUST address them as "Nyabo" (e.g., "Oli otya Nyabo", "Kale Nyabo", "Webale Nyabo", "Bambi Nyabo"). You MUST NEVER call a female "Ssebo" or "Sebbo".
-  * If the user/profile is MALE: You MUST address them as "Ssebo" (e.g., "Oli otya Ssebo", "Kale Ssebo", "Webale Ssebo"). You MUST NEVER call a male "Nyabo".
-  * GENDER NOT SPECIFIED / UNKNOWN: Use first name or friendly neutral phrasing. NEVER guess or default to "Ssebo".
+  * If the user/profile is FEMALE: You MUST address them as "Nyabo" (e.g., "Oli otya Nyabo", "Kale Nyabo", "Webale Nyabo", "Bambi Nyabo"). You MUST NEVER call a female "Ssebo" or "Sebbo". NEVER call a female/woman "Ssebo".
+  * If the user/profile is MALE: You MUST address them as "Ssebo" (e.g., "Oli otya Ssebo", "Kale Ssebo", "Webale Ssebo"). You MUST NEVER call a male "Nyabo". NEVER call a male/man "Nyabo".
+  * GENDER NOT SPECIFIED / UNKNOWN: Use first name or friendly neutral phrasing. NEVER guess or default to "Ssebo" or "Nyabo".
 - HEALTH REFERENCE: "Eddagala" (Medicine), "Obulwadde" (Sickness), "Obulumi" (Pain), "Omutwe" (Head, e.g. "Omutwe gunnuma" -> headache), "Olubuto" (Stomach), "Ekifuba" (Cough/chest), "Musujja" (Fever).
 - EMPATHY: When user reports symptoms, pain ("gunuma"), or fatigue, acknowledge with warmth ("Bambi") first.
 
@@ -3939,6 +3994,33 @@ Respond in EXACT JSON:
   const targetAge = calculateAge(targetEntity?.age ?? targetEntity?.dateOfBirth);
   const ownerAge = calculateAge(userProfile?.age ?? userProfile?.dateOfBirth);
 
+  const rawTargetGender = targetEntity?.gender || userProfile?.gender;
+  const targetGender = typeof rawTargetGender === 'string' ? rawTargetGender.trim().toLowerCase() : null;
+  const isMale = targetGender === 'male' || targetGender === 'man' || targetGender === 'm';
+  const isFemale = targetGender === 'female' || targetGender === 'woman' || targetGender === 'f';
+  const targetName = targetEntity?.name || userProfile?.name || 'User';
+  const targetFirstName = targetName.split(' ')[0] || targetName;
+
+  const genderDirective = isMale
+    ? `=== CRITICAL PATIENT GENDER & HONORIFIC DIRECTIVE (MANDATORY) ===
+• Active Patient / User: ${targetName}
+• Gender: MALE
+• Mandatory Honorific: "Ssebo" (Luganda respectful title for a man / Sir)
+• STRICT PROHIBITION: The user/patient is MALE. You MUST NEVER address them as "Nyabo", "Madam", or any female honorific. Addressing this male user as "Nyabo" is a severe cultural error and forbidden! NEVER call a male/man "Nyabo".
+• When greeting or addressing this user with a Luganda honorific, use ONLY "Ssebo" (e.g., "Ssebo ${targetFirstName}", "Oli otya Ssebo", "Kale Ssebo", "Gyebaleko Ssebo").`
+    : isFemale
+      ? `=== CRITICAL PATIENT GENDER & HONORIFIC DIRECTIVE (MANDATORY) ===
+• Active Patient / User: ${targetName}
+• Gender: FEMALE
+• Mandatory Honorific: "Nyabo" (Luganda respectful title for a woman / Madam)
+• STRICT PROHIBITION: The user/patient is FEMALE. You MUST NEVER address them as "Ssebo", "Sebbo", "Sir", or any male honorific. Addressing this female user as "Ssebo" is a severe cultural error and forbidden! NEVER call a female/woman "Ssebo".
+• When greeting or addressing this user with a Luganda honorific, use ONLY "Nyabo" (e.g., "Nyabo ${targetFirstName}", "Oli otya Nyabo", "Kale Nyabo", "Gyebaleko Nyabo").`
+      : `=== CRITICAL PATIENT GENDER & HONORIFIC DIRECTIVE (MANDATORY) ===
+• Active Patient / User: ${targetName}
+• Gender: NOT SPECIFIED / UNKNOWN
+• Mandatory Honorific: NONE (Gender-neutral)
+• STRICT PROHIBITION: Gender is NOT known. DO NOT guess or default to either "Ssebo" or "Nyabo". Address the user by their first name or friendly neutral phrasing (e.g., "Oli otya ${targetFirstName}", "Hello ${targetFirstName}").`;
+
   const formatAgeLabel = (age) => {
     if (age === null || age === undefined) return 'Age not specified';
     if (age <= 1) return `${age} yrs (Pediatric: Infant <1 yr)`;
@@ -3958,6 +4040,7 @@ Respond in EXACT JSON:
 
   const dynamicContextBlock = `
     === CURRENT SESSION CONTEXT ===
+    ${genderDirective}
     Current Active Route: ${currentPage || 'Not specified'}
     ${currentPage ? `Situational Awareness: The user is currently on "${currentPage}". If they ask about the feature on their active page, acknowledge their location naturally and do not redundantly ask them to navigate to it.` : ''}
     User: ${userProfile?.name || 'User'} | ID: ${userProfile?.id || 'unknown'} | Age: ${ownerAgeStr} | Gender: ${userProfile?.gender || 'Not specified'}
@@ -4001,21 +4084,26 @@ ${familyHubSummary}
   }
   if (cleanedMessages2.length === 0 && lastUserMsg) cleanedMessages2.push({ role: 'user', content: lastUserMsg });
 
-  // Enrich user message turn with active patient clinical age context and alerts
-  if (targetAge !== null) {
-    const userAgeAlerts = [
-      `Active Target Age: ${activeAgeStr}`,
-      targetAge < 12 ? `⚠️ CLINICAL AGE NOTICE: Patient is a pediatric child (${targetAge} yrs). Avoid choking hazards, prioritize chewables/liquids or safe soft food vehicles (applesauce/Bushera/yogurt), and NEVER recommend honey for infants <1 yr.` : '',
-      targetAge >= 65 ? `⚠️ CLINICAL AGE NOTICE: Patient is an older adult (${targetAge} yrs). Watch for presbyphagia/swallowing difficulties; prioritize soft, moist foods (steamed soft Matooke, Bushera, soups); advise taking pills upright with a full glass of water; monitor potassium/calcium interactions.` : ''
-    ].filter(Boolean).join('\n');
+  // Enrich user message turn with active patient clinical age context, gender directives, and alerts
+  const honorificAlert = isMale
+    ? `Patient: ${targetName} | Gender: MALE | Mandatory Honorific: "Ssebo" (STRICT PROHIBITION: NEVER call Nyabo)`
+    : isFemale
+      ? `Patient: ${targetName} | Gender: FEMALE | Mandatory Honorific: "Nyabo" (STRICT PROHIBITION: NEVER call Ssebo)`
+      : `Patient: ${targetName} | Gender: Not specified | Use friendly neutral phrasing (Do NOT use Ssebo or Nyabo)`;
 
-    const firstUserIdx = cleanedMessages2.findIndex(m => m.role === 'user');
-    if (firstUserIdx !== -1 && userAgeAlerts) {
-      cleanedMessages2[firstUserIdx] = {
-        ...cleanedMessages2[firstUserIdx],
-        content: `[Patient Clinical Context: ${userAgeAlerts}]\n\n${cleanedMessages2[firstUserIdx].content}`
-      };
-    }
+  const userAlerts = [
+    honorificAlert,
+    targetAge !== null ? `Active Target Age: ${activeAgeStr}` : '',
+    targetAge !== null && targetAge < 12 ? `⚠️ CLINICAL AGE NOTICE: Patient is a pediatric child (${targetAge} yrs). Avoid choking hazards, prioritize chewables/liquids or safe soft food vehicles (applesauce/Bushera/yogurt), and NEVER recommend honey for infants <1 yr.` : '',
+    targetAge !== null && targetAge >= 65 ? `⚠️ CLINICAL AGE NOTICE: Patient is an older adult (${targetAge} yrs). Watch for presbyphagia/swallowing difficulties; prioritize soft, moist foods (steamed soft Matooke, Bushera, soups); advise taking pills upright with a full glass of water; monitor potassium/calcium interactions.` : ''
+  ].filter(Boolean).join('\n');
+
+  const firstUserIdx = cleanedMessages2.findIndex(m => m.role === 'user');
+  if (firstUserIdx !== -1 && userAlerts) {
+    cleanedMessages2[firstUserIdx] = {
+      ...cleanedMessages2[firstUserIdx],
+      content: `[Patient Clinical Context: ${userAlerts}]\n\n${cleanedMessages2[firstUserIdx].content}`
+    };
   }
 
   // FIX (Bug 4): Merge dynamicContextBlock INTO the system role instead of injecting

@@ -156,10 +156,66 @@ export interface ChatMessage {
  * Unspecified -> "" (Gender-neutral)
  */
 export const resolveHonorific = (gender?: string | null): string => {
-  if (gender === "female") return "Nyabo";
-  if (gender === "male") return "Ssebo";
+  if (!gender) return "";
+  const g = gender.trim().toLowerCase();
+  if (g === "female" || g === "woman" || g === "f") return "Nyabo";
+  if (g === "male" || g === "man" || g === "m") return "Ssebo";
   return "";
 };
+
+/**
+ * Deterministic cultural honorific guardrail for DawaGPT responses.
+ * Strictly prevents misgendering (e.g. addressing a male user as "Nyabo" or a female user as "Ssebo").
+ */
+export function enforceGenderHonorifics(text: string, gender?: string | null, userName: string = ""): string {
+  if (!text || typeof text !== "string") return text || "";
+  const normGender = typeof gender === "string" ? gender.trim().toLowerCase() : null;
+  const isMale = normGender === "male" || normGender === "man" || normGender === "m";
+  const isFemale = normGender === "female" || normGender === "woman" || normGender === "f";
+
+  let result = text;
+  const nonNameWords = new Set(["is", "means", "refers", "represents", "translates", "stands", "defined", "can", "should", "would", "will", "and", "or", "to", "for", "in"]);
+
+  if (isMale) {
+    // 1. "Nyabo [Capitalized Name]" -> "Ssebo [Name]" (e.g. "Nyabo Mbayo" -> "Ssebo Mbayo")
+    result = result.replace(/\bNyabo\s+([A-Z][a-zA-Z'-]*)/g, (match, p1) => {
+      if (nonNameWords.has(p1.toLowerCase())) return match;
+      return `Ssebo ${p1}`;
+    });
+    // 2. Greetings ending in Nyabo: "Oli otya Nyabo", "Gyebaleko, Nyabo", etc.
+    result = result.replace(/\b(Oli\s+otya|Wasuze\s+otya|Osiibye\s+otya|Gyebaleko|Bambi|Webale(?:\s+nnyo)?|Kale|Ki\s+kati)(?:,\s*|\s+)Nyabo\b/gi, (match, greet) => {
+      const hasComma = match.includes(",");
+      return `${greet}${hasComma ? ", " : " "}Ssebo`;
+    });
+    // 3. Salutations: "Nyabo," / "Nyabo!" / "Nyabo:"
+    result = result.replace(/\bNyabo\s*([,!:?])/g, "Ssebo$1");
+    result = result.replace(/\bnyabo\s*([,!:?])/g, "ssebo$1");
+  } else if (isFemale) {
+    // 1. "Ssebo/Sebbo [Capitalized Name]" -> "Nyabo [Name]" (e.g. "Ssebo Sarah" -> "Nyabo Sarah")
+    result = result.replace(/\b(?:Ssebo|Sebbo)\s+([A-Z][a-zA-Z'-]*)/g, (match, p1) => {
+      if (nonNameWords.has(p1.toLowerCase())) return match;
+      return `Nyabo ${p1}`;
+    });
+    // 2. Greetings ending in Ssebo/Sebbo
+    result = result.replace(/\b(Oli\s+otya|Wasuze\s+otya|Osiibye\s+otya|Gyebaleko|Bambi|Webale(?:\s+nnyo)?|Kale|Ki\s+kati)(?:,\s*|\s+)(?:Ssebo|Sebbo)\b/gi, (match, greet) => {
+      const hasComma = match.includes(",");
+      return `${greet}${hasComma ? ", " : " "}Nyabo`;
+    });
+    // 3. Salutations: "Ssebo," / "Sebbo!"
+    result = result.replace(/\b(?:Ssebo|Sebbo)\s*([,!:?])/g, "Nyabo$1");
+    result = result.replace(/\b(?:ssebo|sebbo)\s*([,!:?])/g, "nyabo$1");
+  } else {
+    // Unspecified: Strip honorifics from greetings and direct addresses
+    result = result.replace(/\b(?:Nyabo|Ssebo|Sebbo)\s+([A-Z][a-zA-Z'-]*)/g, (match, p1) => {
+      if (nonNameWords.has(p1.toLowerCase())) return match;
+      return p1;
+    });
+    result = result.replace(/\b(Oli\s+otya|Wasuze\s+otya|Osiibye\s+otya|Gyebaleko|Bambi|Webale(?:\s+nnyo)?|Kale|Ki\s+kati)\s+(?:Nyabo|Ssebo|Sebbo)\b/gi, "$1");
+    result = result.replace(/^(?:Nyabo|Ssebo|Sebbo),\s*/gim, "");
+  }
+
+  return result;
+}
 
 /**
  * Sanitizes markdown links in DawaGPT assistant text to ensure all links resolve
@@ -840,7 +896,7 @@ export function extractWellnessData(text: string): ExtractedWellnessData | null 
   };
 }
 
-export const generateDawaGPTResponse = async (
+const generateDawaGPTResponseImpl = async (
   query: string,
   activeMedicine: Medicine | null,
   userProfile: UserProfile | null,
@@ -1849,6 +1905,43 @@ export const generateDawaGPTResponse = async (
   };
 };
 
+export const generateDawaGPTResponse = async (
+  query: string,
+  activeMedicine: Medicine | null,
+  userProfile: UserProfile | null,
+  allMedicines: Medicine[] = [],
+  doseLogs: DoseLog[] = [],
+  reminders: Reminder[] = [],
+  patients: Patient[] = [],
+  selectedPatientId: string | null = null,
+  currentPage: string | null = null,
+  history: ChatHistoryItem[] = [],
+  preResolvedAction: AIAction | null = null
+): Promise<ChatMessage> => {
+  const resp = await generateDawaGPTResponseImpl(
+    query,
+    activeMedicine,
+    userProfile,
+    allMedicines,
+    doseLogs,
+    reminders,
+    patients,
+    selectedPatientId,
+    currentPage,
+    history,
+    preResolvedAction
+  );
+
+  const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : null;
+  const targetGender = activePatient ? activePatient.gender : userProfile?.gender;
+  const targetName = activePatient ? activePatient.name : userProfile?.name;
+
+  return {
+    ...resp,
+    text: enforceGenderHonorifics(resp.text, targetGender, targetName)
+  };
+};
+
 export const getMedVaultSystemContext = (medicines: Medicine[], reminders: Reminder[] = []): string => {
   const trackedMeds = medicines.filter(m => m.currentQuantity !== undefined || m.totalQuantity !== undefined);
   if (trackedMeds.length === 0) {
@@ -1934,6 +2027,9 @@ export const chatWithDawaGPT = async (
     let actionObj = normalizeAIAction(response.action);
 
     const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
+    const activeGender = activePatient?.gender || userProfile?.gender;
+    const activeName = activePatient?.name || userProfile?.name || "";
+    cleanText = enforceGenderHonorifics(cleanText, activeGender, activeName);
     const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.text || '';
 
     if (!actionObj?.type) {
@@ -2030,6 +2126,10 @@ export const chatWithDawaGPTStream = async (
       currentPage,
     });
 
+    const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
+    const activeGender = activePatient?.gender || userProfile?.gender;
+    const activeName = activePatient?.name || userProfile?.name || "";
+
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
@@ -2070,7 +2170,8 @@ export const chatWithDawaGPTStream = async (
             const visibleText = rawVisibleText
               .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
               .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '');
-            onChunk(visibleText);
+            const sanitizedVisible = enforceGenderHonorifics(visibleText, activeGender, activeName);
+            onChunk(sanitizedVisible);
           } catch (e) {
             // Ignore parse errors
           }
@@ -2122,7 +2223,7 @@ export const chatWithDawaGPTStream = async (
       }
     }
 
-    const fullText = displayText;
+    const fullText = enforceGenderHonorifics(displayText, activeGender, activeName);
 
     interface StreamMetadata {
       suggestions: string[];
@@ -2145,7 +2246,6 @@ export const chatWithDawaGPTStream = async (
       }
     }
 
-    const activePatient = selectedPatientId ? patients.find(p => p.id === selectedPatientId) : undefined;
     const lastUserQuery = messages.filter(m => m.role === 'user').pop()?.text || '';
 
     // If metadata action is missing or malformed from server stream, attempt local deterministic fallback

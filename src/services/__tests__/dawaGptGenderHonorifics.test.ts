@@ -1,11 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { resolveHonorific, generateDawaGPTResponse } from "../aiAssistantService";
+import { resolveHonorific, generateDawaGPTResponse, enforceGenderHonorifics } from "../aiAssistantService";
 import { UserProfile, Patient } from "@/contexts/AppContext";
 
 describe("DawaGPT Gender-Aware Salutations & Honorifics", () => {
   it("resolves correct honorifics for each gender", () => {
     expect(resolveHonorific("female")).toBe("Nyabo");
+    expect(resolveHonorific("Female")).toBe("Nyabo");
+    expect(resolveHonorific("woman")).toBe("Nyabo");
     expect(resolveHonorific("male")).toBe("Ssebo");
+    expect(resolveHonorific("Male")).toBe("Ssebo");
+    expect(resolveHonorific("man")).toBe("Ssebo");
     expect(resolveHonorific(null)).toBe("");
     expect(resolveHonorific(undefined)).toBe("");
   });
@@ -112,5 +116,43 @@ describe("DawaGPT Gender-Aware Salutations & Honorifics", () => {
 
     expect(response.text).toContain("Nyabo");
     expect(response.text).not.toContain("Ssebo");
+  });
+
+  describe("enforceGenderHonorifics Guardrail", () => {
+    it("intercepts and corrects misgendered Nyabo to Ssebo for male profiles", () => {
+      expect(enforceGenderHonorifics("Nyabo Mbayo, gyebaleko!", "male", "Mbayo"))
+        .toBe("Ssebo Mbayo, gyebaleko!");
+      expect(enforceGenderHonorifics("Gyebaleko, Nyabo! How can I help?", "male"))
+        .toBe("Gyebaleko, Ssebo! How can I help?");
+      expect(enforceGenderHonorifics("Oli otya Nyabo", "male"))
+        .toBe("Oli otya Ssebo");
+      expect(enforceGenderHonorifics("Nyabo, your medication is ready.", "male"))
+        .toBe("Ssebo, your medication is ready.");
+    });
+
+    it("intercepts and corrects misgendered Ssebo to Nyabo for female profiles", () => {
+      expect(enforceGenderHonorifics("Ssebo Sarah, gyebaleko!", "female", "Sarah"))
+        .toBe("Nyabo Sarah, gyebaleko!");
+      expect(enforceGenderHonorifics("Gyebaleko, Ssebo! How can I help?", "female"))
+        .toBe("Gyebaleko, Nyabo! How can I help?");
+      expect(enforceGenderHonorifics("Wasuze otya Sebbo", "female"))
+        .toBe("Wasuze otya Nyabo");
+      expect(enforceGenderHonorifics("Ssebo, your medication is ready.", "female"))
+        .toBe("Nyabo, your medication is ready.");
+    });
+
+    it("strips misapplied honorifics when gender is unspecified", () => {
+      expect(enforceGenderHonorifics("Nyabo Mbayo, gyebaleko!", null))
+        .toBe("Mbayo, gyebaleko!");
+      expect(enforceGenderHonorifics("Gyebaleko Nyabo", null))
+        .toBe("Gyebaleko");
+    });
+
+    it("preserves semantic explanations without falsely replacing title descriptions", () => {
+      expect(enforceGenderHonorifics("Nyabo is a Luganda title of respect.", "male"))
+        .toBe("Nyabo is a Luganda title of respect.");
+      expect(enforceGenderHonorifics("Ssebo means sir in Luganda.", "female"))
+        .toBe("Ssebo means sir in Luganda.");
+    });
   });
 });

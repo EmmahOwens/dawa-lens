@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1789998114.261442,
-    "ast_hash": "51effd444b2a43a3900ba5711909ae3a",
+    "mtime": 1790069225.0572195,
+    "ast_hash": "cf4c14ef49ef8c714dbd10f321111c03",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -1260,8 +1260,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.tsx": {
-    "mtime": 1789290982.2262115,
-    "ast_hash": "d6e678b9f2ddbff28a8196f6ae5a5bb8",
+    "mtime": 1790069524.8863297,
+    "ast_hash": "e64032e11c1af3a289f6eb87bcaebd00",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
@@ -1330,8 +1330,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/aiAssistantService.ts": {
-    "mtime": 1789999181.4472795,
-    "ast_hash": "b752dc398177d7c6c1364d46512c4655",
+    "mtime": 1790069584.4567924,
+    "ast_hash": "c7143278a7df38c989b8e63111142b21",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
@@ -2620,8 +2620,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptGenderHonorifics.test.ts": {
-    "mtime": 1787755764.1382997,
-    "ast_hash": "b73ac6ba882a4a63146e6216a65cd21b",
+    "mtime": 1790069633.7163548,
+    "ast_hash": "6146323fa5fff888afc09b8bbcf2980d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/LottieMoji-0Ih8CYxJ.js": {
@@ -4040,8 +4040,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-responses-comprehensive.js": {
-    "mtime": 1789473720.166181,
-    "ast_hash": "5fe19906a9eacf8df811e2cfb8d9c131",
+    "mtime": 1790069846.9055219,
+    "ast_hash": "4ce0fa12a917c2fd10a54355e145174f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-dawagpt-terminal-demo.js": {

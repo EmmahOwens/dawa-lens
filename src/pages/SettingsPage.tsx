@@ -307,11 +307,11 @@ export default function SettingsPage() {
                 </p>
                 {userProfile?.gender && (
                   <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                    userProfile.gender === "female"
+                    userProfile.gender.toLowerCase() === "female"
                       ? "bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20"
                       : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
                   }`}>
-                    {userProfile.gender === "female" ? "Female · Nyabo" : "Male · Ssebo"}
+                    {userProfile.gender.toLowerCase() === "female" ? "Female · Nyabo" : "Male · Ssebo"}
                   </span>
                 )}
               </div>
@@ -326,7 +326,7 @@ export default function SettingsPage() {
               </div>
               <span className="font-medium text-foreground opacity-90 capitalize">
                 {userProfile?.gender 
-                  ? `${userProfile.gender} (${userProfile.gender === "female" ? "Addressed as Nyabo" : "Addressed as Ssebo"})`
+                  ? `${userProfile.gender} (${userProfile.gender.toLowerCase() === "female" ? "Addressed as Nyabo" : "Addressed as Ssebo"})`
                   : "Not specified"}
               </span>
             </div>
