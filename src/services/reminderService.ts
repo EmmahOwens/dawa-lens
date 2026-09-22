@@ -235,7 +235,26 @@ export const checkMissedDoses = async (
     return true; // No filter — check all
   });
 
-    const newlyMissed: { reminder: Reminder; timeStr: string; scheduledDate: Date }[] = [];
+  if (activeReminders.length === 0) return;
+
+  // Prune alert deduplication keys older than 48 hours to keep storage lean
+  try {
+    const pruneCutoff = Date.now() - 48 * 60 * 60 * 1000;
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("dawa_missed_alerted_")) {
+        const parts = key.split("_");
+        const ts = Number(parts[parts.length - 1]);
+        if (!isNaN(ts) && ts < pruneCutoff) {
+          toRemove.push(key);
+        }
+      }
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+  } catch (e) {}
+
+  const newlyMissed: { reminder: Reminder; timeStr: string; scheduledDate: Date }[] = [];
 
     for (const r of activeReminders) {
       // Parse when this reminder was created so we never mark a dose

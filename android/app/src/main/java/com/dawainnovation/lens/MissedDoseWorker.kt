@@ -69,12 +69,25 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
             val storedReminders = NativeRecurrenceStore.getReminders(applicationContext)
             val storedRemindersMap = storedReminders.associateBy { it.id }
 
+            // If there are no stored reminders or none are enabled, clean SQLite and exit immediately
+            if (storedReminders.isEmpty() || storedReminders.none { it.enabled }) {
+                try {
+                    db.delete("reminders", null, null)
+                } catch (e: Exception) {}
+                return Result.success()
+            }
+
             val reminderCursor = db.rawQuery(
                 """SELECT id, medicine_name, dose, time, repeat_schedule, repeat_days, created_at, patient_id 
                    FROM reminders 
                    WHERE enabled = 1""",
                 null
             )
+
+            if (reminderCursor.count == 0) {
+                reminderCursor.close()
+                return Result.success()
+            }
 
             while (reminderCursor.moveToNext()) {
                 val reminderId = reminderCursor.getString(reminderCursor.getColumnIndexOrThrow("id"))
@@ -185,7 +198,7 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
                         if (!logExists) {
                             // 1. Post native notification
                             val notifId = Math.abs(slotKey.hashCode() % 2147483640) + 1
-                            postMissedNotification(medicineName, dose, notifId, t)
+                            postMissedNotification(medicineName, dose, notifId, t, patientId)
 
                             // 2. Insert record into dose_logs table in SQLite
                             val actionTimeIso = isoUtcFormat.format(Date())
@@ -229,7 +242,7 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
         return Result.success()
     }
 
-    private fun postMissedNotification(medicineName: String, dose: String, notifId: Int, timeStr: String) {
+    private fun postMissedNotification(medicineName: String, dose: String, notifId: Int, timeStr: String, patientId: String?) {
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         // Create channel on Android O+
@@ -258,6 +271,9 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("notification_type", "missed_alert")
             putExtra("route", "/history")
+            if (patientId != null) {
+                putExtra("patient_id", patientId)
+            }
         }
         val pi = PendingIntent.getActivity(
             applicationContext,

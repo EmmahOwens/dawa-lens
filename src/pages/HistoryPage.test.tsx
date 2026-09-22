@@ -21,6 +21,8 @@ import * as fc from "fast-check";
 // Using a plain object so the mock closures read the current value dynamically
 const testState = {
   scopedDoseLogs: [] as import("@/contexts/AppContext").DoseLog[],
+  patients: [] as import("@/contexts/AppContext").Patient[],
+  doseLogs: [] as import("@/contexts/AppContext").DoseLog[],
 };
 
 const mockDeleteDoseLog = vi.fn();
@@ -62,10 +64,10 @@ vi.mock("@/contexts/AppContext", () => ({
   useApp: () => ({
     deleteDoseLog: mockDeleteDoseLog,
     logDose: mockLogDose,
-    doseLogs: [],
+    doseLogs: testState.doseLogs,
     medicines: [],
     reminders: [],
-    patients: [],
+    patients: testState.patients,
     wellnessLogs: [],
     selectedPatientId: null,
     userProfile: null,
@@ -117,6 +119,8 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   testState.scopedDoseLogs = [];
+  testState.patients = [];
+  testState.doseLogs = [];
 });
 
 // ─── Unit tests (subtask 3.4) ─────────────────────────────────────────────────
@@ -227,6 +231,34 @@ describe("HistoryPage — unit tests", () => {
     expect(screen.getByRole("button", { name: /^taken$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^skipped$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^missed$/i })).toBeInTheDocument();
+  });
+
+  it("renders patient filter pills when patients exist and filters logs accordingly", async () => {
+    testState.patients = [
+      { id: "pat-1", name: "Amara", relation: "Daughter" } as any,
+    ];
+    testState.doseLogs = [
+      makeDoseLog({ id: "log-self", medicineName: "SelfMed", patientId: null, action: "taken" }),
+      makeDoseLog({ id: "log-pat", medicineName: "AmaraMed", patientId: "pat-1", action: "missed" }),
+    ];
+
+    renderHistoryPage();
+
+    // In 'All Profiles' view, both medications should be visible
+    expect(await screen.findByText("All Profiles")).toBeInTheDocument();
+    expect(screen.getByText("SelfMed")).toBeInTheDocument();
+    expect(screen.getByText("AmaraMed")).toBeInTheDocument();
+
+    // Dependent badge should be shown on AmaraMed and Amara button in filter
+    expect(screen.getAllByText("Amara").length).toBe(2);
+
+    // Click on 'Amara' patient pill to filter only Amara's logs
+    const amaraBtn = screen.getByRole("button", { name: "Amara" });
+    fireEvent.click(amaraBtn);
+
+    // Only AmaraMed should be visible now
+    expect(screen.queryByText("SelfMed")).not.toBeInTheDocument();
+    expect(screen.getByText("AmaraMed")).toBeInTheDocument();
   });
 
   it("excludes logs with action 'snoozed' from the Medication History list and stats", async () => {

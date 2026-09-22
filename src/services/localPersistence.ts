@@ -572,6 +572,36 @@ export const localPersistence = {
         await storage.setItem(LOCAL_LOGS_KEY, legacy.filter((l) => l.id !== id));
       }
     },
+    replaceAll: async (items: DoseLog[]): Promise<void> => {
+      await ensureSqliteReady();
+      if (Capacitor.isNativePlatform() && sqliteReady) {
+        try {
+          await NativeSqlite.execute({ sql: "DELETE FROM dose_logs", params: [] });
+          for (const data of items) {
+            await NativeSqlite.execute({
+              sql: `INSERT INTO dose_logs (id,reminder_id,medicine_name,dose,scheduled_time,action_time,action,is_snoozed,snooze_until,patient_id)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)`,
+              params: [
+                data.id,
+                data.reminderId || "",
+                data.medicineName,
+                data.dose || "",
+                data.scheduledTime || data.actionTime,
+                data.actionTime || new Date().toISOString(),
+                data.action,
+                data.isSnoozed ? 1 : 0,
+                data.snoozeUntil ?? null,
+                data.patientId ?? null,
+              ],
+            });
+          }
+          return;
+        } catch (err) {
+          console.warn("[localPersistence] NativeSqlite doseLogs.replaceAll failed, falling back to storage:", err);
+        }
+      }
+      await storage.setItem(getPartitionKey(LOCAL_LOGS_KEY), items);
+    },
   },
 
   patients: {
@@ -588,8 +618,9 @@ export const localPersistence = {
                 name: r.name as string,
                 age: r.age as number | undefined,
                 gender: r.gender as Patient["gender"],
-                relation: r.relation as string | undefined,
-                managedBy: r.managed_by as string,
+                weight: r.weight as number | undefined,
+                conditions: r.conditions ? JSON.parse(r.conditions as string) : undefined,
+                managedBy: r.managed_by as string | undefined,
                 createdAt: r.created_at as string,
               } as Patient)
           );
@@ -597,46 +628,43 @@ export const localPersistence = {
           console.warn("[localPersistence] NativeSqlite patients.getAll failed, falling back to storage:", err);
         }
       }
+      const partitioned = await storage.getItem<Patient[]>(getPartitionKey(LOCAL_PATIENTS_KEY), []);
+      if (partitioned && partitioned.length > 0) return partitioned;
       return storage.getItem<Patient[]>(LOCAL_PATIENTS_KEY, []);
     },
-    create: async (
-      data: Omit<Patient, "id" | "createdAt" | "managedBy"> & { id?: string; createdAt?: string; managedBy?: string }
-    ): Promise<Patient> => {
-      const id = data.id || `local-patient-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 11)}`;
+    create: async (data: Omit<Patient, "id" | "createdAt"> & { id?: string; createdAt?: string }): Promise<Patient> => {
+      const id = data.id || `lpat-${Date.now()}`;
       const createdAt = data.createdAt || new Date().toISOString();
-      const managedBy = data.managedBy || "local-user";
 
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
-            sql: `INSERT INTO patients (id,name,age,gender,relation,managed_by,created_at)
-                  VALUES (?,?,?,?,?,?,?)`,
+            sql: `INSERT INTO patients (id,name,age,gender,weight,conditions,managed_by,created_at)
+                  VALUES (?,?,?,?,?,?,?,?)`,
             params: [
               id,
               data.name,
               data.age ?? null,
               data.gender ?? null,
-              data.relation ?? null,
-              managedBy,
+              data.weight ?? null,
+              data.conditions ? JSON.stringify(data.conditions) : null,
+              data.managedBy ?? null,
               createdAt,
             ],
           });
-          return { ...data, id, managedBy, createdAt } as Patient;
+          return { ...data, id, createdAt } as Patient;
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite patients.create failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<Patient[]>(LOCAL_PATIENTS_KEY, []);
+      const all = await storage.getItem<Patient[]>(getPartitionKey(LOCAL_PATIENTS_KEY), []);
       const newItem: Patient = {
         ...data,
         id,
-        managedBy,
         createdAt,
       };
       all.push(newItem);
-      await storage.setItem(LOCAL_PATIENTS_KEY, all);
+      await storage.setItem(getPartitionKey(LOCAL_PATIENTS_KEY), all);
       return newItem;
     },
     update: async (id: string, updates: Partial<Patient>): Promise<void> => {
@@ -646,9 +674,14 @@ export const localPersistence = {
             name: "name",
             age: "age",
             gender: "gender",
-            relation: "relation",
+            weight: "weight",
+            conditions: "conditions",
+            managedBy: "managed_by",
           };
-          const queryObj = buildDynamicSqlUpdate("patients", id, mapping, updates as Record<string, unknown>);
+          const transforms: Record<string, (v: unknown) => unknown> = {
+            conditions: (v) => (v ? JSON.stringify(v) : null),
+          };
+          const queryObj = buildDynamicSqlUpdate("patients", id, mapping, updates as Record<string, unknown>, transforms);
           if (queryObj) {
             await NativeSqlite.execute({
               sql: queryObj.sql,
@@ -679,9 +712,11 @@ export const localPersistence = {
           console.warn("[localPersistence] NativeSqlite patients.remove failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<Patient[]>(LOCAL_PATIENTS_KEY, []);
-      const filtered = all.filter((p) => p.id !== id);
-      await storage.setItem(LOCAL_PATIENTS_KEY, filtered);
+      const all = await storage.getItem<Patient[]>(getPartitionKey(LOCAL_PATIENTS_KEY), []);
+      await storage.setItem(
+        getPartitionKey(LOCAL_PATIENTS_KEY),
+        all.filter((p) => p.id !== id)
+      );
     },
   },
 
@@ -698,24 +733,21 @@ export const localPersistence = {
                 id: r.id as string,
                 type: r.type as WellnessLog["type"],
                 timestamp: r.timestamp as string,
-                data: safeJsonParse<Record<string, unknown>>(r.data, {}),
-                userId: r.user_id as string,
-                patientId: r.patient_id as string | null | undefined,
+                data: JSON.parse(r.data as string),
+                userId: r.user_id as string | undefined,
+                patientId: r.patient_id as string | undefined,
               } as WellnessLog)
           );
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite wellnessLogs.getAll failed, falling back to storage:", err);
         }
       }
+      const partitioned = await storage.getItem<WellnessLog[]>(getPartitionKey(LOCAL_WELLNESS_KEY), []);
+      if (partitioned && partitioned.length > 0) return partitioned;
       return storage.getItem<WellnessLog[]>(LOCAL_WELLNESS_KEY, []);
     },
-    create: async (
-      data: Omit<WellnessLog, "id" | "timestamp" | "userId"> & { id?: string; timestamp?: string; userId?: string }
-    ): Promise<WellnessLog> => {
+    create: async (data: Omit<WellnessLog, "id"> & { id?: string }): Promise<WellnessLog> => {
       const id = data.id || `lwell-${Date.now()}`;
-      const timestamp = data.timestamp || new Date().toISOString();
-      const userId = data.userId || "local";
-
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
@@ -724,21 +756,21 @@ export const localPersistence = {
             params: [
               id,
               data.type,
-              timestamp,
+              data.timestamp,
               JSON.stringify(data.data),
-              userId,
+              data.userId ?? null,
               data.patientId ?? null,
             ],
           });
-          return { ...data, id, timestamp, userId } as WellnessLog;
+          return { ...data, id } as WellnessLog;
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite wellnessLogs.create failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<WellnessLog[]>(LOCAL_WELLNESS_KEY, []);
-      const newItem: WellnessLog = { ...data, id, timestamp, userId };
+      const all = await storage.getItem<WellnessLog[]>(getPartitionKey(LOCAL_WELLNESS_KEY), []);
+      const newItem: WellnessLog = { ...data, id };
       all.push(newItem);
-      await storage.setItem(LOCAL_WELLNESS_KEY, all);
+      await storage.setItem(getPartitionKey(LOCAL_WELLNESS_KEY), all);
       return newItem;
     },
     remove: async (id: string): Promise<void> => {
@@ -753,29 +785,31 @@ export const localPersistence = {
           console.warn("[localPersistence] NativeSqlite wellnessLogs.remove failed, falling back to storage:", err);
         }
       }
-      const all = await storage.getItem<WellnessLog[]>(LOCAL_WELLNESS_KEY, []);
-      const filtered = all.filter((l) => l.id !== id);
-      await storage.setItem(LOCAL_WELLNESS_KEY, filtered);
+      const all = await storage.getItem<WellnessLog[]>(getPartitionKey(LOCAL_WELLNESS_KEY), []);
+      await storage.setItem(
+        getPartitionKey(LOCAL_WELLNESS_KEY),
+        all.filter((w) => w.id !== id)
+      );
     },
   },
   scheduleAuditLogs: {
     getAll: async (): Promise<ScheduleAuditLog[]> => {
+      const partitioned = await storage.getItem<ScheduleAuditLog[]>(getPartitionKey(LOCAL_AUDIT_KEY), []);
+      if (partitioned && partitioned.length > 0) return partitioned;
       return storage.getItem<ScheduleAuditLog[]>(LOCAL_AUDIT_KEY, []);
     },
-    create: async (
-      data: Omit<ScheduleAuditLog, "id">
-    ): Promise<ScheduleAuditLog> => {
-      const id = `laudit-${Date.now()}`;
-      const all = await storage.getItem<ScheduleAuditLog[]>(LOCAL_AUDIT_KEY, []);
+    create: async (data: Omit<ScheduleAuditLog, "id"> & { id?: string }): Promise<ScheduleAuditLog> => {
+      const id = data.id || `laudit-${Date.now()}`;
+      const all = await storage.getItem<ScheduleAuditLog[]>(getPartitionKey(LOCAL_AUDIT_KEY), []);
       const newItem: ScheduleAuditLog = { ...data, id };
-      all.push(newItem);
-      await storage.setItem(LOCAL_AUDIT_KEY, all);
+      all.unshift(newItem);
+      // Keep only last 100 audit entries locally
+      const trimmed = all.slice(0, 100);
+      await storage.setItem(getPartitionKey(LOCAL_AUDIT_KEY), trimmed);
       return newItem;
     },
-    remove: async (id: string): Promise<void> => {
-      const all = await storage.getItem<ScheduleAuditLog[]>(LOCAL_AUDIT_KEY, []);
-      const filtered = all.filter((l) => l.id !== id);
-      await storage.setItem(LOCAL_AUDIT_KEY, filtered);
+    replaceAll: async (items: ScheduleAuditLog[]): Promise<void> => {
+      await storage.setItem(getPartitionKey(LOCAL_AUDIT_KEY), items.slice(0, 100));
     },
   },
 };
@@ -788,14 +822,18 @@ export async function clearAllLocalPersistence(userId?: string): Promise<void> {
   const targetUser = userId || activeUserId;
   if (Capacitor.isNativePlatform() && sqliteReady) {
     try {
+      // On user logout or account switch, always wipe SQLite tables to prevent
+      // ghost reminders or un-synced dose logs from leaking into the next session
+      // or triggering background WorkManager / AlarmManager alerts.
+      await NativeSqlite.execute({ sql: "DELETE FROM reminders", params: [] });
+      await NativeSqlite.execute({ sql: "DELETE FROM dose_logs", params: [] });
+      await NativeSqlite.execute({ sql: "DELETE FROM patients", params: [] });
+
       if (targetUser) {
         await NativeSqlite.execute({ sql: "DELETE FROM medicines WHERE user_id = ?", params: [targetUser] });
         await NativeSqlite.execute({ sql: "DELETE FROM wellness_logs WHERE user_id = ?", params: [targetUser] });
       } else {
         await NativeSqlite.execute({ sql: "DELETE FROM medicines", params: [] });
-        await NativeSqlite.execute({ sql: "DELETE FROM reminders", params: [] });
-        await NativeSqlite.execute({ sql: "DELETE FROM dose_logs", params: [] });
-        await NativeSqlite.execute({ sql: "DELETE FROM patients", params: [] });
         await NativeSqlite.execute({ sql: "DELETE FROM wellness_logs", params: [] });
       }
     } catch (e) {
@@ -803,14 +841,27 @@ export async function clearAllLocalPersistence(userId?: string): Promise<void> {
     }
   }
 
-  // Clear unpartitioned & partitioned storage keys
-  const keys = [LOCAL_MEDS_KEY, LOCAL_REMS_KEY, LOCAL_LOGS_KEY, LOCAL_PATIENTS_KEY, LOCAL_WELLNESS_KEY, LOCAL_AUDIT_KEY];
+  // Clear unpartitioned & partitioned local storage keys
+  const keys = [
+    LOCAL_MEDS_KEY,
+    LOCAL_REMS_KEY,
+    LOCAL_LOGS_KEY,
+    LOCAL_PATIENTS_KEY,
+    LOCAL_WELLNESS_KEY,
+    LOCAL_AUDIT_KEY,
+    // Crucial: Wipe cloud cache keys so subsequent users or fresh sign-ins do not see ghost reminders
+    "dawa_cloud_cache_reminders",
+    "dawa_cloud_cache_doselogs",
+    "dawa_cloud_cache_medicines",
+    "dawa_cloud_cache_patients",
+    "dawa_cloud_cache_wellness",
+    "dawa_cloud_cache_schedule_audit",
+    "dawa_cloud_cache_profile",
+  ];
   for (const k of keys) {
-    storage.removeItem(k);
+    await storage.removeItem(k);
     if (targetUser) {
-      storage.removeItem(`${k}_${targetUser}`);
+      await storage.removeItem(`${k}_${targetUser}`);
     }
   }
 }
-
-

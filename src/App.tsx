@@ -90,10 +90,21 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 }
 
 const AppContent = () => {
-  const { reminders, doseLogs, medicines, wellnessLogs, logDose, isInitializing } = useApp();
+  const {
+    reminders,
+    doseLogs,
+    medicines,
+    wellnessLogs,
+    logDose,
+    isInitializing,
+    reconcileOfflineDoseLogs,
+  } = useApp();
   const lastMissedCheckRef = useRef<number>(0);
 
   const runMissedDoseReconciliation = useCallback(() => {
+    if (!reminders.some((r) => r.enabled)) {
+      return;
+    }
     const now = Date.now();
     // 10-minute cooldown to prevent repeating reconciliation loops when doseLogs change
     if (now - lastMissedCheckRef.current < 10 * 60 * 1000) {
@@ -120,6 +131,7 @@ const AppContent = () => {
 
       // Refresh reminders and engagement notifications when app comes to foreground.
       const unsubForeground = onForeground(() => {
+        reconcileOfflineDoseLogs().catch(console.warn);
         scheduleReminders(reminders, doseLogs, medicines).then(() =>
           scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
         );

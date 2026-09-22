@@ -43,7 +43,7 @@ function getRelativeDate(dateString: string) {
 
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const { logDose, deleteDoseLog } = useApp();
+  const { logDose, deleteDoseLog, patients, doseLogs, userProfile } = useApp();
   const { toast } = useToast();
   const { t } = useTranslation();
 
@@ -56,15 +56,23 @@ export default function HistoryPage() {
   const [statusFilter, setStatusFilter] = useState<
     "All" | "taken" | "skipped" | "missed"
   >("All");
+  const [patientFilter, setPatientFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleCount, setVisibleCount] = useState(30);
 
   const { scopedDoseLogs, scopedWellnessLogs } = usePatientScope();
 
-  // Exclude non-history/temporary logs (e.g. snoozed actions)
+  // Resolve dose logs according to patientFilter
   const historyDoseLogs = useMemo(() => {
-    return scopedDoseLogs.filter((l) => l.action !== "snoozed");
-  }, [scopedDoseLogs]);
+    let source = doseLogs.length > 0 ? doseLogs : scopedDoseLogs;
+    if (patientFilter === "self") {
+      source = source.filter((l) => !l.patientId || l.patientId === userProfile?.id);
+    } else if (patientFilter !== "all") {
+      source = source.filter((l) => l.patientId === patientFilter);
+    }
+    // Exclude non-history/temporary logs (e.g. snoozed actions)
+    return source.filter((l) => l.action !== "snoozed");
+  }, [patientFilter, doseLogs, scopedDoseLogs, userProfile]);
 
   // Adherence Stats
   const stats = useMemo(() => {
@@ -99,18 +107,21 @@ export default function HistoryPage() {
         l.medicineName.toLowerCase().includes(q)
       );
     }
-    // Sort descending by actionTime
-    return filtered.sort(
-      (a, b) => toDate(b.actionTime).getTime() - toDate(a.actionTime).getTime()
-    );
+    // Sort descending by scheduledTime or actionTime
+    return filtered.sort((a, b) => {
+      const timeA = toDate(a.scheduledTime || a.actionTime).getTime();
+      const timeB = toDate(b.scheduledTime || b.actionTime).getTime();
+      return timeB - timeA;
+    });
   }, [historyDoseLogs, statusFilter, searchTerm]);
 
   const visibleLogs = filteredLogs.slice(0, visibleCount);
 
-  // Group by relative date
+  // Group by relative date using scheduledTime if available, fallback to actionTime
   const grouped = useMemo(() => {
     return visibleLogs.reduce<Record<string, DoseLog[]>>((acc, log) => {
-      const day = getRelativeDate(log.actionTime);
+      const targetTime = log.scheduledTime || log.actionTime;
+      const day = getRelativeDate(targetTime);
       (acc[day] = acc[day] || []).push(log);
       return acc;
     }, {});
@@ -337,6 +348,44 @@ export default function HistoryPage() {
           />
         </div>
 
+        {patients.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+            <button
+              onClick={() => setPatientFilter("all")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                patientFilter === "all"
+                  ? "bg-foreground text-background border-foreground shadow-sm"
+                  : "bg-card border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+              }`}
+            >
+              All Profiles
+            </button>
+            <button
+              onClick={() => setPatientFilter("self")}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                patientFilter === "self"
+                  ? "bg-foreground text-background border-foreground shadow-sm"
+                  : "bg-card border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+              }`}
+            >
+              {userProfile?.name || "You"}
+            </button>
+            {patients.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setPatientFilter(p.id)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                  patientFilter === p.id
+                    ? "bg-foreground text-background border-foreground shadow-sm"
+                    : "bg-card border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                }`}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
           {(["All", "taken", "skipped", "missed"] as const).map((status) => (
             <button
@@ -448,8 +497,22 @@ export default function HistoryPage() {
                                 {log.action}
                               </Badge>
                               <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
-                                SCH: {log.scheduledTime ? log.scheduledTime.replace(/:\d{2}\.\d{3}Z$/, '').replace('T', ' ') : "N/A"}
+                                SCH:{" "}
+                                {log.scheduledTime
+                                  ? toDate(log.scheduledTime).toLocaleTimeString(undefined, {
+                                      hour: "numeric",
+                                      minute: "2-digit",
+                                    })
+                                  : "N/A"}
                               </span>
+                              {log.patientId && patients.length > 0 && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] font-semibold px-1.5 py-0 h-4 bg-muted text-muted-foreground"
+                                >
+                                  {patients.find((p) => p.id === log.patientId)?.name || "Dependent"}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>

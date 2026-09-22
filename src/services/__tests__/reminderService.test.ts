@@ -633,6 +633,27 @@ describe("isReminderScheduledOnDate & checkMissedDoses", () => {
     expect(loggedDoses.length).toBe(1);
   });
 
+  it("checkMissedDoses exits immediately without logging when reminders are disabled", async () => {
+    const { checkMissedDoses } = await import("../reminderService");
+    const loggedDoses: any[] = [];
+    const mockLogDose = async (log: any) => {
+      loggedDoses.push(log);
+    };
+
+    const disabledReminder: Reminder = {
+      id: "rem-disabled",
+      medicineName: "Disabled Med",
+      dose: "1 tab",
+      time: "08:00",
+      repeatSchedule: "daily",
+      enabled: false,
+      createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
+    };
+
+    await checkMissedDoses([disabledReminder], [], mockLogDose);
+    expect(loggedDoses.length).toBe(0);
+  });
+
   it("scheduleReminders does not schedule out-of-stock alarms when medicine stock is positive", async () => {
     const { scheduleReminders } = await import("../reminderService");
 

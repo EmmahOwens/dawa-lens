@@ -478,6 +478,16 @@ class NativeAlarmPlugin : Plugin() {
         // 4. Handle empty active reminders edge case
         if (incomingActiveIds.isEmpty()) {
             NativeRecurrenceStore.clearAll(ctx)
+            val dbPath = ctx.getDatabasePath("dawa_lens.db")
+            if (dbPath.exists()) {
+                try {
+                    val db = SQLiteDatabase.openDatabase(
+                        dbPath.absolutePath, null, SQLiteDatabase.OPEN_READWRITE
+                    )
+                    db.delete("reminders", null, null)
+                    db.close()
+                } catch (e: Exception) {}
+            }
             val res = JSObject()
             res.put("success", true)
             res.put("exactGranted", canExact)
@@ -485,6 +495,22 @@ class NativeAlarmPlugin : Plugin() {
             res.put("scheduledCount", 0)
             call.resolve(res)
             return
+        }
+
+        // Clean up any omitted reminders from SQLite
+        val dbPath = ctx.getDatabasePath("dawa_lens.db")
+        if (dbPath.exists()) {
+            try {
+                val db = SQLiteDatabase.openDatabase(
+                    dbPath.absolutePath, null, SQLiteDatabase.OPEN_READWRITE
+                )
+                for (prev in previouslyStored) {
+                    if (!incomingActiveIds.contains(prev.id)) {
+                        db.delete("reminders", "id = ?", arrayOf(prev.id))
+                    }
+                }
+                db.close()
+            } catch (e: Exception) {}
         }
 
         val storedReminders = mutableListOf<NativeRecurrenceStore.StoredReminder>()
@@ -835,6 +861,18 @@ class NativeAlarmPlugin : Plugin() {
                 } catch (e: Exception) {}
             }
             NativeRecurrenceStore.clearAll(ctx)
+
+            // Clear SQLite reminders table so background workers and guardian service never see stale reminders
+            val dbPath = ctx.getDatabasePath("dawa_lens.db")
+            if (dbPath.exists()) {
+                try {
+                    val db = SQLiteDatabase.openDatabase(
+                        dbPath.absolutePath, null, SQLiteDatabase.OPEN_READWRITE
+                    )
+                    db.delete("reminders", null, null)
+                    db.close()
+                } catch (e: Exception) {}
+            }
 
             // Dismiss active status bar notifications for routine reminders on Android M+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

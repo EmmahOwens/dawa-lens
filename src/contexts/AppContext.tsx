@@ -39,6 +39,7 @@ import {
 } from "../services/quotesService";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Capacitor } from "@capacitor/core";
+import { NativeAlarm } from "@/plugins/nativeAlarm";
 import { toast } from "../hooks/use-toast";
 import { calculateRefillStatus } from "../services/refillService";
 import { initPushNotifications } from "../services/pushNotificationService";
@@ -330,6 +331,8 @@ export type Patient = {
   /** ISO date string — used to compute exact age and for clinical reports */
   dateOfBirth?: string;
   gender?: "male" | "female";
+  /** Body weight in kg — used for clinical dosing calculations */
+  weight?: number;
   /** e.g. "Mother", "Client", "Father" */
   relation?: string;
   /** "family" | "client" — drives report template & notification channel */
@@ -404,6 +407,7 @@ type AppContextType = {
   logoutUser: () => void;
   clearAllData: () => Promise<void>;
   syncLocalToCloud: () => Promise<void>;
+  reconcileOfflineDoseLogs: () => Promise<void>;
   isInitializing: boolean;
   isDawaGPTOpen: boolean;
   setIsDawaGPTOpen: (v: boolean) => void;
@@ -741,6 +745,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       storage.setItem(CLOUD_CACHE_MEDS_KEY, mergedMeds);
 
       localPersistence.reminders.replaceAll(mergedRems).catch(console.warn);
+      localPersistence.doseLogs.replaceAll(mergedLogs).catch(console.warn);
       localPersistence.medicines.replaceAll(mergedMeds).catch(console.warn);
 
       setPendingOfflineOps(getPendingCount());
@@ -749,6 +754,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Non-fatal — onSnapshot will catch up on its own eventually
       console.warn("[AppContext] refreshFromFirestore failed (non-fatal):", err);
       setPendingOfflineOps(getPendingCount());
+    }
+  }, [currentUserId, storageMode]);
+
+  // ─── Offline background dose logs reconciliation ─────────────────────────
+  // Native background workers (like MissedDoseWorker) write missed dose logs
+  // directly into SQLite dawa_lens.db table `dose_logs`. When the app launches or
+  // comes to the foreground, reconcile those records into React state and cloud Firestore.
+  const reconcileOfflineDoseLogs = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      const sqliteLogs = await localPersistence.doseLogs.getAll().catch(() => []);
+      if (!sqliteLogs || sqliteLogs.length === 0) return;
+
+      setDoseLogs((currentLogs) => {
+        const existingIds = new Set(currentLogs.map((l) => l.id));
+        const missingFromMemory = sqliteLogs.filter((sl) => {
+          if (existingIds.has(sl.id)) return false;
+          return !currentLogs.some(
+            (cl) =>
+              cl.reminderId === sl.reminderId &&
+              cl.scheduledTime === sl.scheduledTime &&
+              cl.action === sl.action
+          );
+        });
+
+        if (missingFromMemory.length === 0) {
+          if (currentLogs.length > sqliteLogs.length) {
+            localPersistence.doseLogs.replaceAll(currentLogs).catch(console.warn);
+          }
+          return currentLogs;
+        }
+
+        const merged = [...currentLogs, ...missingFromMemory];
+        storage.setItem(CLOUD_CACHE_LOGS_KEY, merged);
+        localPersistence.doseLogs.replaceAll(merged).catch(console.warn);
+
+        if (storageMode === "cloud" && currentUserId) {
+          for (const newLog of missingFromMemory) {
+            const serverPayload = {
+              ...newLog,
+              userId: currentUserId,
+              idempotencyKey: newLog.id,
+            };
+            if (hasNetwork()) {
+              doseLogsApi.create(serverPayload as any).catch((err) => {
+                console.warn("[AppContext] Failed to upload offline dose log to Firestore, enqueuing:", err);
+                enqueueOp({
+                  type: "add-dose-log",
+                  collection: "doseLogs",
+                  docId: newLog.id,
+                  data: serverPayload,
+                  userId: currentUserId,
+                });
+                setPendingOfflineOps(getPendingCount());
+              });
+            } else {
+              enqueueOp({
+                type: "add-dose-log",
+                collection: "doseLogs",
+                docId: newLog.id,
+                data: serverPayload,
+                userId: currentUserId,
+              });
+              setPendingOfflineOps(getPendingCount());
+            }
+          }
+        }
+
+        return merged;
+      });
+    } catch (err) {
+      console.warn("[AppContext] reconcileOfflineDoseLogs failed:", err);
     }
   }, [currentUserId, storageMode]);
 
@@ -849,6 +926,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Logout failed", err);
     }
+
+    // Actively cancel native alarms and pending local notifications
+    if (Capacitor.isNativePlatform()) {
+      if (NativeAlarm.cancelReminderAlarms) {
+        NativeAlarm.cancelReminderAlarms().catch((err) =>
+          console.warn("[AppContext] Failed to cancel reminder alarms on logout:", err)
+        );
+      } else {
+        NativeAlarm.cancelAllAlarms({ remindersOnly: true }).catch((err) =>
+          console.warn("[AppContext] Failed to cancel reminder alarms on logout:", err)
+        );
+      }
+      try {
+        const pending = await LocalNotifications.getPending();
+        if (pending.notifications && pending.notifications.length > 0) {
+          await LocalNotifications.cancel({
+            notifications: pending.notifications.map((n) => ({ id: n.id })),
+          });
+        }
+      } catch (cancelErr) {
+        console.warn("[AppContext] Failed to cancel pending LocalNotifications on logout:", cancelErr);
+      }
+    }
+
+    // Wipe all missed dose alert deduplication flags from localStorage
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("dawa_missed_alerted_")) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (e) {
+      // ignore
+    }
+
     // Wipe local unencrypted PHI on device upon logout
     setActiveUserScope(null);
     clearAllLocalPersistence(priorUid || undefined).catch(console.warn);
@@ -1019,6 +1134,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // Keep SQLite completely aligned with the loaded cache so native background workers don't see ghosts
       localPersistence.reminders.replaceAll(finalRems).catch(console.warn);
+      localPersistence.doseLogs.replaceAll(finalLogs).catch(console.warn);
       localPersistence.medicines.replaceAll(finalMeds).catch(console.warn);
     };
 
@@ -1028,6 +1144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           await initLocalPersistence();
         }
         await Promise.all([loadProfile(), loadCache()]);
+        await reconcileOfflineDoseLogs();
       } catch (err) {
         console.warn("[AppContext] Initial loadData warning:", err);
       } finally {
@@ -1134,6 +1251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const merged = applyPendingOps(data, "doseLogs", getPendingOps());
           setDoseLogs(merged);
           storage.setItem(CLOUD_CACHE_LOGS_KEY, merged);
+          localPersistence.doseLogs.replaceAll(merged).catch(console.warn);
         } catch (err) {
           console.warn("[AppContext] Error processing doseLogs snapshot:", err);
         }
@@ -2352,7 +2470,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     patient: Omit<Patient, "id" | "createdAt" | "managedBy">
   ) => {
     if (storageMode === "local") {
-      const newPatient = await localPersistence.patients.create(patient);
+      const newPatient = await localPersistence.patients.create({ ...patient, managedBy: undefined });
       setPatients((prev) => [...prev, newPatient]);
     } else {
       if (!currentUserId) throw new Error("Not logged in");
@@ -2575,6 +2693,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         logoutUser,
         clearAllData,
         syncLocalToCloud,
+        reconcileOfflineDoseLogs,
         isInitializing,
         isDawaGPTOpen,
         setIsDawaGPTOpen,
