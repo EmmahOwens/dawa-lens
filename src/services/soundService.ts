@@ -4,9 +4,20 @@
  * Central audio and notification sound management service for Dawa Lens.
  * Manages sound selection preferences for various notifications (medication reminders,
  * hydration, daily quotes, dose taken, dose skipped, missed dose alerts, refill alerts),
- * provides HTML5 audio playback for in-app preview/feedback, and provides Android
- * raw resource names for native notification channels.
+ * provides HTML5 audio playback for in-app preview/feedback, and drives Android
+ * native notification channel creation with custom per-category WAV sounds.
+ *
+ * Architecture:
+ *  - HTML5 Audio API  → foreground in-app sound previews / action feedback
+ *  - getChannelIdForCategory() → deterministic, sound-hashed Android channel IDs
+ *  - getAndroidSoundUri()      → android.resource:// URI used on notification channels
+ *  - saveSoundPrefs()          → mirrors prefs to native SharedPreferences via NativeAlarm
+ *                                so AlarmReceiver / MissedDoseWorker can use custom sounds
+ *                                even when the app is killed or offline
  */
+
+/** Android package name — must match applicationId in build.gradle */
+const ANDROID_PACKAGE_NAME = "com.dawainnovation.lens";
 
 export interface SoundDefinition {
   id: string;
@@ -190,12 +201,15 @@ export const DEFAULT_SOUND_PREFERENCES: SoundPreferences = {
 };
 
 const STORAGE_KEY = "dawa_sound_preferences";
+const CHANNEL_ACTIVE_KEY = "dawa_active_channel_ids";
 
 class SoundService {
   private currentAudio: HTMLAudioElement | null = null;
   private currentPlayingId: string | null = null;
   private listeners: Set<(prefs: SoundPreferences) => void> = new Set();
   private cachedPrefs: SoundPreferences | null = null;
+  private retryListenerAttached = false;
+  private pendingRetrySoundId: string | null = null;
 
   constructor() {
     this.cachedPrefs = this.loadPreferences();
@@ -245,6 +259,7 @@ class SoundService {
       console.warn("[SoundService] Failed to save preferences to localStorage:", e);
     }
     this.notifyListeners();
+    this.saveSoundPrefsToNative();
   }
 
   /**
@@ -336,6 +351,141 @@ class SoundService {
   }
 
   /**
+   * Returns an android.resource:// URI for the given sound ID.
+   * This URI is passed to NotificationChannel.setSound() on Android O+.
+   * Returns empty string if "silent", "default" keyword if not found.
+   */
+  public getAndroidSoundUri(soundId: string): string {
+    if (!soundId || soundId === "silent") return "";
+    if (soundId === "default") return "default";
+    const soundDef = AVAILABLE_SOUNDS.find((s) => s.id === soundId || s.filename === soundId);
+    if (!soundDef) return "default";
+    return `android.resource://${ANDROID_PACKAGE_NAME}/raw/${soundDef.androidResource}`;
+  }
+
+  /**
+   * Returns the android.resource:// URI for the currently selected sound for a category.
+   */
+  public getAndroidSoundUriForCategory(category: SoundCategoryKey): string {
+    const prefs = this.getPreferences();
+    if (!prefs.enabled) return "";
+    const soundId = prefs.categories[category] || DEFAULT_SOUND_PREFERENCES.categories[category];
+    return this.getAndroidSoundUri(soundId);
+  }
+
+  /**
+   * Returns a sound-hashed Android notification channel ID for a category.
+   * Including the sound name forces Android to create a fresh channel (with the
+   * new sound) when the user changes their preference — Android permanently locks
+   * a channel's sound after first creation, so a new ID is required.
+   *
+   * Pattern: dawa_<category>_<resourceName>_v1
+   */
+  public getChannelIdForCategory(category: SoundCategoryKey): string {
+    const prefs = this.getPreferences();
+    const soundId = prefs.categories[category] || DEFAULT_SOUND_PREFERENCES.categories[category];
+    if (!soundId || soundId === "silent") return `dawa_${category}_silent_v1`;
+    if (soundId === "default") return `dawa_${category}_default_v1`;
+    const soundDef = AVAILABLE_SOUNDS.find((s) => s.id === soundId);
+    const resourceName = soundDef?.androidResource || "default";
+    return `dawa_${category}_${resourceName}_v1`;
+  }
+
+  /**
+   * Mirrors sound preferences to native Android SharedPreferences via NativeAlarm.saveSoundPrefs
+   * (Option A). This enables AlarmReceiver and MissedDoseWorker to apply custom sounds when
+   * the app is killed, backgrounded, or the device is offline. Also creates/updates per-category
+   * channels with the correct sound URI and deletes any stale channels.
+   */
+  public async saveSoundPrefsToNative(): Promise<void> {
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      if (!Capacitor.isNativePlatform()) return;
+
+      const { NativeAlarm } = await import("@/plugins/nativeAlarm");
+      const prefs = this.getPreferences();
+
+      // Build resource-name map for Kotlin SoundPrefsReader
+      const categoryResourceMap: Record<string, string> = {};
+      for (const cat of Object.keys(prefs.categories) as SoundCategoryKey[]) {
+        const soundId = prefs.categories[cat];
+        const soundDef = AVAILABLE_SOUNDS.find((s) => s.id === soundId);
+        categoryResourceMap[cat] = soundDef?.androidResource || "default";
+      }
+
+      // Read previous active channel IDs for cleanup
+      let previousChannelIds: string[] = [];
+      try {
+        const raw = localStorage.getItem(CHANNEL_ACTIVE_KEY);
+        if (raw) previousChannelIds = JSON.parse(raw);
+      } catch { /* ignore */ }
+
+      const activeChannelIds: string[] = [];
+      for (const cat of Object.keys(prefs.categories) as SoundCategoryKey[]) {
+        activeChannelIds.push(this.getChannelIdForCategory(cat));
+      }
+
+      // Identify stale channels to delete
+      const staleChannelIds = previousChannelIds.filter((id) => !activeChannelIds.includes(id));
+
+      // Persist active channels list
+      try {
+        localStorage.setItem(CHANNEL_ACTIVE_KEY, JSON.stringify(activeChannelIds));
+      } catch { /* ignore */ }
+
+      // Call Option-A bridge: native layer creates channels, writes SharedPreferences, deletes stale channels
+      await (NativeAlarm as any).saveSoundPrefs({
+        enabled: prefs.enabled,
+        categories: JSON.stringify(categoryResourceMap),
+        staleChannelIds: JSON.stringify(staleChannelIds),
+      });
+    } catch (e) {
+      // Non-fatal: native layer falls back to system default sound
+    }
+  }
+
+  /**
+   * Play the configured sound for a category, with an automatic timed retry
+   * if the first attempt is blocked by the browser autoplay policy
+   * (NotAllowedError — common when the app is freshly opened from a notification tap).
+   */
+  public tryPlayForCategory(category: SoundCategoryKey, retryDelayMs = 600): void {
+    this.playForCategory(category).then((played) => {
+      if (!played) {
+        setTimeout(() => this.playForCategory(category).catch(() => {}), retryDelayMs);
+      }
+    }).catch(() => {
+      setTimeout(() => this.playForCategory(category).catch(() => {}), retryDelayMs);
+    });
+  }
+
+  /**
+   * Setup autoplay retry on user interaction if audio play is blocked by browser policy.
+   */
+  private setupAutoplayRetry(soundId: string, volumeOverride?: number): void {
+    if (this.retryListenerAttached) return;
+    this.retryListenerAttached = true;
+    this.pendingRetrySoundId = soundId;
+
+    const retryHandler = async () => {
+      window.removeEventListener("click", retryHandler);
+      window.removeEventListener("touchstart", retryHandler);
+      window.removeEventListener("keydown", retryHandler);
+      this.retryListenerAttached = false;
+
+      if (this.pendingRetrySoundId) {
+        const idToPlay = this.pendingRetrySoundId;
+        this.pendingRetrySoundId = null;
+        await this.playSound(idToPlay, volumeOverride);
+      }
+    };
+
+    window.addEventListener("click", retryHandler, { once: true });
+    window.addEventListener("touchstart", retryHandler, { once: true });
+    window.addEventListener("keydown", retryHandler, { once: true });
+  }
+
+  /**
    * Play a specific sound by its id or filename.
    */
   public async playSound(soundId: string, volumeOverride?: number): Promise<boolean> {
@@ -352,7 +502,6 @@ class SoundService {
     // Resolve sound definition
     let soundDef = AVAILABLE_SOUNDS.find((s) => s.id === soundId);
     if (!soundDef && soundId === "default") {
-      // Use Gentle Bell as fallback for default web preview
       soundDef = AVAILABLE_SOUNDS[0];
     }
     if (!soundDef) {
@@ -400,7 +549,9 @@ class SoundService {
       return true;
     } catch (err: any) {
       // Autoplay or permissions issue in browser
-      if (err.name !== "NotAllowedError") {
+      if (err.name === "NotAllowedError") {
+        this.setupAutoplayRetry(soundId, volumeOverride);
+      } else {
         console.warn("[SoundService] Audio playback rejected:", err);
       }
       this.currentPlayingId = null;

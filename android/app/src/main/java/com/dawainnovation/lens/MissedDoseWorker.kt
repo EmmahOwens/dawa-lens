@@ -245,23 +245,38 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
     private fun postMissedNotification(medicineName: String, dose: String, notifId: Int, timeStr: String, patientId: String?) {
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Create channel on Android O+
+        // Create channel on Android O+ using the user-selected custom sound.
+        // SoundPrefsReader reads Device-Protected SharedPreferences written by
+        // NativeAlarmPlugin.saveSoundPrefs() so this works when the app is killed.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            val missedResourceName = SoundPrefsReader.getResourceNameForCategory(applicationContext, "missed")
+            val missedSoundUri = SoundPrefsReader.buildSoundUri(applicationContext, missedResourceName)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
                 ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
             val audioAttributes = AudioAttributes.Builder()
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .build()
+
+            // Channel ID encodes the resource name so a sound change forces a fresh channel
+            val channelId = if (missedResourceName.isEmpty() || missedResourceName == "silent") {
+                "dawa_missed_silent_v1"
+            } else if (missedResourceName == "default") {
+                "dawa_missed_default_v1"
+            } else {
+                "dawa_missed_${missedResourceName}_v1"
+            }
+
             val channel = NotificationChannel(
-                AlarmReceiver.CHANNEL_MISSED,
+                channelId,
                 "Missed Dose Alerts",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Urgent alerts when a scheduled medication dose was missed"
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 400)
-                setSound(alarmSound, audioAttributes)
+                setSound(missedSoundUri, audioAttributes)
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
             }
             nm.createNotificationChannel(channel)
@@ -283,10 +298,23 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
         )
 
         val doseLabel = if (dose.isNotEmpty()) " ($dose)" else ""
-        val alarmSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+
+        // Resolve the custom sound URI from user preferences
+        val missedResourceName = SoundPrefsReader.getResourceNameForCategory(applicationContext, "missed")
+        val missedSoundUri = SoundPrefsReader.buildSoundUri(applicationContext, missedResourceName)
+            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-        val notification = NotificationCompat.Builder(applicationContext, AlarmReceiver.CHANNEL_MISSED)
+        // Use the same sound-hashed channel ID as the channel we just created/ensured above
+        val channelId = if (missedResourceName.isEmpty() || missedResourceName == "silent") {
+            "dawa_missed_silent_v1"
+        } else if (missedResourceName == "default") {
+            "dawa_missed_default_v1"
+        } else {
+            "dawa_missed_${missedResourceName}_v1"
+        }
+
+        val notification = NotificationCompat.Builder(applicationContext, channelId)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle("⚠️ Missed Dose Follow-Up: $medicineName")
             .setContentText("Dose follow-up: $medicineName$doseLabel scheduled at $timeStr was not logged. Stay on track!")
@@ -297,7 +325,7 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
             .setContentIntent(pi)
             .setAutoCancel(true)
             .setVibrate(longArrayOf(0, 400, 200, 400, 200, 400))
-            .setSound(alarmSoundUri)
+            .setSound(missedSoundUri)
             .build()
 
         nm.notify(notifId, notification)

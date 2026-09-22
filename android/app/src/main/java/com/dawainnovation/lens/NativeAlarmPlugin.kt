@@ -1316,4 +1316,118 @@ class NativeAlarmPlugin : Plugin() {
             call.reject("Failed to open app info settings: ${e.message}", e)
         }
     }
+
+    /**
+     * Option-A sound preference bridge (called from soundService.saveSoundPrefsToNative).
+     *
+     * 1. Persists the category → resource-name map to Device-Protected SharedPreferences
+     *    via SoundPrefsReader.save() so AlarmReceiver / MissedDoseWorker can read it
+     *    when the app is killed or offline.
+     * 2. Creates/updates one notification channel per category using the correct custom
+     *    sound URI (android.resource://…/raw/<resourceName>). Because Android locks a
+     *    channel's sound after first creation, each channel ID includes the resource name;
+     *    a new channel is automatically created when the user changes the sound.
+     * 3. Deletes stale channels — those whose IDs are no longer active (sound changed).
+     */
+    @PluginMethod
+    fun saveSoundPrefs(call: PluginCall) {
+        val ctx = context
+        val enabled = call.getBoolean("enabled", true) ?: true
+        val categoriesJson = call.getString("categories") ?: "{}"
+        val staleChannelIdsJson = call.getString("staleChannelIds") ?: "[]"
+
+        // 1. Persist to Device-Protected SharedPreferences
+        SoundPrefsReader.save(ctx, enabled, categoriesJson)
+
+        // 2. Create / update per-category notification channels on Android O+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val notificationManager =
+                ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+                        as android.app.NotificationManager
+
+            try {
+                val catObj = org.json.JSONObject(categoriesJson)
+                val keys = catObj.keys()
+                while (keys.hasNext()) {
+                    val category = keys.next()
+                    val resourceName = catObj.optString(category, "default")
+
+                    // Build the sound URI
+                    val soundUri: android.net.Uri? = SoundPrefsReader.buildSoundUri(ctx, resourceName)
+                        ?: android.media.RingtoneManager.getDefaultUri(
+                            if (category == "missed") android.media.RingtoneManager.TYPE_ALARM
+                            else android.media.RingtoneManager.TYPE_NOTIFICATION
+                        )
+
+                    // Determine importance and audio usage based on category
+                    val importance = when (category) {
+                        "missed"     -> android.app.NotificationManager.IMPORTANCE_HIGH
+                        "medication" -> android.app.NotificationManager.IMPORTANCE_HIGH
+                        "refill"     -> android.app.NotificationManager.IMPORTANCE_HIGH
+                        else         -> android.app.NotificationManager.IMPORTANCE_DEFAULT
+                    }
+                    val audioUsage = when (category) {
+                        "missed", "medication" -> android.media.AudioAttributes.USAGE_ALARM
+                        else                   -> android.media.AudioAttributes.USAGE_NOTIFICATION
+                    }
+
+                    val audioAttributes = android.media.AudioAttributes.Builder()
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(audioUsage)
+                        .build()
+
+                    // Channel ID encodes the resource name so a change forces a fresh channel
+                    val channelId = if (resourceName.isEmpty() || resourceName == "silent") {
+                        "dawa_${category}_silent_v1"
+                    } else if (resourceName == "default") {
+                        "dawa_${category}_default_v1"
+                    } else {
+                        "dawa_${category}_${resourceName}_v1"
+                    }
+
+                    val channelName = when (category) {
+                        "medication" -> "Medicine Reminders"
+                        "hydration"  -> "Hydration Reminders"
+                        "quotes"     -> "Health Quotes & Wellness"
+                        "taken"      -> "Dose Taken Feedback"
+                        "skipped"    -> "Dose Skipped Feedback"
+                        "missed"     -> "Missed Dose Alerts"
+                        "refill"     -> "Refill Alerts"
+                        else         -> "${category.replaceFirstChar { it.uppercase() }} Reminder"
+                    }
+
+                    val channel = android.app.NotificationChannel(channelId, channelName, importance).apply {
+                        description = "Dawa Lens notifications for $category"
+                        enableVibration(importance >= android.app.NotificationManager.IMPORTANCE_DEFAULT)
+                        if (category == "missed" || category == "medication") {
+                            vibrationPattern = longArrayOf(0, 500, 200, 500)
+                        }
+                        if (soundUri != null) {
+                            setSound(soundUri, audioAttributes)
+                        }
+                        lockscreenVisibility = androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC
+                    }
+                    notificationManager.createNotificationChannel(channel)
+                }
+            } catch (e: Exception) {
+                // Non-fatal — channels fall back to system default
+            }
+
+            // 3. Delete stale channels
+            try {
+                val staleArray = org.json.JSONArray(staleChannelIdsJson)
+                for (i in 0 until staleArray.length()) {
+                    val staleId = staleArray.optString(i, "")
+                    if (staleId.isNotEmpty()) {
+                        notificationManager.deleteNotificationChannel(staleId)
+                    }
+                }
+            } catch (e: Exception) {
+                // Non-fatal
+            }
+        }
+
+        call.resolve()
+    }
 }
+

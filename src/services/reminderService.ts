@@ -37,6 +37,8 @@ import {
   isSlotActionedOnDate,
   timeStrToMinutes,
 } from "@/lib/dynamicSchedule";
+import { soundService } from "@/services/soundService";
+
 
 // ─── Notification channel IDs ────────────────────────────────────────────────
 // v2 channels carry the correct default sound. The old channels were created
@@ -392,16 +394,16 @@ export const checkMissedDoses = async (
           if (missedPerm.display === "granted") {
             if (Capacitor.getPlatform() === "android") {
               await LocalNotifications.createChannel({
-                id: CHANNEL_MISSED,
+                id: soundService.getChannelIdForCategory("missed"),
                 name: "Missed Dose Alerts",
                 description: "Alerts when a scheduled dose was not logged",
                 importance: 5,
                 vibration: true,
-                sound: "default",
+                sound: soundService.getAndroidSoundUriForCategory("missed") || "default",
               });
             }
             const missedId = stringToHash(r.id + "missed" + single.scheduledDate.getTime());
-            const missedChannelId = r.patientId ? patientChannelId(r.patientId) : CHANNEL_MISSED;
+            const missedChannelId = r.patientId ? patientChannelId(r.patientId) : soundService.getChannelIdForCategory("missed");
             const fireAt = new Date(Date.now() + 1000);
 
             const isAndroid = Capacitor.getPlatform() === "android";
@@ -448,7 +450,7 @@ export const checkMissedDoses = async (
                   id: missedId,
                   schedule: { at: fireAt, allowWhileIdle: true },
                   channelId: missedChannelId,
-                  sound: "default",
+                  sound: soundService.getAndroidSoundUriForCategory("missed") || "default",
                   extra: {
                     type: "missed_alert",
                     reminderId: r.id,
@@ -476,12 +478,12 @@ export const checkMissedDoses = async (
           if (missedPerm.display === "granted") {
             if (Capacitor.getPlatform() === "android") {
               await LocalNotifications.createChannel({
-                id: CHANNEL_MISSED,
+                id: soundService.getChannelIdForCategory("missed"),
                 name: "Missed Dose Alerts",
                 description: "Alerts when scheduled doses were not logged",
                 importance: 5,
                 vibration: true,
-                sound: "default",
+                sound: soundService.getAndroidSoundUriForCategory("missed") || "default",
               });
             }
             const bundleId = stringToHash("dawa_missed_bundle_" + new Date().toDateString());
@@ -496,9 +498,12 @@ export const checkMissedDoses = async (
                     title: summaryTitle,
                     body: summaryBody,
                     triggerAtMillis: fireAt.getTime(),
+                    channelId: soundService.getChannelIdForCategory("missed"),
+                    soundName: soundService.getAndroidResourceForCategory("missed"),
                     extra: JSON.stringify({
                       type: "missed_alert",
                       route: "/history",
+                      soundName: soundService.getAndroidResourceForCategory("missed"),
                     }),
                   }],
                 });
@@ -510,11 +515,12 @@ export const checkMissedDoses = async (
                     body: summaryBody,
                     id: bundleId,
                     schedule: { at: fireAt, allowWhileIdle: true },
-                    channelId: CHANNEL_MISSED,
-                    sound: "default",
+                    channelId: soundService.getChannelIdForCategory("missed"),
+                    sound: soundService.getAndroidSoundUriForCategory("missed") || "default",
                     extra: {
                       type: "missed_alert",
                       route: "/history",
+                      soundName: soundService.getAndroidResourceForCategory("missed"),
                     },
                   }],
                 });
@@ -526,11 +532,12 @@ export const checkMissedDoses = async (
                   body: summaryBody,
                   id: bundleId,
                   schedule: { at: fireAt, allowWhileIdle: true },
-                  channelId: CHANNEL_MISSED,
-                  sound: "default",
+                  channelId: soundService.getChannelIdForCategory("missed"),
+                  sound: soundService.getAndroidSoundUriForCategory("missed") || "default",
                   extra: {
                     type: "missed_alert",
                     route: "/history",
+                    soundName: soundService.getAndroidResourceForCategory("missed"),
                   },
                 }],
               });
@@ -944,12 +951,12 @@ export const scheduleRefillNotifications = async (
     // Ensure the refill alert channel exists on Android
     if (Capacitor.getPlatform() === "android") {
       await LocalNotifications.createChannel({
-        id: CHANNEL_REFILL,
+        id: soundService.getChannelIdForCategory("refill"),
         name: "Med Vault Refill Alerts",
         description: "Notifies you when medicine stock is critically low",
         importance: 4, // High
         vibration: true,
-        sound: "default",
+        sound: soundService.getAndroidSoundUriForCategory("refill") || "default",
       });
     }
 
@@ -981,9 +988,10 @@ export const scheduleRefillNotifications = async (
         body,
         id: stringToHash(med.id + "low_stock" + todayKey),
         schedule: { at: new Date(Date.now() + 3000), allowWhileIdle: true }, // fire after 3s
-        channelId: CHANNEL_REFILL,
-        sound: "default",
-        extra: { type: "low_stock", medicineId: med.id, patientId: med.patientId ?? null, route: "/medvault" },
+        channelId: soundService.getChannelIdForCategory("refill"),
+        sound: soundService.getAndroidSoundUriForCategory("refill") || "default",
+        extra: { type: "low_stock", medicineId: med.id, patientId: med.patientId ?? null, route: "/medvault",
+          soundName: soundService.getAndroidResourceForCategory("refill") },
       });
 
       localStorage.setItem(sentKey, "1");
@@ -1105,7 +1113,7 @@ const executeScheduleReminders = async (
           importance: 5,
           visibility: 1,
           vibration: true,
-          sound: "default",
+          sound: soundService.getAndroidSoundUriForCategory("medication") || "default",
         });
 
         // Create one channel per managed patient
@@ -1125,7 +1133,7 @@ const executeScheduleReminders = async (
               importance: 5,
               visibility: 1,
               vibration: true,
-              sound: "default",
+              sound: soundService.getAndroidSoundUriForCategory("medication") || "default",
             });
           }
         }
@@ -1224,7 +1232,7 @@ const executeScheduleReminders = async (
           id: notifId,
           schedule: { at: next, allowWhileIdle: true },
           channelId: r.patientId ? patientChannelId(r.patientId) : CHANNEL_OWNER,
-          sound: "default",
+          sound: soundService.getAndroidSoundUriForCategory("medication") || "default",
           actionTypeId: "MEDICINE_REMINDER",
           extra: {
             reminderId: r.id,
@@ -1234,6 +1242,7 @@ const executeScheduleReminders = async (
             dose: r.dose,
             scheduledTime: next.toISOString(),
             route: "/",
+            soundName: soundService.getAndroidResourceForCategory("medication"),
           },
         });
         alarmNotifications.push({

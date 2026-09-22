@@ -273,105 +273,98 @@ class AlarmReceiver : BroadcastReceiver() {
             }
 
             // Create notification channels on Android O+ (safe & idempotent)
+            // Each channel ID encodes the user-selected sound resource name so that
+            // changing the sound preference forces a fresh channel (Android permanently
+            // locks a channel's sound after first creation).
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                    ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-                val notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-                val alarmAudioAttributes = AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .build()
+                // Helper: build a channel for a category using SoundPrefsReader
+                fun createCategoryChannel(
+                    id: String,
+                    name: String,
+                    description: String,
+                    importance: Int,
+                    category: String,
+                    useAlarmAttributes: Boolean = false
+                ) {
+                    val resourceName = SoundPrefsReader.getResourceNameForCategory(context, category)
+                    val soundUri = SoundPrefsReader.buildSoundUri(context, resourceName)
+                        ?: if (useAlarmAttributes) {
+                            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                        } else {
+                            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                        }
 
-                val notifAudioAttributes = AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                    .build()
+                    val audioAttributes = AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(
+                            if (useAlarmAttributes) AudioAttributes.USAGE_ALARM
+                            else AudioAttributes.USAGE_NOTIFICATION
+                        )
+                        .build()
 
-                // 1. Reminders Channel (High Importance, Alarm Sound, Vibration)
-                val reminderChannel = NotificationChannel(
-                    CHANNEL_REMINDERS,
-                    "Medicine Reminders",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Critical alarms and reminders to take medication"
-                    enableVibration(true)
-                    vibrationPattern = longArrayOf(0, 500, 200, 500)
-                    setSound(alarmSound, alarmAudioAttributes)
-                    lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                    val channel = NotificationChannel(id, name, importance).apply {
+                        this.description = description
+                        enableVibration(importance >= NotificationManager.IMPORTANCE_DEFAULT)
+                        if (useAlarmAttributes) vibrationPattern = longArrayOf(0, 500, 200, 500)
+                        setSound(soundUri, audioAttributes)
+                        lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                    }
+                    notificationManager.createNotificationChannel(channel)
                 }
-                notificationManager.createNotificationChannel(reminderChannel)
 
-                // 2. Missed Dose Channel (High Importance, Alarm Sound, Vibration)
-                val missedChannel = NotificationChannel(
-                    CHANNEL_MISSED,
-                    "Missed Dose Alerts",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Urgent alerts when a scheduled medication dose was missed"
-                    enableVibration(true)
-                    vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 400)
-                    setSound(alarmSound, alarmAudioAttributes)
-                    lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
-                }
-                notificationManager.createNotificationChannel(missedChannel)
-
-                // 3. Streaks & Achievements Channel
-                val streakChannel = NotificationChannel(
-                    CHANNEL_STREAKS,
-                    "Achievements & Streaks",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Medication adherence milestones and celebration alerts"
-                    enableVibration(true)
-                    setSound(notifSound, notifAudioAttributes)
-                }
-                notificationManager.createNotificationChannel(streakChannel)
-
-                // 4. Quotes & Encouragement Channel
-                val quotesChannel = NotificationChannel(
-                    CHANNEL_QUOTES,
-                    "Health Quotes & Encouragement",
-                    NotificationManager.IMPORTANCE_DEFAULT
-                ).apply {
-                    description = "Motivational quotes, daily wisdom, and adherence summaries"
-                    setSound(notifSound, notifAudioAttributes)
-                }
-                notificationManager.createNotificationChannel(quotesChannel)
-
-                // 5. Wellness Channel
-                val wellnessChannel = NotificationChannel(
-                    CHANNEL_WELLNESS,
-                    "Wellness Check-Ins",
-                    NotificationManager.IMPORTANCE_DEFAULT
-                ).apply {
-                    description = "Evening health check-ins and wellness log prompts"
-                    setSound(notifSound, notifAudioAttributes)
-                }
-                notificationManager.createNotificationChannel(wellnessChannel)
-
-                // 6. Hydration Channel
-                val hydrationChannel = NotificationChannel(
-                    CHANNEL_HYDRATION,
-                    "Hydration Reminders",
-                    NotificationManager.IMPORTANCE_LOW
-                ).apply {
-                    description = "Periodic hydration breaks and water tracking"
-                    setSound(notifSound, notifAudioAttributes)
-                }
-                notificationManager.createNotificationChannel(hydrationChannel)
-
-                // 7. Refill Alerts Channel
-                val refillChannel = NotificationChannel(
-                    CHANNEL_REFILL,
-                    "Refill Alerts",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Low stock medication warnings and refill reminders"
-                    enableVibration(true)
-                    setSound(notifSound, notifAudioAttributes)
-                }
-                notificationManager.createNotificationChannel(refillChannel)
+                createCategoryChannel(
+                    id = CHANNEL_REMINDERS,
+                    name = "Medicine Reminders",
+                    description = "Critical alarms and reminders to take medication",
+                    importance = NotificationManager.IMPORTANCE_HIGH,
+                    category = "medication",
+                    useAlarmAttributes = true
+                )
+                createCategoryChannel(
+                    id = CHANNEL_MISSED,
+                    name = "Missed Dose Alerts",
+                    description = "Urgent alerts when a scheduled medication dose was missed",
+                    importance = NotificationManager.IMPORTANCE_HIGH,
+                    category = "missed",
+                    useAlarmAttributes = true
+                )
+                createCategoryChannel(
+                    id = CHANNEL_STREAKS,
+                    name = "Achievements & Streaks",
+                    description = "Medication adherence milestones and celebration alerts",
+                    importance = NotificationManager.IMPORTANCE_HIGH,
+                    category = "taken"
+                )
+                createCategoryChannel(
+                    id = CHANNEL_QUOTES,
+                    name = "Health Quotes & Encouragement",
+                    description = "Motivational quotes, daily wisdom, and adherence summaries",
+                    importance = NotificationManager.IMPORTANCE_DEFAULT,
+                    category = "quotes"
+                )
+                createCategoryChannel(
+                    id = CHANNEL_WELLNESS,
+                    name = "Wellness Check-Ins",
+                    description = "Evening health check-ins and wellness log prompts",
+                    importance = NotificationManager.IMPORTANCE_DEFAULT,
+                    category = "quotes"
+                )
+                createCategoryChannel(
+                    id = CHANNEL_HYDRATION,
+                    name = "Hydration Reminders",
+                    description = "Periodic hydration breaks and water tracking",
+                    importance = NotificationManager.IMPORTANCE_DEFAULT,
+                    category = "hydration"
+                )
+                createCategoryChannel(
+                    id = CHANNEL_REFILL,
+                    name = "Refill Alerts",
+                    description = "Low stock medication warnings and refill reminders",
+                    importance = NotificationManager.IMPORTANCE_HIGH,
+                    category = "refill"
+                )
             }
 
             // Launch intent when tapped
@@ -387,9 +380,15 @@ class AlarmReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            val defaultSoundUri = RingtoneManager.getDefaultUri(
-                if (notifType == "missed_alert" || !isEventNotification) RingtoneManager.TYPE_ALARM else RingtoneManager.TYPE_NOTIFICATION
-            ) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            // Resolve the custom sound URI from user preferences for this notification type.
+            // SoundPrefsReader reads from Device-Protected SharedPreferences written by
+            // NativeAlarmPlugin.saveSoundPrefs() — no WebView or network needed.
+            val customSoundUri = SoundPrefsReader.getSoundUriForNotificationType(context, notifType)
+            val defaultSoundUri = customSoundUri
+                ?: RingtoneManager.getDefaultUri(
+                    if (notifType == "missed_alert" || !isEventNotification) RingtoneManager.TYPE_ALARM
+                    else RingtoneManager.TYPE_NOTIFICATION
+                ) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
             val isHighPriority = notifType in listOf("missed_alert", "streak", "refill", "low_stock") || !isEventNotification
 

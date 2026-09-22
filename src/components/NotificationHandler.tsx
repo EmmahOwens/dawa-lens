@@ -84,36 +84,52 @@ export const NotificationHandler = () => {
                 }
                 return;
               }
-              soundService.playForCategory("missed").catch(() => {});
+              soundService.tryPlayForCategory("missed");
               toast.error(notification.title || "Missed Dose Alert", {
                 description: notification.body,
                 duration: 6000,
               });
               return;
             } else if (notifType === "streak" || notifType === "encouragement") {
-              soundService.playForCategory("taken").catch(() => {});
+              soundService.tryPlayForCategory("taken");
               toast.success(notification.title || "Health Milestone", {
                 description: notification.body,
                 duration: 5000,
               });
               return;
             } else if (notifType === "hydration") {
-              soundService.playForCategory("hydration").catch(() => {});
+              soundService.tryPlayForCategory("hydration");
               toast.info(notification.title || "Hydration Reminder", {
                 description: notification.body,
                 duration: 5000,
               });
               return;
             } else if (notifType === "schedule_adjusted" || notifType === "daily_quote" || notifType === "wellness_nudge") {
-              soundService.playForCategory("quotes").catch(() => {});
+              soundService.tryPlayForCategory("quotes");
               toast.info(notification.title || "Health Reminder", {
                 description: notification.body,
                 duration: 5000,
               });
               return;
             } else if (notifType === "refill") {
-              soundService.playForCategory("refill").catch(() => {});
+              soundService.tryPlayForCategory("refill");
               toast.warning(notification.title || "Refill Alert", {
+                description: notification.body,
+                duration: 5000,
+              });
+              return;
+            } else if (notifType === "low_stock") {
+              // Bug 5 fix: low_stock was silently falling through without a sound
+              soundService.tryPlayForCategory("refill");
+              toast.warning(notification.title || "Low Stock Alert", {
+                description: notification.body,
+                duration: 5000,
+              });
+              return;
+            } else if (notifType === "evening_checkin") {
+              // Bug 5 fix: evening_checkin was silently falling through without a sound
+              soundService.tryPlayForCategory("quotes");
+              toast.info(notification.title || "Evening Check-In", {
                 description: notification.body,
                 duration: 5000,
               });
@@ -122,7 +138,7 @@ export const NotificationHandler = () => {
 
             const isReminder = !!extra.reminderId;
             if (isReminder) {
-              soundService.playForCategory("medication").catch(() => {});
+              soundService.tryPlayForCategory("medication");
               toast.info(`Reminder: ${notification.title}`, {
                 description: notification.body,
                 duration: 5000,
@@ -191,6 +207,8 @@ export const NotificationHandler = () => {
                     patientId: targetPatientId ?? null,
                     action: 'skipped'
                   });
+                  // Bug 6 fix: play the skipped sound on the Skip notification action
+                  soundService.tryPlayForCategory("skipped");
                   toast.warning(`${medicineName || "Dose"} skipped.`);
                 } catch (err) {
                   console.error('Failed to skip dose from notification:', err);

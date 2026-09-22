@@ -19,6 +19,20 @@ export interface AlarmNotification {
   triggerAtMillis: number;
   /** Optional JSON string payload passed back in notification extras. */
   extra?: string;
+  /**
+   * Optional Android notification channel ID to use for this alarm.
+   * When provided, AlarmReceiver will post to this channel (which must
+   * already exist with the correct sound). Falls back to the default
+   * channel for the notification type if omitted.
+   */
+  channelId?: string;
+  /**
+   * Optional Android raw resource name (without extension) of the custom
+   * notification sound, e.g. "mixkit_long_pop_2358".
+   * AlarmReceiver uses this to build the android.resource:// URI and set
+   * the sound on both the channel and the notification builder.
+   */
+  soundName?: string;
 }
 
 export interface AuthoritativeReminderConfig {
@@ -123,6 +137,23 @@ export interface NativeAlarmPlugin {
 
   /** Opens the system App Details / App Info screen directly. */
   openAppInfoSettings?(): Promise<void>;
+
+  /**
+   * Option A sound preference bridge.
+   * Persists the user's per-category sound selections to Android SharedPreferences
+   * (readable by SoundPrefsReader.kt even when the app is killed).
+   * Also creates per-category notification channels with the correct custom sound URI
+   * and deletes any stale channels whose sound was changed.
+   *
+   * @param options.enabled        Whether notification sounds are enabled globally.
+   * @param options.categories     JSON string of Record<category, androidResourceName>.
+   * @param options.staleChannelIds JSON string of string[] — channel IDs to delete.
+   */
+  saveSoundPrefs?(options: {
+    enabled: boolean;
+    categories: string;
+    staleChannelIds: string;
+  }): Promise<void>;
 }
 
 const NativeAlarm = registerPlugin<NativeAlarmPlugin>('NativeAlarm');
