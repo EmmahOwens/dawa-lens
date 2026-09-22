@@ -119,42 +119,53 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 mt-auto">
-        <div className={`flex flex-col gap-4 rounded-[1.5rem] bg-card/50 p-4 border border-border/40 shadow-sm ${collapsed ? 'items-center px-2' : 'hover:border-primary/20 transition-colors duration-300'}`}>
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border-2 border-background shadow-md">
+      <SidebarFooter className="p-3 mt-auto">
+        <motion.div
+          whileHover={!collapsed ? { scale: 1.01 } : {}}
+          transition={{ type: "spring", stiffness: 400, damping: 20 }}
+          className={`relative flex items-center gap-2.5 rounded-2xl p-2.5 border border-border/30 bg-gradient-to-br from-card/80 to-background/60 shadow-sm backdrop-blur-sm overflow-hidden transition-all duration-300 ${
+            collapsed ? 'justify-center px-1.5' : 'hover:border-primary/25 hover:shadow-primary/5 hover:shadow-md'
+          }`}
+        >
+          {/* Subtle ambient glow */}
+          {!collapsed && (
+            <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+          )}
+
+          <div className="relative shrink-0">
+            <Avatar className="h-8 w-8 border-[1.5px] border-primary/20 shadow-sm ring-2 ring-background">
               <AvatarImage src="" alt={userProfile?.name || "User"} />
-              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground font-black text-xs">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-black text-[11px]">
                 {userProfile?.name?.charAt(0) || "U"}
               </AvatarFallback>
             </Avatar>
-            {!collapsed && (
-              <div className="flex flex-col min-w-0">
-                <span className="text-[13px] font-black truncate leading-tight text-foreground/90">
-                  {userProfile?.name || "Health User"}
-                </span>
-                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider truncate mt-0.5">
-                  {isProfessionalMode ? "CHW Professional" : "Personal"}
-                </span>
-              </div>
-            )}
+            {/* Online indicator */}
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-success rounded-full border-[1.5px] border-background shadow-sm" />
           </div>
-          
+
           {!collapsed && (
-            <div className="pt-3 mt-1 border-t border-border/40 flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-success font-black text-[9px] uppercase tracking-widest bg-success/10 px-2 py-1 rounded-full border border-success/20">
-                <ShieldCheck size={12} />
-                <span>Verified</span>
+            <div className="flex-1 min-w-0 flex items-center justify-between gap-1">
+              <div className="min-w-0">
+                <p className="text-[11.5px] font-black truncate leading-tight text-foreground/90">
+                  {userProfile?.name || "Health User"}
+                </p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <ShieldCheck size={9} className="text-success shrink-0" />
+                  <span className="text-[9px] text-success font-bold uppercase tracking-wider truncate">
+                    {isProfessionalMode ? "Professional" : "Verified"}
+                  </span>
+                </div>
               </div>
-              <button 
+              <button
                 onClick={logoutUser}
-                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all active:scale-95"
+                aria-label="Log out"
+                className="shrink-0 p-1.5 text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all active:scale-90"
               >
-                <LogOut size={14} />
+                <LogOut size={13} />
               </button>
             </div>
           )}
-        </div>
+        </motion.div>
       </SidebarFooter>
     </Sidebar>
   );

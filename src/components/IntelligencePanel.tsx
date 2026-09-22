@@ -1,31 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, ChevronLeft, LayoutDashboard, Scan, Heart,
-  History, Settings, Info, Sparkles, Bot, Maximize2, Send, ArrowRight
+  History, Settings, Info, Sparkles, Bot
 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { AlertCircle } from "@/lib/icons";
-import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 
-const SAMPLE_PROMPTS = [
-  "Does Panadol interact with Ibuprofen?",
-  "Add a medicine reminder for 8:00 AM...",
-  "Is it safe to take my pills with milk?",
-  "How many days of meds do I have left?",
-  "Log my morning dose of Metformin...",
-  "What are the side effects of Amoxicillin?",
-  "Can you help me build a healthy routine?"
+
+const POPUP_PHRASES = [
+  "Tap me! 👋",
+  "Want to know about your health?",
+  "Check drug interactions 💊",
+  "How's your med supply?",
+  "I'm your medical copilot!",
+  "Ask me anything health-related",
+  "Need a reminder set? 🔔",
+  "Is it safe to mix those meds?",
+  "Your AI health buddy is here!",
+  "Let's talk about your wellness ✨",
 ];
 
-const QUICK_PROMPTS = [
-  { label: "Drug Safety", prompt: "Does Panadol interact with Ibuprofen?" },
-  { label: "Add Reminder", prompt: "Add a medicine reminder" },
-  { label: "Med Stock", prompt: "How many days of meds do I have left?" },
-];
+function usePopupPhrase(phrases: string[], intervalMs = 3000) {
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const cycle = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIndex((i) => (i + 1) % phrases.length);
+        setVisible(true);
+      }, 400);
+    }, intervalMs);
+    return () => clearInterval(cycle);
+  }, [phrases.length, intervalMs]);
+
+  return { phrase: phrases[index], visible };
+}
+
 
 // Widgets
 import { DashboardWidget } from "./intelligence/DashboardWidget";
@@ -49,17 +65,10 @@ export function IntelligencePanel() {
     isDawaGPTOpen, openDawaGPTWithPrompt, isOnline
   } = useApp();
 
-  const [inputQuery, setInputQuery] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
 
-  const placeholder = useTypewriterPlaceholder(SAMPLE_PROMPTS, {
-    isPaused: isFocused || inputQuery !== ""
-  });
 
   const handleLaunch = (prompt?: string) => {
-    const textToPass = (prompt || inputQuery).trim();
-    openDawaGPTWithPrompt(textToPass || undefined);
-    setInputQuery("");
+    openDawaGPTWithPrompt(prompt || undefined);
   };
 
   const renderContextualWidget = () => {
@@ -170,89 +179,100 @@ export function IntelligencePanel() {
         </AnimatePresence>
       </div>
 
-      {/* Pinned Bottom DawaGPT AI Command Deck */}
-      <div className="p-4 border-t border-border/50 bg-background/80 dark:bg-card/60 backdrop-blur-2xl shrink-0 z-20">
-        <div className="rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/[0.08] to-primary/[0.02] p-3.5 shadow-sm hover:border-primary/35 transition-all duration-300 group">
-          
-          {/* Header Row */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-primary/15 border border-primary/25 flex items-center justify-center text-primary shadow-inner">
-                <Bot size={15} />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-black tracking-wide text-foreground">DawaGPT AI</span>
-                  <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-                </div>
-                <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">
-                  {isOnline ? "Medical Copilot" : "Offline"}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => handleLaunch()}
-              aria-label="Expand DawaGPT"
-              className="flex items-center gap-1 text-[10px] font-bold text-primary hover:text-primary-foreground hover:bg-primary transition-all duration-200 border border-primary/30 bg-primary/10 rounded-full px-2.5 py-1 active:scale-95 shadow-sm"
-            >
-              <Maximize2 size={10} />
-              <span>Expand</span>
-            </button>
-          </div>
-
-          {/* Interactive Trigger Input Bar */}
-          <div 
-            onClick={() => {
-              if (!inputQuery) handleLaunch();
-            }}
-            className="flex items-center gap-2 bg-background/90 dark:bg-background/60 border border-border/70 rounded-xl p-1.5 pl-3 shadow-inner hover:border-primary/40 focus-within:border-primary/50 transition-all cursor-text"
-          >
-            <Sparkles size={13} className="text-primary/70 shrink-0" />
-            <input
-              type="text"
-              value={inputQuery}
-              onChange={(e) => setInputQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && isOnline) {
-                  handleLaunch(inputQuery);
-                }
-              }}
-              disabled={!isOnline}
-              placeholder={isOnline ? (placeholder || "Ask DawaGPT anything...") : "DawaGPT is offline..."}
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              className="flex-1 bg-transparent text-[12px] font-medium outline-none placeholder:text-muted-foreground/60 min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isOnline) handleLaunch(inputQuery);
-              }}
-              disabled={!isOnline}
-              aria-label="Send prompt"
-              className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all shrink-0 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {inputQuery.trim() ? <Send size={12} /> : <ArrowRight size={12} />}
-            </button>
-          </div>
-
-          {/* Quick Prompts Chips */}
-          <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto no-scrollbar">
-            {QUICK_PROMPTS.map((item, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleLaunch(item.prompt)}
-                className="whitespace-nowrap px-2.5 py-1 rounded-lg bg-muted/40 hover:bg-primary/10 border border-border/50 hover:border-primary/30 text-[10px] font-semibold text-muted-foreground hover:text-primary transition-all active:scale-95 shrink-0 shadow-xs"
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-        </div>
-      </div>
+      {/* Pinned Bottom DawaGPT AI — Compact Icon with Animated Popups */}
+      <DawaGPTMiniButton onLaunch={handleLaunch} isOnline={isOnline} />
 
     </aside>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DawaGPT Mini Button — animated icon-only compact section
+// ---------------------------------------------------------------------------
+function DawaGPTMiniButton({
+  onLaunch,
+  isOnline,
+}: {
+  onLaunch: () => void;
+  isOnline: boolean;
+}) {
+  const { phrase, visible } = usePopupPhrase(POPUP_PHRASES, 3200);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div className="px-4 pb-4 pt-2 border-t border-border/40 bg-background/80 dark:bg-card/60 backdrop-blur-2xl shrink-0 z-20">
+      <div
+        className="relative flex items-center justify-center py-3"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* Floating popup phrase */}
+        <AnimatePresence mode="wait">
+          {visible && (
+            <motion.div
+              key={phrase}
+              initial={{ opacity: 0, y: 8, scale: 0.88 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.88 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 pointer-events-none z-30"
+            >
+              <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg shadow-primary/30 whitespace-nowrap border border-primary/30 backdrop-blur-sm">
+                {phrase}
+                {/* tail */}
+                <span className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-1.5 overflow-hidden">
+                  <span className="block w-2 h-2 bg-primary rotate-45 mx-auto -translate-y-1" />
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* The animated Bot icon button */}
+        <motion.button
+          onClick={() => onLaunch()}
+          disabled={!isOnline}
+          aria-label="Open DawaGPT AI"
+          whileHover={{ scale: 1.12, rotate: [0, -6, 6, -4, 4, 0] }}
+          whileTap={{ scale: 0.93 }}
+          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary via-primary/90 to-primary/70 text-primary-foreground flex items-center justify-center shadow-xl shadow-primary/35 hover:shadow-primary/50 transition-shadow disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {/* Pulsing ring */}
+          <motion.span
+            className="absolute inset-0 rounded-2xl ring-2 ring-primary/40"
+            animate={isOnline ? { scale: [1, 1.18, 1], opacity: [0.6, 0, 0.6] } : {}}
+            transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
+          />
+          {/* Orbiting sparkle */}
+          <motion.span
+            className="absolute top-0.5 right-0.5 text-yellow-300"
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
+          >
+            <Sparkles size={10} />
+          </motion.span>
+
+          <motion.div
+            animate={hovered ? { rotate: [0, -8, 8, 0], y: [0, -2, 0] } : { rotate: 0, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Bot size={26} strokeWidth={2} />
+          </motion.div>
+
+          {/* Online dot */}
+          <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background flex items-center justify-center ${isOnline ? "bg-emerald-500" : "bg-amber-400"}`}>
+            {isOnline && (
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+            )}
+          </span>
+        </motion.button>
+      </div>
+
+      {/* Sub-label */}
+      <p className="text-center text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 mt-1 select-none">
+        DawaGPT AI
+      </p>
+    </div>
   );
 }
