@@ -47,7 +47,8 @@ function Top5Card({
   isSelected,
   onSelect,
   accentClass,
-  accentText,
+  accentSolid,
+  isPharmacyTab,
   route,
 }: {
   outlet: NdaPharmacy;
@@ -55,10 +56,13 @@ function Top5Card({
   isSelected: boolean;
   onSelect: () => void;
   accentClass: string;
-  accentText: string;
+  accentSolid: string;
+  isPharmacyTab: boolean;
   route: ReturnType<typeof useNearbyPharmacies>["route"];
 }) {
   const rank = index + 1;
+  const distanceKm = isSelected && route ? route.distanceKm : outlet.distanceKm;
+
   return (
     <button
       key={outlet.id}
@@ -71,17 +75,27 @@ function Top5Card({
     >
       <div className="flex items-center justify-between gap-1 mb-1">
         <span
-          className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black ${
-            isSelected ? `${accentText} text-white` : "bg-muted text-muted-foreground"
+          className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 transition-colors ${
+            isSelected ? accentSolid : "bg-muted text-muted-foreground"
           }`}
         >
           #{rank}
         </span>
-        <span className={`text-[11px] font-black ${accentText}`}>
-          {(isSelected && route ? route.distanceKm : outlet.distanceKm) !== undefined
-            ? `${isSelected && route ? route.distanceKm : outlet.distanceKm} km`
-            : ""}
-        </span>
+        {distanceKm !== undefined && (
+          <span
+            className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-black border tracking-tight transition-colors ${
+              isPharmacyTab
+                ? isSelected
+                  ? "bg-teal-500/20 border-teal-500/40 text-teal-800 dark:text-teal-200"
+                  : "bg-teal-500/10 border-teal-500/20 text-teal-700 dark:text-teal-300"
+                : isSelected
+                  ? "bg-amber-500/20 border-amber-500/40 text-amber-800 dark:text-amber-200"
+                  : "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300"
+            }`}
+          >
+            {distanceKm} km
+          </span>
+        )}
       </div>
       <p className="text-xs font-bold text-foreground line-clamp-1 leading-snug">
         {outlet.name}
@@ -271,8 +285,11 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
     ? "bg-teal-500/10 border-teal-500 ring-teal-500/30"
     : "bg-amber-500/10 border-amber-500 ring-amber-500/30";
   const accentText = isPharmacyTab
-    ? "text-teal-600 dark:text-teal-400 bg-teal-600"
-    : "text-amber-600 dark:text-amber-400 bg-amber-600";
+    ? "text-teal-600 dark:text-teal-400"
+    : "text-amber-600 dark:text-amber-400";
+  const accentSolid = isPharmacyTab
+    ? "bg-teal-600 text-white"
+    : "bg-amber-600 text-white";
   const accentBadge = isPharmacyTab
     ? "bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400"
     : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400";
@@ -524,7 +541,8 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                       isSelected={selectedPharmacy?.id === outlet.id}
                       onSelect={() => setSelectedPharmacy(outlet)}
                       accentClass={accentClass}
-                      accentText={isPharmacyTab ? "text-teal-600 dark:text-teal-400 bg-teal-600" : "text-amber-600 dark:text-amber-400 bg-amber-600"}
+                      accentSolid={accentSolid}
+                      isPharmacyTab={isPharmacyTab}
                       route={route}
                     />
                   ))}
