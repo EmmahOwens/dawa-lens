@@ -17,6 +17,7 @@ import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { NativeService } from "@/services/nativeService";
+import { NotificationSoundSettings } from "@/components/settings/NotificationSoundSettings";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -681,7 +682,12 @@ export default function SettingsPage() {
           </div>
         </motion.div>
 
-        {/* 4. Account Management */}
+        {/* 5. Notification Sounds & Audio Tones */}
+        <motion.div variants={itemVariants} className="premium-card">
+          <NotificationSoundSettings />
+        </motion.div>
+
+        {/* 6. Account Management */}
         <motion.div variants={itemVariants} className="premium-card">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 rounded-xl bg-muted text-muted-foreground">

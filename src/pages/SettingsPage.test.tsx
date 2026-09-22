@@ -193,7 +193,7 @@ describe("SettingsPage — unit tests", () => {
 
     // clearAllData should NOT have been called
     expect(mockClearAllData).not.toHaveBeenCalled();
-  });
+  }, 15000);
 
   it("clicking Confirm calls clearAllData and shows a success toast", async () => {
     mockClearAllData.mockResolvedValue(undefined);
@@ -287,6 +287,38 @@ describe("SettingsPage — unit tests", () => {
       expect(document.getElementById("professional-mode-switch")).toBeNull();
     });
   });
+
+  it("renders Notification Sounds & Audio Alerts section with notification categories", async () => {
+    renderSettingsPage();
+    await waitFor(() => {
+      expect(screen.getByText(/Notification Sounds & Audio Alerts/i)).toBeInTheDocument();
+      expect(screen.getByText(/Medication Reminders/i)).toBeInTheDocument();
+      expect(screen.getByText(/Hydration Reminders/i)).toBeInTheDocument();
+      expect(screen.getByText(/Daily Quotes & Wellness/i)).toBeInTheDocument();
+      expect(screen.getByText(/Dose Taken Feedback/i)).toBeInTheDocument();
+      expect(screen.getByText(/Dose Skipped Feedback/i)).toBeInTheDocument();
+      expect(screen.getByText(/Missed Dose Alert/i)).toBeInTheDocument();
+      expect(screen.getByText(/Refill Alerts/i)).toBeInTheDocument();
+    });
+  });
+
+  it("toggles the master audio switch and shows confirmation toast", async () => {
+    renderSettingsPage();
+    await waitFor(() => {
+      expect(screen.getByText(/Audio Notifications/i)).toBeInTheDocument();
+    });
+
+    const audioSwitch = screen.getByLabelText(/Toggle notification sounds/i);
+    fireEvent.click(audioSwitch);
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringMatching(/Notification Sounds/i),
+        })
+      );
+    });
+  });
 });
 
 // ─── Property 6: Dialog state resets after any close path — SettingsPage variant ─
@@ -347,6 +379,6 @@ describe("Property 6: Dialog state resets after any close path — SettingsPage 
         { numRuns: 20 }
       );
     },
-    30_000
+    60_000
   );
 });

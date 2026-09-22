@@ -27,5 +27,12 @@ if (typeof window !== "undefined") {
   if (!window.URL.revokeObjectURL) {
     window.URL.revokeObjectURL = () => {};
   }
+  if (!window.ResizeObserver) {
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
 }
 

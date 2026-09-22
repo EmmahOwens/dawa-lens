@@ -635,8 +635,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/NotificationHandler.tsx": {
-    "mtime": 1789042229.2578359,
-    "ast_hash": "04ca76c865b9b47221c84d5fceb02735",
+    "mtime": 1790071355.1345286,
+    "ast_hash": "8f54bce7e54f8a9498f1976a39fedcaa",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/OfflineOverlay.tsx": {
@@ -1055,8 +1055,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1789040024.843224,
-    "ast_hash": "c00418861e96ee9602238836d1cbbf84",
+    "mtime": 1790071341.929468,
+    "ast_hash": "e1dcc9fec1ce86e1f768fec48830a4df",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1255,13 +1255,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.test.tsx": {
-    "mtime": 1788610895.0050008,
-    "ast_hash": "4214040b7947269492164cb536f2c9e9",
+    "mtime": 1790071579.4573195,
+    "ast_hash": "70dfff5c96d12053fd3ca28918939345",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.tsx": {
-    "mtime": 1790069524.8863297,
-    "ast_hash": "e64032e11c1af3a289f6eb87bcaebd00",
+    "mtime": 1790071325.9963923,
+    "ast_hash": "df5fb58c75899aa2fe52188a49408f47",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
@@ -1450,8 +1450,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/test/setup.ts": {
-    "mtime": 1789999367.3007736,
-    "ast_hash": "e795986c321dac9530c7420c7db75226",
+    "mtime": 1790071482.5700288,
+    "ast_hash": "78127dda7bdf0a9a1d34628968a03d14",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/types/api.ts": {
@@ -4392,6 +4392,121 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/vendor-BKI1LBYY.js": {
     "mtime": 1790002457.1095543,
     "ast_hash": "05f9961ecd65ce70f6b713cb40648a76",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/settings/NotificationSoundSettings.tsx": {
+    "mtime": 1790072543.445077,
+    "ast_hash": "1ed69cb46c6be7e18ba301d2d8e1971c",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/soundService.test.ts": {
+    "mtime": 1790071415.790785,
+    "ast_hash": "1ca2e92d4d5f9caf873704395956d82b",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/soundService.ts": {
+    "mtime": 1790071276.3831382,
+    "ast_hash": "6a672b1fc136429f41dac8067cf7c603",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_bell_notification_933.wav": {
+    "mtime": 1790071230.306876,
+    "ast_hash": "d8653ed1a2130faf0a780ab789a8e579",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_guitar_notification_alert_2320.wav": {
+    "mtime": 1790071230.316876,
+    "ast_hash": "eaa24f4b7df432f45e643f3b0bac3f81",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_happy_bells_notification_937.wav": {
+    "mtime": 1790071230.332876,
+    "ast_hash": "43d5a4f2098844e9dd4ce5e274668e38",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_long_pop_2358.wav": {
+    "mtime": 1790071230.350876,
+    "ast_hash": "5851fb3a6e94a950876d1bc1804f2973",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_positive_notification_951.wav": {
+    "mtime": 1790071230.3768764,
+    "ast_hash": "a6bd4d413623b3509faaf314be20703a",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_sci_fi_click_900.wav": {
+    "mtime": 1790071230.4018764,
+    "ast_hash": "8a383f6764b0bb44ca48c51d29ccf280",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_software_interface_back_2575.wav": {
+    "mtime": 1790071230.4228766,
+    "ast_hash": "a85c8c4465b53ae580cc641d106da99d",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_software_interface_start_2574.wav": {
+    "mtime": 1790071230.4328766,
+    "ast_hash": "8646c43bb795c88a170eed5d7893fcc3",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_uplifting_flute_notification_2317.wav": {
+    "mtime": 1790071230.4588768,
+    "ast_hash": "42e1b349a5e57245ad4630d888658d4f",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_urgent_simple_tone_loop_2976.wav": {
+    "mtime": 1790071230.483877,
+    "ast_hash": "7e42415db4430ee8ffca54185994c823",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-bell-notification-933.wav": {
+    "mtime": 1790071222.9508314,
+    "ast_hash": "d8653ed1a2130faf0a780ab789a8e579",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-guitar-notification-alert-2320.wav": {
+    "mtime": 1790071222.9518316,
+    "ast_hash": "eaa24f4b7df432f45e643f3b0bac3f81",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-happy-bells-notification-937.wav": {
+    "mtime": 1790071222.9528315,
+    "ast_hash": "43d5a4f2098844e9dd4ce5e274668e38",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-long-pop-2358.wav": {
+    "mtime": 1790071222.9528315,
+    "ast_hash": "5851fb3a6e94a950876d1bc1804f2973",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-positive-notification-951.wav": {
+    "mtime": 1790071222.9568315,
+    "ast_hash": "a6bd4d413623b3509faaf314be20703a",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-sci-fi-click-900.wav": {
+    "mtime": 1790071222.9568315,
+    "ast_hash": "8a383f6764b0bb44ca48c51d29ccf280",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-software-interface-back-2575.wav": {
+    "mtime": 1790071222.9568315,
+    "ast_hash": "a85c8c4465b53ae580cc641d106da99d",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-software-interface-start-2574.wav": {
+    "mtime": 1790071222.9578316,
+    "ast_hash": "8646c43bb795c88a170eed5d7893fcc3",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-uplifting-flute-notification-2317.wav": {
+    "mtime": 1790071222.9598315,
+    "ast_hash": "42e1b349a5e57245ad4630d888658d4f",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-urgent-simple-tone-loop-2976.wav": {
+    "mtime": 1790071222.9618316,
+    "ast_hash": "7e42415db4430ee8ffca54185994c823",
     "semantic_hash": ""
   }
 }

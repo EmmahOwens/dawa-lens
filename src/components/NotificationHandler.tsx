@@ -4,6 +4,7 @@ import { PushNotifications, ActionPerformed as PushActionPerformed } from "@capa
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "@/contexts/AppContext";
 import { registerNotificationActions, migrateNotificationChannels } from "@/services/reminderService";
+import { soundService } from "@/services/soundService";
 import { toast } from "sonner";
 import { addMinutes } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -83,19 +84,36 @@ export const NotificationHandler = () => {
                 }
                 return;
               }
+              soundService.playForCategory("missed").catch(() => {});
               toast.error(notification.title || "Missed Dose Alert", {
                 description: notification.body,
                 duration: 6000,
               });
               return;
             } else if (notifType === "streak" || notifType === "encouragement") {
+              soundService.playForCategory("taken").catch(() => {});
               toast.success(notification.title || "Health Milestone", {
                 description: notification.body,
                 duration: 5000,
               });
               return;
-            } else if (notifType === "schedule_adjusted" || notifType === "daily_quote" || notifType === "wellness_nudge" || notifType === "hydration") {
+            } else if (notifType === "hydration") {
+              soundService.playForCategory("hydration").catch(() => {});
+              toast.info(notification.title || "Hydration Reminder", {
+                description: notification.body,
+                duration: 5000,
+              });
+              return;
+            } else if (notifType === "schedule_adjusted" || notifType === "daily_quote" || notifType === "wellness_nudge") {
+              soundService.playForCategory("quotes").catch(() => {});
               toast.info(notification.title || "Health Reminder", {
+                description: notification.body,
+                duration: 5000,
+              });
+              return;
+            } else if (notifType === "refill") {
+              soundService.playForCategory("refill").catch(() => {});
+              toast.warning(notification.title || "Refill Alert", {
                 description: notification.body,
                 duration: 5000,
               });
@@ -104,6 +122,7 @@ export const NotificationHandler = () => {
 
             const isReminder = !!extra.reminderId;
             if (isReminder) {
+              soundService.playForCategory("medication").catch(() => {});
               toast.info(`Reminder: ${notification.title}`, {
                 description: notification.body,
                 duration: 5000,

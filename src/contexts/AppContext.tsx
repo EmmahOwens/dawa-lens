@@ -61,6 +61,7 @@ import {
 } from "../services/offlineQueue";
 import { onNetworkChange, hasNetwork, onForeground } from "../lib/appLifecycle";
 import { notify } from "../lib/notifications";
+import { soundService } from "../services/soundService";
 
 /**
  * Helper to check if proposed reminder times conflict with any other medication reminder
@@ -1642,6 +1643,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const logDose = async (log: Omit<DoseLog, "id" | "actionTime">) => {
+    // Play celebratory or acknowledgment audio feedback
+    if (log.action === "taken") {
+      soundService.playForCategory("taken").catch(() => {});
+    } else if (log.action === "skipped") {
+      soundService.playForCategory("skipped").catch(() => {});
+    }
+
     let newLog: DoseLog;
     const reminder = reminders.find((r) => r.id === log.reminderId);
     const effectivePatientId =
