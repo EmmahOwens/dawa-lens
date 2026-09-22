@@ -129,4 +129,38 @@ describe("useNearbyPharmacies Hook - Network Resilience & Location Fallback", ()
     expect(result.current.isUsingDefaultLocation).toBe(true);
     expect(result.current.isNetworkIssue).toBe(true); // geo error treated as network/location issue
   });
+
+  it("updates active coordinates and location label when a custom geocoded place is selected, and resets cleanly", () => {
+    mockIsOnline = true;
+    mockGeoState = {
+      location: { latitude: 0.3476, longitude: 32.5825, country: "Uganda", countryCode: "UG" },
+      status: "granted",
+      error: null,
+      requestLocation: vi.fn(),
+    };
+
+    const { result } = renderHook(() => useNearbyPharmacies());
+
+    expect(result.current.userCoords).toEqual([32.5825, 0.3476]);
+    expect(result.current.isCustomLocation).toBe(false);
+
+    // User selects a location from Photon typeahead (e.g. Ntinda, Kampala: [32.6136, 0.3544])
+    act(() => {
+      result.current.setCustomLocation([32.6136, 0.3544], "Ntinda, Kampala");
+    });
+
+    expect(result.current.userCoords).toEqual([32.6136, 0.3544]);
+    expect(result.current.activeCoords).toEqual([32.6136, 0.3544]);
+    expect(result.current.isCustomLocation).toBe(true);
+    expect(result.current.activeLocationLabel).toBe("Ntinda, Kampala");
+    expect(result.current.deviceCoords).toEqual([32.5825, 0.3476]);
+
+    // Reset back to live GPS location
+    act(() => {
+      result.current.resetToLiveLocation();
+    });
+
+    expect(result.current.userCoords).toEqual([32.5825, 0.3476]);
+    expect(result.current.isCustomLocation).toBe(false);
+  });
 });

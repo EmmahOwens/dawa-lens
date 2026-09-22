@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useGeolocation } from "./useGeolocation";
 import { useNetworkStatus } from "./useNetworkStatus";
+import { GeocodedPlace } from "../services/locationGeocodingService";
 import {
   NdaPharmacy,
   PharmacyRoute,
@@ -16,6 +17,12 @@ import {
   saveLastKnownLocation,
   DEFAULT_KAMPALA_COORDS,
 } from "../services/pharmacyService";
+
+export interface CustomPharmacyLocation {
+  coords: [number, number]; // [lng, lat]
+  label: string;
+  place?: GeocodedPlace;
+}
 
 export function useNearbyPharmacies() {
   const { location, status: geoStatus, requestLocation } = useGeolocation();
@@ -47,6 +54,32 @@ export function useNearbyPharmacies() {
     }
   }, [location, geoStatus, isNetworkIssue]);
 
+  // ── Custom Location (Geocoded via Photon / Pelias) ───────────────────────────
+  const [customLocation, setCustomLocationState] = useState<CustomPharmacyLocation | null>(null);
+
+  const setCustomLocation = useCallback(
+    (coords: [number, number], label: string, place?: GeocodedPlace) => {
+      setCustomLocationState({ coords, label, place });
+    },
+    []
+  );
+
+  const resetToLiveLocation = useCallback(() => {
+    setCustomLocationState(null);
+  }, []);
+
+  const activeCoords = useMemo<[number, number]>(() => {
+    if (customLocation) return customLocation.coords;
+    return userCoords;
+  }, [customLocation, userCoords]);
+
+  const activeLocationLabel = useMemo(() => {
+    if (customLocation) return customLocation.label;
+    if (isUsingPreviousLocation) return "Previous Saved Location";
+    if (isUsingDefaultLocation) return "Kampala (Default)";
+    return "Device GPS Location";
+  }, [customLocation, isUsingPreviousLocation, isUsingDefaultLocation]);
+
   // ── Shared state ─────────────────────────────────────────────────────────────
   const [transportMode, setTransportMode] = useState<"driving" | "walking">("driving");
   const [selectedPharmacy, setSelectedPharmacy] = useState<NdaPharmacy | null>(null);
@@ -59,7 +92,7 @@ export function useNearbyPharmacies() {
   const [radiusKm] = useState(25);
 
   const [rawTopPharmacies, setRawTopPharmacies] = useState<NdaPharmacy[]>(() =>
-    findTopNearestPharmacies(userCoords[1], userCoords[0], 5, true)
+    findTopNearestPharmacies(activeCoords[1], activeCoords[0], 5, true)
   );
 
   const top5Pharmacies = useMemo(() => {
@@ -73,7 +106,7 @@ export function useNearbyPharmacies() {
   const [dsSelectedDistrict, setDsSelectedDistrict] = useState("ALL");
 
   const [rawTopDrugShops, setRawTopDrugShops] = useState<NdaPharmacy[]>(() =>
-    findTopNearestDrugShops(userCoords[1], userCoords[0], 5)
+    findTopNearestDrugShops(activeCoords[1], activeCoords[0], 5)
   );
 
   const top5DrugShops = useMemo(() => {
@@ -84,13 +117,13 @@ export function useNearbyPharmacies() {
 
   // ── Pharmacy enrichment effect ───────────────────────────────────────────────
   useEffect(() => {
-    const initialCandidates = findTopNearestPharmacies(userCoords[1], userCoords[0], 10, true);
+    const initialCandidates = findTopNearestPharmacies(activeCoords[1], activeCoords[0], 10, true);
     setRawTopPharmacies(initialCandidates.slice(0, 5));
 
     if (!isOnline) return;
 
     let isCancelled = false;
-    fetchTopPharmaciesRoadDistances(userCoords, initialCandidates, transportMode)
+    fetchTopPharmaciesRoadDistances(activeCoords, initialCandidates, transportMode)
       .then((enriched) => {
         if (!isCancelled && enriched.length > 0) {
           const sorted = [...enriched]
@@ -111,17 +144,17 @@ export function useNearbyPharmacies() {
       });
 
     return () => { isCancelled = true; };
-  }, [userCoords, transportMode, isOnline]);
+  }, [activeCoords, transportMode, isOnline]);
 
   // ── Drug shop top-5 effect ────────────────────────────────────────────────────
   useEffect(() => {
-    const initialDsTop10 = findTopNearestDrugShops(userCoords[1], userCoords[0], 10);
+    const initialDsTop10 = findTopNearestDrugShops(activeCoords[1], activeCoords[0], 10);
     setRawTopDrugShops(initialDsTop10.slice(0, 5));
 
     if (!isOnline) return;
 
     let isCancelled = false;
-    fetchTopPharmaciesRoadDistances(userCoords, initialDsTop10, transportMode)
+    fetchTopPharmaciesRoadDistances(activeCoords, initialDsTop10, transportMode)
       .then((enriched) => {
         if (!isCancelled && enriched.length > 0) {
           const sorted = [...enriched]
@@ -142,28 +175,28 @@ export function useNearbyPharmacies() {
       });
 
     return () => { isCancelled = true; };
-  }, [userCoords, transportMode, isOnline]);
+  }, [activeCoords, transportMode, isOnline]);
 
   // ── Filtered lists ────────────────────────────────────────────────────────────
   const filteredPharmacies = useMemo(() =>
-    findNearbyPharmacies(userCoords[1], userCoords[0], {
+    findNearbyPharmacies(activeCoords[1], activeCoords[0], {
       radiusKm,
       district: selectedDistrict,
       query: searchQuery,
       onlyRetail: true,
       limit: 60,
     }),
-    [userCoords, radiusKm, selectedDistrict, searchQuery]
+    [activeCoords, radiusKm, selectedDistrict, searchQuery]
   );
 
   const filteredDrugShops = useMemo(() =>
-    findNearbyDrugShops(userCoords[1], userCoords[0], {
+    findNearbyDrugShops(activeCoords[1], activeCoords[0], {
       radiusKm: 100,
       district: dsSelectedDistrict,
       query: dsSearchQuery,
       limit: 60,
     }),
-    [userCoords, dsSelectedDistrict, dsSearchQuery]
+    [activeCoords, dsSelectedDistrict, dsSearchQuery]
   );
 
   // ── Auto-select nearest on load ───────────────────────────────────────────────
@@ -188,7 +221,7 @@ export function useNearbyPharmacies() {
       selectedPharmacy.latitude,
     ];
 
-    getPharmacyRoute(userCoords, pharmacyCoords, transportMode)
+    getPharmacyRoute(activeCoords, pharmacyCoords, transportMode)
       .then((res) => {
         if (!isCancelled) {
           setRoute(res);
@@ -245,7 +278,7 @@ export function useNearbyPharmacies() {
       });
 
     return () => { isCancelled = true; };
-  }, [selectedPharmacy?.id, userCoords, transportMode]);
+  }, [selectedPharmacy?.id, activeCoords, transportMode]);
 
   // ── District lists ────────────────────────────────────────────────────────────
   const allDistricts = useMemo(() => getAllDistricts(), []);
@@ -259,7 +292,14 @@ export function useNearbyPharmacies() {
   );
 
   return {
-    userCoords,
+    userCoords: activeCoords,
+    deviceCoords: userCoords,
+    activeCoords,
+    customLocation,
+    setCustomLocation,
+    resetToLiveLocation,
+    activeLocationLabel,
+    isCustomLocation: !!customLocation,
     locationSource,
     isUsingPreviousLocation,
     isUsingDefaultLocation,

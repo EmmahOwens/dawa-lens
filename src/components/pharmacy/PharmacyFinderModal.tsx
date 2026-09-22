@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useNearbyPharmacies } from "@/hooks/useNearbyPharmacies";
 import { PharmacyRouteMap } from "./PharmacyRouteMap";
+import { PharmacyLocationSearch } from "./PharmacyLocationSearch";
 import { getDirectionsUrl, formatDuration, NdaPharmacy } from "@/services/pharmacyService";
 import { Medicine } from "@/contexts/AppContext";
 import {
@@ -232,6 +233,12 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
 }) => {
   const {
     userCoords,
+    deviceCoords,
+    customLocation,
+    setCustomLocation,
+    resetToLiveLocation,
+    activeLocationLabel,
+    isCustomLocation,
     isUsingPreviousLocation,
     isNetworkIssue,
     geoStatus,
@@ -373,6 +380,23 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                 <CloseSquare size={20} />
               </button>
             </div>
+
+            {/* ── Address & Location Search (Photon / Pelias typeahead) ── */}
+            <PharmacyLocationSearch
+              currentCoords={userCoords}
+              activeLocationLabel={activeLocationLabel}
+              isCustomLocation={isCustomLocation}
+              onSelectPlace={(place) => {
+                setCustomLocation(place.coordinates, place.displayName, place);
+              }}
+              onResetToGps={() => {
+                resetToLiveLocation();
+                if (geoStatus !== "granted") {
+                  requestLocation();
+                }
+              }}
+              className="mt-3.5"
+            />
 
             {/* ── Outlet Type Switcher (Pharmacies / Drug Shops) ─── */}
             <div className="mt-4 flex rounded-2xl bg-muted/40 p-1 border border-border/40 gap-1">

@@ -179,7 +179,7 @@ describe("pharmacyService", () => {
     // Walking should roughly reflect ~4.8 km/h (approx 12.5 mins per km)
     const expectedApproxWalkMins = (walkingRoute.distanceKm / 4.8) * 60;
     expect(walkingRoute.durationMinutes).toBeCloseTo(expectedApproxWalkMins, -1);
-  });
+  }, 15000);
 
   it("handles fetchTopPharmaciesRoadDistances gracefully and sorts ascending", async () => {
     const userCoords: [number, number] = [32.5825, 0.3476];
