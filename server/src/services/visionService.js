@@ -122,12 +122,125 @@ const PILL_ID_SCHEMA = {
  */
 const toInlineImagePart = (imageBase64) => {
   if (!imageBase64 || typeof imageBase64 !== 'string') return null;
-  const data = imageBase64.replace(/^data:image\/\w+;base64,/, '').trim();
+  const data = imageBase64.replace(/^data:image\/\w+;base64,/, '').replace(/\s+/g, '').trim();
   // ~8MB of base64 ≈ 6MB binary — well above the client's 800px/75% JPEG output
   if (data.length < 100 || data.length > 8 * 1024 * 1024 || !/^[A-Za-z0-9+/=]+$/.test(data)) {
     return null;
   }
   return { inline_data: { mime_type: 'image/jpeg', data } };
+};
+
+/**
+ * Safely parses and repairs JSON returned by AI models.
+ * Handles markdown fences, outer commentary, trailing commas, and truncated arrays.
+ */
+export const safeParsePillIdJson = (raw) => {
+  if (!raw || typeof raw !== 'string') return null;
+
+  // 1. Strip markdown fences and whitespace
+  const cleaned = sanitizeJson(raw).trim();
+
+  // 2. Direct JSON.parse
+  try {
+    const direct = JSON.parse(cleaned);
+    if (direct && typeof direct === 'object') {
+      if (Array.isArray(direct.matches)) return direct;
+      if (direct.name) {
+        return {
+          matches: [direct],
+          imprints: direct.imprints || [],
+          labels: direct.labels || [],
+          summary: direct.summary || '',
+        };
+      }
+    }
+  } catch (_) {
+    // Continue to advanced recovery
+  }
+
+  // 3. Extract outermost JSON object if model included commentary/prologue/epilogue
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const extracted = cleaned.substring(firstBrace, lastBrace + 1);
+    try {
+      const parsedExtracted = JSON.parse(extracted);
+      if (parsedExtracted && typeof parsedExtracted === 'object') {
+        if (Array.isArray(parsedExtracted.matches)) return parsedExtracted;
+      }
+    } catch (_) {
+      // Continue to trailing comma fix
+    }
+  }
+
+  // 4. Fix trailing commas (e.g. `[ { ... }, ]` or `{ "a": 1, }`)
+  const withoutTrailingCommas = cleaned.replace(/,\s*([}\]])/g, '$1');
+  try {
+    const parsed = JSON.parse(withoutTrailingCommas);
+    if (parsed && typeof parsed === 'object') {
+      if (Array.isArray(parsed.matches)) return parsed;
+    }
+  } catch (_) {
+    // Continue to regex recovery
+  }
+
+  // 5. Truncated output recovery: extract candidate objects from partial response
+  try {
+    const matches = [];
+    const objectRegex = /\{[^{}]*"name"\s*:\s*"([^"]+)"[^{}]*\}/g;
+    let objMatch;
+    while ((objMatch = objectRegex.exec(cleaned)) !== null) {
+      const block = objMatch[0];
+      const nameMatch = block.match(/"name"\s*:\s*"([^"]+)"/);
+      const genericMatch = block.match(/"genericName"\s*:\s*"([^"]*)"/);
+      const confMatch = block.match(/"confidence"\s*:\s*([0-9.]+)/);
+      const safetyMatch = block.match(/"safetyFlag"\s*:\s*"([^"]*)"/);
+      const noticeMatch = block.match(/"unverifiedNotice"\s*:\s*"([^"]*)"/);
+
+      if (nameMatch && nameMatch[1] && nameMatch[1] !== 'Inconclusive Match') {
+        matches.push({
+          name: nameMatch[1].trim(),
+          genericName: genericMatch ? genericMatch[1].trim() : '',
+          confidence: confMatch ? (parseFloat(confMatch[1]) || 0.85) : 0.85,
+          safetyFlag: safetyMatch ? safetyMatch[1].trim() : '',
+          unverifiedNotice: noticeMatch ? noticeMatch[1].trim() : 'Visual match unverified. Confirm dosage and instructions from medication packaging or pharmacist.'
+        });
+      }
+    }
+
+    if (matches.length === 0) {
+      const nameRegex = /"name"\s*:\s*"([^"]+)"/g;
+      let nm;
+      while ((nm = nameRegex.exec(cleaned)) !== null) {
+        if (nm[1] && nm[1] !== 'Inconclusive Match') {
+          matches.push({
+            name: nm[1].trim(),
+            genericName: '',
+            confidence: 0.9,
+            safetyFlag: '',
+            unverifiedNotice: 'Visual match unverified. Confirm dosage and instructions from medication packaging or pharmacist.'
+          });
+        }
+      }
+    }
+
+    const summaryMatch = cleaned.match(/"summary"\s*:\s*"([^"]*)/);
+    const summary = summaryMatch ? summaryMatch[1] : 'Visual identification completed.';
+
+    if (matches.length > 0) {
+      console.warn(`[visionService] ⚠️ Recovered ${matches.length} candidate match(es) from partial AI output.`);
+      return {
+        matches,
+        imprints: [],
+        labels: [],
+        summary,
+      };
+    }
+  } catch (err) {
+    console.warn('[visionService] Regex recovery failed:', err.message);
+  }
+
+  return null;
 };
 
 /**
@@ -171,20 +284,6 @@ export const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
     parts.push(imagePart);
   }
 
-  const requestBody = {
-    contents: [
-      {
-        parts,
-      },
-    ],
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 700,
-      responseMimeType: 'application/json',
-      responseSchema: PILL_ID_SCHEMA,
-    },
-  };
-
   const candidateModels = Array.from(new Set([
     GEMINI_FLASH_MODEL,
     'gemini-2.5-flash',
@@ -197,6 +296,21 @@ export const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
 
   for (const model of candidateModels) {
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const modelGenConfig = {
+      temperature: 0.4,
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json',
+      responseSchema: PILL_ID_SCHEMA,
+    };
+    if (model.includes('2.') || model.includes('2.5') || model.includes('flash')) {
+      modelGenConfig.thinkingConfig = { thinkingBudget: 0 };
+    }
+
+    const requestBody = {
+      contents: [{ parts }],
+      generationConfig: modelGenConfig,
+    };
+
     const fn = async () => {
       return await axios.post(
         `${apiUrl}?key=${apiKey}`,
@@ -241,10 +355,9 @@ export const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
     throw new Error('Gemini returned an empty response');
   }
 
-  let parsed;
-  try {
-    parsed = JSON.parse(rawText);
-  } catch {
+  const parsed = safeParsePillIdJson(rawText);
+  if (!parsed || !parsed.matches || !Array.isArray(parsed.matches) || parsed.matches.length === 0) {
+    console.error('[visionService] ❌ Failed to parse Gemini response as JSON. Raw preview:', String(rawText).slice(0, 300));
     throw new Error('AI returned malformed data');
   }
 
@@ -254,8 +367,8 @@ export const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
   return {
     success: true,
     matches: enrichedMatches,
-    imprints: parsed.imprints || [],
-    labels: parsed.labels || [],
+    imprints: Array.isArray(parsed.imprints) ? parsed.imprints : [],
+    labels: Array.isArray(parsed.labels) ? parsed.labels : [],
     summary: parsed.summary || '',
     engine: `${usedModel}`,
   };
@@ -312,23 +425,15 @@ export const identifyWithDawaGPT = async (ocrText, patientAge) => {
   const result = await callAiWithFallback(messages, {
     isJson: true,
     priority: 'high',
-    maxTokens: 1000,
+    maxTokens: 2048,
     isComplex: true,
   });
 
   let parsedData = result;
   if (typeof result === 'string') {
-    try {
-      parsedData = JSON.parse(sanitizeJson(result));
-    } catch {
-      parsedData = {};
-    }
+    parsedData = safeParsePillIdJson(result) || {};
   } else if (result && !result.matches && typeof result.text === 'string') {
-    try {
-      parsedData = JSON.parse(sanitizeJson(result.text));
-    } catch {
-      parsedData = result;
-    }
+    parsedData = safeParsePillIdJson(result.text) || result;
   }
 
   const rawMatches = normaliseMatches(parsedData?.matches);

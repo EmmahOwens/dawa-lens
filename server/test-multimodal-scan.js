@@ -14,6 +14,7 @@ const originalGet = axios.get;
 axios.get = async () => ({ data: {} });
 
 let failGemini = false;
+let geminiCustomResponse = null;
 
 axios.post = async (url, data, config) => {
   interceptedUrl = url;
@@ -24,6 +25,20 @@ axios.post = async (url, data, config) => {
       const err = new Error('Service Unavailable: Gemini overloaded');
       err.response = { status: 503, data: { error: { message: 'Overloaded' } } };
       throw err;
+    }
+
+    if (geminiCustomResponse !== null) {
+      return {
+        data: {
+          candidates: [
+            {
+              content: {
+                parts: [{ text: geminiCustomResponse }]
+              }
+            }
+          ]
+        }
+      };
     }
 
     return {
@@ -162,12 +177,24 @@ async function runTests() {
   assert.strictEqual(res6.matches[0].name, 'Amoxicillin');
   console.log(`✅ Test 6 Passed: Direct DawaGPT fallback confirmed working.`);
 
+  // Test 7: Truncated/Malformed JSON recovery (e.g. cut off output from Revidol blister scan)
+  console.log('\n🔹 Test 7: Resilient recovery from truncated AI response (Revidol blister scan)');
+  failGemini = false;
+  geminiCustomResponse = '```json\n{"matches": [{"name": "REVIDOL", "genericName": "Paracetamol 500mg", "confidence": 0.99, "safetyFlag": "Do not exceed 4g in 24 hours", "unverifiedNotice": "Check package"}], "summary": "Revidol contains paracetamol used for pain';
+  const res7 = await visionService.identifyPill(dummyBase64Image, 35, '');
+  assert.ok(res7.success, 'Scan should recover and succeed from truncated JSON');
+  assert.strictEqual(res7.matches[0].name, 'REVIDOL');
+  assert.strictEqual(res7.matches[0].genericName, 'Paracetamol 500mg');
+  assert.strictEqual(res7.matches.length, 5, 'Should normalize to 5 matches');
+  console.log('✅ Test 7 Passed: Successfully recovered and parsed candidate matches from truncated output.');
+  geminiCustomResponse = null;
+
   // Reset flag and restore axios
   failGemini = false;
   axios.post = originalPost;
   axios.get = originalGet;
 
-  console.log('\n🎉 ALL MULTIMODAL, HYBRID & API FALLBACK SCAN TESTS PASSED!');
+  console.log('\n🎉 ALL MULTIMODAL, HYBRID, API FALLBACK & RECOVERY SCAN TESTS PASSED!');
 }
 
 runTests().catch(err => {
