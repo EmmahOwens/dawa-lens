@@ -237,8 +237,8 @@ export const NotificationHandler = () => {
                         body: `Time to take your ${dose || "prescribed"} dose of ${medicineName || "medicine"}`,
                         id: snoozeId,
                         schedule: { at: snoozeTime, allowWhileIdle: true },
-                        channelId: 'dawa_reminders_v2',
-                        sound: 'default',
+                        channelId: soundService.getChannelIdForCategory("medication"),
+                        sound: soundService.getAndroidResourceForCategory("medication") || "default",
                         actionTypeId: 'MEDICINE_REMINDER',
                         extra: extra
                       }
@@ -311,7 +311,7 @@ export const NotificationHandler = () => {
             const data = action.notification.data || {};
             if (data.route) {
               navigateRef.current(data.route);
-            } else if (data.channelId === "dawa_missed_v2" || data.type === "missed_alert") {
+            } else if (data.channelId?.startsWith("dawa_missed_") || data.channelId === "dawa_missed_v2" || data.type === "missed_alert") {
               navigateRef.current("/history");
             } else {
               navigateRef.current("/");

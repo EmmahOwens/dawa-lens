@@ -1352,12 +1352,19 @@ class NativeAlarmPlugin : Plugin() {
                     val category = keys.next()
                     val resourceName = catObj.optString(category, "default")
 
+                    val isSilent = !enabled || resourceName.isEmpty() || resourceName == "silent"
+
                     // Build the sound URI
-                    val soundUri: android.net.Uri? = SoundPrefsReader.buildSoundUri(ctx, resourceName)
-                        ?: android.media.RingtoneManager.getDefaultUri(
-                            if (category == "missed") android.media.RingtoneManager.TYPE_ALARM
+                    val soundUri: android.net.Uri? = if (isSilent) {
+                        null
+                    } else if (resourceName == "default") {
+                        android.media.RingtoneManager.getDefaultUri(
+                            if (category == "missed" || category == "medication") android.media.RingtoneManager.TYPE_ALARM
                             else android.media.RingtoneManager.TYPE_NOTIFICATION
                         )
+                    } else {
+                        SoundPrefsReader.buildSoundUri(ctx, resourceName)
+                    }
 
                     // Determine importance and audio usage based on category
                     val importance = when (category) {
@@ -1371,19 +1378,15 @@ class NativeAlarmPlugin : Plugin() {
                         else                   -> android.media.AudioAttributes.USAGE_NOTIFICATION
                     }
 
-                    val audioAttributes = android.media.AudioAttributes.Builder()
-                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setUsage(audioUsage)
-                        .build()
+                    val audioAttributes = if (!isSilent && soundUri != null) {
+                        android.media.AudioAttributes.Builder()
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(audioUsage)
+                            .build()
+                    } else null
 
                     // Channel ID encodes the resource name so a change forces a fresh channel
-                    val channelId = if (resourceName.isEmpty() || resourceName == "silent") {
-                        "dawa_${category}_silent_v1"
-                    } else if (resourceName == "default") {
-                        "dawa_${category}_default_v1"
-                    } else {
-                        "dawa_${category}_${resourceName}_v1"
-                    }
+                    val channelId = SoundPrefsReader.getChannelIdForCategory(ctx, category)
 
                     val channelName = when (category) {
                         "medication" -> "Medicine Reminders"
@@ -1398,11 +1401,13 @@ class NativeAlarmPlugin : Plugin() {
 
                     val channel = android.app.NotificationChannel(channelId, channelName, importance).apply {
                         description = "Dawa Lens notifications for $category"
-                        enableVibration(importance >= android.app.NotificationManager.IMPORTANCE_DEFAULT)
-                        if (category == "missed" || category == "medication") {
+                        enableVibration(importance >= android.app.NotificationManager.IMPORTANCE_DEFAULT && !isSilent)
+                        if ((category == "missed" || category == "medication") && !isSilent) {
                             vibrationPattern = longArrayOf(0, 500, 200, 500)
                         }
-                        if (soundUri != null) {
+                        if (isSilent) {
+                            setSound(null, null)
+                        } else if (soundUri != null) {
                             setSound(soundUri, audioAttributes)
                         }
                         lockscreenVisibility = androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC

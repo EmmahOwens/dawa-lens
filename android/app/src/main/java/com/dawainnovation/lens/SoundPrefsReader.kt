@@ -28,7 +28,7 @@ object SoundPrefsReader {
     private const val KEY_CATEGORIES = "categories"
 
     /** Category → raw resource name mapping. Matches DEFAULT_SOUND_PREFERENCES in soundService.ts. */
-    private val DEFAULTS = mapOf(
+    val DEFAULTS = mapOf(
         "medication" to "mixkit_software_interface_start_2574",
         "hydration"  to "mixkit_long_pop_2358",
         "quotes"     to "mixkit_uplifting_flute_notification_2317",
@@ -39,7 +39,7 @@ object SoundPrefsReader {
     )
 
     /** Notification type → SoundCategoryKey mapping (mirrors AlarmReceiver channel routing). */
-    private val TYPE_TO_CATEGORY = mapOf(
+    val TYPE_TO_CATEGORY = mapOf(
         "reminder"          to "medication",
         "missed_alert"      to "missed",
         "hydration"         to "hydration",
@@ -71,6 +71,13 @@ object SoundPrefsReader {
     fun isSoundEnabled(context: Context): Boolean =
         getPrefs(context).getBoolean(KEY_ENABLED, true)
 
+    /** Returns true if sound is disabled globally or set to silent for the category. */
+    fun isSilent(context: Context, category: String): Boolean {
+        if (!isSoundEnabled(context)) return true
+        val resource = getResourceNameForCategory(context, category)
+        return resource.isEmpty() || resource == "silent"
+    }
+
     /**
      * Returns the Android raw resource name for a given category key.
      * Falls back to the hardcoded default for that category if the preference is not set.
@@ -93,6 +100,28 @@ object SoundPrefsReader {
             }
         }
         return DEFAULTS[category] ?: "default"
+    }
+
+    /**
+     * Returns the deterministic sound-hashed NotificationChannel ID for a category.
+     * Matches soundService.getChannelIdForCategory and NativeAlarmPlugin.saveSoundPrefs:
+     *   "dawa_${category}_silent_v1"
+     *   "dawa_${category}_default_v1"
+     *   "dawa_${category}_${resourceName}_v1"
+     */
+    fun getChannelIdForCategory(context: Context, category: String): String {
+        val resourceName = getResourceNameForCategory(context, category)
+        return when {
+            resourceName.isEmpty() || resourceName == "silent" -> "dawa_${category}_silent_v1"
+            resourceName == "default" -> "dawa_${category}_default_v1"
+            else -> "dawa_${category}_${resourceName}_v1"
+        }
+    }
+
+    /** Convenience: sound-hashed NotificationChannel ID for a notification type. */
+    fun getChannelIdForNotificationType(context: Context, notifType: String): String {
+        val category = TYPE_TO_CATEGORY[notifType] ?: "medication"
+        return getChannelIdForCategory(context, category)
     }
 
     /**

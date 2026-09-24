@@ -14,6 +14,7 @@ import {
 } from "@capacitor/local-notifications";
 import { NativeAlarm, AlarmNotification } from "@/plugins/nativeAlarm";
 import { notify } from "@/lib/notifications";
+import { soundService } from "@/services/soundService";
 import { Capacitor } from "@capacitor/core";
 import { DoseLog, Reminder, WellnessLog } from "@/contexts/AppContext";
 import {
@@ -94,10 +95,24 @@ export async function createEngagementChannels(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   if (Capacitor.getPlatform() !== "android") return;
   try {
-    await LocalNotifications.createChannel({ id: CHANNEL_QUOTES,    name: "Daily Health Quotes",       description: "Motivational health quotes to keep you inspired",   importance: 3, vibration: false, sound: "default" });
-    await LocalNotifications.createChannel({ id: CHANNEL_WELLNESS,  name: "Wellness Reminders",        description: "Evening check-ins and wellness log nudges",         importance: 3, vibration: false, sound: "default" });
-    await LocalNotifications.createChannel({ id: CHANNEL_HYDRATION, name: "Hydration Reminders",       description: "Stay hydrated throughout the day",                  importance: 2, vibration: false, sound: "default" });
-    await LocalNotifications.createChannel({ id: CHANNEL_STREAKS,   name: "Achievements & Streaks",    description: "Celebrate your medication adherence milestones",    importance: 4, vibration: true,  sound: "default" });
+    const quotesResource = soundService.getAndroidResourceForCategory("quotes");
+    const hydrationResource = soundService.getAndroidResourceForCategory("hydration");
+
+    const quotesSound = quotesResource !== "default" && quotesResource !== "silent" ? quotesResource : undefined;
+    const hydrationSound = hydrationResource !== "default" && hydrationResource !== "silent" ? hydrationResource : undefined;
+
+    const quotesChannelId = soundService.getChannelIdForCategory("quotes");
+    const hydrationChannelId = soundService.getChannelIdForCategory("hydration");
+
+    // Dynamic sound-hashed channels
+    await LocalNotifications.createChannel({ id: quotesChannelId,    name: "Daily Health Quotes",       description: "Motivational health quotes to keep you inspired",   importance: 3, vibration: false, sound: quotesSound });
+    await LocalNotifications.createChannel({ id: hydrationChannelId, name: "Hydration Reminders",       description: "Stay hydrated throughout the day",                  importance: 3, vibration: false, sound: hydrationSound });
+
+    // Legacy fallback channels (importance: 3 for hydration so sounds play)
+    await LocalNotifications.createChannel({ id: CHANNEL_QUOTES,    name: "Daily Health Quotes",       description: "Motivational health quotes to keep you inspired",   importance: 3, vibration: false, sound: quotesSound });
+    await LocalNotifications.createChannel({ id: CHANNEL_WELLNESS,  name: "Wellness Reminders",        description: "Evening check-ins and wellness log nudges",         importance: 3, vibration: false, sound: quotesSound });
+    await LocalNotifications.createChannel({ id: CHANNEL_HYDRATION, name: "Hydration Reminders",       description: "Stay hydrated throughout the day",                  importance: 3, vibration: false, sound: hydrationSound });
+    await LocalNotifications.createChannel({ id: CHANNEL_STREAKS,   name: "Achievements & Streaks",    description: "Celebrate your medication adherence milestones",    importance: 4, vibration: true,  sound: quotesSound });
   } catch (err) {
     console.warn("[quotesService] Failed to create engagement channels:", err);
   }
@@ -216,8 +231,8 @@ async function scheduleDailyQuoteNotifications(
       title: "🌟 Daily Health Quote",
       body: quote,
       schedule: { at: fireDate, allowWhileIdle: true },
-      channelId: CHANNEL_QUOTES,
-      sound: "default",
+      channelId: soundService.getChannelIdForCategory("quotes"),
+      sound: soundService.getAndroidResourceForCategory("quotes") || "default",
       extra: { type: "daily_quote", route: "/" },
     });
     alarmBatch.push({
@@ -253,8 +268,8 @@ export async function schedulePostDoseEncouragementNotification(medicineName: st
         title: `💊 ${medicineName} — Logged!`,
         body: quote,
         schedule: { at: fireAt, allowWhileIdle: true },
-        channelId: CHANNEL_QUOTES,
-        sound: "default",
+        channelId: soundService.getChannelIdForCategory("quotes"),
+        sound: soundService.getAndroidResourceForCategory("quotes") || "default",
         extra: { type: "encouragement", route: "/" }
       }]
     });
@@ -347,7 +362,7 @@ async function scheduleHydrationReminders(
       const dateKey = `${startOfDay(addDays(now, i)).toISOString()}_${hour}`;
       const id = stringToHash("dawa_hydration_" + dateKey);
       const body = getHydrationQuote(fireDate, hIdx);
-      localBatch.push({ id, title: "💧 Hydration Reminder", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_HYDRATION, sound: "default", extra: { type: "hydration", route: "/" } });
+      localBatch.push({ id, title: "💧 Hydration Reminder", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: soundService.getChannelIdForCategory("hydration"), sound: soundService.getAndroidResourceForCategory("hydration") || "default", extra: { type: "hydration", route: "/" } });
       alarmBatch.push({ id, title: "💧 Hydration Reminder", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "hydration" }) });
       ids.push(id);
     }
@@ -384,7 +399,7 @@ async function scheduleWeeklyAdherenceSummary(
     const dateKey = startOfDay(addDays(now, daysUntilSunday + week * 7)).toISOString();
     const id = stringToHash("dawa_weekly_summary_" + dateKey);
     const body = getWeeklySummaryQuote(week, fireDate);
-    localBatch.push({ id, title: "📊 Your Weekly Health Summary", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_QUOTES, sound: "default", extra: { type: "weekly_summary", route: "/history" } });
+    localBatch.push({ id, title: "📊 Your Weekly Health Summary", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: soundService.getChannelIdForCategory("quotes"), sound: soundService.getAndroidResourceForCategory("quotes") || "default", extra: { type: "weekly_summary", route: "/history" } });
     alarmBatch.push({ id, title: "📊 Your Weekly Health Summary", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "weekly_summary" }) });
     ids.push(id);
   }

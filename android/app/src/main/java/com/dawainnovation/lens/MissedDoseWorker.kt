@@ -8,6 +8,7 @@ import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import android.media.AudioAttributes
 import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
@@ -245,28 +246,29 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
     private fun postMissedNotification(medicineName: String, dose: String, notifId: Int, timeStr: String, patientId: String?) {
         val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+        val channelId = SoundPrefsReader.getChannelIdForCategory(applicationContext, "missed")
+        val missedResourceName = SoundPrefsReader.getResourceNameForCategory(applicationContext, "missed")
+        val isSilent = missedResourceName.isEmpty() || missedResourceName == "silent"
+
+        val missedSoundUri: Uri? = if (isSilent) {
+            null
+        } else if (missedResourceName == "default") {
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        } else {
+            SoundPrefsReader.buildSoundUri(applicationContext, missedResourceName)
+        }
+
         // Create channel on Android O+ using the user-selected custom sound.
         // SoundPrefsReader reads Device-Protected SharedPreferences written by
         // NativeAlarmPlugin.saveSoundPrefs() so this works when the app is killed.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val missedResourceName = SoundPrefsReader.getResourceNameForCategory(applicationContext, "missed")
-            val missedSoundUri = SoundPrefsReader.buildSoundUri(applicationContext, missedResourceName)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
-            val audioAttributes = AudioAttributes.Builder()
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_ALARM)
-                .build()
-
-            // Channel ID encodes the resource name so a sound change forces a fresh channel
-            val channelId = if (missedResourceName.isEmpty() || missedResourceName == "silent") {
-                "dawa_missed_silent_v1"
-            } else if (missedResourceName == "default") {
-                "dawa_missed_default_v1"
-            } else {
-                "dawa_missed_${missedResourceName}_v1"
-            }
+            val audioAttributes = if (!isSilent && missedSoundUri != null) {
+                AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .build()
+            } else null
 
             val channel = NotificationChannel(
                 channelId,
@@ -274,9 +276,13 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Urgent alerts when a scheduled medication dose was missed"
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 400)
-                setSound(missedSoundUri, audioAttributes)
+                enableVibration(!isSilent)
+                if (!isSilent) vibrationPattern = longArrayOf(0, 400, 200, 400, 200, 400)
+                if (isSilent) {
+                    setSound(null, null)
+                } else if (missedSoundUri != null) {
+                    setSound(missedSoundUri, audioAttributes)
+                }
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
             }
             nm.createNotificationChannel(channel)
@@ -298,21 +304,6 @@ class MissedDoseWorker(context: Context, params: WorkerParameters) :
         )
 
         val doseLabel = if (dose.isNotEmpty()) " ($dose)" else ""
-
-        // Resolve the custom sound URI from user preferences
-        val missedResourceName = SoundPrefsReader.getResourceNameForCategory(applicationContext, "missed")
-        val missedSoundUri = SoundPrefsReader.buildSoundUri(applicationContext, missedResourceName)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
-        // Use the same sound-hashed channel ID as the channel we just created/ensured above
-        val channelId = if (missedResourceName.isEmpty() || missedResourceName == "silent") {
-            "dawa_missed_silent_v1"
-        } else if (missedResourceName == "default") {
-            "dawa_missed_default_v1"
-        } else {
-            "dawa_missed_${missedResourceName}_v1"
-        }
 
         val notification = NotificationCompat.Builder(applicationContext, channelId)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
