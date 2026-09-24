@@ -129,6 +129,18 @@ class RateLimitManager {
         rpd: 1500,
         tpd: 50000000,
       },
+      'gemini-2.0-flash': {
+        rpm: 10,
+        tpm: 250000,
+        rpd: 1500,
+        tpd: 50000000,
+      },
+      'gemini-1.5-flash': {
+        rpm: 15,
+        tpm: 1000000,
+        rpd: 1500,
+        tpd: 50000000,
+      },
       'gemini-pro': { rpm: 10, tpm: 250000, rpd: 1500, tpd: 50000000 },
 
       // ── Z.ai (GLM models) ────────────────────────────────────────────────────

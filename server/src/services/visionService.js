@@ -7,7 +7,7 @@ import { fetchDrugLabel, fetchNdcData } from './openFdaService.js';
 dotenv.config();
 
 // ── API Config ───────────────────────────────────────────────────────────────
-const GEMINI_FLASH_MODEL = 'gemini-3.5-flash';
+const GEMINI_FLASH_MODEL = process.env.GEMINI_SCAN_MODEL || 'gemini-2.5-flash';
 
 const getGeminiApiKeyForScan = () => {
   const key = process.env.GEMINI_API_KEY_2;
@@ -131,8 +131,6 @@ const normaliseMatches = (raw) => {
 const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
   const apiKey = getGeminiApiKeyForScan();
 
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FLASH_MODEL}:generateContent`;
-
   // Multimodal request: the photo is the primary identification source, the
   // on-device OCR text is a hint. Falls back to text-only when no valid
   // image arrives (older clients / offline flows).
@@ -155,39 +153,64 @@ const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
       responseSchema: PILL_ID_SCHEMA,
     },
   };
-  
-  const fn = async () => {
-    return await axios.post(
-      `${apiUrl}?key=${apiKey}`,
-      requestBody,
-      { timeout: 20000 }
-    );
-  };
-  
+
+  const candidateModels = Array.from(new Set([
+    GEMINI_FLASH_MODEL,
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+  ].filter(Boolean)));
+
   let response;
-  try {
-    // Best rate limiting techniques:
-    // - Enqueue under 'gemini-3.5-flash' rate limit config
-    // - priority: high
-    // - maxRetries: 3
-    // - failFast: false (queues request on rate limit instead of immediate failure)
-    response = await rateLimitManager.enqueue(fn, 'gemini-3.5-flash', requestBody.contents, 'high', 3, false);
-  } catch (err) {
-    const genericErr = new Error(`Gemini Text API error: ${err.message}`);
-    genericErr.status = err.response?.status;
+  let usedModel = GEMINI_FLASH_MODEL;
+  let lastError = null;
+
+  for (const model of candidateModels) {
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const fn = async () => {
+      return await axios.post(
+        `${apiUrl}?key=${apiKey}`,
+        requestBody,
+        { timeout: 20000 }
+      );
+    };
+
+    try {
+      // Best rate limiting techniques:
+      // - Enqueue under the matching model rate limit config (or 'gemini' fallback)
+      const rateLimitKey = rateLimitManager.configs[model] ? model : 'gemini';
+      response = await rateLimitManager.enqueue(fn, rateLimitKey, requestBody.contents, 'high', 3, false);
+      usedModel = model;
+      lastError = null;
+      break;
+    } catch (err) {
+      lastError = err;
+      const status = err.response?.status;
+      // If model not found (404) or bad request due to unsupported model name, try next candidate model
+      if (status === 404 || (status === 400 && err.response?.data?.error?.message?.toLowerCase().includes('model'))) {
+        console.warn(`[visionService] ⚠️ Model ${model} returned HTTP ${status}. Falling back to next candidate model...`);
+        continue;
+      }
+      break;
+    }
+  }
+
+  if (!response) {
+    const genericErr = new Error(`Gemini Text API error: ${lastError?.message || 'Unknown error'}`);
+    genericErr.status = lastError?.response?.status;
     throw genericErr;
   }
-  
+
   const candidate = response.data?.candidates?.[0];
   if (!candidate) {
     throw new Error('No response received from Gemini');
   }
-  
+
   const rawText = candidate.content?.parts?.[0]?.text;
   if (!rawText) {
     throw new Error('Gemini returned an empty response');
   }
-  
+
   let parsed;
   try {
     parsed = JSON.parse(rawText);
@@ -204,7 +227,7 @@ const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
     imprints: parsed.imprints || [],
     labels: parsed.labels || [],
     summary: parsed.summary || '',
-    engine: `${GEMINI_FLASH_MODEL}`,
+    engine: `${usedModel}`,
   };
 };
 
