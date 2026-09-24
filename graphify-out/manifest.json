@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/firebase.json": {
-    "mtime": 1789555167.5145295,
-    "ast_hash": "567144c44c95e4e756e10e8b322a5171",
+    "mtime": 1790240775.4099536,
+    "ast_hash": "334253d67c36fd0681958adfecb7ccdd",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/firestore.indexes.json": {
@@ -410,8 +410,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/rateLimitManager.js": {
-    "mtime": 1789821693.0122724,
-    "ast_hash": "3767cd12250e6e6153f69d2ad42d100d",
+    "mtime": 1790241498.563785,
+    "ast_hash": "05909c84a773e19090cc8eefba76bc82",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/reminderService.js": {
@@ -430,8 +430,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/visionService.js": {
-    "mtime": 1789110215.3778768,
-    "ast_hash": "975e86d58ed7ff6bc98bd562c220d53e",
+    "mtime": 1790241529.8543994,
+    "ast_hash": "1ab701877c95c59fa6466b52d91b06c9",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/wellnessService.js": {
@@ -550,8 +550,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1790077158.7713869,
-    "ast_hash": "785114ac79cdb1521d6b3aded0fc11c4",
+    "mtime": 1790240528.6313791,
+    "ast_hash": "4acd3dd74204455882c2c59dc3ade67c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -1335,8 +1335,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/api.ts": {
-    "mtime": 1789289930.1011825,
-    "ast_hash": "28f7246aadeedae48383d186780737a5",
+    "mtime": 1790240478.523994,
+    "ast_hash": "16304081b0e58d16e02c017403fcf4de",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/barcodeResolver.ts": {
@@ -1410,8 +1410,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/pillIdService.ts": {
-    "mtime": 1788264362.2279387,
-    "ast_hash": "d1b8b3e417b68ad1a8f5fff9617d021b",
+    "mtime": 1790240504.2701945,
+    "ast_hash": "4666c5bb337d1986f90625b33adfb2df",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/refillService.ts": {
@@ -1475,8 +1475,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/workers/ocrWorker.ts": {
-    "mtime": 1784219231.2370677,
-    "ast_hash": "4b9e27ec9ddc50278f2af1bbcc59a1e0",
+    "mtime": 1790240722.1716917,
+    "ast_hash": "1674617118d638a42c21e2f0bcdc7f6b",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/tailwind.config.ts": {
@@ -1500,8 +1500,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/vercel.json": {
-    "mtime": 1788264299.4710743,
-    "ast_hash": "3a01d84dc38803df219f9b088bcc53e9",
+    "mtime": 1790240775.4139535,
+    "ast_hash": "a98247d10fbf8ca4d4068a9ac8bdcdb8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/vite.config.ts": {
@@ -2365,8 +2365,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-scan-isolated.js": {
-    "mtime": 1789110349.9900513,
-    "ast_hash": "85deec209a99a5b8d748eafb6c87a0ef",
+    "mtime": 1790241552.8271282,
+    "ast_hash": "cfec9bee3a7280de03691357376c64fa",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useTypewriterPlaceholder.ts": {
@@ -4582,6 +4582,21 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/vendor-CfSJgd5c.js": {
     "mtime": 1790239119.2993584,
     "ast_hash": "eb6bbc903890fd878e6ad4c6c2737157",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/tesseract/core/tesseract-core-lstm.wasm.js": {
+    "mtime": 1790240686.9854712,
+    "ast_hash": "a3c227d2e04b7be5d1ef50d75f3a5ee3",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/tesseract/core/tesseract-core-simd-lstm.wasm.js": {
+    "mtime": 1790240686.940471,
+    "ast_hash": "2bd630487581a49b7d7cce1bfe42314c",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/tesseract/worker.min.js": {
+    "mtime": 1790240686.9204707,
+    "ast_hash": "b1ab464237e687b323da236fff45ba05",
     "semantic_hash": ""
   }
 }
