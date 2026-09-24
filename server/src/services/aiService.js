@@ -127,17 +127,23 @@ const GROQ_KEYS = [GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3].filter(Boolean)
 const GROQ_KEY_SUFFIXES = ['', '-key2', '-key3'];
 let groqKeyIndex = 0;
 
+export const getActiveGroqKeys = () => {
+  return GROQ_KEYS.length > 0 ? GROQ_KEYS : [process.env.GROQ_API_KEY, process.env.GROQ_API_KEY_2, process.env.GROQ_API_KEY_3].filter(Boolean);
+};
+
 const getGroqKeyInfo = () => {
-  if (GROQ_KEYS.length === 0) return { key: null, keySuffix: '' };
-  const idx = groqKeyIndex % GROQ_KEYS.length;
+  const keys = getActiveGroqKeys();
+  if (keys.length === 0) return { key: null, keySuffix: '' };
+  const idx = groqKeyIndex % keys.length;
   groqKeyIndex++;
-  return { key: GROQ_KEYS[idx], keySuffix: GROQ_KEY_SUFFIXES[idx] || '' };
+  return { key: keys[idx], keySuffix: GROQ_KEY_SUFFIXES[idx] || '' };
 };
 
 // Legacy compat shim — keeps existing callGroq/callGemini callers that pass a modelId working
 const getGroqApiKey = (modelId) => {
-  if (GROQ_KEYS.length === 0) return null;
-  return GROQ_KEYS[groqKeyIndex % GROQ_KEYS.length];
+  const keys = getActiveGroqKeys();
+  if (keys.length === 0) return null;
+  return keys[groqKeyIndex % keys.length];
 };
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -963,8 +969,9 @@ export const callAiWithFallback = async (messages, options = {}) => {
   }
 
   // 2. Try Groq Primary across independent accounts
-  if (GROQ_KEYS.length > 0 && preferredModel !== GROQ_MODEL && preferredModel !== 'groq-70b') {
-    for (let i = 0; i < GROQ_KEYS.length; i++) {
+  const activeGroqKeys = getActiveGroqKeys();
+  if (activeGroqKeys.length > 0 && preferredModel !== GROQ_MODEL && preferredModel !== 'groq-70b') {
+    for (let i = 0; i < activeGroqKeys.length; i++) {
       try {
         return await callGroqChat(messages, responseFormat, GROQ_MODEL, priority, maxTokens, true, temperature);
       } catch (err) {
@@ -1010,8 +1017,8 @@ export const callAiWithFallback = async (messages, options = {}) => {
   }
 
   // 7. Try Groq Scout (openai/gpt-oss-120b)
-  if (GROQ_KEYS.length > 0 && preferredModel !== GROQ_SCOUT_MODEL && preferredModel !== 'groq-scout') {
-    for (let i = 0; i < GROQ_KEYS.length; i++) {
+  if (activeGroqKeys.length > 0 && preferredModel !== GROQ_SCOUT_MODEL && preferredModel !== 'groq-scout') {
+    for (let i = 0; i < activeGroqKeys.length; i++) {
       try {
         return await callGroqChat(messages, responseFormat, GROQ_SCOUT_MODEL, priority, maxTokens, true, temperature);
       } catch (err) {
@@ -1021,8 +1028,8 @@ export const callAiWithFallback = async (messages, options = {}) => {
   }
 
   // 8. Try Groq Light (openai/gpt-oss-20b or light model)
-  if (GROQ_KEYS.length > 0 && preferredModel !== GROQ_LIGHT_MODEL && preferredModel !== 'groq-8b') {
-    for (let i = 0; i < GROQ_KEYS.length; i++) {
+  if (activeGroqKeys.length > 0 && preferredModel !== GROQ_LIGHT_MODEL && preferredModel !== 'groq-8b') {
+    for (let i = 0; i < activeGroqKeys.length; i++) {
       try {
         return await callGroqChat(messages, responseFormat, GROQ_LIGHT_MODEL, priority, maxTokens, true, temperature);
       } catch (err) {
@@ -1032,8 +1039,8 @@ export const callAiWithFallback = async (messages, options = {}) => {
   }
 
   // 8b. Try Groq Qwen (qwen/qwen3.6-27b)
-  if (GROQ_KEYS.length > 0) {
-    for (let i = 0; i < GROQ_KEYS.length; i++) {
+  if (activeGroqKeys.length > 0) {
+    for (let i = 0; i < activeGroqKeys.length; i++) {
       try {
         return await callGroqChat(messages, responseFormat, 'qwen/qwen3.6-27b', priority, maxTokens, true, temperature);
       } catch (err) {

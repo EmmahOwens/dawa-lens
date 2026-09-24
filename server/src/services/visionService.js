@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import AppError from '../utils/AppError.js';
 import { rateLimitManager } from './rateLimitManager.js';
 import { fetchDrugLabel, fetchNdcData } from './openFdaService.js';
+import { callAiWithFallback, sanitizeJson } from './aiService.js';
 
 dotenv.config();
 
@@ -49,6 +50,38 @@ Return ONLY valid JSON matching this schema exactly:
   ],
   "imprints": ["text on pill surface extracted from OCR or image"],
   "labels": ["text on packaging extracted from OCR or image"],
+  "summary": "2-3 sentence visual identification summary: primary clinical indication and regulatory safety warning. Do NOT include dosage instructions."
+}`;
+};
+
+const getTextFallbackPillIdPrompt = (ocrText, patientAge) => {
+  const ageCtx = patientAge ? ` for a patient aged ${patientAge}` : '';
+  return `You are a pharmaceutical visual and text identification assistant${ageCtx}. Identify candidate medications strictly from the following OCR text extracted from packaging or pill markings.
+
+CRITICAL CLINICAL SAFETY RULE: NEVER generate dosage instructions, standard doses, or medication schedules. Dosing advice must be determined exclusively by a licensed prescriber, pharmacist, or from verified physical packaging.
+
+OCR Text:
+"${ocrText}"
+
+Analyze the OCR text to extract:
+1. The candidate brand name(s) or generic active ingredient(s).
+2. Any imprints or packaging text extracted.
+3. Formulate exactly 5 candidate matches ranked by confidence. If fewer than 5 matches exist, fill the rest with inconclusive entries.
+4. For each match, provide an explicit unverifiedNotice reminding the user to verify against the packaging label or with a pharmacist.
+
+Return ONLY valid JSON matching this schema exactly:
+{
+  "matches": [
+    {
+      "name": "brand name",
+      "genericName": "active ingredient(s)",
+      "confidence": 0.0,
+      "safetyFlag": "critical boxed warning or precautionary alert, or empty string",
+      "unverifiedNotice": "Visual match unverified. Confirm dosage and instructions from medication packaging or pharmacist."
+    }
+  ],
+  "imprints": ["text on pill surface extracted from OCR"],
+  "labels": ["text on packaging extracted from OCR"],
   "summary": "2-3 sentence visual identification summary: primary clinical indication and regulatory safety warning. Do NOT include dosage instructions."
 }`;
 };
@@ -126,7 +159,7 @@ const normaliseMatches = (raw) => {
 
 // ── Gemini Text model ────────────────────────────────────────
 
-const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
+export const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
   const apiKey = getGeminiApiKeyForScan();
 
   // Multimodal request: the photo is the primary identification source, the
@@ -262,19 +295,68 @@ const enrichMatchesWithFda = async (matches) => {
   return enriched;
 };
 
+// ── Fallback: DawaGPT text-based multi-provider cascade ──────
+
+/**
+ * Identifies candidate medications using OCR text via DawaGPT's unified
+ * multi-provider fallback cascade (Cerebras, Groq, SambaNova, Nvidia NIM, OpenRouter, Mistral, Z.ai).
+ *
+ * @param {string} ocrText - Extracted OCR text from the medication.
+ * @param {number} [patientAge] - Optional patient age for clinical context.
+ * @returns {Promise<object>}
+ */
+export const identifyWithDawaGPT = async (ocrText, patientAge) => {
+  const prompt = getTextFallbackPillIdPrompt(ocrText, patientAge);
+  const messages = [{ role: 'user', content: prompt }];
+
+  const result = await callAiWithFallback(messages, {
+    isJson: true,
+    priority: 'high',
+    maxTokens: 1000,
+    isComplex: true,
+  });
+
+  let parsedData = result;
+  if (typeof result === 'string') {
+    try {
+      parsedData = JSON.parse(sanitizeJson(result));
+    } catch {
+      parsedData = {};
+    }
+  } else if (result && !result.matches && typeof result.text === 'string') {
+    try {
+      parsedData = JSON.parse(sanitizeJson(result.text));
+    } catch {
+      parsedData = result;
+    }
+  }
+
+  const rawMatches = normaliseMatches(parsedData?.matches);
+  const enrichedMatches = await enrichMatchesWithFda(rawMatches);
+
+  return {
+    success: true,
+    matches: enrichedMatches,
+    imprints: Array.isArray(parsedData?.imprints) ? parsedData.imprints : [],
+    labels: Array.isArray(parsedData?.labels) ? parsedData.labels : [],
+    summary: parsedData?.summary || parsedData?.text || '',
+    engine: result?.source || 'DawaGPT (API Fallback)',
+  };
+};
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
  * Identifies a pill/medication using the captured photo plus extracted OCR text.
  *
- * Exclusively uses Gemini Flash with GEMINI_API_KEY_2 (isolated from DawaGPT).
- * The photo is sent as an inline multimodal part (authoritative source); the
- * on-device OCR text accompanies it as a hint. Identification gracefully
- * degrades to OCR-text-only when the image is missing or malformed.
+ * Primary: Gemini Flash (isolated or shared key) with multimodal support.
+ * Fallback: Unified AI API Fallback cascade (DawaGPT multi-provider chain)
+ *           when Gemini encounters quota limits, rate limits, or outages
+ *           and OCR text is available.
  *
  * @param {string} [image]     - Optional base64 image of the packaging/pill.
  * @param {number} [patientAge] - Optional patient age for dosage context.
- * @param {string} ocrText     - Extracted OCR text from the medication.
+ * @param {string} [ocrText]   - Extracted OCR text from the medication.
  * @returns {Promise<object>}
  */
 export const identifyPill = async (image, patientAge, ocrText) => {
@@ -289,14 +371,40 @@ export const identifyPill = async (image, patientAge, ocrText) => {
     );
   }
 
+  let geminiError = null;
+
+  // ── 1. Primary Engine: Gemini Multimodal / Text ──────────
   try {
-    console.log(`[visionService] 🔄 Processing scan with Gemini (${GEMINI_FLASH_MODEL})${image ? ' [multimodal]' : ' [text-only]'}...`);
+    console.log(`[visionService] 🔄 Processing scan with Gemini (${GEMINI_FLASH_MODEL})${hasImage ? ' [multimodal]' : ' [text-only]'}...`);
     const result = await identifyWithGemini(ocrText, patientAge, image);
-    console.log(`[visionService] ✅ Identified via Gemini`);
+    console.log(`[visionService] ✅ Identified via Gemini (${result.engine})`);
     return result;
   } catch (err) {
-    console.error(`[visionService] ❌ Gemini scan failed:`, err.message);
-    if (err.isOperational) throw err;
-    throw new AppError(`Scan failed: ${err.message}`, err.status || 502);
+    geminiError = err;
+    console.warn(`[visionService] ⚠️ Primary Gemini scan failed: ${err.message}`);
   }
+
+  // ── 2. Resilient API Fallback: DawaGPT Multi-Provider Cascade ──────────
+  // When OCR text is available, gracefully cascade to the unified AI API fallback
+  if (hasText) {
+    try {
+      console.log(`[visionService] 🔄 Cascading to unified AI API fallback (DawaGPT multi-provider chain)...`);
+      const fallbackResult = await identifyWithDawaGPT(ocrText, patientAge);
+      console.log(`[visionService] ✅ Identified via API Fallback (${fallbackResult.engine})`);
+      return fallbackResult;
+    } catch (fallbackErr) {
+      console.error(`[visionService] ❌ Unified AI API fallback cascade also failed:`, fallbackErr.message);
+    }
+  } else {
+    console.warn(`[visionService] ℹ️ Cannot cascade to text-based API fallback because no OCR text was extracted from this image.`);
+  }
+
+  // If both primary and fallback failed (or image-only failed with no OCR text)
+  if (geminiError?.isOperational) {
+    throw geminiError;
+  }
+  throw new AppError(
+    `Scan identification failed: ${geminiError?.message || 'AI services unavailable'}`,
+    geminiError?.status || 502
+  );
 };

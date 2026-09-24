@@ -375,8 +375,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/aiService.js": {
-    "mtime": 1790069225.0572195,
-    "ast_hash": "cf4c14ef49ef8c714dbd10f321111c03",
+    "mtime": 1790244284.9064143,
+    "ast_hash": "7034e35ce4711d62a32e3b2cc0c0940f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/autonomousService.js": {
@@ -430,8 +430,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/visionService.js": {
-    "mtime": 1790242728.7231917,
-    "ast_hash": "86ef30296d0eee86926b3ec78e33fc60",
+    "mtime": 1790244032.5491292,
+    "ast_hash": "72dbebbb9b8991ad6d7e1ff8425bb67a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/src/services/wellnessService.js": {
@@ -4600,8 +4600,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-multimodal-scan.js": {
-    "mtime": 1790243094.1567154,
-    "ast_hash": "76767e3c7fd55eacbf4ffefb6e48b01d",
+    "mtime": 1790244299.1594272,
+    "ast_hash": "c0ced395dbc18b12a52efe6067648237",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/pillIdService.test.ts": {
+    "mtime": 1790243518.2069683,
+    "ast_hash": "2c3bf6f3ebd49978611f1526cb38a335",
     "semantic_hash": ""
   }
 }

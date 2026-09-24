@@ -13,37 +13,77 @@ const originalGet = axios.get;
 
 axios.get = async () => ({ data: {} });
 
+let failGemini = false;
+
 axios.post = async (url, data, config) => {
   interceptedUrl = url;
   interceptedRequestBody = data;
 
+  if (url.includes('generativelanguage.googleapis.com')) {
+    if (failGemini) {
+      const err = new Error('Service Unavailable: Gemini overloaded');
+      err.response = { status: 503, data: { error: { message: 'Overloaded' } } };
+      throw err;
+    }
+
+    return {
+      data: {
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    matches: [
+                      {
+                        name: 'REVIDOL',
+                        genericName: 'Paracetamol',
+                        confidence: 0.98,
+                        safetyFlag: 'Do not exceed 4g/day',
+                        unverifiedNotice: 'Visual match unverified. Confirm with packaging.'
+                      },
+                      { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' },
+                      { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' },
+                      { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' },
+                      { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' }
+                    ],
+                    imprints: ['500'],
+                    labels: ['PARACETAMOL TABLETS BP 500MG', 'REVIDOL'],
+                    summary: 'Revidol contains paracetamol 500mg used for relief of mild to moderate pain and fever.'
+                  })
+                }
+              ]
+            }
+          }
+        ]
+      }
+    };
+  }
+
+  // Handle Groq / Cerebras / fallback providers
   return {
     data: {
-      candidates: [
+      choices: [
         {
-          content: {
-            parts: [
-              {
-                text: JSON.stringify({
-                  matches: [
-                    {
-                      name: 'REVIDOL',
-                      genericName: 'Paracetamol',
-                      confidence: 0.98,
-                      safetyFlag: 'Do not exceed 4g/day',
-                      unverifiedNotice: 'Visual match unverified. Confirm with packaging.'
-                    },
-                    { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' },
-                    { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' },
-                    { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' },
-                    { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' }
-                  ],
-                  imprints: ['500'],
-                  labels: ['PARACETAMOL TABLETS BP 500MG', 'REVIDOL'],
-                  summary: 'Revidol contains paracetamol 500mg used for relief of mild to moderate pain and fever.'
-                })
-              }
-            ]
+          message: {
+            content: JSON.stringify({
+              matches: [
+                {
+                  name: 'Amoxicillin',
+                  genericName: 'Amoxicillin Trihydrate',
+                  confidence: 0.96,
+                  safetyFlag: 'Contraindicated in penicillin allergy',
+                  unverifiedNotice: 'Visual match unverified. Check packaging.'
+                },
+                { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' },
+                { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' },
+                { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' },
+                { name: 'Inconclusive Match', genericName: '', confidence: 0.0, safetyFlag: '', unverifiedNotice: 'Inconclusive' }
+              ],
+              imprints: ['AMOX 500'],
+              labels: ['Amoxicillin Capsules 500mg'],
+              summary: 'Broad-spectrum penicillin antibiotic.'
+            })
           }
         }
       ]
@@ -52,6 +92,7 @@ axios.post = async (url, data, config) => {
 };
 
 process.env.GEMINI_API_KEY = 'TEST_GEMINI_KEY';
+process.env.GROQ_API_KEY = 'TEST_GROQ_KEY';
 process.env.NODE_ENV = 'production';
 
 // Valid dummy base64 JPEG data (~120 chars)
@@ -102,11 +143,31 @@ async function runTests() {
   );
   console.log('✅ Test 4 Passed: Empty scan properly rejected with NO_INPUT_DETECTED.');
 
-  // Restore axios
+  // Test 5: Graceful cascade to Unified AI API Fallback when Gemini fails
+  console.log('\n🔹 Test 5: Graceful cascade to API Fallback when Gemini is rate-limited/down');
+  failGemini = true;
+  const res5 = await visionService.identifyPill(dummyBase64Image, 35, 'Amoxicillin Capsules 500mg');
+  assert.ok(res5.success, 'Scan should succeed via API fallback');
+  assert.strictEqual(res5.matches[0].name, 'Amoxicillin', 'Should identify Amoxicillin via fallback');
+  assert.ok(
+    res5.engine.includes('Groq') || res5.engine.includes('Fallback') || res5.engine.includes('DawaGPT'),
+    `Engine should indicate fallback provider, got: ${res5.engine}`
+  );
+  console.log(`✅ Test 5 Passed: Scan cascaded seamlessly to API fallback (${res5.engine}).`);
+
+  // Test 6: Direct invocation of identifyWithDawaGPT
+  console.log('\n🔹 Test 6: Direct identifyWithDawaGPT invocation');
+  const res6 = await visionService.identifyWithDawaGPT('Amoxicillin 500mg', 30);
+  assert.ok(res6.success, 'Direct DawaGPT call should succeed');
+  assert.strictEqual(res6.matches[0].name, 'Amoxicillin');
+  console.log(`✅ Test 6 Passed: Direct DawaGPT fallback confirmed working.`);
+
+  // Reset flag and restore axios
+  failGemini = false;
   axios.post = originalPost;
   axios.get = originalGet;
 
-  console.log('\n🎉 ALL MULTIMODAL & HYBRID VISION SCAN TESTS PASSED!');
+  console.log('\n🎉 ALL MULTIMODAL, HYBRID & API FALLBACK SCAN TESTS PASSED!');
 }
 
 runTests().catch(err => {
