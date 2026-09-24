@@ -5,6 +5,7 @@ import { GeocodedPlace } from "../services/locationGeocodingService";
 import {
   NdaPharmacy,
   PharmacyRoute,
+  PharmacyTransportMode,
   findTopNearestPharmacies,
   findTopNearestDrugShops,
   findNearbyPharmacies,
@@ -81,7 +82,7 @@ export function useNearbyPharmacies() {
   }, [customLocation, isUsingPreviousLocation, isUsingDefaultLocation]);
 
   // ── Shared state ─────────────────────────────────────────────────────────────
-  const [transportMode, setTransportMode] = useState<"driving" | "walking">("driving");
+  const [transportMode, setTransportMode] = useState<PharmacyTransportMode>("boda_boda");
   const [selectedPharmacy, setSelectedPharmacy] = useState<NdaPharmacy | null>(null);
   const [route, setRoute] = useState<PharmacyRoute | null>(null);
   const [isRouteLoading, setIsRouteLoading] = useState(false);

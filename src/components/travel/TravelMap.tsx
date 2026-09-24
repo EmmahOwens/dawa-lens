@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo, useState } from 'react';
-import maplibregl, { Map, Marker, LngLatLike } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import type { Map, Marker, LngLatLike } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plane } from "@/lib/icons";

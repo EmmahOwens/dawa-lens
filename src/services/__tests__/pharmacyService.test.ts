@@ -181,10 +181,32 @@ describe("pharmacyService", () => {
     expect(walkingRoute.durationMinutes).toBeCloseTo(expectedApproxWalkMins, -1);
   }, 15000);
 
+  it("calculates realistic boda_boda duration and generates two_wheeler Google Maps URL", async () => {
+    const userCoords: [number, number] = [32.5825, 0.3476];
+    const pharmacyCoords: [number, number] = [32.6108, 0.3542];
+
+    const bodaRoute = await getPharmacyRoute(userCoords, pharmacyCoords, "boda_boda");
+    expect(bodaRoute.mode).toBe("boda_boda");
+    expect(bodaRoute.distanceKm).toBeGreaterThan(0);
+    expect(bodaRoute.durationMinutes).toBeGreaterThanOrEqual(1);
+
+    // Boda boda (~26 km/h) should be much faster than walking (~4.8 km/h)
+    const approxBodaMins = (bodaRoute.distanceKm / 26) * 60;
+    expect(bodaRoute.durationMinutes).toBeCloseTo(approxBodaMins, -1);
+
+    // Deep link contains travelmode=two_wheeler
+    const navUrl = getDirectionsUrl(pharmacyCoords[1], pharmacyCoords[0], "First Pharmacy", {
+      userCoords,
+      mode: "boda_boda",
+    });
+    expect(navUrl).toContain("travelmode=two_wheeler");
+    expect(navUrl).toContain(`destination=${pharmacyCoords[1]},${pharmacyCoords[0]}`);
+  }, 15000);
+
   it("handles fetchTopPharmaciesRoadDistances gracefully and sorts ascending", async () => {
     const userCoords: [number, number] = [32.5825, 0.3476];
     const top5 = findTopNearestPharmacies(0.3476, 32.5825, 3);
-    const enriched = await fetchTopPharmaciesRoadDistances(userCoords, top5, "driving");
+    const enriched = await fetchTopPharmaciesRoadDistances(userCoords, top5, "boda_boda");
 
     expect(enriched).toHaveLength(top5.length);
     for (let i = 0; i < enriched.length; i++) {

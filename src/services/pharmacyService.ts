@@ -26,11 +26,13 @@ export interface NdaPharmacy {
   durationMinutes?: number;
 }
 
+export type PharmacyTransportMode = "boda_boda" | "driving" | "walking";
+
 export interface PharmacyRoute {
   coordinates: [number, number][]; // [lng, lat] for MapLibre GeoJSON LineString
   distanceKm: number;
   durationMinutes: number;
-  mode: "driving" | "walking";
+  mode: PharmacyTransportMode;
   isFallback?: boolean;
 }
 
@@ -274,7 +276,7 @@ export function findNearbyPharmacies(
     limit = 50,
   } = options;
 
-  let results = PHARMACIES.filter((p) => {
+  const results = PHARMACIES.filter((p) => {
     if (onlyRetail && !p.isRetail) return false;
     if (district && district !== "ALL" && p.district.toLowerCase() !== district.toLowerCase()) {
       return false;
@@ -366,7 +368,7 @@ async function safeFetchWithTimeout(url: string, timeoutMs: number): Promise<Res
 export async function getPharmacyRoute(
   userCoords: [number, number],
   pharmacyCoords: [number, number],
-  mode: "driving" | "walking" = "driving"
+  mode: PharmacyTransportMode = "boda_boda"
 ): Promise<PharmacyRoute> {
   const cacheKey = `${userCoords[0].toFixed(5)},${userCoords[1].toFixed(5)}->${pharmacyCoords[0].toFixed(5)},${pharmacyCoords[1].toFixed(5)}:${mode}`;
   if (routeCache.has(cacheKey)) {
@@ -389,10 +391,15 @@ export async function getPharmacyRoute(
         const routeObj = data.routes[0];
         const routeDistanceKm = Math.round((routeObj.distance / 1000) * 10) / 10;
         
-        // OSRM demo server only computes driving durations. For walking, calculate realistic walking time based on distance (4.8 km/h).
+        // Realistic duration modeling:
+        // - walking: ~4.8 km/h
+        // - boda_boda: ~26 km/h (weaves through Uganda traffic, bypasses arterial jams)
+        // - driving: OSRM car profile duration
         const durationMinutes =
           mode === "walking"
             ? Math.max(1, Math.round((routeDistanceKm / 4.8) * 60))
+            : mode === "boda_boda"
+            ? Math.max(2, Math.round((routeDistanceKm / 26) * 60))
             : Math.max(1, Math.round(routeObj.duration / 60));
 
         const routeResult: PharmacyRoute = {
@@ -421,8 +428,9 @@ export async function getPharmacyRoute(
     ]);
   }
 
-  const speedKmh = mode === "walking" ? 4.8 : 30; // avg city speed in Uganda
-  const estDuration = Math.max(1, Math.round((straightDist / speedKmh) * 60));
+  // Uganda city transit speed approximations for fallback:
+  const speedKmh = mode === "walking" ? 4.8 : mode === "boda_boda" ? 26 : 22;
+  const estDuration = Math.max(mode === "boda_boda" ? 2 : 1, Math.round((straightDist / speedKmh) * 60));
 
   const fallbackResult: PharmacyRoute = {
     coordinates: fallbackCoords,
@@ -443,7 +451,7 @@ export async function getPharmacyRoute(
 export async function fetchTopPharmaciesRoadDistances(
   userCoords: [number, number],
   pharmacies: NdaPharmacy[],
-  mode: "driving" | "walking" = "driving"
+  mode: PharmacyTransportMode = "boda_boda"
 ): Promise<NdaPharmacy[]> {
   if (!pharmacies || pharmacies.length === 0) return pharmacies;
 
@@ -473,6 +481,8 @@ export async function fetchTopPharmaciesRoadDistances(
 
             if (mode === "walking") {
               durationMins = Math.max(1, Math.round((distKm / 4.8) * 60));
+            } else if (mode === "boda_boda") {
+              durationMins = Math.max(2, Math.round((distKm / 26) * 60));
             } else if (durationRow && typeof durationRow[idx + 1] === "number") {
               durationMins = Math.max(1, Math.round(durationRow[idx + 1] / 60));
             }
@@ -532,7 +542,7 @@ export function findNearbyDrugShops(
 ): NdaPharmacy[] {
   const { radiusKm = 50, district = "", query = "", limit = 60 } = options;
 
-  let results = DRUG_SHOPS.filter((d) => {
+  const results = DRUG_SHOPS.filter((d) => {
     if (district && district !== "ALL" && d.district.toLowerCase() !== district.toLowerCase()) {
       return false;
     }
@@ -595,8 +605,8 @@ export interface DirectionsUrlOptions {
   userLat?: number;
   /** Explicit user longitude */
   userLng?: number;
-  /** Travel mode: driving or walking */
-  mode?: "driving" | "walking";
+  /** Travel mode: boda_boda, driving, or walking */
+  mode?: PharmacyTransportMode;
   /** If true, generates Google Maps URL even on iOS */
   preferGoogleMaps?: boolean;
 }
@@ -615,7 +625,7 @@ export function getDirectionsUrl(
 ): string {
   let originLat: number | undefined;
   let originLng: number | undefined;
-  let mode: "driving" | "walking" | undefined;
+  let mode: PharmacyTransportMode | undefined;
   let preferGoogleMaps = false;
 
   if (Array.isArray(options)) {
@@ -672,7 +682,8 @@ export function getDirectionsUrl(
     parts.push(`daddr=${lat},${lng}`);
     if (mode === "walking") {
       parts.push("dirflg=w");
-    } else if (mode === "driving") {
+    } else {
+      // Apple Maps doesn't have a motorcycle dirflg; driving is the closest match
       parts.push("dirflg=d");
     }
     if (name) {
@@ -689,7 +700,13 @@ export function getDirectionsUrl(
   }
   parts.push(`destination=${lat},${lng}`);
   if (mode) {
-    parts.push(`travelmode=${encodeURIComponent(mode)}`);
+    if (mode === "boda_boda") {
+      parts.push("travelmode=two_wheeler");
+    } else if (mode === "walking") {
+      parts.push("travelmode=walking");
+    } else {
+      parts.push("travelmode=driving");
+    }
   }
   parts.push("dir_action=navigate");
 

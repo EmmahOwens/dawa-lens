@@ -5,12 +5,13 @@ import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useNearbyPharmacies } from "@/hooks/useNearbyPharmacies";
 import { PharmacyRouteMap } from "./PharmacyRouteMap";
 import { PharmacyLocationSearch } from "./PharmacyLocationSearch";
-import { getDirectionsUrl, formatDuration, NdaPharmacy } from "@/services/pharmacyService";
+import { getDirectionsUrl, formatDuration, NdaPharmacy, PharmacyTransportMode } from "@/services/pharmacyService";
 import { Medicine } from "@/contexts/AppContext";
 import {
   Navigation,
   CheckCircle,
   Car,
+  Bike,
   Search,
   RefreshCw,
   Info,
@@ -123,7 +124,7 @@ function SelectedCard({
   outlet: NdaPharmacy;
   route: ReturnType<typeof useNearbyPharmacies>["route"];
   isRouteLoading: boolean;
-  transportMode: "driving" | "walking";
+  transportMode: PharmacyTransportMode;
   medicine?: Medicine | null;
   onRefillLogged?: (m: Medicine) => void;
   onClose: () => void;
@@ -172,7 +173,7 @@ function SelectedCard({
           </span>
           <span className="text-[10px] font-bold text-muted-foreground mt-1">
             {route
-              ? `${formatDuration(route.durationMinutes)} ${transportMode}`
+              ? `${formatDuration(route.durationMinutes)} (${transportMode === "boda_boda" ? "Boda" : transportMode === "driving" ? "Car" : "Walk"})`
               : "Distance"}
           </span>
         </div>
@@ -457,24 +458,34 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
 
               <div className="flex rounded-xl bg-muted/40 p-1 border border-border/40">
                 <button
+                  onClick={() => setTransportMode("boda_boda")}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    transportMode === "boda_boda"
+                      ? `${isDrugShopTab ? "bg-amber-600" : "bg-teal-600"} text-white shadow-sm`
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Bike className="size-3.5" /> Boda
+                </button>
+                <button
                   onClick={() => setTransportMode("driving")}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     transportMode === "driving"
                       ? `${isDrugShopTab ? "bg-amber-600" : "bg-teal-600"} text-white shadow-sm`
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Car className="size-3.5" /> Driving
+                  <Car className="size-3.5" /> Drive
                 </button>
                 <button
                   onClick={() => setTransportMode("walking")}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     transportMode === "walking"
                       ? `${isDrugShopTab ? "bg-amber-600" : "bg-teal-600"} text-white shadow-sm`
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Navigation className="size-3.5" /> Walking
+                  <Navigation className="size-3.5" /> Walk
                 </button>
               </div>
             </div>

@@ -689,6 +689,25 @@ export const Building = svg(
 );
 export const Building2 = Building;
 
+/** Bicycle / Motorcycle / Boda Boda */
+export const Bike = svg(
+  <>
+    <circle cx="18.5" cy="17.5" r="3.5" />
+    <circle cx="5.5" cy="17.5" r="3.5" />
+    <circle cx="15" cy="5" r="1" />
+    <path d="M12 17.5V14l-3-3 4-3 2 3h2" />
+  </>
+);
+
+/** Layers / Map Basemap Switcher */
+export const Layers = svg(
+  <>
+    <path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z" />
+    <path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65" />
+    <path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65" />
+  </>
+);
+
 // ─── Re-exports / extras ─────────────────────────────────────────────────────
 
 /** Alias kept for files that use `import { LucideIcon }` as a type */

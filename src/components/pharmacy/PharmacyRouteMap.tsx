@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import maplibregl, { Map, Marker, LngLatBounds } from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
+import type { Map, Marker } from "maplibre-gl";
+import { LngLatBounds } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { NdaPharmacy, PharmacyRoute, formatDuration } from "@/services/pharmacyService";
@@ -9,6 +11,9 @@ import {
   Crosshair,
   CheckCircle,
   RefreshCw,
+  Layers,
+  Bike,
+  Car,
 } from "@/lib/icons";
 
 interface PharmacyRouteMapProps {
@@ -24,6 +29,31 @@ interface PharmacyRouteMapProps {
 const PRIMARY_STYLE = "https://tiles.openfreemap.org/styles/positron";
 const FALLBACK_STYLE = "https://tiles.openfreemap.org/styles/bright";
 
+// High-resolution Esri World Imagery for satellite basemap toggle
+const SATELLITE_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "esri-satellite": {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      attribution: "Esri, Maxar, Earthstar Geographics",
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: "esri-satellite-layer",
+      type: "raster",
+      source: "esri-satellite",
+      minzoom: 0,
+      maxzoom: 19,
+    },
+  ],
+};
+
 export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
   userCoords,
   topPharmacies,
@@ -37,9 +67,127 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
   const mapRef = useRef<Map | null>(null);
   const userMarkerRef = useRef<Marker | null>(null);
   const pharmacyMarkersRef = useRef<Marker[]>([]);
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const routeRef = useRef<PharmacyRoute | null>(route);
+  routeRef.current = route;
 
-  // ── 1. Initialize MapLibre GL ───────────────────────────────────────────────
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [mapMode, setMapMode] = useState<"streets" | "satellite">("streets");
+  const mapModeRef = useRef<"streets" | "satellite">("streets");
+  mapModeRef.current = mapMode;
+
+  // ── Helper: Attach route source & styling layers ───────────────────────────
+  const setupRouteLayers = useCallback((map: Map, isSatellite: boolean) => {
+    try {
+      const currentRoute = routeRef.current;
+      const initialCoords = currentRoute && currentRoute.coordinates.length > 0 ? currentRoute.coordinates : [];
+
+      if (!map.getSource("pharmacy-route")) {
+        map.addSource("pharmacy-route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates: initialCoords,
+            },
+          },
+        });
+      }
+
+      // Outer Glow Layer
+      if (!map.getLayer("pharmacy-route-glow")) {
+        map.addLayer({
+          id: "pharmacy-route-glow",
+          type: "line",
+          source: "pharmacy-route",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": isSatellite ? "#22d3ee" : "#0d9488",
+            "line-width": 8,
+            "line-opacity": isSatellite ? 0.65 : 0.35,
+            "line-blur": 3,
+          },
+        });
+      }
+
+      // Core Route Line
+      if (!map.getLayer("pharmacy-route-core")) {
+        map.addLayer({
+          id: "pharmacy-route-core",
+          type: "line",
+          source: "pharmacy-route",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": isSatellite ? "#06b6d4" : "#0f766e",
+            "line-width": 4,
+            "line-opacity": 0.95,
+          },
+        });
+      }
+
+      // Dashed Inner Line for visual motion
+      if (!map.getLayer("pharmacy-route-dash")) {
+        map.addLayer({
+          id: "pharmacy-route-dash",
+          type: "line",
+          source: "pharmacy-route",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": isSatellite ? "#ffffff" : "#5eead4",
+            "line-width": 2,
+            "line-dasharray": [1, 2],
+            "line-opacity": 0.95,
+          },
+        });
+      }
+
+      // Optional 3D buildings in Streets vector mode
+      if (!isSatellite) {
+        const sourceId = map.getSource("openmaptiles") ? "openmaptiles" : map.getSource("composite") ? "composite" : null;
+        if (sourceId && !map.getLayer("3d-buildings")) {
+          try {
+            map.addLayer({
+              id: "3d-buildings",
+              source: sourceId,
+              "source-layer": "building",
+              type: "fill-extrusion",
+              minzoom: 15,
+              paint: {
+                "fill-extrusion-color": "#cbd5e1",
+                "fill-extrusion-height": [
+                  "interpolate", ["linear"], ["zoom"],
+                  15, 0,
+                  16, ["get", "render_height"]
+                ],
+                "fill-extrusion-base": [
+                  "interpolate", ["linear"], ["zoom"],
+                  15, 0,
+                  16, ["get", "render_min_height"]
+                ],
+                "fill-extrusion-opacity": 0.55,
+              },
+            });
+          } catch {
+            // Source doesn't have 3D building schema, continue smoothly
+          }
+        }
+      }
+    } catch (layerErr) {
+      console.warn("[PharmacyRouteMap] Error setting up layers:", layerErr);
+    }
+  }, []);
+
+  // ── 1. Initialize MapLibre GL v6 ───────────────────────────────────────────
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -58,7 +206,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
 
       map.on("error", (e) => {
         console.warn("[PharmacyRouteMap] MapLibre error:", e);
-        if (!fallbackApplied) {
+        if (!fallbackApplied && mapModeRef.current === "streets") {
           fallbackApplied = true;
           try {
             map.setStyle(FALLBACK_STYLE);
@@ -71,74 +219,16 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
       map.on("load", () => {
         try {
           map.resize();
-
-          // Add Route Source
-          map.addSource("pharmacy-route", {
-            type: "geojson",
-            data: {
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "LineString",
-                coordinates: [],
-              },
-            },
-          });
-
-          // Outer Glow Layer
-          map.addLayer({
-            id: "pharmacy-route-glow",
-            type: "line",
-            source: "pharmacy-route",
-            layout: {
-              "line-join": "round",
-              "line-cap": "round",
-            },
-            paint: {
-              "line-color": "#0d9488",
-              "line-width": 8,
-              "line-opacity": 0.35,
-              "line-blur": 3,
-            },
-          });
-
-          // Core Route Line
-          map.addLayer({
-            id: "pharmacy-route-core",
-            type: "line",
-            source: "pharmacy-route",
-            layout: {
-              "line-join": "round",
-              "line-cap": "round",
-            },
-            paint: {
-              "line-color": "#0f766e",
-              "line-width": 4,
-              "line-opacity": 0.95,
-            },
-          });
-
-          // Dashed Inner Line for visual motion
-          map.addLayer({
-            id: "pharmacy-route-dash",
-            type: "line",
-            source: "pharmacy-route",
-            layout: {
-              "line-join": "round",
-              "line-cap": "round",
-            },
-            paint: {
-              "line-color": "#5eead4",
-              "line-width": 2,
-              "line-dasharray": [1, 2],
-              "line-opacity": 0.9,
-            },
-          });
-
+          setupRouteLayers(map, mapModeRef.current === "satellite");
           setIsMapLoaded(true);
         } catch (loadErr) {
           console.warn("[PharmacyRouteMap] Error on map load:", loadErr);
         }
+      });
+
+      // When style changes (e.g. switching to satellite), restore route layers
+      map.on("styledata", () => {
+        setupRouteLayers(map, mapModeRef.current === "satellite");
       });
 
       mapRef.current = map;
@@ -152,7 +242,26 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         mapRef.current = null;
       }
     };
-  }, []);
+  }, [setupRouteLayers, userCoords]);
+
+  // ── Toggle between Streets & Satellite Basemap ─────────────────────────────
+  const toggleMapMode = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const nextMode = mapMode === "streets" ? "satellite" : "streets";
+    setMapMode(nextMode);
+
+    try {
+      if (nextMode === "satellite") {
+        map.setStyle(SATELLITE_STYLE);
+      } else {
+        map.setStyle(PRIMARY_STYLE);
+      }
+    } catch (err) {
+      console.warn("[PharmacyRouteMap] Failed to toggle map mode:", err);
+    }
+  }, [mapMode]);
 
   // ── 2. Render User Marker ──────────────────────────────────────────────────
   useEffect(() => {
@@ -301,8 +410,11 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     if (!map || !isMapLoaded) return;
 
     try {
-      const source = map.getSource("pharmacy-route") as maplibregl.GeoJSONSource;
-      if (!source) return;
+      const source = map.getSource("pharmacy-route") as maplibregl.GeoJSONSource | undefined;
+      if (!source) {
+        setupRouteLayers(map, mapModeRef.current === "satellite");
+        return;
+      }
 
       if (route && route.coordinates.length > 0) {
         source.setData({
@@ -326,7 +438,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     } catch (routeErr) {
       console.warn("[PharmacyRouteMap] Error updating route geometry:", routeErr);
     }
-  }, [route, isMapLoaded]);
+  }, [route, isMapLoaded, setupRouteLayers]);
 
   // ── 5. Auto Fit Camera to frame User and Selected Pharmacy ──────────────────
   const fitCameraToBounds = useCallback(() => {
@@ -381,7 +493,13 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
             ) : route ? (
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 text-xs font-black text-teal-600 dark:text-teal-400">
-                  <Navigation className="size-3.5" />
+                  {route.mode === "boda_boda" ? (
+                    <Bike className="size-3.5" />
+                  ) : route.mode === "walking" ? (
+                    <Navigation className="size-3.5" />
+                  ) : (
+                    <Car className="size-3.5" />
+                  )}
                   <span>{route.distanceKm} km</span>
                 </div>
                 <span className="text-[10px] text-muted-foreground">·</span>
@@ -399,7 +517,22 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
       </AnimatePresence>
 
       {/* Recenter & Map Controls (Bottom Right) */}
-      <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-1.5">
+      <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-1.5 items-end">
+        {/* Satellite / Streets Toggle */}
+        <button
+          onClick={toggleMapMode}
+          title={mapMode === "streets" ? "Switch to Satellite Imagery" : "Switch to Street Map"}
+          className={`flex h-8 items-center gap-1.5 px-2.5 rounded-xl backdrop-blur-md border shadow-md transition-all active:scale-95 text-xs font-bold ${
+            mapMode === "satellite"
+              ? "bg-teal-600 text-white border-teal-500 shadow-teal-600/30"
+              : "bg-card/90 text-foreground border-border/60 hover:bg-card"
+          }`}
+        >
+          <Layers className="size-3.5" />
+          <span className="text-[11px] font-extrabold">{mapMode === "streets" ? "Satellite" : "Streets"}</span>
+        </button>
+
+        {/* Recenter Button */}
         <button
           onClick={fitCameraToBounds}
           title="Recenter Route"
@@ -427,3 +560,4 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     </div>
   );
 };
+
