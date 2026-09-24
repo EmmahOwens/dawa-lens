@@ -9,9 +9,9 @@ const router = express.Router();
  */
 router.post('/pill-id', protect, async (req, res, next) => {
   try {
-    const { image, patientAge, ocrText } = req.body;
-    if (!ocrText) {
-      return res.status(400).json({ error: 'No OCR text provided', code: 'NO_TEXT' });
+    const { image, patientAge, ocrText } = req.body || {};
+    if ((!ocrText || !ocrText.trim()) && (!image || typeof image !== 'string' || image.trim().length === 0)) {
+      return res.status(400).json({ error: 'No medication image or label text provided', code: 'MISSING_INPUT' });
     }
 
     const result = await visionService.identifyPill(image, patientAge, ocrText);

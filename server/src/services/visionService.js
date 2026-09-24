@@ -10,27 +10,25 @@ dotenv.config();
 const GEMINI_FLASH_MODEL = process.env.GEMINI_SCAN_MODEL || 'gemini-2.5-flash';
 
 const getGeminiApiKeyForScan = () => {
-  const key = process.env.GEMINI_API_KEY_2;
+  const key = process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY;
   if (!key) {
-    if (process.env.NODE_ENV !== 'production' && process.env.GEMINI_API_KEY) {
-      console.warn('[visionService] ⚠️ GEMINI_API_KEY_2 is not set. Falling back to GEMINI_API_KEY for development.');
-      return process.env.GEMINI_API_KEY;
-    }
-    throw new AppError('Gemini API key for scanning (GEMINI_API_KEY_2) is not configured.', 500, 'GEMINI_KEY_2_MISSING');
+    throw new AppError('Gemini API key for scanning (GEMINI_API_KEY_2 or GEMINI_API_KEY) is not configured.', 500, 'GEMINI_KEY_MISSING');
   }
   return key;
 };
 
 // ── Prompt ───────────────────────────────────────────────────────────────────
 const getTextPillIdPrompt = (ocrText) => {
-  return `You are a pharmaceutical visual identification assistant. Identify candidate medications using BOTH of the following sources, in priority order:
-1. The attached photo of the medication packaging / blister foil / pill. The photo is authoritative: read all visible text directly from it, including stylised or low-contrast printing that OCR may have garbled or missed.
-2. The OCR text extracted on-device (may contain recognition errors, extraneous characters, or omissions — treat it as a hint, not ground truth).
+  const hasOcr = Boolean(ocrText && ocrText.trim().length > 0);
+  return `You are a pharmaceutical visual identification assistant. Identify candidate medications ${
+    hasOcr
+      ? 'using BOTH of the following sources in priority order: 1) The attached photo of the medication packaging / blister foil / pill (authoritative: read all visible text directly from it). 2) The on-device OCR text hint (may contain recognition errors or omissions).'
+      : 'directly by reading and analyzing all visible brand names, active ingredients, dosage strengths, and imprints from the attached photo of the medication packaging, blister foil, or pill.'
+  }
 
 CRITICAL CLINICAL SAFETY RULE: NEVER generate dosage instructions, standard doses, or medication schedules. Dosing advice must be determined exclusively by a licensed prescriber, pharmacist, or from verified physical packaging.
 
-OCR Text (hint only, may be wrong):
-"${ocrText}"
+${hasOcr ? `OCR Text (hint only, may be incomplete or garbled):\n"${ocrText}"` : 'Note: On-device OCR was unable to read text on this label; perform direct visual recognition from the attached image.'}
 
 Analyze the photo and OCR text to extract:
 1. The candidate brand name(s) or generic active ingredient(s).
@@ -49,8 +47,8 @@ Return ONLY valid JSON matching this schema exactly:
       "unverifiedNotice": "Visual match unverified. Confirm dosage and instructions from medication packaging or pharmacist."
     }
   ],
-  "imprints": ["text on pill surface extracted from OCR"],
-  "labels": ["text on packaging extracted from OCR"],
+  "imprints": ["text on pill surface extracted from OCR or image"],
+  "labels": ["text on packaging extracted from OCR or image"],
   "summary": "2-3 sentence visual identification summary: primary clinical indication and regulatory safety warning. Do NOT include dosage instructions."
 }`;
 };
@@ -157,7 +155,6 @@ const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
   const candidateModels = Array.from(new Set([
     GEMINI_FLASH_MODEL,
     'gemini-2.5-flash',
-    'gemini-2.0-flash',
     'gemini-1.5-flash',
   ].filter(Boolean)));
 
@@ -281,11 +278,14 @@ const enrichMatchesWithFda = async (matches) => {
  * @returns {Promise<object>}
  */
 export const identifyPill = async (image, patientAge, ocrText) => {
-  if (!ocrText || !ocrText.trim()) {
+  const hasText = Boolean(ocrText && ocrText.trim().length > 0);
+  const hasImage = Boolean(image && typeof image === 'string' && image.length > 50);
+
+  if (!hasText && !hasImage) {
     throw new AppError(
-      'No text was detected from the scan. Please try again with a clearer photo of the label.',
+      'No text or image was detected from the scan. Please try again with a clearer photo of the label.',
       400,
-      'NO_TEXT_DETECTED'
+      'NO_INPUT_DETECTED'
     );
   }
 

@@ -34,16 +34,23 @@ let initPromise: Promise<void> | null = null;
  * workerBlobURL:false loads the worker script directly from origin, which
  * worker-src 'self' permits.
  */
-const TESSERACT_BASE = `${import.meta.env.BASE_URL || "/"}tesseract`;
+function getAssetUrl(subpath: string): string {
+  const origin = typeof self !== 'undefined' && self.location ? self.location.origin : '';
+  const base = import.meta.env.BASE_URL || '/';
+  const cleanBase = base.endsWith('/') ? base : `${base}/`;
+  const cleanSub = subpath.startsWith('/') ? subpath.slice(1) : subpath;
+  const fullPath = `${cleanBase}tesseract/${cleanSub}`;
+  return origin ? new URL(fullPath, origin).href : fullPath;
+}
 
 function ensureWorker(): Promise<void> {
   if (tesseractWorker) return Promise.resolve();
   if (initPromise) return initPromise;
 
   initPromise = createWorker('eng', 1, {
-    workerPath: `${TESSERACT_BASE}/worker.min.js`,
-    corePath: `${TESSERACT_BASE}/core`,
-    langPath: `${TESSERACT_BASE}/lang`,
+    workerPath: getAssetUrl('worker.min.js'),
+    corePath: getAssetUrl('core'),
+    langPath: getAssetUrl('lang'),
     workerBlobURL: false,
     // Silence logging in the worker context to avoid noise
     logger: () => undefined,

@@ -93,21 +93,34 @@ async function testScanIsolation() {
   assert.ok(lastRequestUrl.includes('key=TEST_KEY_1_VAL'), 'API URL should use GEMINI_API_KEY in development');
   console.log('✅ Test Case 2 Passed! Development fallback verified.');
 
-  // --- Test Case 3: Strictly block scan if key is missing in production ---
-  console.log('\n🔹 Test Case 3: Throws error in production if GEMINI_API_KEY_2 is missing');
+  // --- Test Case 3: Production fallback to GEMINI_API_KEY and missing keys error ---
+  console.log('\n🔹 Test Case 3: In production, uses GEMINI_API_KEY when GEMINI_API_KEY_2 is missing');
   delete process.env.GEMINI_API_KEY_2;
-  process.env.GEMINI_API_KEY = 'TEST_KEY_1_VAL';
+  process.env.GEMINI_API_KEY = 'FALLBACK_PROD_KEY';
   process.env.NODE_ENV = 'production';
+
+  const result3 = await visionService.identifyPill(null, 30, 'Paracetamol 500mg');
+  assert.ok(result3.success, 'Scan should succeed using fallback key in production');
+  assert.ok(lastRequestUrl.includes('key=FALLBACK_PROD_KEY'), 'API URL should use GEMINI_API_KEY in production when KEY_2 missing');
+  console.log('✅ Test Case 3a Passed! Production fallback verified.');
+
+  console.log('\n🔹 Test Case 3b: Throws error if both GEMINI_API_KEY and GEMINI_API_KEY_2 are missing');
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_API_KEY_2;
 
   await assert.rejects(
     async () => {
       await visionService.identifyPill(null, 30, 'Paracetamol 500mg');
     },
     (err) => {
-      return err instanceof AppError && err.statusCode === 500 && err.code === 'GEMINI_KEY_2_MISSING';
+      return err instanceof AppError && err.statusCode === 500 && err.code === 'GEMINI_KEY_MISSING';
     },
-    'Should throw AppError when scan key is missing in production'
+    'Should throw AppError when both keys are missing'
   );
+  console.log('✅ Test Case 3b Passed! Missing key error handled correctly.');
+
+  // Restore key for remaining tests
+  process.env.GEMINI_API_KEY = 'TEST_KEY_1_VAL';
   console.log('✅ Test Case 3 Passed! Production key requirements enforced.');
 
   // --- Test Case 4: Rate limit manager integration ---

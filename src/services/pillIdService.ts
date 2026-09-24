@@ -52,7 +52,6 @@ function isNetworkError(err: any): boolean {
   );
 }
 
-/** Maps raw failures to specific, actionable user messages. */
 function describeScanFailure(err: any): string {
   const statusCode = err?.statusCode as number | undefined;
   if (statusCode === 429) {
@@ -61,34 +60,42 @@ function describeScanFailure(err: any): string {
   if (statusCode === 408) {
     return "The scan server took too long to respond (it may have been waking up). Please try again in a moment.";
   }
-  if (statusCode && statusCode >= 500) {
-    return "The scan service is temporarily unavailable. Please try again shortly.";
+  if (statusCode === 401) {
+    return "Session expired or authentication failed. Please sign in again.";
   }
   if (isNetworkError(err)) {
     return "Cannot reach the Dawa Lens server. Please check your internet connection and try again.";
+  }
+  if (statusCode && statusCode >= 500) {
+    return err?.message || "The scan service is temporarily unavailable. Please try again shortly.";
+  }
+  if (err?.message && !err.message.includes("[object Object]")) {
+    return err.message;
   }
   return "Failed to identify medication accurately. Please try a manual search or verify your connection.";
 }
 
 export async function identifyPill(base64Image: string, patientAge?: string): Promise<PillIdResponse> {
   try {
-    // 1. Run local OCR first
+    // 1. Run local OCR first (non-fatal: if local OCR fails, multimodal Gemini reads the image directly)
     let ocrText = "";
     try {
       ocrText = await extractTextFromImage(base64Image);
     } catch (ocrErr) {
-      console.error('[pillIdService] Local OCR failed:', ocrErr);
-      throw new Error('The scanner was unable to read the label. Please ensure the lighting is good, the image is clear, and the text is not blurry.');
-    }
-
-    if (!ocrText || !ocrText.trim()) {
-      throw new Error('No text detected on the package or pill. Please make sure the medication label is facing the camera, holds steady, and matches the scan box.');
+      console.warn('[pillIdService] Local OCR unavailable or failed, falling back to direct multimodal image scan:', ocrErr);
     }
 
     // Strip the data:image/jpeg;base64, prefix if it exists
-    const cleanImage = base64Image.replace(/^data:image\/\w+;base64,/, '');
+    const cleanImage = base64Image ? base64Image.replace(/^data:image\/\w+;base64,/, '') : '';
 
-    const payload = { image: cleanImage, patientAge, ocrText: ocrText.trim() };
+    const hasImage = Boolean(cleanImage && cleanImage.length > 50);
+    const hasText = Boolean(ocrText && ocrText.trim().length > 0);
+
+    if (!hasImage && !hasText) {
+      throw new Error('No medication image or label text detected. Please make sure the medication is facing the camera, holds steady, and matches the scan box.');
+    }
+
+    const payload = { image: cleanImage, patientAge, ocrText: (ocrText || '').trim() };
     let response: unknown;
     try {
       response = await visionApi.identifyPill(payload);
@@ -100,15 +107,17 @@ export async function identifyPill(base64Image: string, patientAge?: string): Pr
     return response as PillIdResponse;
   } catch (error: any) {
     console.error('Pill identification failed:', error);
-    // If it's a specific custom error from local OCR or API, propagate it directly
+    // If it's a specific custom error from local validation, propagate directly
     if (error.message && (
-      error.message.includes('No text detected') ||
+      error.message.includes('No medication image') ||
       error.message.includes('unable to read') ||
       error.code
     )) {
       throw error;
     }
-    throw new Error(describeScanFailure(error));
+    const finalErr = new Error(describeScanFailure(error));
+    if (error.code) (finalErr as any).code = error.code;
+    throw finalErr;
   }
 }
 

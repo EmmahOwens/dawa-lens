@@ -61,11 +61,14 @@ export default function ResultsPage() {
         const err = e as { code?: string; message?: string; fixUrl?: string };
         const code = err.code;
         const errorMessages: Record<string, string> = {
-          API_KEY_MISSING: 'Gemini API key is not configured. Add GEMINI_API_KEY to server/.env.',
-          INVALID_API_KEY: 'The Gemini API key is invalid or expired. Check server/.env.',
-          BILLING_DISABLED: 'Google Cloud Vision billing is not enabled on this GCP project.',
+          API_KEY_MISSING: 'Gemini API key is not configured. Add GEMINI_API_KEY to your Render environment.',
+          GEMINI_KEY_MISSING: 'Gemini API key is not configured. Add GEMINI_API_KEY to your Render environment.',
+          GEMINI_KEY_2_MISSING: 'Gemini API key is not configured. Add GEMINI_API_KEY to your Render environment.',
+          INVALID_API_KEY: 'The Gemini API key is invalid or expired. Check your Render environment.',
+          BILLING_DISABLED: 'Google Cloud billing is not enabled on this GCP project.',
           RATE_LIMITED: 'AI rate limit reached. Please wait a moment and try again.',
           SAFETY_BLOCKED: 'The image was blocked by safety filters. Please try a clearer photo.',
+          NO_INPUT_DETECTED: 'No medication label or image detected. Please make sure the medication is facing the camera.',
         };
         if (code && code in errorMessages) {
           setScanError({ message: errorMessages[code], code, fixUrl: err.fixUrl });
@@ -173,7 +176,7 @@ export default function ResultsPage() {
             <AlertTriangle size={22} className="text-destructive shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="font-black text-sm text-destructive uppercase tracking-tight mb-1">
-                {scanError.code === 'API_KEY_MISSING' || scanError.code === 'INVALID_API_KEY'
+                {scanError.code === 'API_KEY_MISSING' || scanError.code === 'INVALID_API_KEY' || scanError.code === 'GEMINI_KEY_MISSING' || scanError.code === 'GEMINI_KEY_2_MISSING'
                   ? 'API Key Not Configured'
                   : scanError.code === 'RATE_LIMITED'
                   ? 'Rate Limit Reached'
@@ -182,7 +185,7 @@ export default function ResultsPage() {
                   : 'Scan Failed'}
               </p>
               <p className="text-xs text-muted-foreground leading-relaxed">{scanError.message}</p>
-              {(scanError.code === 'API_KEY_MISSING' || scanError.code === 'INVALID_API_KEY') && (
+              {(scanError.code === 'API_KEY_MISSING' || scanError.code === 'INVALID_API_KEY' || scanError.code === 'GEMINI_KEY_MISSING' || scanError.code === 'GEMINI_KEY_2_MISSING') && (
                 <a
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"
