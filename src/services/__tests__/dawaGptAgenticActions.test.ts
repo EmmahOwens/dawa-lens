@@ -123,6 +123,10 @@ vi.mock("@/hooks/use-toast", () => ({
   })
 }));
 
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => vi.fn()
+}));
+
 describe("DawaGPT Full-System Agentic Actions Suite", () => {
   beforeEach(() => {
     vi.clearAllMocks();

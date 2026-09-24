@@ -697,11 +697,6 @@ export default function DawaGPT() {
     }
   }, [isOpen, dawaGPTInitialPrompt]);
 
-  const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email", "/scan"];
-  if (hiddenPaths.includes(location.pathname)) return null;
-
-  const lastMsg = messages[messages.length - 1];
-
   // Smart Fallback Suggestions logic grounded in active conversation context
   const getSmartFallbacks = useCallback(() => {
     return getContextualSuggestions({
@@ -714,6 +709,10 @@ export default function DawaGPT() {
     });
   }, [messages, activeMedicines, medicines, reminders, userProfile, resolvedPatient, location.pathname]);
 
+  const hiddenPaths = ["/welcome", "/auth", "/onboarding", "/verify-email", "/scan"];
+  if (hiddenPaths.includes(location.pathname)) return null;
+
+  const lastMsg = messages[messages.length - 1];
   const rawLastSuggestions = lastMsg?.suggestions && Array.isArray(lastMsg.suggestions) ? lastMsg.suggestions : [];
   const hasValidSuggestions = rawLastSuggestions.length > 0 && !isGenericBoilerplate(rawLastSuggestions);
 

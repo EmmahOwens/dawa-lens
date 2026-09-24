@@ -80,16 +80,7 @@ export function useAIActions() {
     setSelectedPatientId, reminders, medicines, doseLogs, patients
   } = useApp();
   const { toast } = useToast();
-  let navigate: (to: string) => void;
-  try {
-    navigate = useNavigate();
-  } catch {
-    navigate = (to: string) => {
-      if (typeof window !== "undefined") {
-        window.location.href = to;
-      }
-    };
-  }
+  const navigate = useNavigate();
 
   // Helper to resolve patient ID from patientId, patientName, patient, or target member
   const resolvePatientId = (rawIdOrName?: string | null): string | undefined => {

@@ -33,6 +33,10 @@ vi.mock("@/hooks/use-toast", () => ({
   })
 }));
 
+vi.mock("react-router-dom", () => ({
+  useNavigate: () => vi.fn()
+}));
+
 describe("DawaGPT Wellness & Symptom Extraction", () => {
   it("extracts headache with low vitality (energy: 2, mood: 2)", () => {
     const data = extractWellnessData("I have a headache");
