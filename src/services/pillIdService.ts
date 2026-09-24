@@ -29,6 +29,47 @@ export interface PillIdResponse {
  * @param patientAge Optional age of the patient to get a recommended dosage
  * @returns Prediction results from the vision service
  */
+/**
+ * One retry for transient backend failures. A timed-out first attempt usually
+ * means the hosted server (Render free tier) was waking from a cold start —
+ * the attempt still wakes it, so the retry lands in ~1s.
+ */
+function isTransientScanError(err: any): boolean {
+  const statusCode = err?.statusCode as number | undefined;
+  if (typeof statusCode === "number") {
+    return statusCode === 408 || statusCode >= 500;
+  }
+  // No statusCode → network-level failure (fetch TypeError, offline flap)
+  return true;
+}
+
+function isNetworkError(err: any): boolean {
+  return (
+    err instanceof TypeError ||
+    /failed to fetch|networkerror|load failed|internet connection/i.test(
+      err?.message || ""
+    )
+  );
+}
+
+/** Maps raw failures to specific, actionable user messages. */
+function describeScanFailure(err: any): string {
+  const statusCode = err?.statusCode as number | undefined;
+  if (statusCode === 429) {
+    return "Scan limit reached. Please wait a few minutes before scanning again.";
+  }
+  if (statusCode === 408) {
+    return "The scan server took too long to respond (it may have been waking up). Please try again in a moment.";
+  }
+  if (statusCode && statusCode >= 500) {
+    return "The scan service is temporarily unavailable. Please try again shortly.";
+  }
+  if (isNetworkError(err)) {
+    return "Cannot reach the Dawa Lens server. Please check your internet connection and try again.";
+  }
+  return "Failed to identify medication accurately. Please try a manual search or verify your connection.";
+}
+
 export async function identifyPill(base64Image: string, patientAge?: string): Promise<PillIdResponse> {
   try {
     // 1. Run local OCR first
@@ -46,20 +87,28 @@ export async function identifyPill(base64Image: string, patientAge?: string): Pr
 
     // Strip the data:image/jpeg;base64, prefix if it exists
     const cleanImage = base64Image.replace(/^data:image\/\w+;base64,/, '');
-    
-    const response = await visionApi.identifyPill({ image: cleanImage, patientAge, ocrText: ocrText.trim() });
+
+    const payload = { image: cleanImage, patientAge, ocrText: ocrText.trim() };
+    let response: unknown;
+    try {
+      response = await visionApi.identifyPill(payload);
+    } catch (apiErr: any) {
+      if (!isTransientScanError(apiErr)) throw apiErr;
+      console.warn("[pillIdService] Transient scan failure, retrying once:", apiErr?.message);
+      response = await visionApi.identifyPill(payload);
+    }
     return response as PillIdResponse;
   } catch (error: any) {
     console.error('Pill identification failed:', error);
     // If it's a specific custom error from local OCR or API, propagate it directly
     if (error.message && (
-      error.message.includes('No text detected') || 
-      error.message.includes('unable to read') || 
+      error.message.includes('No text detected') ||
+      error.message.includes('unable to read') ||
       error.code
     )) {
       throw error;
     }
-    throw new Error('Failed to identify medication accurately. Please try a manual search or verify your connection.');
+    throw new Error(describeScanFailure(error));
   }
 }
 

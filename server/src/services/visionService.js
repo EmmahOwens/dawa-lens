@@ -23,13 +23,16 @@ const getGeminiApiKeyForScan = () => {
 
 // ── Prompt ───────────────────────────────────────────────────────────────────
 const getTextPillIdPrompt = (ocrText) => {
-  return `You are a pharmaceutical visual identification assistant. Identify candidate medications strictly from the following OCR text extracted from packaging or pill markings.
+  return `You are a pharmaceutical visual identification assistant. Identify candidate medications using BOTH of the following sources, in priority order:
+1. The attached photo of the medication packaging / blister foil / pill. The photo is authoritative: read all visible text directly from it, including stylised or low-contrast printing that OCR may have garbled or missed.
+2. The OCR text extracted on-device (may contain recognition errors, extraneous characters, or omissions — treat it as a hint, not ground truth).
+
 CRITICAL CLINICAL SAFETY RULE: NEVER generate dosage instructions, standard doses, or medication schedules. Dosing advice must be determined exclusively by a licensed prescriber, pharmacist, or from verified physical packaging.
 
-OCR Text:
+OCR Text (hint only, may be wrong):
 "${ocrText}"
 
-Analyze the OCR text to extract:
+Analyze the photo and OCR text to extract:
 1. The candidate brand name(s) or generic active ingredient(s).
 2. Any imprints or packaging text extracted.
 3. Formulate exactly 5 candidate matches ranked by confidence. If fewer than 5 matches exist, fill the rest with inconclusive entries.
@@ -82,6 +85,21 @@ const PILL_ID_SCHEMA = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
+ * Validates and normalises the client-provided base64 image for inline
+ * multimodal input. Returns null when absent or malformed so the scan can
+ * still proceed OCR-text-only.
+ */
+const toInlineImagePart = (imageBase64) => {
+  if (!imageBase64 || typeof imageBase64 !== 'string') return null;
+  const data = imageBase64.replace(/^data:image\/\w+;base64,/, '').trim();
+  // ~8MB of base64 ≈ 6MB binary — well above the client's 800px/75% JPEG output
+  if (data.length < 100 || data.length > 8 * 1024 * 1024 || !/^[A-Za-z0-9+/=]+$/.test(data)) {
+    return null;
+  }
+  return { inline_data: { mime_type: 'image/jpeg', data } };
+};
+
+/**
  * Normalises and pads the matches array to exactly 5 entries.
  */
 const normaliseMatches = (raw) => {
@@ -110,16 +128,24 @@ const normaliseMatches = (raw) => {
 
 // ── Gemini Text model ────────────────────────────────────────
 
-const identifyWithGeminiText = async (ocrText, patientAge) => {
+const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
   const apiKey = getGeminiApiKeyForScan();
-  
+
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_FLASH_MODEL}:generateContent`;
+
+  // Multimodal request: the photo is the primary identification source, the
+  // on-device OCR text is a hint. Falls back to text-only when no valid
+  // image arrives (older clients / offline flows).
+  const parts = [{ text: getTextPillIdPrompt(ocrText) }];
+  const imagePart = toInlineImagePart(imageBase64);
+  if (imagePart) {
+    parts.push(imagePart);
+  }
+
   const requestBody = {
     contents: [
       {
-        parts: [
-          { text: getTextPillIdPrompt(ocrText) },
-        ],
+        parts,
       },
     ],
     generationConfig: {
@@ -219,11 +245,14 @@ const enrichMatchesWithFda = async (matches) => {
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Identifies a pill/medication using extracted OCR text.
+ * Identifies a pill/medication using the captured photo plus extracted OCR text.
  *
- * Exclusively uses Gemini 3.5 Flash with GEMINI_API_KEY_2 (isolated from DawaGPT).
+ * Exclusively uses Gemini Flash with GEMINI_API_KEY_2 (isolated from DawaGPT).
+ * The photo is sent as an inline multimodal part (authoritative source); the
+ * on-device OCR text accompanies it as a hint. Identification gracefully
+ * degrades to OCR-text-only when the image is missing or malformed.
  *
- * @param {string} [image]     - Ignored/Optional base64 image.
+ * @param {string} [image]     - Optional base64 image of the packaging/pill.
  * @param {number} [patientAge] - Optional patient age for dosage context.
  * @param {string} ocrText     - Extracted OCR text from the medication.
  * @returns {Promise<object>}
@@ -238,8 +267,8 @@ export const identifyPill = async (image, patientAge, ocrText) => {
   }
 
   try {
-    console.log(`[visionService] 🔄 Processing scan with Gemini (${GEMINI_FLASH_MODEL})...`);
-    const result = await identifyWithGeminiText(ocrText, patientAge);
+    console.log(`[visionService] 🔄 Processing scan with Gemini (${GEMINI_FLASH_MODEL})${image ? ' [multimodal]' : ' [text-only]'}...`);
+    const result = await identifyWithGemini(ocrText, patientAge, image);
     console.log(`[visionService] ✅ Identified via Gemini`);
     return result;
   } catch (err) {

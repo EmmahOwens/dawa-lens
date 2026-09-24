@@ -133,12 +133,33 @@ async function streamRequest(
 
 // --- Vision AI ---
 export const visionApi = {
+  // Long timeout: the hosted API (Render free tier) can take ~60s to wake from
+  // a cold start; aborting at 20s made every first scan after idle fail.
   identifyPill: (data: { image?: string; patientAge?: string; ocrText: string }) =>
     request<unknown>("/vision/pill-id", {
       method: "POST",
+      timeoutMs: 60000,
       body: JSON.stringify(data),
     }),
 };
+
+/**
+ * Fire-and-forget ping to the API health endpoint.
+ * Wakes the hosted backend from a cold start at app launch so the first
+ * real request (e.g. a pill scan) does not absorb the spin-up delay.
+ * Never throws — failures are irrelevant to the caller.
+ */
+export async function warmUpApi(): Promise<void> {
+  try {
+    const healthUrl = `${BASE_URL.replace(/\/v1\/?$/, "")}/health`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    await fetch(healthUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+  } catch {
+    // Non-fatal: the scan flow retries on transient failures anyway.
+  }
+}
 
 // --- Generative AI (Coaching & Holistic Safety) ---
 const sanitizeMedicines = (medicines?: Medicine[]): Medicine[] | undefined => {

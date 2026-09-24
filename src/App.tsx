@@ -31,6 +31,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { NotificationHandler } from "@/components/NotificationHandler";
 import StoreUpdateModal from "@/components/StoreUpdateModal";
 import { initLocalPersistence } from "@/services/localPersistence";
+import { warmUpApi } from "@/services/api";
 import pkg from "../package.json";
 import { isNewerVersion, fetchLatestRelease } from "@/lib/update";
 import BatteryOptimizationGate from "@/components/BatteryOptimizationGate";
@@ -209,9 +210,14 @@ const App = () => {
         console.error("Failed to check for updates:", error);
       }
     };
-    // Only fetch update info when a network connection is available.
+    // Only fetch update info and warm the API when a network connection is available.
+    // The health ping wakes the hosted backend (Render free tier) from a cold
+    // start so the first real request — e.g. a pill scan — is not abandoned.
     deferToIdle(() => {
-      if (hasNetwork()) checkForUpdate();
+      if (hasNetwork()) {
+        checkForUpdate();
+        warmUpApi();
+      }
     });
 
     if (Capacitor.isNativePlatform()) {

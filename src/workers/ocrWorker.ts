@@ -26,11 +26,25 @@ type OutMsg =
 let tesseractWorker: Awaited<ReturnType<typeof createWorker>> | null = null;
 let initPromise: Promise<void> | null = null;
 
+/**
+ * Tesseract assets are self-hosted from /public/tesseract (worker script, WASM
+ * cores, eng.traineddata.gz). The library defaults fetch them from external
+ * CDNs at runtime, which the deployed site's Content-Security-Policy blocks
+ * (connect-src / script-src allowlists) — leaving web OCR dead in production.
+ * workerBlobURL:false loads the worker script directly from origin, which
+ * worker-src 'self' permits.
+ */
+const TESSERACT_BASE = `${import.meta.env.BASE_URL || "/"}tesseract`;
+
 function ensureWorker(): Promise<void> {
   if (tesseractWorker) return Promise.resolve();
   if (initPromise) return initPromise;
 
   initPromise = createWorker('eng', 1, {
+    workerPath: `${TESSERACT_BASE}/worker.min.js`,
+    corePath: `${TESSERACT_BASE}/core`,
+    langPath: `${TESSERACT_BASE}/lang`,
+    workerBlobURL: false,
     // Silence logging in the worker context to avoid noise
     logger: () => undefined,
   })
