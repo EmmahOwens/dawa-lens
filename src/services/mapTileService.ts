@@ -13,7 +13,7 @@ export const FIREBASE_PMTILES_STORAGE_URL =
 export const OPENFREEMAP_POSITRON_STYLE = "https://tiles.openfreemap.org/styles/positron";
 export const OPENFREEMAP_BRIGHT_STYLE = "https://tiles.openfreemap.org/styles/bright";
 
-// High-resolution Esri World Imagery raster basemap
+// High-resolution Esri World Imagery raster basemap (maxzoom capped at 17 so MapLibre overzooms in Uganda instead of showing 'Map data not yet available' tiles)
 export const ESRI_SATELLITE_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
@@ -24,7 +24,7 @@ export const ESRI_SATELLITE_STYLE: maplibregl.StyleSpecification = {
       ],
       tileSize: 256,
       attribution: "Esri, Maxar, Earthstar Geographics",
-      maxzoom: 19,
+      maxzoom: 17,
     },
   },
   layers: [
@@ -33,7 +33,79 @@ export const ESRI_SATELLITE_STYLE: maplibregl.StyleSpecification = {
       type: "raster",
       source: "esri-satellite",
       minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+};
+
+/**
+ * Unified multi-layer composite map style:
+ * Contains both Streets (CARTO Voyager) and Satellite (Esri maxzoom 17 + Hybrid labels)
+ * in a single style specification.
+ *
+ * Switching between Streets and Satellite is done via layer visibility toggling,
+ * completely avoiding map.setStyle() teardowns that wipe out route polylines!
+ */
+export const COMPOSITE_PHARMACY_MAP_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "streets-source": {
+      type: "raster",
+      tiles: [
+        "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+      ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors, © CARTO",
       maxzoom: 19,
+    },
+    "satellite-source": {
+      type: "raster",
+      tiles: [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      tileSize: 256,
+      attribution: "Esri, Maxar, Earthstar Geographics",
+      maxzoom: 17, // Capped at 17 to prevent Esri "Map data not yet available" tiles
+    },
+    "satellite-labels-source": {
+      type: "raster",
+      tiles: [
+        "https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png",
+      ],
+      tileSize: 256,
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: "streets-layer",
+      type: "raster",
+      source: "streets-source",
+      minzoom: 0,
+      maxzoom: 22,
+      layout: {
+        visibility: "visible",
+      },
+    },
+    {
+      id: "satellite-layer",
+      type: "raster",
+      source: "satellite-source",
+      minzoom: 0,
+      maxzoom: 22,
+      layout: {
+        visibility: "none",
+      },
+    },
+    {
+      id: "satellite-labels-layer",
+      type: "raster",
+      source: "satellite-labels-source",
+      minzoom: 0,
+      maxzoom: 22,
+      layout: {
+        visibility: "none",
+      },
     },
   ],
 };

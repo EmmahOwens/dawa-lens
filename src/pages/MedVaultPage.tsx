@@ -25,6 +25,7 @@ import { usePatientScope } from "@/hooks/usePatientScope";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { calculateRefillStatus } from "@/services/refillService";
 import { PharmacyFinderModal } from "@/components/pharmacy/PharmacyFinderModal";
+import { NdaPharmacy } from "@/services/pharmacyService";
 import PermissionRequest from "@/components/PermissionRequest";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
@@ -117,11 +118,12 @@ function StockRing({
 
 interface RefillSheetProps {
   medicine: Medicine;
+  pharmacy?: NdaPharmacy | null;
   onClose: () => void;
   onSave: (qty: number, unit: string, perDose: number, total: number, frequencyPerDay?: number) => Promise<void>;
 }
 
-function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
+function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) {
   const [qty, setQty] = useState(medicine.currentQuantity?.toString() ?? "");
   const [perDose, setPerDose] = useState(medicine.dosagePerDose?.toString() ?? "1");
   const [frequencyPerDay, setFrequencyPerDay] = useState(medicine.frequencyPerDay?.toString() ?? "1");
@@ -188,6 +190,24 @@ function RefillSheet({ medicine, onClose, onSave }: RefillSheetProps) {
           <p className="text-xs text-muted-foreground mb-6">
             {medicine.name} · Current: {medicine.currentQuantity ?? "—"} {medicine.unit ?? "units"}
           </p>
+
+          {pharmacy && (
+            <div className="mb-5 p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-between gap-3 text-xs">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-teal-700 dark:text-teal-300 font-black text-[10px] uppercase tracking-wider">
+                  <CheckCircle className="size-3.5 text-teal-600 dark:text-teal-400" />
+                  <span>Verified Refill Outlet</span>
+                </div>
+                <p className="font-extrabold text-foreground truncate mt-0.5">{pharmacy.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  NDA Lic: {pharmacy.premiseNo} · {pharmacy.district}
+                </p>
+              </div>
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-800 dark:text-teal-200 shrink-0">
+                NDA Uganda
+              </span>
+            </div>
+          )}
 
         <div className="space-y-5">
           <div className="space-y-2">
@@ -539,6 +559,7 @@ export default function MedVaultPage() {
   const { toast } = useToast();
 
   const [refillTarget, setRefillTarget] = useState<Medicine | null>(null);
+  const [refillPharmacy, setRefillPharmacy] = useState<NdaPharmacy | null>(null);
   const [pharmacyFinderMedicine, setPharmacyFinderMedicine] = useState<Medicine | null | undefined>(undefined);
   const [showLocationPermission, setShowLocationPermission] = useState(false);
   const [pendingPharmacyMedicine, setPendingPharmacyMedicine] = useState<Medicine | null | undefined>(undefined);
@@ -591,17 +612,27 @@ export default function MedVaultPage() {
   ) => {
     if (!refillTarget) return;
     try {
+      const pharmacyNote = refillPharmacy
+        ? `Refilled via ${refillPharmacy.name} (NDA Lic: ${refillPharmacy.premiseNo}, ${refillPharmacy.district}) on ${new Date().toLocaleDateString()}.`
+        : "";
+      const updatedNotes = pharmacyNote
+        ? (refillTarget.notes ? `${refillTarget.notes}\n${pharmacyNote}` : pharmacyNote)
+        : refillTarget.notes;
+
       await updateMedicine(refillTarget.id, {
         currentQuantity: qty,
         totalQuantity: total,
         dosagePerDose: perDose,
         frequencyPerDay,
         unit,
+        ...(updatedNotes !== undefined ? { notes: updatedNotes } : {}),
       });
       const doses = Math.floor(qty / perDose);
       toast({
         title: "Stock updated ✅",
-        description: `${refillTarget.name}: ${qty} ${unit} logged (${doses} dose${doses !== 1 ? "s" : ""}).`,
+        description: refillPharmacy
+          ? `${refillTarget.name}: ${qty} ${unit} logged via ${refillPharmacy.name}.`
+          : `${refillTarget.name}: ${qty} ${unit} logged (${doses} dose${doses !== 1 ? "s" : ""}).`,
       });
     } catch {
       toast({
@@ -849,7 +880,11 @@ export default function MedVaultPage() {
         {refillTarget && (
           <RefillSheet
             medicine={refillTarget}
-            onClose={() => setRefillTarget(null)}
+            pharmacy={refillPharmacy}
+            onClose={() => {
+              setRefillTarget(null);
+              setRefillPharmacy(null);
+            }}
             onSave={handleRefillSave}
           />
         )}
@@ -861,9 +896,10 @@ export default function MedVaultPage() {
           <PharmacyFinderModal
             medicine={pharmacyFinderMedicine}
             onClose={() => setPharmacyFinderMedicine(undefined)}
-            onRefillLogged={(med) => {
+            onRefillLogged={(med, pharmacy) => {
               setPharmacyFinderMedicine(undefined);
               setRefillTarget(med);
+              setRefillPharmacy(pharmacy ?? null);
             }}
           />
         )}

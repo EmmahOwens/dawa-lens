@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useNearbyPharmacies } from "@/hooks/useNearbyPharmacies";
+import { usePatientScope } from "@/hooks/usePatientScope";
+import { calculateRefillStatus } from "@/services/refillService";
+import { useToast } from "@/hooks/use-toast";
 import { PharmacyRouteMap } from "./PharmacyRouteMap";
 import { PharmacyLocationSearch } from "./PharmacyLocationSearch";
 import { PharmacyVerificationModal } from "./PharmacyVerificationModal";
@@ -26,6 +29,7 @@ import {
   Location,
   WifiOff,
   Pill,
+  AlertTriangle,
 } from "@/lib/icons";
 import PermissionRequest from "@/components/PermissionRequest";
 import { Button } from "@/components/ui/button";
@@ -35,7 +39,7 @@ import { Input } from "@/components/ui/input";
 interface PharmacyFinderModalProps {
   medicine?: Medicine | null;
   onClose: () => void;
-  onRefillLogged?: (medicine: Medicine) => void;
+  onRefillLogged?: (medicine: Medicine, pharmacy?: NdaPharmacy) => void;
 }
 
 type OutletTab = "pharmacy" | "drug_shop";
@@ -121,6 +125,7 @@ function SelectedCard({
   onClose,
   onNavigate,
   onOpenVerification,
+  onShare,
   isDrugShop,
 }: {
   outlet: NdaPharmacy;
@@ -128,10 +133,11 @@ function SelectedCard({
   isRouteLoading: boolean;
   transportMode: PharmacyTransportMode;
   medicine?: Medicine | null;
-  onRefillLogged?: (m: Medicine) => void;
+  onRefillLogged?: (m: Medicine, p: NdaPharmacy) => void;
   onClose: () => void;
   onNavigate: () => void;
   onOpenVerification: () => void;
+  onShare: () => void;
   isDrugShop: boolean;
 }) {
   const accentBorder = isDrugShop ? "border-amber-500/30" : "border-teal-500/30";
@@ -207,30 +213,53 @@ function SelectedCard({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2 pt-1">
+      <div className="flex flex-wrap items-center gap-2 pt-1">
         <Button
           onClick={onNavigate}
-          className={`flex-1 h-12 rounded-2xl font-black ${btnClass} text-white shadow-lg flex items-center justify-center gap-2 text-xs uppercase tracking-wider`}
+          className={`flex-1 min-w-[130px] h-12 rounded-2xl font-black ${btnClass} text-white shadow-lg flex items-center justify-center gap-2 text-xs uppercase tracking-wider`}
         >
           <Navigation className="size-4" />
-          <span>Open in Navigation</span>
+          <span>Navigation</span>
         </Button>
+
+        {outlet.phone && (
+          <a
+            href={`tel:${outlet.phone}`}
+            className="h-12 px-3 rounded-2xl font-bold border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-xs flex items-center gap-1.5 transition-colors shrink-0"
+            title={`Call ${outlet.name}`}
+          >
+            <Phone className="size-4 text-teal-600 dark:text-teal-400" />
+            <span>Call</span>
+          </a>
+        )}
+
+        <Button
+          variant="outline"
+          onClick={onShare}
+          title="Share pharmacy location & directions"
+          className="h-12 px-3 rounded-2xl font-bold border-border/60 hover:bg-muted/40 text-xs flex items-center gap-1.5 shrink-0"
+        >
+          <Compass className="size-4 text-muted-foreground" />
+          <span className="hidden sm:inline">Share</span>
+        </Button>
+
         <Button
           variant="outline"
           onClick={onOpenVerification}
           title="Verify or update pharmacy location"
-          className="h-12 px-3.5 rounded-2xl font-bold border-border/60 hover:bg-muted/40 text-xs flex items-center gap-1.5"
+          className="h-12 px-3 rounded-2xl font-bold border-border/60 hover:bg-muted/40 text-xs flex items-center gap-1.5 shrink-0"
         >
           <ShieldCheck className="size-4 text-teal-600 dark:text-teal-400" />
           <span className="hidden sm:inline">Verify</span>
         </Button>
+
         {medicine && onRefillLogged && (
           <Button
             variant="outline"
-            onClick={() => { onRefillLogged(medicine); onClose(); }}
-            className="h-12 rounded-2xl font-bold border-border/60 text-xs"
+            onClick={() => { onRefillLogged(medicine, outlet); onClose(); }}
+            className="h-12 px-4 rounded-2xl font-black border-teal-500/40 text-teal-700 dark:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 text-xs flex items-center gap-1.5 shrink-0"
           >
-            <RefreshCw className="size-3.5 mr-1" /> Refill
+            <RefreshCw className="size-3.5 mr-1" /> Refill {medicine.name.split(" ")[0]}
           </Button>
         )}
       </div>
@@ -244,6 +273,33 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
   onClose,
   onRefillLogged,
 }) => {
+  const { toast } = useToast();
+  const { scopedMedicines, scopedReminders } = usePatientScope();
+
+  // Medicines with tracked inventory that user can refill
+  const trackedMedicines = useMemo(() => {
+    return scopedMedicines.filter((m) => m.currentQuantity !== undefined);
+  }, [scopedMedicines]);
+
+  // Current selected medicine for refill (initialized from prop or first tracked low medicine)
+  const [selectedMed, setSelectedMed] = useState<Medicine | null>(medicine ?? null);
+
+  useEffect(() => {
+    if (medicine) {
+      setSelectedMed(medicine);
+    } else if (!selectedMed && trackedMedicines.length > 0) {
+      // Prioritize lowest stock / critical medicine
+      const sorted = [...trackedMedicines].sort((a, b) => (a.currentQuantity ?? 0) - (b.currentQuantity ?? 0));
+      setSelectedMed(sorted[0]);
+    }
+  }, [medicine, trackedMedicines]);
+
+  // Real-time stock status of selected medicine
+  const activeMedStatus = useMemo(() => {
+    if (!selectedMed) return null;
+    return calculateRefillStatus(selectedMed, scopedReminders);
+  }, [selectedMed, scopedReminders]);
+
   const {
     userCoords,
     deviceCoords,
@@ -326,6 +382,28 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const handleShareOutlet = (outlet: NdaPharmacy) => {
+    const url = getDirectionsUrl(outlet.latitude, outlet.longitude, outlet.name, {
+      userCoords,
+      mode: transportMode,
+    });
+    const shareText = `🏥 ${outlet.name}\n📍 ${outlet.address || outlet.street}, ${outlet.district}\n📋 NDA License: ${outlet.premiseNo}${outlet.phone ? `\n📞 Phone: ${outlet.phone}` : ""}\n🗺️ Directions: ${url}`;
+    
+    if (typeof navigator !== "undefined" && navigator.share) {
+      navigator.share({
+        title: outlet.name,
+        text: shareText,
+        url,
+      }).catch(() => {});
+    } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(shareText);
+      toast({
+        title: "Copied to clipboard 📋",
+        description: `${outlet.name} details & navigation link copied.`,
+      });
+    }
+  };
+
   // When switching outlet tab, auto-select the top nearest from new set
   const handleOutletTabChange = (tab: OutletTab) => {
     setOutletTab(tab);
@@ -367,29 +445,80 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
           {/* ── Modal Header ────────────────────────────────────────── */}
           <div className="px-6 pb-4 border-b border-border/40 shrink-0">
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
+              <div className="flex-1 min-w-0 pr-2">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${accentBadge}`}>
                     <CheckCircle className="size-3" /> NDA Uganda
                   </span>
-                  {medicine && (
+                  {selectedMed && (
                     <span className="inline-flex items-center rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[10px] font-extrabold text-amber-600 dark:text-amber-400">
-                      Refill Radar
+                      Refill: {selectedMed.name}
                     </span>
                   )}
+                  {activeMedStatus?.isLow ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 border border-red-500/30 px-2 py-0.5 text-[10px] font-black text-red-600 dark:text-red-400 animate-pulse">
+                      Critical (~{activeMedStatus.daysRemaining ?? 0}d left)
+                    </span>
+                  ) : activeMedStatus?.isWarning ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-black text-amber-600 dark:text-amber-400">
+                      Low (~{activeMedStatus.daysRemaining ?? 0}d left)
+                    </span>
+                  ) : null}
                 </div>
-                <h2 className="text-2xl font-black tracking-tight text-foreground leading-tight">
-                  {medicine ? `Refill ${medicine.name}` : "Find Nearest Licensed Outlet"}
+                <h2 className="text-2xl font-black tracking-tight text-foreground leading-tight truncate">
+                  {selectedMed ? `Refill ${selectedMed.name}` : "Find Nearest Licensed Outlet"}
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {isPharmacyTab
                     ? "NDA-licensed pharmacies (drug outlets) with live road routes."
                     : "NDA-licensed drug shops across all Uganda regions."}
                 </p>
+
+                {/* Medicine Picker Chips (when multiple tracked meds exist in Med Vault) */}
+                {trackedMedicines.length > 0 && (
+                  <div className="mt-2.5 pt-2 border-t border-border/30">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                        <Pill className="size-3 text-teal-600 dark:text-teal-400" />
+                        Select Medicine to Refill
+                      </span>
+                      <span className="text-[9px] text-muted-foreground">
+                        {trackedMedicines.length} in Med Vault
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                      {trackedMedicines.map((med) => {
+                        const isCurrent = selectedMed?.id === med.id;
+                        const isLow = (med.currentQuantity ?? 0) <= 5;
+                        return (
+                          <button
+                            key={med.id}
+                            type="button"
+                            onClick={() => setSelectedMed(med)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold shrink-0 transition-all border ${
+                              isCurrent
+                                ? "bg-teal-600 text-white border-teal-600 shadow-sm"
+                                : isLow
+                                ? "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300 hover:bg-red-500/20"
+                                : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50"
+                            }`}
+                          >
+                            <span className="truncate max-w-[120px]">{med.name}</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                              isCurrent ? "bg-white/20 text-white" : "bg-muted/60 text-muted-foreground"
+                            }`}>
+                              {med.currentQuantity} {med.unit || "units"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-2xl bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                className="p-2 rounded-2xl bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
               >
                 <CloseSquare size={20} />
               </button>
@@ -443,6 +572,16 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                 </span>
               </button>
             </div>
+
+            {/* ── NDA Regulatory Notice for Drug Shops ─── */}
+            {isDrugShopTab && (
+              <div className="mt-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+                <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <span className="font-bold">NDA Regulatory Notice:</span> Class C Drug Shops are legally restricted to OTC and essential items. Prescription drugs must be refilled at a licensed Pharmacy.
+                </div>
+              </div>
+            )}
 
             {/* ── Sub-row: Top 5 / Search + Travel Mode ─────────── */}
             <div className="mt-3 flex items-center justify-between gap-2 flex-wrap">
@@ -600,8 +739,8 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
 
             {/* ── Search & Filter ──────────────────────────────────── */}
             {viewTab === "search" && (
-              <div className="space-y-3">
-                <div className="flex gap-2">
+              <div className="space-y-2.5">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
@@ -616,13 +755,31 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                   <select
                     value={activeDistrict}
                     onChange={(e) => setActiveDistrict(e.target.value)}
-                    className="h-11 px-3 rounded-2xl border border-input bg-background text-xs font-bold text-foreground focus:ring-2 focus:ring-ring"
+                    className="h-11 px-3 rounded-2xl border border-input bg-background text-xs font-bold text-foreground focus:ring-2 focus:ring-ring sm:max-w-[200px]"
                   >
                     <option value="ALL">All Districts ({activeDistricts.length})</option>
                     {activeDistricts.map((d) => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
+                </div>
+
+                {/* Quick Regional Hub Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-[10px]">
+                  {["ALL", "Kampala", "Wakiso", "Jinja", "Mbarara", "Gulu"].map((hub) => (
+                    <button
+                      key={hub}
+                      type="button"
+                      onClick={() => setActiveDistrict(hub)}
+                      className={`px-2.5 py-1 rounded-lg border font-bold shrink-0 transition-all ${
+                        activeDistrict === hub
+                          ? `${isPharmacyTab ? "bg-teal-600 border-teal-600" : "bg-amber-600 border-amber-600"} text-white shadow-sm`
+                          : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/60"
+                      }`}
+                    >
+                      {hub === "ALL" ? "All Districts" : hub}
+                    </button>
+                  ))}
                 </div>
 
                 {/* Filtered list */}
@@ -681,11 +838,12 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                 route={route}
                 isRouteLoading={isRouteLoading}
                 transportMode={transportMode}
-                medicine={medicine}
-                onRefillLogged={onRefillLogged}
+                medicine={selectedMed}
+                onRefillLogged={(m, p) => onRefillLogged?.(m, p)}
                 onClose={onClose}
                 onNavigate={() => handleOpenExternalMaps(selectedPharmacy)}
                 onOpenVerification={() => setIsVerificationOpen(true)}
+                onShare={() => handleShareOutlet(selectedPharmacy)}
                 isDrugShop={selectedPharmacy.outletType === "drug_shop"}
               />
             )}

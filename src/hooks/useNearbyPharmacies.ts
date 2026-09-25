@@ -18,6 +18,7 @@ import {
   saveLastKnownLocation,
   DEFAULT_KAMPALA_COORDS,
 } from "../services/pharmacyService";
+import { applyCommunityFeedback } from "../services/pharmacyFeedbackService";
 
 export interface CustomPharmacyLocation {
   coords: [number, number]; // [lng, lat]
@@ -97,9 +98,10 @@ export function useNearbyPharmacies() {
   );
 
   const top5Pharmacies = useMemo(() => {
-    return [...rawTopPharmacies].sort(
+    const list = [...rawTopPharmacies].sort(
       (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
     );
+    return applyCommunityFeedback(list);
   }, [rawTopPharmacies]);
 
   // ── Drug Shop state ───────────────────────────────────────────────────────────
@@ -111,9 +113,10 @@ export function useNearbyPharmacies() {
   );
 
   const top5DrugShops = useMemo(() => {
-    return [...rawTopDrugShops].sort(
+    const list = [...rawTopDrugShops].sort(
       (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
     );
+    return applyCommunityFeedback(list);
   }, [rawTopDrugShops]);
 
   // ── Pharmacy enrichment effect ───────────────────────────────────────────────
@@ -179,26 +182,26 @@ export function useNearbyPharmacies() {
   }, [activeCoords, transportMode, isOnline]);
 
   // ── Filtered lists ────────────────────────────────────────────────────────────
-  const filteredPharmacies = useMemo(() =>
-    findNearbyPharmacies(activeCoords[1], activeCoords[0], {
+  const filteredPharmacies = useMemo(() => {
+    const list = findNearbyPharmacies(activeCoords[1], activeCoords[0], {
       radiusKm,
       district: selectedDistrict,
       query: searchQuery,
       onlyRetail: true,
       limit: 60,
-    }),
-    [activeCoords, radiusKm, selectedDistrict, searchQuery]
-  );
+    });
+    return applyCommunityFeedback(list);
+  }, [activeCoords, radiusKm, selectedDistrict, searchQuery]);
 
-  const filteredDrugShops = useMemo(() =>
-    findNearbyDrugShops(activeCoords[1], activeCoords[0], {
+  const filteredDrugShops = useMemo(() => {
+    const list = findNearbyDrugShops(activeCoords[1], activeCoords[0], {
       radiusKm: 100,
       district: dsSelectedDistrict,
       query: dsSearchQuery,
       limit: 60,
-    }),
-    [activeCoords, dsSelectedDistrict, dsSearchQuery]
-  );
+    });
+    return applyCommunityFeedback(list);
+  }, [activeCoords, dsSelectedDistrict, dsSearchQuery]);
 
   // ── Auto-select nearest on load ───────────────────────────────────────────────
   useEffect(() => {
@@ -249,27 +252,21 @@ export function useNearbyPharmacies() {
           };
 
           if (selectedPharmacy.outletType === "drug_shop") {
-            setRawTopDrugShops((prev) => {
-              const updated = prev.map((p) =>
+            setRawTopDrugShops((prev) =>
+              prev.map((p) =>
                 p.id === selectedPharmacy.id
                   ? { ...p, distanceKm: res.distanceKm, durationMinutes: res.durationMinutes }
                   : p
-              );
-              return [...updated].sort(
-                (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
-              );
-            });
+              )
+            );
           } else {
-            setRawTopPharmacies((prev) => {
-              const updated = prev.map((p) =>
+            setRawTopPharmacies((prev) =>
+              prev.map((p) =>
                 p.id === selectedPharmacy.id
                   ? { ...p, distanceKm: res.distanceKm, durationMinutes: res.durationMinutes }
                   : p
-              );
-              return [...updated].sort(
-                (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
-              );
-            });
+              )
+            );
           }
         }
       })

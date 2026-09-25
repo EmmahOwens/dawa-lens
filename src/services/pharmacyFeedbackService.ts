@@ -109,9 +109,42 @@ export async function flushPendingFeedback(): Promise<number> {
   return flushedCount;
 }
 
+/**
+ * Merges locally verified community feedback (phone number, coordinates) into in-memory pharmacy outlets.
+ */
+export function applyCommunityFeedback<T extends { id: string; name: string; premiseNo?: string; phone?: string; latitude: number; longitude: number }>(
+  outlets: T[]
+): T[] {
+  const queue = getQueuedFeedback();
+  if (!queue || queue.length === 0) return outlets;
+
+  const feedbackMap = new Map<string, StoredPharmacyFeedback>();
+  for (const fb of queue) {
+    if (fb.pharmacyId) feedbackMap.set(fb.pharmacyId, fb);
+    if (fb.pharmacyName) feedbackMap.set(fb.pharmacyName.toLowerCase(), fb);
+  }
+
+  return outlets.map((outlet) => {
+    const fb =
+      feedbackMap.get(outlet.id) ||
+      (outlet.premiseNo ? feedbackMap.get(outlet.premiseNo) : undefined) ||
+      feedbackMap.get(outlet.name.toLowerCase());
+
+    if (!fb) return outlet;
+
+    return {
+      ...outlet,
+      phone: fb.suggestedPhone || outlet.phone,
+      latitude: typeof fb.verifiedLat === "number" ? fb.verifiedLat : outlet.latitude,
+      longitude: typeof fb.verifiedLng === "number" ? fb.verifiedLng : outlet.longitude,
+    };
+  });
+}
+
 // Auto flush when online event fires
 if (typeof window !== "undefined") {
   window.addEventListener("online", () => {
     flushPendingFeedback().catch(() => {});
   });
 }
+

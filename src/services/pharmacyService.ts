@@ -315,8 +315,10 @@ export function findNearbyPharmacies(
     return { ...p, distanceKm: dist };
   });
 
+  // If user explicitly selected a district or entered a search query, bypass the 25km radius cap
+  const hasSpecificFilter = Boolean((district && district !== "ALL") || query.trim().length > 0);
   const filteredByRadius =
-    radiusKm && radiusKm < 1000
+    !hasSpecificFilter && radiusKm && radiusKm < 1000
       ? withDist.filter((p) => (p.distanceKm ?? Infinity) <= radiusKm)
       : withDist;
 
@@ -580,8 +582,10 @@ export function findNearbyDrugShops(
     distanceKm: calculateHaversineDistance(userLat, userLng, d.latitude, d.longitude),
   }));
 
+  // If user explicitly selected a district or entered a search query, bypass the radius cap
+  const hasSpecificFilter = Boolean((district && district !== "ALL") || query.trim().length > 0);
   const filtered =
-    radiusKm && radiusKm < 1000
+    !hasSpecificFilter && radiusKm && radiusKm < 1000
       ? withDist.filter((d) => (d.distanceKm ?? Infinity) <= radiusKm)
       : withDist;
 

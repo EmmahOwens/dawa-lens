@@ -18,10 +18,8 @@ import {
 
 import {
   initPmtilesProtocol,
-  resolveActiveVectorStyle,
+  COMPOSITE_PHARMACY_MAP_STYLE,
   ESRI_SATELLITE_STYLE,
-  OPENFREEMAP_POSITRON_STYLE,
-  OPENFREEMAP_BRIGHT_STYLE,
 } from "@/services/mapTileService";
 
 interface PharmacyRouteMapProps {
@@ -33,10 +31,6 @@ interface PharmacyRouteMapProps {
   onSelectPharmacy: (pharmacy: NdaPharmacy) => void;
   className?: string;
 }
-
-const PRIMARY_STYLE = OPENFREEMAP_POSITRON_STYLE;
-const FALLBACK_STYLE = OPENFREEMAP_BRIGHT_STYLE;
-const SATELLITE_STYLE = ESRI_SATELLITE_STYLE;
 
 export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
   userCoords,
@@ -92,7 +86,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
           paint: {
             "line-color": isSatellite ? "#22d3ee" : "#0d9488",
             "line-width": 8,
-            "line-opacity": isSatellite ? 0.65 : 0.35,
+            "line-opacity": isSatellite ? 0.75 : 0.4,
             "line-blur": 3,
           },
         });
@@ -134,78 +128,27 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
           },
         });
       }
-
-      // Optional 3D buildings in Streets vector mode
-      if (!isSatellite) {
-        const sourceId = map.getSource("openmaptiles") ? "openmaptiles" : map.getSource("composite") ? "composite" : null;
-        if (sourceId && !map.getLayer("3d-buildings")) {
-          try {
-            map.addLayer({
-              id: "3d-buildings",
-              source: sourceId,
-              "source-layer": "building",
-              type: "fill-extrusion",
-              minzoom: 15,
-              paint: {
-                "fill-extrusion-color": "#cbd5e1",
-                "fill-extrusion-height": [
-                  "interpolate", ["linear"], ["zoom"],
-                  15, 0,
-                  16, ["get", "render_height"]
-                ],
-                "fill-extrusion-base": [
-                  "interpolate", ["linear"], ["zoom"],
-                  15, 0,
-                  16, ["get", "render_min_height"]
-                ],
-                "fill-extrusion-opacity": 0.55,
-              },
-            });
-          } catch {
-            // Source doesn't have 3D building schema, continue smoothly
-          }
-        }
-      }
     } catch (layerErr) {
       console.warn("[PharmacyRouteMap] Error setting up layers:", layerErr);
     }
   }, []);
 
-  // ── 1. Initialize MapLibre GL v6 ───────────────────────────────────────────
+  // ── 1. Initialize MapLibre with unified composite style ──────────────────────
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
-
-    let fallbackApplied = false;
 
     try {
       initPmtilesProtocol(maplibregl);
 
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: PRIMARY_STYLE,
+        style: COMPOSITE_PHARMACY_MAP_STYLE,
         center: userCoords,
         zoom: 13,
         attributionControl: false,
         dragRotate: false,
         touchPitch: false,
-      });
-
-      resolveActiveVectorStyle().then((activeStyle) => {
-        if (mapRef.current && mapModeRef.current === "streets" && activeStyle !== PRIMARY_STYLE) {
-          mapRef.current.setStyle(activeStyle);
-        }
-      });
-
-      map.on("error", (e) => {
-        console.warn("[PharmacyRouteMap] MapLibre error:", e);
-        if (!fallbackApplied && mapModeRef.current === "streets") {
-          fallbackApplied = true;
-          try {
-            map.setStyle(FALLBACK_STYLE);
-          } catch (err) {
-            console.warn("[PharmacyRouteMap] Fallback style failed:", err);
-          }
-        }
+        cooperativeGestures: true,
       });
 
       map.on("load", () => {
@@ -216,11 +159,6 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         } catch (loadErr) {
           console.warn("[PharmacyRouteMap] Error on map load:", loadErr);
         }
-      });
-
-      // When style changes (e.g. switching to satellite), restore route layers
-      map.on("styledata", () => {
-        setupRouteLayers(map, mapModeRef.current === "satellite");
       });
 
       mapRef.current = map;
@@ -236,19 +174,47 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     };
   }, [setupRouteLayers, userCoords]);
 
-  // ── Toggle between Streets & Satellite Basemap ─────────────────────────────
+  // ── ResizeObserver to handle modal spring animations seamlessly ───────────
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    const ro = new ResizeObserver(() => {
+      if (mapRef.current) {
+        mapRef.current.resize();
+      }
+    });
+
+    ro.observe(mapContainerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  // ── Non-destructive Streets ↔ Satellite Visibility Toggling ────────────────
   const toggleMapMode = useCallback(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !map.isStyleLoaded()) return;
 
     const nextMode = mapMode === "streets" ? "satellite" : "streets";
     setMapMode(nextMode);
 
     try {
-      if (nextMode === "satellite") {
-        map.setStyle(SATELLITE_STYLE);
-      } else {
-        map.setStyle(PRIMARY_STYLE);
+      // Toggle raster basemap layer visibilities (ZERO setStyle calls!)
+      if (map.getLayer("streets-layer")) {
+        map.setLayoutProperty("streets-layer", "visibility", nextMode === "streets" ? "visible" : "none");
+      }
+      if (map.getLayer("satellite-layer")) {
+        map.setLayoutProperty("satellite-layer", "visibility", nextMode === "satellite" ? "visible" : "none");
+      }
+      if (map.getLayer("satellite-labels-layer")) {
+        map.setLayoutProperty("satellite-labels-layer", "visibility", nextMode === "satellite" ? "visible" : "none");
+      }
+
+      // Adjust route colors for optimal contrast against satellite vs streets
+      if (map.getLayer("pharmacy-route-glow")) {
+        map.setPaintProperty("pharmacy-route-glow", "line-color", nextMode === "satellite" ? "#22d3ee" : "#0d9488");
+        map.setPaintProperty("pharmacy-route-glow", "line-opacity", nextMode === "satellite" ? 0.75 : 0.4);
+      }
+      if (map.getLayer("pharmacy-route-core")) {
+        map.setPaintProperty("pharmacy-route-core", "line-color", nextMode === "satellite" ? "#06b6d4" : "#0f766e");
       }
     } catch (err) {
       console.warn("[PharmacyRouteMap] Failed to toggle map mode:", err);
@@ -311,7 +277,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     userMarkerRef.current = marker;
   }, [userCoords]);
 
-  // ── 3. Render Top 5 Pharmacy Markers ───────────────────────────────────────
+  // ── 3. Render Pharmacy Markers (Top outlets + Guaranteed Selected Pin) ─────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -320,10 +286,17 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     pharmacyMarkersRef.current.forEach((m) => m.remove());
     pharmacyMarkersRef.current = [];
 
-    topPharmacies.forEach((pharmacy, index) => {
+    // Ensure selectedPharmacy is ALWAYS included among rendered pins
+    const displayOutlets = [...topPharmacies];
+    if (selectedPharmacy && !displayOutlets.some((p) => p.id === selectedPharmacy.id)) {
+      displayOutlets.push(selectedPharmacy);
+    }
+
+    displayOutlets.forEach((pharmacy) => {
       const isSelected = selectedPharmacy?.id === pharmacy.id;
       const isDrugShop = pharmacy.outletType === "drug_shop";
-      const rank = index + 1;
+      const rankIndex = topPharmacies.findIndex((p) => p.id === pharmacy.id);
+      const rankText = rankIndex >= 0 ? `#${rankIndex + 1}` : "★";
 
       // Colour scheme: teal for pharmacies, amber for drug shops
       const activeBg = isDrugShop
@@ -349,7 +322,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         align-items: center;
         transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         transform-origin: bottom center;
-        z-index: ${isSelected ? 30 : 15 - index};
+        z-index: ${isSelected ? 30 : rankIndex >= 0 ? 15 - rankIndex : 10};
       `;
 
       const badge = document.createElement("div");
@@ -369,7 +342,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         border: 2px solid ${isSelected ? activeBorder : inactiveBorder};
         box-shadow: ${isSelected ? activeShadow : "0 2px 6px rgba(0,0,0,0.25)"};
       `;
-      badge.innerText = `#${rank}`;
+      badge.innerText = rankText;
 
       const tip = document.createElement("div");
       tip.style.cssText = `
@@ -402,28 +375,19 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     if (!map || !isMapLoaded) return;
 
     try {
-      const source = map.getSource("pharmacy-route") as maplibregl.GeoJSONSource | undefined;
+      let source = map.getSource("pharmacy-route") as maplibregl.GeoJSONSource | undefined;
       if (!source) {
         setupRouteLayers(map, mapModeRef.current === "satellite");
-        return;
+        source = map.getSource("pharmacy-route") as maplibregl.GeoJSONSource | undefined;
       }
 
-      if (route && route.coordinates.length > 0) {
+      if (source) {
         source.setData({
           type: "Feature",
           properties: {},
           geometry: {
             type: "LineString",
-            coordinates: route.coordinates,
-          },
-        });
-      } else {
-        source.setData({
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates: [],
+            coordinates: route && route.coordinates.length > 0 ? route.coordinates : [],
           },
         });
       }
