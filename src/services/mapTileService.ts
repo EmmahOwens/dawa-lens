@@ -116,13 +116,20 @@ let globalProtocolInstance: pmtiles.Protocol | null = null;
 /**
  * Initializes and registers the PMTiles protocol handler with MapLibre GL once.
  */
-export function initPmtilesProtocol(maplibreInstance: typeof maplibregl): void {
+export function initPmtilesProtocol(maplibreInstance: any): void {
   if (isProtocolRegistered) return;
 
   try {
-    globalProtocolInstance = new pmtiles.Protocol();
-    maplibreInstance.addProtocol("pmtiles", globalProtocolInstance.tile);
-    isProtocolRegistered = true;
+    const ProtocolClass = (pmtiles as any).Protocol || (pmtiles as any).default?.Protocol;
+    if (ProtocolClass) {
+      globalProtocolInstance = new ProtocolClass();
+      const addProtocolFn =
+        maplibreInstance?.addProtocol || maplibreInstance?.default?.addProtocol;
+      if (typeof addProtocolFn === "function") {
+        addProtocolFn.call(maplibreInstance, "pmtiles", globalProtocolInstance.tile);
+        isProtocolRegistered = true;
+      }
+    }
   } catch (err) {
     console.warn("[mapTileService] Failed to register PMTiles protocol:", err);
   }

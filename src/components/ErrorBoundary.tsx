@@ -1,7 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, RefreshCw, Home } from "@/lib/icons";
-import { isChunkLoadError } from "@/lib/lazyWithRetry";
+import { isChunkLoadError, clearChunkReloadFlags } from "@/lib/lazyWithRetry";
 
 interface Props {
   children?: ReactNode;
@@ -36,6 +36,7 @@ class ErrorBoundary extends Component<Props, State> {
       const now = Date.now();
       if (now - lastReload > 10000 && (typeof navigator === "undefined" || navigator.onLine)) {
         sessionStorage.setItem("error_boundary_chunk_reload_ts", String(now));
+        clearChunkReloadFlags();
         window.location.reload();
       }
     }
@@ -50,23 +51,13 @@ class ErrorBoundary extends Component<Props, State> {
 
   private handleReset = () => {
     this.setState({ hasError: false, error: null });
-    try {
-      sessionStorage.removeItem("error_boundary_chunk_reload_ts");
-      sessionStorage.removeItem("vite_preload_reload_ts");
-    } catch {
-      // ignore
-    }
+    clearChunkReloadFlags();
     window.location.reload();
   };
 
   private handleGoHome = () => {
     this.setState({ hasError: false, error: null });
-    try {
-      sessionStorage.removeItem("error_boundary_chunk_reload_ts");
-      sessionStorage.removeItem("vite_preload_reload_ts");
-    } catch {
-      // ignore
-    }
+    clearChunkReloadFlags();
     window.location.href = "/";
   };
 
