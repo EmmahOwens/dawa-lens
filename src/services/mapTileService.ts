@@ -15,18 +15,32 @@ export const FIREBASE_PMTILES_STORAGE_URL =
 export const OPENFREEMAP_POSITRON_STYLE = "https://tiles.openfreemap.org/styles/positron";
 export const OPENFREEMAP_BRIGHT_STYLE = "https://tiles.openfreemap.org/styles/bright";
 
-// Ultra-reliable standalone raster style fallback (works offline or when vector tiles are blocked)
+// Optional CARTO API key (CARTO requires an API key for unwatermarked basemaps)
+const CARTO_API_KEY =
+  (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_CARTO_API_KEY) ||
+  (typeof process !== "undefined" && process.env?.VITE_CARTO_API_KEY) ||
+  "";
+
+const cartoKeyParam = CARTO_API_KEY ? `?api_key=${encodeURIComponent(CARTO_API_KEY)}` : "";
+
+// Ultra-reliable standalone raster style fallback (clean, unwatermarked OpenStreetMap tiles, or CARTO if API key is configured)
 export const RASTER_POSITRON_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
     "carto-positron-source": {
       type: "raster",
-      tiles: [
-        "https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}@2x.png",
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-      ],
+      tiles: CARTO_API_KEY
+        ? [
+            `https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}@2x.png${cartoKeyParam}`,
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          ]
+        : [
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          ],
       tileSize: 256,
-      attribution: "© OpenStreetMap contributors, © CARTO",
+      attribution: CARTO_API_KEY
+        ? "© OpenStreetMap contributors, © CARTO"
+        : "© OpenStreetMap contributors",
       maxzoom: 19,
     },
   },
@@ -68,7 +82,7 @@ export const ESRI_SATELLITE_STYLE: maplibregl.StyleSpecification = {
 
 /**
  * Unified multi-layer composite map style:
- * Contains both Streets (CARTO Voyager) and Satellite (Esri maxzoom 17 + Hybrid labels)
+ * Contains both Streets (clean OpenStreetMap or CARTO if key provided) and Satellite (Esri maxzoom 17 + Hybrid labels)
  * in a single style specification.
  *
  * Switching between Streets and Satellite is done via layer visibility toggling,
@@ -79,11 +93,13 @@ export const COMPOSITE_PHARMACY_MAP_STYLE: maplibregl.StyleSpecification = {
   sources: {
     "streets-source": {
       type: "raster",
-      tiles: [
-        "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-      ],
+      tiles: CARTO_API_KEY
+        ? [`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png${cartoKeyParam}`]
+        : ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
-      attribution: "© OpenStreetMap contributors, © CARTO",
+      attribution: CARTO_API_KEY
+        ? "© OpenStreetMap contributors, © CARTO"
+        : "© OpenStreetMap contributors",
       maxzoom: 19,
     },
     "satellite-source": {
@@ -97,10 +113,15 @@ export const COMPOSITE_PHARMACY_MAP_STYLE: maplibregl.StyleSpecification = {
     },
     "satellite-labels-source": {
       type: "raster",
-      tiles: [
-        "https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png",
-      ],
+      tiles: CARTO_API_KEY
+        ? [`https://basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}@2x.png${cartoKeyParam}`]
+        : [
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+          ],
       tileSize: 256,
+      attribution: CARTO_API_KEY
+        ? "© OpenStreetMap contributors, © CARTO"
+        : "Esri, HERE, Garmin, (c) OpenStreetMap contributors",
       maxzoom: 19,
     },
   },
