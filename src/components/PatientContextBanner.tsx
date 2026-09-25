@@ -6,10 +6,13 @@
  * one-tap "Exit" button to return to the host's own profile.
  */
 
+import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "@/lib/icons";
+import { Pill, X } from "@/lib/icons";
+import { toast } from "sonner";
 import { useApp } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
+import { parseReminderTimes } from "@/lib/dynamicSchedule";
 
 /** Maps patient color keys to Tailwind class bundles */
 const COLOR_SCHEMES: Record<
@@ -69,8 +72,63 @@ const DEFAULT_SCHEME = {
 };
 
 export function PatientContextBanner() {
-  const { selectedPatientId, setSelectedPatientId } = useApp();
+  const { selectedPatientId, setSelectedPatientId, reminders, doseLogs, logDose } = useApp();
   const { resolvedPatient } = usePatientScope();
+
+  // Caregiver due dose check: gives immediate visibility and 1-tap logging
+  // for the caregiver's own due medication even while actively viewing a patient's profile.
+  const caregiverDueDose = useMemo(() => {
+    const caregiverReminders = reminders.filter(
+      (r) => (!r.patientId || r.patientId === null) && r.enabled
+    );
+    if (caregiverReminders.length === 0) return null;
+
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+
+    for (const r of caregiverReminders) {
+      const scheduledTimes = Array.isArray((r as any).times)
+        ? (r as any).times
+        : parseReminderTimes(r.time || "");
+
+      for (const timeStr of scheduledTimes) {
+        const [h, m] = timeStr.split(":").map(Number);
+        if (isNaN(h) || isNaN(m)) continue;
+        const doseMins = h * 60 + m;
+
+        // Due window: 15 minutes before to 120 minutes after scheduled time
+        const diff = currentMins - doseMins;
+        if (diff >= -15 && diff <= 120) {
+          const alreadyLogged = doseLogs.some((l) => {
+            const isCaregiver = !l.patientId || l.patientId === null;
+            if (!isCaregiver) return false;
+            if (l.reminderId !== r.id) return false;
+            const logTime =
+              l.actionTime ||
+              l.scheduledTime ||
+              (l as any).timestamp ||
+              (l as any).loggedAt ||
+              "";
+            const logDate = logTime.slice(0, 10);
+            return (
+              logDate === todayStr ||
+              (logTime ? Math.abs(new Date(logTime).getTime() - now.getTime()) < 3600000 : false)
+            );
+          });
+
+          if (!alreadyLogged) {
+            return {
+              reminder: r,
+              time: timeStr,
+              isOverdue: diff > 0,
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }, [reminders, doseLogs]);
 
   // Only render when viewing a managed patient
   if (!selectedPatientId) return null;
@@ -135,6 +193,41 @@ export function PatientContextBanner() {
             Exit
           </button>
         </div>
+
+        {/* Caregiver Due Dose Alert Bar */}
+        {caregiverDueDose && (
+          <div className="bg-amber-500/15 dark:bg-amber-500/20 border-b border-amber-500/30 px-4 py-1.5 flex items-center justify-between text-amber-900 dark:text-amber-200">
+            <div className="flex items-center gap-2 text-xs min-w-0 pr-2">
+              <Pill size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="truncate">
+                <strong className="font-semibold">Your dose due ({caregiverDueDose.time}):</strong>{" "}
+                {caregiverDueDose.reminder.medicineName}{" "}
+                {(caregiverDueDose.reminder.dose || (caregiverDueDose.reminder as any).dosage) && (
+                  <span className="opacity-75">
+                    ({caregiverDueDose.reminder.dose || (caregiverDueDose.reminder as any).dosage})
+                  </span>
+                )}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                logDose({
+                  reminderId: caregiverDueDose.reminder.id,
+                  medicineName: caregiverDueDose.reminder.medicineName,
+                  dose: caregiverDueDose.reminder.dose || (caregiverDueDose.reminder as any).dosage || "",
+                  scheduledTime: caregiverDueDose.time,
+                  action: "taken",
+                  patientId: null,
+                });
+                toast.success(`Logged your ${caregiverDueDose.reminder.medicineName} as taken`);
+              }}
+              className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white transition shadow-xs shrink-0"
+            >
+              Take Dose
+            </button>
+          </div>
+        )}
       </motion.div>
     </AnimatePresence>
   );

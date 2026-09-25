@@ -1564,6 +1564,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       !rawPatientId || rawPatientId === "null" || rawPatientId === "undefined"
         ? null
         : rawPatientId;
+    const effectivePatientName =
+      rem.patientName !== undefined
+        ? rem.patientName
+        : effectivePatientId
+        ? patients.find((p) => p.id === effectivePatientId)?.name ?? null
+        : null;
     const createdAt = new Date().toISOString();
     const localId = `lrem-${Date.now()}`;
 
@@ -1572,6 +1578,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       id: localId,
       medicineId: rem.medicineId || null,
       patientId: effectivePatientId,
+      patientName: effectivePatientName,
       createdAt,
     } as Reminder;
 
@@ -1634,6 +1641,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const p = finalUpdates.patientId;
       finalUpdates.patientId =
         !p || p === "null" || p === "undefined" ? null : p;
+      if (finalUpdates.patientName === undefined) {
+        finalUpdates.patientName = finalUpdates.patientId
+          ? patients.find((pt) => pt.id === finalUpdates.patientId)?.name ?? null
+          : null;
+      }
     }
 
     // 1. Save locally instantly
@@ -1771,7 +1783,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let newLog: DoseLog;
     const reminder = reminders.find((r) => r.id === log.reminderId);
     const effectivePatientId =
-      log.patientId ?? reminder?.patientId ?? selectedPatientId ?? null;
+      log.patientId !== undefined
+        ? log.patientId
+        : reminder?.patientId !== undefined
+        ? reminder.patientId
+        : selectedPatientId ?? null;
 
     if (storageMode === "local") {
       newLog = await localPersistence.doseLogs.create({
@@ -2225,7 +2241,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const timestamp = (log as any).timestamp
       ? toDate((log as any).timestamp).toISOString()
       : new Date().toISOString();
-    const effectivePatientId = log.patientId ?? selectedPatientId ?? null;
+    const effectivePatientId =
+      log.patientId !== undefined ? log.patientId : selectedPatientId ?? null;
     const effectiveUserId = storageMode === "local" ? "local" : currentUserId || "local";
 
     const newLog: WellnessLog = {

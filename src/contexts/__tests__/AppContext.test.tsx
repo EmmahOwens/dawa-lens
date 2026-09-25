@@ -281,4 +281,57 @@ describe("AppContext - logDose dynamic reminder time shifting", () => {
     expect(mockLocalRemRemove).toHaveBeenCalledWith("rem-delete-test");
     expect(result.current.reminders).toHaveLength(0);
   });
+
+  it("should preserve patientId: null for caregiver reminders even when a client profile is selected", async () => {
+    const caregiverReminder: Reminder = {
+      id: "rem-caregiver-1",
+      medicineName: "Caregiver Med",
+      dose: "1 tablet",
+      time: "09:00",
+      repeatSchedule: "daily",
+      enabled: true,
+      patientId: null,
+      createdAt: new Date().toISOString(),
+    };
+
+    mockLocalRemsGetAll.mockResolvedValue([caregiverReminder]);
+    mockLocalLogCreate.mockImplementation((data) =>
+      Promise.resolve({ ...data, id: "log-caregiver-1", actionTime: new Date().toISOString() })
+    );
+
+    const { result } = renderHook(() => useApp(), {
+      wrapper: AppProvider,
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    // Simulate switching profile to a client/patient
+    act(() => {
+      result.current.setSelectedPatientId("patient-client-999");
+    });
+    expect(result.current.selectedPatientId).toBe("patient-client-999");
+
+    // Caregiver takes their dose from notification or reminder while client profile is active
+    await act(async () => {
+      await result.current.logDose({
+        reminderId: "rem-caregiver-1",
+        medicineName: "Caregiver Med",
+        dose: "1 tablet",
+        scheduledTime: new Date().toISOString(),
+        action: "taken",
+        patientId: null, // explicit null for caregiver
+      });
+    });
+
+    // Check that the dose was recorded with patientId: null, NOT the selectedPatientId
+    expect(mockLocalLogCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reminderId: "rem-caregiver-1",
+        patientId: null,
+        action: "taken",
+      })
+    );
+  });
 });

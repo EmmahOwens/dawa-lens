@@ -49,7 +49,8 @@ class AlarmReceiver : BroadcastReceiver() {
             medicineName: String,
             dose: String,
             scheduledTimeMs: Long,
-            patientId: String? = null
+            patientId: String? = null,
+            patientName: String? = null
         ) {
             if (!markSlotFired(reminderId, scheduledTimeMs)) {
                 return
@@ -62,12 +63,27 @@ class AlarmReceiver : BroadcastReceiver() {
                 put("dose", dose)
                 put("scheduledTime", scheduledTimeMs)
                 if (patientId != null) put("patientId", patientId)
+                if (patientName != null) put("patientName", patientName)
             }.toString()
+
+            val titleText = if (!patientName.isNullOrEmpty()) {
+                if (medicineName.isNotEmpty()) "Time for $patientName's $medicineName" else "Medication Reminder ($patientName)"
+            } else if (patientId == null) {
+                if (medicineName.isNotEmpty()) "Time for your $medicineName" else "Your Medication Reminder"
+            } else {
+                if (medicineName.isNotEmpty()) "Time for $medicineName" else "Medication Reminder"
+            }
+            val bodyText = if (!patientName.isNullOrEmpty()) {
+                if (dose.isNotEmpty()) "$patientName's dose: $dose. Don't miss it!" else "Scheduled medication dose for $patientName."
+            } else if (patientId == null) {
+                if (dose.isNotEmpty()) "Your dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+            } else {
+                if (dose.isNotEmpty()) "Dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+            }
 
             val intent = Intent(context, AlarmReceiver::class.java).apply {
                 putExtra("notificationId", numericId)
-                putExtra("title", "Time for $medicineName")
-                val bodyText = if (dose.isNotEmpty()) "Dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+                putExtra("title", titleText)
                 putExtra("body", bodyText)
                 putExtra("extra", extraJson)
             }
@@ -95,6 +111,7 @@ class AlarmReceiver : BroadcastReceiver() {
             var dose = ""
             var scheduledTime = ""
             var patientId: String? = null
+            var patientName: String? = null
 
             if (extraStr.isNotEmpty()) {
                 try {
@@ -106,6 +123,9 @@ class AlarmReceiver : BroadcastReceiver() {
                     scheduledTime = extraObj.optString("scheduledTime", "")
                     if (extraObj.has("patientId") && !extraObj.isNull("patientId")) {
                         patientId = extraObj.optString("patientId")
+                    }
+                    if (extraObj.has("patientName") && !extraObj.isNull("patientName")) {
+                        patientName = extraObj.optString("patientName")
                     }
                 } catch (e: Exception) {
                     // Non-fatal JSON parse error
@@ -502,7 +522,7 @@ class AlarmReceiver : BroadcastReceiver() {
 
             // 2. Promptly calculate and schedule the single next recurrence for this reminder
             if (!isEventNotification && reminderId.isNotEmpty()) {
-                rescheduleSuccessorAlarm(context, reminderId, medicineName, dose, patientId)
+                rescheduleSuccessorAlarm(context, reminderId, medicineName, dose, patientId, patientName)
             }
         } finally {
             if (wakeLock?.isHeld == true) {
@@ -525,7 +545,8 @@ class AlarmReceiver : BroadcastReceiver() {
         reminderId: String,
         medicineName: String,
         dose: String,
-        patientId: String?
+        patientId: String?,
+        patientName: String? = null
     ) {
         try {
             // If device is unlocked, verify that the reminder still exists and is enabled in SQLite
@@ -588,6 +609,8 @@ class AlarmReceiver : BroadcastReceiver() {
                 put("dose", dose)
                 put("scheduledTime", nextTrigger)
                 if (patientId != null) put("patientId", patientId)
+                val finalPatientName = patientName ?: matched.patientName
+                if (finalPatientName != null) put("patientName", finalPatientName)
             }.toString()
 
             val nextIntent = Intent(context, AlarmReceiver::class.java).apply {

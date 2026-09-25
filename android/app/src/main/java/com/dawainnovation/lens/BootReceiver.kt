@@ -154,7 +154,7 @@ class BootReceiver : BroadcastReceiver() {
         try {
             db = SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             val cursor = db.rawQuery(
-                """SELECT id, medicine_name, dose, time, repeat_schedule, repeat_days, enabled, patient_id 
+                """SELECT id, medicine_name, dose, time, repeat_schedule, repeat_days, enabled, patient_id, patient_name 
                    FROM reminders 
                    WHERE enabled = 1""",
                 null
@@ -169,6 +169,9 @@ class BootReceiver : BroadcastReceiver() {
                 val repeatSchedule = cursor.getString(cursor.getColumnIndexOrThrow("repeat_schedule")) ?: "daily"
                 val repeatDaysJson = cursor.getString(cursor.getColumnIndexOrThrow("repeat_days"))
                 val patientId = cursor.getString(cursor.getColumnIndexOrThrow("patient_id"))
+                val patientName = try {
+                    cursor.getString(cursor.getColumnIndexOrThrow("patient_name"))
+                } catch (e: Exception) { null }
 
                 val repeatDaysList = if (!repeatDaysJson.isNullOrEmpty()) {
                     try {
@@ -179,8 +182,21 @@ class BootReceiver : BroadcastReceiver() {
                     }
                 } else null
 
-                val genericTitle = if (medicineName.isNotEmpty()) "Time for $medicineName" else "Medication Reminder"
-                val genericBody = if (dose.isNotEmpty()) "Dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+                val genericTitle = if (!patientName.isNullOrEmpty()) {
+                    if (medicineName.isNotEmpty()) "Time for $patientName's $medicineName" else "Medication Reminder ($patientName)"
+                } else if (patientId == null) {
+                    if (medicineName.isNotEmpty()) "Time for your $medicineName" else "Your Medication Reminder"
+                } else {
+                    if (medicineName.isNotEmpty()) "Time for $medicineName" else "Medication Reminder"
+                }
+
+                val genericBody = if (!patientName.isNullOrEmpty()) {
+                    if (dose.isNotEmpty()) "$patientName's dose: $dose. Don't miss it!" else "Scheduled medication dose for $patientName."
+                } else if (patientId == null) {
+                    if (dose.isNotEmpty()) "Your dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+                } else {
+                    if (dose.isNotEmpty()) "Dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+                }
 
                 reconciledList.add(
                     NativeRecurrenceStore.StoredReminder(
@@ -193,7 +209,8 @@ class BootReceiver : BroadcastReceiver() {
                         genericTitle = genericTitle,
                         genericBody = genericBody,
                         lastScheduledTrigger = 0L,
-                        patientId = patientId
+                        patientId = patientId,
+                        patientName = patientName
                     )
                 )
             }

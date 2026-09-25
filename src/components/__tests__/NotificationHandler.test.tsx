@@ -31,4 +31,16 @@ describe("NotificationHandler - parseNotificationExtra", () => {
     expect(parseNotificationExtra("not-json")).toEqual({});
     expect(parseNotificationExtra("{bad:json}")).toEqual({});
   });
+
+  it("should preserve patientId: null for caregiver notifications", () => {
+    const rawString = JSON.stringify({
+      reminderId: "rem-caregiver-1",
+      patientId: null,
+      patientName: null,
+      route: "/reminders",
+    });
+    const parsed = parseNotificationExtra(rawString);
+    expect(parsed.patientId).toBeNull();
+    expect(parsed.reminderId).toBe("rem-caregiver-1");
+  });
 });

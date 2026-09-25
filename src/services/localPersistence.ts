@@ -307,6 +307,7 @@ export const localPersistence = {
                 enabled: Boolean(r.enabled),
                 createdAt: r.created_at as string,
                 patientId: r.patient_id as string | null | undefined,
+                patientName: (r.patient_name as string) || (r.patient_id ? undefined : null),
               } as Reminder)
           );
         } catch (err) {
@@ -324,8 +325,8 @@ export const localPersistence = {
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
-            sql: `INSERT INTO reminders (id,medicine_id,medicine_name,dose,time,repeat_schedule,repeat_days,notes,enabled,created_at,patient_id)
-                  VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+            sql: `INSERT INTO reminders (id,medicine_id,medicine_name,dose,time,repeat_schedule,repeat_days,notes,enabled,created_at,patient_id,patient_name)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
             params: [
               id,
               data.medicineId ?? null,
@@ -338,6 +339,8 @@ export const localPersistence = {
               data.enabled ? 1 : 0,
               createdAt,
               (data as Reminder & { patientId?: string | null }).patientId ??
+                null,
+              (data as Reminder & { patientName?: string | null }).patientName ??
                 null,
             ],
           });
@@ -369,6 +372,7 @@ export const localPersistence = {
             notes: "notes",
             enabled: "enabled",
             patientId: "patient_id",
+            patientName: "patient_name",
           };
           const transforms: Record<string, (v: unknown) => unknown> = {
             enabled: (v) => (v ? 1 : 0),
@@ -420,8 +424,8 @@ export const localPersistence = {
           await NativeSqlite.execute({ sql: "DELETE FROM reminders", params: [] });
           for (const data of items) {
             await NativeSqlite.execute({
-              sql: `INSERT INTO reminders (id,medicine_id,medicine_name,dose,time,repeat_schedule,repeat_days,notes,enabled,created_at,patient_id)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+              sql: `INSERT INTO reminders (id,medicine_id,medicine_name,dose,time,repeat_schedule,repeat_days,notes,enabled,created_at,patient_id,patient_name)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
               params: [
                 data.id,
                 data.medicineId ?? null,
@@ -434,6 +438,7 @@ export const localPersistence = {
                 data.enabled ? 1 : 0,
                 data.createdAt || new Date().toISOString(),
                 (data as Reminder & { patientId?: string | null }).patientId ?? null,
+                (data as Reminder & { patientName?: string | null }).patientName ?? null,
               ],
             });
           }

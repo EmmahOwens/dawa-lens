@@ -533,9 +533,23 @@ class NativeAlarmPlugin : Plugin() {
             val medicineName = obj.optString("medicineName", "")
             val dose = obj.optString("dose", "")
             val patientId = if (obj.has("patientId") && !obj.isNull("patientId")) obj.getString("patientId") else null
+            val patientName = if (obj.has("patientName") && !obj.isNull("patientName")) obj.getString("patientName") else null
 
-            val genericTitle = if (medicineName.isNotEmpty()) "Time for $medicineName" else "Medication Reminder"
-            val genericBody = if (dose.isNotEmpty()) "Dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+            val genericTitle = if (!patientName.isNullOrEmpty()) {
+                if (medicineName.isNotEmpty()) "Time for $patientName's $medicineName" else "Medication Reminder ($patientName)"
+            } else if (patientId == null) {
+                if (medicineName.isNotEmpty()) "Time for your $medicineName" else "Your Medication Reminder"
+            } else {
+                if (medicineName.isNotEmpty()) "Time for $medicineName" else "Medication Reminder"
+            }
+
+            val genericBody = if (!patientName.isNullOrEmpty()) {
+                if (dose.isNotEmpty()) "$patientName's dose: $dose. Don't miss it!" else "Scheduled medication dose for $patientName."
+            } else if (patientId == null) {
+                if (dose.isNotEmpty()) "Your dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+            } else {
+                if (dose.isNotEmpty()) "Dose: $dose. Remember to take your medicine!" else "You have a scheduled medication dose to take."
+            }
 
             val engineSchedule = NativeRecurrenceEngine.ReminderSchedule(
                 id = id,
@@ -561,7 +575,8 @@ class NativeAlarmPlugin : Plugin() {
                     genericTitle = genericTitle,
                     genericBody = genericBody,
                     lastScheduledTrigger = nextTrigger ?: 0L,
-                    patientId = patientId
+                    patientId = patientId,
+                    patientName = patientName
                 )
             )
 
@@ -574,6 +589,7 @@ class NativeAlarmPlugin : Plugin() {
                     put("dose", dose)
                     put("scheduledTime", nextTrigger)
                     if (patientId != null) put("patientId", patientId)
+                    if (patientName != null) put("patientName", patientName)
                 }.toString()
 
                 val scheduled = scheduleOneAlarmInternal(

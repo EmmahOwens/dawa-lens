@@ -6,8 +6,17 @@ import { useApp } from "@/contexts/AppContext";
 import { registerNotificationActions, migrateNotificationChannels } from "@/services/reminderService";
 import { soundService } from "@/services/soundService";
 import { toast } from "sonner";
-import { addMinutes } from "date-fns";
+import {
+  addMinutes,
+  isSameDay,
+  startOfDay,
+  setHours,
+  setMinutes,
+  setSeconds,
+  setMilliseconds,
+} from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { isReminderScheduledOnDate } from "@/services/reminderService";
 
 export const parseNotificationExtra = (rawExtra: unknown): Record<string, any> => {
   if (!rawExtra) return {};
@@ -25,18 +34,31 @@ export const parseNotificationExtra = (rawExtra: unknown): Record<string, any> =
 
 export const NotificationHandler = () => {
   const navigate = useNavigate();
-  const { logDose, reminders, setSelectedPatientId } = useApp();
+  const {
+    logDose,
+    reminders,
+    doseLogs,
+    patients,
+    selectedPatientId,
+    setSelectedPatientId,
+  } = useApp();
 
   // Use refs so the single effect closure always sees the latest values
   // without needing to re-register Capacitor listeners on every change.
   const navigateRef = useRef(navigate);
   const logDoseRef = useRef(logDose);
   const remindersRef = useRef(reminders);
+  const doseLogsRef = useRef(doseLogs);
+  const patientsRef = useRef(patients);
+  const selectedPatientIdRef = useRef(selectedPatientId);
   const setSelectedPatientIdRef = useRef(setSelectedPatientId);
 
   navigateRef.current = navigate;
   logDoseRef.current = logDose;
   remindersRef.current = reminders;
+  doseLogsRef.current = doseLogs;
+  patientsRef.current = patients;
+  selectedPatientIdRef.current = selectedPatientId;
   setSelectedPatientIdRef.current = setSelectedPatientId;
 
   useEffect(() => {
@@ -352,6 +374,191 @@ export const NotificationHandler = () => {
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Request web notification permissions when supported
+  useEffect(() => {
+    if (
+      !Capacitor.isNativePlatform() &&
+      typeof window !== "undefined" &&
+      "Notification" in window
+    ) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
+      }
+    }
+  }, []);
+
+  // Universal in-app due dose reminder engine (runs across both web & native)
+  useEffect(() => {
+    const checkDueReminders = () => {
+      const activeReminders = remindersRef.current.filter((r) => r.enabled);
+      if (activeReminders.length === 0) return;
+
+      const now = new Date();
+      const currentHours = now.getHours();
+      const currentMinutes = now.getMinutes();
+      const nowTotalMin = currentHours * 60 + currentMinutes;
+
+      for (const r of activeReminders) {
+        if (!isReminderScheduledOnDate(r, now, doseLogsRef.current)) {
+          continue;
+        }
+
+        const times = r.time
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => {
+            const parts = t.split(":");
+            if (parts.length !== 2) return false;
+            const [h, m] = parts.map(Number);
+            return !isNaN(h) && !isNaN(m) && h >= 0 && h <= 23 && m >= 0 && m <= 59;
+          });
+
+        for (const timeStr of times) {
+          const [h, m] = timeStr.split(":").map(Number);
+          const slotTotalMin = h * 60 + m;
+          const diffMinutes = nowTotalMin - slotTotalMin;
+
+          // Alert if slot was scheduled within the last 15 minutes (diff 0 to 15)
+          if (diffMinutes < 0 || diffMinutes > 15) {
+            continue;
+          }
+
+          let scheduledDate = setHours(startOfDay(now), h);
+          scheduledDate = setMinutes(scheduledDate, m);
+          scheduledDate = setSeconds(scheduledDate, 0);
+          scheduledDate = setMilliseconds(scheduledDate, 0);
+
+          // Check if dose was already actioned (taken, skipped, or snoozed)
+          const targetPatientId = r.patientId ?? null;
+          const alreadyLogged = doseLogsRef.current.some((l) => {
+            if ((l.patientId ?? null) !== targetPatientId) return false;
+            const matchesMed =
+              l.reminderId === r.id ||
+              (Boolean(l.medicineName) &&
+                Boolean(r.medicineName) &&
+                l.medicineName.toLowerCase().trim() === r.medicineName.toLowerCase().trim());
+            if (!matchesMed) return false;
+
+            const logDate = new Date(l.scheduledTime || l.actionTime);
+            if (!isSameDay(logDate, now)) return false;
+
+            const logMin = logDate.getHours() * 60 + logDate.getMinutes();
+            if (Math.abs(logMin - slotTotalMin) <= 15) {
+              if (l.isSnoozed && l.snoozeUntil && new Date(l.snoozeUntil).getTime() > now.getTime()) {
+                return true; // currently snoozed
+              }
+              return true; // already taken / skipped
+            }
+            return false;
+          });
+
+          if (alreadyLogged) continue;
+
+          // Deduplicate in-app alert for this slot today
+          const sessionKey = `dawa_inapp_alert_${r.id}_${now.toDateString()}_${timeStr}`;
+          if (sessionStorage.getItem(sessionKey)) {
+            continue;
+          }
+          sessionStorage.setItem(sessionKey, "1");
+
+          const isOwner = !r.patientId;
+          const resolvedPatientName =
+            r.patientName ||
+            (r.patientId ? patientsRef.current.find((p) => p.id === r.patientId)?.name : null);
+
+          const title = isOwner
+            ? `Personal Reminder: ${r.medicineName}`
+            : `${resolvedPatientName || "Patient"}'s Reminder: ${r.medicineName}`;
+
+          const description = isOwner
+            ? `Time to take your ${r.dose} dose (${timeStr})`
+            : `Time for ${resolvedPatientName || "patient"}'s ${r.dose} dose (${timeStr})`;
+
+          soundService.tryPlayForCategory("medication");
+
+          // Web notification if available and permission granted
+          if (
+            typeof window !== "undefined" &&
+            "Notification" in window &&
+            Notification.permission === "granted"
+          ) {
+            try {
+              new Notification(title, {
+                body: description,
+                icon: "/icon-192.png",
+                tag: sessionKey,
+              });
+            } catch (e) {}
+          }
+
+          toast.info(title, {
+            description,
+            duration: 12000,
+            action: {
+              label: "Mark Taken",
+              onClick: async () => {
+                try {
+                  await logDoseRef.current({
+                    reminderId: r.id,
+                    medicineName: r.medicineName,
+                    dose: r.dose,
+                    scheduledTime: scheduledDate.toISOString(),
+                    patientId: targetPatientId,
+                    action: "taken",
+                  });
+                  toast.success(`Logged: ${r.medicineName} taken.`);
+                } catch (err) {
+                  console.error("Failed to log dose from in-app alert:", err);
+                }
+              },
+            },
+            cancel: {
+              label: "Snooze (15m)",
+              onClick: async () => {
+                try {
+                  const snoozeTime = addMinutes(new Date(), 15);
+                  await logDoseRef.current({
+                    reminderId: r.id,
+                    medicineName: r.medicineName,
+                    dose: r.dose,
+                    scheduledTime: scheduledDate.toISOString(),
+                    patientId: targetPatientId,
+                    action: "snoozed",
+                    isSnoozed: true,
+                    snoozeUntil: snoozeTime.toISOString(),
+                  });
+                  toast.info(`Snoozed ${r.medicineName} for 15 minutes.`);
+                } catch (err) {
+                  console.error("Failed to snooze dose from in-app alert:", err);
+                }
+              },
+            },
+          });
+        }
+      }
+    };
+
+    // Run immediately on mount
+    checkDueReminders();
+
+    // Check periodically every 20 seconds
+    const intervalId = setInterval(checkDueReminders, 20_000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        checkDueReminders();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleVisibility);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleVisibility);
+    };
+  }, []);
 
   return null;
 };

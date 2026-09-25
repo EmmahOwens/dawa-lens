@@ -602,6 +602,50 @@ describe("isReminderScheduledOnDate & checkMissedDoses", () => {
     expect(loggedDoses.length).toBe(0);
   });
 
+  it("checkMissedDoses distinguishes caregiver doses from patient doses when matching existing logs", async () => {
+    const { checkMissedDoses } = await import("../reminderService");
+
+    const loggedDoses: any[] = [];
+    const mockLogDose = async (log: any) => {
+      loggedDoses.push(log);
+    };
+
+    const now = new Date();
+    const threeHoursAgo = new Date(now.getTime() - 3 * 3600 * 1000);
+    const timeStr = `${threeHoursAgo.getHours().toString().padStart(2, "0")}:${threeHoursAgo.getMinutes().toString().padStart(2, "0")}`;
+
+    // Caregiver reminder (patientId: null)
+    const caregiverReminder: Reminder = {
+      id: "rem-caregiver-med",
+      medicineName: "Amoxicillin",
+      dose: "500mg",
+      time: timeStr,
+      repeatSchedule: "daily",
+      enabled: true,
+      patientId: null,
+      createdAt: new Date(now.getTime() - 48 * 3600 * 1000).toISOString(),
+    };
+
+    // Patient took the same medication name earlier today
+    const patientLog: DoseLog = {
+      id: "log-patient-taken",
+      reminderId: "rem-patient-med",
+      medicineName: "Amoxicillin",
+      dose: "500mg",
+      scheduledTime: threeHoursAgo.toISOString(),
+      actionTime: threeHoursAgo.toISOString(),
+      action: "taken",
+      patientId: "patient-client-1",
+    };
+
+    // When checkMissedDoses runs, the patient's log should NOT mask the caregiver's missed dose
+    await checkMissedDoses([caregiverReminder], [patientLog], mockLogDose);
+    expect(loggedDoses.length).toBe(1);
+    expect(loggedDoses[0].reminderId).toBe("rem-caregiver-med");
+    expect(loggedDoses[0].patientId).toBeNull();
+    expect(loggedDoses[0].action).toBe("missed");
+  });
+
   it("checkMissedDoses deduplicates so the same missed slot is not re-alerted on subsequent checks", async () => {
     const { checkMissedDoses } = await import("../reminderService");
 

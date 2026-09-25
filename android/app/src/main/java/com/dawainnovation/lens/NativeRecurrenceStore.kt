@@ -35,7 +35,8 @@ object NativeRecurrenceStore {
         val genericTitle: String = "Medication Reminder",
         val genericBody: String = "You have a scheduled medication dose to take.",
         val lastScheduledTrigger: Long = 0L,
-        val patientId: String? = null
+        val patientId: String? = null,
+        val patientName: String? = null
     ) {
         fun toEngineSchedule(): NativeRecurrenceEngine.ReminderSchedule {
             return NativeRecurrenceEngine.ReminderSchedule(
@@ -81,6 +82,9 @@ object NativeRecurrenceStore {
                 if (r.patientId != null) {
                     put("patientId", r.patientId)
                 }
+                if (r.patientName != null) {
+                    put("patientName", r.patientName)
+                }
             }
             array.put(obj)
         }
@@ -122,7 +126,8 @@ object NativeRecurrenceStore {
                         genericTitle = obj.optString("genericTitle", "Medication Reminder"),
                         genericBody = obj.optString("genericBody", "You have a scheduled medication dose to take."),
                         lastScheduledTrigger = obj.optLong("lastScheduledTrigger", 0L),
-                        patientId = if (obj.has("patientId") && !obj.isNull("patientId")) obj.getString("patientId") else null
+                        patientId = if (obj.has("patientId") && !obj.isNull("patientId")) obj.getString("patientId") else null,
+                        patientName = if (obj.has("patientName") && !obj.isNull("patientName")) obj.getString("patientName") else null
                     )
                 )
             }

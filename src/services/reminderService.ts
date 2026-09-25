@@ -310,6 +310,9 @@ export const checkMissedDoses = async (
             computeShiftOffset(r, doseLogs)
           );
           const logExists = doseLogs.some((log) => {
+            const matchesPatient = (log.patientId ?? null) === (r.patientId ?? null);
+            if (!matchesPatient) return false;
+
             const matchesReminder =
               log.reminderId === r.id ||
               (Boolean(log.medicineName) &&
@@ -381,12 +384,17 @@ export const checkMissedDoses = async (
     if (newlyMissed.length === 1) {
       const single = newlyMissed[0];
       const r = single.reminder;
-      const missedTitle = r.patientName
+      const isOwner = !r.patientId;
+      const missedTitle = !isOwner && r.patientName
         ? `⚠️ Missed Dose: ${r.patientName}'s ${r.medicineName}`
-        : `⚠️ Missed Dose: ${r.medicineName}`;
-      const missedBody = r.patientName
+        : (!isOwner && r.patientId
+          ? `⚠️ Missed Dose: Family Member's ${r.medicineName}`
+          : `⚠️ Missed Dose: Your ${r.medicineName}`);
+      const missedBody = !isOwner && r.patientName
         ? `${r.patientName} missed their ${r.dose} dose scheduled at ${single.timeStr.trim()}. Please follow up.`
-        : `You missed your ${r.dose} dose scheduled for ${single.timeStr.trim()}. Please stay on track!`;
+        : (!isOwner && r.patientId
+          ? `A family member missed their ${r.dose} dose scheduled at ${single.timeStr.trim()}. Please follow up.`
+          : `You missed your ${r.dose} dose scheduled for ${single.timeStr.trim()}. Please stay on track!`);
 
       notify.error(missedTitle, missedBody);
 
@@ -1242,13 +1250,22 @@ const executeScheduleReminders = async (
         if (!next || isAfter(next, addDays(now, 30))) break;
 
         const notifId = stringToHash(r.id + next.toISOString());
+        const isOwner = !r.patientId;
+        const patientDisplayName = r.patientName || (r.patientId ? "Family Member" : null);
+        const reminderTitle = !isOwner && r.patientName
+          ? `Time for ${r.patientName}'s ${r.medicineName}`
+          : (!isOwner && r.patientId
+            ? `Time for ${r.medicineName} (${patientDisplayName})`
+            : `Time for your ${r.medicineName}`);
+        const reminderBody = !isOwner && r.patientName
+          ? `${r.patientName}'s dose: ${r.dose}. Don't miss it!`
+          : (!isOwner && r.patientId
+            ? `Dose for ${patientDisplayName}: ${r.dose}. Don't miss it!`
+            : `Your dose: ${r.dose}. Remember to take your medicine!`);
+
         notifications.push({
-          title: r.patientName
-            ? `Time for ${r.patientName}'s ${r.medicineName}`
-            : `Time for ${r.medicineName}`,
-          body: r.patientName
-            ? `${r.patientName}'s dose: ${r.dose}. Don't miss it!`
-            : `Dose: ${r.dose}. Remember to take your medicine!`,
+          title: reminderTitle,
+          body: reminderBody,
           id: notifId,
           schedule: { at: next, allowWhileIdle: true },
           channelId: r.patientId ? patientChannelId(r.patientId, medicationResource) : soundService.getChannelIdForCategory("medication"),
@@ -1267,12 +1284,8 @@ const executeScheduleReminders = async (
         });
         alarmNotifications.push({
           id: notifId,
-          title: r.patientName
-            ? `Time for ${r.patientName}'s ${r.medicineName}`
-            : `Time for ${r.medicineName}`,
-          body: r.patientName
-            ? `${r.patientName}'s dose: ${r.dose}. Don't miss it!`
-            : `Dose: ${r.dose}. Remember to take your medicine!`,
+          title: reminderTitle,
+          body: reminderBody,
           triggerAtMillis: next.getTime(),
           extra: JSON.stringify({
             reminderId: r.id,
