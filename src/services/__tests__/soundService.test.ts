@@ -98,4 +98,47 @@ describe("soundService", () => {
     expect(reset.volume).toBe(0.8);
     expect(reset.categories.medication).toBe("interface-start");
   });
+
+  it("computes sound-hashed channel IDs and handles silent/disabled states", () => {
+    // Default enabled state
+    const medChannel = soundService.getChannelIdForCategory("medication");
+    expect(medChannel).toBe("dawa_medication_mixkit_software_interface_start_2574_v1");
+
+    // Silent sound
+    soundService.setCategorySound("medication", "silent");
+    expect(soundService.getChannelIdForCategory("medication")).toBe("dawa_medication_silent_v1");
+
+    // Master disabled state forces silent channel
+    soundService.setCategorySound("medication", "bell");
+    soundService.setEnabled(false);
+    expect(soundService.getChannelIdForCategory("medication")).toBe("dawa_medication_silent_v1");
+  });
+
+  it("returns correct Capacitor sound value avoiding raw/default.wav bug", () => {
+    // Enabled with resource tone
+    expect(soundService.getCapacitorSound("medication")).toBe("mixkit_software_interface_start_2574");
+
+    // Default tone must return undefined so Android uses system default instead of looking for res/raw/default.wav
+    soundService.setCategorySound("medication", "default");
+    expect(soundService.getCapacitorSound("medication")).toBeUndefined();
+
+    // Silent tone must return undefined
+    soundService.setCategorySound("medication", "silent");
+    expect(soundService.getCapacitorSound("medication")).toBeUndefined();
+
+    // Master disabled must return undefined
+    soundService.setCategorySound("medication", "bell");
+    soundService.setEnabled(false);
+    expect(soundService.getCapacitorSound("medication")).toBeUndefined();
+  });
+
+  it("dispatches window event when sound preferences are modified", () => {
+    const dispatchSpy = vi.fn();
+    window.addEventListener("dawa:sound-preferences-changed", dispatchSpy);
+
+    soundService.setCategorySound("medication", "bell");
+    expect(dispatchSpy).toHaveBeenCalled();
+
+    window.removeEventListener("dawa:sound-preferences-changed", dispatchSpy);
+  });
 });

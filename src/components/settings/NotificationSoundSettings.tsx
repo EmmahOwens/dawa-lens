@@ -66,12 +66,18 @@ export const NotificationSoundSettings: React.FC = () => {
   const [preferences, setPreferences] = useState<SoundPreferences>(() =>
     soundService.getPreferences()
   );
-  const [playingSoundId, setPlayingSoundId] = useState<string | null>(null);
+  const [activePreview, setActivePreview] = useState<{
+    category: SoundCategoryKey | "volume_test";
+    soundId: string;
+  } | null>(null);
 
   useEffect(() => {
     const unsubscribe = soundService.subscribe((newPrefs) => {
       setPreferences(newPrefs);
-      setPlayingSoundId(soundService.getCurrentlyPlayingId());
+      const currentlyPlaying = soundService.getCurrentlyPlayingId();
+      if (!currentlyPlaying) {
+        setActivePreview(null);
+      }
     });
 
     return () => {
@@ -84,7 +90,7 @@ export const NotificationSoundSettings: React.FC = () => {
     soundService.setEnabled(enabled);
     if (!enabled) {
       soundService.stopSound();
-      setPlayingSoundId(null);
+      setActivePreview(null);
     }
     toast({
       title: enabled ? "Notification Sounds Enabled" : "Notification Sounds Muted",
@@ -102,32 +108,35 @@ export const NotificationSoundSettings: React.FC = () => {
   const handleSoundSelect = (category: SoundCategoryKey, soundId: string) => {
     soundService.setCategorySound(category, soundId);
     if (soundId !== "silent") {
+      setActivePreview({ category, soundId });
       soundService.playSound(soundId);
-      setPlayingSoundId(soundId);
     } else {
       soundService.stopSound();
-      setPlayingSoundId(null);
+      setActivePreview(null);
     }
   };
 
-  const handlePreviewToggle = async (soundId: string) => {
-    if (playingSoundId === soundId) {
+  const handlePreviewToggle = async (
+    category: SoundCategoryKey | "volume_test",
+    soundId: string
+  ) => {
+    if (activePreview?.category === category && activePreview?.soundId === soundId) {
       soundService.stopSound();
-      setPlayingSoundId(null);
+      setActivePreview(null);
       return;
     }
 
-    setPlayingSoundId(soundId);
+    setActivePreview({ category, soundId });
     const played = await soundService.playSound(soundId, preferences.volume);
     if (!played) {
-      setPlayingSoundId(null);
+      setActivePreview(null);
     }
   };
 
   const handleResetDefaults = () => {
     soundService.resetToDefaults();
     soundService.stopSound();
-    setPlayingSoundId(null);
+    setActivePreview(null);
     toast({
       title: "Audio Defaults Restored",
       description: "All notification chimes have been reset to recommended sounds.",
@@ -222,19 +231,28 @@ export const NotificationSoundSettings: React.FC = () => {
               <span className="font-mono text-xs text-muted-foreground font-medium">
                 {Math.round(preferences.volume * 100)}%
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePreviewToggle("interface-start")}
-                className="h-7 px-2 text-[11px] font-bold rounded-lg"
-              >
-                {playingSoundId === "interface-start" ? (
-                  <Square size={11} className="mr-1 fill-current text-primary" />
-                ) : (
-                  <Play size={11} className="mr-1 fill-current text-primary" />
-                )}
-                Test
-              </Button>
+              {(() => {
+                const primarySoundId =
+                  preferences.categories.medication !== "silent" && preferences.categories.medication !== "default"
+                    ? preferences.categories.medication
+                    : "mixkit-positive-notification-951";
+                const isVolumeTesting = activePreview?.category === "volume_test";
+                return (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePreviewToggle("volume_test", primarySoundId)}
+                    className="h-7 px-2 text-[11px] font-bold rounded-lg"
+                  >
+                    {isVolumeTesting ? (
+                      <Square size={11} className="mr-1 fill-current text-primary" />
+                    ) : (
+                      <Play size={11} className="mr-1 fill-current text-primary" />
+                    )}
+                    Test
+                  </Button>
+                );
+              })()}
             </div>
           </div>
 
@@ -260,7 +278,10 @@ export const NotificationSoundSettings: React.FC = () => {
           const Icon = categoryIconMap[cat.key];
           const color = categoryColorMap[cat.key];
           const selectedSoundId = preferences.categories[cat.key] || cat.defaultSoundId;
-          const isPlaying = playingSoundId === selectedSoundId && selectedSoundId !== "silent";
+          const isPlaying =
+            activePreview?.category === cat.key &&
+            activePreview?.soundId === selectedSoundId &&
+            selectedSoundId !== "silent";
 
           return (
             <div
@@ -347,7 +368,7 @@ export const NotificationSoundSettings: React.FC = () => {
                     variant={isPlaying ? "default" : "outline"}
                     size="icon"
                     disabled={!preferences.enabled || selectedSoundId === "silent"}
-                    onClick={() => handlePreviewToggle(selectedSoundId)}
+                    onClick={() => handlePreviewToggle(cat.key, selectedSoundId)}
                     className={`h-9 w-9 rounded-xl shrink-0 transition-all ${
                       isPlaying
                         ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105"

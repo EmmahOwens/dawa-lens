@@ -51,7 +51,8 @@ object SoundPrefsReader {
         "encouragement"     to "taken",
         "weekly_summary"    to "quotes",
         "refill"            to "refill",
-        "low_stock"         to "refill"
+        "low_stock"         to "refill",
+        "test_alarm"        to "medication"
     )
 
     /**

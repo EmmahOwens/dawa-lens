@@ -259,6 +259,13 @@ class SoundService {
       console.warn("[SoundService] Failed to save preferences to localStorage:", e);
     }
     this.notifyListeners();
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(
+          new CustomEvent("dawa:sound-preferences-changed", { detail: { ...prefs } })
+        );
+      } catch { /* ignore */ }
+    }
     this.saveSoundPrefsToNative();
   }
 
@@ -383,6 +390,7 @@ class SoundService {
    */
   public getChannelIdForCategory(category: SoundCategoryKey): string {
     const prefs = this.getPreferences();
+    if (!prefs.enabled) return `dawa_${category}_silent_v1`;
     const soundId = prefs.categories[category] || DEFAULT_SOUND_PREFERENCES.categories[category];
     if (!soundId || soundId === "silent") return `dawa_${category}_silent_v1`;
     if (soundId === "default") return `dawa_${category}_default_v1`;
@@ -409,8 +417,14 @@ class SoundService {
       const categoryResourceMap: Record<string, string> = {};
       for (const cat of Object.keys(prefs.categories) as SoundCategoryKey[]) {
         const soundId = prefs.categories[cat];
-        const soundDef = AVAILABLE_SOUNDS.find((s) => s.id === soundId);
-        categoryResourceMap[cat] = soundDef?.androidResource || "default";
+        if (!prefs.enabled || soundId === "silent") {
+          categoryResourceMap[cat] = "silent";
+        } else if (soundId === "default") {
+          categoryResourceMap[cat] = "default";
+        } else {
+          const soundDef = AVAILABLE_SOUNDS.find((s) => s.id === soundId);
+          categoryResourceMap[cat] = soundDef?.androidResource || "default";
+        }
       }
 
       // Read previous active channel IDs for cleanup
@@ -519,7 +533,9 @@ class SoundService {
         return false;
       }
 
-      const audioUrl = `/notification_sounds/${soundDef.filename}`;
+      const baseUrl = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.BASE_URL) || "/";
+      const cleanBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+      const audioUrl = `${cleanBase}notification_sounds/${soundDef.filename}`;
       const audio = new Audio(audioUrl);
       const targetVolume = volumeOverride !== undefined ? volumeOverride : prefs.volume;
       audio.volume = Math.max(0, Math.min(1, targetVolume));
@@ -587,6 +603,16 @@ class SoundService {
 
     const soundDef = AVAILABLE_SOUNDS.find((s) => s.id === soundId);
     return soundDef?.androidResource || "default";
+  }
+
+  /**
+   * Get the sound string suitable for @capacitor/local-notifications.
+   * Returns undefined for "default", "silent", or empty, ensuring Android
+   * system default ringtone is used without seeking a nonexistent raw/default file.
+   */
+  public getCapacitorSound(category: SoundCategoryKey): string | undefined {
+    const resource = this.getAndroidResourceForCategory(category);
+    return resource && resource !== "default" && resource !== "silent" ? resource : undefined;
   }
 }
 

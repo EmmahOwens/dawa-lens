@@ -47,8 +47,10 @@ import { soundService } from "@/services/soundService";
 const CHANNEL_OWNER       = "dawa_owner_v2";
 const CHANNEL_REFILL      = "dawa_refill_alerts_v2";
 const CHANNEL_REMINDERS   = "dawa_reminders_v2";   // used by registerNotificationActions
-const CHANNEL_MISSED      = "dawa_missed_doses_v2"; // dedicated channel for missed-dose alerts
-const patientChannelId    = (id: string) => `dawa_patient_v2_${id}`;
+const patientChannelId = (id: string, resourceName?: string) => {
+  const res = resourceName && resourceName !== "default" && resourceName !== "silent" ? resourceName : (resourceName === "silent" ? "silent" : "default");
+  return `dawa_patient_${id}_${res}_v1`;
+};
 
 /** Legacy IDs that may already be cached on existing devices (silent — no sound). */
 const LEGACY_CHANNELS = [
@@ -404,7 +406,7 @@ export const checkMissedDoses = async (
               });
             }
             const missedId = stringToHash(r.id + "missed" + single.scheduledDate.getTime());
-            const missedChannelId = r.patientId ? patientChannelId(r.patientId) : soundService.getChannelIdForCategory("missed");
+            const missedChannelId = soundService.getChannelIdForCategory("missed");
             const fireAt = new Date(Date.now() + 1000);
 
             const isAndroid = Capacitor.getPlatform() === "android";
@@ -433,7 +435,7 @@ export const checkMissedDoses = async (
                     id: missedId,
                     schedule: { at: fireAt, allowWhileIdle: true },
                     channelId: missedChannelId,
-                    sound: "default",
+                    sound: soundService.getCapacitorSound("missed"),
                     extra: {
                       type: "missed_alert",
                       reminderId: r.id,
@@ -451,7 +453,7 @@ export const checkMissedDoses = async (
                   id: missedId,
                   schedule: { at: fireAt, allowWhileIdle: true },
                   channelId: missedChannelId,
-                  sound: soundService.getAndroidResourceForCategory("missed") || "default",
+                  sound: soundService.getCapacitorSound("missed"),
                   extra: {
                     type: "missed_alert",
                     reminderId: r.id,
@@ -518,7 +520,7 @@ export const checkMissedDoses = async (
                     id: bundleId,
                     schedule: { at: fireAt, allowWhileIdle: true },
                     channelId: soundService.getChannelIdForCategory("missed"),
-                    sound: soundService.getAndroidResourceForCategory("missed") || "default",
+                    sound: soundService.getCapacitorSound("missed"),
                     extra: {
                       type: "missed_alert",
                       route: "/history",
@@ -535,7 +537,7 @@ export const checkMissedDoses = async (
                   id: bundleId,
                   schedule: { at: fireAt, allowWhileIdle: true },
                   channelId: soundService.getChannelIdForCategory("missed"),
-                  sound: soundService.getAndroidResourceForCategory("missed") || "default",
+                  sound: soundService.getCapacitorSound("missed"),
                   extra: {
                     type: "missed_alert",
                     route: "/history",
@@ -769,7 +771,7 @@ export const registerNotificationActions = async () => {
         importance: 5, // High importance
         visibility: 1, // Public
         vibration: true,
-        sound: "default",
+        sound: soundService.getCapacitorSound("medication"),
       });
     }
 
@@ -867,7 +869,7 @@ export const scheduleAdjustmentNotification = async ({
     // current execution context ends (required for allowWhileIdle to work).
     const fireAt = new Date(Date.now() + 2000);
     const notifId = stringToHash(reminderId + "schedule_adjusted" + fireAt.getTime().toString());
-    const channelId = patientId ? `dawa_patient_v2_${patientId}` : soundService.getChannelIdForCategory("medication");
+    const channelId = patientId ? patientChannelId(patientId, soundService.getAndroidResourceForCategory("medication")) : soundService.getChannelIdForCategory("medication");
 
     // ── Unified Single Pipeline Routing ──
     const isAndroid = Capacitor.getPlatform() === "android";
@@ -898,7 +900,7 @@ export const scheduleAdjustmentNotification = async ({
               id: notifId,
               schedule: { at: fireAt, allowWhileIdle: true },
               channelId,
-              sound: soundService.getAndroidResourceForCategory("medication") || "default",
+              sound: soundService.getCapacitorSound("medication"),
               extra: {
                 type: "schedule_adjusted",
                 reminderId,
@@ -918,7 +920,7 @@ export const scheduleAdjustmentNotification = async ({
             id: notifId,
             schedule: { at: fireAt, allowWhileIdle: true },
             channelId,
-            sound: soundService.getAndroidResourceForCategory("medication") || "default",
+            sound: soundService.getCapacitorSound("medication"),
             extra: {
               type: "schedule_adjusted",
               reminderId,
@@ -992,7 +994,7 @@ export const scheduleRefillNotifications = async (
         id: stringToHash(med.id + "low_stock" + todayKey),
         schedule: { at: new Date(Date.now() + 3000), allowWhileIdle: true }, // fire after 3s
         channelId: soundService.getChannelIdForCategory("refill"),
-        sound: soundService.getAndroidResourceForCategory("refill") || "default",
+        sound: soundService.getCapacitorSound("refill"),
         extra: { type: "low_stock", medicineId: med.id, patientId: med.patientId ?? null, route: "/medvault",
           soundName: soundService.getAndroidResourceForCategory("refill") },
       });
@@ -1086,6 +1088,7 @@ const executeScheduleReminders = async (
 
     const activeReminders = (reminders || []).filter((r) => r && r.enabled);
     const isAndroid = Capacitor.getPlatform() === "android";
+    const medicationResource = soundService.getAndroidResourceForCategory("medication");
 
     // 1. Check system readiness & channel status on Android
     let readiness: ReadinessCheckResult | null = null;
@@ -1110,7 +1113,6 @@ const executeScheduleReminders = async (
       try {
         // Always ensure the owner channel exists
         const medicationChannelId = soundService.getChannelIdForCategory("medication");
-        const medicationResource = soundService.getAndroidResourceForCategory("medication");
         const medicationSound = medicationResource !== "default" && medicationResource !== "silent" ? medicationResource : undefined;
 
         await LocalNotifications.createChannel({
@@ -1143,7 +1145,7 @@ const executeScheduleReminders = async (
               ? `${r.patientName}'s Reminders`
               : "Family Member Reminders";
             await LocalNotifications.createChannel({
-              id: patientChannelId(r.patientId),
+              id: patientChannelId(r.patientId, medicationResource),
               name: channelName,
               description: `Medication reminders for ${
                 r.patientName ?? "a family member"
@@ -1249,8 +1251,8 @@ const executeScheduleReminders = async (
             : `Dose: ${r.dose}. Remember to take your medicine!`,
           id: notifId,
           schedule: { at: next, allowWhileIdle: true },
-          channelId: r.patientId ? patientChannelId(r.patientId) : soundService.getChannelIdForCategory("medication"),
-          sound: soundService.getAndroidResourceForCategory("medication") || "default",
+          channelId: r.patientId ? patientChannelId(r.patientId, medicationResource) : soundService.getChannelIdForCategory("medication"),
+          sound: soundService.getCapacitorSound("medication"),
           actionTypeId: "MEDICINE_REMINDER",
           extra: {
             reminderId: r.id,

@@ -207,8 +207,6 @@ export const NotificationHandler = () => {
                     patientId: targetPatientId ?? null,
                     action: 'skipped'
                   });
-                  // Bug 6 fix: play the skipped sound on the Skip notification action
-                  soundService.tryPlayForCategory("skipped");
                   toast.warning(`${medicineName || "Dose"} skipped.`);
                 } catch (err) {
                   console.error('Failed to skip dose from notification:', err);

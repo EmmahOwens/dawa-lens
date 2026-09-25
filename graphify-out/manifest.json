@@ -1,7 +1,7 @@
 {
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/build.gradle": {
-    "mtime": 1790245484.027221,
-    "ast_hash": "1b15d9980ae9c85958f703401f88f162",
+    "mtime": 1790342883.9026976,
+    "ast_hash": "4bb658acfc5875c5fdd3bb64ae1641de",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/capacitor.build.gradle": {
@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/package.json": {
-    "mtime": 1790309894.694355,
-    "ast_hash": "2ce93627cc7f5af864b7e8abc8389c4c",
+    "mtime": 1790342868.8510725,
+    "ast_hash": "a2cbc973ad92234a830bfc6fa3ba4f30",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/playwright-fixture.ts": {
@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1790240528.6313791,
-    "ast_hash": "4acd3dd74204455882c2c59dc3ade67c",
+    "mtime": 1790346003.7570481,
+    "ast_hash": "6322434b82c2ddb48b15e85df61ce525",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -630,8 +630,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/NotificationHandler.tsx": {
-    "mtime": 1790235875.8994558,
-    "ast_hash": "df1c29a4eeec20d0e74b3fac18d694f9",
+    "mtime": 1790346103.7385952,
+    "ast_hash": "a4b5da5a9c9b7dbf989cab9c0212f3fb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/OfflineOverlay.tsx": {
@@ -1415,8 +1415,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/reminderService.ts": {
-    "mtime": 1790235796.470759,
-    "ast_hash": "c5b947664f6dac8e35d7196c22446249",
+    "mtime": 1790347284.5172534,
+    "ast_hash": "119a2b65fb7735b581bb60efe044b5e0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/visionService.ts": {
@@ -2435,8 +2435,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/quotesService.ts": {
-    "mtime": 1790235839.0134,
-    "ast_hash": "de982965fd884ce3bc15c443c5445543",
+    "mtime": 1790346069.1984112,
+    "ast_hash": "7d1c5a1108a0aef425d537e0f67081f1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/project_proposal.md": {
@@ -4190,18 +4190,18 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/settings/NotificationSoundSettings.tsx": {
-    "mtime": 1790072543.445077,
-    "ast_hash": "1ed69cb46c6be7e18ba301d2d8e1971c",
+    "mtime": 1790346202.3988347,
+    "ast_hash": "c27cd54d333184b8ab3637ade9023129",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/soundService.test.ts": {
-    "mtime": 1790071415.790785,
-    "ast_hash": "1ca2e92d4d5f9caf873704395956d82b",
+    "mtime": 1790346244.7826602,
+    "ast_hash": "8f9cb450171d23cb8e98154361306351",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/soundService.ts": {
-    "mtime": 1790101009.1093497,
-    "ast_hash": "4732b7cf284cbc8aece5c3e2324c2b81",
+    "mtime": 1790345740.2733428,
+    "ast_hash": "ed1ae0b62ea9b6dd2e2cd5b4d2f3ec9c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_bell_notification_933.wav": {
@@ -4220,8 +4220,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_long_pop_2358.wav": {
-    "mtime": 1790071230.350876,
-    "ast_hash": "5851fb3a6e94a950876d1bc1804f2973",
+    "mtime": 1790345607.0632796,
+    "ast_hash": "638cc743f2eaf31eadfeece1ad1dac35",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_positive_notification_951.wav": {
@@ -4230,8 +4230,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_sci_fi_click_900.wav": {
-    "mtime": 1790071230.4018764,
-    "ast_hash": "8a383f6764b0bb44ca48c51d29ccf280",
+    "mtime": 1790345606.740277,
+    "ast_hash": "9227f94243e3ed91103b0c3b089bada7",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/res/raw/mixkit_software_interface_back_2575.wav": {
@@ -4270,8 +4270,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-long-pop-2358.wav": {
-    "mtime": 1790071222.9528315,
-    "ast_hash": "5851fb3a6e94a950876d1bc1804f2973",
+    "mtime": 1790345607.0602796,
+    "ast_hash": "638cc743f2eaf31eadfeece1ad1dac35",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-positive-notification-951.wav": {
@@ -4280,8 +4280,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-sci-fi-click-900.wav": {
-    "mtime": 1790071222.9568315,
-    "ast_hash": "8a383f6764b0bb44ca48c51d29ccf280",
+    "mtime": 1790345606.732277,
+    "ast_hash": "9227f94243e3ed91103b0c3b089bada7",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/notification_sounds/mixkit-software-interface-back-2575.wav": {
@@ -4335,8 +4335,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/SoundPrefsReader.kt": {
-    "mtime": 1790235160.1856916,
-    "ast_hash": "e0d7eab106eb6e4741458c680a6e4d47",
+    "mtime": 1790345708.3061025,
+    "ast_hash": "d5a7072b8b183473ba9fd11f713c9f1a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-bell-notification-933.wav": {

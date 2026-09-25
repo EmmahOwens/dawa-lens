@@ -139,7 +139,23 @@ const AppContent = () => {
         runMissedDoseReconciliation();
       });
 
-      return unsubForeground;
+      // Reschedule reminders and recreate channels dynamically when sound preferences change in Settings
+      let soundDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+      const onSoundPrefsChanged = () => {
+        if (soundDebounceTimer) clearTimeout(soundDebounceTimer);
+        soundDebounceTimer = setTimeout(() => {
+          scheduleReminders(reminders, doseLogs, medicines).then(() =>
+            scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
+          );
+        }, 400);
+      };
+      window.addEventListener("dawa:sound-preferences-changed", onSoundPrefsChanged);
+
+      return () => {
+        unsubForeground();
+        if (soundDebounceTimer) clearTimeout(soundDebounceTimer);
+        window.removeEventListener("dawa:sound-preferences-changed", onSoundPrefsChanged);
+      };
     } else {
       // On web/PWA: check missed doses when tab becomes active and on 15m interval
       const handleVisibilityChange = () => {

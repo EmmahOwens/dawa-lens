@@ -97,22 +97,26 @@ export async function createEngagementChannels(): Promise<void> {
   try {
     const quotesResource = soundService.getAndroidResourceForCategory("quotes");
     const hydrationResource = soundService.getAndroidResourceForCategory("hydration");
+    const takenResource = soundService.getAndroidResourceForCategory("taken");
 
     const quotesSound = quotesResource !== "default" && quotesResource !== "silent" ? quotesResource : undefined;
     const hydrationSound = hydrationResource !== "default" && hydrationResource !== "silent" ? hydrationResource : undefined;
+    const takenSound = takenResource !== "default" && takenResource !== "silent" ? takenResource : undefined;
 
     const quotesChannelId = soundService.getChannelIdForCategory("quotes");
     const hydrationChannelId = soundService.getChannelIdForCategory("hydration");
+    const takenChannelId = soundService.getChannelIdForCategory("taken");
 
     // Dynamic sound-hashed channels
     await LocalNotifications.createChannel({ id: quotesChannelId,    name: "Daily Health Quotes",       description: "Motivational health quotes to keep you inspired",   importance: 3, vibration: false, sound: quotesSound });
     await LocalNotifications.createChannel({ id: hydrationChannelId, name: "Hydration Reminders",       description: "Stay hydrated throughout the day",                  importance: 3, vibration: false, sound: hydrationSound });
+    await LocalNotifications.createChannel({ id: takenChannelId,     name: "Achievements & Streaks",    description: "Celebrate your medication adherence milestones",    importance: 4, vibration: true,  sound: takenSound });
 
     // Legacy fallback channels (importance: 3 for hydration so sounds play)
     await LocalNotifications.createChannel({ id: CHANNEL_QUOTES,    name: "Daily Health Quotes",       description: "Motivational health quotes to keep you inspired",   importance: 3, vibration: false, sound: quotesSound });
     await LocalNotifications.createChannel({ id: CHANNEL_WELLNESS,  name: "Wellness Reminders",        description: "Evening check-ins and wellness log nudges",         importance: 3, vibration: false, sound: quotesSound });
     await LocalNotifications.createChannel({ id: CHANNEL_HYDRATION, name: "Hydration Reminders",       description: "Stay hydrated throughout the day",                  importance: 3, vibration: false, sound: hydrationSound });
-    await LocalNotifications.createChannel({ id: CHANNEL_STREAKS,   name: "Achievements & Streaks",    description: "Celebrate your medication adherence milestones",    importance: 4, vibration: true,  sound: quotesSound });
+    await LocalNotifications.createChannel({ id: CHANNEL_STREAKS,   name: "Achievements & Streaks",    description: "Celebrate your medication adherence milestones",    importance: 4, vibration: true,  sound: takenSound });
   } catch (err) {
     console.warn("[quotesService] Failed to create engagement channels:", err);
   }
@@ -232,8 +236,8 @@ async function scheduleDailyQuoteNotifications(
       body: quote,
       schedule: { at: fireDate, allowWhileIdle: true },
       channelId: soundService.getChannelIdForCategory("quotes"),
-      sound: soundService.getAndroidResourceForCategory("quotes") || "default",
-      extra: { type: "daily_quote", route: "/" },
+      sound: soundService.getCapacitorSound("quotes"),
+      extra: { type: "daily_quote", route: "/", soundName: soundService.getAndroidResourceForCategory("quotes") },
     });
     alarmBatch.push({
       id,
@@ -268,9 +272,9 @@ export async function schedulePostDoseEncouragementNotification(medicineName: st
         title: `💊 ${medicineName} — Logged!`,
         body: quote,
         schedule: { at: fireAt, allowWhileIdle: true },
-        channelId: soundService.getChannelIdForCategory("quotes"),
-        sound: soundService.getAndroidResourceForCategory("quotes") || "default",
-        extra: { type: "encouragement", route: "/" }
+        channelId: soundService.getChannelIdForCategory("taken"),
+        sound: soundService.getCapacitorSound("taken"),
+        extra: { type: "encouragement", route: "/", soundName: soundService.getAndroidResourceForCategory("taken") }
       }]
     });
     try {
@@ -322,7 +326,7 @@ async function scheduleEveningCheckIns(
     const dateKey = startOfDay(addDays(now, i)).toISOString();
     const id = stringToHash("dawa_evening_checkin_" + dateKey);
     const body = getEveningCheckInQuote(fireDate);
-    localBatch.push({ id, title: "🌙 Evening Check-In", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: CHANNEL_WELLNESS, sound: "default", extra: { type: "evening_checkin", route: "/" } });
+    localBatch.push({ id, title: "🌙 Evening Check-In", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: soundService.getChannelIdForCategory("quotes"), sound: soundService.getCapacitorSound("quotes"), extra: { type: "evening_checkin", route: "/", soundName: soundService.getAndroidResourceForCategory("quotes") } });
     alarmBatch.push({ id, title: "🌙 Evening Check-In", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "evening_checkin" }) });
     ids.push(id);
   }
@@ -362,7 +366,7 @@ async function scheduleHydrationReminders(
       const dateKey = `${startOfDay(addDays(now, i)).toISOString()}_${hour}`;
       const id = stringToHash("dawa_hydration_" + dateKey);
       const body = getHydrationQuote(fireDate, hIdx);
-      localBatch.push({ id, title: "💧 Hydration Reminder", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: soundService.getChannelIdForCategory("hydration"), sound: soundService.getAndroidResourceForCategory("hydration") || "default", extra: { type: "hydration", route: "/" } });
+      localBatch.push({ id, title: "💧 Hydration Reminder", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: soundService.getChannelIdForCategory("hydration"), sound: soundService.getCapacitorSound("hydration"), extra: { type: "hydration", route: "/", soundName: soundService.getAndroidResourceForCategory("hydration") } });
       alarmBatch.push({ id, title: "💧 Hydration Reminder", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "hydration" }) });
       ids.push(id);
     }
@@ -399,7 +403,7 @@ async function scheduleWeeklyAdherenceSummary(
     const dateKey = startOfDay(addDays(now, daysUntilSunday + week * 7)).toISOString();
     const id = stringToHash("dawa_weekly_summary_" + dateKey);
     const body = getWeeklySummaryQuote(week, fireDate);
-    localBatch.push({ id, title: "📊 Your Weekly Health Summary", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: soundService.getChannelIdForCategory("quotes"), sound: soundService.getAndroidResourceForCategory("quotes") || "default", extra: { type: "weekly_summary", route: "/history" } });
+    localBatch.push({ id, title: "📊 Your Weekly Health Summary", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: soundService.getChannelIdForCategory("quotes"), sound: soundService.getCapacitorSound("quotes"), extra: { type: "weekly_summary", route: "/history", soundName: soundService.getAndroidResourceForCategory("quotes") } });
     alarmBatch.push({ id, title: "📊 Your Weekly Health Summary", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "weekly_summary" }) });
     ids.push(id);
   }
@@ -459,9 +463,9 @@ export async function scheduleStreakNotification(streak: number): Promise<void> 
         title: `🔥 ${streak}-Day Medication Streak!`,
         body,
         schedule: { at: fireAt, allowWhileIdle: true },
-        channelId: CHANNEL_STREAKS,
-        sound: "default",
-        extra: { type: "streak", streak, route: "/history" }
+        channelId: soundService.getChannelIdForCategory("taken"),
+        sound: soundService.getCapacitorSound("taken"),
+        extra: { type: "streak", streak, route: "/history", soundName: soundService.getAndroidResourceForCategory("taken") }
       }]
     });
     try {
@@ -512,7 +516,7 @@ export async function scheduleWellnessNudge(wellnessLogs: WellnessLog[]): Promis
     const fireAt = new Date(Date.now() + 2000);
     const id = stringToHash("dawa_wellness_nudge_" + todayKey);
     const body = getWellnessNudgeQuote(fireAt);
-    await LocalNotifications.schedule({ notifications: [{ id, title: "🩺 Wellness Check-In", body, schedule: { at: fireDateSafe(fireAt), allowWhileIdle: true }, channelId: CHANNEL_WELLNESS, sound: "default", extra: { type: "wellness_nudge", route: "/wellness" } }] });
+    await LocalNotifications.schedule({ notifications: [{ id, title: "🩺 Wellness Check-In", body, schedule: { at: fireDateSafe(fireAt), allowWhileIdle: true }, channelId: soundService.getChannelIdForCategory("quotes"), sound: soundService.getCapacitorSound("quotes"), extra: { type: "wellness_nudge", route: "/wellness", soundName: soundService.getAndroidResourceForCategory("quotes") } }] });
     try { await NativeAlarm.scheduleAlarms({ notifications: [{ id, title: "🩺 Wellness Check-In", body, triggerAtMillis: fireAt.getTime(), extra: JSON.stringify({ type: "wellness_nudge" }) }] }); }
     catch (e) { console.warn("[quotesService] NativeAlarm wellness nudge failed (non-fatal):", e); }
     localStorage.setItem(dedupeKey, "1");
