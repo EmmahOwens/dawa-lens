@@ -16,6 +16,14 @@ import {
   Car,
 } from "@/lib/icons";
 
+import {
+  initPmtilesProtocol,
+  resolveActiveVectorStyle,
+  ESRI_SATELLITE_STYLE,
+  OPENFREEMAP_POSITRON_STYLE,
+  OPENFREEMAP_BRIGHT_STYLE,
+} from "@/services/mapTileService";
+
 interface PharmacyRouteMapProps {
   userCoords: [number, number]; // [lng, lat]
   topPharmacies: NdaPharmacy[];
@@ -26,33 +34,9 @@ interface PharmacyRouteMapProps {
   className?: string;
 }
 
-const PRIMARY_STYLE = "https://tiles.openfreemap.org/styles/positron";
-const FALLBACK_STYLE = "https://tiles.openfreemap.org/styles/bright";
-
-// High-resolution Esri World Imagery for satellite basemap toggle
-const SATELLITE_STYLE: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    "esri-satellite": {
-      type: "raster",
-      tiles: [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      ],
-      tileSize: 256,
-      attribution: "Esri, Maxar, Earthstar Geographics",
-      maxzoom: 19,
-    },
-  },
-  layers: [
-    {
-      id: "esri-satellite-layer",
-      type: "raster",
-      source: "esri-satellite",
-      minzoom: 0,
-      maxzoom: 19,
-    },
-  ],
-};
+const PRIMARY_STYLE = OPENFREEMAP_POSITRON_STYLE;
+const FALLBACK_STYLE = OPENFREEMAP_BRIGHT_STYLE;
+const SATELLITE_STYLE = ESRI_SATELLITE_STYLE;
 
 export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
   userCoords,
@@ -194,6 +178,8 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     let fallbackApplied = false;
 
     try {
+      initPmtilesProtocol(maplibregl);
+
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
         style: PRIMARY_STYLE,
@@ -202,6 +188,12 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         attributionControl: false,
         dragRotate: false,
         touchPitch: false,
+      });
+
+      resolveActiveVectorStyle().then((activeStyle) => {
+        if (mapRef.current && mapModeRef.current === "streets" && activeStyle !== PRIMARY_STYLE) {
+          mapRef.current.setStyle(activeStyle);
+        }
       });
 
       map.on("error", (e) => {

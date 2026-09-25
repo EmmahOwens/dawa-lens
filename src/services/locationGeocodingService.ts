@@ -284,9 +284,30 @@ export async function searchPeliasSuggestions(
   }
 }
 
+import {
+  searchOfflineUgandaGazetteer,
+  OfflineGazetteerEntry,
+} from "@/data/ugandaGazetteer";
+
+export function formatGazetteerPlace(entry: OfflineGazetteerEntry): GeocodedPlace {
+  return {
+    id: `gazetteer-${entry.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    name: entry.name,
+    displayName: `${entry.name}, ${entry.district} (${entry.region} Uganda)`,
+    coordinates: entry.coordinates,
+    type: entry.type,
+    district: entry.district,
+    state: entry.region,
+    country: "Uganda",
+    countryCode: "UG",
+    provider: "photon",
+  };
+}
+
 /**
  * Primary search suggestions function:
- * Searches address and location suggestions using Photon by Komoot (or Pelias if configured).
+ * Searches address and location suggestions using Photon by Komoot (or Pelias if configured),
+ * with instant fallback to the local Uganda gazetteer when offline or in low-connectivity environments.
  */
 export async function searchAddressSuggestions(
   query: string,
@@ -294,12 +315,37 @@ export async function searchAddressSuggestions(
 ): Promise<GeocodedPlace[]> {
   const provider = options.provider || "photon";
   const peliasUrl = typeof process !== "undefined" && (process.env?.VITE_PELIAS_API_URL || "");
+  const limit = options.limit || DEFAULT_LIMIT;
 
-  if (provider === "pelias" && peliasUrl) {
-    return searchPeliasSuggestions(query, peliasUrl, options);
+  let onlineResults: GeocodedPlace[] = [];
+  try {
+    if (provider === "pelias" && peliasUrl) {
+      onlineResults = await searchPeliasSuggestions(query, peliasUrl, options);
+    } else {
+      onlineResults = await searchPhotonSuggestions(query, options);
+    }
+  } catch (err) {
+    console.warn("[LocationGeocoding] Online search failed, using local gazetteer fallback:", err);
   }
 
-  return searchPhotonSuggestions(query, options);
+  if (onlineResults && onlineResults.length > 0) {
+    if (onlineResults.length < limit) {
+      const localMatches = searchOfflineUgandaGazetteer(query, limit - onlineResults.length);
+      const formattedLocal = localMatches.map(formatGazetteerPlace);
+      const combined = [...onlineResults];
+      for (const loc of formattedLocal) {
+        if (!combined.some((c) => c.name.toLowerCase() === loc.name.toLowerCase())) {
+          combined.push(loc);
+        }
+      }
+      return combined.slice(0, limit);
+    }
+    return onlineResults;
+  }
+
+  // Fallback to offline gazetteer when offline or no online results
+  const localMatches = searchOfflineUgandaGazetteer(query, limit);
+  return localMatches.map(formatGazetteerPlace);
 }
 
 /**

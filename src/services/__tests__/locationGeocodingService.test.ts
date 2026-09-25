@@ -209,4 +209,32 @@ describe("locationGeocodingService", () => {
       expect(result?.coordinates).toEqual([32.5825, 0.3476]);
     });
   });
+
+  describe("searchAddressSuggestions (Offline Uganda Gazetteer)", () => {
+    it("falls back to local Uganda gazetteer when network is offline", async () => {
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Network offline"));
+
+      const results = await searchAddressSuggestions("Kololo", { limit: 5 });
+      expect(results.length).toBeGreaterThan(0);
+      expect(results[0].name).toBe("Kololo");
+      expect(results[0].district).toBe("Kampala");
+      expect(results[0].country).toBe("Uganda");
+      expect(results[0].coordinates).toEqual([32.5936, 0.3292]);
+    });
+
+    it("matches towns and trading centers like Mbarara, Namanve, and Jinja offline", async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue({
+        ok: true,
+        json: async () => ({ features: [] }),
+      } as Response);
+
+      const namanve = await searchAddressSuggestions("Namanve");
+      expect(namanve.length).toBeGreaterThan(0);
+      expect(namanve[0].name).toContain("Namanve");
+
+      const mbarara = await searchAddressSuggestions("Mbarara");
+      expect(mbarara.length).toBeGreaterThan(0);
+      expect(mbarara[0].name).toContain("Mbarara");
+    });
+  });
 });

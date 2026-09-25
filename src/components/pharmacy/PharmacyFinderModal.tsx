@@ -5,6 +5,7 @@ import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useNearbyPharmacies } from "@/hooks/useNearbyPharmacies";
 import { PharmacyRouteMap } from "./PharmacyRouteMap";
 import { PharmacyLocationSearch } from "./PharmacyLocationSearch";
+import { PharmacyVerificationModal } from "./PharmacyVerificationModal";
 import { getDirectionsUrl, formatDuration, NdaPharmacy, PharmacyTransportMode } from "@/services/pharmacyService";
 import { Medicine } from "@/contexts/AppContext";
 import {
@@ -119,6 +120,7 @@ function SelectedCard({
   onRefillLogged,
   onClose,
   onNavigate,
+  onOpenVerification,
   isDrugShop,
 }: {
   outlet: NdaPharmacy;
@@ -129,6 +131,7 @@ function SelectedCard({
   onRefillLogged?: (m: Medicine) => void;
   onClose: () => void;
   onNavigate: () => void;
+  onOpenVerification: () => void;
   isDrugShop: boolean;
 }) {
   const accentBorder = isDrugShop ? "border-amber-500/30" : "border-teal-500/30";
@@ -204,7 +207,7 @@ function SelectedCard({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-3 pt-1">
+      <div className="flex items-center gap-2 pt-1">
         <Button
           onClick={onNavigate}
           className={`flex-1 h-12 rounded-2xl font-black ${btnClass} text-white shadow-lg flex items-center justify-center gap-2 text-xs uppercase tracking-wider`}
@@ -212,13 +215,22 @@ function SelectedCard({
           <Navigation className="size-4" />
           <span>Open in Navigation</span>
         </Button>
+        <Button
+          variant="outline"
+          onClick={onOpenVerification}
+          title="Verify or update pharmacy location"
+          className="h-12 px-3.5 rounded-2xl font-bold border-border/60 hover:bg-muted/40 text-xs flex items-center gap-1.5"
+        >
+          <ShieldCheck className="size-4 text-teal-600 dark:text-teal-400" />
+          <span className="hidden sm:inline">Verify</span>
+        </Button>
         {medicine && onRefillLogged && (
           <Button
             variant="outline"
             onClick={() => { onRefillLogged(medicine); onClose(); }}
             className="h-12 rounded-2xl font-bold border-border/60 text-xs"
           >
-            <RefreshCw className="size-3.5 mr-1" /> Log Refill
+            <RefreshCw className="size-3.5 mr-1" /> Refill
           </Button>
         )}
       </div>
@@ -272,6 +284,7 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
   const [outletTab, setOutletTab] = useState<OutletTab>("pharmacy");
   const [viewTab, setViewTab] = useState<ViewTab>("top5");
   const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const swipe = useSwipeToDismiss(onClose);
 
   const isPharmacyTab = outletTab === "pharmacy";
@@ -672,6 +685,7 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                 onRefillLogged={onRefillLogged}
                 onClose={onClose}
                 onNavigate={() => handleOpenExternalMaps(selectedPharmacy)}
+                onOpenVerification={() => setIsVerificationOpen(true)}
                 isDrugShop={selectedPharmacy.outletType === "drug_shop"}
               />
             )}
@@ -729,6 +743,16 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
         icon={Navigation}
         permissionName="Location"
       />
+
+      {/* Community Verification Modal */}
+      {selectedPharmacy && (
+        <PharmacyVerificationModal
+          pharmacy={selectedPharmacy}
+          userCoords={userCoords}
+          isOpen={isVerificationOpen}
+          onClose={() => setIsVerificationOpen(false)}
+        />
+      )}
     </>,
     document.body
   );
