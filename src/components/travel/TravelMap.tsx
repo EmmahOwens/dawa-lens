@@ -3,8 +3,17 @@ import * as maplibregl from 'maplibre-gl';
 import type { Map, Marker, LngLatLike } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane } from "@/lib/icons";
+import { Plane, Globe } from "@/lib/icons";
 import { RiveMoji } from "../rive/RiveMoji";
+import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
+// Register MapLibre GL worker URL globally for Vite bundling
+if (typeof (maplibregl as any).setWorkerUrl === 'function') {
+  (maplibregl as any).setWorkerUrl(mapWorkerUrl);
+}
+
+// Default origin coordinates (Kampala, Uganda [lng, lat])
+const DEFAULT_HOME_LNG_LAT: [number, number] = [32.5825, 0.3476];
 
 interface TravelMapProps {
   isAnimating: boolean;
@@ -136,13 +145,77 @@ const ALIAS_MAP: Record<string, string> = {
   'dominicanrep': 'dominicanrepublic',
 };
 
-// Default home: Kampala, Uganda (fallback when GPS is unavailable)
-const DEFAULT_HOME_LNG_LAT: [number, number] = [32.58, 0.35];
-
 // Free vector tile styles – no API key required
-// OpenFreeMap is the most reliable free tile source for MapLibre v5
+// OpenFreeMap is the most reliable free tile source for MapLibre v5 & v6
 const PRIMARY_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 const FALLBACK_STYLE = 'https://tiles.openfreemap.org/styles/bright';
+
+// Clean fallback raster style using OpenStreetMap tiles (no API key, no watermark)
+const RASTER_BACKUP_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'osm-tiles': {
+      type: 'raster',
+      tiles: [
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      ],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: 'osm-backup-layer',
+      type: 'raster',
+      source: 'osm-tiles',
+      minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+};
+
+/** Setup flight arc GeoJSON source and line layers on a map instance */
+function setupFlightLayers(m: Map) {
+  try {
+    if (typeof m.getSource === 'function' && !m.getSource('flight-arc')) {
+      m.addSource('flight-arc', {
+        type: 'geojson',
+        data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
+      });
+    }
+
+    if (typeof m.getLayer === 'function' && !m.getLayer('flight-arc-dashes')) {
+      m.addLayer({
+        id: 'flight-arc-dashes',
+        type: 'line',
+        source: 'flight-arc',
+        paint: {
+          'line-color': '#007AFF',
+          'line-width': 2,
+          'line-dasharray': [4, 4],
+          'line-opacity': 0.5,
+        },
+      });
+    }
+
+    if (typeof m.getLayer === 'function' && !m.getLayer('flight-arc-solid')) {
+      m.addLayer({
+        id: 'flight-arc-solid',
+        type: 'line',
+        source: 'flight-arc',
+        paint: {
+          'line-color': '#007AFF',
+          'line-width': 2.5,
+          'line-opacity': 0.9,
+          'line-blur': 0,
+        },
+      });
+    }
+  } catch (layerErr) {
+    console.warn('[TravelMap] Error setting up flight layers:', layerErr);
+  }
+}
 
 /** Interpolate N points along a great-circle arc in LngLat space */
 function buildArcCoordinates(
@@ -412,10 +485,14 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
 
     let fallbackApplied = false;
 
-    const initMap = (style: string) => {
+    const initMap = (style: string | maplibregl.StyleSpecification) => {
       if (!mapContainerRef.current) return null;
 
       try {
+        if (typeof (maplibregl as any).setWorkerUrl === 'function') {
+          (maplibregl as any).setWorkerUrl(mapWorkerUrl);
+        }
+
         const map = new maplibregl.Map({
           container: mapContainerRef.current,
           style,
@@ -430,93 +507,59 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
           },
         });
 
-        // Error handling – swap to fallback style on failure
+        // Error handling – swap to fallback style on fatal failure
         map.on('error', (e) => {
-          console.error('MapLibre error:', e);
-          if (!fallbackApplied) {
+          console.warn('[TravelMap] MapLibre event:', e);
+          const errorMsg = e.error?.message || '';
+          const isFatal = !map.isStyleLoaded() || errorMsg.includes('Worker failed') || errorMsg.includes('Failed to fetch');
+          if (isFatal && !fallbackApplied) {
             fallbackApplied = true;
-            console.warn('Primary map style failed, switching to fallback...');
+            console.warn('[TravelMap] Primary style failed, switching to fallback style...');
             try {
               map.setStyle(FALLBACK_STYLE);
             } catch (styleErr) {
-              console.warn('Failed to set fallback style:', styleErr);
+              console.warn('[TravelMap] Failed to set fallback style:', styleErr);
             }
           }
         });
 
-        // Compact attribution
-        try {
-          map.addControl(
-            new maplibregl.AttributionControl({ compact: true }),
-            'bottom-left'
-          );
-        } catch (ctrlErr) {
-          console.warn('Failed to add attribution control:', ctrlErr);
-        }
-
-        map.on('load', () => {
+        const handleMapReady = () => {
           try {
-            // Force a resize on load to fix blank canvas when the container was
-            // laid out before the map's WebGL canvas had definite dimensions
             map.resize();
+            setupFlightLayers(map);
 
-            // ── Flight arc source + layer ─────────────────────────────────────────
-            map.addSource('flight-arc', {
-              type: 'geojson',
-              data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [] } },
-            });
+            if (!homeMarkerRef.current) {
+              const homeEl = document.createElement('div');
+              homeEl.className = 'travel-map-home-marker';
+              homeEl.innerHTML = `
+                <div style="
+                  width:16px; height:16px; border-radius:50%;
+                  background:#007AFF; border:3px solid #fff;
+                  box-shadow:0 0 0 4px rgba(0,122,255,0.3), 0 2px 8px rgba(0,0,0,0.3);
+                  position:relative;
+                ">
+                  <span style="
+                    position:absolute; inset:-6px; border-radius:50%;
+                    border:2px solid rgba(0,122,255,0.4);
+                    animation:travel-pulse 2s ease-out infinite;
+                  "></span>
+                </div>`;
 
-            map.addLayer({
-              id: 'flight-arc-dashes',
-              type: 'line',
-              source: 'flight-arc',
-              paint: {
-                'line-color': '#007AFF',
-                'line-width': 2,
-                'line-dasharray': [4, 4],
-                'line-opacity': 0.5,
-              },
-            });
-
-            map.addLayer({
-              id: 'flight-arc-solid',
-              type: 'line',
-              source: 'flight-arc',
-              paint: {
-                'line-color': '#007AFF',
-                'line-width': 2.5,
-                'line-opacity': 0.9,
-                'line-blur': 0,
-              },
-            });
-
-            // ── Home pulse marker ───────────────────────────────────────────────────
-            const homeEl = document.createElement('div');
-            homeEl.className = 'travel-map-home-marker';
-            homeEl.innerHTML = `
-              <div style="
-                width:16px; height:16px; border-radius:50%;
-                background:#007AFF; border:3px solid #fff;
-                box-shadow:0 0 0 4px rgba(0,122,255,0.3), 0 2px 8px rgba(0,0,0,0.3);
-                position:relative;
-              ">
-                <span style="
-                  position:absolute; inset:-6px; border-radius:50%;
-                  border:2px solid rgba(0,122,255,0.4);
-                  animation:travel-pulse 2s ease-out infinite;
-                "></span>
-              </div>`;
-
-            homeMarkerRef.current = new maplibregl.Marker({ element: homeEl, anchor: 'center' })
-              .setLngLat(homeLngLat)
-              .setPopup(new maplibregl.Popup({ offset: 20 }).setDOMContent(createSafePopupElement('📍', userCountry || 'Your Location')))
-              .addTo(map);
+              homeMarkerRef.current = new maplibregl.Marker({ element: homeEl, anchor: 'center' })
+                .setLngLat(homeLngLat)
+                .setPopup(new maplibregl.Popup({ offset: 20 }).setDOMContent(createSafePopupElement('📍', userCountry || 'Your Location')))
+                .addTo(map);
+            }
 
             setIsMapLoaded(true);
           } catch (loadErr) {
-            console.warn('[TravelMap] Error during map on-load configuration:', loadErr);
+            console.warn('[TravelMap] Error during map readiness configuration:', loadErr);
           }
-        });
+        };
+
+        // Re-attach flight layers and ensure ready state whenever style or map loads
+        map.on('styledata', handleMapReady);
+        map.on('load', handleMapReady);
 
         mapRef.current = map;
 
@@ -582,7 +625,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
   // ── Update arc + destination marker + mini plane flight loop ───────────────
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded() || !isMapLoaded) return;
+    if (!map || !isMapLoaded) return;
 
     // Cleanup prior destination marker
     if (destMarkerRef.current) {
@@ -601,7 +644,11 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
     }
     planeInnerElRef.current = null;
 
-    const arcSource = map.getSource('flight-arc') as maplibregl.GeoJSONSource | undefined;
+    let arcSource = map.getSource('flight-arc') as maplibregl.GeoJSONSource | undefined;
+    if (!arcSource) {
+      setupFlightLayers(map);
+      arcSource = map.getSource('flight-arc') as maplibregl.GeoJSONSource | undefined;
+    }
 
     if (!destCoords) {
       // Clear arc
@@ -742,6 +789,15 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
       {/* MapLibre container – must have explicit width & height so the WebGL
           canvas gets real pixel dimensions before MapLibre initialises */}
       <div ref={mapContainerRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+
+      {!isMapLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/30 backdrop-blur-xs pointer-events-none z-[5]">
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-background/90 border border-border/60 text-[11px] font-bold text-muted-foreground shadow-lg">
+            <Globe size={14} className="animate-spin text-primary" />
+            <span>Loading global map...</span>
+          </div>
+        </div>
+      )}
 
       {/* Origin label */}
       <div className="absolute top-3 left-3 z-10 flex flex-col pointer-events-none">

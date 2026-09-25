@@ -26,6 +26,8 @@ vi.mock("maplibre-gl", () => {
     addControl: vi.fn(),
     addSource: vi.fn(),
     addLayer: vi.fn(),
+    getLayer: vi.fn(),
+    getStyle: vi.fn().mockReturnValue({}),
     getSource: mockGetSource,
     isStyleLoaded: mockIsStyleLoaded,
     resize: mockResize,
@@ -60,12 +62,14 @@ vi.mock("maplibre-gl", () => {
       Popup: PopupMock,
       LngLatBounds: LngLatBoundsMock,
       AttributionControl: AttributionControlMock,
+      setWorkerUrl: vi.fn(),
     },
     Map: MapMock,
     Marker: MarkerMock,
     Popup: PopupMock,
     LngLatBounds: LngLatBoundsMock,
     AttributionControl: AttributionControlMock,
+    setWorkerUrl: vi.fn(),
   };
 });
 

@@ -3,6 +3,8 @@ import type * as maplibregl from "maplibre-gl";
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 
+import mapWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+
 export const LOCAL_MAP_PACK_FILENAME = "uganda.pmtiles";
 
 // Default Firebase Storage / CDN URL for Uganda PMTiles package
@@ -12,6 +14,32 @@ export const FIREBASE_PMTILES_STORAGE_URL =
 
 export const OPENFREEMAP_POSITRON_STYLE = "https://tiles.openfreemap.org/styles/positron";
 export const OPENFREEMAP_BRIGHT_STYLE = "https://tiles.openfreemap.org/styles/bright";
+
+// Ultra-reliable standalone raster style fallback (works offline or when vector tiles are blocked)
+export const RASTER_POSITRON_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "carto-positron-source": {
+      type: "raster",
+      tiles: [
+        "https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}@2x.png",
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors, © CARTO",
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: "carto-positron-layer",
+      type: "raster",
+      source: "carto-positron-source",
+      minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+};
 
 // High-resolution Esri World Imagery raster basemap (maxzoom capped at 17 so MapLibre overzooms in Uganda instead of showing 'Map data not yet available' tiles)
 export const ESRI_SATELLITE_STYLE: maplibregl.StyleSpecification = {
@@ -112,15 +140,35 @@ export const COMPOSITE_PHARMACY_MAP_STYLE: maplibregl.StyleSpecification = {
 
 let isProtocolRegistered = false;
 let globalProtocolInstance: pmtiles.Protocol | null = null;
+let isWorkerConfigured = false;
+
+/**
+ * Ensures MapLibre GL is configured with its bundled Web Worker URL in Vite.
+ */
+export function setupMapLibreWorker(maplibreInstance?: any): void {
+  if (isWorkerConfigured) return;
+  try {
+    const inst = maplibreInstance;
+    const setWorkerUrlFn = inst?.setWorkerUrl || inst?.default?.setWorkerUrl;
+    if (typeof setWorkerUrlFn === "function") {
+      setWorkerUrlFn.call(inst, mapWorkerUrl);
+      isWorkerConfigured = true;
+    }
+  } catch (err) {
+    console.warn("[mapTileService] Failed to set MapLibre worker URL:", err);
+  }
+}
 
 /**
  * Initializes and registers the PMTiles protocol handler with MapLibre GL once.
  */
 export function initPmtilesProtocol(maplibreInstance: any): void {
+  setupMapLibreWorker(maplibreInstance);
+
   if (isProtocolRegistered) return;
 
   try {
-    const ProtocolClass = (pmtiles as any).Protocol || (pmtiles as any).default?.Protocol;
+    const ProtocolClass = (pmtiles as any).Protocol;
     if (ProtocolClass) {
       globalProtocolInstance = new ProtocolClass();
       const addProtocolFn =
