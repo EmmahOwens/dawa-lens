@@ -24,6 +24,21 @@ export interface NdaPharmacy {
   verified: boolean;
   distanceKm?: number;
   durationMinutes?: number;
+  confidenceScore?: number;
+  dataSource?: "nda_official" | "overture_fused" | "overture_osm_fused" | "community_verified";
+  osmId?: string;
+  overtureId?: string;
+  openingHours?: string;
+  verifiedByNda?: boolean;
+}
+
+export interface EnrichedPharmacy extends NdaPharmacy {
+  overtureId?: string;
+  osmId?: string;
+  confidenceScore?: number;
+  openingHours?: string;
+  verifiedByNda?: boolean;
+  dataSource?: "nda_official" | "overture_fused" | "overture_osm_fused" | "community_verified";
 }
 
 export type PharmacyTransportMode = "boda_boda" | "driving" | "walking";

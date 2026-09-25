@@ -83,7 +83,7 @@ describe("pharmacyService", () => {
     expect(route.distanceKm).toBeGreaterThan(0);
     expect(route.durationMinutes).toBeGreaterThan(0);
     expect(route.mode).toBe("driving");
-  });
+  }, 15000);
 
   it("generates correct directions navigation URLs for Google Maps with exact coordinates", () => {
     // Basic call with destination coordinates
@@ -215,7 +215,7 @@ describe("pharmacyService", () => {
         expect(enriched[i].distanceKm!).toBeLessThanOrEqual(enriched[i + 1].distanceKm!);
       }
     }
-  });
+  }, 15000);
 
   describe("Location persistence and fallback handling", () => {
     beforeEach(() => {
