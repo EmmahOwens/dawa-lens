@@ -30,6 +30,10 @@ import {
   WifiOff,
   Pill,
   AlertTriangle,
+  Maximize2,
+  Minimize2,
+  ChevronUp,
+  ChevronDown,
 } from "@/lib/icons";
 import PermissionRequest from "@/components/PermissionRequest";
 import { Button } from "@/components/ui/button";
@@ -341,7 +345,24 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
   const [viewTab, setViewTab] = useState<ViewTab>("top5");
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  const [isFsCardCollapsed, setIsFsCardCollapsed] = useState(false);
   const swipe = useSwipeToDismiss(onClose);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isMapFullscreen) {
+          e.stopPropagation();
+          setIsMapFullscreen(false);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMapFullscreen, onClose]);
 
   const isPharmacyTab = outletTab === "pharmacy";
   const isDrugShopTab = outletTab === "drug_shop";
@@ -428,21 +449,125 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          className="w-full max-w-2xl bg-card rounded-t-[2.5rem] shadow-2xl border border-border/50 max-h-[92dvh] flex flex-col overflow-hidden"
+          className={`w-full flex flex-col overflow-hidden transition-all duration-300 ${
+            isMapFullscreen
+              ? "fixed inset-0 max-w-none max-h-none h-[100dvh] rounded-none z-50 border-0 bg-background"
+              : "max-w-2xl bg-card rounded-t-[2.5rem] shadow-2xl border border-border/50 max-h-[92dvh]"
+          }`}
         >
-          {/* Grab handle */}
-          <motion.div
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0.05, bottom: 0.3 }}
-            onDragEnd={(_e, info) => { if (info.offset.y > 80) onClose(); }}
-            className="flex-shrink-0 pt-4 pb-2 px-6 cursor-grab active:cursor-grabbing touch-pan-x select-none"
-            {...swipe}
-          >
-            <div className="w-12 h-1.5 rounded-full bg-muted/80 hover:bg-muted mx-auto transition-colors" />
-          </motion.div>
+          {/* Grab handle (normal view only) */}
+          {!isMapFullscreen && (
+            <motion.div
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.05, bottom: 0.3 }}
+              onDragEnd={(_e, info) => { if (info.offset.y > 80) onClose(); }}
+              className="flex-shrink-0 pt-4 pb-2 px-6 cursor-grab active:cursor-grabbing touch-pan-x select-none"
+              {...swipe}
+            >
+              <div className="w-12 h-1.5 rounded-full bg-muted/80 hover:bg-muted mx-auto transition-colors" />
+            </motion.div>
+          )}
 
-          {/* ── Modal Header ────────────────────────────────────────── */}
+          {/* ── Fullscreen Top Bar Overlay ──────────────────────────── */}
+          {isMapFullscreen && (
+            <div className="absolute top-0 left-0 right-0 z-30 pt-[max(env(safe-area-inset-top),0.75rem)] px-3 sm:px-4 pointer-events-none">
+              <div className="flex items-center justify-between gap-2 max-w-4xl mx-auto pointer-events-auto">
+                {/* Exit Fullscreen button */}
+                <button
+                  type="button"
+                  onClick={() => setIsMapFullscreen(false)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg text-foreground hover:bg-card active:scale-95 transition-all text-xs font-bold"
+                  title="Exit full screen map (Esc)"
+                >
+                  <Minimize2 className="size-4 text-teal-600 dark:text-teal-400" />
+                  <span className="hidden sm:inline">Exit Full Screen</span>
+                  <span className="text-[10px] text-muted-foreground ml-0.5 font-mono hidden md:inline">Esc</span>
+                </button>
+
+                {/* Outlet switcher */}
+                <div className="flex rounded-2xl bg-card/90 backdrop-blur-md p-1 border border-border/60 shadow-lg gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleOutletTabChange("pharmacy")}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                      isPharmacyTab ? "bg-teal-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Building className="size-3" />
+                    <span>Pharmacies</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOutletTabChange("drug_shop")}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                      isDrugShopTab ? "bg-amber-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Pill className="size-3" />
+                    <span>Drug Shops</span>
+                  </button>
+                </div>
+
+                {/* Right controls: Travel mode + Close */}
+                <div className="flex items-center gap-1.5">
+                  <div className="flex rounded-2xl bg-card/90 backdrop-blur-md p-1 border border-border/60 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => setTransportMode("boda_boda")}
+                      title="Boda boda route"
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        transportMode === "boda_boda"
+                          ? `${isDrugShopTab ? "bg-amber-600" : "bg-teal-600"} text-white shadow-sm`
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Bike className="size-3.5" />
+                      <span className="hidden md:inline">Boda</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTransportMode("driving")}
+                      title="Car route"
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        transportMode === "driving"
+                          ? `${isDrugShopTab ? "bg-amber-600" : "bg-teal-600"} text-white shadow-sm`
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Car className="size-3.5" />
+                      <span className="hidden md:inline">Drive</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTransportMode("walking")}
+                      title="Walking route"
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        transportMode === "walking"
+                          ? `${isDrugShopTab ? "bg-amber-600" : "bg-teal-600"} text-white shadow-sm`
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Navigation className="size-3.5" />
+                      <span className="hidden md:inline">Walk</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="p-2.5 rounded-2xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg text-muted-foreground hover:text-foreground active:scale-95 transition-all shrink-0"
+                    title="Close"
+                  >
+                    <CloseSquare size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Modal Header (normal view only) ──────────────────────── */}
+          {!isMapFullscreen && (
           <div className="px-6 pb-4 border-b border-border/40 shrink-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0 pr-2">
@@ -642,197 +767,226 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
               </div>
             </div>
           </div>
+          )}
 
-          {/* ── Modal Body ──────────────────────────────────────────── */}
-          <div className="p-6 space-y-5 flex-1 overflow-y-auto no-scrollbar touch-auto overscroll-contain">
-
-            {/* Location / Network warning */}
-            {isNetworkIssue ? (
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs">
-                <div className="flex items-center gap-2 min-w-0">
-                  <WifiOff className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <span className="truncate">
-                    {isUsingPreviousLocation
-                      ? "Network issue detected. Using your previous location (offline mode)."
-                      : "Network issue detected. Defaulting to Kampala area."}
-                  </span>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => requestLocation()}
-                  className="h-7 text-[10px] font-bold rounded-xl border-amber-500/30 bg-amber-500/15 hover:bg-amber-500/25 shrink-0 ml-2">
-                  Retry GPS
-                </Button>
-              </div>
-            ) : (geoStatus === "denied" || geoStatus === "error") && (
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Location className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <span className="truncate">
-                    {isUsingPreviousLocation
-                      ? "Location disabled. Showing your previous location."
-                      : "Location disabled. Showing default Kampala area."}
-                  </span>
-                </div>
-                <Button size="sm" variant="outline" onClick={() => setShowLocationDialog(true)}
-                  className="h-7 text-[10px] font-bold rounded-xl border-amber-500/30 bg-amber-500/15 hover:bg-amber-500/25 shrink-0 ml-2">
-                  Enable Location
-                </Button>
-              </div>
-            )}
-
-            {/* ── Drug Shop regional info banner ───────────────────── */}
-            <AnimatePresence mode="wait">
-              {isDrugShopTab && (
-                <motion.div
-                  key="ds-banner"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
-                      <Pill className="size-4 text-amber-600 dark:text-amber-400" />
+          {/* ── Modal Body / Fullscreen Map View ────────────────────── */}
+          <div className={
+            isMapFullscreen
+              ? "relative flex-1 h-full w-full overflow-hidden p-0 m-0"
+              : "p-6 space-y-5 flex-1 overflow-y-auto no-scrollbar touch-auto overscroll-contain"
+          }>
+            {!isMapFullscreen && (
+              <>
+                {/* Location / Network warning */}
+                {isNetworkIssue ? (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <WifiOff className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span className="truncate">
+                        {isUsingPreviousLocation
+                          ? "Network issue detected. Using your previous location (offline mode)."
+                          : "Network issue detected. Defaulting to Kampala area."}
+                      </span>
                     </div>
-                    <div>
-                      <p className="text-xs font-black text-amber-700 dark:text-amber-300">
-                        NDA-Licensed Drug Shops — All 9 Regions
-                      </p>
-                      <p className="text-[10px] text-amber-600/70 dark:text-amber-400/70 mt-0.5">
-                        Western · South Western · Central · Eastern · West Nile · Northern · South Eastern · Kampala Extra · North Eastern
-                      </p>
+                    <Button size="sm" variant="outline" onClick={() => requestLocation()}
+                      className="h-7 text-[10px] font-bold rounded-xl border-amber-500/30 bg-amber-500/15 hover:bg-amber-500/25 shrink-0 ml-2">
+                      Retry GPS
+                    </Button>
+                  </div>
+                ) : (geoStatus === "denied" || geoStatus === "error") && (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Location className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span className="truncate">
+                        {isUsingPreviousLocation
+                          ? "Location disabled. Showing your previous location."
+                          : "Location disabled. Showing default Kampala area."}
+                      </span>
                     </div>
+                    <Button size="sm" variant="outline" onClick={() => setShowLocationDialog(true)}
+                      className="h-7 text-[10px] font-bold rounded-xl border-amber-500/30 bg-amber-500/15 hover:bg-amber-500/25 shrink-0 ml-2">
+                      Enable Location
+                    </Button>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                )}
 
-            {/* ── Top 5 Carousel ───────────────────────────────────── */}
-            {viewTab === "top5" && (
-              <div>
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
-                    isPharmacyTab ? "text-teal-600 dark:text-teal-400" : "text-amber-600 dark:text-amber-400"
-                  }`}>
-                    <Compass className="size-3.5" />
-                    {isPharmacyTab ? "Top 5 Nearest Pharmacies" : "Top 5 Nearest Drug Shops"}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground font-semibold">Tap to view route</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
-                  {activeTop5.map((outlet, idx) => (
-                    <Top5Card
-                      key={outlet.id}
-                      outlet={outlet}
-                      index={idx}
-                      isSelected={selectedPharmacy?.id === outlet.id}
-                      onSelect={() => setSelectedPharmacy(outlet)}
-                      accentClass={accentClass}
-                      accentSolid={accentSolid}
-                      isPharmacyTab={isPharmacyTab}
-                      route={route}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Search & Filter ──────────────────────────────────── */}
-            {viewTab === "search" && (
-              <div className="space-y-2.5">
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input
-                      placeholder={isPharmacyTab
-                        ? "Search pharmacy name, pharmacist, district…"
-                        : "Search drug shop name, district, region…"}
-                      value={activeSearch}
-                      onChange={(e) => setActiveSearch(e.target.value)}
-                      className="pl-9 h-11 rounded-2xl font-medium"
-                    />
-                  </div>
-                  <select
-                    value={activeDistrict}
-                    onChange={(e) => setActiveDistrict(e.target.value)}
-                    className="h-11 px-3 rounded-2xl border border-input bg-background text-xs font-bold text-foreground focus:ring-2 focus:ring-ring sm:max-w-[200px]"
-                  >
-                    <option value="ALL">All Districts ({activeDistricts.length})</option>
-                    {activeDistricts.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Quick Regional Hub Chips */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-[10px]">
-                  {["ALL", "Kampala", "Wakiso", "Jinja", "Mbarara", "Gulu"].map((hub) => (
-                    <button
-                      key={hub}
-                      type="button"
-                      onClick={() => setActiveDistrict(hub)}
-                      className={`px-2.5 py-1 rounded-lg border font-bold shrink-0 transition-all ${
-                        activeDistrict === hub
-                          ? `${isPharmacyTab ? "bg-teal-600 border-teal-600" : "bg-amber-600 border-amber-600"} text-white shadow-sm`
-                          : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/60"
-                      }`}
+                {/* ── Drug Shop regional info banner ───────────────────── */}
+                <AnimatePresence mode="wait">
+                  {isDrugShopTab && (
+                    <motion.div
+                      key="ds-banner"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
                     >
-                      {hub === "ALL" ? "All Districts" : hub}
-                    </button>
-                  ))}
-                </div>
+                      <div className="flex items-center gap-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center shrink-0">
+                          <Pill className="size-4 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-amber-700 dark:text-amber-300">
+                            NDA-Licensed Drug Shops — All 9 Regions
+                          </p>
+                          <p className="text-[10px] text-amber-600/70 dark:text-amber-400/70 mt-0.5">
+                            Western · South Western · Central · Eastern · West Nile · Northern · South Eastern · Kampala Extra · North Eastern
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                {/* Filtered list */}
-                <div className="max-h-40 overflow-y-auto no-scrollbar space-y-1.5 p-1 rounded-2xl bg-muted/20 border border-border/40">
-                  {activeFiltered.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4 font-semibold">
-                      No matching {isPharmacyTab ? "pharmacies" : "drug shops"} found.
-                    </p>
-                  ) : (
-                    activeFiltered.map((p) => {
-                      const isSelected = selectedPharmacy?.id === p.id;
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => setSelectedPharmacy(p)}
-                          className={`p-2.5 rounded-xl cursor-pointer flex items-center justify-between transition-all ${
-                            isSelected
-                              ? `${isPharmacyTab ? "bg-teal-500/15 border border-teal-500/40" : "bg-amber-500/15 border border-amber-500/40"} text-foreground`
-                              : "hover:bg-muted/40 text-muted-foreground"
+                {/* ── Top 5 Carousel ───────────────────────────────────── */}
+                {viewTab === "top5" && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <span className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                        isPharmacyTab ? "text-teal-600 dark:text-teal-400" : "text-amber-600 dark:text-amber-400"
+                      }`}>
+                        <Compass className="size-3.5" />
+                        {isPharmacyTab ? "Top 5 Nearest Pharmacies" : "Top 5 Nearest Drug Shops"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-semibold">Tap to view route</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                      {activeTop5.map((outlet, idx) => (
+                        <Top5Card
+                          key={outlet.id}
+                          outlet={outlet}
+                          index={idx}
+                          isSelected={selectedPharmacy?.id === outlet.id}
+                          onSelect={() => setSelectedPharmacy(outlet)}
+                          accentClass={accentClass}
+                          accentSolid={accentSolid}
+                          isPharmacyTab={isPharmacyTab}
+                          route={route}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Search & Filter ──────────────────────────────────── */}
+                {viewTab === "search" && (
+                  <div className="space-y-2.5">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                        <Input
+                          placeholder={isPharmacyTab
+                            ? "Search pharmacy name, pharmacist, district…"
+                            : "Search drug shop name, district, region…"}
+                          value={activeSearch}
+                          onChange={(e) => setActiveSearch(e.target.value)}
+                          className="pl-9 h-11 rounded-2xl font-medium"
+                        />
+                      </div>
+                      <select
+                        value={activeDistrict}
+                        onChange={(e) => setActiveDistrict(e.target.value)}
+                        className="h-11 px-3 rounded-2xl border border-input bg-background text-xs font-bold text-foreground focus:ring-2 focus:ring-ring sm:max-w-[200px]"
+                      >
+                        <option value="ALL">All Districts ({activeDistricts.length})</option>
+                        {activeDistricts.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Quick Regional Hub Chips */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-[10px]">
+                      {["ALL", "Kampala", "Wakiso", "Jinja", "Mbarara", "Gulu"].map((hub) => (
+                        <button
+                          key={hub}
+                          type="button"
+                          onClick={() => setActiveDistrict(hub)}
+                          className={`px-2.5 py-1 rounded-lg border font-bold shrink-0 transition-all ${
+                            activeDistrict === hub
+                              ? `${isPharmacyTab ? "bg-teal-600 border-teal-600" : "bg-amber-600 border-amber-600"} text-white shadow-sm`
+                              : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/60"
                           }`}
                         >
-                          <div className="min-w-0 pr-2">
-                            <p className="text-xs font-bold text-foreground truncate">{p.name}</p>
-                            <p className="text-[10px] truncate">{p.district}{p.region ? ` · ${p.region}` : ""}</p>
-                          </div>
-                          <span className={`text-[11px] font-black flex-shrink-0 ${
-                            isPharmacyTab ? "text-teal-600 dark:text-teal-400" : "text-amber-600 dark:text-amber-400"
-                          }`}>
-                            {(isSelected && route ? route.distanceKm : p.distanceKm) !== undefined
-                              ? `${isSelected && route ? route.distanceKm : p.distanceKm} km`
-                              : ""}
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
+                          {hub === "ALL" ? "All Districts" : hub}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Filtered list */}
+                    <div className="max-h-40 overflow-y-auto no-scrollbar space-y-1.5 p-1 rounded-2xl bg-muted/20 border border-border/40">
+                      {activeFiltered.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-4 font-semibold">
+                          No matching {isPharmacyTab ? "pharmacies" : "drug shops"} found.
+                        </p>
+                      ) : (
+                        activeFiltered.map((p) => {
+                          const isSelected = selectedPharmacy?.id === p.id;
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => setSelectedPharmacy(p)}
+                              className={`p-2.5 rounded-xl cursor-pointer flex items-center justify-between transition-all ${
+                                isSelected
+                                  ? `${isPharmacyTab ? "bg-teal-500/15 border border-teal-500/40" : "bg-amber-500/15 border border-amber-500/40"} text-foreground`
+                                  : "hover:bg-muted/40 text-muted-foreground"
+                              }`}
+                            >
+                              <div className="min-w-0 pr-2">
+                                <p className="text-xs font-bold text-foreground truncate">{p.name}</p>
+                                <p className="text-[10px] truncate">{p.district}{p.region ? ` · ${p.region}` : ""}</p>
+                              </div>
+                              <span className={`text-[11px] font-black flex-shrink-0 ${
+                                isPharmacyTab ? "text-teal-600 dark:text-teal-400" : "text-amber-600 dark:text-amber-400"
+                              }`}>
+                                {(isSelected && route ? route.distanceKm : p.distanceKm) !== undefined
+                                  ? `${isSelected && route ? route.distanceKm : p.distanceKm} km`
+                                  : ""}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Map Header with Fullscreen button ── */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${accentText}`}>
+                    <Compass className="size-3.5" />
+                    {isPharmacyTab ? "Live Pharmacy Route Map" : "Live Drug Shop Route Map"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsMapFullscreen(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-extrabold text-teal-700 dark:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 transition-all active:scale-95 shadow-sm"
+                    title="Resize map to full screen view"
+                  >
+                    <Maximize2 className="size-3.5" />
+                    <span>Full Screen</span>
+                  </button>
                 </div>
-              </div>
+              </>
             )}
 
-            {/* ── Map ─────────────────────────────────────────────────── */}
-            <PharmacyRouteMap
-              userCoords={userCoords}
-              topPharmacies={mapOutlets}
-              selectedPharmacy={selectedPharmacy}
-              route={route}
-              isRouteLoading={isRouteLoading}
-              onSelectPharmacy={(p) => setSelectedPharmacy(p)}
-              className="h-[260px] w-full"
-            />
+            {/* ── Map (Continuously mounted!) ─────────────────────────── */}
+            <div className={isMapFullscreen ? "absolute inset-0 h-full w-full" : "w-full"}>
+              <PharmacyRouteMap
+                userCoords={userCoords}
+                topPharmacies={mapOutlets}
+                selectedPharmacy={selectedPharmacy}
+                route={route}
+                isRouteLoading={isRouteLoading}
+                onSelectPharmacy={(p) => setSelectedPharmacy(p)}
+                className={isMapFullscreen ? "h-full w-full" : "h-[260px] w-full"}
+                isFullscreen={isMapFullscreen}
+                onToggleFullscreen={() => setIsMapFullscreen((prev) => !prev)}
+              />
+            </div>
 
-            {/* ── Selected outlet detail card ───────────────────────── */}
-            {selectedPharmacy && (
+            {/* ── Selected outlet detail card (Normal view only) ──────── */}
+            {!isMapFullscreen && selectedPharmacy && (
               <SelectedCard
                 outlet={selectedPharmacy}
                 route={route}
@@ -848,41 +1002,168 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
               />
             )}
 
-            {/* ── NDA Source Footer ─────────────────────────────────── */}
-            <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/40 flex items-center justify-between gap-3 text-xs text-muted-foreground mt-4">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className={`p-1.5 rounded-lg border shrink-0 ${
-                  isPharmacyTab
-                    ? "bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400"
-                    : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
-                }`}>
-                  <ShieldCheck className="size-4" />
+            {/* ── NDA Source Footer (Normal view only) ────────────────── */}
+            {!isMapFullscreen && (
+              <div className="p-3.5 rounded-2xl bg-muted/40 border border-border/40 flex items-center justify-between gap-3 text-xs text-muted-foreground mt-4">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`p-1.5 rounded-lg border shrink-0 ${
+                    isPharmacyTab
+                      ? "bg-teal-500/10 border-teal-500/20 text-teal-600 dark:text-teal-400"
+                      : "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
+                  }`}>
+                    <ShieldCheck className="size-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-foreground text-[11px] leading-tight truncate">
+                      Source: National Drug Authority (NDA) Uganda
+                    </p>
+                    <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">
+                      {isPharmacyTab
+                        ? "Official Register of Licensed Drug Outlets & Pharmacies"
+                        : "Licensed Drug Shops — All 9 Regional Zones"}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="font-bold text-foreground text-[11px] leading-tight truncate">
-                    Source: National Drug Authority (NDA) Uganda
-                  </p>
-                  <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 truncate">
-                    {isPharmacyTab
-                      ? "Official Register of Licensed Drug Outlets & Pharmacies"
-                      : "Licensed Drug Shops — All 9 Regional Zones"}
-                  </p>
-                </div>
+                <a
+                  href="https://www.nda.or.ug"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider hover:underline shrink-0 px-2.5 py-1 rounded-lg border ${
+                    isPharmacyTab
+                      ? "text-teal-600 dark:text-teal-400 bg-teal-500/10 border-teal-500/20"
+                      : "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20"
+                  }`}
+                >
+                  nda.or.ug
+                </a>
               </div>
-              <a
-                href="https://www.nda.or.ug"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider hover:underline shrink-0 px-2.5 py-1 rounded-lg border ${
-                  isPharmacyTab
-                    ? "text-teal-600 dark:text-teal-400 bg-teal-500/10 border-teal-500/20"
-                    : "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20"
-                }`}
-              >
-                nda.or.ug
-              </a>
-            </div>
+            )}
           </div>
+
+          {/* ── Fullscreen Floating Bottom Card ─────────────────────── */}
+          {isMapFullscreen && selectedPharmacy && (
+            <div className="absolute bottom-0 left-0 right-0 z-30 pb-[max(env(safe-area-inset-bottom),0.75rem)] px-3 sm:px-4 pointer-events-none">
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="max-w-xl mx-auto w-full pointer-events-auto bg-card/95 backdrop-blur-xl rounded-3xl border border-border/60 shadow-2xl p-4 space-y-3"
+              >
+                {/* Collapse / Expand row */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${accentSolid}`}>
+                      #{top5Pharmacies.findIndex((p) => p.id === selectedPharmacy.id) + 1 || "★"}
+                    </span>
+                    <span className="text-xs font-black text-foreground truncate">
+                      {selectedPharmacy.name}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${accentBadge} shrink-0`}>
+                      {route ? `${route.distanceKm} km · ${formatDuration(route.durationMinutes)}` : `${selectedPharmacy.distanceKm ?? "—"} km`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsFsCardCollapsed((prev) => !prev)}
+                      className="p-1.5 rounded-xl bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      title={isFsCardCollapsed ? "Expand pharmacy details" : "Collapse details to see more map"}
+                    >
+                      {isFsCardCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* If expanded, show outlet chips, details, and action buttons */}
+                {!isFsCardCollapsed && (
+                  <>
+                    {/* Top 5 quick picker chips right on the map */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+                      {activeTop5.map((outlet, idx) => {
+                        const isSelected = selectedPharmacy.id === outlet.id;
+                        return (
+                          <button
+                            key={outlet.id}
+                            type="button"
+                            onClick={() => setSelectedPharmacy(outlet)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold shrink-0 transition-all border ${
+                              isSelected
+                                ? `${accentClass} font-black shadow-sm ring-1`
+                                : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50"
+                            }`}
+                          >
+                            <span className="text-[10px] font-black">#{idx + 1}</span>
+                            <span className="truncate max-w-[100px]">{outlet.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{outlet.distanceKm}km</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Address & License info */}
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/30">
+                      <p className="truncate pr-2">{selectedPharmacy.address || selectedPharmacy.street}, {selectedPharmacy.district}</p>
+                      <span className={`text-[10px] font-mono font-bold shrink-0 ${accentText}`}>
+                        {selectedPharmacy.premiseNo}
+                      </span>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        onClick={() => handleOpenExternalMaps(selectedPharmacy)}
+                        className={`flex-1 h-10 rounded-xl font-black ${
+                          selectedPharmacy.outletType === "drug_shop"
+                            ? "bg-amber-600 hover:bg-amber-700"
+                            : "bg-teal-600 hover:bg-teal-700"
+                        } text-white shadow-md flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider`}
+                      >
+                        <Navigation className="size-3.5" />
+                        <span>Directions</span>
+                      </Button>
+
+                      {selectedPharmacy.phone && (
+                        <a
+                          href={`tel:${selectedPharmacy.phone}`}
+                          className="h-10 px-3 rounded-xl font-bold border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-xs flex items-center gap-1.5 transition-colors shrink-0"
+                          title={`Call ${selectedPharmacy.name}`}
+                        >
+                          <Phone className="size-3.5 text-teal-600 dark:text-teal-400" />
+                          <span className="hidden sm:inline">Call</span>
+                        </a>
+                      )}
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleShareOutlet(selectedPharmacy)}
+                        className="h-10 px-3 rounded-xl font-bold border-border/60 hover:bg-muted/40 text-xs flex items-center gap-1.5 shrink-0"
+                      >
+                        <Compass className="size-3.5 text-muted-foreground" />
+                        <span className="hidden sm:inline">Share</span>
+                      </Button>
+
+                      {selectedMed && onRefillLogged && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            onRefillLogged(selectedMed, selectedPharmacy);
+                            setIsMapFullscreen(false);
+                            onClose();
+                          }}
+                          className="h-10 px-3 rounded-xl font-black border-teal-500/40 text-teal-700 dark:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 text-xs flex items-center gap-1 shrink-0"
+                        >
+                          <RefreshCw className="size-3 mr-1" /> Refill {selectedMed.name.split(" ")[0]}
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            </div>
+          )}
         </motion.div>
       </motion.div>
 

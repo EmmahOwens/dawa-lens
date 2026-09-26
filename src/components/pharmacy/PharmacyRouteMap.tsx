@@ -14,6 +14,8 @@ import {
   Layers,
   Bike,
   Car,
+  Maximize2,
+  Minimize2,
 } from "@/lib/icons";
 
 import {
@@ -30,6 +32,8 @@ interface PharmacyRouteMapProps {
   isRouteLoading?: boolean;
   onSelectPharmacy: (pharmacy: NdaPharmacy) => void;
   className?: string;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
@@ -40,7 +44,19 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
   isRouteLoading = false,
   onSelectPharmacy,
   className = "h-[340px] w-full",
+  isFullscreen: isFullscreenProp,
+  onToggleFullscreen,
 }) => {
+  const [internalFullscreen, setInternalFullscreen] = useState(false);
+  const isFullscreen = isFullscreenProp !== undefined ? isFullscreenProp : internalFullscreen;
+
+  const handleToggleFullscreen = useCallback(() => {
+    if (onToggleFullscreen) {
+      onToggleFullscreen();
+    } else {
+      setInternalFullscreen((prev) => !prev);
+    }
+  }, [onToggleFullscreen]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const userMarkerRef = useRef<Marker | null>(null);
@@ -421,6 +437,42 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     });
   }, [userCoords, selectedPharmacy, route]);
 
+  // ── Handle Fullscreen transitions & gestures ────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    try {
+      if (isFullscreen) {
+        map.cooperativeGestures?.disable();
+      } else {
+        map.cooperativeGestures?.enable();
+      }
+      // Give DOM time to update layout, then resize & fit bounds
+      const timer = setTimeout(() => {
+        map.resize();
+        fitCameraToBounds();
+      }, 120);
+      return () => clearTimeout(timer);
+    } catch (e) {
+      console.warn("[PharmacyRouteMap] Error adjusting gestures on fullscreen change:", e);
+    }
+  }, [isFullscreen, fitCameraToBounds]);
+
+  // ── Keyboard Escape listener to exit fullscreen ─────────────────────────────
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleToggleFullscreen();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullscreen, handleToggleFullscreen]);
+
   useEffect(() => {
     if (isMapLoaded) {
       fitCameraToBounds();
@@ -428,18 +480,26 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
   }, [isMapLoaded, selectedPharmacy, route, fitCameraToBounds]);
 
   return (
-    <div className={`relative overflow-hidden rounded-3xl border border-border/60 bg-muted/20 shadow-inner ${className}`}>
+    <div
+      className={`relative overflow-hidden ${
+        isFullscreen
+          ? "fixed inset-0 z-40 h-full w-full rounded-none border-0"
+          : `rounded-3xl border border-border/60 bg-muted/20 shadow-inner ${className}`
+      }`}
+    >
       {/* Map Container */}
       <div ref={mapContainerRef} className="absolute inset-0 h-full w-full" />
 
-      {/* Route Info Badge (Top Right) */}
+      {/* Route Info Badge (Top Right or Left when Fullscreen) */}
       <AnimatePresence>
         {selectedPharmacy && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="absolute top-3 right-3 z-20 flex items-center gap-2 rounded-2xl bg-card/90 backdrop-blur-md px-3.5 py-2 border border-border/60 shadow-lg text-foreground"
+            className={`absolute z-20 flex items-center gap-2 rounded-2xl bg-card/90 backdrop-blur-md px-3.5 py-2 border border-border/60 shadow-lg text-foreground ${
+              isFullscreen ? "top-4 left-4" : "top-3 right-3"
+            }`}
           >
             {isRouteLoading ? (
               <div className="flex items-center gap-2 text-xs font-bold text-teal-600 dark:text-teal-400">
@@ -472,8 +532,30 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Recenter & Map Controls (Bottom Right) */}
-      <div className="absolute bottom-3 right-3 z-20 flex flex-col gap-1.5 items-end">
+      {/* Recenter & Map Controls (Bottom Right / Top Right in Fullscreen) */}
+      <div
+        className={`absolute z-20 flex flex-col gap-1.5 items-end ${
+          isFullscreen ? "top-4 right-4" : "bottom-3 right-3"
+        }`}
+      >
+        {/* Fullscreen Toggle Button */}
+        <button
+          onClick={handleToggleFullscreen}
+          title={isFullscreen ? "Exit Full Screen (Esc)" : "Full Screen Map"}
+          aria-label={isFullscreen ? "Exit Full Screen" : "Full Screen Map"}
+          className={`flex h-9 w-9 items-center justify-center rounded-xl backdrop-blur-md border shadow-md transition-all active:scale-90 ${
+            isFullscreen
+              ? "bg-teal-600 text-white border-teal-500 shadow-teal-600/30"
+              : "bg-card/90 text-foreground border-border/60 hover:bg-card"
+          }`}
+        >
+          {isFullscreen ? (
+            <Minimize2 className="size-4 text-white" />
+          ) : (
+            <Maximize2 className="size-4 text-teal-600 dark:text-teal-400" />
+          )}
+        </button>
+
         {/* Satellite / Streets Toggle */}
         <button
           onClick={toggleMapMode}
@@ -499,7 +581,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
       </div>
 
       {/* Legend + NDA verified (Bottom Left) */}
-      <div className="absolute bottom-3 left-3 z-20 flex flex-col gap-1.5">
+      <div className={`absolute z-20 flex flex-col gap-1.5 ${isFullscreen ? "bottom-24 left-4" : "bottom-3 left-3"}`}>
         <div className="flex items-center gap-2 rounded-xl bg-card/90 backdrop-blur-md px-2.5 py-1.5 border border-border/60 shadow-sm pointer-events-none">
           <span className="inline-block w-2.5 h-2.5 rounded-full bg-teal-600 shrink-0" />
           <span className="text-[9px] font-bold text-muted-foreground">Pharmacy</span>
