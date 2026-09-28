@@ -216,12 +216,6 @@ class BootReceiver : BroadcastReceiver() {
             }
             cursor.close()
 
-            // If SQLite is empty or has 0 rows, DO NOT overwrite NativeRecurrenceStore!
-            // NativeRecurrenceStore in Device-Protected Storage is our primary source of truth across reboots.
-            if (reconciledList.isEmpty()) {
-                return
-            }
-
             // Cancel alarms and dismiss notifications for any reminders in NativeRecurrenceStore that are no longer in reconciledList
             val oldStored = NativeRecurrenceStore.getReminders(context)
             val reconciledIds = reconciledList.map { it.id }.toSet()

@@ -3,6 +3,7 @@ import { LocalNotifications, ActionPerformed } from "@capacitor/local-notificati
 import { PushNotifications, ActionPerformed as PushActionPerformed } from "@capacitor/push-notifications";
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "@/contexts/AppContext";
+import { usePatientScope } from "@/hooks/usePatientScope";
 import { registerNotificationActions, migrateNotificationChannels } from "@/services/reminderService";
 import { soundService } from "@/services/soundService";
 import { toast } from "sonner";
@@ -42,12 +43,14 @@ export const NotificationHandler = () => {
     selectedPatientId,
     setSelectedPatientId,
   } = useApp();
+  const { scopedReminders } = usePatientScope();
 
   // Use refs so the single effect closure always sees the latest values
   // without needing to re-register Capacitor listeners on every change.
   const navigateRef = useRef(navigate);
   const logDoseRef = useRef(logDose);
   const remindersRef = useRef(reminders);
+  const scopedRemindersRef = useRef(scopedReminders);
   const doseLogsRef = useRef(doseLogs);
   const patientsRef = useRef(patients);
   const selectedPatientIdRef = useRef(selectedPatientId);
@@ -56,6 +59,7 @@ export const NotificationHandler = () => {
   navigateRef.current = navigate;
   logDoseRef.current = logDose;
   remindersRef.current = reminders;
+  scopedRemindersRef.current = scopedReminders;
   doseLogsRef.current = doseLogs;
   patientsRef.current = patients;
   selectedPatientIdRef.current = selectedPatientId;
@@ -86,11 +90,11 @@ export const NotificationHandler = () => {
             const extra = parseNotificationExtra(notification.extra);
             const notifType = extra.type as string | undefined;
 
-            // Strict check: if this notification references a reminder, verify it exists and is enabled
+            // Strict check: if this notification references a reminder, verify it exists and is enabled in the current reminders tab
             if (extra.reminderId) {
-              const exists = remindersRef.current.some((r) => r.id === extra.reminderId && r.enabled);
+              const exists = scopedRemindersRef.current.some((r) => r.id === extra.reminderId && r.enabled);
               if (!exists) {
-                console.log(`[NotificationHandler] Discarding notification for deleted/disabled reminder: ${extra.reminderId}`);
+                console.log(`[NotificationHandler] Discarding notification for reminder not in reminders tab: ${extra.reminderId}`);
                 if (notification.id) {
                   LocalNotifications.cancel({ notifications: [{ id: notification.id }] }).catch(console.warn);
                 }
@@ -99,12 +103,21 @@ export const NotificationHandler = () => {
             }
 
             if (notifType === "missed_alert") {
-              // If there are no active reminders at all, do not show missed dose alerts
-              if (remindersRef.current.length === 0 || remindersRef.current.every((r) => !r.enabled)) {
+              // If there are no active reminders in the current tab, do not show missed dose alerts
+              if (scopedRemindersRef.current.length === 0 || scopedRemindersRef.current.every((r) => !r.enabled)) {
                 if (notification.id) {
                   LocalNotifications.cancel({ notifications: [{ id: notification.id }] }).catch(console.warn);
                 }
                 return;
+              }
+              if (extra.reminderId) {
+                const matches = scopedRemindersRef.current.some((r) => r.id === extra.reminderId && r.enabled);
+                if (!matches) {
+                  if (notification.id) {
+                    LocalNotifications.cancel({ notifications: [{ id: notification.id }] }).catch(console.warn);
+                  }
+                  return;
+                }
               }
               soundService.tryPlayForCategory("missed");
               toast.error(notification.title || "Missed Dose Alert", {
@@ -187,9 +200,9 @@ export const NotificationHandler = () => {
 
               let targetPatientId = extra.patientId;
               if (reminderId) {
-                const matched = remindersRef.current.find((r) => r.id === reminderId);
+                const matched = scopedRemindersRef.current.find((r) => r.id === reminderId);
                 if (!matched) {
-                  console.log(`[NotificationHandler] Ignoring action for deleted reminder: ${reminderId}`);
+                  console.log(`[NotificationHandler] Ignoring action for reminder not in reminders tab: ${reminderId}`);
                   if (notification.id) {
                     await LocalNotifications.cancel({ notifications: [{ id: notification.id }] });
                   }
@@ -391,7 +404,7 @@ export const NotificationHandler = () => {
   // Universal in-app due dose reminder engine (runs across both web & native)
   useEffect(() => {
     const checkDueReminders = () => {
-      const activeReminders = remindersRef.current.filter((r) => r.enabled);
+      const activeReminders = scopedRemindersRef.current.filter((r) => r.enabled);
       if (activeReminders.length === 0) return;
 
       const now = new Date();

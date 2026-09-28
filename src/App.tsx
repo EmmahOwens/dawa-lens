@@ -90,20 +90,20 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+import { usePatientScope } from "@/hooks/usePatientScope";
+
 const AppContent = () => {
   const {
-    reminders,
-    doseLogs,
-    medicines,
     wellnessLogs,
     logDose,
     isInitializing,
     reconcileOfflineDoseLogs,
   } = useApp();
+  const { scopedReminders, scopedDoseLogs, scopedMedicines } = usePatientScope();
   const lastMissedCheckRef = useRef<number>(0);
 
   const runMissedDoseReconciliation = useCallback(() => {
-    if (!reminders.some((r) => r.enabled)) {
+    if (!scopedReminders.some((r) => r.enabled)) {
       return;
     }
     const now = Date.now();
@@ -112,8 +112,8 @@ const AppContent = () => {
       return;
     }
     lastMissedCheckRef.current = now;
-    checkMissedDoses(reminders, doseLogs, logDose);
-  }, [reminders, doseLogs, logDose]);
+    checkMissedDoses(scopedReminders, scopedDoseLogs, logDose);
+  }, [scopedReminders, scopedDoseLogs, logDose]);
 
   useEffect(() => {
     // Do NOT run until data is fully loaded — prevents false "missed" entries
@@ -126,15 +126,15 @@ const AppContent = () => {
     if (Capacitor.isNativePlatform()) {
       // scheduleReminders first (it cancels all pending alarms), then
       // scheduleEngagementNotifications adds engagement alarms on top.
-      scheduleReminders(reminders, doseLogs, medicines).then(() =>
-        scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
+      scheduleReminders(scopedReminders, scopedDoseLogs, scopedMedicines).then(() =>
+        scheduleEngagementNotifications(scopedDoseLogs, scopedReminders, wellnessLogs)
       );
 
       // Refresh reminders and engagement notifications when app comes to foreground.
       const unsubForeground = onForeground(() => {
         reconcileOfflineDoseLogs().catch(console.warn);
-        scheduleReminders(reminders, doseLogs, medicines).then(() =>
-          scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
+        scheduleReminders(scopedReminders, scopedDoseLogs, scopedMedicines).then(() =>
+          scheduleEngagementNotifications(scopedDoseLogs, scopedReminders, wellnessLogs)
         );
         runMissedDoseReconciliation();
       });
@@ -144,8 +144,8 @@ const AppContent = () => {
       const onSoundPrefsChanged = () => {
         if (soundDebounceTimer) clearTimeout(soundDebounceTimer);
         soundDebounceTimer = setTimeout(() => {
-          scheduleReminders(reminders, doseLogs, medicines).then(() =>
-            scheduleEngagementNotifications(doseLogs, reminders, wellnessLogs)
+          scheduleReminders(scopedReminders, scopedDoseLogs, scopedMedicines).then(() =>
+            scheduleEngagementNotifications(scopedDoseLogs, scopedReminders, wellnessLogs)
           );
         }, 400);
       };
@@ -175,7 +175,7 @@ const AppContent = () => {
         clearInterval(intervalId);
       };
     }
-  }, [reminders, doseLogs, medicines, wellnessLogs, logDose, isInitializing, runMissedDoseReconciliation]);
+  }, [scopedReminders, scopedDoseLogs, scopedMedicines, wellnessLogs, logDose, isInitializing, runMissedDoseReconciliation]);
 
   return null;
 };

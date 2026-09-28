@@ -337,6 +337,25 @@ class AdherenceGuardianService : Service() {
             for (reminder in storedReminders) {
                 if (!reminder.enabled) continue
 
+                // 0. Verify reminder exists in SQLite (dawa_lens.db) if DB is available
+                val dbPath = getDatabasePath("dawa_lens.db")
+                if (dbPath.exists()) {
+                    var reminderValid = false
+                    try {
+                        val db = SQLiteDatabase.openDatabase(dbPath.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+                        val c = db.rawQuery("SELECT id, enabled FROM reminders WHERE id = ? AND enabled = 1 LIMIT 1", arrayOf(reminder.id))
+                        reminderValid = c.moveToFirst()
+                        c.close()
+                        db.close()
+                    } catch (e: Exception) {
+                        reminderValid = true // non-fatal fallback
+                    }
+                    if (!reminderValid) {
+                        NativeRecurrenceStore.removeReminder(this, reminder.id)
+                        continue
+                    }
+                }
+
                 // 1. Active Watchdog Check:
                 // If AlarmManager was suppressed or delayed by Transsion XOS / MIUI battery managers,
                 // the running guardian service detects due doses (within the last 2 minutes) and

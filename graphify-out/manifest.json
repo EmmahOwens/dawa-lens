@@ -1,7 +1,7 @@
 {
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/build.gradle": {
-    "mtime": 1790342883.9026976,
-    "ast_hash": "4bb658acfc5875c5fdd3bb64ae1641de",
+    "mtime": 1790580583.9532018,
+    "ast_hash": "eb1c7bc04468a13f93c4b0eb4b9f0233",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/capacitor.build.gradle": {
@@ -45,8 +45,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/AlarmReceiver.kt": {
-    "mtime": 1790353951.607474,
-    "ast_hash": "9043630a31eb88a03f192e680e2cb374",
+    "mtime": 1790582427.4786382,
+    "ast_hash": "7bc06d6bb72533fb69ea1f3a5e504c5d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/AppUpdaterPlugin.java": {
@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/BootReceiver.kt": {
-    "mtime": 1790354102.4814932,
-    "ast_hash": "ec0a5808db1c4491bba8a5cfea398df5",
+    "mtime": 1790582482.3021727,
+    "ast_hash": "f6b2634c474146963e6243c69bd71839",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/DawaLensApplication.kt": {
@@ -75,8 +75,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeAlarmPlugin.kt": {
-    "mtime": 1790353877.078284,
-    "ast_hash": "c0798915d1d1affdf61f9165abbbf48a",
+    "mtime": 1790582462.2349818,
+    "ast_hash": "1ebfd0348dc5815bd8f2a2fe1639edba",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeCameraPlugin.kt": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/package.json": {
-    "mtime": 1790342868.8510725,
-    "ast_hash": "a2cbc973ad92234a830bfc6fa3ba4f30",
+    "mtime": 1790580570.3782504,
+    "ast_hash": "7f48a234ad5bcd376949ca06dfce7f06",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/playwright-fixture.ts": {
@@ -540,8 +540,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1790346003.7570481,
-    "ast_hash": "6322434b82c2ddb48b15e85df61ce525",
+    "mtime": 1790581709.5430825,
+    "ast_hash": "6d5a5519c4ded4817437830ee1846e9d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -625,8 +625,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/NotificationHandler.tsx": {
-    "mtime": 1790354242.9624789,
-    "ast_hash": "aac324609bbb5992eaf230fa31d824b3",
+    "mtime": 1790581788.5364966,
+    "ast_hash": "28270fbed1e1a09510ceae8d8b4c5069",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/OfflineOverlay.tsx": {
@@ -1045,8 +1045,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1790353699.588283,
-    "ast_hash": "052ba4525d199d88e4a0b5c6141e69ac",
+    "mtime": 1790582367.6710055,
+    "ast_hash": "25f99888e6b4eb0c4f53722f33e10262",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1410,8 +1410,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/reminderService.ts": {
-    "mtime": 1790353817.9555697,
-    "ast_hash": "7d0e80c59cb1fd0b65eeffd967699630",
+    "mtime": 1790581837.4868317,
+    "ast_hash": "3836672bdb2e6b015ce0cb35f0e13ddb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/visionService.ts": {
@@ -2640,8 +2640,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/NativeActionReceiver.kt": {
-    "mtime": 1787891605.4596364,
-    "ast_hash": "d7c9d8215bc7366ea791121f4d234a50",
+    "mtime": 1790582440.5597694,
+    "ast_hash": "b7fae11f91e46b13817878eb0435dacb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/scripts/scrapeNdaPharmacies.py": {
@@ -2690,8 +2690,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/java/com/dawainnovation/lens/AdherenceGuardianService.kt": {
-    "mtime": 1790353982.2596161,
-    "ast_hash": "053c4286b227285d72405f9120609dd4",
+    "mtime": 1790582497.977318,
+    "ast_hash": "199097ce0a78f2eaa5a8db9b3d08b2b7",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/server/test-audit-remediation.js": {

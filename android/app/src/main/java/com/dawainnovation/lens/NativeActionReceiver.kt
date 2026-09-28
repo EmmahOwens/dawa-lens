@@ -69,6 +69,22 @@ class NativeActionReceiver : BroadcastReceiver() {
                         dbPath.absolutePath, null, SQLiteDatabase.OPEN_READWRITE
                     )
 
+                    if (reminderId.isNotEmpty()) {
+                        val checkCursor = db.rawQuery(
+                            "SELECT id, enabled FROM reminders WHERE id = ? LIMIT 1",
+                            arrayOf(reminderId)
+                        )
+                        val exists = checkCursor.moveToFirst()
+                        val isEnabled = if (exists) checkCursor.getInt(checkCursor.getColumnIndexOrThrow("enabled")) == 1 else false
+                        checkCursor.close()
+
+                        if (!exists || !isEnabled) {
+                            Log.w(TAG, "Refusing to log action $action for reminder $reminderId: does not exist or disabled in reminders table")
+                            NativeRecurrenceStore.removeReminder(context, reminderId)
+                            return
+                        }
+                    }
+
                     when (action) {
                         ACTION_TAKE -> {
                             val logId = "take-${now}-${(1000..9999).random()}"

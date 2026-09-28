@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode,
 } from "react";
 import { getRxCUI } from "../services/interactionChecker";
@@ -521,6 +522,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const remindersRef = useRef<Reminder[]>(reminders);
+  useEffect(() => {
+    remindersRef.current = reminders;
+  }, [reminders]);
   const [doseLogs, setDoseLogs] = useState<DoseLog[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [wellnessLogs, setWellnessLogs] = useState<WellnessLog[]>([]);
@@ -736,16 +741,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const mergedLogs = applyPendingOps(freshLogs, "doseLogs", remainingOps);
       const mergedMeds = applyPendingOps(freshMeds, "medicines", remainingOps);
 
+      // Clean up any phantom missed logs whose reminders no longer exist
+      const validRems = new Set(mergedRems.map((r) => r.id));
+      const cleanedLogs = mergedLogs.filter((l) => {
+        if (!l.reminderId) return true;
+        if (l.action === "missed" && !validRems.has(l.reminderId)) {
+          return false;
+        }
+        return true;
+      });
+
       setReminders(mergedRems);
-      setDoseLogs(mergedLogs);
+      setDoseLogs(cleanedLogs);
       setMedicines(mergedMeds);
 
       storage.setItem(CLOUD_CACHE_REMS_KEY, mergedRems);
-      storage.setItem(CLOUD_CACHE_LOGS_KEY, mergedLogs);
+      storage.setItem(CLOUD_CACHE_LOGS_KEY, cleanedLogs);
       storage.setItem(CLOUD_CACHE_MEDS_KEY, mergedMeds);
 
       localPersistence.reminders.replaceAll(mergedRems).catch(console.warn);
-      localPersistence.doseLogs.replaceAll(mergedLogs).catch(console.warn);
+      localPersistence.doseLogs.replaceAll(cleanedLogs).catch(console.warn);
       localPersistence.medicines.replaceAll(mergedMeds).catch(console.warn);
 
       setPendingOfflineOps(getPendingCount());
@@ -768,10 +783,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!sqliteLogs || sqliteLogs.length === 0) return;
 
       setDoseLogs((currentLogs) => {
-        const existingIds = new Set(currentLogs.map((l) => l.id));
-        const missingFromMemory = sqliteLogs.filter((sl) => {
+        // Valid reminders check: only retain sqlite logs whose reminderId exists in active reminders (if reminderId is present)
+        const validReminderIds = new Set(remindersRef.current.map((r) => r.id));
+        const filteredSqliteLogs = sqliteLogs.filter((sl) => {
+          if (!sl.reminderId) return true;
+          return validReminderIds.has(sl.reminderId);
+        });
+
+        // Also clean up any phantom 'missed' logs in currentLogs that belong to deleted reminders
+        const cleanedCurrentLogs = currentLogs.filter((cl) => {
+          if (!cl.reminderId) return true;
+          if (cl.action === "missed" && !validReminderIds.has(cl.reminderId)) {
+            return false;
+          }
+          return true;
+        });
+
+        const existingIds = new Set(cleanedCurrentLogs.map((l) => l.id));
+        const missingFromMemory = filteredSqliteLogs.filter((sl) => {
           if (existingIds.has(sl.id)) return false;
-          return !currentLogs.some(
+          return !cleanedCurrentLogs.some(
             (cl) =>
               cl.reminderId === sl.reminderId &&
               cl.scheduledTime === sl.scheduledTime &&
@@ -779,14 +810,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           );
         });
 
+        const hasOrphanedSqliteLogs = filteredSqliteLogs.length < sqliteLogs.length;
+        const hadCleanedLogs = cleanedCurrentLogs.length < currentLogs.length;
+
         if (missingFromMemory.length === 0) {
-          if (currentLogs.length > sqliteLogs.length) {
-            localPersistence.doseLogs.replaceAll(currentLogs).catch(console.warn);
+          if (cleanedCurrentLogs.length !== sqliteLogs.length || hasOrphanedSqliteLogs || hadCleanedLogs) {
+            localPersistence.doseLogs.replaceAll(cleanedCurrentLogs).catch(console.warn);
+            storage.setItem(CLOUD_CACHE_LOGS_KEY, cleanedCurrentLogs);
           }
-          return currentLogs;
+          return cleanedCurrentLogs;
         }
 
-        const merged = [...currentLogs, ...missingFromMemory];
+        const merged = [...cleanedCurrentLogs, ...missingFromMemory];
         storage.setItem(CLOUD_CACHE_LOGS_KEY, merged);
         localPersistence.doseLogs.replaceAll(merged).catch(console.warn);
 
@@ -1125,16 +1160,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const finalMeds = applyPendingOps(cachedMeds, "medicines", pendingOps);
       const finalLogs = applyPendingOps(cachedLogs, "doseLogs", pendingOps);
 
+      // Clean up any phantom missed logs whose reminders no longer exist
+      const validRemsSet = new Set(finalRems.map((r) => r.id));
+      const cleanedLogs = finalLogs.filter((l) => {
+        if (!l.reminderId) return true;
+        if (l.action === "missed" && !validRemsSet.has(l.reminderId)) {
+          return false;
+        }
+        return true;
+      });
+
       setMedicines(finalMeds);
       setReminders(finalRems);
-      setDoseLogs(finalLogs);
+      setDoseLogs(cleanedLogs);
       setScheduleAuditLogs(cachedAudit);
       setPatients(cachedPatients);
       setWellnessLogs(cachedWell);
 
       // Keep SQLite completely aligned with the loaded cache so native background workers don't see ghosts
       localPersistence.reminders.replaceAll(finalRems).catch(console.warn);
-      localPersistence.doseLogs.replaceAll(finalLogs).catch(console.warn);
+      localPersistence.doseLogs.replaceAll(cleanedLogs).catch(console.warn);
       localPersistence.medicines.replaceAll(finalMeds).catch(console.warn);
     };
 
@@ -1655,6 +1700,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.warn("[AppContext] Failed to update reminder locally:", e);
     }
 
+    // If disabled, eagerly cancel single reminder alarm instantly
+    if (finalUpdates.enabled === false && Capacitor.isNativePlatform()) {
+      cancelSingleReminder(id).catch(console.warn);
+    }
+
     // 2. Optimistic UI update & cache sync
     setReminders((p) => {
       const next = p.map((r) => (r.id === id ? { ...r, ...finalUpdates } : r));
@@ -1733,7 +1783,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     //    for this reminder are cleared immediately — before the useEffect has a
     //    chance to fire on the next render cycle.
     if (Capacitor.isNativePlatform()) {
-      scheduleReminders(nextReminders, doseLogs, medicines).catch((err) =>
+      const activeScopedReminders = nextReminders.filter((r) => {
+        if (selectedPatientId === null || selectedPatientId === "host") {
+          return !r.patientId || r.patientId === "host";
+        }
+        return r.patientId === selectedPatientId;
+      });
+      scheduleReminders(activeScopedReminders, doseLogs, medicines).catch((err) =>
         console.warn("[AppContext] Failed to reschedule notifications after delete:", err)
       );
     }

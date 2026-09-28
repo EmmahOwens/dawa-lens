@@ -39,6 +39,20 @@ import {
 } from "@/lib/dynamicSchedule";
 import { soundService } from "@/services/soundService";
 
+export const parseNotificationExtra = (rawExtra: unknown): Record<string, any> => {
+  if (!rawExtra) return {};
+  if (typeof rawExtra === "object") return rawExtra as Record<string, any>;
+  if (typeof rawExtra === "string") {
+    try {
+      const parsed = JSON.parse(rawExtra);
+      return typeof parsed === "object" && parsed !== null ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+};
+
 
 // ─── Notification channel IDs ────────────────────────────────────────────────
 // v2 channels carry the correct default sound. The old channels were created
@@ -1176,7 +1190,7 @@ const executeScheduleReminders = async (
       const pending = await LocalNotifications.getPending();
       if (pending.notifications && pending.notifications.length > 0) {
         const toCancel = pending.notifications.filter((n) => {
-          const extra = (n.extra || {}) as Record<string, any>;
+          const extra = parseNotificationExtra(n.extra || (n as any).data);
           const type = extra.type;
           // If this notification belongs to a reminder that is no longer active, cancel it immediately!
           if (extra.reminderId && !activeIds.has(extra.reminderId)) {
@@ -1204,7 +1218,7 @@ const executeScheduleReminders = async (
       const delivered = await LocalNotifications.getDeliveredNotifications();
       if (delivered.notifications && delivered.notifications.length > 0) {
         const toRemove = delivered.notifications.filter((n) => {
-          const extra = n.extra || n.data;
+          const extra = parseNotificationExtra(n.extra || (n as any).data);
           if (extra && extra.reminderId && !activeIds.has(extra.reminderId)) {
             return true;
           }
@@ -1394,7 +1408,7 @@ export const cancelSingleReminder = async (reminderId: string): Promise<void> =>
     const pending = await LocalNotifications.getPending();
     if (pending.notifications && pending.notifications.length > 0) {
       const matching = pending.notifications.filter((n) => {
-        const extra = (n.extra || {}) as Record<string, any>;
+        const extra = parseNotificationExtra(n.extra || (n as any).data);
         return extra.reminderId === reminderId;
       });
       if (matching.length > 0) {
@@ -1412,7 +1426,7 @@ export const cancelSingleReminder = async (reminderId: string): Promise<void> =>
     const delivered = await LocalNotifications.getDeliveredNotifications();
     if (delivered.notifications && delivered.notifications.length > 0) {
       const matching = delivered.notifications.filter((n) => {
-        const extra = n.extra || (n as any).data;
+        const extra = parseNotificationExtra(n.extra || (n as any).data);
         return extra && extra.reminderId === reminderId;
       });
       if (matching.length > 0) {

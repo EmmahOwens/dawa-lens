@@ -186,15 +186,10 @@ class AlarmReceiver : BroadcastReceiver() {
                                 isExplicitlyDisabled = true
                             }
                         } else {
-                            // Row was not found in SQLite reminders table.
-                            // DO NOT assume deleted! SQLite may be uninitialized or lagging.
-                            // Fall back to authoritative NativeRecurrenceStore in Device-Protected Storage!
-                            if (storeMatch != null) {
-                                reminderExists = true
-                                if (!storeMatch.enabled) isExplicitlyDisabled = true
-                            } else {
-                                reminderExists = false
-                            }
+                            // Row was not found in SQLite reminders table while unlocked and DB exists.
+                            // The reminder was deleted by the user! Treat as deleted so alarm is cancelled
+                            // and purged from NativeRecurrenceStore.
+                            reminderExists = false
                         }
                         reminderCursor.close()
 
@@ -566,8 +561,9 @@ class AlarmReceiver : BroadcastReceiver() {
                             "SELECT id, enabled FROM reminders WHERE id = ? LIMIT 1",
                             arrayOf(reminderId)
                         )
+                        val exists = cursor.moveToFirst()
                         var isExplicitlyDisabledInSqlite = false
-                        if (cursor.moveToFirst()) {
+                        if (exists) {
                             val isEnabled = cursor.getInt(cursor.getColumnIndexOrThrow("enabled")) == 1
                             if (!isEnabled) {
                                 isExplicitlyDisabledInSqlite = true
@@ -576,7 +572,7 @@ class AlarmReceiver : BroadcastReceiver() {
                         cursor.close()
                         db.close()
 
-                        if (isExplicitlyDisabledInSqlite) {
+                        if (!exists || isExplicitlyDisabledInSqlite) {
                             NativeRecurrenceStore.removeReminder(context, reminderId)
                             return
                         }
