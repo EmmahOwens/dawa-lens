@@ -32,7 +32,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "bell",
     name: "Gentle Bell",
-    filename: "mixkit-bell-notification-933.wav",
+    filename: "mixkit-bell-notification-933.mp3",
     androidResource: "mixkit_bell_notification_933",
     description: "Crisp and clear gentle bell chime",
     categoryTag: "Chime",
@@ -40,7 +40,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "guitar",
     name: "Acoustic Strum",
-    filename: "mixkit-guitar-notification-alert-2320.wav",
+    filename: "mixkit-guitar-notification-alert-2320.mp3",
     androidResource: "mixkit_guitar_notification_alert_2320",
     description: "Warm and melodic acoustic guitar alert",
     categoryTag: "Melodic",
@@ -48,7 +48,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "happy-bells",
     name: "Happy Bells",
-    filename: "mixkit-happy-bells-notification-937.wav",
+    filename: "mixkit-happy-bells-notification-937.mp3",
     androidResource: "mixkit_happy_bells_notification_937",
     description: "Cheerful, uplifting harmonic bells",
     categoryTag: "Chime",
@@ -56,7 +56,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "long-pop",
     name: "Soft Bubble Pop",
-    filename: "mixkit-long-pop-2358.wav",
+    filename: "mixkit-long-pop-2358.mp3",
     androidResource: "mixkit_long_pop_2358",
     description: "Gentle water droplet and bubble pop",
     categoryTag: "Minimal",
@@ -64,7 +64,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "positive",
     name: "Positive Ding",
-    filename: "mixkit-positive-notification-951.wav",
+    filename: "mixkit-positive-notification-951.mp3",
     androidResource: "mixkit_positive_notification_951",
     description: "Upbeat and affirmative celebratory chime",
     categoryTag: "Affirmation",
@@ -72,7 +72,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "click",
     name: "Crisp Click",
-    filename: "mixkit-sci-fi-click-900.wav",
+    filename: "mixkit-sci-fi-click-900.mp3",
     androidResource: "mixkit_sci_fi_click_900",
     description: "Subtle, modern haptic-style click",
     categoryTag: "Minimal",
@@ -80,7 +80,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "interface-back",
     name: "Modern Tap",
-    filename: "mixkit-software-interface-back-2575.wav",
+    filename: "mixkit-software-interface-back-2575.mp3",
     androidResource: "mixkit_software_interface_back_2575",
     description: "Soft tactile interface tap",
     categoryTag: "Minimal",
@@ -88,7 +88,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "interface-start",
     name: "Digital Harmony",
-    filename: "mixkit-software-interface-start-2574.wav",
+    filename: "mixkit-software-interface-start-2574.mp3",
     androidResource: "mixkit_software_interface_start_2574",
     description: "Smooth, futuristic startup chime",
     categoryTag: "Melodic",
@@ -96,7 +96,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "uplifting-flute",
     name: "Uplifting Flute",
-    filename: "mixkit-uplifting-flute-notification-2317.wav",
+    filename: "mixkit-uplifting-flute-notification-2317.mp3",
     androidResource: "mixkit_uplifting_flute_notification_2317",
     description: "Soothing and inspiring wooden flute note",
     categoryTag: "Wellness",
@@ -104,7 +104,7 @@ export const AVAILABLE_SOUNDS: SoundDefinition[] = [
   {
     id: "urgent-tone",
     name: "Urgent Alert",
-    filename: "mixkit-urgent-simple-tone-loop-2976.wav",
+    filename: "mixkit-urgent-simple-tone-loop-2976.mp3",
     androidResource: "mixkit_urgent_simple_tone_loop_2976",
     description: "Distinct high-priority alert tone",
     categoryTag: "High Priority",
@@ -365,7 +365,8 @@ class SoundService {
   public getAndroidSoundUri(soundId: string): string {
     if (!soundId || soundId === "silent") return "";
     if (soundId === "default") return "default";
-    const soundDef = AVAILABLE_SOUNDS.find((s) => s.id === soundId || s.filename === soundId);
+    const normalizedId = soundId.replace(/\.wav$/, ".mp3");
+    const soundDef = AVAILABLE_SOUNDS.find((s) => s.id === soundId || s.filename === soundId || s.filename === normalizedId);
     if (!soundDef) return "default";
     return `android.resource://${ANDROID_PACKAGE_NAME}/raw/${soundDef.androidResource}`;
   }
@@ -519,7 +520,8 @@ class SoundService {
       soundDef = AVAILABLE_SOUNDS[0];
     }
     if (!soundDef) {
-      soundDef = AVAILABLE_SOUNDS.find((s) => s.filename === soundId);
+      const normalizedId = soundId.replace(/\.wav$/, ".mp3");
+      soundDef = AVAILABLE_SOUNDS.find((s) => s.filename === soundId || s.filename === normalizedId);
     }
     if (!soundDef) {
       console.warn(`[SoundService] Unknown sound ID: "${soundId}"`);

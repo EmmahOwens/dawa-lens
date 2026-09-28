@@ -16,11 +16,7 @@
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
 
-# Rive Android Runtime
--keep class app.rive.runtime.** { *; }
--keepclasseswithmembers class app.rive.runtime.** {
-    native <methods>;
-}
+
 
 # Capacitor
 -keep class com.getcapacitor.** { *; }

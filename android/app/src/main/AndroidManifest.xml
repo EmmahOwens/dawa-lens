@@ -101,6 +101,11 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Medication reminder and adherence monitoring service" />
         </service>
+
+        <!-- Google Play Services ML Kit OCR: Ensure OCR model is available via Play Services -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr" />
     </application>
 
     <!-- Permissions -->
