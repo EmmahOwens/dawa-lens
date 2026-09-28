@@ -346,7 +346,6 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [isVerificationOpen, setIsVerificationOpen] = useState(false);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
-  const [isFsCardCollapsed, setIsFsCardCollapsed] = useState(false);
   const swipe = useSwipeToDismiss(onClose);
 
   useEffect(() => {
@@ -467,103 +466,6 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
             >
               <div className="w-12 h-1.5 rounded-full bg-muted/80 hover:bg-muted mx-auto transition-colors" />
             </motion.div>
-          )}
-
-          {/* ── Fullscreen Top Bar Overlay ──────────────────────────── */}
-          {isMapFullscreen && (
-            <div className="absolute top-0 left-0 right-0 z-30 pt-[max(env(safe-area-inset-top),0.75rem)] px-3 sm:px-4 pointer-events-none">
-              <div className="flex items-center justify-between gap-2 max-w-4xl mx-auto pointer-events-auto">
-                {/* Exit Fullscreen button */}
-                <button
-                  type="button"
-                  onClick={() => setIsMapFullscreen(false)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg text-foreground hover:bg-card active:scale-95 transition-all text-xs font-bold"
-                  title="Exit full screen map (Esc)"
-                >
-                  <Minimize2 className="size-4 text-teal-600 dark:text-teal-400" />
-                  <span className="hidden sm:inline">Exit Full Screen</span>
-                  <span className="text-[10px] text-muted-foreground ml-0.5 font-mono hidden md:inline">Esc</span>
-                </button>
-
-                {/* Outlet switcher */}
-                <div className="flex rounded-2xl bg-card/90 backdrop-blur-md p-1 border border-border/60 shadow-lg gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handleOutletTabChange("pharmacy")}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                      isPharmacyTab ? "bg-teal-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Building className="size-3" />
-                    <span>Pharmacies</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleOutletTabChange("drug_shop")}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                      isDrugShopTab ? "bg-amber-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Pill className="size-3" />
-                    <span>Drug Shops</span>
-                  </button>
-                </div>
-
-                {/* Right controls: Travel mode + Close */}
-                <div className="flex items-center gap-1.5">
-                  <div className="flex rounded-2xl bg-card/90 backdrop-blur-md p-1 border border-border/60 shadow-lg">
-                    <button
-                      type="button"
-                      onClick={() => setTransportMode("boda_boda")}
-                      title="Boda boda route"
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        transportMode === "boda_boda"
-                          ? `${isDrugShopTab ? "bg-amber-600" : "bg-teal-600"} text-white shadow-sm`
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Bike className="size-3.5" />
-                      <span className="hidden md:inline">Boda</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTransportMode("driving")}
-                      title="Car route"
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        transportMode === "driving"
-                          ? `${isDrugShopTab ? "bg-amber-600" : "bg-teal-600"} text-white shadow-sm`
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Car className="size-3.5" />
-                      <span className="hidden md:inline">Drive</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTransportMode("walking")}
-                      title="Walking route"
-                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        transportMode === "walking"
-                          ? `${isDrugShopTab ? "bg-amber-600" : "bg-teal-600"} text-white shadow-sm`
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <Navigation className="size-3.5" />
-                      <span className="hidden md:inline">Walk</span>
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="p-2.5 rounded-2xl bg-card/90 backdrop-blur-md border border-border/60 shadow-lg text-muted-foreground hover:text-foreground active:scale-95 transition-all shrink-0"
-                    title="Close"
-                  >
-                    <CloseSquare size={18} />
-                  </button>
-                </div>
-              </div>
-            </div>
           )}
 
           {/* ── Modal Header (normal view only) ──────────────────────── */}
@@ -982,6 +884,17 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                 className={isMapFullscreen ? "h-full w-full" : "h-[260px] w-full"}
                 isFullscreen={isMapFullscreen}
                 onToggleFullscreen={() => setIsMapFullscreen((prev) => !prev)}
+                transportMode={transportMode}
+                onTransportModeChange={(mode) => setTransportMode(mode)}
+                outletTab={outletTab}
+                onOutletTabChange={(tab) => handleOutletTabChange(tab)}
+                onNavigate={(p) => handleOpenExternalMaps(p)}
+                onCall={(p) => p.phone && window.open(`tel:${p.phone}`)}
+                onShare={(p) => handleShareOutlet(p)}
+                onOpenVerification={() => setIsVerificationOpen(true)}
+                medicine={selectedMed}
+                onRefillLogged={(m, p) => onRefillLogged?.(m, p)}
+                onClose={onClose}
               />
             </div>
 
@@ -1039,131 +952,6 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
               </div>
             )}
           </div>
-
-          {/* ── Fullscreen Floating Bottom Card ─────────────────────── */}
-          {isMapFullscreen && selectedPharmacy && (
-            <div className="absolute bottom-0 left-0 right-0 z-30 pb-[max(env(safe-area-inset-bottom),0.75rem)] px-3 sm:px-4 pointer-events-none">
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="max-w-xl mx-auto w-full pointer-events-auto bg-card/95 backdrop-blur-xl rounded-3xl border border-border/60 shadow-2xl p-4 space-y-3"
-              >
-                {/* Collapse / Expand row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${accentSolid}`}>
-                      #{top5Pharmacies.findIndex((p) => p.id === selectedPharmacy.id) + 1 || "★"}
-                    </span>
-                    <span className="text-xs font-black text-foreground truncate">
-                      {selectedPharmacy.name}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${accentBadge} shrink-0`}>
-                      {route ? `${route.distanceKm} km · ${formatDuration(route.durationMinutes)}` : `${selectedPharmacy.distanceKm ?? "—"} km`}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setIsFsCardCollapsed((prev) => !prev)}
-                      className="p-1.5 rounded-xl bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      title={isFsCardCollapsed ? "Expand pharmacy details" : "Collapse details to see more map"}
-                    >
-                      {isFsCardCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* If expanded, show outlet chips, details, and action buttons */}
-                {!isFsCardCollapsed && (
-                  <>
-                    {/* Top 5 quick picker chips right on the map */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
-                      {activeTop5.map((outlet, idx) => {
-                        const isSelected = selectedPharmacy.id === outlet.id;
-                        return (
-                          <button
-                            key={outlet.id}
-                            type="button"
-                            onClick={() => setSelectedPharmacy(outlet)}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold shrink-0 transition-all border ${
-                              isSelected
-                                ? `${accentClass} font-black shadow-sm ring-1`
-                                : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50"
-                            }`}
-                          >
-                            <span className="text-[10px] font-black">#{idx + 1}</span>
-                            <span className="truncate max-w-[100px]">{outlet.name}</span>
-                            <span className="text-[10px] text-muted-foreground">{outlet.distanceKm}km</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Address & License info */}
-                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/30">
-                      <p className="truncate pr-2">{selectedPharmacy.address || selectedPharmacy.street}, {selectedPharmacy.district}</p>
-                      <span className={`text-[10px] font-mono font-bold shrink-0 ${accentText}`}>
-                        {selectedPharmacy.premiseNo}
-                      </span>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-2 pt-1">
-                      <Button
-                        size="sm"
-                        onClick={() => handleOpenExternalMaps(selectedPharmacy)}
-                        className={`flex-1 h-10 rounded-xl font-black ${
-                          selectedPharmacy.outletType === "drug_shop"
-                            ? "bg-amber-600 hover:bg-amber-700"
-                            : "bg-teal-600 hover:bg-teal-700"
-                        } text-white shadow-md flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider`}
-                      >
-                        <Navigation className="size-3.5" />
-                        <span>Directions</span>
-                      </Button>
-
-                      {selectedPharmacy.phone && (
-                        <a
-                          href={`tel:${selectedPharmacy.phone}`}
-                          className="h-10 px-3 rounded-xl font-bold border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 text-xs flex items-center gap-1.5 transition-colors shrink-0"
-                          title={`Call ${selectedPharmacy.name}`}
-                        >
-                          <Phone className="size-3.5 text-teal-600 dark:text-teal-400" />
-                          <span className="hidden sm:inline">Call</span>
-                        </a>
-                      )}
-
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleShareOutlet(selectedPharmacy)}
-                        className="h-10 px-3 rounded-xl font-bold border-border/60 hover:bg-muted/40 text-xs flex items-center gap-1.5 shrink-0"
-                      >
-                        <Compass className="size-3.5 text-muted-foreground" />
-                        <span className="hidden sm:inline">Share</span>
-                      </Button>
-
-                      {selectedMed && onRefillLogged && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            onRefillLogged(selectedMed, selectedPharmacy);
-                            setIsMapFullscreen(false);
-                            onClose();
-                          }}
-                          className="h-10 px-3 rounded-xl font-black border-teal-500/40 text-teal-700 dark:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 text-xs flex items-center gap-1 shrink-0"
-                        >
-                          <RefreshCw className="size-3 mr-1" /> Refill {selectedMed.name.split(" ")[0]}
-                        </Button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </motion.div>
-            </div>
-          )}
         </motion.div>
       </motion.div>
 

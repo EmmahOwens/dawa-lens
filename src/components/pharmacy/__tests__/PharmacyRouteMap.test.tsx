@@ -164,4 +164,137 @@ describe("PharmacyRouteMap - Full Screen Feature", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(handleToggle).toHaveBeenCalledTimes(1);
   });
+
+  it("renders transport mean selector in top-left and invokes onTransportModeChange", () => {
+    const handleTransportChange = vi.fn();
+    render(
+      <PharmacyRouteMap
+        userCoords={[32.58, 0.31]}
+        topPharmacies={[mockPharmacy]}
+        selectedPharmacy={mockPharmacy}
+        route={null}
+        onSelectPharmacy={vi.fn()}
+        isFullscreen={true}
+        transportMode="boda_boda"
+        onTransportModeChange={handleTransportChange}
+      />
+    );
+
+    // Desktop transport selector button
+    const driveButtons = screen.getAllByRole("button", { name: /Driving route/i });
+    expect(driveButtons.length).toBeGreaterThan(0);
+    fireEvent.click(driveButtons[0]);
+    expect(handleTransportChange).toHaveBeenCalledWith("driving");
+
+    const walkButtons = screen.getAllByRole("button", { name: /Walking route/i });
+    expect(walkButtons.length).toBeGreaterThan(0);
+    fireEvent.click(walkButtons[0]);
+    expect(handleTransportChange).toHaveBeenCalledWith("walking");
+  });
+
+  it("renders outlet switcher and toggles between Pharmacies and Drug Shops in full screen mode", () => {
+    const handleOutletTabChange = vi.fn();
+    render(
+      <PharmacyRouteMap
+        userCoords={[32.58, 0.31]}
+        topPharmacies={[mockPharmacy]}
+        selectedPharmacy={mockPharmacy}
+        route={null}
+        onSelectPharmacy={vi.fn()}
+        isFullscreen={true}
+        outletTab="pharmacy"
+        onOutletTabChange={handleOutletTabChange}
+      />
+    );
+
+    const drugShopButtons = screen.getAllByRole("button", { name: /Drug Shops/i });
+    expect(drugShopButtons.length).toBeGreaterThan(0);
+    fireEvent.click(drugShopButtons[0]);
+    expect(handleOutletTabChange).toHaveBeenCalledWith("drug_shop");
+  });
+
+  it("renders top 5 nearest cards across the top and selects an outlet on click", () => {
+    const secondPharmacy: NdaPharmacy = {
+      ...mockPharmacy,
+      id: "pharm-2",
+      name: "Second Care Pharmacy",
+      distanceKm: 2.1,
+    };
+    const handleSelect = vi.fn();
+
+    render(
+      <PharmacyRouteMap
+        userCoords={[32.58, 0.31]}
+        topPharmacies={[mockPharmacy, secondPharmacy]}
+        selectedPharmacy={mockPharmacy}
+        route={null}
+        onSelectPharmacy={handleSelect}
+        isFullscreen={true}
+      />
+    );
+
+    // Rank badges and cards exist
+    const secondCards = screen.getAllByText("Second Care Pharmacy");
+    expect(secondCards.length).toBeGreaterThan(0);
+    fireEvent.click(secondCards[0]);
+    expect(handleSelect).toHaveBeenCalledWith(secondPharmacy);
+  });
+
+  it("renders selected outlet details on desktop card and supports collapse/expand", () => {
+    render(
+      <PharmacyRouteMap
+        userCoords={[32.58, 0.31]}
+        topPharmacies={[mockPharmacy]}
+        selectedPharmacy={mockPharmacy}
+        route={null}
+        onSelectPharmacy={vi.fn()}
+        isFullscreen={true}
+      />
+    );
+
+    // Pharmacist and License details rendered
+    expect(screen.getByText("Dr. Jane Doe")).toBeInTheDocument();
+    expect(screen.getAllByText("NDA/2026/001").length).toBeGreaterThan(0);
+
+    // Collapse desktop card
+    const collapseBtn = screen.getByTitle("Collapse details for full map view");
+    fireEvent.click(collapseBtn);
+
+    // Collapsed trigger pill is visible
+    const expandPill = screen.getByTitle("Expand selected outlet details");
+    expect(expandPill).toBeInTheDocument();
+
+    // Clicking expands it back
+    fireEvent.click(expandPill);
+    expect(screen.getByTitle("Collapse details for full map view")).toBeInTheDocument();
+  });
+
+  it("renders mobile equivalents: bottom drawer with directions and expandable details", () => {
+    const handleNavigate = vi.fn();
+    render(
+      <PharmacyRouteMap
+        userCoords={[32.58, 0.31]}
+        topPharmacies={[mockPharmacy]}
+        selectedPharmacy={mockPharmacy}
+        route={null}
+        onSelectPharmacy={vi.fn()}
+        isFullscreen={true}
+        onNavigate={handleNavigate}
+      />
+    );
+
+    // Mobile bottom drawer has Directions button
+    const directionsBtn = screen.getByRole("button", { name: /Directions/i });
+    expect(directionsBtn).toBeInTheDocument();
+    fireEvent.click(directionsBtn);
+    expect(handleNavigate).toHaveBeenCalledWith(mockPharmacy);
+
+    // Expand mobile bottom sheet
+    const expandBtn = screen.getByLabelText("Expand sheet");
+    fireEvent.click(expandBtn);
+
+    // Check expanded details (e.g. Call, Share buttons)
+    expect(screen.getAllByRole("button", { name: /Share/i }).length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Collapse sheet")).toBeInTheDocument();
+  });
 });
