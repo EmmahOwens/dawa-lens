@@ -186,5 +186,41 @@ describe("MessageRenderer Component", () => {
     // Should render the text safely
     expect(container.textContent).toContain("Completely Unrelated Information");
   });
+
+  it("renders markdown tables with clean hybrid soft-card styling and zero cell borders", () => {
+    const tableMarkdown = `
+| Medicine | Dosage | Timing |
+| :--- | :--- | :--- |
+| Amoxicillin | 500mg | With breakfast |
+| Paracetamol | 1000mg | Every 6 hours |
+    `.trim();
+
+    const { container } = render(
+      <MemoryRouter>
+        <MessageRenderer text={tableMarkdown} />
+      </MemoryRouter>
+    );
+
+    const table = container.querySelector("table");
+    expect(table).toBeInTheDocument();
+
+    const headers = container.querySelectorAll("th");
+    expect(headers.length).toBe(3);
+    expect(headers[0].textContent).toContain("Medicine");
+    expect(headers[1].textContent).toContain("Dosage");
+    expect(headers[2].textContent).toContain("Timing");
+
+    const rows = container.querySelectorAll("tbody tr");
+    expect(rows.length).toBe(2);
+
+    const cells = container.querySelectorAll("td");
+    expect(cells.length).toBe(6);
+    expect(cells[0].textContent).toContain("Amoxicillin");
+    expect(cells[1].textContent).toContain("500mg");
+
+    // Verify cell classes have border-0
+    expect(cells[0].className).toContain("border-0");
+  });
 });
+
 
