@@ -699,7 +699,7 @@ export default function FamilyHubPage() {
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-[3rem] p-6 sm:p-8 max-h-[90dvh] border-none shadow-2xl overflow-y-auto no-scrollbar"
+          className="w-full max-w-lg mx-auto rounded-t-3xl p-6 sm:p-8 max-h-[90dvh] border border-border/50 border-b-0 shadow-2xl overflow-y-auto no-scrollbar"
           {...sheetSwipe}
         >
           <div className="w-12 h-1.5 rounded-full bg-muted/70 hover:bg-muted mx-auto -mt-2 mb-8 transition-colors" />
