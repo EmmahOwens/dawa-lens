@@ -1,0 +1,52 @@
+% TikZ definition for Dawa Lens System Architecture
+\begin{tikzpicture}[
+  node distance=1.2cm and 1.0cm,
+  block/.style={rectangle, draw=black, thick, fill=white, text width=4.5cm, align=center, minimum height=1.3cm, font=\small},
+  core/.style={rectangle, draw=black, very thick, fill=black!4, text width=7.2cm, align=center, minimum height=10.5cm, font=\small},
+  subblock/.style={rectangle, draw=black, fill=white, text width=6.5cm, align=center, minimum height=1.6cm, font=\footnotesize},
+  arrow/.style={-{Stealth[length=2.5mm]}, thick},
+  dashedarrow/.style={-{Stealth[length=2.5mm]}, {Stealth[length=2.5mm]}-, thick, dashed}
+]
+
+  % Central Core
+  \node[core] (core) at (0,0) {
+    \textbf{DAWA LENS SYSTEM ARCHITECTURE}\\
+    \textit{\footnotesize (Edge-Native Android / Capacitor 8 \& Cloud Gateway)}\\[0.4cm]
+    \begin{tikzpicture}[baseline=(T1.north)]
+      \node[subblock] (T1) {\textbf{Tier 1: Client Presentation Tier}\\ \scriptsize React 18 + Vite SPA Shell (Capacitor)\\ \tiny • Touch UI • Family Hub • NDA Map • PDF Export};
+      \node[subblock, below=0.35cm of T1] (T2) {\textbf{Tier 2: Offline Persistence \& Scheduling}\\ \scriptsize Dexie.js IndexedDB Store\\ \tiny • AlarmManager • Mutation Queue • Exponential Retry};
+      \node[subblock, below=0.35cm of T2] (T3) {\textbf{Tier 3: Clinical Vision \& Pharmacology}\\ \scriptsize WebAssembly (Wasm) Engine\\ \tiny • Tesseract OCR Worker • RxNorm DDI • Matooke/Mukene};
+      \draw[arrow] (T1) -- (T2);
+      \draw[arrow] (T2) -- (T3);
+    \end{tikzpicture}
+  };
+
+  % Inputs on Left
+  \node[block, left=2.2cm of core.north west, anchor=north east] (pwr) {\textbf{Li-ion Battery / Power}\\ \footnotesize 3.7V / 5V DC Supply};
+  \node[block, below=0.6cm of pwr] (touch) {\textbf{Capacitive Touchscreen}\\ \footnotesize Multi-Touch Input / Logs};
+  \node[block, below=0.6cm of touch] (rtc) {\textbf{Hardware RTC Interrupt}\\ \footnotesize Android AlarmManager};
+  \node[block, below=0.6cm of touch] (btn) {\textbf{Hardware Push Buttons}\\ \footnotesize Power / Volume - Snooze};
+  \node[block, below=0.6cm of btn] (cam) {\textbf{CMOS Camera Sensor}\\ \footnotesize Pill / Blister Strip Ingestion};
+
+  % Outputs on Right
+  \node[block, right=2.2cm of core.north east, anchor=north west] (pdf) {\textbf{Clinical PDF Exporter}\\ \footnotesize PWA Healthcare Export};
+  \node[block, below=0.6cm of pdf] (spk) {\textbf{Piezo Buzzer / Speaker}\\ \footnotesize High-Audibility Chime};
+  \node[block, below=0.6cm of spk] (flash) {\textbf{Flash Memory / SQLite}\\ \footnotesize IndexedDB Physical Backing};
+  \node[block, below=0.6cm of flash] (fb) {\textbf{Firebase Cloud Firestore}\\ \footnotesize Caregiver Telemetry \& Sync};
+  \node[block, below=0.6cm of fb] (nda) {\textbf{NDA Uganda Registry}\\ \footnotesize Licensed Drug Outlets};
+  \node[block, below=0.6cm of nda] (gemini) {\textbf{Cloud Gemini 2.0}\\ \footnotesize Luganda Audio Fallback};
+
+  % Connectors
+  \draw[arrow] (pwr) -- (core.north west |- pwr);
+  \draw[arrow] (touch) -- (core.west |- touch);
+  \draw[arrow] (rtc) -- (core.west |- rtc);
+  \draw[arrow] (cam) -- (core.west |- cam);
+
+  \draw[arrow] (core.east |- pdf) -- (pdf);
+  \draw[arrow] (core.east |- spk) -- (spk);
+  \draw[arrow] (core.east |- flash) -- (flash);
+  \draw[dashedarrow] (core.east |- fb) -- node[above, font=\tiny] {Wi-Fi / 4G LTE} (fb);
+  \draw[dashedarrow] (core.east |- nda) -- node[above, font=\tiny] {Wi-Fi / 4G LTE} (nda);
+  \draw[dashedarrow] (core.east |- gemini) -- node[above, font=\tiny] {HTTPS API} (gemini);
+
+\end{tikzpicture}

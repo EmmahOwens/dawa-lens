@@ -1,0 +1,146 @@
+
+  <svg xmlns="http://www.w3.org/2000/svg" width="1150" height="545" viewBox="0 0 1150 545">
+    
+  <defs>
+    <marker id="cf-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#000000" />
+    </marker>
+    <style>
+      text {
+        font-family: 'LMRoman10', 'Latin Modern Roman', 'Times New Roman', 'Nimbus Roman', serif;
+        color: #000000;
+      }
+      .col-header {
+        font-family: 'LMRoman10', 'Latin Modern Roman', 'Times New Roman', 'Nimbus Roman', serif;
+        font-size: 13.5px;
+        font-weight: bold;
+      }
+      .col-sub {
+        font-family: 'LMRoman10', 'Latin Modern Roman', 'Times New Roman', 'Nimbus Roman', serif;
+        font-size: 11px;
+        font-style: italic;
+      }
+      .item-title {
+        font-family: 'LMRoman10', 'Latin Modern Roman', 'Times New Roman', 'Nimbus Roman', serif;
+        font-size: 11.5px;
+        font-weight: bold;
+      }
+      .item-desc {
+        font-family: 'LMRoman10', 'Latin Modern Roman', 'Times New Roman', 'Nimbus Roman', serif;
+        font-size: 10px;
+      }
+    </style>
+  </defs>
+  
+    <rect width="1150" height="545" fill="#ffffff" />
+
+    <!-- Three Main Columns -->
+    
+      <!-- Column Container -->
+      <rect x="35" y="25" width="315" height="390" fill="#ffffff" stroke="#000000" stroke-width="1.2" />
+      <text x="192.5" y="47" text-anchor="middle" class="col-header">INDEPENDENT VARIABLES</text>
+      <text x="192.5" y="61" text-anchor="middle" class="col-sub">(Dawa Lens Engineered Artifacts)</text>
+      <line x1="35" y1="67" x2="350" y2="67" stroke="#000000" stroke-width="0.8" />
+    
+        <rect x="50" y="73" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="192.5" y="95" text-anchor="middle" class="item-title">On-Device Wasm OCR Engine</text>
+        <text x="192.5" y="112" text-anchor="middle" class="item-desc">Tesseract.js packaging & dosage text ingestion</text>
+      
+        <rect x="50" y="138" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="192.5" y="160" text-anchor="middle" class="item-title">Offline-First Relational Datastore</text>
+        <text x="192.5" y="177" text-anchor="middle" class="item-desc">IndexedDB client schema with Dexie.js persistence</text>
+      
+        <rect x="50" y="203" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="192.5" y="225" text-anchor="middle" class="item-title">Deterministic Reminder Scheduler</text>
+        <text x="192.5" y="242" text-anchor="middle" class="item-desc">Native exact alarm APIs (SCHEDULE_EXACT_ALARM)</text>
+      
+        <rect x="50" y="268" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="192.5" y="290" text-anchor="middle" class="item-title">Indigenous Food-Drug Guard</text>
+        <text x="192.5" y="307" text-anchor="middle" class="item-desc">Matooke K+ and Mukene chelation rules</text>
+      
+        <rect x="50" y="333" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="192.5" y="355" text-anchor="middle" class="item-title">NDA Directory & Family Hub Sync</text>
+        <text x="192.5" y="372" text-anchor="middle" class="item-desc">Licensed pharmacy verification & caregiver telemetry</text>
+      
+    
+      <!-- Column Container -->
+      <rect x="417" y="25" width="315" height="390" fill="#f8f8f8" stroke="#000000" stroke-width="1.2" />
+      <text x="574.5" y="47" text-anchor="middle" class="col-header">MEDIATING VARIABLES</text>
+      <text x="574.5" y="61" text-anchor="middle" class="col-sub">(User &amp; System Interaction Mechanisms)</text>
+      <line x1="417" y1="67" x2="732" y2="67" stroke="#000000" stroke-width="0.8" />
+    
+        <rect x="432" y="73" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="574.5" y="95" text-anchor="middle" class="item-title">Perceived Usability & Offline Access</text>
+        <text x="574.5" y="112" text-anchor="middle" class="item-desc">Zero network latency & intuitive touch interaction</text>
+      
+        <rect x="432" y="138" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="574.5" y="160" text-anchor="middle" class="item-title">Health Literacy & Dosing Confidence</text>
+        <text x="574.5" y="177" text-anchor="middle" class="item-desc">Visual clarity, dosage confirmation & audio cues</text>
+      
+        <rect x="432" y="203" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="574.5" y="225" text-anchor="middle" class="item-title">Dietary Contraindication Awareness</text>
+        <text x="574.5" y="242" text-anchor="middle" class="item-desc">Proactive prevention of food-drug toxic clashes</text>
+      
+        <rect x="432" y="268" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="574.5" y="290" text-anchor="middle" class="item-title">Caregiver Support & Accountability</text>
+        <text x="574.5" y="307" text-anchor="middle" class="item-desc">Remote family telemetry & missed-dose alerts</text>
+      
+        <rect x="432" y="333" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="574.5" y="355" text-anchor="middle" class="item-title">Regulatory Sourcing Security</text>
+        <text x="574.5" y="372" text-anchor="middle" class="item-desc">Authentication of official NDA licensed dispensaries</text>
+      
+    
+      <!-- Column Container -->
+      <rect x="800" y="25" width="315" height="390" fill="#ffffff" stroke="#000000" stroke-width="1.2" />
+      <text x="957.5" y="47" text-anchor="middle" class="col-header">DEPENDENT VARIABLES</text>
+      <text x="957.5" y="61" text-anchor="middle" class="col-sub">(Target Clinical &amp; Safety Outcomes)</text>
+      <line x1="800" y1="67" x2="1115" y2="67" stroke="#000000" stroke-width="0.8" />
+    
+        <rect x="815" y="73" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="957.5" y="95" text-anchor="middle" class="item-title">Significant Adherence Lift (≥ 35%)</text>
+        <text x="957.5" y="112" text-anchor="middle" class="item-desc">Substantial suppression of missed & delayed doses</text>
+      
+        <rect x="815" y="138" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="957.5" y="160" text-anchor="middle" class="item-title">Elimination of Preventable ADRs</text>
+        <text x="957.5" y="177" text-anchor="middle" class="item-desc">Prevention of drug toxicity, chelation & hyperkalemia</text>
+      
+        <rect x="815" y="203" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="957.5" y="225" text-anchor="middle" class="item-title">Timely Prescription Refill Compliance</text>
+        <text x="957.5" y="242" text-anchor="middle" class="item-desc">Elimination of chronic medication stockouts</text>
+      
+        <rect x="815" y="268" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="957.5" y="290" text-anchor="middle" class="item-title">Reduction in Acute Readmissions</text>
+        <text x="957.5" y="307" text-anchor="middle" class="item-desc">Fewer preventable emergency hospitalizations</text>
+      
+        <rect x="815" y="333" width="285" height="55" fill="#ffffff" stroke="#000000" stroke-width="0.85" />
+        <text x="957.5" y="355" text-anchor="middle" class="item-title">Doctor-Ready Objective Reporting</text>
+        <text x="957.5" y="372" text-anchor="middle" class="item-desc">Verified longitudinal compliance exports for clinics</text>
+      
+
+    <!-- Primary Horizontal Connecting Arrows -->
+    <line x1="350" y1="220" x2="417" y2="220" stroke="#000000" stroke-width="1.3" marker-end="url(#cf-arrow)" />
+    <line x1="732" y1="220" x2="800" y2="220" stroke="#000000" stroke-width="1.3" marker-end="url(#cf-arrow)" />
+
+    <!-- MODERATING FACTORS (Bottom Container) -->
+    <rect x="35" y="442" width="1080" height="88" fill="#f5f5f5" stroke="#000000" stroke-width="1.2" />
+    <text x="575" y="462" text-anchor="middle" class="col-header">MODERATING CONTEXTUAL FACTORS</text>
+    <text x="575" y="476" text-anchor="middle" class="col-sub">(Uganda Low-Resource Outpatient Environment)</text>
+    <line x1="35" y1="481" x2="1115" y2="481" stroke="#000000" stroke-width="0.8" />
+
+    <!-- Moderating sub-factors -->
+    <rect x="55" y="487" width="325" height="35" fill="#ffffff" stroke="#000000" stroke-width="0.8" />
+    <text x="217" y="502" text-anchor="middle" class="item-title">Infrastructure Volatility</text>
+    <text x="217" y="515" text-anchor="middle" class="item-desc">Cellular data &amp; grid power cuts (offline mitigations)</text>
+
+    <rect x="412" y="487" width="325" height="35" fill="#ffffff" stroke="#000000" stroke-width="0.8" />
+    <text x="574" y="502" text-anchor="middle" class="item-title">Socio-Economic Realities</text>
+    <text x="574" y="515" text-anchor="middle" class="item-desc">Low literacy &amp; unlabelled generic blister strips</text>
+
+    <rect x="770" y="487" width="325" height="35" fill="#ffffff" stroke="#000000" stroke-width="0.8" />
+    <text x="932" y="502" text-anchor="middle" class="item-title">Device Heterogeneity</text>
+    <text x="932" y="515" text-anchor="middle" class="item-desc">Entry-tier smartphones with limited RAM &amp; CPU</text>
+
+    <!-- Upward Arrow from Moderating Box to mediation column -->
+    <line x1="574.5" y1="442" x2="574.5" y2="415" stroke="#000000" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#cf-arrow)" />
+  </svg>
+  

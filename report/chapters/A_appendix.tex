@@ -1,0 +1,96 @@
+\chapter{Project Workplan and Implementation Schedule}
+\label{app:workplan}
+
+This appendix details the engineering workplan, activity schedule, and milestone progression required to execute Dawa Lens over the eight-month project lifecycle across the 2026/2027 academic year at Soroti University.
+
+\section{Implementation Timeline and Milestones}
+
+The engineering activities are structured into five sequential phases, mapped against specific deliverables in Table~\ref{tab:workplan_milestones} across the 32-week academic lifecycle.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{Project implementation timeline, phases, and key milestones.}
+  \label{tab:workplan_milestones}
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\textwidth}{@{} >{\raggedright\arraybackslash}p{2.4cm} >{\raggedright\arraybackslash}p{2.0cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{3.6cm} @{}}
+    \toprule
+    \textbf{Phase} & \textbf{Timeline} & \textbf{Major Engineering Activities} & \textbf{Key Deliverables / Milestone} \\
+    \midrule
+    \textbf{Phase 1: Inception} & Weeks 1--6 \newline (Oct--Nov 2026) & Literature review, stakeholder interviews, clinical guideline analysis, and requirement specification. & Approved Proposal Report; System Requirements Specification (SRS). \\
+    \midrule
+    \textbf{Phase 2: Architecture} & Weeks 7--12 \newline (Nov--Dec 2026) & UI/UX wireframing, IndexedDB local schema, offline queue design, and Capacitor Android runtime setup. & System Architecture Document; Prototype UI Mockups. \\
+    \midrule
+    \textbf{Phase 3: Development} & Weeks 13--22 \newline (Jan--Mar 2027) & Reminder scheduler, edge Tesseract.js OCR, Ugandan food-drug interaction engine, and NDA directory. & Functional Alpha Release (Android APK); Web Clinical Extension PWA. \\
+    \midrule
+    \textbf{Phase 4: Evaluation} & Weeks 23--28 \newline (Mar--Apr 2027) & Unit/integration testing, offline fault benchmarking, and 2-week field usability evaluation ($N=50$) with SUS. & Quantitative Testing Report; Field Usability Evaluation Dataset. \\
+    \midrule
+    \textbf{Phase 5: Finalization} & Weeks 29--32 \newline (May 2027) & Empirical data analysis, final thesis drafting, supervisor review revisions, and defense preparation. & Final Research Project Report / Thesis; Production Software Release. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\chapter{Technical Specifications, Instruments, and Clinical Matrices}
+\label{app:technical}
+
+\section{Data Collection and Usability Instruments}
+\label{app:instruments}
+
+\subsection*{Standardized System Usability Scale (SUS)}
+Participants in the field pilot ($N=50$) will complete the standardized 10-item System Usability Scale (SUS) questionnaire \cite{brooke1996sus} rated on a 5-point Likert scale (1 = Strongly Disagree to 5 = Strongly Agree): (1)~I would like to use Dawa Lens frequently for my medication; (2)~I found the application unnecessarily complex; (3)~I thought the application was easy to use; (4)~I would need the support of a technical person to use this app; (5)~The various functions were well integrated; (6)~There was too much inconsistency in the app; (7)~Most outpatients would learn to use this application very quickly; (8)~I found the application cumbersome to use; (9)~I felt confident using the application; (10)~I needed to learn a lot of things before I could get going.
+
+\subsection*{Semi-Structured Healthcare Worker Interview Protocol}
+Community pharmacists and clinical attendants will be evaluated across five operational dimensions: (1)~frequency of patient confusion regarding generic packaging and forgotten doses; (2)~practical scanning effectiveness on generic blister strips; (3)~clinical utility of indigenous food-drug warnings (\textit{Matooke} and \textit{Mukene}); (4)~actionability of exported clinical PDF reports; and (5)~willingness to recommend Dawa Lens for chronic disease management.
+
+\section{Local Relational Data Dictionary (IndexedDB Schema Summary)}
+
+The client-side persistence layer is engineered using browser-standard IndexedDB managed via a custom LocalPersistence service. Table~\ref{tab:data_dictionary} summarizes the relational schema across the four core local object stores.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{Local client-side relational data dictionary summary (IndexedDB).}
+  \label{tab:data_dictionary}
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabularx}{\textwidth}{@{} >{\bfseries\raggedright\arraybackslash}p{2.4cm} >{\ttfamily\raggedright\arraybackslash}p{1.6cm} >{\raggedright\arraybackslash}p{4.4cm} >{\raggedright\arraybackslash}X @{}}
+    \toprule
+    \textbf{Object Store} & \textbf{PK} & \textbf{Core Fields / Attributes} & \textbf{Clinical / Engineering Purpose} \\
+    \midrule
+    medications & id (UUID) & name, activeIngredients, dosage, form, remainingCount, refillThreshold, verifiedNda & Local inventory of prescribed drugs, formulations, inventory counts, and NDA verification flags. \\
+    \midrule
+    reminders & id (UUID) & medicationId (FK), scheduledTime, daysOfWeek, mealRelation, isEnabled, notificationId & Programmed daily dosing intervals, meal alignments (before/with/after), and exact alarm notification handles. \\
+    \midrule
+    adherence\_logs & id (UUID) & medicationId (FK), scheduledTime, actionTime, status, loggedBy, synced & Immutable event log recording dose outcomes (taken, skipped, missed) and multi-profile caregiver attribution. \\
+    \midrule
+    offline\_queue & id (Auto) & operation (CRUD), collection, payload (JSON), timestamp, retryCount & Transactional FIFO mutation queue providing resilient exponential-backoff cloud synchronization. \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Reminder State Machine and Ugandan Dietary Interaction Rules}
+\label{app:tables}
+
+Medication reminders transition through four deterministic states to guarantee offline delivery: \textbf{(1)~SCHEDULED:} registered via native \texttt{SCHEDULE\_EXACT\_ALARM}; \textbf{(2)~TRIGGERED:} wakes CPU partial lock and emits audio-visual alert; \textbf{(3)~LOGGED:} writes immutable record to \texttt{adherence\_logs} and decrements inventory; and \textbf{(4)~SYNCHRONIZED:} background worker dequeues FIFO records and flushes to Firebase Firestore upon network reconnect. Table~\ref{tab:food_interaction_matrix} specifies the indigenous food-drug interaction rules implemented in the system.
+
+\begin{table}[!htbp]
+  \centering
+  \caption{Ugandan indigenous food-drug interaction rules matrix.}
+  \label{tab:food_interaction_matrix}
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{} >{\raggedright\arraybackslash}p{2.2cm} >{\raggedright\arraybackslash}p{2.8cm} >{\centering\arraybackslash}p{1.3cm} >{\raggedright\arraybackslash}X @{}}
+    \toprule
+    \textbf{Indigenous Food} & \textbf{Target Drug / Class} & \textbf{Severity} & \textbf{Biochemical Mechanism \& Automated Clinical Warning} \\
+    \midrule
+    \textbf{Green Bananas (\textit{Matooke})} & ACE Inhibitors (Enalapril), K$^+$-Sparing Diuretics & High (Level 3) & Dense potassium load in \textit{Matooke} (350--450mg/100g) risks hyperkalemia and cardiac dysrhythmias. \newline \textit{Warning: Avoid large portions within 2 hours of blood pressure doses.} \\
+    \midrule
+    \textbf{Silver Fish (\textit{Mukene})} & Fluoroquinolones (Ciprofloxacin), Tetracyclines & High (Level 3) & Calcium and iron cations form insoluble chelates, reducing antibiotic absorption by up to 70\%. \newline \textit{Warning: Do not eat Mukene 2 hours before or after antibiotic doses.} \\
+    \midrule
+    \textbf{Finger Millet (\textit{Kalo})} & Oral Iron Supplements (Ferrous Sulfate) & Medium (Level 2) & High phytate and tannin content binds supplemental iron, inhibiting absorption. \newline \textit{Warning: Take iron tablets with water/juice 1 hour before Kalo.} \\
+    \midrule
+    \textbf{Groundnut Stew (\textit{G-nut sauce})} & Antiretrovirals (Efavirenz), Lipophilic Anthelmintics & Medium (Level 2) & High fat content delays gastric emptying, altering absorption kinetics and elevating CNS side effects. \newline \textit{Warning: Take Efavirenz on an empty stomach at bedtime.} \\
+    \midrule
+    \textbf{Indigenous Greens (\textit{Nakati}, \textit{Dodo})} & Oral Anticoagulants (Warfarin) & High (Level 3) & Abundant Vitamin K promotes clotting factor synthesis, antagonizing Warfarin anticoagulation. \newline \textit{Warning: Maintain consistent small intake; avoid sudden dietary surges.} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}

@@ -1,0 +1,132 @@
+% ============================================================
+%  SOROTI UNIVERSITY -- RESEARCH PROPOSAL REPORT
+%  Major: Electronics and Computer Engineering
+%
+%  HOW TO USE THIS TEMPLATE
+%  1. Fill in the metadata commands below (title, name, etc.)
+%  2. Write your content in the chapter files inside
+%     chapters/ (one .tex file per chapter, already linked
+%     below with \input).
+%  3. Add references to ../references.bib (or copy it here).
+%  4. Compile with: pdflatex -> bibtex -> pdflatex -> pdflatex
+%     or simply: latexmk -pdf main.tex
+% ============================================================
+
+\documentclass[proposal,openany]{sotuthesis}
+
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{url}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,calc,fit,backgrounds}
+
+\setlist{noitemsep,topsep=2pt,parsep=0pt,partopsep=0pt}
+
+\makeatletter
+\@openrightfalse
+\makeatother
+
+% ---------------- Front matter metadata ----------------
+\reporttitle{Dawa Lens: An Offline-First Smart Medicine Reminder App}
+\studentname{Mbayo Emmanuel Owen}
+\studentnumber{2301600083}
+\programme{Bachelor of Engineering in Electronics and Computer Engineering}
+\supervisorname{Dr. Musa Chemisto}
+\cosupervisorname{} % leave empty braces if none
+\schoolname{SCHOOL OF ENGINEERING AND TECHNOLOGY}
+\departmentname{DEPARTMENT OF ELECTRONICS AND COMPUTER ENGINEERING}
+\coursecode{GEC4101 Research Project}
+\submissiondate{October, 2026}
+\universitylogo{SUN-LOGO}
+\setheadertitle{Soroti University Research Project Proposal Report}
+
+\title{\@reporttitle}
+\author{\@studentname}
+\date{\@submissiondate}
+
+\begin{document}
+
+% ---------------- Front matter ----------------
+\makecoverpage
+\maketitlepage
+
+\frontmatterstart
+\makedeclaration
+\makeapproval
+
+\begin{thesisabstract}
+Medication non-adherence and preventable pharmacological errors constitute severe public health challenges in developing nations, particularly in Uganda where co-morbidities such as hypertension, diabetes, HIV/AIDS, and malaria require complex, long-term drug regimens. In outpatient settings, patients frequently receive generic medications in unlabelled blister strips without patient information leaflets, while healthcare records remain fragmented across paper records. Furthermore, commercially available reminder applications rely heavily on continuous high-speed internet connectivity, fail to evaluate indigenous dietary contraindications, and lack mechanisms to verify licensed pharmaceutical distribution outlets.
+
+This proposal presents the design, implementation, and empirical evaluation of \textbf{Dawa Lens}, an offline-first smart medicine reminder application engineered specifically for resource-constrained environments. Dawa Lens leverages mobile edge computing, on-device optical character recognition (OCR), and lightweight clinical decision logic to provide automated medication schedule generation, resilient offline alarm notifications, and indigenous food-drug interaction screening (such as biochemical interactions involving steamed green bananas (\textit{Matooke}) and silver fish (\textit{Mukene})). The system incorporates an integrated official directory of licensed community pharmacies from the National Drug Authority (NDA) Uganda to guide safe refills, as well as a synchronized Family Hub that empowers multi-generational caregivers to monitor treatment compliance remotely. A companion web platform serves as an accessible clinical extension for comprehensive health tracking and doctor-ready report export.
+
+Adopting a Design Science Research methodology, the system architecture separates local client-side persistence (IndexedDB/SQLite) from asynchronous cloud synchronization (Firebase Firestore), guaranteeing deterministic sub-second operation during prolonged network and electrical outages. The proposed solution will be evaluated across technical benchmarks (OCR character error rate, notification latency, and memory footprint) and an empirical usability study involving 50 participants using the standardized System Usability Scale (SUS). The expected outcome is a functional, culturally grounded, and context-resilient mobile health tool that significantly reduces missed doses and improves outpatient medication safety.
+
+\vspace{0.5cm}
+\noindent\textbf{Keywords:} Medication Adherence; Offline-First Systems; Mobile Health; Optical Character Recognition; Drug-Food Interaction; Electronics and Computer Engineering; Soroti University.
+\end{thesisabstract}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\begin{abbreviations}
+  \item[ACT] Artemisinin-based Combination Therapy
+  \item[ADR] Adverse Drug Reaction
+  \item[API] Application Programming Interface
+  \item[ARV] Antiretroviral
+  \item[CAP] Consistency, Availability, Partition tolerance
+  \item[CER] Character Error Rate
+  \item[CRDT] Conflict-Free Replicated Data Type
+  \item[DDI] Drug-Drug Interaction
+  \item[DFI] Drug-Food Interaction
+  \item[DSR] Design Science Research
+  \item[EHR] Electronic Health Record
+  \item[EMR] Electronic Medical Record
+  \item[FAO] Food and Agriculture Organization of the United Nations
+  \item[FDA] Food and Drug Administration
+  \item[FIFO] First-In, First-Out
+  \item[GPS] Global Positioning System
+  \item[HIV] Human Immunodeficiency Virus
+  \item[IEEE] Institute of Electrical and Electronics Engineers
+  \item[IMB] Information-Motivation-Behavioral Skills
+  \item[mHealth] Mobile Health
+  \item[MoH] Ministry of Health (Republic of Uganda)
+  \item[NDA] National Drug Authority (Uganda)
+  \item[NFR] Non-Functional Requirement
+  \item[NLM] National Library of Medicine
+  \item[NSAID] Non-Steroidal Anti-Inflammatory Drug
+  \item[OCR] Optical Character Recognition
+  \item[PIL] Patient Information Leaflet
+  \item[PWA] Progressive Web App
+  \item[RQ] Research Question
+  \item[RxNorm] Standardized Nomenclature for Clinical Drugs
+  \item[SMS] Short Message Service
+  \item[SQLite] Structured Query Language Lite
+  \item[SUS] System Usability Scale
+  \item[TB] Tuberculosis
+  \item[UML] Unified Modeling Language
+  \item[USSD] Unstructured Supplementary Service Data
+  \item[Wasm] WebAssembly
+  \item[WHO] World Health Organization
+\end{abbreviations}
+
+% ---------------- Main matter ----------------
+\mainmatterstart
+
+\input{chapters/01_introduction}
+\input{chapters/02_literature_review}
+\input{chapters/03_methodology}
+\input{chapters/04_conclusion}
+
+% ---------------- References ----------------
+\bibliographystyle{ieeetr}
+\bibliography{references}
+
+% ---------------- Appendices ----------------
+\appendix
+\input{chapters/A_appendix}
+
+\end{document}

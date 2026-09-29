@@ -1,0 +1,46 @@
+% TikZ definition for Dawa Lens Conceptual Framework
+\begin{tikzpicture}[
+  node distance=0.25cm,
+  header/.style={rectangle, draw=black, thick, fill=black!4, text width=4.8cm, align=center, minimum height=1.1cm, font=\small\textbf},
+  card/.style={rectangle, draw=black, fill=white, text width=4.5cm, align=center, minimum height=1.2cm, font=\footnotesize},
+  arrow/.style={-{Stealth[length=3mm]}, very thick},
+  dasharrow/.style={-{Stealth[length=3mm]}, thick, dashed}
+]
+
+  % Col 1: Independent
+  \node[header] (iv_head) at (0,0) {INDEPENDENT VARIABLES\\ \footnotesize\normalfont\textit{(Dawa Lens Engineered Artifacts)}};
+  \node[card, below=0.2cm of iv_head] (iv1) {\textbf{On-Device Wasm OCR}\\ \scriptsize Packaging \& dosage extraction};
+  \node[card, below=of iv1] (iv2) {\textbf{Offline IndexedDB Store}\\ \scriptsize Dexie.js relational schema};
+  \node[card, below=of iv2] (iv3) {\textbf{Deterministic Scheduler}\\ \scriptsize Exact Alarm APIs};
+  \node[card, below=of iv3] (iv4) {\textbf{Indigenous Food Guard}\\ \scriptsize Matooke \& Mukene rules};
+  \node[card, below=of iv4] (iv5) {\textbf{NDA Directory \& Family Hub}\\ \scriptsize Outlets \& caregiver sync};
+
+  % Col 2: Mediating
+  \node[header] (med_head) at (5.8,0) {MEDIATING VARIABLES\\ \footnotesize\normalfont\textit{(Interaction Mechanisms)}};
+  \node[card, below=0.2cm of med_head] (m1) {\textbf{Perceived Usability}\\ \scriptsize Zero latency touch UI};
+  \node[card, below=of m1] (m2) {\textbf{Health Literacy}\\ \scriptsize Visual \& audio dosing guidance};
+  \node[card, below=of m2] (m3) {\textbf{Dietary Awareness}\\ \scriptsize Food-drug clash prevention};
+  \node[card, below=of m3] (m4) {\textbf{Caregiver Accountability}\\ \scriptsize Remote telemetry alerts};
+  \node[card, below=of m4] (m5) {\textbf{Regulatory Sourcing Trust}\\ \scriptsize Licensed dispensary check};
+
+  % Col 3: Dependent
+  \node[header] (dv_head) at (11.6,0) {DEPENDENT VARIABLES\\ \footnotesize\normalfont\textit{(Target Clinical Outcomes)}};
+  \node[card, below=0.2cm of dv_head] (dv1) {\textbf{Adherence Lift ($\ge 35\%$)}\\ \scriptsize Missed dose suppression};
+  \node[card, below=of dv1] (dv2) {\textbf{ADR Elimination}\\ \scriptsize Zero toxic chelation/hyperkalemia};
+  \node[card, below=of dv2] (dv3) {\textbf{Timely Refill Compliance}\\ \scriptsize Stockout prevention};
+  \node[card, below=of dv3] (dv4) {\textbf{Reduced Readmissions}\\ \scriptsize Avoidable hospitalization drop};
+  \node[card, below=of dv4] (dv5) {\textbf{Doctor-Ready Reporting}\\ \scriptsize Clinical compliance exports};
+
+  % Connectors
+  \draw[arrow] (5.0, -3.2) -- (5.6, -3.2);
+  \draw[arrow] (10.8, -3.2) -- (11.4, -3.2);
+
+  % Bottom Moderating
+  \node[rectangle, draw=black, thick, fill=black!3, text width=16.0cm, align=center, minimum height=1.8cm, below=0.8cm of m5] (mod) {
+    \textbf{MODERATING CONTEXTUAL FACTORS (Uganda Outpatient Environment)}\\
+    \scriptsize (1) Infrastructure Volatility (Cellular/Grid Cuts) \quad (2) Socio-Economic Realities (Unlabelled Blisters) \quad (3) Device Heterogeneity
+  };
+
+  \draw[dasharrow] (mod.north) -- (m5.south);
+
+\end{tikzpicture}
