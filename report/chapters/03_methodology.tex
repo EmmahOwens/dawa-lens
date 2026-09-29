@@ -64,7 +64,7 @@ Table~\ref{tab:tools_technologies} enumerates the development stack, test device
 Empirical evaluation data collected during laboratory benchmarking and user field trials will be processed across four primary dimensions:
 \begin{enumerate}[noitemsep,topsep=2pt]
   \item \textbf{OCR Text Recognition Accuracy:} Character Error Rate $\text{CER} = (S + D + I) / N$ \cite{smith2007tesseract}, targeting $\text{CER} < 5\%$ and clinical entity extraction success $\ge 90\%$.
-  \item \textbf{Reminder Timing Fidelity:} Scheduling latency delta across Android background/Doze states ($|t_{\text{triggered}} - t_{\text{scheduled}}| \le 1.0\,\text{s}$).
+  \item \textbf{Reminder Timing Fidelity:} Scheduling latency delta across Android background execution and battery-optimizing Doze states \cite{android2024doze} ($|t_{\text{triggered}} - t_{\text{scheduled}}| \le 1.0\,\text{s}$).
   \item \textbf{Usability and Acceptance:} Standardized SUS scores \cite{brooke1996sus} across $N=50$ participants evaluated against Bangor's acceptability benchmarks ($\ge 75/100$) \cite{bangor2008empirical}.
   \item \textbf{Adherence Compliance:} Paired two-tailed $t$-tests ($\alpha = 0.05$) analyzing compliance gains between baseline recall and app-logged data.
 \end{enumerate}
