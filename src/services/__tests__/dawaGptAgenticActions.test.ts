@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   extractDeterministicAction,
   generateDawaGPTResponse,
-  normalizeAIAction
+  normalizeAIAction,
+  userRequestedReminder
 } from "../aiAssistantService";
 import { renderHook, act } from "@testing-library/react";
 import { useAIActions } from "@/hooks/useAIActions";
@@ -269,6 +270,42 @@ describe("DawaGPT Full-System Agentic Actions Suite", () => {
       expect(action?.payload.name).toBe("Panadol");
       expect(action?.payload.currentQuantity).toBe(30);
     });
+
+    it("returns null for informational medical/side effect queries ('Coartem side effects')", () => {
+      const historyWithReminders = [
+        { id: "msg-0", role: "assistant" as const, sender: "dawagpt" as const, text: "You can view or manage your schedule in [Medication Reminders](/reminders) or [check stock in Med Vault](/medvault)." }
+      ];
+      expect(extractDeterministicAction("Coartem side effects", sampleMedicines, sampleReminders, samplePatients, historyWithReminders)).toBeNull();
+      expect(extractDeterministicAction("Panadol side effects", sampleMedicines, sampleReminders, samplePatients, historyWithReminders)).toBeNull();
+      expect(extractDeterministicAction("Can I take Panadol with Coartem?", sampleMedicines, sampleReminders, samplePatients, historyWithReminders)).toBeNull();
+      expect(extractDeterministicAction("Is Metformin safe during pregnancy?", sampleMedicines, sampleReminders, samplePatients, historyWithReminders)).toBeNull();
+      expect(extractDeterministicAction("What are my reminders?", sampleMedicines, sampleReminders, samplePatients, historyWithReminders)).toBeNull();
+      expect(extractDeterministicAction("Show my medications", sampleMedicines, sampleReminders, samplePatients, historyWithReminders)).toBeNull();
+    });
+
+    it("extracts REMOVE_REMINDER when user says 'Delete that reminder' (screenshot case)", () => {
+      const history = [
+        { id: "msg-1", role: "user" as const, sender: "user" as const, text: "Coartem side effects" },
+        { id: "msg-2", role: "assistant" as const, sender: "dawagpt" as const, text: "I've set up a reminder for you to take **Coartem** (2 tablets) 2 times a day at **1:00 AM and 1:00 PM**." }
+      ];
+      const action = extractDeterministicAction("Delete that reminder", sampleMedicines, sampleReminders, samplePatients, history);
+      expect(action).not.toBeNull();
+      expect(action?.type).toBe("REMOVE_REMINDER");
+      expect(action?.payload.medicineName).toBe("Coartem");
+    });
+
+    it("extracts REMOVE_REMINDER for variations like 'Delete the reminder' or 'Remove that reminder'", () => {
+      const history = [
+        { id: "msg-1", role: "assistant" as const, sender: "dawagpt" as const, text: "Reminder scheduled for Metformin at 8:00 AM." }
+      ];
+      const action1 = extractDeterministicAction("Delete the reminder", sampleMedicines, sampleReminders, samplePatients, history);
+      expect(action1?.type).toBe("REMOVE_REMINDER");
+      expect(action1?.payload.medicineName).toBe("Metformin");
+
+      const action2 = extractDeterministicAction("Remove that reminder", sampleMedicines, sampleReminders, samplePatients, history);
+      expect(action2?.type).toBe("REMOVE_REMINDER");
+      expect(action2?.payload.medicineName).toBe("Metformin");
+    });
   });
 
   describe("2. Conversational Response Formatting (generateDawaGPTResponse)", () => {
@@ -372,6 +409,41 @@ describe("DawaGPT Full-System Agentic Actions Suite", () => {
       expect(resp.action?.type).toBe("UNDO_DOSE_LOG");
       expect(resp.text).toContain("reverted your last logged dose");
       expect(resp.source).toBe("Adherence Guard");
+    });
+
+    it("never creates ADD_REMINDER action when user asks 'Coartem side effects'", async () => {
+      const resp = await generateDawaGPTResponse(
+        "Coartem side effects",
+        null,
+        null,
+        sampleMedicines,
+        sampleDoseLogs,
+        sampleReminders,
+        samplePatients
+      );
+      expect(resp.action).toBeUndefined();
+      expect(resp.source).not.toBe("Schedule Guard");
+      expect(resp.text).not.toContain("I've set up a reminder");
+    });
+
+    it("processes 'Delete that reminder' into REMOVE_REMINDER action", async () => {
+      const history = [
+        { id: "msg-1", role: "assistant" as const, sender: "dawagpt" as const, text: "I've set up a reminder for you to take **Metformin** at 8:00 AM." }
+      ];
+      const resp = await generateDawaGPTResponse(
+        "Delete that reminder",
+        null,
+        null,
+        sampleMedicines,
+        sampleDoseLogs,
+        sampleReminders,
+        samplePatients,
+        null,
+        null,
+        history
+      );
+      expect(resp.action?.type).toBe("REMOVE_REMINDER");
+      expect(resp.action?.payload.medicineName).toBe("Metformin");
     });
   });
 
@@ -566,6 +638,29 @@ describe("DawaGPT Full-System Agentic Actions Suite", () => {
       );
       expect(mockToast).toHaveBeenCalled();
     });
+
+    it("ensures ADD_REMINDER fills dose and distributed times from Med Vault when payload is incomplete", async () => {
+      const { result } = renderHook(() => useAIActions());
+      await act(async () => {
+        await result.current.dispatchAIAction({
+          type: "ADD_REMINDER",
+          payload: {
+            medicineName: "Amoxicillin",
+            time: "08:00"
+          }
+        });
+      });
+
+      // Amoxicillin in sampleMedicines has dosagePerDose: 2, unit: "tablets", frequencyPerDay: 3
+      expect(mockAddReminder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          medicineName: "Amoxicillin",
+          dose: "2 tablets",
+          time: "08:00,16:00,00:00",
+          repeatSchedule: "custom"
+        })
+      );
+    });
   });
 
   describe("4. normalizeAIAction Schema Conversion", () => {
@@ -609,4 +704,40 @@ describe("DawaGPT Full-System Agentic Actions Suite", () => {
       expect(normalized).toEqual(standardAction);
     });
   });
+
+  describe("5. Strict Reminder Request Gatekeeping (Only add when user asks)", () => {
+    it("recognizes explicit reminder requests", () => {
+      expect(userRequestedReminder("Remind me to take Panadol")).toBe(true);
+      expect(userRequestedReminder("Set a reminder for Coartem at 8am")).toBe(true);
+      expect(userRequestedReminder("I need a reminder for Amoxicillin")).toBe(true);
+      expect(userRequestedReminder("Create a reminder for Metformin")).toBe(true);
+      expect(userRequestedReminder("Schedule a reminder for my pills")).toBe(true);
+      expect(userRequestedReminder("Set an alarm for Panadol at 8pm")).toBe(true);
+      expect(userRequestedReminder("Alarm for Coartem at 10am")).toBe(true);
+    });
+
+    it("rejects non-reminder queries and informational questions", () => {
+      expect(userRequestedReminder("Coartem side effects")).toBe(false);
+      expect(userRequestedReminder("Delete that reminder")).toBe(false);
+      expect(userRequestedReminder("Can I take Panadol with Coartem?")).toBe(false);
+      expect(userRequestedReminder("What are my reminders?")).toBe(false);
+      expect(userRequestedReminder("Show my medications")).toBe(false);
+      expect(userRequestedReminder("Add Metformin 500mg 1 tablet to my cabinet")).toBe(false);
+      expect(userRequestedReminder("I have a headache")).toBe(false);
+      expect(userRequestedReminder("Thank you")).toBe(false);
+    });
+
+    it("does NOT attach companion reminder when adding medicine without explicit time", () => {
+      const action = extractDeterministicAction("Add Metformin 500mg 1 tablet to my cabinet", sampleMedicines, sampleReminders, samplePatients);
+      expect(action).not.toBeNull();
+      expect(action?.type).toBe("ADD_MEDICINE");
+      expect((action?.payload as any)?.reminderSchedule).toBeUndefined();
+    });
+
+    it("does NOT extract ADD_REMINDER when user only asks about medication details", () => {
+      expect(extractDeterministicAction("Coartem 20/120mg dosage", sampleMedicines, sampleReminders, samplePatients)).toBeNull();
+      expect(extractDeterministicAction("How do I take Amoxicillin?", sampleMedicines, sampleReminders, samplePatients)).toBeNull();
+    });
+  });
 });
+

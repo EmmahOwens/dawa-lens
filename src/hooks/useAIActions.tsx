@@ -1,6 +1,6 @@
 import { useApp, Medicine, Patient, Reminder } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
-import { AIAction, normalizeAIAction } from "@/services/aiAssistantService";
+import { AIAction, normalizeAIAction, distributeTimes } from "@/services/aiAssistantService";
 import { RiveMoji } from "@/components/rive/RiveMoji";
 import { useNavigate } from "react-router-dom";
 import React from "react";
@@ -290,17 +290,34 @@ export function useAIActions() {
           let medicineId = payload.medicineId;
           let color = payload.color;
           let icon = payload.icon;
+          const matchedMed = findMedicine(medicineId, payload.medicineName);
 
-          if (!medicineId && payload.medicineName) {
-            const match = findMedicine(undefined, payload.medicineName);
-            if (match) {
-              medicineId = match.id;
-              if (!color) color = match.color;
-              if (!icon) icon = match.icon;
-            }
+          if (matchedMed) {
+            medicineId = matchedMed.id;
+            if (!color) color = matchedMed.color;
+            if (!icon) icon = matchedMed.icon;
           }
 
-          const normalizedTime = payload.time ? normalizeTimeStr(payload.time) : "08:00";
+          // Follow dose amount defined in Medications & Med Vault if payload dose is generic or missing
+          let resolvedDose = payload.dose;
+          if (matchedMed) {
+            const definedDose = matchedMed.dosagePerDose
+              ? `${matchedMed.dosagePerDose} ${matchedMed.unit || "tablets"}`
+              : (matchedMed.dosage || undefined);
+            if (!resolvedDose || resolvedDose === "1 dose" || (resolvedDose === "1 tablet" && matchedMed.dosagePerDose && matchedMed.dosagePerDose > 1)) {
+              resolvedDose = definedDose || resolvedDose || "1 tablet";
+            }
+          }
+          if (!resolvedDose) {
+            resolvedDose = "1 tablet";
+          }
+
+          let normalizedTime = payload.time ? normalizeTimeStr(payload.time) : "08:00";
+          // If medication defines a daily frequency (>1) and incoming payload only has 1 time slot, distribute times
+          if (matchedMed && matchedMed.frequencyPerDay && matchedMed.frequencyPerDay > 1 && !normalizedTime.includes(",")) {
+            normalizedTime = distributeTimes(normalizedTime, matchedMed.frequencyPerDay).join(",");
+          }
+
           let repeatSchedule = payload.repeatSchedule;
 
           if (typeof repeatSchedule === "string") {
@@ -330,7 +347,7 @@ export function useAIActions() {
           await addReminder({
             medicineId: medicineId || undefined,
             medicineName: payload.medicineName,
-            dose: payload.dose || "1 dose",
+            dose: resolvedDose,
             time: normalizedTime,
             repeatSchedule: repeatSchedule,
             repeatDays: payload.repeatDays || undefined,
@@ -343,7 +360,7 @@ export function useAIActions() {
           });
           toast({
             title: <span className="flex items-center gap-2"><RiveMoji emoji="✅" size={16} /> Reminder added</span>,
-            description: action.confirmMessage || `Scheduled ${payload.medicineName} for ${normalizedTime}.`,
+            description: action.confirmMessage || `Scheduled ${payload.medicineName} (${resolvedDose}) for ${normalizedTime}.`,
           });
           break;
         }

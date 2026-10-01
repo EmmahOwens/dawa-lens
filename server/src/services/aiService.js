@@ -1887,10 +1887,20 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
         result.text = enforceGenderHonorifics(clean || result.text, activeGender, activeName);
       }
       result.action = normalizeAIAction(result.action);
+      if (result.action && result.action.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
+        console.warn("[aiService] Suppressed unsolicited ADD_REMINDER action because user did not ask for a reminder");
+        result.action = null;
+      }
       if (!result.action) {
         let fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
+        if (fallbackAction && fallbackAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
+          fallbackAction = null;
+        }
         if (!fallbackAction && result.text) {
           fallbackAction = extractDeterministicAction(result.text, medicines || [], reminders || [], patients || [], messages || []);
+          if (fallbackAction && fallbackAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
+            fallbackAction = null;
+          }
         }
         if (fallbackAction) {
           result.action = normalizeAIAction(fallbackAction);
@@ -2110,41 +2120,102 @@ export const normalizeAIAction = (rawAction) => {
   return normalized;
 };
 
+/**
+ * Strict verification that the user explicitly asked to add or schedule a reminder.
+ * A reminder MUST ONLY be created if the user directly asked for one,
+ * or if they are in an active multi-turn flow replying to a reminder time prompt they initiated.
+ */
+export const userRequestedReminder = (text, history = []) => {
+  if (!text || typeof text !== "string") return false;
+  const lower = text.toLowerCase().trim();
+
+  // 1. If user is explicitly deleting/removing/pausing a reminder, they are NOT asking to add one
+  if (/\b(?:delete|remove|cancel|stop|pause|mute|disable|turn off|clear)\b/i.test(lower)) {
+    return false;
+  }
+
+  // 2. If user is asking medical questions or side effects or inquiries without explicit reminder request
+  const isMedOrInquiry = /\b(side effects?|adverse effects?|can i take|should i take|is it safe|interact|interaction|what is|what are|how much|tell me about|show me|list|view|check)\b/i.test(lower);
+
+  // 3. Direct explicit phrases in the user prompt asking to add/set a reminder or alarm
+  const explicitAddReminderRegex = /\b(?:remind(?:\s+me)?(?:\s+to\s+take|\s+about)?|(?:set(?:\s*up)?|add|create|schedule|make|give\s+me|put|need|want)(?:\s+a)?\s+reminder|alarm\s+for|set\s+(?:an?\s+)?alarm|new\s+reminder|reminder\s+for|reminder\s+schedule)\b/i;
+
+  if (explicitAddReminderRegex.test(lower) && !isMedOrInquiry) {
+    return true;
+  }
+
+  // 4. Active multi-turn flow: User previously asked for a reminder in this conversation,
+  // assistant asked for the starting time/dosage, and user is now answering with that time/parameter
+  if (Array.isArray(history) && history.length >= 1) {
+    const isAssistant = (m) => m && (m.role === "assistant" || m.sender === "dawagpt" || m.sender === "assistant");
+    const isUser = (m) => m && (m.role === "user" || m.sender === "user");
+    const getMsgText = (m) => String(m.text || m.content || "").toLowerCase();
+
+    const prevAssistant = [...history].reverse().find(isAssistant);
+    if (prevAssistant) {
+      const prevAssistantText = getMsgText(prevAssistant);
+      const asksForReminderTime = /\b(what time.*(?:first dose|take|start|reminder)|starting time|when would you like to take|what time would you like to take)\b/i.test(prevAssistantText);
+      const isTimeAnswer = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d{1,2}:\d{2})\b/i.test(lower);
+
+      if (asksForReminderTime && isTimeAnswer && !isMedOrInquiry) {
+        // Confirm that the user initiated a reminder request earlier in this thread
+        const userInitiatedReminder = history.some(m => isUser(m) && explicitAddReminderRegex.test(getMsgText(m)));
+        if (userInitiatedReminder) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+};
+
 export const extractDeterministicAction = (text, medicines = [], reminders = [], patients = [], history = []) => {
   if (!text) return null;
   const lower = text.toLowerCase().trim();
 
-  // Multi-turn synthesis if text is short (<100 chars) and answering a previous assistant prompt
+  // 1. Guard against medical, safety, side-effects, or informational questions
+  // These are clinical questions meant for LLM reasoning, NOT agentic action executions!
+  const isMedQuestion =
+    /\b(can i take|should i take|is it safe|interact|interaction|safe to|together|can i use|should i use|side effects?|adverse effects?|what is|what are|tell me about|how do i take|dosage of|how much|when should i take|info on|details about|benefits of)\b/i.test(lower) ||
+    isSameTaskOrDuplicateQuery(lower, medicines);
+
+  if (isMedQuestion) {
+    return null;
+  }
+
+  // 2. Guard against pure inquiries that do not contain action verbs
+  // e.g. "What are my reminders?", "Show my medications", "List my pills", "Do I have any alarms?"
+  const isActionCommand = /\b(add|create|delete|remove|refill|restock|schedule|log|record|update|change|reschedule|pause|resume|undo|revert|snooze|switch)\b/i.test(lower);
+  const isQuestionOrInquiry = /^(what|which|how|tell me|show me|list|check|view|display|can you tell|do i have|are there|when is|when are)\b/i.test(lower);
+  if (isQuestionOrInquiry && !isActionCommand) {
+    return null;
+  }
+
+  // 3. Multi-turn synthesis: ONLY when user is answering an assistant's question about an action parameter
   let effectiveText = lower;
+  let isAnsweringTimePrompt = false;
+
   if (Array.isArray(history) && history.length >= 1) {
     const isAssistant = (m) => m && (m.role === "assistant" || m.sender === "dawagpt" || m.sender === "assistant");
-    const isUser = (m) => m && (m.role === "user" || m.sender === "user");
     const getMsgText = (m) => String(m.text || m.content || "").trim();
 
     const prevAssistant = [...history].reverse().find(isAssistant);
-    const userMsgs = history.filter(isUser);
+    if (prevAssistant) {
+      // Strip markdown links and brackets to avoid pulling in footer URLs like [Medication Reminders](/reminders)
+      const cleanPrevAssistant = getMsgText(prevAssistant)
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .toLowerCase();
 
-    let originalUser = null;
-    if (userMsgs.length > 0) {
-      const lastUserMsg = userMsgs[userMsgs.length - 1];
-      if (getMsgText(lastUserMsg).toLowerCase() === lower && userMsgs.length >= 2) {
-        originalUser = userMsgs[userMsgs.length - 2];
-      } else {
-        originalUser = lastUserMsg;
+      const asksForTime = /\b(what time|starting time|first dose|when would you like to take|what time would you like to take)\b/i.test(cleanPrevAssistant);
+      const isTimeAnswer = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d{1,2}:\d{2})\b/i.test(lower);
+
+      if (asksForTime && isTimeAnswer && !isMedQuestion) {
+        isAnsweringTimePrompt = true;
+        effectiveText = `${cleanPrevAssistant} ${lower}`.trim();
       }
     }
-
-    if (prevAssistant && originalUser) {
-      effectiveText = `${getMsgText(originalUser)} ${getMsgText(prevAssistant)} ${lower}`.toLowerCase().trim();
-    } else if (prevAssistant) {
-      effectiveText = `${getMsgText(prevAssistant)} ${lower}`.toLowerCase().trim();
-    } else if (originalUser) {
-      effectiveText = `${getMsgText(originalUser)} ${lower}`.toLowerCase().trim();
-    }
   }
-
-  // Guard: if it's purely an informational/safety question, do not misroute to actions
-  const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use|side effects?|what is|tell me about)\b/i.test(effectiveText) || isSameTaskOrDuplicateQuery(effectiveText, medicines);
 
   // 1. UNDO_DOSE_LOG
   const isUndoDose = /\b(undo(\s+my)?(\s+last)?\s+(dose|log|record)|revert(\s+my)?\s+dose|cancel(\s+my)?(\s+last)?\s+dose|i didn't take|didn't take my dose|made a mistake.*take)\b/i.test(lower);
@@ -2201,21 +2272,47 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
   }
 
   // 5. REMOVE_REMINDER
-  const removeRemMatch = lower.match(/\b(?:delete|remove|cancel|stop)\s+(?:my\s+)?(?:reminder|alarm)\s*(?:for\s+([a-z0-9-]+))?\b/i) ||
-                         lower.match(/\bstop\s+reminding\s+me\s+(?:about|for|to\s+take)\s+([a-z0-9-]+)\b/i);
+  const removeRemMatch =
+    lower.match(/\b(?:delete|remove|cancel|stop)\s+(?:(?:my|the|that|this)\s+)?(?:(?:medication\s+|medicine\s+)?(?:reminders?|alarms?))\s*(?:for\s+([a-z0-9-]+))?\b/i) ||
+    lower.match(/\b(?:delete|remove|cancel)\s+([a-z0-9-]+)\s+(?:reminder|alarm)\b/i) ||
+    lower.match(/\bstop\s+reminding\s+me\s+(?:about|for|to\s+take)\s+([a-z0-9-]+)\b/i);
+
   if (removeRemMatch) {
-    const medQuery = (removeRemMatch[1] || "").trim();
-    let matchedReminder = reminders.find(r => medQuery && r.medicineName.toLowerCase().includes(medQuery.toLowerCase()));
+    let medQuery = (removeRemMatch[1] || "").trim();
+    if (!medQuery && Array.isArray(history) && history.length > 0) {
+      // Check if previous assistant message mentioned a medicine or reminder
+      const prevAssistant = [...history].reverse().find(m => m && (m.role === "assistant" || m.sender === "dawagpt" || m.sender === "assistant"));
+      const prevRaw = String(prevAssistant?.text || prevAssistant?.content || "");
+      const prevText = prevRaw.toLowerCase();
+      const mentionedMed = medicines.find(m => m.name && prevText.includes(m.name.toLowerCase())) ||
+                           reminders.find(r => r.medicineName && prevText.includes(r.medicineName.toLowerCase()));
+      if (mentionedMed) {
+        medQuery = mentionedMed.name || mentionedMed.medicineName;
+      } else {
+        const boldMatch = prevRaw.match(/\*\*(?:take\s+)?([A-Za-z0-9-]+)\*\*/i) ||
+                          prevRaw.match(/\b(?:reminder\s+(?:for|to\s+take)|to\s+take)\s+\*?\*?([A-Za-z0-9-]+)\*?\*?/i);
+        if (boldMatch && !["you", "your", "the", "a", "all"].includes(boldMatch[1].toLowerCase())) {
+          medQuery = boldMatch[1];
+        }
+      }
+    }
+
+    let matchedReminder = medQuery
+      ? reminders.find(r => r.medicineName && r.medicineName.toLowerCase().includes(medQuery.toLowerCase()))
+      : (reminders.length === 1 ? reminders[0] : null);
+
     if (!matchedReminder && medQuery) {
       matchedReminder = reminders.find(r => r.medicineName.toLowerCase() === medQuery.toLowerCase());
     }
+
+    const medName = matchedReminder?.medicineName || medQuery || "the medication";
     return {
       type: "REMOVE_REMINDER",
       payload: {
         id: matchedReminder?.id || null,
-        medicineName: matchedReminder?.medicineName || medQuery || "Medication"
+        medicineName: medName
       },
-      confirmMessage: `Removed reminder for ${matchedReminder?.medicineName || medQuery || "the medication"}.`
+      confirmMessage: `Removed reminder for ${medName}.`
     };
   }
 
@@ -2338,16 +2435,31 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
     };
   }
 
-  // 12. ADD_REMINDER
-  const isReminderIntent = /\b(remind(\s+me)?|set(\s*up)?(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for|reminder\s+schedule|medication\s+reminder|reminders?\b)/i.test(effectiveText);
+  // 12. ADD_REMINDER - STRICT: Only execute when the user explicitly asked for a reminder!
+  const isReminderIntent = userRequestedReminder(lower, history);
+
   if (isReminderIntent) {
-    const timeMatch = lower.match(/\b(?:at\s+|start\s+at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i) ||
-                      effectiveText.match(/\b(?:at\s+|start\s+at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
+    // Strict time pattern detection to prevent numbers like "2 tablets", "500mg", "3 times" from being parsed as hours
     let explicitTime = null;
-    if (timeMatch && (timeMatch[3] || lower.includes("at ") || effectiveText.includes("at ") || timeMatch[2])) {
-      let hours = parseInt(timeMatch[1], 10);
-      const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-      const meridiem = timeMatch[3]?.toLowerCase();
+
+    // Pattern 1: Explicit 12-hour time with am/pm (e.g., "8am", "8:30pm", "8 am", "11:00 PM")
+    const ampmMatch = lower.match(/\b(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b/i) ||
+                      (isAnsweringTimePrompt ? effectiveText.match(/\b(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b/i) : null);
+    // Pattern 2: 24-hour clock or colon time (e.g., "08:00", "17:00", "20:30")
+    const colonMatch = lower.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/) ||
+                       (isAnsweringTimePrompt ? effectiveText.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/) : null);
+    // Pattern 3: Standalone "at <hour>" or "start at <hour>" (e.g., "at 8", "start at 17", "at 9 o'clock")
+    const atHourMatch = lower.match(/\b(?:start(?:ing)?\s+at|\bat)\s+([01]?\d|2[0-3])(?::([0-5]\d))?\s*(am|pm)?\b/i) ||
+                        (isAnsweringTimePrompt ? effectiveText.match(/\b(?:start(?:ing)?\s+at|\bat)\s+([01]?\d|2[0-3])(?::([0-5]\d))?\s*(am|pm)?\b/i) : null);
+    // Pattern 4: "<hour> o'clock" (e.g., "8 o'clock")
+    const oclockMatch = lower.match(/\b([01]?\d|2[0-3])\s*o'?clock\s*(am|pm)?\b/i) ||
+                        (isAnsweringTimePrompt ? effectiveText.match(/\b([01]?\d|2[0-3])\s*o'?clock\s*(am|pm)?\b/i) : null);
+
+    const activeMatch = ampmMatch || colonMatch || atHourMatch || oclockMatch;
+    if (activeMatch) {
+      let hours = parseInt(activeMatch[1], 10);
+      const minutes = activeMatch[2] ? parseInt(activeMatch[2], 10) : 0;
+      const meridiem = (activeMatch[3] || (activeMatch[0].match(/am|pm/i)?.[0]))?.toLowerCase();
 
       if (meridiem === 'pm' && hours < 12) hours += 12;
       if (meridiem === 'am' && hours === 12) hours = 0;
@@ -2361,7 +2473,7 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
       .filter(m => (m.name && lower.includes(m.name.toLowerCase())) || (m.genericName && lower.includes(m.genericName.toLowerCase())))
       .sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0))[0];
 
-    if (!matchedMed) {
+    if (!matchedMed && isAnsweringTimePrompt) {
       matchedMed = medicines
         .filter(m => (m.name && effectiveText.includes(m.name.toLowerCase())) || (m.genericName && effectiveText.includes(m.genericName.toLowerCase())))
         .sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0))[0];
@@ -2374,33 +2486,35 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
         return null;
       }
 
-      // Read dosage from user prompt or effectiveText or Med Vault / Medications
-      const doseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?))\b/i) ||
-                        effectiveText.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?))\b/i);
-      const dose = doseMatch ? doseMatch[1] : (
+      // Read dosage: User's explicit prompt dosage overrides, otherwise strictly follow Med Vault / Medications
+      const userDoseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|mcg|tablets?|pills?|capsules?|drops?|puffs?))\b/i);
+      const dose = userDoseMatch ? userDoseMatch[1] : (
         matchedMed.dosagePerDose
           ? `${matchedMed.dosagePerDose} ${matchedMed.unit || 'tablets'}`
           : (matchedMed.dosage || "1 tablet")
       );
 
-      // Read daily frequency from user prompt or effectiveText or Med Vault / Medications
+      // Read daily frequency: User's explicit frequency overrides, then assistant prompt / history context if answering prompt, otherwise strictly follow Med Vault / Medications
       let freq = matchedMed.frequencyPerDay && matchedMed.frequencyPerDay > 0 ? matchedMed.frequencyPerDay : 1;
       let repeatSchedule = freq > 1 ? "custom" : "daily";
 
-      const freqSource = lower.includes("twice") || lower.includes("thrice") || lower.includes("times") ? lower : effectiveText;
-      if (freqSource.includes("weekly")) {
+      const freqSourceText = lower.includes("twice") || lower.includes("thrice") || lower.includes("times") || lower.includes("once") || lower.includes("weekly")
+        ? lower
+        : (isAnsweringTimePrompt ? effectiveText.toLowerCase() : lower);
+
+      if (freqSourceText.includes("weekly")) {
         repeatSchedule = "weekly";
         freq = 1;
-      } else if (freqSource.includes("once")) {
+      } else if (freqSourceText.includes("once")) {
         repeatSchedule = "once";
         freq = 1;
-      } else if (freqSource.includes("twice") || freqSource.includes("2 times") || freqSource.includes("2x") || freqSource.includes("two times")) {
+      } else if (freqSourceText.includes("twice") || freqSourceText.includes("2 times") || freqSourceText.includes("2x") || freqSourceText.includes("two times")) {
         freq = 2;
         repeatSchedule = "custom";
-      } else if (freqSource.includes("three times") || freqSource.includes("thrice") || freqSource.includes("3 times") || freqSource.includes("3x")) {
+      } else if (freqSourceText.includes("three times") || freqSourceText.includes("thrice") || freqSourceText.includes("3 times") || freqSourceText.includes("3x")) {
         freq = 3;
         repeatSchedule = "custom";
-      } else if (freqSource.includes("four times") || freqSource.includes("4 times") || freqSource.includes("4x")) {
+      } else if (freqSourceText.includes("four times") || freqSourceText.includes("4 times") || freqSourceText.includes("4x")) {
         freq = 4;
         repeatSchedule = "custom";
       }
@@ -2527,11 +2641,15 @@ export const extractDeterministicAction = (text, medicines = [], reminders = [],
     const totalQuantity = qtyMatch ? parseInt(qtyMatch[1], 10) : 30;
 
     let time = null;
-    const timeMatch = lower.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
-    if (timeMatch) {
-      let hours = parseInt(timeMatch[1], 10);
-      const minutes = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-      const meridiem = timeMatch[3]?.toLowerCase();
+    const explicitTimeMatch =
+      lower.match(/\b(?:remind(?:\s+me)?\s+at|\bat)\s+(1[0-2]|0?[1-9]|2[0-3])(?::([0-5]\d))?\s*(am|pm)?\b/i) ||
+      lower.match(/\b(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b/i) ||
+      lower.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+
+    if (explicitTimeMatch) {
+      let hours = parseInt(explicitTimeMatch[1], 10);
+      const minutes = explicitTimeMatch[2] ? parseInt(explicitTimeMatch[2], 10) : 0;
+      const meridiem = (explicitTimeMatch[3] || explicitTimeMatch[0].match(/am|pm/i)?.[0])?.toLowerCase();
       if (meridiem === 'pm' && hours < 12) hours += 12;
       if (meridiem === 'am' && hours === 12) hours = 0;
       if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
@@ -2873,7 +2991,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
   }
 
   // 2.5 Handle Reminder Intent when no action was generated (clarification needed)
-  const isReminderIntent = /\b(remind(\s+me)?|set(\s+a)?\s+reminder|add(\s+a)?\s+reminder|schedule(\s+a)?\s+reminder|create(\s+a)?\s+reminder|alarm\s+for)\b/i.test(norm);
+  const isReminderIntent = userRequestedReminder(norm, messages);
   if (isReminderIntent) {
     const matchedMed = (medicines || [])
       .filter(m => (m.name && norm.includes(m.name.toLowerCase())) || (m.genericName && norm.includes(m.genericName.toLowerCase())))
@@ -3140,10 +3258,20 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
           cleanText = enforceGenderHonorifics(cleanText, activeGender, activeName);
 
           let candidateAction = normalizeAIAction(jsonResp.action);
+          if (candidateAction && candidateAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
+            console.warn("[aiService] Suppressed unsolicited streaming ADD_REMINDER action because user did not ask for a reminder");
+            candidateAction = null;
+          }
           if (!candidateAction) {
             let fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
+            if (fallbackAction && fallbackAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
+              fallbackAction = null;
+            }
             if (!fallbackAction && cleanText) {
               fallbackAction = extractDeterministicAction(cleanText, medicines || [], reminders || [], patients || [], messages || []);
+              if (fallbackAction && fallbackAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
+                fallbackAction = null;
+              }
             }
             if (fallbackAction) {
               candidateAction = normalizeAIAction(fallbackAction);
@@ -3846,6 +3974,12 @@ ${getFoodKnowledgePrompt()}
   2. NEVER LIE / CRITICAL ACTION RULE: If your response text uses past tense confirmation ("I've added", "I have logged", "I've set up", "I have updated", "Refilled", "Recorded", "Done!"), you MUST include the populated 'action' JSON object in your response. If you cannot produce the action object or information is missing, you MUST NOT use past tense — ask for the missing details in the present tense instead.
   3. FIRST ATTEMPT SUCCESS: Execute on first request without asking for confirmation if basic parameters are provided.
   4. EMIT ACTIONS ON MULTI-TURN CONFIRMATION: When the user supplies the starting time, dosage, or parameter that you previously asked for (e.g. user says "at 17:00" or "start at 5pm"), you MUST immediately emit the complete 'action' object (e.g. ADD_REMINDER) with the configured parameters. Do not just verbally acknowledge without the action!
+  5. ABSOLUTE RULE: ONLY ADD A REMINDER WHEN THE USER EXPLICITLY ASKS FOR ONE:
+     - DO NOT add, create, or schedule a reminder unless the user explicitly requested a reminder (e.g. "remind me", "set a reminder", "schedule reminder", "alarm for", "need a reminder") OR is answering your direct question about their reminder starting time.
+     - NEVER volunteer or set up reminders unsolicited. If the user did not say "remind me" or ask for a reminder, DO NOT schedule a reminder and DO NOT emit an ADD_REMINDER action.
+     - When the user asks general medical, safety, side-effect, usage, or drug interaction questions (e.g. "Coartem side effects", "Can I take Panadol?", "What is Metformin?"), you MUST provide clinical guidance and DO NOT emit any ADD_REMINDER action!
+     - When the user asks to delete or remove a reminder (e.g. "Delete that reminder", "Cancel reminder"), emit REMOVE_REMINDER, NEVER ADD_REMINDER!
+     - When adding a reminder for any medication in the user's Med Vault or active medications, you MUST follow its exact dose amount (dosagePerDose + unit) and daily frequency (frequencyPerDay) defined in Med Vault / Medications.
 - ACTION SCHEMAS:
   * STRUCTURE: Every action MUST be an object with "type" and "payload": { "type": "<ACTION_NAME>", "payload": { ... } }.
   * ADD_MEDICINE: { "type": "ADD_MEDICINE", "payload": { name, genericName?, dosage, unit?, notes?, totalQuantity?, currentQuantity?, dosagePerDose?, frequencyPerDay?, patientId?, patientName? } }

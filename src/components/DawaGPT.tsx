@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
-import { ChatMessage, chatWithDawaGPTStream, resolveHonorific, extractDeterministicAction, normalizeAIAction } from "@/services/aiAssistantService";
+import { ChatMessage, chatWithDawaGPTStream, resolveHonorific, extractDeterministicAction, normalizeAIAction, userRequestedReminder } from "@/services/aiAssistantService";
 import { useAIActions } from "@/hooks/useAIActions";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { calculateVitalitySummary } from "@/lib/vitalityUtils";
@@ -534,20 +534,29 @@ export default function DawaGPT() {
       ));
 
       const normalizedAction = normalizeAIAction(response.action);
+      let effectiveAction = normalizedAction;
+      if (effectiveAction?.type === "ADD_REMINDER" && !userRequestedReminder(text, history)) {
+        console.warn("[DawaGPT] Discarding unsolicited ADD_REMINDER action because user did not ask for a reminder");
+        effectiveAction = null;
+      }
+
       const isPastTenseClaim = response.text &&
         /\b(i've|i have|done|added|logged|set up|created|updated|removed|deleted|scheduled|recorded|saved|refilled|discontinued)\b/i.test(response.text);
 
-      let effectiveAction = normalizedAction;
       if (!effectiveAction) {
         const fromUserText = extractDeterministicAction(text, allMedicines, allReminders, patients, [...history, userMsg]);
         if (fromUserText) {
-          effectiveAction = normalizeAIAction(fromUserText);
+          if (fromUserText.type !== "ADD_REMINDER" || userRequestedReminder(text, history)) {
+            effectiveAction = normalizeAIAction(fromUserText);
+          }
         }
       }
-      if (!effectiveAction && response.text) {
+      if (!effectiveAction && response.text && isPastTenseClaim && !/\b(side effects?|what is|what are|can i take|should i take|how do i|interact)\b/i.test(text)) {
         const fromAiText = extractDeterministicAction(response.text, allMedicines, allReminders, patients, [...history, userMsg]);
         if (fromAiText) {
-          effectiveAction = normalizeAIAction(fromAiText);
+          if (fromAiText.type !== "ADD_REMINDER" || userRequestedReminder(text, history)) {
+            effectiveAction = normalizeAIAction(fromAiText);
+          }
         }
       }
 
