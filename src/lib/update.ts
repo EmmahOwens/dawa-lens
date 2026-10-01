@@ -37,6 +37,11 @@ export interface UpdateInfo {
 }
 
 export const fetchLatestRelease = async (): Promise<UpdateInfo | null> => {
+  // Only native Android checks for APK updates. Web (e.g. Vercel) updates via web deployments.
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+    return null;
+  }
+
   try {
     const REPO = "EmmahOwens/dawa-lens";
     const GITHUB_API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;

@@ -206,6 +206,12 @@ const App = () => {
     deferToIdle(preloadOCRModel);
 
     const checkForUpdate = async () => {
+      // In-app APK updates are strictly for the native Android app.
+      // Web environments (e.g. Vercel) update automatically on deployment.
+      if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") {
+        return;
+      }
+
       try {
         const updateInfo = await fetchLatestRelease();
         if (!updateInfo) return;
@@ -231,7 +237,9 @@ const App = () => {
     // start so the first real request — e.g. a pill scan — is not abandoned.
     deferToIdle(() => {
       if (hasNetwork()) {
-        checkForUpdate();
+        if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+          checkForUpdate();
+        }
         warmUpApi();
       }
     });
@@ -293,7 +301,7 @@ const App = () => {
                 <ErrorBoundary name="DawaGPT">
                   <DawaGPT />
                 </ErrorBoundary>
-                {showUpdateModal && (
+                {showUpdateModal && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && (
                   <StoreUpdateModal
                     currentVersion={CURRENT_VERSION}
                     newVersion={updateData.newVersion}

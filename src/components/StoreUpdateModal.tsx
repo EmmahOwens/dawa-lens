@@ -21,6 +21,11 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
   const [errorMessage, setErrorMessage] = useState('');
   const listenerRef = useRef<{ remove: () => Promise<void> } | null>(null);
 
+  // In-app update overlay is only for native Android APK releases; never render on web or non-Android
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+    return null;
+  }
+
   // Clean up listener on unmount
   useEffect(() => {
     return () => {
