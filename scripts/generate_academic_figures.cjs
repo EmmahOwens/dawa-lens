@@ -654,19 +654,6 @@ function generateUseCaseDiagramSvg() {
     <!-- Pharmacist Associations -->
     <line x1="${phX - 22}" y1="${phY - 15}" x2="${col2X + rx}" y2="470" stroke="#000000" stroke-width="1.0" />
     <line x1="${phX - 22}" y1="${phY + 15}" x2="${col2X + rx}" y2="545" stroke="#000000" stroke-width="1.0" />
-
-    <!-- ================= INCLUDE / EXTEND RELATIONSHIPS ================= -->
-    <!-- UC1 -> UC2 <<include>> -->
-    <line x1="${col1X}" y1="117" x2="${col1X}" y2="141" stroke="#000000" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#uc-arrow)" />
-    <text x="${col1X + 8}" y="132" class="rel-text">&lt;&lt;include&gt;&gt;</text>
-
-    <!-- UC7 -> UC9 <<include>> -->
-    <path d="M ${col1X + rx - 10} 498 C ${col1X + rx + 30} 538, ${col1X + rx + 30} 570, ${col1X + rx - 10} 606" fill="none" stroke="#000000" stroke-width="0.9" stroke-dasharray="4,3" marker-end="url(#uc-arrow)" />
-    <text x="${col1X + rx + 34}" y="555" class="rel-text">&lt;&lt;include&gt;&gt;</text>
-
-    <!-- UC11 -> UC12 <<include>> (Searching pharmacies includes premise verification) -->
-    <line x1="${col2X}" y1="489" x2="${col2X}" y2="526" stroke="#000000" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#uc-arrow)" />
-    <text x="${col2X + 8}" y="511" class="rel-text">&lt;&lt;include&gt;&gt;</text>
   `;
 
   svg += `</svg>`;
