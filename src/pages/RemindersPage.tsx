@@ -19,6 +19,8 @@ import {
   UserRound,
   RefreshCw,
   WifiOff,
+  MoreVertical,
+  ChevronDown,
 } from "@/lib/icons";
 import { useApp, Reminder } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
@@ -36,6 +38,13 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { DailyTimeline, todayAt, getCircularDiffMinutes } from "@/components/dashboard/DailyTimeline";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -142,6 +151,7 @@ export default function RemindersPage() {
   const { t } = useTranslation();
   const { 
     updateReminder, deleteReminder, isInitializing, pendingOfflineOps, logDose,
+    patients, selectedPatientId, setSelectedPatientId,
   } = useApp();
 
   const { resolvedPatient, scopedReminders, scopedDoseLogs } =
@@ -270,23 +280,74 @@ export default function RemindersPage() {
         </motion.button>
       </motion.div>
 
-      {/* Active Profile Chip */}
-      <motion.div
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.03 }}
-        className="flex items-center gap-2 mb-5 px-4 py-2.5 rounded-2xl bg-secondary/60 border border-border/40 w-fit"
-      >
-        <UserRound size={13} className="text-primary flex-shrink-0" />
-        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-          Viewing:
-        </span>
-        <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
-          {resolvedPatient.isOwner
-            ? `${resolvedPatient.name} (You)`
-            : resolvedPatient.name}
-        </span>
-      </motion.div>
+      {/* Active Profile Switcher Dropdown */}
+      {patients.length > 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+          className="mb-5"
+        >
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-secondary/70 hover:bg-secondary border border-border/50 transition-all text-left shadow-xs group"
+              >
+                <UserRound size={13} className="text-primary flex-shrink-0" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                  Viewing:
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-foreground group-hover:text-primary transition-colors">
+                  {resolvedPatient.isOwner
+                    ? `${resolvedPatient.name} (You)`
+                    : resolvedPatient.name}
+                </span>
+                <ChevronDown size={12} className="text-muted-foreground opacity-60 ml-0.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="rounded-2xl p-1.5 min-w-[200px] shadow-xl border-border/40">
+              <DropdownMenuItem
+                onClick={() => setSelectedPatientId(null)}
+                className={`rounded-xl px-3 py-2 text-xs font-bold cursor-pointer ${
+                  selectedPatientId === null ? "bg-primary/10 text-primary" : ""
+                }`}
+              >
+                <UserRound size={14} className="mr-2" />
+                Self (You)
+              </DropdownMenuItem>
+              {patients.map((p) => (
+                <DropdownMenuItem
+                  key={p.id}
+                  onClick={() => setSelectedPatientId(p.id)}
+                  className={`rounded-xl px-3 py-2 text-xs font-bold cursor-pointer ${
+                    selectedPatientId === p.id ? "bg-primary/10 text-primary" : ""
+                  }`}
+                >
+                  <UserRound size={14} className="mr-2 opacity-60" />
+                  {p.name} {p.relation ? `(${p.relation})` : ""}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+          className="flex items-center gap-2 mb-5 px-4 py-2.5 rounded-2xl bg-secondary/60 border border-border/40 w-fit"
+        >
+          <UserRound size={13} className="text-primary flex-shrink-0" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+            Viewing:
+          </span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-foreground">
+            {resolvedPatient.isOwner
+              ? `${resolvedPatient.name} (You)`
+              : resolvedPatient.name}
+          </span>
+        </motion.div>
+      )}
 
       {/* Offline Banner */}
       <AnimatePresence>
@@ -357,7 +418,7 @@ export default function RemindersPage() {
           </p>
         </div>
         <div
-          className={`p-3 rounded-2xl text-center ${
+          className={`col-span-2 sm:col-span-1 p-3 rounded-2xl text-center flex sm:flex-col items-center justify-between sm:justify-center px-4 sm:px-3 ${
             missedToday > 0
               ? "bg-destructive/8 border border-destructive/20"
               : "bg-accent border border-border/50"
@@ -370,7 +431,7 @@ export default function RemindersPage() {
           >
             {missedToday}
           </p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-0 sm:mt-1">
             Missed
           </p>
         </div>
@@ -667,7 +728,7 @@ export default function RemindersPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     {/* Toggle */}
                     <button
                       onClick={() => handleToggle(reminder)}
@@ -688,43 +749,59 @@ export default function RemindersPage() {
                       )}
                     </button>
 
-                    <div className="flex gap-1.5">
-                      {/* Edit */}
-                      <button
-                        onClick={() =>
-                          navigate("/reminders/new", {
-                            state: {
-                              editId: reminder.id,
-                              medicineId: reminder.medicineId,
-                              medicineName: reminder.medicineName,
-                              dose: reminder.dose,
-                              time: reminder.time,
-                              repeat: reminder.repeatSchedule,
-                              repeatDays: reminder.repeatDays,
-                              notes: reminder.notes,
-                              enabled: reminder.enabled,
-                              color: reminder.color,
-                              icon: reminder.icon,
-                              patientId: reminder.patientId ?? null,
-                              patientName: reminder.patientName ?? null,
-                            },
-                          })
-                        }
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                        title="Edit reminder"
-                      >
-                        <Pencil size={14} />
-                      </button>
-
-                      {/* Delete */}
-                      <button
-                        onClick={() => setPendingDeleteId(reminder.id)}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        title="Delete reminder"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                    {/* 3-Dots Dropdown Menu */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent hover:border-border/50 transition-all active:scale-90"
+                          title="More options"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-2xl p-1.5 min-w-[160px] shadow-xl border-border/40">
+                        <DropdownMenuItem
+                          onClick={() =>
+                            navigate("/reminders/new", {
+                              state: {
+                                editId: reminder.id,
+                                medicineId: reminder.medicineId,
+                                medicineName: reminder.medicineName,
+                                dose: reminder.dose,
+                                time: reminder.time,
+                                repeat: reminder.repeatSchedule,
+                                repeatDays: reminder.repeatDays,
+                                notes: reminder.notes,
+                                enabled: reminder.enabled,
+                                color: reminder.color,
+                                icon: reminder.icon,
+                                patientId: reminder.patientId ?? null,
+                                patientName: reminder.patientName ?? null,
+                              },
+                            })
+                          }
+                          className="gap-2.5 font-bold text-xs rounded-xl p-2.5 cursor-pointer"
+                        >
+                          <Pencil size={14} className="text-primary" />
+                          Edit Schedule
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleToggle(reminder)}
+                          className="gap-2.5 font-bold text-xs rounded-xl p-2.5 cursor-pointer"
+                        >
+                          <RefreshCw size={14} />
+                          {reminder.enabled ? "Pause Schedule" : "Resume Schedule"}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator className="my-1 bg-border/40" />
+                        <DropdownMenuItem
+                          onClick={() => setPendingDeleteId(reminder.id)}
+                          className="gap-2.5 font-bold text-xs rounded-xl p-2.5 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+                        >
+                          <Trash2 size={14} />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </motion.div>
               );

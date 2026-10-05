@@ -645,8 +645,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PatientContextBanner.tsx": {
-    "mtime": 1790354729.0581706,
-    "ast_hash": "ae17e3559a2072068744f35d92b1aa90",
+    "mtime": 1791241433.4718962,
+    "ast_hash": "b156aa0cb18d25947f8133660bbbfa84",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PermissionRequest.tsx": {
@@ -1160,8 +1160,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AddReminderPage.tsx": {
-    "mtime": 1789031364.837705,
-    "ast_hash": "2bd2cb4ea61949eb1668e07dad787019",
+    "mtime": 1791239784.3623886,
+    "ast_hash": "e69e64051bcf2fb7f1c6362ad600061f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AuthPage.tsx": {
@@ -1175,8 +1175,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/FamilyHubPage.tsx": {
-    "mtime": 1790583556.9628794,
-    "ast_hash": "024c7418833ceab76014937ee48e9ec4",
+    "mtime": 1791241169.5603395,
+    "ast_hash": "90e20141c8b921949e25611babf9fea8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/HistoryPage.test.tsx": {
@@ -1185,8 +1185,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/HistoryPage.tsx": {
-    "mtime": 1790077232.3233151,
-    "ast_hash": "cdb8a59de94641d0d239ddb223d1d46d",
+    "mtime": 1791239313.9998987,
+    "ast_hash": "d3342874251d29445e32c2b087381a3d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/Index.tsx": {
@@ -1195,8 +1195,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/InteractionsPage.tsx": {
-    "mtime": 1789979199.285536,
-    "ast_hash": "ee0920d4d534f7fe8d22fd861fd85e6a",
+    "mtime": 1791240324.8912814,
+    "ast_hash": "c62f5921f0e6bbd133f136b4f1dcd6ad",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicineInfoPage.tsx": {
@@ -1215,13 +1215,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/RemindersPage.tsx": {
-    "mtime": 1789044138.7364788,
-    "ast_hash": "1ff1e40fd54e9426c099ee399324d688",
+    "mtime": 1791239470.6342897,
+    "ast_hash": "1ca59fc230e861e394e1e80ea5082f97",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ReportPage.tsx": {
-    "mtime": 1789979129.1055765,
-    "ast_hash": "81b6d2add6a4cfc6e22d0a41c1495836",
+    "mtime": 1791239568.704877,
+    "ast_hash": "65f45b26895b21f5913375a6690877c9",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ResultsPage.tsx": {
@@ -1255,8 +1255,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
-    "mtime": 1789630503.6389155,
-    "ast_hash": "2d1c1b594f91a1c7a14e47dab58e61c4",
+    "mtime": 1791240933.6221368,
+    "ast_hash": "a4ae25227c788f18481c8511cb2c221a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/VerifyEmailPage.tsx": {
@@ -1270,8 +1270,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx": {
-    "mtime": 1789628127.6282687,
-    "ast_hash": "03b6e9976676810619c3628a8de5b903",
+    "mtime": 1791240613.225091,
+    "ast_hash": "42be551c2c5db9a56b80e596789c4790",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/app-updater.ts": {
@@ -2235,13 +2235,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedVaultPage.tsx": {
-    "mtime": 1790324692.0774007,
-    "ast_hash": "fc6bae89dad2249fef9865e177c0b7d3",
+    "mtime": 1791240030.2482567,
+    "ast_hash": "487ab17a2e7751acf4b46fe1d068d958",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicationsPage.tsx": {
-    "mtime": 1789031350.1606293,
-    "ast_hash": "e043fae6d64c5503e656c61742dc9d95",
+    "mtime": 1791239896.9672565,
+    "ast_hash": "e58333e7dd466d48b15ba2c13a333e14",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useNetworkStatus.ts": {

@@ -39,6 +39,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -316,6 +323,32 @@ export default function FamilyHubPage() {
           </button>
         </div>
       </motion.div>
+
+      {/* Mobile Profile Switcher Bar */}
+      {patients.length > 0 && (
+        <div className="sm:hidden mb-6">
+          <Select
+            value={selectedPatientId || "self"}
+            onValueChange={(val) => {
+              setSelectedPatientId(val === "self" ? null : val);
+            }}
+          >
+            <SelectTrigger className="w-full h-12 rounded-2xl bg-card border-2 border-primary/20 text-xs font-bold shadow-sm">
+              <SelectValue placeholder="Switch Profile..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="self" className="text-xs font-bold">
+                👤 {userProfile?.name || "You (Primary Account)"}
+              </SelectItem>
+              {patients.map((p) => (
+                <SelectItem key={p.id} value={p.id} className="text-xs font-bold">
+                  {p.relation ? `👥 ${p.name} (${p.relation})` : `👥 ${p.name}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Active Member Detail Panel */}
       <motion.div

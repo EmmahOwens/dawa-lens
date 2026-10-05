@@ -12,6 +12,7 @@ import {
   Search,
   TrendingUp,
   Calendar,
+  MoreVertical,
 } from "@/lib/icons";
 import { useApp, DoseLog } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
@@ -23,6 +24,19 @@ import { useState, useMemo } from "react";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { toDate } from "@/lib/utils";
 import { calculateVitalitySummary } from "@/lib/vitalityUtils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Helper for relative date
 function getRelativeDate(dateString: string) {
@@ -231,32 +245,62 @@ export default function HistoryPage() {
           <ArrowLeft size={16} /> {t("common.back")}
         </button>
         <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={exportCSV}
-            className="rounded-xl h-9 text-xs"
-          >
-            <Download size={14} className="mr-1.5" /> {t("history.export")}
-          </Button>
-          <label>
+          {/* Desktop Export/Import buttons */}
+          <div className="hidden sm:flex gap-2">
             <Button
               size="sm"
               variant="outline"
-              asChild
-              className="rounded-xl h-9 text-xs cursor-pointer"
+              onClick={exportCSV}
+              className="rounded-xl h-9 text-xs"
             >
-              <span>
-                <Upload size={14} className="mr-1.5" /> {t("history.import")}
-              </span>
+              <Download size={14} className="mr-1.5" /> {t("history.export")}
             </Button>
-            <input
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={importCSV}
-            />
-          </label>
+            <label>
+              <Button
+                size="sm"
+                variant="outline"
+                asChild
+                className="rounded-xl h-9 text-xs cursor-pointer"
+              >
+                <span>
+                  <Upload size={14} className="mr-1.5" /> {t("history.import")}
+                </span>
+              </Button>
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={importCSV}
+              />
+            </label>
+          </div>
+
+          {/* Mobile More Actions Dropdown */}
+          <div className="sm:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="outline" className="rounded-xl h-9 w-9">
+                  <MoreVertical size={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-xl min-w-[150px]">
+                <DropdownMenuItem onClick={exportCSV} className="gap-2 cursor-pointer text-xs font-semibold">
+                  <Download size={14} /> {t("history.export")}
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="gap-2 cursor-pointer text-xs font-semibold">
+                  <label className="flex items-center gap-2 cursor-pointer w-full">
+                    <Upload size={14} /> {t("history.import")}
+                    <input
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={importCSV}
+                    />
+                  </label>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -333,7 +377,7 @@ export default function HistoryPage() {
       </motion.div>
 
       {/* Search & Filters */}
-      <div className="space-y-4 mb-6">
+      <div className="space-y-3 mb-6">
         <div className="relative">
           <Search
             size={18}
@@ -348,8 +392,48 @@ export default function HistoryPage() {
           />
         </div>
 
+        {/* Mobile Dropdowns for Filters */}
+        <div className="sm:hidden grid grid-cols-2 gap-2">
+          {patients.length > 0 && (
+            <Select value={patientFilter} onValueChange={setPatientFilter}>
+              <SelectTrigger className="h-10 rounded-xl bg-card border-border/50 text-xs font-bold truncate">
+                <SelectValue placeholder="Profile" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Family & Clients</SelectItem>
+                <SelectItem value="self">{userProfile?.name ? `${userProfile.name} (You)` : "Self (You)"}</SelectItem>
+                {patients.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name} {p.relation ? `(${p.relation})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <Select
+            value={statusFilter}
+            onValueChange={(val) => setStatusFilter(val as any)}
+          >
+            <SelectTrigger
+              className={`h-10 rounded-xl bg-card border-border/50 text-xs font-bold ${
+                patients.length === 0 ? "col-span-2" : ""
+              }`}
+            >
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Statuses</SelectItem>
+              <SelectItem value="taken">Taken</SelectItem>
+              <SelectItem value="skipped">Skipped</SelectItem>
+              <SelectItem value="missed">Missed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Desktop / Tablet Filter Pill Bars */}
         {patients.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
               onClick={() => setPatientFilter("all")}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
@@ -386,7 +470,7 @@ export default function HistoryPage() {
           </div>
         )}
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
           {(["All", "taken", "skipped", "missed"] as const).map((status) => (
             <button
               key={status}

@@ -558,10 +558,12 @@ export default function AddReminderPage() {
                   placeholder={t("reminders.dose_placeholder")}
                   className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all"
                 />
-                <div className="flex flex-wrap gap-2">
+                {/* Desktop dosage presets */}
+                <div className="hidden sm:flex flex-wrap gap-2">
                   {["1 Pill", "2 Pills", "5ml", "10ml", "1 Puff"].map((d) => (
                     <button
                       key={d}
+                      type="button"
                       onClick={() => setDose(d)}
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
                         dose === d ? "bg-primary text-primary-foreground shadow-md" : "bg-muted/50 text-muted-foreground hover:bg-muted"
@@ -570,6 +572,25 @@ export default function AddReminderPage() {
                       {d}
                     </button>
                   ))}
+                </div>
+
+                {/* Mobile dosage preset dropdown */}
+                <div className="sm:hidden">
+                  <Select
+                    value={["1 Pill", "2 Pills", "5ml", "10ml", "1 Puff"].includes(dose) ? dose : ""}
+                    onValueChange={(val) => setDose(val)}
+                  >
+                    <SelectTrigger className="w-full h-10 rounded-xl text-xs bg-muted/20 border-border/50">
+                      <SelectValue placeholder="Quick dose presets..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["1 Pill", "2 Pills", "5ml", "10ml", "1 Puff"].map((d) => (
+                        <SelectItem key={d} value={d} className="text-xs">
+                          {d}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -696,11 +717,12 @@ export default function AddReminderPage() {
                 className="col-span-full space-y-4 pt-2"
               >
                 <div className="space-y-3">
-                  <Label className="text-xs font-bold text-muted-foreground ml-1">Frequency (Times per day)</Label>
-                  <div className="flex gap-2">
+                  {/* Desktop frequency row */}
+                  <div className="hidden sm:flex gap-2">
                     {[1, 2, 3, 4, 5, 6].map((f) => (
                       <button
                         key={f}
+                        type="button"
                         onClick={() => handleFrequencyChange(f)}
                         className={`flex-1 h-10 rounded-xl text-xs font-bold transition-all border ${
                           times.length === f
@@ -711,6 +733,25 @@ export default function AddReminderPage() {
                         {f}x
                       </button>
                     ))}
+                  </div>
+
+                  {/* Mobile frequency dropdown */}
+                  <div className="sm:hidden">
+                    <Select
+                      value={times.length.toString()}
+                      onValueChange={(val) => handleFrequencyChange(parseInt(val, 10))}
+                    >
+                      <SelectTrigger className="w-full h-11 rounded-xl text-xs font-bold bg-muted/20 border-border/50">
+                        <SelectValue placeholder="Select times per day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6].map((f) => (
+                          <SelectItem key={f} value={f.toString()} className="text-xs font-semibold">
+                            {f}x per day ({f} {f === 1 ? "dose" : "doses"})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <p className="text-[10px] text-muted-foreground ml-1 italic">
                     Example: 2 pills taken 3 times a day

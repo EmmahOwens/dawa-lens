@@ -8,6 +8,15 @@ import {
 } from "@/lib/icons";
 import { aiApi } from "@/services/api";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useTranslation } from "react-i18next";
 import { TravelMap } from "@/components/travel/TravelMap";
 import { lookupDRA } from "@/services/draDatabase";
@@ -171,8 +180,8 @@ export default function TravelCompanionPage() {
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
           
           <div className="flex flex-col gap-4 relative z-10">
-            <div className="w-full">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-2 block opacity-80">
+            <div className="w-full space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1 block opacity-80">
                 Where are you heading?
               </label>
               <div className="relative group">
@@ -187,6 +196,45 @@ export default function TravelCompanionPage() {
                   placeholder="Enter country (e.g. Kenya, France...)"
                   className="w-full h-14 pl-12 pr-4 rounded-2xl bg-background border border-border outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/30 transition-all text-base font-bold shadow-sm"
                 />
+              </div>
+
+              {/* Quick corridor preset selector */}
+              <div className="pt-1">
+                <Select
+                  value={destination}
+                  onValueChange={(val) => {
+                    if (val) {
+                      setDestination(val);
+                      setIsAnimating(false);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full h-10 rounded-xl text-xs bg-muted/20 border-border/50 text-muted-foreground font-semibold">
+                    <SelectValue placeholder="Or select common travel corridor..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel className="text-[10px] font-black uppercase tracking-wider text-primary">
+                        East Africa Corridor
+                      </SelectLabel>
+                      {["Kenya", "Tanzania", "Rwanda", "South Sudan", "DR Congo", "Burundi"].map((c) => (
+                        <SelectItem key={c} value={c} className="text-xs">
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                    <SelectGroup>
+                      <SelectLabel className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                        Popular Global Destinations
+                      </SelectLabel>
+                      {["United Kingdom", "United Arab Emirates", "United States", "India", "South Africa", "Canada"].map((c) => (
+                        <SelectItem key={c} value={c} className="text-xs">
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             

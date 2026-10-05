@@ -6,6 +6,15 @@ import { useApp } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { Heart, Utensils, Sparkles, Loader2, Smile, Zap, CheckCircle2, AlertTriangle, ShieldCheck, Brain, Activity, Coffee, Info, Trash2, TrendingUp } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { aiApi } from "@/services/api";
 import { generateLocalClinicalAssessment } from "@/services/clinicalAssessmentService";
 import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
@@ -487,6 +496,63 @@ export default function WellnessPage() {
                 </h3>
               </div>
 
+              {/* Mobile Quick Symptom Selector */}
+              <div className="sm:hidden mb-6 space-y-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Quick Add Symptom
+                  </span>
+                  {symptoms.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSymptoms([])}
+                      className="text-[10px] font-bold text-destructive hover:underline"
+                    >
+                      Clear all ({symptoms.length})
+                    </button>
+                  )}
+                </div>
+                <Select
+                  value=""
+                  onValueChange={(opt) => {
+                    if (!opt) return;
+                    setSymptoms(prev => {
+                      const alreadySelected = prev.some(s =>
+                        s.toLowerCase() === opt.toLowerCase() ||
+                        (opt === "Stomach Ache" && s.toLowerCase() === "stomachache")
+                      );
+                      return alreadySelected
+                        ? prev.filter(s => s.toLowerCase() !== opt.toLowerCase() && !(opt === "Stomach Ache" && s.toLowerCase() === "stomachache"))
+                        : [...prev, opt];
+                    });
+                  }}
+                >
+                  <SelectTrigger className="w-full h-11 rounded-xl text-xs bg-muted/20 border-border/50">
+                    <SelectValue placeholder="+ Select symptom from category..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {symptomCategories.map(cat => (
+                      <SelectGroup key={cat.name}>
+                        <SelectLabel className="text-[10px] font-black uppercase tracking-wider text-primary">
+                          {cat.name} Symptoms
+                        </SelectLabel>
+                        {cat.options.map(opt => {
+                          const isSelected = symptoms.some(s =>
+                            s.toLowerCase() === opt.toLowerCase() ||
+                            (opt === "Stomach Ache" && s.toLowerCase() === "stomachache")
+                          );
+                          return (
+                            <SelectItem key={opt} value={opt} className="text-xs">
+                              {isSelected ? `✓ ${opt} (Logged)` : opt}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectGroup>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-6">
                 {symptomCategories.map((cat) => (
                   <div key={cat.name}>
@@ -570,8 +636,8 @@ export default function WellnessPage() {
                 </div>
               </div>
 
-              {/* Suggestions */}
-              <div className="mt-4 mb-6">
+              {/* Desktop Suggestions */}
+              <div className="hidden sm:block mt-4 mb-6">
                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 mb-3 ml-1">Local Favorites</p>
                 <div className="flex flex-wrap gap-2">
                   {["Matooke & G-nut Sauce", "Fish Stew & Kalo", "Katogo with Beans", "Steamed Luwombo", "Mukene & Posho", "Nakati & Sweet Potatoes", "Nsenene (Grasshoppers)", "Roasted Gonja"].map(s => (
@@ -584,6 +650,23 @@ export default function WellnessPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Mobile Suggestions Dropdown */}
+              <div className="sm:hidden mt-4 mb-6">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 mb-2 ml-1">Local Favorites Presets</p>
+                <Select value="" onValueChange={(val) => { if (val) setMeal(val); }}>
+                  <SelectTrigger className="w-full h-11 rounded-xl text-xs bg-warning/5 border-warning/20 text-warning font-semibold">
+                    <SelectValue placeholder="Quick fill local Ugandan favorite..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["Matooke & G-nut Sauce", "Fish Stew & Kalo", "Katogo with Beans", "Steamed Luwombo", "Mukene & Posho", "Nakati & Sweet Potatoes", "Nsenene (Grasshoppers)", "Roasted Gonja"].map(s => (
+                      <SelectItem key={s} value={s} className="text-xs">
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mt-6">

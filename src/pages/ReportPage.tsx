@@ -25,8 +25,16 @@ import {
   Brain,
   Heart,
   RefreshCw,
+  MoreVertical,
 } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { aiApi } from "@/services/api";
 import { generateLocalClinicalAssessment } from "@/services/clinicalAssessmentService";
 import { VitalityTrends2D } from "@/components/wellness/VitalityTrends2D";
@@ -561,48 +569,94 @@ export default function ReportPage() {
               Health summary for {patientName}
             </p>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Primary Download PDF button */}
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
-              onClick={() => setShowPreview(true)}
-              className="rounded-xl h-10 border-border/50 shadow-sm gap-2"
-            >
-              <Eye size={15} />
-              <span className="hidden xs:inline">Preview</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
               onClick={handleDownloadPDF}
               disabled={downloading}
-              className="rounded-xl w-10 h-10 border-border/50 shadow-sm text-primary"
+              className="rounded-xl h-10 px-3.5 shadow-md shadow-primary/20 text-xs font-bold gap-2"
               title="Download PDF Report"
             >
               {downloading ? (
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2 size={15} className="animate-spin" />
               ) : (
-                <Download size={16} />
+                <Download size={15} />
               )}
+              <span className="hidden xs:inline">Download PDF</span>
+              <span className="xs:hidden">PDF</span>
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleShare}
-              className="rounded-xl w-10 h-10 border-border/50 shadow-sm"
-              title="Share Report"
-            >
-              <Share2 size={16} />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handlePrint}
-              className="rounded-xl w-10 h-10 border-border/50 shadow-sm hidden sm:flex"
-              title="Print Medical Report"
-            >
-              <Printer size={16} />
-            </Button>
+
+            {/* Desktop Actions */}
+            <div className="hidden sm:flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPreview(true)}
+                className="rounded-xl h-10 border-border/50 shadow-sm gap-2"
+              >
+                <Eye size={15} />
+                <span>Preview</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleShare}
+                className="rounded-xl w-10 h-10 border-border/50 shadow-sm"
+                title="Share Report"
+              >
+                <Share2 size={16} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handlePrint}
+                className="rounded-xl w-10 h-10 border-border/50 shadow-sm"
+                title="Print Medical Report"
+              >
+                <Printer size={16} />
+              </Button>
+            </div>
+
+            {/* Mobile More Actions Dropdown */}
+            <div className="sm:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-xl w-10 h-10 border-border/50 shadow-sm"
+                  >
+                    <MoreVertical size={16} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-2xl p-1.5 min-w-[170px] shadow-xl border-border/40">
+                  <DropdownMenuItem
+                    onClick={() => setShowPreview(true)}
+                    className="gap-2.5 font-bold text-xs rounded-xl p-2.5 cursor-pointer"
+                  >
+                    <Eye size={15} className="text-primary" />
+                    Preview Report
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleShare}
+                    className="gap-2.5 font-bold text-xs rounded-xl p-2.5 cursor-pointer"
+                  >
+                    <Share2 size={15} />
+                    Share Summary
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-1 bg-border/40" />
+                  <DropdownMenuItem
+                    onClick={handlePrint}
+                    className="gap-2.5 font-bold text-xs rounded-xl p-2.5 cursor-pointer"
+                  >
+                    <Printer size={15} />
+                    Print Report
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </motion.div>
 

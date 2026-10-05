@@ -8,11 +8,17 @@
 
 import { useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Pill, X } from "@/lib/icons";
+import { Pill, X, ChevronDown } from "@/lib/icons";
 import { toast } from "sonner";
 import { useApp } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { parseReminderTimes } from "@/lib/dynamicSchedule";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /** Maps patient color keys to Tailwind class bundles */
 const COLOR_SCHEMES: Record<
@@ -72,7 +78,7 @@ const DEFAULT_SCHEME = {
 };
 
 export function PatientContextBanner() {
-  const { selectedPatientId, setSelectedPatientId, reminders, doseLogs, logDose } = useApp();
+  const { selectedPatientId, setSelectedPatientId, reminders, doseLogs, logDose, patients } = useApp();
   const { resolvedPatient } = usePatientScope();
 
   // Caregiver due dose check: gives immediate visibility and 1-tap logging
@@ -162,27 +168,83 @@ export function PatientContextBanner() {
           className={`flex items-center justify-between px-4 py-2 border-b ${scheme.bg} ${scheme.border}`}
         >
           {/* Left: avatar + name info */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div
-              className={`w-7 h-7 rounded-full ${scheme.dot} flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 shadow-sm`}
-            >
-              {initials}
-            </div>
-            <div className="min-w-0">
-              <p
-                className={`text-[10px] font-black uppercase tracking-widest ${scheme.text} truncate leading-tight`}
+          {patients && patients.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-80 transition-opacity cursor-pointer group select-none"
+                  aria-label="Switch active profile"
+                >
+                  <div
+                    className={`w-7 h-7 rounded-full ${scheme.dot} flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 shadow-sm`}
+                  >
+                    {initials}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1">
+                      <p
+                        className={`text-[10px] font-black uppercase tracking-widest ${scheme.text} truncate leading-tight`}
+                      >
+                        Viewing {resolvedPatient.name}&apos;s Profile
+                      </p>
+                      <ChevronDown size={11} className={`${scheme.text} opacity-70 group-hover:opacity-100 transition-opacity shrink-0`} />
+                    </div>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground opacity-70 leading-tight">
+                      {typeBadge}
+                      {resolvedPatient.relation
+                        ? ` · ${resolvedPatient.relation}`
+                        : ""}
+                      {resolvedPatient.age ? ` · ${resolvedPatient.age} yrs` : ""}
+                    </p>
+                  </div>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 p-1.5 rounded-xl">
+                <DropdownMenuItem
+                  onClick={() => setSelectedPatientId(null)}
+                  className="text-xs font-semibold gap-2 py-2 cursor-pointer"
+                >
+                  <span>👤</span>
+                  <span>Switch to You (Host)</span>
+                </DropdownMenuItem>
+                {patients.map((p) => (
+                  <DropdownMenuItem
+                    key={p.id}
+                    onClick={() => setSelectedPatientId(p.id)}
+                    className={`text-xs font-semibold gap-2 py-2 cursor-pointer ${
+                      p.id === selectedPatientId ? "bg-primary/10 text-primary font-bold" : ""
+                    }`}
+                  >
+                    <span>👥</span>
+                    <span className="truncate">{p.name} {p.relation ? `(${p.relation})` : ""}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div
+                className={`w-7 h-7 rounded-full ${scheme.dot} flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 shadow-sm`}
               >
-                Viewing {resolvedPatient.name}&apos;s Profile
-              </p>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground opacity-70 leading-tight">
-                {typeBadge}
-                {resolvedPatient.relation
-                  ? ` · ${resolvedPatient.relation}`
-                  : ""}
-                {resolvedPatient.age ? ` · ${resolvedPatient.age} yrs` : ""}
-              </p>
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p
+                  className={`text-[10px] font-black uppercase tracking-widest ${scheme.text} truncate leading-tight`}
+                >
+                  Viewing {resolvedPatient.name}&apos;s Profile
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground opacity-70 leading-tight">
+                  {typeBadge}
+                  {resolvedPatient.relation
+                    ? ` · ${resolvedPatient.relation}`
+                    : ""}
+                  {resolvedPatient.age ? ` · ${resolvedPatient.age} yrs` : ""}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Right: exit button */}
           <button

@@ -20,6 +20,7 @@ import {
   Package2,
   AlertTriangle,
   UserRound,
+  MoreVertical,
 } from "@/lib/icons";
 import { useApp, Medicine } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
@@ -35,6 +36,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -261,10 +268,12 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 pt-1">
+            {/* Desktop dosage presets */}
+            <div className="hidden sm:flex flex-wrap gap-2 pt-1">
               {["500mg", "250mg", "1 Pill", "2 Pills", "5ml", "10ml", "1 Puff"].map((d) => (
                 <button
                   key={d}
+                  type="button"
                   onClick={() => setDosage(d)}
                   className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
                     dosage === d 
@@ -275,6 +284,25 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                   {d}
                 </button>
               ))}
+            </div>
+
+            {/* Mobile dosage preset dropdown */}
+            <div className="sm:hidden pt-1">
+              <Select
+                value={["500mg", "250mg", "1 Pill", "2 Pills", "5ml", "10ml", "1 Puff"].includes(dosage) ? dosage : ""}
+                onValueChange={(val) => setDosage(val)}
+              >
+                <SelectTrigger className="w-full h-10 rounded-xl text-xs bg-muted/20 border-border/50">
+                  <SelectValue placeholder="Quick dosage preset..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {["500mg", "250mg", "1 Pill", "2 Pills", "5ml", "10ml", "1 Puff"].map((d) => (
+                    <SelectItem key={d} value={d} className="text-xs">
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -849,7 +877,8 @@ export default function MedicationsPage() {
                     )}
                   </div>
 
-                  <div className="flex gap-2">
+                  {/* Desktop action buttons */}
+                  <div className="hidden sm:flex gap-2">
                     <button
                       onClick={() => {
                         setSelectedMed(med);
@@ -867,6 +896,49 @@ export default function MedicationsPage() {
                     >
                       <Trash2 size={13} />
                     </button>
+                  </div>
+
+                  {/* Mobile 3-dots DropdownMenu */}
+                  <div className="sm:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border/50 transition-all active:scale-90 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                          aria-label="Medication options"
+                        >
+                          <MoreVertical size={15} />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedMed(med);
+                            setIsSheetOpen(true);
+                          }}
+                          className="text-xs font-semibold gap-2 py-2"
+                        >
+                          <Edit2 size={14} />
+                          <span>Edit Details</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedMed(med);
+                            setIsSheetOpen(true);
+                          }}
+                          className="text-xs font-semibold gap-2 py-2"
+                        >
+                          <Package2 size={14} />
+                          <span>{isTracked ? "Adjust Stock Tracking" : "Enable Stock Tracker"}</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setDeleteTarget(med)}
+                          className="text-xs font-semibold gap-2 py-2 text-destructive focus:text-destructive"
+                        >
+                          <Trash2 size={14} />
+                          <span>Delete Medication</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </motion.div>

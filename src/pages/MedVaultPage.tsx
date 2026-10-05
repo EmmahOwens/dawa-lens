@@ -19,6 +19,7 @@ import {
   Compass,
   Location,
   Navigation,
+  MoreVertical,
 } from "@/lib/icons";
 import { useApp, Medicine } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
@@ -37,6 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -479,8 +486,8 @@ function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, is
         </div>
       </div>
 
-      {/* Card Actions */}
-      <div className="mt-4 flex items-center justify-between pt-2 border-t border-border/30 gap-2 flex-wrap">
+      {/* Desktop Card Actions */}
+      <div className="hidden sm:flex mt-4 items-center justify-between pt-2 border-t border-border/30 gap-2 flex-wrap">
         <a
           href={`/medicine/${encodeURIComponent(medicine.name)}`}
           className="inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors"
@@ -510,6 +517,50 @@ function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, is
             Refill
           </button>
         </div>
+      </div>
+
+      {/* Mobile Card Actions */}
+      <div className="sm:hidden mt-4 flex items-center justify-between pt-2 border-t border-border/30">
+        <button
+          onClick={onRefill}
+          className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all active:scale-95 min-h-[38px] ${
+            isLow || isOutOfStock
+              ? "bg-red-500 text-white border-red-500 shadow-md shadow-red-500/20"
+              : "bg-primary text-primary-foreground border-primary shadow-sm"
+          }`}
+        >
+          <RefreshCw className="size-3.5" />
+          <span>Refill Stock</span>
+        </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="p-2.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border/50 transition-all active:scale-90 min-h-[38px] min-w-[38px] flex items-center justify-center"
+              aria-label="Stock options"
+            >
+              <MoreVertical size={16} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem
+              onClick={onFindPharmacy}
+              className="text-xs font-semibold gap-2 py-2 text-teal-700 dark:text-teal-300 focus:text-teal-700"
+            >
+              <Compass className="size-3.5 text-teal-600 dark:text-teal-400" />
+              <span>Find NDA Pharmacy</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="text-xs font-semibold gap-2 py-2">
+              <a
+                href={`/medicine/${encodeURIComponent(medicine.name)}`}
+                className="flex items-center gap-2 w-full"
+              >
+                <Info className="size-3.5 text-primary" />
+                <span>FDA Safety & Storage</span>
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </motion.div>
   );
@@ -666,7 +717,8 @@ export default function MedVaultPage() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        {/* Desktop Header Actions */}
+        <div className="hidden sm:flex items-center gap-2">
           <button
             onClick={() => handleOpenPharmacyFinder(null)}
             className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 px-3 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
@@ -681,6 +733,44 @@ export default function MedVaultPage() {
             <Pill className="size-3.5" />
             <span>Medications</span>
           </button>
+        </div>
+
+        {/* Mobile Header Actions */}
+        <div className="sm:hidden flex items-center gap-1.5">
+          <button
+            onClick={() => handleOpenPharmacyFinder(null)}
+            aria-label="Find NDA Pharmacies"
+            className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300 transition-all active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center"
+            title="Find NDA Pharmacies"
+          >
+            <Compass className="size-4 text-teal-600 dark:text-teal-400" />
+          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="p-2.5 rounded-xl bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground transition-all active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center"
+                aria-label="More navigation options"
+              >
+                <MoreVertical size={16} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                onClick={() => navigate("/medications")}
+                className="text-xs font-semibold gap-2 py-2"
+              >
+                <Pill className="size-3.5 text-primary" />
+                <span>All Medications</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleOpenPharmacyFinder(null)}
+                className="text-xs font-semibold gap-2 py-2 text-teal-700 dark:text-teal-300"
+              >
+                <Compass className="size-3.5 text-teal-600 dark:text-teal-400" />
+                <span>NDA Pharmacies</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </motion.div>
 

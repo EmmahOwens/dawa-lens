@@ -24,6 +24,15 @@ import { checkFdaMultiSafety, FdaMultiSafetyResult } from "@/services/openFdaCli
 import FdaBoxedWarningBadge from "@/components/fda/FdaBoxedWarningBadge";
 import { MobileWatchdogResolveButton } from "@/components/intelligence/MobileWatchdogResolveButton";
 import { buildSafetyConsultPrompt } from "@/lib/safetyPromptBuilder";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } };
@@ -1003,14 +1012,14 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
             <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-border/40">
               <button
                 onClick={loadCabinetMeds}
-                className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all flex items-center gap-1.5"
+                className="flex-1 sm:flex-initial justify-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all flex items-center gap-1.5 min-h-[40px]"
               >
                 <Plus size={12} /> Load Cabinet Meds
               </button>
               {sandboxDrugs.length > 0 && (
                 <button
                   onClick={clearSandbox}
-                  className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-xl bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-all flex items-center gap-1.5"
+                  className="flex-1 sm:flex-initial justify-center px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-xl bg-destructive/10 border border-destructive/20 text-destructive hover:bg-destructive/20 transition-all flex items-center gap-1.5 min-h-[40px]"
                 >
                   <Trash2 size={12} /> Clear Sandbox
                 </button>
@@ -1294,53 +1303,121 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
           </div>
         )}
 
-        {/* Standard Quick Select Chips */}
-        <div className="mb-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
-            Common Lifestyle Factors
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {availableFactors.map(({ id, icon: Icon }) => (
+        {/* Mobile Categorized Dropdown Selector for Lifestyle Factors & Ugandan Foods */}
+        <div className="sm:hidden mb-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+              Quick Add Lifestyle or Food
+            </p>
+            {lifestyleFactors.length > 0 && (
               <button
-                key={id}
                 type="button"
-                onClick={() => toggleFactor(id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all select-none ${
-                  lifestyleFactors.includes(id) 
-                    ? "bg-primary border-primary text-primary-foreground shadow-md ring-1 ring-primary/20 font-bold" 
-                    : "bg-card border-border/50 text-muted-foreground hover:border-primary/20 font-medium"
-                }`}
+                onClick={() => setLifestyleFactors([])}
+                className="text-[10px] font-bold text-destructive hover:underline"
               >
-                <Icon size={14} />
-                <span className="text-[10px] uppercase tracking-wider">{id}</span>
+                Clear all ({lifestyleFactors.length})
               </button>
-            ))}
+            )}
           </div>
+          <Select
+            value=""
+            onValueChange={(val) => {
+              if (val) toggleFactor(val);
+            }}
+          >
+            <SelectTrigger className="w-full h-11 rounded-xl text-xs bg-muted/20 border-border/50">
+              <SelectValue placeholder="+ Select factor or local food to check..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel className="text-[10px] font-black uppercase tracking-wider text-primary">
+                  Common Lifestyle Factors
+                </SelectLabel>
+                {availableFactors.map(({ id }) => (
+                  <SelectItem key={id} value={id} className="text-xs">
+                    {lifestyleFactors.includes(id) ? `✓ ${id} (Added)` : id}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                  Popular & Ugandan Foods
+                </SelectLabel>
+                {popularSuggestions.map((sug) => (
+                  <SelectItem key={sug} value={sug} className="text-xs">
+                    {lifestyleFactors.includes(sug) ? `✓ ${sug} (Added)` : sug}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          {/* Active mobile tags strip */}
+          {lifestyleFactors.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {lifestyleFactors.map((factor) => (
+                <span
+                  key={factor}
+                  onClick={() => toggleFactor(factor)}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-primary text-primary-foreground px-2.5 py-1 rounded-lg cursor-pointer active:scale-95 shadow-xs"
+                >
+                  <span>Selected: {factor}</span>
+                  <X size={11} className="hover:opacity-80" />
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Popular Suggestions Pills */}
-        <div className="mb-10">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
-            Popular & Ugandan Foods
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {popularSuggestions.map(sug => {
-              const active = lifestyleFactors.includes(sug);
-              return (
+        {/* Desktop Quick Select Chips */}
+        <div className="hidden sm:block">
+          <div className="mb-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
+              Common Lifestyle Factors
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {availableFactors.map(({ id, icon: Icon }) => (
                 <button
-                  key={sug}
+                  key={id}
                   type="button"
-                  onClick={() => toggleSuggestion(sug)}
-                  className={`text-[10px] font-semibold px-3 py-1.5 rounded-lg border transition-all select-none ${
-                    active
-                      ? "bg-secondary text-primary border-primary/40 font-bold"
-                      : "bg-muted/20 hover:bg-muted/40 text-muted-foreground border-border/40 hover:text-foreground"
+                  onClick={() => toggleFactor(id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all select-none ${
+                    lifestyleFactors.includes(id) 
+                      ? "bg-primary border-primary text-primary-foreground shadow-md ring-1 ring-primary/20 font-bold" 
+                      : "bg-card border-border/50 text-muted-foreground hover:border-primary/20 font-medium"
                   }`}
                 >
-                  + {sug}
+                  <Icon size={14} />
+                  <span className="text-[10px] uppercase tracking-wider">{id}</span>
                 </button>
-              );
-            })}
+              ))}
+            </div>
+          </div>
+
+          {/* Popular Suggestions Pills */}
+          <div className="mb-10">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">
+              Popular & Ugandan Foods
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {popularSuggestions.map(sug => {
+                const active = lifestyleFactors.includes(sug);
+                return (
+                  <button
+                    key={sug}
+                    type="button"
+                    onClick={() => toggleSuggestion(sug)}
+                    className={`text-[10px] font-semibold px-3 py-1.5 rounded-lg border transition-all select-none ${
+                      active
+                        ? "bg-secondary text-primary border-primary/40 font-bold"
+                        : "bg-muted/20 hover:bg-muted/40 text-muted-foreground border-border/40 hover:text-foreground"
+                    }`}
+                  >
+                    + {sug}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
