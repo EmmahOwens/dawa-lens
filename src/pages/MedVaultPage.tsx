@@ -175,7 +175,7 @@ function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) 
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="w-full max-w-lg bg-card rounded-t-3xl shadow-2xl border border-border/50 max-h-[90dvh] flex flex-col overflow-hidden"
+        className="w-full max-w-lg bg-card rounded-t-[28px] md:rounded-[24px] shadow-2xl border border-border max-h-[90dvh] flex flex-col overflow-hidden"
       >
         {/* Drag handle — swipe this area to dismiss */}
         <motion.div
@@ -188,37 +188,37 @@ function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) 
           className="flex-shrink-0 pt-4 pb-2 px-6 cursor-grab active:cursor-grabbing touch-pan-x select-none"
           {...swipe}
         >
-          <div className="w-10 h-1 rounded-full bg-muted/70 hover:bg-muted mx-auto transition-colors" />
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/40 mx-auto transition-colors" />
         </motion.div>
 
         {/* Scrollable form body */}
         <div className="overflow-y-auto no-scrollbar touch-auto overscroll-contain flex-1 px-6 pb-8">
-          <h3 className="text-xl font-black tracking-tight mb-1">Update Stock & Frequency</h3>
+          <h3 className="text-2xl font-bold tracking-[-0.022em] text-foreground mb-1">Update Stock & Frequency</h3>
           <p className="text-xs text-muted-foreground mb-6">
             {medicine.name} · Current: {medicine.currentQuantity ?? "—"} {medicine.unit ?? "units"}
           </p>
 
           {pharmacy && (
-            <div className="mb-5 p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-between gap-3 text-xs">
+            <div className="mb-5 p-3.5 rounded-[16px] bg-muted/30 border border-border flex items-center justify-between gap-3 text-xs">
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-teal-700 dark:text-teal-300 font-black text-[10px] uppercase tracking-wider">
-                  <CheckCircle className="size-3.5 text-teal-600 dark:text-teal-400" />
+                <div className="flex items-center gap-1.5 text-primary font-semibold text-[10px] uppercase tracking-wider">
+                  <CheckCircle className="size-3.5 text-primary" />
                   <span>Verified Refill Outlet</span>
                 </div>
-                <p className="font-extrabold text-foreground truncate mt-0.5">{pharmacy.name}</p>
+                <p className="font-bold text-foreground truncate mt-0.5">{pharmacy.name}</p>
                 <p className="text-[10px] text-muted-foreground truncate">
                   NDA Lic: {pharmacy.premiseNo} · {pharmacy.district}
                 </p>
               </div>
-              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-800 dark:text-teal-200 shrink-0">
+              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
                 NDA Uganda
               </span>
             </div>
           )}
 
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <Label className="text-xs font-bold text-muted-foreground">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Pills / Units you have right now
             </Label>
             <Input
@@ -227,7 +227,7 @@ function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) 
               value={qty}
               onChange={(e) => setQty(e.target.value)}
               placeholder="e.g. 30"
-              className={`h-12 rounded-xl text-lg font-bold ${
+              className={`h-11 rounded-full text-base font-semibold ${
                 isOverCapacity ? "border-destructive focus-visible:ring-destructive" : ""
               }`}
               autoFocus
@@ -241,8 +241,8 @@ function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) 
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold text-muted-foreground">
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Pills per dose
               </Label>
               <Input
@@ -251,16 +251,16 @@ function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) 
                 value={perDose}
                 onChange={(e) => setPerDose(e.target.value)}
                 placeholder="1"
-                className="h-12 rounded-xl font-bold"
+                className="h-11 rounded-full font-semibold text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold text-muted-foreground">Unit</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unit</Label>
               <Select value={unit} onValueChange={setUnit}>
-                <SelectTrigger className="h-12 rounded-xl">
+                <SelectTrigger className="h-11 rounded-full">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-[18px] border-border bg-card">
                   {UNITS.map((u) => (
                     <SelectItem key={u} value={u}>
                       {u}
@@ -272,12 +272,12 @@ function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) 
           </div>
 
           {/* Daily Frequency (Doses per day) */}
-          <div className="space-y-2.5 pt-1">
+          <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-bold text-muted-foreground">
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Daily Frequency (Times / Doses taken per day)
               </Label>
-              <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-md">
+              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
                 {parsedFreq} dose{parsedFreq !== 1 ? "s" : ""}/day
               </span>
             </div>
@@ -293,21 +293,21 @@ function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) 
                   type="button"
                   key={preset.value}
                   onClick={() => setFrequencyPerDay(preset.value.toString())}
-                  className={`p-2 rounded-xl text-center border transition-all ${
+                  className={`p-2.5 rounded-[14px] text-center border transition-all active:scale-95 ${
                     parsedFreq === preset.value
-                      ? "bg-teal-600 text-white border-teal-600 shadow-sm"
-                      : "bg-muted/30 border-border/40 text-muted-foreground hover:bg-muted/50"
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-muted/30 border-border text-muted-foreground hover:bg-muted/50"
                   }`}
                 >
-                  <span className="block text-xs font-black leading-tight">{preset.label}</span>
+                  <span className="block text-xs font-bold leading-tight">{preset.label}</span>
                   <span className="block text-[9px] opacity-80 leading-none mt-0.5">{preset.sub}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs font-bold text-muted-foreground">
+          <div className="space-y-1.5">
+            <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Total when full (original pack size)
             </Label>
             <Input
@@ -316,32 +316,32 @@ function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) 
               value={total}
               onChange={(e) => setTotal(e.target.value)}
               placeholder="e.g. 60"
-              className="h-12 rounded-xl font-bold"
+              className="h-11 rounded-full font-semibold text-sm"
             />
           </div>
 
           {/* Live Dose vs Day Breakdown Preview */}
           {!isNaN(parsedQty) && parsedQty >= 0 && (
-            <div className="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-foreground space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-teal-800 dark:text-teal-300">
+            <div className="p-4 rounded-[18px] bg-muted/30 border border-border text-foreground space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-foreground">
                 <span>Daily Dosage:</span>
-                <span>
+                <span className="text-muted-foreground">
                   {(parsedPerDose * parsedFreq).toFixed(
                     Number.isInteger(parsedPerDose * parsedFreq) ? 0 : 1
                   )}{" "}
                   {unit}/day ({parsedPerDose} {unit}/dose × {parsedFreq} {parsedFreq === 1 ? "dose" : "doses"}/day)
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-teal-500/20">
-                <div className="bg-background/60 p-2 rounded-xl border border-teal-500/10">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Doses Remaining</p>
-                  <p className="text-base font-black text-teal-600 dark:text-teal-400 mt-0.5">
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
+                <div className="bg-card p-3 rounded-[14px] border border-border">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Doses Remaining</p>
+                  <p className="text-base font-bold text-foreground mt-0.5">
                     {Math.floor(parsedQty / parsedPerDose)} <span className="text-xs font-semibold text-muted-foreground">doses</span>
                   </p>
                 </div>
-                <div className="bg-background/60 p-2 rounded-xl border border-teal-500/10">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Days of Supply</p>
-                  <p className="text-base font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                <div className="bg-card p-3 rounded-[14px] border border-border">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Days of Supply</p>
+                  <p className="text-base font-bold text-foreground mt-0.5">
                     ~{Math.floor(parsedQty / (parsedPerDose * parsedFreq))} <span className="text-xs font-semibold text-muted-foreground">days</span>
                   </p>
                 </div>
@@ -351,13 +351,13 @@ function RefillSheet({ medicine, pharmacy, onClose, onSave }: RefillSheetProps) 
         </div>
 
         <div className="flex gap-3 mt-8">
-          <Button variant="outline" onClick={onClose} className="flex-1 rounded-xl h-12">
+          <Button variant="outline" onClick={onClose} className="flex-1 rounded-full h-11 border-border font-semibold text-xs active:scale-95 transition-transform">
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={isSaving || isInvalid}
-            className="flex-1 rounded-xl h-12 font-bold bg-teal-600 hover:bg-teal-700 text-white"
+            className="flex-1 rounded-full h-11 font-semibold text-xs bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95 transition-transform"
           >
             {isSaving ? "Saving…" : "Save Stock"}
           </Button>
@@ -696,24 +696,20 @@ export default function MedVaultPage() {
   return (
     <div className="w-full">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6"
-      >
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-xl bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+            className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-all"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={16} />
           </button>
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-foreground leading-none">
+            <h1 className="text-[28px] sm:text-[34px] font-semibold tracking-tight text-foreground leading-none">
               Med Vault
             </h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
-              Your pill stock tracker
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              Pill supply &amp; stock tracker
             </p>
           </div>
         </div>
@@ -721,14 +717,14 @@ export default function MedVaultPage() {
         <div className="hidden sm:flex items-center gap-2">
           <button
             onClick={() => handleOpenPharmacyFinder(null)}
-            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 px-3 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
+            className="flex items-center gap-1.5 text-[12px] font-normal bg-muted border border-border hover:bg-muted/80 text-foreground px-4 py-2 rounded-full transition-all active:scale-95"
           >
-            <Compass className="size-3.5 text-teal-600 dark:text-teal-400" />
+            <Compass className="size-3.5 text-primary" />
             <span>NDA Pharmacies</span>
           </button>
           <button
             onClick={() => navigate("/medications")}
-            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary px-3 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
+            className="flex items-center gap-1.5 text-[12px] font-normal bg-primary text-primary-foreground px-4 py-2 rounded-full transition-all active:scale-95 shadow-none"
           >
             <Pill className="size-3.5" />
             <span>Medications</span>
@@ -772,72 +768,62 @@ export default function MedVaultPage() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Hero Stats */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.05 }}
-        className="relative overflow-hidden rounded-[2rem] p-6 mb-8 bg-gradient-to-br from-teal-600 via-cyan-600 to-emerald-500 text-white shadow-2xl shadow-teal-500/20"
-      >
-        {/* Background deco */}
-        <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-black/10 rounded-full blur-2xl pointer-events-none" />
-
+      {/* Hero Stats Tile */}
+      <div className="relative overflow-hidden rounded-[18px] border border-border p-6 mb-8 bg-[#272729] text-white transition-all">
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 rounded-xl bg-white/20 backdrop-blur-md border border-white/10">
-              <Package2 size={18} />
+            <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-white">
+              <Package2 size={16} />
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">
-              Stock Overview
+            <span className="text-[12px] font-normal text-[#cccccc]">
+              Supply Overview
             </span>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-3xl font-black leading-none">{tracked.length}</p>
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider mt-1">
+              <p className="text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-white">{tracked.length}</p>
+              <p className="text-[12px] text-[#cccccc] mt-0.5">
                 Tracked
               </p>
             </div>
             <div>
-              <p className="text-3xl font-black leading-none">{totalTablets}</p>
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider mt-1">
+              <p className="text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-white">{totalTablets}</p>
+              <p className="text-[12px] text-[#cccccc] mt-0.5">
                 Total Units
               </p>
             </div>
             <div>
-              <p className={`text-3xl font-black leading-none ${criticalCount > 0 ? "text-red-300" : "text-white"}`}>
+              <p className={`text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight ${criticalCount > 0 ? "text-[#ff453a]" : "text-white"}`}>
                 {criticalCount}
               </p>
-              <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider mt-1">
+              <p className="text-[12px] text-[#cccccc] mt-0.5">
                 Critical
               </p>
             </div>
           </div>
 
           {(criticalCount > 0 || warningCount > 0) && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-[11px] font-bold bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/10 w-fit">
-                <AlertTriangle size={12} className={criticalCount > 0 ? "text-red-300" : "text-amber-300"} />
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
+              <div className="flex items-center gap-2 text-[12px] text-[#cccccc]">
+                <AlertTriangle size={13} className={criticalCount > 0 ? "text-[#ff453a]" : "text-[#ff9f0a]"} />
                 {criticalCount > 0
-                  ? `${criticalCount} medicine${criticalCount > 1 ? "s" : ""} critically low — refill now!`
+                  ? `${criticalCount} medicine${criticalCount > 1 ? "s" : ""} critically low`
                   : `${warningCount} medicine${warningCount > 1 ? "s" : ""} running low`}
               </div>
 
               <button
                 onClick={() => handleOpenPharmacyFinder(null)}
-                className="flex items-center gap-1.5 text-[11px] font-black bg-white text-teal-900 hover:bg-white/90 px-3.5 py-2 rounded-xl shadow-lg transition-all active:scale-95"
+                className="h-8 px-4 rounded-full bg-white/10 hover:bg-white/15 text-white text-[12px] font-normal transition-all active:scale-95"
               >
-                <Compass className="size-3.5 text-teal-600" />
-                <span>Top 5 NDA Pharmacies</span>
+                Find Pharmacy
               </button>
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Loading */}
       {isInitializing ? (

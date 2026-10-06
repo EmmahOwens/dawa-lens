@@ -434,7 +434,7 @@ export default function AddReminderPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-[-0.022em]">
           {isEditing
             ? t("reminders.edit_title", "Edit Reminder")
             : t("reminders.add_title")}
@@ -446,23 +446,23 @@ export default function AddReminderPage() {
         </p>
       </motion.div>
 
-      {/* Live Preview */}
+      {/* Live Preview - Apple Tile */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1 }}
         className="mb-8"
       >
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3 ml-1">Live Preview</p>
-        <div className={`relative flex items-center gap-4 p-4 rounded-2xl border bg-card shadow-lg transition-all duration-500 ${COLORS.find(c => c.name === color)?.border || 'border-border/50'}`}>
-          <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-500 ${COLORS.find(c => c.name === color)?.value || 'bg-primary'} bg-opacity-10 ${COLORS.find(c => c.name === color)?.text || 'text-primary'}`}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2.5 ml-1">Live Preview</p>
+        <div className={`relative flex items-center gap-4 p-4 rounded-[18px] border bg-[#f5f5f7] dark:bg-[#272729] transition-all duration-300 ${COLORS.find(c => c.name === color)?.border || 'border-border'}`}>
+          <div className={`flex-shrink-0 w-11 h-11 rounded-[11px] flex items-center justify-center transition-colors ${COLORS.find(c => c.name === color)?.value || 'bg-primary'} bg-opacity-10 ${COLORS.find(c => c.name === color)?.text || 'text-primary'}`}>
             {(() => {
               const IconComp = ICONS.find(i => i.name === icon)?.icon || Pill;
-              return <IconComp size={24} />;
+              return <IconComp size={22} />;
             })()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-lg font-bold text-foreground leading-tight truncate">
+            <p className="text-base font-bold text-foreground leading-tight truncate">
               {medicineName || "Medicine Name"}
             </p>
             <div className="flex items-center gap-2 mt-1">
@@ -472,7 +472,7 @@ export default function AddReminderPage() {
             </div>
           </div>
           <div className="flex-shrink-0">
-            <div className={`w-3 h-3 rounded-full ${COLORS.find(c => c.name === color)?.value || 'bg-primary'} animate-pulse`} />
+            <div className={`w-2.5 h-2.5 rounded-full ${COLORS.find(c => c.name === color)?.value || 'bg-primary'}`} />
           </div>
         </div>
       </motion.div>
@@ -1003,15 +1003,13 @@ export default function AddReminderPage() {
           className="mt-8 flex justify-center w-full z-40"
         >
           <div className="w-full max-w-lg pointer-events-auto">
-            <Button
+            <button
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full h-14 rounded-2xl text-sm font-bold uppercase tracking-widest shadow-[0_20px_50px_rgba(0,122,255,0.3)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] group relative overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98]"
-              size="lg"
+              className="w-full h-12 rounded-full text-base font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 flex items-center justify-center gap-2"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/90 to-primary translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out opacity-20" />
-              <Save size={18} className="mr-2 relative z-10" />
-              <span className="relative z-10">
+              <Save size={18} />
+              <span>
                 {isSaving
                   ? "Saving Schedule..."
                   : isEditing
@@ -1020,7 +1018,7 @@ export default function AddReminderPage() {
                   ? "Save Offline"
                   : t("reminders.save_reminder")}
               </span>
-            </Button>
+            </button>
           </div>
         </motion.div>
       </div>

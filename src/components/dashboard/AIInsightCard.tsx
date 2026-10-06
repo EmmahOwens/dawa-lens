@@ -32,7 +32,6 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
     return {
       mood: latest?.mood != null ? Number(latest.mood) : null,
       energy: latest?.energy != null ? Number(latest.energy) : null,
-      // Reuse saved AI reflection from the most recent log if it exists
       latestReflection: latest?.aiReflection ?? null,
     };
   }, [wellnessLogs, today]);
@@ -70,7 +69,6 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
           medicines,
         });
         const data = res as any;
-        // Prefer a short summary; fall back to first insight bullet
         const text: string =
           data?.summary ??
           (Array.isArray(data?.insights) && data.insights.length > 0
@@ -98,77 +96,67 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
       }
     };
 
-    fetchInsight();
-  }, []);
+    if (doseLogs.length > 0 || wellnessLogs.length > 0) {
+      fetchInsight();
+    }
+  }, [doseLogs, wellnessLogs, medicines]);
 
-  // Displayed insight text — prefer live Groq, then saved reflection summary, then nothing
-  const displayInsight =
-    groqInsight ??
-    (latestReflection?.reflection ?? null);
+  const displayInsight = groqInsight || latestReflection;
 
-  // Trend indicator based on mood + adherence
-  const TrendIcon =
-    adherencePercent >= 80 && (mood == null || mood >= 3) ? TrendingUp
-    : adherencePercent < 60 || (mood != null && mood <= 2) ? TrendingDown
-    : Minus;
-
-  const trendColor =
-    TrendIcon === TrendingUp ? "text-emerald-300"
-    : TrendIcon === TrendingDown ? "text-red-300"
-    : "text-amber-300";
+  const { TrendIcon, trendColor } = useMemo(() => {
+    if (adherencePercent >= 80) {
+      return { TrendIcon: TrendingUp, trendColor: "text-primary" };
+    }
+    if (adherencePercent >= 50) {
+      return { TrendIcon: Minus, trendColor: "text-muted-foreground" };
+    }
+    return { TrendIcon: TrendingDown, trendColor: "text-destructive" };
+  }, [adherencePercent]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="mb-8 relative overflow-hidden rounded-3xl bg-background border border-border/50 p-6 text-foreground shadow-sm hover:shadow-md transition-shadow duration-300"
-    >
-      <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-        <Sparkles size={100} className="text-primary" />
-      </div>
-
+    <div className="mb-8 overflow-hidden rounded-[18px] border border-border bg-card p-6 text-foreground transition-all duration-200">
       <div className="relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-primary/10 rounded-lg border border-primary/20">
-              <Sparkles size={14} className="text-primary" />
+            <div className="h-7 w-7 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+              <Sparkles size={14} />
             </div>
-            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-              AI Health Insight
+            <span className="text-[12px] font-medium uppercase tracking-[0.05em] text-muted-foreground">
+              Clinical Insight
             </span>
           </div>
           {insightLoading ? (
             <Loader2 size={14} className="text-muted-foreground animate-spin" />
           ) : (
-            <TrendIcon size={16} className={trendColor.replace("white", "primary").replace("indigo", "primary").replace("-300", "-500")} />
+            <TrendIcon size={16} className={trendColor} />
           )}
         </div>
 
-        {/* Emotion summary pills (only when data exists) */}
+        {/* Emotion summary chips */}
         {(mood != null || energy != null) && (
-          <div className="flex gap-2 mb-5 flex-wrap">
+          <div className="flex gap-2 mb-4 flex-wrap">
             {mood != null && (
-              <span className="text-[10px] font-bold uppercase tracking-widest bg-muted/50 border border-border/50 px-3 py-1.5 rounded-xl text-muted-foreground flex items-center gap-1.5">
-                Mood{" "}
+              <span className="text-[12px] font-normal bg-muted border border-border px-3 py-1 rounded-full text-foreground flex items-center gap-1.5">
+                Mood:{" "}
                 {mood >= 4 ? (
-                  <span className="flex items-center gap-1"><RiveMoji emoji="😊" size={14} /> Positive</span>
+                  <span className="flex items-center gap-1 font-medium"><RiveMoji emoji="😊" size={13} /> Positive</span>
                 ) : mood <= 2 ? (
-                  <span className="flex items-center gap-1"><RiveMoji emoji="😔" size={14} /> Low</span>
+                  <span className="flex items-center gap-1 font-medium"><RiveMoji emoji="😔" size={13} /> Low</span>
                 ) : (
-                  <span className="flex items-center gap-1"><RiveMoji emoji="😐" size={14} /> Neutral</span>
+                  <span className="flex items-center gap-1 font-medium"><RiveMoji emoji="😐" size={13} /> Neutral</span>
                 )}
               </span>
             )}
             {energy != null && (
-              <span className="text-[10px] font-bold uppercase tracking-widest bg-muted/50 border border-border/50 px-3 py-1.5 rounded-xl text-muted-foreground flex items-center gap-1.5">
-                Energy{" "}
+              <span className="text-[12px] font-normal bg-muted border border-border px-3 py-1 rounded-full text-foreground flex items-center gap-1.5">
+                Energy:{" "}
                 {energy >= 4 ? (
-                  <span className="flex items-center gap-1"><RiveMoji emoji="⚡" size={14} /> High</span>
+                  <span className="flex items-center gap-1 font-medium"><RiveMoji emoji="⚡" size={13} /> High</span>
                 ) : energy <= 2 ? (
-                  <span className="flex items-center gap-1"><RiveMoji emoji="🪫" size={14} /> Low</span>
+                  <span className="flex items-center gap-1 font-medium"><RiveMoji emoji="🪫" size={13} /> Low</span>
                 ) : (
-                  <span className="flex items-center gap-1"><RiveMoji emoji="🔋" size={14} /> Moderate</span>
+                  <span className="flex items-center gap-1 font-medium"><RiveMoji emoji="🔋" size={13} /> Moderate</span>
                 )}
               </span>
             )}
@@ -177,31 +165,32 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
 
         {/* Insight text */}
         {insightLoading && !displayInsight ? (
-          <div className="space-y-2 mb-6">
+          <div className="space-y-2 mb-5">
             <div className="h-3 bg-muted rounded-full w-full animate-pulse" />
             <div className="h-3 bg-muted rounded-full w-4/5 animate-pulse" />
-            <div className="h-3 bg-muted/80 rounded-full w-3/5 animate-pulse" />
           </div>
         ) : displayInsight ? (
-          <div className="text-[15px] font-medium leading-relaxed mb-6 text-foreground/90">
+          <div className="text-[15px] font-normal leading-relaxed mb-5 text-foreground">
             <MessageRenderer
               text={displayInsight}
-              className="text-[15px] font-medium leading-relaxed text-foreground/90 [&_strong]:text-foreground"
+              className="text-[15px] font-normal leading-relaxed text-foreground [&_strong]:font-semibold"
             />
           </div>
         ) : (
-          <p className="text-[15px] font-medium leading-relaxed mb-6 text-muted-foreground italic">
-            Log your mood or take a medication dose to generate a personalized insight.
+          <p className="text-[14px] font-normal leading-relaxed mb-5 text-muted-foreground">
+            Log your wellness status or take a medication dose to generate a personalized clinical insight.
           </p>
         )}
 
+        {/* Apple Pill CTA */}
         <button
           onClick={() => setIsDawaGPTOpen(true)}
-          className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 px-5 py-2.5 rounded-xl transition-all active:scale-95 shadow-md shadow-primary/10"
+          className="inline-flex items-center gap-1.5 h-9 px-5 rounded-full bg-primary text-primary-foreground text-[13px] font-normal hover:brightness-105 active:scale-95 transition-all"
         >
-          Ask DawaGPT <ArrowRight size={12} />
+          <span>Ask DawaGPT</span>
+          <ArrowRight size={12} />
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }

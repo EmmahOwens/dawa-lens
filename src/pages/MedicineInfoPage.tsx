@@ -104,26 +104,31 @@ export default function MedicineInfoPage() {
         <ArrowLeft size={16} /> {t("common.back")}
       </button>
 
-      <h1 className="text-xl font-bold text-foreground mb-3 flex items-center gap-2">
-        <Pill size={20} className="text-primary" />
+      <h1 className="text-2xl font-bold tracking-[-0.022em] text-foreground mb-4 flex items-center gap-2">
+        <Pill size={22} className="text-[#0066cc] dark:text-[#2997ff]" />
         {t("medicine_info.title")}
       </h1>
 
-      {/* Search bar */}
-      <div className="flex gap-2 mb-4">
+      {/* Apple Search pill */}
+      <div className="flex gap-2 mb-6">
         <Input
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder={t("medicine_info.search_placeholder")}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          className="rounded-full h-11 px-4 bg-card border-border text-sm"
         />
-        <Button onClick={handleSearch} disabled={searching}>
+        <button 
+          onClick={handleSearch} 
+          disabled={searching}
+          className="rounded-full h-11 px-5 text-sm font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 shrink-0"
+        >
           {searching ? "..." : t("common.search")}
-        </Button>
+        </button>
       </div>
 
       {isError && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 mb-4">
+        <div className="rounded-[18px] border border-destructive/30 bg-destructive/10 p-4 mb-4">
           <div className="flex items-start gap-2">
             <AlertTriangle size={16} className="text-destructive mt-0.5 shrink-0" />
             <p className="text-xs text-destructive leading-relaxed">
@@ -134,12 +139,12 @@ export default function MedicineInfoPage() {
       )}
 
       {info && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
           
           {interactions.length > 0 && (
             <div className="space-y-2 mb-2">
               {interactions.map((interaction, i) => (
-                <Alert key={i} variant="destructive" className="bg-destructive/10 border-destructive">
+                <Alert key={i} variant="destructive" className="rounded-[18px] bg-destructive/10 border-destructive">
                   <ShieldAlert className="h-5 w-5" />
                   <AlertTitle>{t("medicine_info.severe_warning")}</AlertTitle>
                   <AlertDescription className="text-sm mt-1 leading-relaxed">
@@ -150,15 +155,14 @@ export default function MedicineInfoPage() {
             </div>
           )}
 
-          <div className="rounded-xl bg-primary/10 border border-primary/20 p-3">
+          {/* Hero Drug Card - Near-Black Tile 1 / Parchment */}
+          <div className="rounded-[18px] bg-[#f5f5f7] dark:bg-[#272729] border border-border p-5">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-lg font-bold text-foreground">{info.name}</h2>
-                {info.genericName && <p className="text-sm text-muted-foreground">{t("medicine_info.generic")}: {info.genericName}</p>}
+                <h2 className="text-xl font-bold tracking-[-0.015em] text-foreground">{info.name}</h2>
+                {info.genericName && <p className="text-sm text-muted-foreground mt-0.5">{t("medicine_info.generic")}: {info.genericName}</p>}
               </div>
-              <Button 
-                size="sm" 
-                variant="secondary"
+              <button 
                 onClick={() => {
                   const existing = reminders.find(rem => rem.medicineName.toLowerCase() === info.name.toLowerCase());
                   if (existing) {
@@ -180,13 +184,13 @@ export default function MedicineInfoPage() {
                     navigate("/reminders/new", { state: { medicineName: info.name } });
                   }
                 }}
-                className="rounded-xl shadow-sm border border-primary/20"
+                className="rounded-full h-9 px-4 text-xs font-semibold bg-card border border-border hover:bg-secondary text-foreground transition-transform active:scale-95 flex items-center gap-1.5 shrink-0"
               >
-                <Bell size={14} className="mr-1.5" /> 
+                <Bell size={13} /> 
                 {reminders.some(rem => rem.medicineName.toLowerCase() === info.name.toLowerCase()) ? "Edit Reminder" : "Reminder"}
-              </Button>
+              </button>
             </div>
-            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
               <ExternalLink size={12} /> {t("medicine_info.source")}: {info.source}
             </p>
           </div>
@@ -195,13 +199,13 @@ export default function MedicineInfoPage() {
           <FdaSafetyOverviewCard profile={fdaProfile} isLoading={fdaLoading} />
 
           {sections.map((s) => (
-            <div key={s.title} className="rounded-xl border border-border bg-card p-3">
-              <h3 className="text-sm font-semibold text-foreground mb-2">{s.title}</h3>
+            <div key={s.title} className="rounded-[18px] border border-border bg-card p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-1.5">{s.title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{s.content}</p>
             </div>
           ))}
 
-          <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 font-medium">
+          <div className="rounded-[18px] border border-warning/30 bg-warning/10 p-4 font-medium">
             <div className="flex items-start gap-2 text-warning">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               <p className="text-xs leading-relaxed">

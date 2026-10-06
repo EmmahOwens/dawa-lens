@@ -36,7 +36,7 @@ import {
   AlertTriangle,
   Clock,
   X,
-} from "lucide-react";
+} from "@/lib/icons";
 
 const DISMISSED_KEY = "reliability_card_dismissed_until";
 const AUTOSTART_PROMPTED_KEY = "autostart_proactive_prompted_v1";

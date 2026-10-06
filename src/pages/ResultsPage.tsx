@@ -104,8 +104,8 @@ export default function ResultsPage() {
         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> {t("common.back")}
       </button>
 
-      <h1 className="text-3xl font-black text-foreground mb-6 tracking-tighter flex items-center gap-3">
-        <FileText size={28} className="text-primary" />
+      <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 tracking-[-0.022em] flex items-center gap-2.5">
+        <FileText size={24} className="text-[#0066cc] dark:text-[#2997ff]" />
         {t("scan.recognition_results", "Recognition Results")}
       </h1>
 
@@ -114,12 +114,12 @@ export default function ResultsPage() {
       )}
 
       {imageUrl && (
-        <div className="mb-8 rounded-[2.5rem] overflow-hidden border-4 border-card shadow-2xl bg-black/5 flex items-center justify-center relative aspect-square max-h-[400px] mx-auto">
+        <div className="mb-8 rounded-[18px] overflow-hidden border border-border bg-card flex items-center justify-center relative aspect-square max-h-[360px] mx-auto">
           <img src={imageUrl} alt="Captured scan" className="w-full h-full object-cover" />
           {(!animationComplete || loading) && (
             <motion.div 
-               className="absolute top-0 left-0 w-full h-[15%] bg-gradient-to-b from-transparent to-primary/40 border-b-[3px] border-primary z-10 box-border"
-               animate={{ y: [0, 340, 0] }}
+               className="absolute top-0 left-0 w-full h-[15%] bg-gradient-to-b from-transparent to-primary/40 border-b-[2px] border-primary z-10 box-border"
+               animate={{ y: [0, 300, 0] }}
                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             />
           )}
@@ -129,37 +129,36 @@ export default function ResultsPage() {
       <AnimatePresence>
         {saved && (
           <motion.div
-            initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
-            animate={{ opacity: 1, backdropFilter: "blur(5px)" }}
-            exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-background/50 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-background/60 backdrop-blur-md pointer-events-none"
           >
              <motion.div 
-                initial={{ scale: 0.5, opacity: 0 }}
+                initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.8, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className="w-48 h-48 bg-card/90 backdrop-blur-3xl rounded-[3rem] border border-white/20 shadow-[0_0_50px_rgba(0,0,0,0.2)] flex flex-col items-center justify-center gap-5"
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="w-44 h-44 bg-card rounded-[22px] border border-border flex flex-col items-center justify-center gap-4"
              >
                 <div className="relative">
-                  <motion.svg width="60" height="60" viewBox="0 0 50 50">
+                  <motion.svg width="56" height="56" viewBox="0 0 50 50">
                     <motion.circle 
                       cx="25" cy="25" r="23" 
-                      fill="transparent" stroke="hsl(var(--success))" strokeWidth="4" 
+                      fill="transparent" stroke="hsl(var(--success))" strokeWidth="3" 
                       initial={{ strokeDasharray: "150", strokeDashoffset: "150" }}
                       animate={{ strokeDashoffset: 0 }}
                       transition={{ duration: 0.5, ease: "easeOut" }}
                     />
                     <motion.path 
                       d="M14 26 L22 34 L38 16" 
-                      fill="transparent" stroke="hsl(var(--success))" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"
+                      fill="transparent" stroke="hsl(var(--success))" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"
                       initial={{ pathLength: 0 }}
                       animate={{ pathLength: 1 }}
                       transition={{ duration: 0.4, delay: 0.3, ease: "easeOut" }}
                     />
                   </motion.svg>
                 </div>
-                <p className="text-sm font-black uppercase tracking-widest text-success">Saved</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-success">Saved</p>
              </motion.div>
           </motion.div>
         )}
@@ -170,12 +169,12 @@ export default function ResultsPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 rounded-3xl border-2 border-destructive/30 bg-destructive/5 p-6"
+          className="mb-6 rounded-[18px] border border-destructive/30 bg-destructive/5 p-5"
         >
           <div className="flex items-start gap-3">
-            <AlertTriangle size={22} className="text-destructive shrink-0 mt-0.5" />
+            <AlertTriangle size={20} className="text-destructive shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="font-black text-sm text-destructive uppercase tracking-tight mb-1">
+              <p className="font-bold text-sm text-destructive uppercase tracking-tight mb-1">
                 {scanError.code === 'API_KEY_MISSING' || scanError.code === 'INVALID_API_KEY' || scanError.code === 'GEMINI_KEY_MISSING' || scanError.code === 'GEMINI_KEY_2_MISSING'
                   ? 'API Key Not Configured'
                   : scanError.code === 'RATE_LIMITED'
@@ -190,7 +189,7 @@ export default function ResultsPage() {
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-primary hover:underline"
+                  className="inline-flex items-center gap-1.5 mt-2.5 text-xs font-semibold text-[#0066cc] dark:text-[#2997ff] hover:underline"
                 >
                   <Sparkles size={12} /> Get Free Gemini API Key →
                 </a>
@@ -200,7 +199,7 @@ export default function ResultsPage() {
                   href={scanError.fixUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-primary hover:underline"
+                  className="inline-flex items-center gap-1.5 mt-2.5 text-xs font-semibold text-[#0066cc] dark:text-[#2997ff] hover:underline"
                 >
                   <Sparkles size={12} /> Fix This →
                 </a>
@@ -218,10 +217,10 @@ export default function ResultsPage() {
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 px-5 py-4 rounded-2xl bg-primary/5 border border-primary/20 flex items-start gap-3"
+              className="mb-6 px-5 py-4 rounded-[18px] bg-card border border-border flex items-start gap-3"
             >
-              <Sparkles size={16} className="text-primary shrink-0 mt-0.5" />
-              <div className="text-xs text-foreground/80 leading-relaxed font-medium italic">
+              <Sparkles size={16} className="text-[#0066cc] dark:text-[#2997ff] shrink-0 mt-0.5" />
+              <div className="text-xs text-foreground/80 leading-relaxed font-medium">
                 <ReactMarkdown
                   components={{
                     p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
@@ -235,42 +234,41 @@ export default function ResultsPage() {
 
           {highConfidence.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                 <ThumbsUp size={14} className="text-success" /> {t("scan.high_confidence")}
               </h2>
               <div className="space-y-4">
                 {highConfidence.map((r, idx) => (
                   <motion.div
                     key={r.name + idx}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ y: -5 }}
-                    className={`rounded-[2rem] border-2 p-6 transition-all ${confirmed === r.name ? "border-success bg-success/5 shadow-lg" : "border-border bg-card hover:border-primary/30 hover:shadow-xl"}`}
+                    className={`rounded-[18px] border p-5 transition-all ${confirmed === r.name ? "border-[#0066cc] dark:border-[#2997ff] bg-primary/5" : "border-border bg-card hover:border-foreground/20"}`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h3 className="text-xl font-black text-card-foreground leading-tight">{r.name}</h3>
+                          <h3 className="text-lg font-bold text-card-foreground leading-tight">{r.name}</h3>
                           {r.ndcValidated && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
                               <Check size={11} /> NDC Verified
                             </span>
                           )}
                           {r.deaSchedule && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
                               <ShieldAlert size={11} /> {r.deaSchedule}
                             </span>
                           )}
                         </div>
-                        {r.genericName && <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5 opacity-70">{r.genericName}</p>}
-                        <div className="mt-2 rounded-xl bg-amber-500/10 border border-amber-500/20 p-2 flex items-start gap-2">
+                        {r.genericName && <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-0.5">{r.genericName}</p>}
+                        <div className="mt-2 rounded-[11px] bg-amber-500/10 border border-amber-500/20 p-2.5 flex items-start gap-2">
                           <ShieldAlert size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                          <p className="text-[10.5px] text-amber-600 dark:text-amber-400 leading-tight">
+                          <p className="text-[11px] text-amber-600 dark:text-amber-400 leading-tight">
                             <strong className="font-semibold">Unverified match:</strong> Confirm dosage on physical packaging or with a pharmacist.
                           </p>
                         </div>
                       </div>
-                      <div className="bg-success text-success-foreground rounded-full px-3 py-1 text-[11px] font-black shadow-lg shrink-0">
+                      <div className="bg-success/15 text-success border border-success/20 rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0">
                         {Math.round(r.confidence * 100)}% Match
                       </div>
                     </div>
@@ -284,22 +282,25 @@ export default function ResultsPage() {
 
                     {/* Indications / Typical Use Confirmation Prompt */}
                     {r.indications && (
-                      <div className="mb-4 rounded-2xl bg-primary/5 border border-primary/15 p-3 flex items-start gap-2.5">
-                        <Info size={16} className="text-primary shrink-0 mt-0.5" />
+                      <div className="mb-4 rounded-[11px] bg-muted/40 border border-border p-3 flex items-start gap-2.5">
+                        <Info size={15} className="text-primary shrink-0 mt-0.5" />
                         <div>
                           <p className="text-[11px] font-bold text-foreground">Typical Clinical Use:</p>
                           <p className="text-[11px] text-muted-foreground leading-relaxed">{r.indications}</p>
                         </div>
                       </div>
                     )}
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 pt-2">
                       <div className="flex gap-2">
-                        <Button className="rounded-full flex-1 h-12" onClick={() => handleConfirm(r)} disabled={!!confirmed}>
-                          <Check size={18} className="mr-2" /> {t("common.save")}
-                        </Button>
-                        <Button 
-                          variant="secondary" 
-                          className="rounded-full flex-1 h-12" 
+                        <button 
+                          className="rounded-full flex-1 h-11 text-xs font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 flex items-center justify-center gap-1.5" 
+                          onClick={() => handleConfirm(r)} 
+                          disabled={!!confirmed}
+                        >
+                          <Check size={16} /> {t("common.save")}
+                        </button>
+                        <button 
+                          className="rounded-full flex-1 h-11 text-xs font-semibold border border-border bg-card hover:bg-secondary text-foreground transition-transform active:scale-95 flex items-center justify-center gap-1.5"
                           onClick={() => {
                             const existing = reminders.find(rem => rem.medicineName.toLowerCase() === r.name.toLowerCase());
                             if (existing) {
@@ -322,17 +323,16 @@ export default function ResultsPage() {
                             }
                           }}
                         >
-                          <Bell size={18} className="mr-2" /> 
+                          <Bell size={15} /> 
                           {reminders.some(rem => rem.medicineName.toLowerCase() === r.name.toLowerCase()) ? "Edit Reminder" : "Reminder"}
-                        </Button>
+                        </button>
                       </div>
-                      <Button
-                        variant="outline"
-                        className="rounded-full w-full h-12"
+                      <button
+                        className="rounded-full w-full h-10 text-xs font-medium border border-border bg-secondary/50 hover:bg-secondary text-foreground transition-transform active:scale-95 flex items-center justify-center gap-1.5"
                         onClick={() => navigate(`/medicine/${encodeURIComponent(r.name)}`)}
                       >
-                         View Details & Safety <ArrowLeft size={16} className="rotate-180 ml-2" />
-                      </Button>
+                         View Details & Safety <ArrowLeft size={14} className="rotate-180" />
+                      </button>
                     </div>
                   </motion.div>
                 ))}
@@ -341,24 +341,27 @@ export default function ResultsPage() {
           )}
           {lowConfidence.length > 0 && (
             <div className="mb-6">
-              <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
                 <ThumbsDown size={14} className="text-warning" /> {t("scan.low_confidence")}
               </h2>
               <div className="space-y-3">
                 {lowConfidence.map((r) => (
-                  <div key={r.name} className="rounded-xl border border-warning/30 bg-warning/5 p-4">
+                  <div key={r.name} className="rounded-[18px] border border-warning/30 bg-warning/5 p-4">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="font-semibold text-card-foreground">{r.name}</p>
+                        <p className="font-semibold text-foreground text-sm">{r.name}</p>
                       </div>
-                      <span className="rounded-lg bg-warning/15 px-2 py-1 text-xs font-bold text-warning">
+                      <span className="rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-semibold text-warning">
                         {Math.round(r.confidence * 100)}%
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-3">
-                      <Button size="sm" variant="outline" onClick={() => navigate(`/search?q=${encodeURIComponent(r.name)}`)}>
-                        <Search size={14} className="mr-1" /> Verify
-                      </Button>
+                      <button 
+                        className="rounded-full h-8 px-3.5 text-xs font-semibold border border-border bg-card hover:bg-secondary text-foreground active:scale-95 transition-transform flex items-center gap-1.5"
+                        onClick={() => navigate(`/search?q=${encodeURIComponent(r.name)}`)}
+                      >
+                        <Search size={13} /> Verify
+                      </button>
                     </div>
                   </div>
                 ))}

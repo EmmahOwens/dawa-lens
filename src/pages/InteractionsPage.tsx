@@ -588,7 +588,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
       >
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground flex items-center gap-2">
               {activeTab === "cabinet" ? t("safety.title") : "Safety Sandbox"}
             </h1>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1">
@@ -598,23 +598,23 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
           <div className="flex gap-2">
             <button 
               onClick={handleShareReport}
-              className="w-11 h-11 rounded-xl bg-card border border-border/40 flex items-center justify-center text-muted-foreground hover:text-foreground shadow-sm transition-all active:scale-95"
+              className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95"
               title="Share Report"
             >
-              <Share2 size={18} />
+              <Share2 size={16} />
             </button>
-            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm">
-              <ShieldAlert size={20} />
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <ShieldAlert size={18} />
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Glassmorphic Tab Switcher */}
-      <div className="flex p-1 bg-muted/30 border border-border/30 rounded-xl mb-6 backdrop-blur-md">
+      {/* Apple Segmented Pill Switcher */}
+      <div className="flex p-1 bg-secondary border border-border rounded-full mb-6">
         <button
           onClick={() => handleTabChange("cabinet")}
-          className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${
             activeTab === "cabinet"
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
@@ -624,7 +624,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
         </button>
         <button
           onClick={() => handleTabChange("sandbox")}
-          className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${
             activeTab === "sandbox"
               ? "bg-card text-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground"
@@ -843,7 +843,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                   <motion.div 
                     key={idx} 
                     variants={item}
-                    className="rounded-xl border border-border/50 bg-card p-5 shadow-sm overflow-hidden relative transition-all hover:bg-accent/5"
+                    className="rounded-[18px] border border-border bg-card p-5 overflow-hidden relative transition-all hover:border-foreground/20"
                   >
                     <div className={`absolute top-0 left-0 w-1 h-full ${interaction.severity === 'high' ? 'bg-destructive' : 'bg-warning'}`} />
                     
@@ -854,9 +854,9 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                         <span className="font-bold text-sm text-card-foreground lowercase capitalize tracking-tight">{interaction.drug2}</span>
                       </div>
                       {interaction.severity === 'high' ? (
-                        <Badge variant="destructive" className="ml-2 px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.severe")}</Badge>
+                        <Badge variant="destructive" className="ml-2 px-2.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full">{t("safety.severe")}</Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-warning/10 text-amber-800 dark:text-amber-300 px-2 py-0 text-[9px] uppercase font-bold tracking-widest">{t("safety.warning")}</Badge>
+                        <Badge variant="secondary" className="bg-warning/10 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full">{t("safety.warning")}</Badge>
                       )}
                     </div>
 
@@ -869,16 +869,16 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                           </span>
                         )}
                         {interaction.clinicalDetails.spacingHours !== undefined ? (
-                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
                             ⏰ Space by {interaction.clinicalDetails.spacingHours}+ hours
                           </span>
                         ) : interaction.severity === 'high' ? (
-                          <span className="text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2.5 py-0.5 rounded-full">
                             🚫 Avoid Combination
                           </span>
                         ) : null}
                         {interaction.clinicalDetails.organRisk && (
-                          <span className="text-[10px] font-semibold text-muted-foreground bg-muted/40 border border-border/40 px-2 py-0.5 rounded-md">
+                          <span className="text-[10px] font-semibold text-muted-foreground bg-muted/40 border border-border/40 px-2.5 py-0.5 rounded-full">
                             Target: {interaction.clinicalDetails.organRisk}
                           </span>
                         )}
@@ -892,7 +892,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={() => translateExplanation(key, interaction.drug1, interaction.drug2, interaction.description)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider transition-all"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-semibold transition-all active:scale-95"
                       >
                         {explanations[key]?.loading ? (
                           <Loader2 size={12} className="animate-spin" />
@@ -904,7 +904,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
 
                       <button
                         onClick={() => handleConsultSingleInteraction(interaction)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/80 hover:bg-secondary text-secondary-foreground text-[10px] font-bold uppercase tracking-wider transition-all"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-[11px] font-semibold transition-all active:scale-95"
                       >
                         <Brain size={12} />
                         Consult DawaGPT

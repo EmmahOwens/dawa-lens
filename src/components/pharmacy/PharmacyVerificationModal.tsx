@@ -108,16 +108,16 @@ export const PharmacyVerificationModal: React.FC<PharmacyVerificationModalProps>
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-full max-w-md overflow-hidden rounded-3xl bg-card border border-border shadow-2xl"
+        className="w-full max-w-md overflow-hidden rounded-[20px] bg-card border border-border shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-border/50 bg-muted/20">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
+        <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#f5f5f7] dark:bg-[#272729] border border-border text-primary">
               <ShieldCheck className="size-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-foreground leading-tight">
+              <h3 className="text-base font-bold tracking-[-0.022em] text-foreground leading-tight">
                 Community Verification
               </h3>
               <p className="text-xs text-muted-foreground line-clamp-1">{pharmacy.name}</p>
@@ -125,7 +125,7 @@ export const PharmacyVerificationModal: React.FC<PharmacyVerificationModalProps>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted active:scale-95"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted active:scale-95 transition-transform"
           >
             <CloseSquare className="size-5" />
           </button>
@@ -135,43 +135,43 @@ export const PharmacyVerificationModal: React.FC<PharmacyVerificationModalProps>
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Action Type Selector */}
           <div>
-            <label className="text-xs font-bold text-foreground mb-1.5 block">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">
               What would you like to verify?
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setFeedbackType("confirm_location")}
-                className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs font-bold transition-all ${
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
                   feedbackType === "confirm_location"
-                    ? "bg-teal-500/15 border-teal-500/40 text-teal-700 dark:text-teal-300 shadow-sm"
-                    : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/40"
                 }`}
               >
-                <Location className="size-4 shrink-0 text-teal-600 dark:text-teal-400" />
+                <Location className="size-3.5 shrink-0" />
                 <span>Confirm Location</span>
               </button>
               <button
                 type="button"
                 onClick={() => setFeedbackType("wrong_location")}
-                className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs font-bold transition-all ${
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-full border text-xs font-semibold transition-all active:scale-95 ${
                   feedbackType === "wrong_location"
-                    ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300 shadow-sm"
-                    : "bg-muted/20 border-border/50 text-muted-foreground hover:bg-muted/40"
+                    ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300"
+                    : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/40"
                 }`}
               >
-                <AlertTriangle className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <AlertTriangle className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
                 <span>Wrong Coordinates</span>
               </button>
             </div>
           </div>
 
           {/* GPS Pin Capture */}
-          <div className="p-3.5 rounded-2xl bg-muted/30 border border-border/50 space-y-2">
+          <div className="p-4 rounded-[16px] bg-muted/30 border border-border space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-foreground">Pin Live GPS Ground Truth</span>
+              <span className="text-xs font-semibold text-foreground">Pin Live GPS Ground Truth</span>
               {verifiedCoords ? (
-                <span className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                   <CheckCircle className="size-3.5" /> Pinned
                   {gpsAccuracy && ` (±${gpsAccuracy}m)`}
                 </span>
@@ -186,16 +186,16 @@ export const PharmacyVerificationModal: React.FC<PharmacyVerificationModalProps>
               size="sm"
               onClick={handleCaptureLiveGps}
               disabled={isLocating}
-              className="w-full h-9 rounded-xl font-bold gap-2 text-xs"
+              className="w-full h-10 rounded-full font-semibold gap-2 text-xs border-border active:scale-95 transition-transform"
             >
               {isLocating ? (
                 <>
-                  <RefreshCw className="size-3.5 animate-spin text-teal-600" />
+                  <RefreshCw className="size-3.5 animate-spin text-primary" />
                   <span>Locking Satellites…</span>
                 </>
               ) : (
                 <>
-                  <Crosshair className="size-3.5 text-teal-600 dark:text-teal-400" />
+                  <Crosshair className="size-3.5 text-primary" />
                   <span>{verifiedCoords ? "Re-pin Current GPS" : "I'm Here — Pin My GPS"}</span>
                 </>
               )}
@@ -204,48 +204,48 @@ export const PharmacyVerificationModal: React.FC<PharmacyVerificationModalProps>
 
           {/* Optional Phone Number Update */}
           <div>
-            <label className="text-xs font-bold text-foreground mb-1 block">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
               Contact Phone (Optional)
             </label>
             <div className="relative">
-              <Phone className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+              <Phone className="absolute left-4 top-3 size-4 text-muted-foreground" />
               <Input
                 type="tel"
                 value={suggestedPhone}
                 onChange={(e) => setSuggestedPhone(e.target.value)}
                 placeholder="e.g. +256 700 000 000"
-                className="pl-9 h-10 rounded-xl text-xs"
+                className="pl-11 h-11 rounded-full text-xs"
               />
             </div>
           </div>
 
           {/* Notes */}
           <div>
-            <label className="text-xs font-bold text-foreground mb-1 block">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">
               Landmark or Operating Details (Optional)
             </label>
             <Input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Opposite Shell petrol station, open 24/7"
-              className="h-10 rounded-xl text-xs"
+              className="h-11 rounded-full text-xs"
             />
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+          <div className="flex items-center gap-2 pt-2 border-t border-border">
             <Button
               type="button"
               variant="ghost"
               onClick={onClose}
-              className="flex-1 h-10 rounded-xl text-xs font-bold"
+              className="flex-1 h-11 rounded-full text-xs font-semibold active:scale-95 transition-transform"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 h-10 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs gap-1.5 shadow-md shadow-teal-600/20"
+              className="flex-1 h-11 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs gap-1.5 active:scale-95 transition-transform"
             >
               {isSubmitting ? (
                 <RefreshCw className="size-3.5 animate-spin" />

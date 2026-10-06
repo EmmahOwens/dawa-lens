@@ -562,7 +562,7 @@ export default function ReportPage() {
           className="mb-8 flex flex-wrap items-start justify-between gap-4"
         >
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+            <h1 className="text-3xl font-bold tracking-[-0.022em] text-foreground">
               Care Report
             </h1>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1 truncate">
@@ -576,7 +576,7 @@ export default function ReportPage() {
               size="sm"
               onClick={handleDownloadPDF}
               disabled={downloading}
-              className="rounded-xl h-10 px-3.5 shadow-md shadow-primary/20 text-xs font-bold gap-2"
+              className="rounded-full h-10 px-4 text-xs font-semibold gap-2 active:scale-95 transition-transform"
               title="Download PDF Report"
             >
               {downloading ? (
@@ -594,7 +594,7 @@ export default function ReportPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowPreview(true)}
-                className="rounded-xl h-10 border-border/50 shadow-sm gap-2"
+                className="rounded-full h-10 px-4 border-border text-xs font-semibold gap-2 active:scale-95 transition-transform"
               >
                 <Eye size={15} />
                 <span>Preview</span>
@@ -603,7 +603,7 @@ export default function ReportPage() {
                 variant="outline"
                 size="icon"
                 onClick={handleShare}
-                className="rounded-xl w-10 h-10 border-border/50 shadow-sm"
+                className="rounded-full w-10 h-10 border-border active:scale-95 transition-transform"
                 title="Share Report"
               >
                 <Share2 size={16} />
@@ -612,7 +612,7 @@ export default function ReportPage() {
                 variant="outline"
                 size="icon"
                 onClick={handlePrint}
-                className="rounded-xl w-10 h-10 border-border/50 shadow-sm"
+                className="rounded-full w-10 h-10 border-border active:scale-95 transition-transform"
                 title="Print Medical Report"
               >
                 <Printer size={16} />
@@ -626,22 +626,22 @@ export default function ReportPage() {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="rounded-xl w-10 h-10 border-border/50 shadow-sm"
+                    className="rounded-full w-10 h-10 border-border"
                   >
                     <MoreVertical size={16} />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-2xl p-1.5 min-w-[170px] shadow-xl border-border/40">
+                <DropdownMenuContent align="end" className="rounded-2xl p-1.5 min-w-[170px] border-border bg-card">
                   <DropdownMenuItem
                     onClick={() => setShowPreview(true)}
-                    className="gap-2.5 font-bold text-xs rounded-xl p-2.5 cursor-pointer"
+                    className="gap-2.5 font-semibold text-xs rounded-xl p-2.5 cursor-pointer"
                   >
                     <Eye size={15} className="text-primary" />
                     Preview Report
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={handleShare}
-                    className="gap-2.5 font-bold text-xs rounded-xl p-2.5 cursor-pointer"
+                    className="gap-2.5 font-semibold text-xs rounded-xl p-2.5 cursor-pointer"
                   >
                     <Share2 size={15} />
                     Share Summary
@@ -649,7 +649,7 @@ export default function ReportPage() {
                   <DropdownMenuSeparator className="my-1 bg-border/40" />
                   <DropdownMenuItem
                     onClick={handlePrint}
-                    className="gap-2.5 font-bold text-xs rounded-xl p-2.5 cursor-pointer"
+                    className="gap-2.5 font-semibold text-xs rounded-xl p-2.5 cursor-pointer"
                   >
                     <Printer size={15} />
                     Print Report
@@ -669,23 +669,23 @@ export default function ReportPage() {
           {/* Adherence Score Card */}
           <motion.div
             variants={item}
-            className="p-8 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/10 relative overflow-hidden transition-all hover:scale-[1.01]"
+            className="p-6 sm:p-7 rounded-[18px] border border-border bg-[#f5f5f7] dark:bg-[#272729] text-foreground relative overflow-hidden transition-all active:scale-[0.99]"
           >
-            <div className="absolute top-0 right-0 p-8 opacity-10">
+            <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 pointer-events-none text-foreground">
               <Activity size={96} />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider opacity-80 mb-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
               7-Day Adherence Rating
             </p>
-            <div className="flex items-end gap-3">
-              <h2 className="text-5xl font-bold tracking-tight">
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-5xl font-bold tracking-[-0.022em] text-foreground">
                 {adherenceScore}%
               </h2>
-              <p className="text-[10px] font-bold mb-2.5 opacity-90 uppercase tracking-widest text-primary-foreground/70">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Overall Score
-              </p>
+              </span>
             </div>
-            <p className="mt-5 text-[12px] font-medium opacity-80 leading-relaxed max-w-[260px]">
+            <p className="mt-3 text-xs font-normal text-muted-foreground leading-relaxed max-w-[320px]">
               {adherenceScore >= 90
                 ? "Excellent tracking consistency. Keep it up!"
                 : adherenceScore >= 70
@@ -701,7 +701,7 @@ export default function ReportPage() {
 
           {/* Emotional Wellness Summary */}
           {emotionalStats && (
-            <motion.div variants={item} className="premium-card">
+            <motion.div variants={item} className="p-6 rounded-[18px] border border-border bg-card">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="section-title flex items-center gap-2 mb-0">
                   <Heart size={14} className="text-destructive" /> Emotional
@@ -716,7 +716,7 @@ export default function ReportPage() {
 
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {/* Avg Mood */}
-                <div className="p-4 rounded-2xl bg-success/5 border border-success/10">
+                <div className="p-4 rounded-[14px] bg-muted/30 border border-border">
                   <div className="flex items-center gap-2 mb-2">
                     <Smile size={14} className="text-success" />
                     <p className="text-[10px] font-black uppercase tracking-widest text-success/70">
@@ -744,7 +744,7 @@ export default function ReportPage() {
                 </div>
 
                 {/* Avg Energy */}
-                <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                <div className="p-4 rounded-[14px] bg-muted/30 border border-border">
                   <div className="flex items-center gap-2 mb-2">
                     <Zap size={14} className="text-primary" />
                     <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">
@@ -773,7 +773,7 @@ export default function ReportPage() {
               </div>
 
               {/* Wellness consistency */}
-              <div className="flex items-center gap-3 mb-5 p-3 rounded-xl bg-muted/20 border border-border/40">
+              <div className="flex items-center gap-3 mb-5 p-3 rounded-xl bg-muted/20 border border-border">
                 <Brain
                   size={14}
                   className="text-muted-foreground/60 shrink-0"
@@ -802,12 +802,12 @@ export default function ReportPage() {
                     {emotionalStats.topSymptoms.map(({ name, count }) => (
                       <div
                         key={name}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent/50 border border-border/40"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/40 border border-border"
                       >
-                        <span className="text-xs font-bold text-foreground">
+                        <span className="text-xs font-semibold text-foreground">
                           {name}
                         </span>
-                        <span className="text-[9px] font-black text-muted-foreground bg-muted/60 px-1 rounded">
+                        <span className="text-[10px] font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
                           {count}×
                         </span>
                       </div>
@@ -819,7 +819,7 @@ export default function ReportPage() {
           )}
 
           {/* AI Clinical Summary */}
-          <motion.div variants={item} className="premium-card">
+          <motion.div variants={item} className="p-6 rounded-[18px] border border-border bg-card">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <h3 className="section-title flex items-center gap-2 mb-0">
@@ -827,7 +827,7 @@ export default function ReportPage() {
                   Assessment
                 </h3>
                 {insights?.source === "local" && (
-                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                     Calculated from logs
                   </span>
                 )}
@@ -856,7 +856,7 @@ export default function ReportPage() {
 
             {insights ? (
               <div className="space-y-6">
-                <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10 relative">
+                <div className="p-5 rounded-[16px] bg-muted/30 border border-border relative">
                   <div className="text-sm font-semibold text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
@@ -883,20 +883,20 @@ export default function ReportPage() {
                           <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-xs font-mono">{children}</code>
                         ),
                         table: ({ children }) => (
-                          <div className="overflow-x-auto my-3 rounded-xl border border-primary/20">
+                          <div className="overflow-x-auto my-3 rounded-[12px] border border-border">
                             <table className="w-full text-xs text-left border-collapse">{children}</table>
                           </div>
                         ),
-                        thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
-                        th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap text-foreground">{children}</th>,
-                        td: ({ children }) => <td className="px-3 py-2 border-b border-border/30 text-foreground">{children}</td>,
+                        thead: ({ children }) => <thead className="bg-muted/50">{children}</thead>,
+                        th: ({ children }) => <th className="px-3 py-2 border-b border-border font-bold whitespace-nowrap text-foreground">{children}</th>,
+                        td: ({ children }) => <td className="px-3 py-2 border-b border-border/50 text-foreground">{children}</td>,
                       }}
                     >
                       {insights.summary}
                     </ReactMarkdown>
                   </div>
                   {insights.dosagePatterns && (
-                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm dark:prose-invert max-w-none">
+                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-border prose prose-sm dark:prose-invert max-w-none">
                       <strong className="text-foreground font-bold">
                         Dosage Patterns:
                       </strong>
@@ -925,13 +925,13 @@ export default function ReportPage() {
                             <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-xs font-mono">{children}</code>
                           ),
                           table: ({ children }) => (
-                            <div className="overflow-x-auto my-3 rounded-xl border border-primary/20">
+                            <div className="overflow-x-auto my-3 rounded-[12px] border border-border">
                               <table className="w-full text-xs text-left border-collapse">{children}</table>
                             </div>
                           ),
-                          thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
-                          th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap text-foreground">{children}</th>,
-                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/30 text-foreground">{children}</td>,
+                          thead: ({ children }) => <thead className="bg-muted/50">{children}</thead>,
+                          th: ({ children }) => <th className="px-3 py-2 border-b border-border font-bold whitespace-nowrap text-foreground">{children}</th>,
+                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/50 text-foreground">{children}</td>,
                         }}
                       >
                         {insights.dosagePatterns}
@@ -939,7 +939,7 @@ export default function ReportPage() {
                     </div>
                   )}
                   {insights.lifestyleAnalysis && (
-                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-primary/10 prose prose-sm dark:prose-invert max-w-none">
+                    <div className="text-xs font-medium text-muted-foreground mt-3 pt-3 border-t border-border prose prose-sm dark:prose-invert max-w-none">
                       <strong className="text-foreground font-bold">
                         Lifestyle & Symptoms:
                       </strong>
@@ -968,13 +968,13 @@ export default function ReportPage() {
                             <code className="bg-muted px-1.5 py-0.5 rounded text-primary text-xs font-mono">{children}</code>
                           ),
                           table: ({ children }) => (
-                            <div className="overflow-x-auto my-3 rounded-xl border border-primary/20">
+                            <div className="overflow-x-auto my-3 rounded-[12px] border border-border">
                               <table className="w-full text-xs text-left border-collapse">{children}</table>
                             </div>
                           ),
-                          thead: ({ children }) => <thead className="bg-primary/10">{children}</thead>,
-                          th: ({ children }) => <th className="px-3 py-2 border-b border-primary/20 font-bold whitespace-nowrap text-foreground">{children}</th>,
-                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/30 text-foreground">{children}</td>,
+                          thead: ({ children }) => <thead className="bg-muted/50">{children}</thead>,
+                          th: ({ children }) => <th className="px-3 py-2 border-b border-border font-bold whitespace-nowrap text-foreground">{children}</th>,
+                          td: ({ children }) => <td className="px-3 py-2 border-b border-border/50 text-foreground">{children}</td>,
                         }}
                       >
                         {insights.lifestyleAnalysis}
@@ -991,10 +991,10 @@ export default function ReportPage() {
                     {insights.insights.map((insight: string, idx: number) => (
                       <div
                         key={idx}
-                        className="flex gap-3 items-start p-3.5 rounded-xl bg-accent/30 border border-border/40 hover:bg-accent/50 transition-colors"
+                        className="flex gap-3 items-start p-3.5 rounded-[14px] bg-muted/20 border border-border hover:bg-muted/40 transition-colors"
                       >
-                        <div className="w-5 h-5 rounded-full bg-indigo-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                          <CheckCircle2 size={12} className="text-indigo-500" />
+                        <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <CheckCircle2 size={12} className="text-primary" />
                         </div>
                         <div className="text-xs text-foreground leading-relaxed font-medium prose prose-sm dark:prose-invert max-w-none">
                           <ReactMarkdown
@@ -1027,9 +1027,9 @@ export default function ReportPage() {
                     {insights.actionItems.map((action: string, idx: number) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-3.5 rounded-xl bg-warning/5 border border-warning/20"
+                        className="flex items-center justify-between p-3.5 rounded-[14px] bg-warning/5 border border-warning/20"
                       >
-                        <div className="text-xs font-semibold text-amber-900 dark:text-amber-200 leading-snug pr-4 prose prose-sm dark:prose-invert max-w-none">
+                        <div className="text-xs font-semibold text-foreground leading-snug pr-4 prose prose-sm dark:prose-invert max-w-none">
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
                             components={{
@@ -1037,10 +1037,10 @@ export default function ReportPage() {
                                 <p className="m-0">{children}</p>
                               ),
                               strong: ({ children }) => (
-                                <strong className="font-bold text-amber-950 dark:text-amber-100">{children}</strong>
+                                <strong className="font-bold text-foreground">{children}</strong>
                               ),
                               b: ({ children }) => (
-                                <b className="font-bold text-amber-950 dark:text-amber-100">{children}</b>
+                                <b className="font-bold text-foreground">{children}</b>
                               ),
                             }}
                           >
@@ -1057,9 +1057,9 @@ export default function ReportPage() {
                 )}
               </div>
             ) : (
-              <div className="py-14 text-center opacity-80 bg-accent/20 rounded-2xl border border-dashed border-border/50 p-6">
-                <Info size={32} className="mx-auto mb-3 opacity-50" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              <div className="py-14 text-center bg-muted/20 rounded-[18px] border border-dashed border-border p-6">
+                <Info size={32} className="mx-auto mb-3 opacity-40 text-muted-foreground" />
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {loading
                     ? "Generating Clinical Insights..."
                     : scopedDoseLogs.length > 0 || scopedMedicines.length > 0
@@ -1071,7 +1071,7 @@ export default function ReportPage() {
                     variant="outline"
                     size="sm"
                     onClick={fetchInsights}
-                    className="mt-4 text-xs font-bold rounded-xl gap-2"
+                    className="mt-4 text-xs font-semibold rounded-full gap-2 border-border active:scale-95 transition-transform"
                   >
                     <Sparkles size={13} className="text-primary" />
                     Generate Clinical Assessment
@@ -1085,9 +1085,9 @@ export default function ReportPage() {
 
       {/* -------------------- PREVIEW DIALOG -------------------- */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-[96vw] sm:max-w-4xl w-full h-[90dvh] max-h-[92dvh] p-0 overflow-hidden flex flex-col gap-0 rounded-2xl border-none shadow-2xl">
-          <DialogHeader className="p-3 sm:p-4 border-b bg-background flex-row items-center justify-between space-y-0">
-            <DialogTitle className="text-[10px] sm:text-sm font-bold uppercase tracking-widest opacity-70 truncate mr-2">
+        <DialogContent className="max-w-[96vw] sm:max-w-4xl w-full h-[90dvh] max-h-[92dvh] p-0 overflow-hidden flex flex-col gap-0 rounded-[20px] border border-border shadow-2xl">
+          <DialogHeader className="p-3 sm:p-4 border-b border-border bg-background flex-row items-center justify-between space-y-0">
+            <DialogTitle className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate mr-2">
               Report Preview
             </DialogTitle>
             <div className="flex gap-1.5 sm:gap-2 pr-8">
@@ -1096,7 +1096,7 @@ export default function ReportPage() {
                 size="sm"
                 onClick={handleDownloadPDF}
                 disabled={downloading}
-                className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl text-primary"
+                className="h-8 sm:h-9 px-3 gap-1.5 sm:gap-2 rounded-full border-border text-primary active:scale-95 transition-transform"
               >
                 {downloading ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -1111,10 +1111,10 @@ export default function ReportPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleShare}
-                className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl"
+                className="h-8 sm:h-9 px-3 gap-1.5 sm:gap-2 rounded-full border-border active:scale-95 transition-transform"
               >
                 <Share2 size={14} />
-                <span className="hidden xs:inline text-[10px] sm:text-xs">
+                <span className="hidden xs:inline text-[10px] sm:text-xs font-semibold">
                   Share
                 </span>
               </Button>
@@ -1122,10 +1122,10 @@ export default function ReportPage() {
                 variant="outline"
                 size="sm"
                 onClick={handlePrint}
-                className="h-8 sm:h-9 px-2 sm:px-3 gap-1.5 sm:gap-2 rounded-xl hidden sm:flex"
+                className="h-8 sm:h-9 px-3 gap-1.5 sm:gap-2 rounded-full border-border hidden sm:flex active:scale-95 transition-transform"
               >
                 <Printer size={14} />
-                <span className="text-[10px] sm:text-xs">Print</span>
+                <span className="text-[10px] sm:text-xs font-semibold">Print</span>
               </Button>
             </div>
           </DialogHeader>

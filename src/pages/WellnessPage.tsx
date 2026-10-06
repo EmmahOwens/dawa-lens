@@ -378,11 +378,11 @@ export default function WellnessPage() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground">
             Wellness Hub
           </h1>
-          <div className="w-11 h-11 rounded-xl bg-success/10 flex items-center justify-center text-success shadow-sm">
-            <Heart size={20} />
+          <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center text-success">
+            <Heart size={18} />
           </div>
         </div>
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80">
@@ -395,17 +395,17 @@ export default function WellnessPage() {
         <WellnessInsightCard insight={insight} loading={insightLoading} onRefresh={() => fetchWellnessInsight(true)} />
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-8 p-1 bg-muted/50 rounded-xl border border-border/50">
+      {/* Apple Segmented Pill Switcher */}
+      <div className="flex gap-1 mb-8 p-1 bg-secondary rounded-full border border-border">
         <button
           onClick={() => setActiveTab("journal")}
-          className={`flex-1 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${activeTab === "journal" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground/80"}`}
+          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${activeTab === "journal" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           Daily Journal
         </button>
         <button
           onClick={() => setActiveTab("food")}
-          className={`flex-1 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${activeTab === "food" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground/80"}`}
+          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${activeTab === "food" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
         >
           Food Log
         </button>

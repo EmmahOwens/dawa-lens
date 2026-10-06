@@ -92,16 +92,16 @@ export function IntelligencePanel() {
 
   if (isIntelligenceCollapsed) {
     return (
-      <aside className="w-[70px] border-l border-border bg-sidebar-background flex flex-col h-screen sticky top-0 overflow-hidden items-center py-6 transition-all duration-500 justify-between">
+      <aside className="w-[72px] border-l border-border bg-card/60 backdrop-blur-xl flex flex-col h-screen sticky top-0 overflow-hidden items-center py-6 transition-all duration-300 justify-between">
         <div className="flex flex-col items-center">
           <button
             onClick={() => setIsIntelligenceCollapsed(false)}
             aria-label="Expand intelligence panel"
-            className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-8 hover:bg-primary/20 transition-colors active:scale-95"
+            className="w-9 h-9 rounded-full bg-muted/60 hover:bg-muted flex items-center justify-center text-foreground mb-8 transition-colors active:scale-95"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={18} />
           </button>
-          <div className="flex flex-col gap-7 opacity-40">
+          <div className="flex flex-col gap-6 opacity-40 text-muted-foreground">
             <LayoutDashboard size={20} />
             <Scan size={20} />
             <Heart size={20} />
@@ -116,10 +116,10 @@ export function IntelligencePanel() {
             onClick={() => handleLaunch()}
             title={isOnline ? "Ask DawaGPT" : "DawaGPT is offline"}
             disabled={!isOnline}
-            className="relative group w-11 h-11 rounded-2xl bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-background ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-            <Bot size={20} className="group-hover:rotate-6 transition-transform" />
+            <div className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${isOnline ? "bg-emerald-500" : "bg-amber-500"}`} />
+            <Bot size={18} />
           </button>
           <Info size={16} className="text-muted-foreground/30 mb-2" />
         </div>
@@ -128,46 +128,46 @@ export function IntelligencePanel() {
   }
 
   return (
-    <aside className="w-[360px] border-l border-white/10 bg-background/60 backdrop-blur-3xl backdrop-saturate-[2] flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-500 animate-in fade-in slide-in-from-right-4 shadow-[-20px_0_40px_rgba(0,0,0,0.04)]">
+    <aside className="w-[360px] border-l border-border bg-card/60 backdrop-blur-xl flex flex-col h-screen sticky top-0 overflow-hidden transition-all duration-300 shadow-xs">
 
       {/* Header with Collapse Button */}
-      <div className="p-5 pb-3 flex items-center justify-between border-b border-white/5 shrink-0">
+      <div className="p-4 px-5 flex items-center justify-between border-b border-border shrink-0">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-8 h-8 rounded-lg overflow-hidden shadow-md border border-primary/20 p-0.5 bg-background">
-              <img src="/dawa-gpt.png" alt="Intelligence" className="w-full h-full object-cover rounded-[calc(0.5rem-2px)]" />
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-border p-0.5 bg-card">
+              <img src="/dawa-gpt.png" alt="Intelligence" className="w-full h-full object-cover rounded-full" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-background rounded-full flex items-center justify-center">
-              <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-success animate-pulse" : "bg-amber-500"}`} />
+              <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-amber-500"}`} />
             </div>
           </div>
           <div>
-            <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground leading-none">Intelligence</h2>
-            <span className="text-[9px] text-primary/80 font-bold uppercase tracking-widest mt-0.5 block">Live Context</span>
+            <h2 className="text-xs font-semibold tracking-tight text-foreground leading-none">Intelligence</h2>
+            <span className="text-[10px] text-muted-foreground font-medium mt-0.5 block">Live Health Context</span>
           </div>
         </div>
         <button
           onClick={() => setIsIntelligenceCollapsed(true)}
           aria-label="Collapse panel"
-          className="p-1.5 hover:bg-muted/80 rounded-full text-muted-foreground transition-all active:scale-90"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors active:scale-95"
         >
           <ChevronRight size={18} />
         </button>
       </div>
 
       {/* Main Scrollable Contextual Widgets Area */}
-      <div className="p-5 space-y-6 overflow-y-auto flex-1 no-scrollbar">
+      <div className="p-5 space-y-5 overflow-y-auto flex-1 no-scrollbar">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, x: 10 }}
+            initial={{ opacity: 0, x: 8 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.3 }}
+            exit={{ opacity: 0, x: -8 }}
+            transition={{ duration: 0.25 }}
           >
             <ErrorBoundary
               fallback={
-                <div className="p-4 rounded-xl bg-destructive/5 border border-destructive/20 text-center">
+                <div className="p-4 rounded-[18px] bg-destructive/5 border border-destructive/20 text-center">
                   <AlertCircle size={20} className="text-destructive mx-auto mb-2" />
                   <p className="text-[10px] font-bold text-destructive uppercase tracking-widest">Widget Error</p>
                 </div>
@@ -197,81 +197,47 @@ function DawaGPTMiniButton({
   isOnline: boolean;
 }) {
   const { phrase, visible } = usePopupPhrase(POPUP_PHRASES, 3200);
-  const [hovered, setHovered] = useState(false);
 
   return (
-    <div className="px-4 pb-4 pt-2 border-t border-border/40 bg-background/80 dark:bg-card/60 backdrop-blur-2xl shrink-0 z-20">
-      <div
-        className="relative flex items-center justify-center py-3"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
+    <div className="px-4 pb-4 pt-2 border-t border-border bg-card/80 backdrop-blur-xl shrink-0 z-20">
+      <div className="relative flex items-center justify-center py-2">
         {/* Floating popup phrase */}
         <AnimatePresence mode="wait">
           {visible && (
             <motion.div
               key={phrase}
-              initial={{ opacity: 0, y: 8, scale: 0.88 }}
+              initial={{ opacity: 0, y: 6, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.88 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 pointer-events-none z-30"
+              exit={{ opacity: 0, y: -6, scale: 0.95 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 pointer-events-none z-30"
             >
-              <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg shadow-primary/30 whitespace-nowrap border border-primary/30 backdrop-blur-sm">
+              <div className="bg-foreground text-background text-[11px] font-medium px-3.5 py-1.5 rounded-full shadow-md whitespace-nowrap">
                 {phrase}
                 {/* tail */}
-                <span className="absolute left-1/2 -translate-x-1/2 -bottom-1.5 w-3 h-1.5 overflow-hidden">
-                  <span className="block w-2 h-2 bg-primary rotate-45 mx-auto -translate-y-1" />
-                </span>
+                <span className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-foreground rotate-45" />
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* The animated Bot icon button */}
-        <motion.button
+        {/* The Action Blue Bot icon button */}
+        <button
           onClick={() => onLaunch()}
           disabled={!isOnline}
           aria-label="Open DawaGPT AI"
-          whileHover={{ scale: 1.12, rotate: [0, -6, 6, -4, 4, 0] }}
-          whileTap={{ scale: 0.93 }}
-          transition={{ type: "spring", stiffness: 300, damping: 15 }}
-          className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary via-primary/90 to-primary/70 text-primary-foreground flex items-center justify-center shadow-xl shadow-primary/35 hover:shadow-primary/50 transition-shadow disabled:opacity-40 disabled:cursor-not-allowed"
+          className="relative w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {/* Pulsing ring */}
-          <motion.span
-            className="absolute inset-0 rounded-2xl ring-2 ring-primary/40"
-            animate={isOnline ? { scale: [1, 1.18, 1], opacity: [0.6, 0, 0.6] } : {}}
-            transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
-          />
-          {/* Orbiting sparkle */}
-          <motion.span
-            className="absolute top-0.5 right-0.5 text-yellow-300"
-            animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
-          >
-            <Sparkles size={10} />
-          </motion.span>
-
-          <motion.div
-            animate={hovered ? { rotate: [0, -8, 8, 0], y: [0, -2, 0] } : { rotate: 0, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Bot size={26} strokeWidth={2} />
-          </motion.div>
+          <Bot size={22} />
 
           {/* Online dot */}
-          <span className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-background flex items-center justify-center ${isOnline ? "bg-emerald-500" : "bg-amber-400"}`}>
-            {isOnline && (
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-            )}
-          </span>
-        </motion.button>
+          <span className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background flex items-center justify-center ${isOnline ? "bg-emerald-500" : "bg-amber-400"}`} />
+        </button>
       </div>
 
       {/* Sub-label */}
-      <p className="text-center text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 mt-1 select-none">
-        DawaGPT AI
+      <p className="text-center text-[10px] font-medium text-muted-foreground select-none">
+        Ask DawaGPT
       </p>
     </div>
   );

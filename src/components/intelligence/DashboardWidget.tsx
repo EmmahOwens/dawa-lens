@@ -98,8 +98,7 @@ export function DashboardWidget() {
           <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
         </div>
         <motion.div 
-          whileHover={{ scale: 1.01 }}
-          className="bg-primary/5 backdrop-blur-md border border-primary/20 rounded-[2rem] p-6 relative overflow-hidden group shadow-sm hover:shadow-primary/5 transition-all"
+          className="bg-card border border-border rounded-[18px] p-5 relative overflow-hidden transition-colors shadow-xs"
         >
           <div className="z-10 relative">
             {overallNextSlot ? (
@@ -141,12 +140,11 @@ export function DashboardWidget() {
                 )}
 
                 {/* Quick Actions (Take / Skip) */}
-                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-primary/10">
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border">
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={(e) => handleActionWithConfetti(e, overallNextSlot.reminder, "taken", overallNextSlot.scheduledISO)}
-                    className="flex-1 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center gap-1.5 text-[11px] font-bold shadow-sm hover:bg-primary/90 transition-colors"
+                    className="flex-1 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center gap-1.5 text-xs font-semibold hover:bg-primary/90 transition-all active:scale-95"
                     title="Take dose"
                     aria-label="Take dose"
                   >
@@ -154,10 +152,9 @@ export function DashboardWidget() {
                     <span>Take Dose</span>
                   </motion.button>
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => handleAction(overallNextSlot.reminder, "skipped", overallNextSlot.scheduledISO)}
-                    className="h-8 px-3 rounded-xl bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center gap-1 text-[11px] font-semibold transition-colors border border-border/40"
+                    className="h-9 px-4 rounded-full bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center gap-1 text-xs font-semibold transition-all border border-border active:scale-95"
                     title="Skip dose"
                     aria-label="Skip dose"
                   >
@@ -168,59 +165,50 @@ export function DashboardWidget() {
               </>
             ) : hasScheduledDosesToday ? (
               <div className="flex items-center gap-3 py-1">
-                <div className="w-9 h-9 rounded-xl bg-success/15 border border-success/30 flex items-center justify-center text-success shrink-0">
+                <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                   <Check size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-foreground">All Doses Complete</p>
-                  <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+                  <p className="text-xs font-semibold text-foreground">All Doses Complete</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
                     All scheduled doses completed for today
                   </p>
                 </div>
               </div>
             ) : hasReminders ? (
               <div className="flex items-center gap-3 py-1">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
                   <Clock size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-foreground">No Doses Today</p>
-                  <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+                  <p className="text-xs font-semibold text-foreground">No Doses Today</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
                     No medication doses scheduled for today
                   </p>
                 </div>
               </div>
             ) : (
               <div className="flex items-center gap-3 py-1">
-                <div className="w-9 h-9 rounded-xl bg-muted/30 border border-border/50 flex items-center justify-center text-muted-foreground/60 shrink-0">
+                <div className="w-9 h-9 rounded-full bg-muted/40 border border-border flex items-center justify-center text-muted-foreground shrink-0">
                   <Clock size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-foreground">No Reminders</p>
-                  <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+                  <p className="text-xs font-semibold text-foreground">No Reminders</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
                     No active medication reminders
                   </p>
                 </div>
               </div>
             )}
           </div>
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.2, 1], 
-              opacity: [0.2, 0.4, 0.2],
-              x: [0, 10, 0]
-            }}
-            transition={{ duration: 6, repeat: Infinity }}
-            className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl pointer-events-none"
-          />
         </motion.div>
       </section>
 
       {/* Adherence Insight */}
       <section>
         <div className="flex items-center justify-between mb-4 px-1">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">7-Day Streak</h4>
-          <TrendingUp size={14} className="text-success" />
+          <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">7-Day Streak</h4>
+          <TrendingUp size={14} className="text-emerald-600 dark:text-emerald-400" />
         </div>
         <div className="flex gap-1.5 justify-between">
           {dailyStatus.map((item, i) => (
@@ -229,12 +217,12 @@ export function DashboardWidget() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: i * 0.05 }}
-              className={`h-10 flex-1 rounded-xl border-2 shadow-sm flex items-center justify-center text-[11px] font-black uppercase transition-all duration-300 ${
+              className={`h-9 flex-1 rounded-[10px] border flex items-center justify-center text-[11px] font-bold uppercase transition-all duration-300 ${
                 item.status === "success"
-                  ? "bg-success/10 border-success/30 ring-4 ring-success/5 text-success" 
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" 
                   : item.status === "missed"
                   ? "bg-destructive/10 border-destructive/30 text-destructive"
-                  : "bg-muted/20 border-border/50 text-muted-foreground/40"
+                  : "bg-muted/30 border-border text-muted-foreground/50"
               }`} 
             >
               {item.letter}
@@ -242,12 +230,11 @@ export function DashboardWidget() {
           ))}
         </div>
         
-        <motion.div 
-          whileHover={{ y: -2 }}
-          className="mt-6 bg-background/40 backdrop-blur-sm border border-border/50 rounded-[1.5rem] p-5 flex items-start gap-4 shadow-sm min-h-[80px]"
+        <div 
+          className="mt-5 bg-card border border-border rounded-[18px] p-4 flex items-start gap-3.5 shadow-xs"
         >
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-             <Sparkles size={16} className="text-primary" />
+          <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary">
+             <Sparkles size={16} />
           </div>
           <div className="flex-1">
             {isLoading ? (
@@ -256,32 +243,31 @@ export function DashboardWidget() {
                   <span className="text-[10px] font-bold uppercase tracking-wider">Analyzing logs...</span>
                 </div>
             ) : insight ? (
-                <div className="text-[11px] leading-relaxed text-foreground/80 font-medium">
+                <div className="text-[11px] leading-relaxed text-foreground font-medium">
                   <MessageRenderer
                     text={insight}
                     className="text-[11px] leading-relaxed [&_strong]:text-primary"
                   />
                 </div>
             ) : (
-                <p className="text-[11px] leading-relaxed text-foreground/80 font-medium italic">
+                <p className="text-[11px] leading-relaxed text-muted-foreground font-medium">
                   Log your doses consistently to build your streak and receive personalized health insights.
                 </p>
             )}
           </div>
-        </motion.div>
+        </div>
 
         {nutritionalTip && (
-          <motion.div 
-            whileHover={{ y: -2 }}
-            className="mt-3 bg-primary/5 border border-primary/20 rounded-[1.5rem] p-4 flex items-start gap-3 shadow-sm"
+          <div 
+            className="mt-3 bg-card border border-border rounded-[18px] p-4 flex items-start gap-3 shadow-xs"
           >
-            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5 text-primary">
+            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5 text-primary">
                <Salad size={14} />
             </div>
             <div className="flex-1 min-w-0">
-              <MessageRenderer text={nutritionalTip} className="text-[10px] leading-relaxed text-foreground/80" />
+              <MessageRenderer text={nutritionalTip} className="text-[11px] leading-relaxed text-foreground" />
             </div>
-          </motion.div>
+          </div>
         )}
       </section>
     </div>

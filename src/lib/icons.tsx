@@ -718,6 +718,120 @@ export const Layers = svg(
   </>
 );
 
+/** Smartphone / mobile device */
+export const Smartphone = svg(
+  <>
+    <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+    <path d="M12 18h.01" />
+  </>
+);
+
+/** Play button / trigger */
+export const Play = svg(
+  <polygon points="6 3 20 12 6 21 6 3" fill="currentColor" />
+);
+
+/** Help / Question mark circle */
+export const HelpCircle = svg(
+  <>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </>
+);
+
+/** Stethoscope */
+export const Stethoscope = svg(
+  <>
+    <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" />
+    <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" />
+    <circle cx="20" cy="10" r="2" />
+  </>
+);
+
+/** Square stop */
+export const Square = svg(
+  <rect width="16" height="16" x="4" y="4" rx="2" />
+);
+
+/** Skip Forward */
+export const SkipForward = svg(
+  <>
+    <polygon points="5 4 15 12 5 20 5 4" fill="currentColor" />
+    <line x1="19" y1="5" x2="19" y2="19" />
+  </>
+);
+
+/** Music note */
+export const Music2 = svg(
+  <>
+    <circle cx="8" cy="18" r="4" />
+    <path d="M12 18V2l7 4" />
+  </>
+);
+
+/** Sliders / Settings levels */
+export const Sliders = svg(
+  <>
+    <line x1="4" y1="21" x2="4" y2="14" />
+    <line x1="4" y1="10" x2="4" y2="3" />
+    <line x1="12" y1="21" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12" y2="3" />
+    <line x1="20" y1="21" x2="20" y2="16" />
+    <line x1="20" y1="12" x2="20" y2="3" />
+    <line x1="1" y1="14" x2="7" y2="14" />
+    <line x1="9" y1="8" x2="15" y2="8" />
+    <line x1="17" y1="16" x2="23" y2="16" />
+  </>
+);
+
+/** Battery charging */
+export const BatteryCharging = svg(
+  <>
+    <path d="M15 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2" />
+    <path d="M6 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h1" />
+    <line x1="11" y1="7" x2="8" y2="13" />
+    <line x1="13" y1="11" x2="10" y2="17" />
+    <line x1="22" y1="11" x2="22" y2="13" />
+  </>
+);
+
+/** BellOff */
+export const BellOff = svg(
+  <>
+    <path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5" />
+    <path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7" />
+    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    <line x1="2" y1="2" x2="22" y2="22" />
+  </>
+);
+
+/** Volume2 */
+export const Volume2 = svg(
+  <>
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+  </>
+);
+
+/** Volume1 */
+export const Volume1 = svg(
+  <>
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+  </>
+);
+
+/** VolumeX */
+export const VolumeX = svg(
+  <>
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+    <line x1="22" y1="9" x2="16" y2="15" />
+    <line x1="16" y1="9" x2="22" y2="15" />
+  </>
+);
+
 // ─── Re-exports / extras ─────────────────────────────────────────────────────
 
 /** Alias kept for files that use `import { LucideIcon }` as a type */

@@ -247,22 +247,16 @@ export default function RemindersPage() {
   return (
     <div className="w-full pb-8">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-4"
-      >
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-[28px] sm:text-[34px] font-semibold tracking-tight text-foreground leading-none">
             {t("reminders.title", "Reminders")}
           </h1>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">
+          <p className="text-[12px] text-muted-foreground mt-1">
             {enabledCount} active · {takenToday} taken today
           </p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <button
           onClick={() =>
             navigate("/reminders/new", {
               state: {
@@ -273,12 +267,12 @@ export default function RemindersPage() {
               },
             })
           }
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/25"
+          className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-5 py-2 rounded-full text-[13px] font-normal hover:brightness-105 active:scale-95 transition-all shadow-none"
         >
-          <Plus size={16} />
+          <Plus size={14} />
           Add
-        </motion.button>
-      </motion.div>
+        </button>
+      </div>
 
       {/* Active Profile Switcher Dropdown */}
       {patients.length > 0 ? (
@@ -385,57 +379,42 @@ export default function RemindersPage() {
       </AnimatePresence>
 
       {/* Stats Row */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6"
-      >
-        <div className="p-3 rounded-2xl bg-primary/8 border border-primary/15 text-center">
-          <p className="text-2xl font-bold text-primary">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        <div className="p-4 rounded-[18px] bg-card border border-border text-center">
+          <p className="text-[22px] font-semibold text-foreground leading-none">
             {scopedReminders.length}
           </p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+          <p className="text-[12px] text-muted-foreground mt-1.5">
             Total
           </p>
         </div>
-        <div className="p-3 rounded-2xl bg-success/8 border border-success/15 text-center">
-          <p className="text-2xl font-bold text-success">{enabledCount}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+        <div className="p-4 rounded-[18px] bg-card border border-border text-center">
+          <p className="text-[22px] font-semibold text-foreground leading-none">{enabledCount}</p>
+          <p className="text-[12px] text-muted-foreground mt-1.5">
             Active
           </p>
         </div>
-        <div className="p-3 rounded-2xl bg-accent border border-border/50 text-center">
-          <p className="text-2xl font-bold text-foreground">{takenToday}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+        <div className="p-4 rounded-[18px] bg-card border border-border text-center">
+          <p className="text-[22px] font-semibold text-foreground leading-none">{takenToday}</p>
+          <p className="text-[12px] text-muted-foreground mt-1.5">
             Taken
           </p>
         </div>
-        <div className="p-3 rounded-2xl bg-accent border border-border/50 text-center">
-          <p className="text-2xl font-bold text-muted-foreground">{skippedToday}</p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+        <div className="p-4 rounded-[18px] bg-card border border-border text-center">
+          <p className="text-[22px] font-semibold text-muted-foreground leading-none">{skippedToday}</p>
+          <p className="text-[12px] text-muted-foreground mt-1.5">
             Skipped
           </p>
         </div>
-        <div
-          className={`col-span-2 sm:col-span-1 p-3 rounded-2xl text-center flex sm:flex-col items-center justify-between sm:justify-center px-4 sm:px-3 ${
-            missedToday > 0
-              ? "bg-destructive/8 border border-destructive/20"
-              : "bg-accent border border-border/50"
-          }`}
-        >
-          <p
-            className={`text-2xl font-bold ${
-              missedToday > 0 ? "text-destructive" : "text-foreground"
-            }`}
-          >
+        <div className="col-span-2 sm:col-span-1 p-4 rounded-[18px] bg-card border border-border text-center flex sm:flex-col items-center justify-between sm:justify-center">
+          <p className={`text-[22px] font-semibold leading-none ${missedToday > 0 ? "text-destructive" : "text-foreground"}`}>
             {missedToday}
           </p>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-0 sm:mt-1">
+          <p className="text-[12px] text-muted-foreground mt-0 sm:mt-1.5">
             Missed
           </p>
         </div>
-      </motion.div>
+      </div>
 
       {/* Daily Timeline */}
       <DailyTimeline
@@ -510,10 +489,10 @@ export default function RemindersPage() {
                   variants={item}
                   layout
                   exit={{ opacity: 0, x: 40, scale: 0.95 }}
-                  className={`relative flex items-center gap-4 p-4 rounded-2xl border transition-all shadow-sm ${
+                  className={`relative flex items-center gap-4 p-5 rounded-[18px] border transition-all ${
                     reminder.enabled
-                      ? "bg-card border-border/50 hover:border-primary/20"
-                      : "bg-muted/30 border-border/30 opacity-60"
+                      ? "bg-card border-border hover:border-primary/40"
+                      : "bg-muted/30 border-border opacity-60"
                   }`}
                 >
                   {/* Icon */}

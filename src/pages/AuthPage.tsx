@@ -243,53 +243,48 @@ export default function AuthPage() {
       />
 
       {/* Left Panel: Branding (Desktop Only) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary/5">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-primary/10 to-transparent" />
-          <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 20% 50%, hsl(var(--primary) / 0.15) 0%, transparent 60%)" }} />
-        </div>
-        
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#f5f5f7] dark:bg-[#161617] border-r border-border">
         <div className="relative z-10 p-16 flex flex-col justify-between w-full">
           <div>
             <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-4 mb-12 transition-transform"
+              className="flex items-center gap-3.5 mb-14"
             >
-              <div className="h-12 w-12 rounded-2xl bg-white shadow-xl shadow-primary/20 flex items-center justify-center p-2">
+              <div className="h-11 w-11 rounded-[14px] bg-card border border-border flex items-center justify-center p-2">
                 <img src={LOGO_BASE64} alt="Dawa Lens" className="w-full h-full object-contain" />
               </div>
-              <span className="text-2xl font-bold tracking-tight text-foreground">Dawa Lens</span>
+              <span className="text-xl font-bold tracking-tight text-foreground">Dawa Lens</span>
             </motion.div>
             
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -15 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.15 }}
             >
-              <h1 className="text-5xl font-black tracking-tight leading-[1.1] text-foreground mb-6">
-                Precision Care,<br />Every Dose Matters.
+              <h1 className="text-4xl lg:text-5xl font-bold tracking-[-0.022em] leading-[1.1] text-foreground mb-6">
+                Precision Care.<br />Every Dose Matters.
               </h1>
-              <p className="text-xl text-muted-foreground/80 max-w-md leading-relaxed">
-                Empowering your medication journey with smart identification and reliable management.
+              <p className="text-lg text-muted-foreground max-w-md leading-relaxed font-normal">
+                Empowering your medication journey with smart identification and verified clinical safety.
               </p>
             </motion.div>
           </div>
 
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="grid grid-cols-2 gap-6"
+            transition={{ delay: 0.3 }}
+            className="grid grid-cols-2 gap-4"
           >
             {[
-              { icon: ShieldCheck, title: "Secure Data", desc: "End-to-end encrypted logs" },
-              { icon: Heart, title: "Personalized", desc: "Tailored to your health" },
+              { icon: ShieldCheck, title: "Secure Data", desc: "Private on-device health vaults" },
+              { icon: Heart, title: "Personalized", desc: "Tailored to your prescriptions" },
             ].map((feature, i) => (
-              <div key={i} className="p-6 rounded-3xl bg-white/40 backdrop-blur-md border border-white/40 shadow-sm">
-                <feature.icon className="text-primary mb-3" size={24} />
-                <h3 className="font-bold text-sm mb-1">{feature.title}</h3>
-                <p className="text-[12px] text-muted-foreground">{feature.desc}</p>
+              <div key={i} className="p-5 rounded-[18px] bg-card border border-border">
+                <feature.icon className="text-[#0066cc] dark:text-[#2997ff] mb-2.5" size={22} />
+                <h3 className="font-bold text-sm text-foreground mb-0.5">{feature.title}</h3>
+                <p className="text-xs text-muted-foreground">{feature.desc}</p>
               </div>
             ))}
           </motion.div>
@@ -297,39 +292,40 @@ export default function AuthPage() {
       </div>
 
       {/* Right Panel: Auth Forms */}
-      <div className="flex-1 flex flex-col items-center overflow-y-auto no-scrollbar px-4 py-8 sm:p-8 lg:py-12">
-        <div className="w-full max-w-[400px] space-y-8">
-          <div className="lg:hidden text-center mb-6 transition-transform">
-            <img src={LOGO_BASE64} alt="Logo" className="w-14 h-14 mx-auto mb-3" />
+      <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto no-scrollbar px-4 py-8 sm:p-8 lg:py-12">
+        <div className="w-full max-w-[400px] space-y-6">
+          <div className="lg:hidden text-center mb-6">
+            <img src={LOGO_BASE64} alt="Logo" className="w-14 h-14 mx-auto mb-2.5" />
+            <h2 className="text-xl font-bold tracking-tight text-foreground">Dawa Lens</h2>
           </div>
 
           <AnimatePresence mode="wait">
             {stage === "form" && (
               <motion.div
                 key="auth-form"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="glass-card p-6 sm:p-8 shadow-2xl shadow-primary/5"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="rounded-[18px] border border-border bg-card p-6 sm:p-8"
               >
                 <div className="mb-6">
-                  <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2">
-                    {isLogin ? "Welcome Back" : "Start Journey"}
+                  <h2 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground mb-1.5">
+                    {isLogin ? "Welcome Back" : "Create Account"}
                   </h2>
                   <p className="text-muted-foreground text-sm">
                     {isLogin ? "Continue where you left off." : "Create your personalized health lens today."}
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   {!isLogin && (
                     <div className="space-y-1.5">
-                      <Label htmlFor="name" className="text-[11px] uppercase tracking-widest font-bold opacity-70">Full Name</Label>
+                      <Label htmlFor="name" className="text-xs font-semibold text-foreground uppercase tracking-wider">Full Name</Label>
                       <div className="relative">
-                        <User size={18} className="absolute left-3 top-3 text-muted-foreground/60" />
+                        <User size={16} className="absolute left-3.5 top-3.5 text-muted-foreground" />
                         <Input 
                           id="name" placeholder="John Doe" 
-                          className="pl-10 h-12 rounded-xl bg-muted/50 border-transparent focus:bg-background transition-all"
+                          className="pl-10 h-11 rounded-full bg-card border-border text-sm"
                           value={name} onChange={(e) => setName(e.target.value)}
                         />
                       </div>
@@ -337,12 +333,12 @@ export default function AuthPage() {
                   )}
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-[11px] uppercase tracking-widest font-bold opacity-70">Email Address</Label>
+                    <Label htmlFor="email" className="text-xs font-semibold text-foreground uppercase tracking-wider">Email Address</Label>
                     <div className="relative">
-                      <Mail size={18} className="absolute left-3 top-3 text-muted-foreground/60" />
+                      <Mail size={16} className="absolute left-3.5 top-3.5 text-muted-foreground" />
                       <Input 
                         id="email" type="email" placeholder="you@example.com" 
-                        className="pl-10 h-12 rounded-xl bg-muted/50 border-transparent focus:bg-background transition-all"
+                        className="pl-10 h-11 rounded-full bg-card border-border text-sm"
                         value={email} onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
@@ -350,58 +346,67 @@ export default function AuthPage() {
 
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password" className="text-[11px] uppercase tracking-widest font-bold opacity-70">Password</Label>
+                      <Label htmlFor="password" className="text-xs font-semibold text-foreground uppercase tracking-wider">Password</Label>
                       {isLogin && (
-                        <button type="button" onClick={() => setStage("forgot-password")} className="text-[11px] font-bold text-primary hover:underline">
+                        <button type="button" onClick={() => setStage("forgot-password")} className="text-xs font-medium text-[#0066cc] dark:text-[#2997ff] hover:underline">
                           Forgot Password?
                         </button>
                       )}
                     </div>
                     <div className="relative">
-                      <Lock size={18} className="absolute left-3 top-3 text-muted-foreground/60" />
+                      <Lock size={16} className="absolute left-3.5 top-3.5 text-muted-foreground" />
                       <Input 
                         id="password" type={showPassword ? "text" : "password"} 
                         placeholder="••••••••" 
-                        className="pl-10 pr-10 h-12 rounded-xl bg-muted/50 border-transparent focus:bg-background transition-all"
+                        className="pl-10 pr-10 h-11 rounded-full bg-card border-border text-sm"
                         value={password} onChange={(e) => setPassword(e.target.value)}
                       />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-muted-foreground/60 hover:text-primary transition-colors">
-                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-3.5 text-muted-foreground hover:text-foreground transition-colors">
+                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
                     {!isLogin && <PillStrengthMeter password={password} />}
                   </div>
 
-                  <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center justify-between py-1">
                     <div className="flex items-center gap-2">
                       <Switch id="remember" checked={rememberMe} onCheckedChange={setRememberMe} />
-                      <Label htmlFor="remember" className="text-xs font-medium cursor-pointer">Remember me</Label>
+                      <Label htmlFor="remember" className="text-xs font-medium text-muted-foreground cursor-pointer">Remember me</Label>
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full h-12 rounded-2xl text-[15px] font-bold shadow-lg shadow-primary/20" disabled={loading}>
-                    {loading ? <Loader2 className="animate-spin" /> : (isLogin ? "Sign In" : "Create Account")}
-                  </Button>
+                  <button 
+                    type="submit" 
+                    className="w-full h-11 rounded-full text-sm font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 flex items-center justify-center gap-2" 
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="animate-spin size-4" /> : (isLogin ? "Sign In" : "Create Account")}
+                  </button>
                 </form>
 
-                <div className="relative my-8">
+                <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-                  <div className="relative flex justify-center text-[10px] uppercase tracking-[0.2em] font-black"><span className="bg-background px-3 text-muted-foreground">Social Auth</span></div>
+                  <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-semibold"><span className="bg-card px-2.5 text-muted-foreground">Or</span></div>
                 </div>
 
-                <Button variant="outline" className="w-full h-12 rounded-2xl gap-3 border-border/50 hover:bg-muted" onClick={handleGoogleSignIn} disabled={loading}>
-                  <svg className="h-5 w-5" viewBox="0 0 24 24">
+                <button 
+                  type="button" 
+                  className="w-full h-11 rounded-full border border-border bg-card hover:bg-secondary text-foreground text-sm font-semibold flex items-center justify-center gap-2.5 transition-transform active:scale-95" 
+                  onClick={handleGoogleSignIn} 
+                  disabled={loading}
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                   </svg>
-                  <span className="text-sm font-bold">Sign in with Google</span>
-                </Button>
+                  <span>Sign in with Google</span>
+                </button>
 
-                <p className="text-center text-[13px] text-muted-foreground mt-8 font-medium">
+                <p className="text-center text-xs text-muted-foreground mt-6 font-normal">
                   {isLogin ? "New to Dawa Lens?" : "Already have an account?"}{" "}
-                  <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-black hover:underline ml-1">
+                  <button onClick={() => setIsLogin(!isLogin)} className="text-[#0066cc] dark:text-[#2997ff] font-semibold hover:underline ml-1">
                     {isLogin ? "Create Account" : "Sign In"}
                   </button>
                 </p>
@@ -411,35 +416,39 @@ export default function AuthPage() {
             {stage === "forgot-password" && (
               <motion.div
                 key="forgot-password"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="glass-card p-8"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="rounded-[18px] border border-border bg-card p-6 sm:p-8"
               >
-                <button onClick={() => setStage("form")} className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors mb-6">
+                <button onClick={() => setStage("form")} className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mb-6">
                   <ArrowLeft size={14} /> Back to Sign In
                 </button>
-                <div className="mb-8">
-                  <h2 className="text-3xl font-black tracking-tight mb-2">Reset Password</h2>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold tracking-[-0.022em] text-foreground mb-1.5">Reset Password</h2>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     Enter the email associated with your account and we'll send a link to reset your password.
                   </p>
                 </div>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-[11px] uppercase tracking-widest font-bold opacity-70">Email Address</Label>
+                    <Label htmlFor="email" className="text-xs font-semibold text-foreground uppercase tracking-wider">Email Address</Label>
                     <div className="relative">
-                      <Mail size={18} className="absolute left-3 top-3 text-muted-foreground/60" />
+                      <Mail size={16} className="absolute left-3.5 top-3.5 text-muted-foreground" />
                       <Input 
                         id="email" type="email" placeholder="you@example.com" 
-                        className="pl-10 h-12 rounded-xl bg-muted/50 border-transparent focus:bg-background transition-all"
+                        className="pl-10 h-11 rounded-full bg-card border-border text-sm"
                         value={email} onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full h-12 rounded-2xl font-bold" disabled={loading}>
-                    {loading ? <Loader2 className="animate-spin" /> : "Send Reset Link"}
-                  </Button>
+                  <button 
+                    type="submit" 
+                    className="w-full h-11 rounded-full text-sm font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 flex items-center justify-center gap-2" 
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="animate-spin size-4" /> : "Send Reset Link"}
+                  </button>
                 </form>
               </motion.div>
             )}
@@ -447,37 +456,36 @@ export default function AuthPage() {
             {stage === "awaiting-verification" && (
               <motion.div
                 key="verify"
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-center"
+                className="rounded-[18px] border border-border bg-card p-6 sm:p-8 text-center"
               >
-                <div className="w-24 h-24 rounded-[2.5rem] bg-primary/10 flex items-center justify-center mx-auto mb-8 relative">
-                   <motion.div 
-                    animate={{ scale: [1, 1.2, 1], rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                   >
-                     <Mail size={42} className="text-primary" />
-                   </motion.div>
-                   <div className="absolute -top-1 -right-1 h-6 w-6 bg-primary text-white rounded-full flex items-center justify-center border-4 border-background">
-                     <Info size={12} />
-                   </div>
+                <div className="w-20 h-20 rounded-[20px] bg-secondary border border-border flex items-center justify-center mx-auto mb-6 relative">
+                  <Mail size={32} className="text-[#0066cc] dark:text-[#2997ff]" />
                 </div>
 
-                <h2 className="text-3xl font-black tracking-tight mb-3">Verify Identity</h2>
-                <p className="text-muted-foreground text-sm leading-relaxed mb-8 px-4">
+                <h2 className="text-2xl font-bold tracking-[-0.022em] text-foreground mb-2">Verify Identity</h2>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-6 px-2">
                   We've sent a secure link to <strong className="text-foreground">{email}</strong>. 
                   Please confirm your email to activate your Health Lens.
                 </p>
 
-                <div className="space-y-4">
-                  <Button className="w-full h-12 rounded-2xl font-bold" onClick={() => window.location.reload()}>
-                    <CheckCircle2 size={18} className="mr-2" /> I've Verified My Email
-                  </Button>
-                  <Button variant="outline" className="w-full h-12 rounded-2xl text-xs font-bold gap-2" onClick={() => {}} disabled={resending}>
-                    {resending ? <Loader2 className="animate-spin h-3 w-3" /> : <RefreshCw size={14} />}
+                <div className="space-y-3">
+                  <button 
+                    className="w-full h-11 rounded-full text-sm font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 flex items-center justify-center gap-2" 
+                    onClick={() => window.location.reload()}
+                  >
+                    <CheckCircle2 size={16} /> I've Verified My Email
+                  </button>
+                  <button 
+                    className="w-full h-11 rounded-full text-xs font-semibold border border-border bg-card hover:bg-secondary text-foreground transition-transform active:scale-95 flex items-center justify-center gap-2" 
+                    onClick={() => {}} 
+                    disabled={resending}
+                  >
+                    {resending ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : <RefreshCw size={14} />}
                     Resend Code
-                  </Button>
-                  <button onClick={() => setStage("form")} className="text-xs font-bold text-muted-foreground hover:text-primary transition-colors">
+                  </button>
+                  <button onClick={() => setStage("form")} className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors pt-2">
                     Back to Form
                   </button>
                 </div>

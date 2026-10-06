@@ -18,7 +18,7 @@ import {
   Sliders,
   Check,
   LucideIcon,
-} from "lucide-react";
+} from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";

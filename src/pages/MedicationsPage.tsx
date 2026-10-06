@@ -194,7 +194,7 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
-        className="w-full max-w-xl bg-card rounded-t-[2.5rem] shadow-2xl border border-border/50 max-h-[92dvh] flex flex-col"
+        className="w-full max-w-xl bg-card rounded-t-[28px] md:rounded-[24px] shadow-2xl border border-border max-h-[92dvh] flex flex-col overflow-hidden"
       >
         {/* Drag handle — swipe this area to dismiss */}
         <motion.div
@@ -204,21 +204,21 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
           onDragEnd={(_e, info) => {
             if (info.offset.y > 80) onClose();
           }}
-          className="flex-shrink-0 pt-5 pb-2 px-6 cursor-grab active:cursor-grabbing touch-pan-x"
+          className="flex-shrink-0 pt-4 pb-2 px-6 cursor-grab active:cursor-grabbing touch-pan-x"
           {...swipe}
         >
-          <div className="w-12 h-1.5 rounded-full bg-muted/70 hover:bg-muted mx-auto transition-colors" />
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/40 mx-auto transition-colors" />
         </motion.div>
         {/* Scrollable form body */}
-        <div className="overflow-y-auto no-scrollbar touch-auto flex-1 px-6 pb-12">
+        <div className="overflow-y-auto no-scrollbar touch-auto flex-1 px-6 pb-10">
         
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-2xl font-black tracking-tight">
+          <h3 className="text-2xl font-bold tracking-[-0.022em] text-foreground">
             {isEditing ? "Edit Medication" : "Add Medication"}
           </h3>
           <button
             onClick={onClose}
-            className="p-2 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground transition-colors"
+            className="w-8 h-8 rounded-full border border-border hover:bg-muted/60 text-muted-foreground flex items-center justify-center transition-all active:scale-95"
           >
             <X size={16} />
           </button>
@@ -227,8 +227,8 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
         <div className="space-y-6">
           {/* Section: Basic Info */}
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-xs font-bold text-muted-foreground ml-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="name" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                 Medicine Name
               </Label>
               <Input
@@ -236,13 +236,13 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Ibuprofen, Paracetamol"
-                className="h-12 rounded-xl border-border/50 bg-muted/20 text-foreground text-sm focus:bg-background transition-all"
+                className="h-11 rounded-full border-border bg-card text-foreground text-sm focus:border-primary transition-colors"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dosage" className="text-xs font-bold text-muted-foreground ml-1">
+              <div className="space-y-1.5">
+                <Label htmlFor="dosage" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                   Strength / Dosage Description
                 </Label>
                 <Input
@@ -250,12 +250,12 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                   value={dosage}
                   onChange={(e) => setDosage(e.target.value)}
                   placeholder="e.g. 500mg, 10ml, 1 tablet"
-                  className="h-12 rounded-xl border-border/50 bg-muted/20 text-sm focus:bg-background transition-all"
+                  className="h-11 rounded-full border-border bg-card text-sm focus:border-primary transition-colors"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="genericName" className="text-xs font-bold text-muted-foreground ml-1">
+              <div className="space-y-1.5">
+                <Label htmlFor="genericName" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                   Generic Name (Optional)
                 </Label>
                 <Input
@@ -263,7 +263,7 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                   value={genericName}
                   onChange={(e) => setGenericName(e.target.value)}
                   placeholder="e.g. Acetaminophen"
-                  className="h-12 rounded-xl border-border/50 bg-muted/20 text-sm focus:bg-background transition-all"
+                  className="h-11 rounded-full border-border bg-card text-sm focus:border-primary transition-colors"
                 />
               </div>
             </div>
@@ -275,10 +275,10 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                   key={d}
                   type="button"
                   onClick={() => setDosage(d)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${
                     dosage === d 
-                      ? "bg-primary text-primary-foreground shadow-md scale-105" 
-                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                      ? "bg-primary text-primary-foreground shadow-sm" 
+                      : "bg-muted/40 border border-border text-muted-foreground hover:bg-muted"
                   }`}
                 >
                   {d}
@@ -292,10 +292,10 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                 value={["500mg", "250mg", "1 Pill", "2 Pills", "5ml", "10ml", "1 Puff"].includes(dosage) ? dosage : ""}
                 onValueChange={(val) => setDosage(val)}
               >
-                <SelectTrigger className="w-full h-10 rounded-xl text-xs bg-muted/20 border-border/50">
+                <SelectTrigger className="w-full h-11 rounded-full text-xs bg-card border-border">
                   <SelectValue placeholder="Quick dosage preset..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-[18px] border-border bg-card">
                   {["500mg", "250mg", "1 Pill", "2 Pills", "5ml", "10ml", "1 Puff"].map((d) => (
                     <SelectItem key={d} value={d} className="text-xs">
                       {d}
@@ -307,12 +307,12 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
           </div>
 
           {/* Section: Frequency (Doses per Day) */}
-          <div className="space-y-3 pt-2 border-t border-border/40">
+          <div className="space-y-3 pt-3 border-t border-border">
             <div className="flex items-center justify-between">
-              <Label htmlFor="frequencyPerDay" className="text-xs font-bold text-muted-foreground ml-1">
+              <Label htmlFor="frequencyPerDay" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                 Daily Frequency (Times / Doses Taken per Day)
               </Label>
-              <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2.5 py-0.5 rounded-full">
                 {parsedFreq} dose{parsedFreq !== 1 ? "s" : ""}/day
               </span>
             </div>
@@ -328,20 +328,20 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                   type="button"
                   key={preset.value}
                   onClick={() => setFrequencyPerDay(preset.value.toString())}
-                  className={`p-2 rounded-xl text-center border transition-all ${
+                  className={`p-2.5 rounded-[14px] text-center border transition-all active:scale-95 ${
                     parsedFreq === preset.value
-                      ? "bg-primary text-primary-foreground border-primary shadow-sm scale-102"
-                      : "bg-muted/20 border-border/40 text-muted-foreground hover:bg-muted/40"
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                      : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/40"
                   }`}
                 >
-                  <span className="block text-xs font-black leading-tight">{preset.label}</span>
+                  <span className="block text-xs font-bold leading-tight">{preset.label}</span>
                   <span className="block text-[9px] opacity-75 leading-none mt-0.5">{preset.sub}</span>
                 </button>
               ))}
             </div>
 
             <div className="flex items-center gap-3 pt-1">
-              <span className="text-[11px] text-muted-foreground font-medium flex-shrink-0">Custom times per day:</span>
+              <span className="text-xs text-muted-foreground font-medium flex-shrink-0">Custom times per day:</span>
               <Input
                 id="frequencyPerDay"
                 type="number"
@@ -351,23 +351,23 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                 value={frequencyPerDay}
                 onChange={(e) => setFrequencyPerDay(e.target.value)}
                 placeholder="e.g. 1"
-                className="h-10 w-24 rounded-xl text-center font-bold"
+                className="h-10 w-24 rounded-full text-center font-semibold text-xs"
               />
               <span className="text-xs text-muted-foreground">times a day</span>
             </div>
           </div>
 
           {/* Section: Color & Icon Picker */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-border/40">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-3 border-t border-border">
             <div className="space-y-3">
-              <Label className="text-xs font-bold text-muted-foreground ml-1">Medication Theme Color</Label>
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">Medication Theme Color</Label>
               <div className="flex gap-2.5">
                 {COLORS.map((c) => (
                   <button
                     key={c.name}
                     onClick={() => setColor(c.name)}
                     className={`w-8 h-8 rounded-full ${c.value} transition-all relative ${
-                      color === c.name ? "ring-2 ring-primary ring-offset-2 scale-110 shadow-lg" : "opacity-60 hover:opacity-100"
+                      color === c.name ? "ring-2 ring-primary ring-offset-2 scale-105" : "opacity-60 hover:opacity-100"
                     }`}
                   >
                     {color === c.name && <Check size={14} className="text-white absolute inset-0 m-auto" />}
@@ -377,7 +377,7 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
             </div>
 
             <div className="space-y-3">
-              <Label className="text-xs font-bold text-muted-foreground ml-1">Medication Icon</Label>
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">Medication Icon</Label>
               <div className="flex gap-3">
                 {ICONS.map((i) => {
                   const IconComp = i.icon;
@@ -385,8 +385,8 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                     <button
                       key={i.name}
                       onClick={() => setIcon(i.name)}
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                        icon === i.name ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-muted text-muted-foreground hover:bg-muted-foreground/10"
+                      className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-all active:scale-95 ${
+                        icon === i.name ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 border border-border text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       <IconComp size={18} />
@@ -398,17 +398,17 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
           </div>
 
           {/* Section: Stock Tracking Toggle */}
-          <div className="pt-4 border-t border-border/40 space-y-4">
-            <div className="flex items-center justify-between bg-muted/20 border border-border/40 p-4 rounded-2xl">
+          <div className="pt-4 border-t border-border space-y-4">
+            <div className="flex items-center justify-between bg-muted/20 border border-border p-4 rounded-[18px]">
               <div>
-                <Label className="text-sm font-bold text-foreground block">Track Stock (Link to Med Vault)</Label>
-                <span className="text-[10px] text-muted-foreground">Keep track of pill quantity and receive refill notices.</span>
+                <Label className="text-sm font-semibold text-foreground block">Track Stock (Link to Med Vault)</Label>
+                <span className="text-xs text-muted-foreground">Keep track of pill quantity and receive refill notices.</span>
               </div>
               <button
                 type="button"
                 onClick={() => setTrackStock(!trackStock)}
                 className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  trackStock ? "bg-teal-500" : "bg-muted-foreground/30"
+                  trackStock ? "bg-primary" : "bg-muted-foreground/30"
                 }`}
               >
                 <span
@@ -428,8 +428,8 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                   className="space-y-4 pt-2 overflow-hidden"
                 >
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="qty" className="text-xs font-bold text-muted-foreground">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="qty" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Pills / Stock on Hand
                       </Label>
                       <Input
@@ -439,16 +439,16 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                         value={qty}
                         onChange={(e) => setQty(e.target.value)}
                         placeholder="e.g. 30"
-                        className="h-12 rounded-xl text-base font-bold"
+                        className="h-11 rounded-full text-sm font-semibold"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs font-bold text-muted-foreground">Unit</Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unit</Label>
                       <Select value={unit} onValueChange={setUnit}>
-                        <SelectTrigger className="h-12 rounded-xl">
+                        <SelectTrigger className="h-11 rounded-full">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="rounded-[18px] border-border bg-card">
                           {UNITS.map((u) => (
                             <SelectItem key={u} value={u}>{u}</SelectItem>
                           ))}
@@ -458,8 +458,8 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="perDose" className="text-xs font-bold text-muted-foreground">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="perDose" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Units per dose
                       </Label>
                       <Input
@@ -469,11 +469,11 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                         value={perDose}
                         onChange={(e) => setPerDose(e.target.value)}
                         placeholder="e.g. 1"
-                        className="h-12 rounded-xl font-bold"
+                        className="h-11 rounded-full font-semibold text-sm"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="total" className="text-xs font-bold text-muted-foreground">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="total" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         Total pack size
                       </Label>
                       <Input
@@ -483,7 +483,7 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
                         value={total}
                         onChange={(e) => setTotal(e.target.value)}
                         placeholder="e.g. 60"
-                        className={`h-12 rounded-xl font-bold ${
+                        className={`h-11 rounded-full font-semibold text-sm ${
                           isOverCapacity ? "border-destructive focus-visible:ring-destructive" : ""
                         }`}
                       />
@@ -492,26 +492,26 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
 
                   {/* Live Doses vs Days Breakdown Preview */}
                   {!isNaN(parsedQty) && parsedQty >= 0 && (
-                    <div className="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-foreground space-y-2 animate-in fade-in duration-200">
-                      <div className="flex items-center justify-between text-xs font-bold text-teal-800 dark:text-teal-300">
+                    <div className="p-4 rounded-[18px] bg-muted/30 border border-border text-foreground space-y-2">
+                      <div className="flex items-center justify-between text-xs font-semibold text-foreground">
                         <span>Daily Intake Rate:</span>
-                        <span>
+                        <span className="text-muted-foreground">
                           {(parsedPerDose * parsedFreq).toFixed(
                             Number.isInteger(parsedPerDose * parsedFreq) ? 0 : 1
                           )}{" "}
                           {unit}/day ({parsedPerDose} {unit}/dose × {parsedFreq} {parsedFreq === 1 ? "dose" : "doses"}/day)
                         </span>
                       </div>
-                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-teal-500/20">
-                        <div className="bg-background/60 p-2.5 rounded-xl border border-teal-500/10">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Doses in Stock</p>
-                          <p className="text-lg font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
+                        <div className="bg-card p-3 rounded-[14px] border border-border">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Doses in Stock</p>
+                          <p className="text-lg font-bold text-foreground mt-0.5">
                             {Math.floor(parsedQty / parsedPerDose)} <span className="text-xs font-semibold text-muted-foreground">doses</span>
                           </p>
                         </div>
-                        <div className="bg-background/60 p-2.5 rounded-xl border border-teal-500/10">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Days of Supply</p>
-                          <p className="text-lg font-black text-teal-600 dark:text-teal-400 mt-0.5">
+                        <div className="bg-card p-3 rounded-[14px] border border-border">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Days of Supply</p>
+                          <p className="text-lg font-bold text-foreground mt-0.5">
                             ~{Math.floor(parsedQty / (parsedPerDose * parsedFreq))} <span className="text-xs font-semibold text-muted-foreground">days</span>
                           </p>
                         </div>
@@ -531,8 +531,8 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
           </div>
 
           {/* Section: Notes */}
-          <div className="space-y-2 pt-2 border-t border-border/40">
-            <Label htmlFor="notes" className="text-xs font-bold text-muted-foreground ml-1">
+          <div className="space-y-1.5 pt-3 border-t border-border">
+            <Label htmlFor="notes" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
               Medication Notes (Optional)
             </Label>
             <Input
@@ -540,19 +540,19 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Take with food, keep refrigerated"
-              className="h-12 rounded-xl border-border/50 bg-muted/20 text-sm focus:bg-background transition-all"
+              className="h-11 rounded-full border-border bg-card text-sm focus:border-primary transition-colors"
             />
           </div>
         </div>
 
         <div className="flex gap-3 mt-8">
-          <Button variant="outline" onClick={onClose} className="flex-1 rounded-xl h-12">
+          <Button variant="outline" onClick={onClose} className="flex-1 rounded-full h-11 border-border font-semibold text-xs active:scale-95 transition-transform">
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={isSaving || !name.trim() || !dosage.trim() || (trackStock && isStockInvalid)}
-            className="flex-1 rounded-xl h-12 font-bold"
+            className="flex-1 rounded-full h-11 font-semibold text-xs bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-transform"
           >
             {isSaving ? "Saving…" : isEditing ? "Update Medication" : "Save Medication"}
           </Button>
@@ -640,23 +640,19 @@ export default function MedicationsPage() {
   return (
     <div className="w-full">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6"
-      >
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-xl bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+            className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-all"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={16} />
           </button>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground leading-none">
+            <h1 className="text-[28px] sm:text-[34px] font-semibold tracking-tight text-foreground leading-none">
               Medications
             </h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+            <p className="text-[12px] text-muted-foreground mt-0.5">
               Prescription Inventory
             </p>
           </div>
@@ -667,11 +663,11 @@ export default function MedicationsPage() {
             setSelectedMed(null);
             setIsSheetOpen(true);
           }}
-          className="flex items-center gap-1 bg-primary text-primary-foreground px-4 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20 transition-all active:scale-95"
+          className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-5 py-2 rounded-full text-[13px] font-normal hover:brightness-105 active:scale-95 transition-all shadow-none"
         >
           <Plus size={14} /> Add Medicine
         </button>
-      </motion.div>
+      </div>
 
       {/* Patient Scoped Context Banner */}
       {!resolvedPatient.isOwner && resolvedPatient.name && (
@@ -700,7 +696,7 @@ export default function MedicationsPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search saved medications..."
-          className="h-12 rounded-2xl border-border/50 bg-muted/20 px-4 focus:bg-background transition-all"
+          className="h-11 rounded-full border-border bg-card px-5 text-[15px] focus:border-primary transition-all"
         />
       </div>
 
@@ -708,29 +704,29 @@ export default function MedicationsPage() {
       <div className="grid grid-cols-2 gap-3 mb-8">
         <button
           onClick={() => navigate("/medvault")}
-          className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-card hover:border-teal-500/30 transition-all text-left shadow-sm active:scale-98"
+          className="flex items-center justify-between p-4.5 rounded-[18px] border border-border bg-card hover:border-primary/40 transition-all text-left active:scale-[0.98]"
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 bg-teal-500/10 text-teal-500 rounded-xl">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-9 w-9 bg-muted text-primary rounded-full flex items-center justify-center shrink-0">
               <Package2 size={16} />
             </div>
             <div>
-              <span className="font-extrabold text-xs text-foreground block leading-tight">Med Vault</span>
-              <span className="text-[9px] text-muted-foreground block leading-none mt-0.5">Check pill stock</span>
+              <span className="font-medium text-[14px] text-foreground block leading-tight">Med Vault</span>
+              <span className="text-[12px] text-muted-foreground block leading-none mt-0.5">Track pill supply</span>
             </div>
           </div>
         </button>
         <button
           onClick={() => navigate("/reminders/new")}
-          className="flex items-center justify-between p-4 rounded-2xl border border-border/50 bg-card hover:border-primary/30 transition-all text-left shadow-sm active:scale-98"
+          className="flex items-center justify-between p-4.5 rounded-[18px] border border-border bg-card hover:border-primary/40 transition-all text-left active:scale-[0.98]"
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-2 bg-primary/10 text-primary rounded-xl">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-9 w-9 bg-muted text-primary rounded-full flex items-center justify-center shrink-0">
               <PlusCircle size={16} />
             </div>
             <div>
-              <span className="font-extrabold text-xs text-foreground block leading-tight">Add Reminder</span>
-              <span className="text-[9px] text-muted-foreground block leading-none mt-0.5">Schedule a dose</span>
+              <span className="font-medium text-[14px] text-foreground block leading-tight">Add Reminder</span>
+              <span className="text-[12px] text-muted-foreground block leading-none mt-0.5">Schedule a dose</span>
             </div>
           </div>
         </button>
@@ -813,24 +809,24 @@ export default function MedicationsPage() {
               <motion.div
                 key={med.id}
                 layout
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`relative overflow-hidden rounded-3xl border bg-card p-4 shadow-sm transition-all border-border/50 hover:shadow-md`}
+                className="relative overflow-hidden rounded-[18px] border border-border bg-card p-5 transition-all hover:border-primary/40"
               >
                 <div className="flex items-start justify-between gap-4">
                   {/* Left Side: Icon & Info */}
                   <div className="flex items-start gap-3.5 min-w-0">
-                    <div className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ${colors.bg} ${colors.text} border ${colors.border}`}>
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-muted text-primary border border-border">
                       <IconComp className="size-5" />
                     </div>
 
                     <div className="min-w-0 pt-0.5">
-                      <h4 className="text-base font-black tracking-tight text-foreground leading-tight truncate">
+                      <h4 className="text-[16px] font-semibold tracking-tight text-foreground leading-tight truncate">
                         {med.name}
                       </h4>
-                      <p className="text-xs font-bold text-muted-foreground mt-0.5">{med.dosage}</p>
+                      <p className="text-[13px] text-muted-foreground mt-0.5">{med.dosage}</p>
                       {med.genericName && (
-                        <p className="text-[10px] text-muted-foreground/60 italic truncate mt-0.5">
+                        <p className="text-[12px] text-muted-foreground/80 italic truncate mt-0.5">
                           {med.genericName}
                         </p>
                       )}

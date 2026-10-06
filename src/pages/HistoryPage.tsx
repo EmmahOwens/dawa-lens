@@ -251,7 +251,7 @@ export default function HistoryPage() {
               size="sm"
               variant="outline"
               onClick={exportCSV}
-              className="rounded-xl h-9 text-xs"
+              className="rounded-full h-9 px-4 text-xs font-medium"
             >
               <Download size={14} className="mr-1.5" /> {t("history.export")}
             </Button>
@@ -260,7 +260,7 @@ export default function HistoryPage() {
                 size="sm"
                 variant="outline"
                 asChild
-                className="rounded-xl h-9 text-xs cursor-pointer"
+                className="rounded-full h-9 px-4 text-xs font-medium cursor-pointer"
               >
                 <span>
                   <Upload size={14} className="mr-1.5" /> {t("history.import")}
@@ -279,11 +279,11 @@ export default function HistoryPage() {
           <div className="sm:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="outline" className="rounded-xl h-9 w-9">
+                <Button size="icon" variant="outline" className="rounded-full h-9 w-9">
                   <MoreVertical size={16} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl min-w-[150px]">
+              <DropdownMenuContent align="end" className="rounded-2xl min-w-[150px]">
                 <DropdownMenuItem onClick={exportCSV} className="gap-2 cursor-pointer text-xs font-semibold">
                   <Download size={14} /> {t("history.export")}
                 </DropdownMenuItem>
@@ -305,24 +305,20 @@ export default function HistoryPage() {
       </div>
 
       <div className="mb-6">
-        <h1 className="text-4xl font-bold text-foreground tracking-tight mb-2">
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-[-0.022em] mb-2">
           {t("history.title")}
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Keep track of your adherence and health records.
         </p>
       </div>
 
-      {/* Adherence Dashboard */}
+      {/* Adherence Dashboard - Apple Near-Black Tile 1 / Parchment */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="premium-card bg-gradient-to-br from-primary/10 via-background to-background border-primary/20 mb-6 overflow-hidden relative"
+        className="rounded-[18px] border border-border bg-[#f5f5f7] dark:bg-[#272729] p-6 mb-6 overflow-hidden relative"
       >
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-          <TrendingUp size={120} />
-        </div>
-
         <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
           <div className="relative w-24 h-24 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90">
@@ -331,7 +327,7 @@ export default function HistoryPage() {
                 cy="48"
                 r="40"
                 stroke="currentColor"
-                strokeWidth="8"
+                strokeWidth="7"
                 fill="transparent"
                 className="text-muted/20"
               />
@@ -340,18 +336,18 @@ export default function HistoryPage() {
                 cy="48"
                 r="40"
                 stroke="currentColor"
-                strokeWidth="8"
+                strokeWidth="7"
                 fill="transparent"
                 strokeDasharray={251.2}
                 strokeDashoffset={251.2 - (251.2 * stats.rate) / 100}
-                className="text-primary transition-all duration-1000 ease-out"
+                className="text-[#0066cc] dark:text-[#2997ff] transition-all duration-1000 ease-out"
               />
             </svg>
-            <span className="absolute text-xl font-black">{stats.rate}%</span>
+            <span className="absolute text-xl font-bold tracking-tight text-foreground">{stats.rate}%</span>
           </div>
 
           <div className="flex-1 text-center sm:text-left">
-            <h2 className="text-lg font-bold text-foreground mb-1">
+            <h2 className="text-lg font-bold text-foreground tracking-[-0.015em] mb-1">
               7-Day Adherence
             </h2>
             <p className="text-sm text-muted-foreground mb-3">
@@ -361,13 +357,13 @@ export default function HistoryPage() {
             <div className="flex gap-2 justify-center sm:justify-start">
               <button
                 onClick={() => navigate("/wellness")}
-                className="inline-flex items-center rounded-lg py-1 px-3 bg-success/10 text-success border border-success/20 text-xs font-semibold hover:bg-success/20 transition-colors"
+                className="inline-flex items-center rounded-full py-1.5 px-3.5 bg-success/10 text-success border border-success/20 text-xs font-semibold hover:bg-success/20 transition-colors active:scale-95"
               >
                 <Check size={12} className="mr-1" /> Good Progress
               </button>
               <button
                 onClick={() => navigate("/report")}
-                className="inline-flex items-center rounded-lg py-1 px-3 bg-primary/10 text-primary border border-primary/20 text-xs font-semibold hover:bg-primary/20 transition-colors"
+                className="inline-flex items-center rounded-full py-1.5 px-3.5 bg-primary/10 text-primary border border-primary/20 text-xs font-semibold hover:bg-primary/20 transition-colors active:scale-95"
               >
                 <Calendar size={12} className="mr-1" /> Weekly Report
               </button>
@@ -388,7 +384,7 @@ export default function HistoryPage() {
             placeholder="Search medicine logs..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-12 pl-12 pr-4 rounded-2xl border border-border/50 bg-muted/20 focus:bg-background focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+            className="w-full h-11 pl-12 pr-4 rounded-full border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring text-sm transition-all"
           />
         </div>
 
@@ -396,7 +392,7 @@ export default function HistoryPage() {
         <div className="sm:hidden grid grid-cols-2 gap-2">
           {patients.length > 0 && (
             <Select value={patientFilter} onValueChange={setPatientFilter}>
-              <SelectTrigger className="h-10 rounded-xl bg-card border-border/50 text-xs font-bold truncate">
+              <SelectTrigger className="h-10 rounded-full bg-card border-border text-xs font-semibold truncate">
                 <SelectValue placeholder="Profile" />
               </SelectTrigger>
               <SelectContent>
@@ -416,7 +412,7 @@ export default function HistoryPage() {
             onValueChange={(val) => setStatusFilter(val as any)}
           >
             <SelectTrigger
-              className={`h-10 rounded-xl bg-card border-border/50 text-xs font-bold ${
+              className={`h-10 rounded-full bg-card border-border text-xs font-semibold ${
                 patients.length === 0 ? "col-span-2" : ""
               }`}
             >
@@ -436,20 +432,20 @@ export default function HistoryPage() {
           <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
             <button
               onClick={() => setPatientFilter("all")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
                 patientFilter === "all"
-                  ? "bg-foreground text-background border-foreground shadow-sm"
-                  : "bg-card border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               All Profiles
             </button>
             <button
               onClick={() => setPatientFilter("self")}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
                 patientFilter === "self"
-                  ? "bg-foreground text-background border-foreground shadow-sm"
-                  : "bg-card border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               {userProfile?.name || "You"}
@@ -458,10 +454,10 @@ export default function HistoryPage() {
               <button
                 key={p.id}
                 onClick={() => setPatientFilter(p.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
                   patientFilter === p.id
-                    ? "bg-foreground text-background border-foreground shadow-sm"
-                    : "bg-card border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-card border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {p.name}
@@ -475,10 +471,10 @@ export default function HistoryPage() {
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all border ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold capitalize whitespace-nowrap transition-all border ${
                 statusFilter === status
-                  ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/25"
-                  : "bg-card border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
+                  ? "bg-[#0066cc] dark:bg-[#0071e3] border-transparent text-white"
+                  : "bg-card border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               {status}
@@ -542,12 +538,12 @@ export default function HistoryPage() {
                       key={log.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="group relative rounded-2xl border border-border/50 bg-card p-4 transition-all hover:shadow-xl hover:border-primary/20 hover:-translate-y-1"
+                      className="group relative rounded-[18px] border border-border bg-card p-4 transition-colors hover:border-foreground/20"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div
-                            className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-2xl shadow-sm transition-transform group-hover:scale-110 ${
+                            className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-[11px] transition-transform group-hover:scale-105 ${
                               log.action === "taken"
                                 ? "bg-success/10 text-success"
                                 : log.action === "missed"
@@ -556,11 +552,11 @@ export default function HistoryPage() {
                             }`}
                           >
                             {log.action === "taken" ? (
-                              <Check size={22} strokeWidth={3} />
+                              <Check size={20} strokeWidth={2.5} />
                             ) : log.action === "missed" ? (
-                              <AlertCircle size={22} strokeWidth={2.5} />
+                              <AlertCircle size={20} strokeWidth={2.5} />
                             ) : (
-                              <X size={22} strokeWidth={3} />
+                              <X size={20} strokeWidth={2.5} />
                             )}
                           </div>
                           <div>
@@ -570,7 +566,7 @@ export default function HistoryPage() {
                             <div className="flex items-center gap-2">
                               <Badge
                                 variant="outline"
-                                className={`text-[10px] uppercase font-black tracking-widest px-2 py-0 border-none ${
+                                className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0 border-none rounded-full ${
                                   log.action === "taken"
                                     ? "bg-success/10 text-success"
                                     : log.action === "missed"
@@ -580,7 +576,7 @@ export default function HistoryPage() {
                               >
                                 {log.action}
                               </Badge>
-                              <span className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-tighter">
+                              <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-tight">
                                 SCH:{" "}
                                 {log.scheduledTime
                                   ? toDate(log.scheduledTime).toLocaleTimeString(undefined, {
@@ -592,7 +588,7 @@ export default function HistoryPage() {
                               {log.patientId && patients.length > 0 && (
                                 <Badge
                                   variant="secondary"
-                                  className="text-[10px] font-semibold px-1.5 py-0 h-4 bg-muted text-muted-foreground"
+                                  className="text-[10px] font-semibold px-2 py-0 h-4 bg-muted text-muted-foreground rounded-full"
                                 >
                                   {patients.find((p) => p.id === log.patientId)?.name || "Dependent"}
                                 </Badge>
@@ -603,10 +599,10 @@ export default function HistoryPage() {
 
                         <div className="flex items-center justify-between sm:justify-end gap-3 mt-4 sm:mt-0 pt-4 sm:pt-0 border-t border-border/50 sm:border-0">
                           <div className="text-right">
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">
                               Logged at
                             </p>
-                            <p className="text-sm font-bold text-foreground">
+                            <p className="text-sm font-semibold text-foreground">
                               {toDate(log.actionTime).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",
@@ -616,10 +612,10 @@ export default function HistoryPage() {
 
                           <button
                             onClick={() => handleDelete(log.id)}
-                            className="p-2.5 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded-xl transition-all"
+                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-all active:scale-95"
                             title="Undo / Delete Record"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
@@ -635,7 +631,7 @@ export default function HistoryPage() {
               <Button
                 variant="outline"
                 onClick={() => setVisibleCount((c) => c + 30)}
-                className="rounded-2xl w-full sm:w-auto h-12 font-bold uppercase tracking-widest text-xs border-primary/20 text-primary hover:bg-primary/5"
+                className="rounded-full w-full sm:w-auto h-11 px-8 font-semibold text-xs border-border text-foreground hover:bg-muted active:scale-95"
               >
                 Load Older Records
               </Button>

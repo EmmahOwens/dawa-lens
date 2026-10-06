@@ -103,7 +103,7 @@ export function FeatureSlideshow() {
 
   return (
     <div 
-      className="relative w-full mb-10 overflow-hidden rounded-[2.5rem] group shadow-2xl shadow-black/5"
+      className="relative w-full mb-8 overflow-hidden rounded-[20px] bg-card border border-border shadow-xs"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}
@@ -115,78 +115,77 @@ export function FeatureSlideshow() {
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={handleDragEnd}
-          initial={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, scale: 0.9, filter: "blur(10px)" }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className={`relative w-full p-6 sm:p-8 flex flex-col min-h-[16rem] sm:min-h-[14rem] justify-between cursor-grab active:cursor-grabbing bg-gradient-to-br ${current.color} text-white`}
-          onTap={() => current.to && navigate(current.to)}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="relative w-full p-6 sm:p-7 flex flex-col min-h-[14rem] sm:min-h-[13rem] justify-between cursor-grab active:cursor-grabbing bg-card select-none"
         >
-          {/* Background Decoration */}
-          <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-black/5 rounded-full blur-2xl pointer-events-none" />
-          
-          <div className="relative z-10 flex items-start justify-between">
+          <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 mb-1">
-                 <div className="p-2 rounded-xl bg-white/20 backdrop-blur-md border border-white/10 shadow-lg">
-                    <current.icon size={20} />
-                 </div>
-                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">
-                    {current.type === "tip" ? "Health Discovery" : "Premium Feature"}
-                 </span>
+                <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                  <current.icon size={18} />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  {current.type === "tip" ? "Health Discovery" : "Featured"}
+                </span>
               </div>
-              <h3 className="text-2xl font-black tracking-tight leading-none mt-2">
+              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground leading-snug mt-1">
                 {current.label}
               </h3>
             </div>
             
-            <div className="flex flex-col items-end gap-3">
-              <div className="flex gap-1.5">
-                {slides.map((_, i) => (
-                  <div 
-                    key={i}
-                    className="relative h-1 w-6 rounded-full bg-white/20 overflow-hidden"
-                  >
-                    {i === currentIndex && (
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: "100%" }}
-                        transition={{ duration: isPaused ? 0 : 6, ease: "linear" }}
-                        className="absolute inset-0 bg-white"
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
+            {/* Story style progress pills */}
+            <div className="flex items-center gap-1.5 shrink-0 pt-1">
+              {slides.map((_, i) => (
+                <div 
+                  key={i}
+                  className="relative h-1 w-6 rounded-full bg-muted overflow-hidden"
+                >
+                  {i === currentIndex && (
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: isPaused ? 0 : 6, ease: "linear" }}
+                      className="absolute inset-0 bg-primary"
+                    />
+                  )}
+                  {i < currentIndex && (
+                    <div className="absolute inset-0 bg-primary/40" />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="relative z-10 max-w-[95%] sm:max-w-[80%]">
-            <p className="text-sm font-medium leading-relaxed opacity-90">
+          <div className="relative z-10 max-w-xl my-2">
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               {current.description}
             </p>
             {current.to && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className="mt-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-white/20 w-fit px-4 py-2 rounded-full backdrop-blur-md border border-white/10"
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (current.to) navigate(current.to);
+                }}
+                className="mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-full bg-primary text-primary-foreground font-semibold text-xs tracking-wide hover:bg-primary/90 active:scale-95 transition-all"
               >
-                Try it now <ArrowRight size={12} />
-              </motion.div>
+                <span>Try it now</span>
+                <ArrowRight size={12} />
+              </button>
             )}
           </div>
           
-          {/* Progress bar at the very bottom */}
-          <div className="absolute bottom-0 left-0 h-1 bg-white/10 w-full">
-             <motion.div 
-               key={currentIndex}
-               initial={{ width: 0 }}
-               animate={{ width: isPaused ? "0%" : "100%" }}
-               transition={{ duration: 6, ease: "linear" }}
-               className="h-full bg-white/40"
-             />
+          {/* Subtle bottom progress indicator */}
+          <div className="absolute bottom-0 left-0 h-0.5 bg-border/40 w-full overflow-hidden">
+            <motion.div 
+              key={currentIndex}
+              initial={{ width: 0 }}
+              animate={{ width: isPaused ? "0%" : "100%" }}
+              transition={{ duration: 6, ease: "linear" }}
+              className="h-full bg-primary/40"
+            />
           </div>
         </motion.div>
       </AnimatePresence>

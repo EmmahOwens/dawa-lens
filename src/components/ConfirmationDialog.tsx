@@ -90,11 +90,9 @@ export default function ConfirmationDialog({
         <DialogPrimitive.Content
           className={cn(
             "fixed left-[50%] top-[50%] z-50 w-full max-w-sm translate-x-[-50%] translate-y-[-50%]",
-            "rounded-3xl border-none bg-background p-0 overflow-hidden shadow-2xl",
+            "rounded-[20px] border border-border bg-card p-0 overflow-hidden shadow-2xl",
             "focus:outline-none"
           )}
-          // Disable Radix's built-in close-on-overlay-click so our onOpenChange
-          // handles it; Radix fires onOpenChange(false) on Escape + overlay click.
         >
           <AnimatePresence>
             {open && (
@@ -108,23 +106,23 @@ export default function ConfirmationDialog({
                 {/* ── Header region ── */}
                 <div
                   className={cn(
-                    "flex flex-col items-center text-center px-6 pt-8 pb-5",
+                    "flex flex-col items-center text-center px-6 pt-8 pb-4",
                     variant === "critical" && "bg-destructive/10"
                   )}
                 >
                   {/* Icon circle */}
-                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-background shadow">
-                    <Trash2 size={28} className="text-destructive" />
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[16px] bg-[#f5f5f7] dark:bg-[#272729] border border-border">
+                    <Trash2 size={24} className="text-destructive" />
                   </div>
 
                   {/* Title */}
-                  <DialogTitle className="text-xl font-black tracking-tight text-foreground mb-2">
+                  <DialogTitle className="text-xl font-bold tracking-[-0.022em] text-foreground mb-2">
                     {title}
                   </DialogTitle>
 
                   {/* Danger badge */}
                   {dangerBadgeLabel && (
-                    <span className="inline-flex items-center rounded-full bg-destructive/10 px-3 py-0.5 text-[10px] font-black uppercase tracking-widest text-destructive border border-destructive/20">
+                    <span className="inline-flex items-center rounded-full bg-destructive/10 px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-destructive border border-destructive/20">
                       {dangerBadgeLabel}
                     </span>
                   )}
@@ -133,17 +131,17 @@ export default function ConfirmationDialog({
                 {/* ── Body region ── */}
                 <div className="px-6 pb-6 space-y-5">
                   {/* Description */}
-                  <DialogDescription className="text-center text-sm text-muted-foreground leading-relaxed">
+                  <DialogDescription className="text-center text-xs text-muted-foreground leading-relaxed">
                     {description}
                   </DialogDescription>
 
                   {/* Optional item list */}
                   {itemList && itemList.length > 0 && (
-                    <ul className="space-y-2 rounded-2xl border border-border/50 bg-muted/30 p-4">
+                    <ul className="space-y-2 rounded-[14px] border border-border bg-muted/30 p-4">
                       {itemList.map((item) => (
                         <li
                           key={item}
-                          className="flex items-center gap-2.5 text-sm font-medium text-foreground"
+                          className="flex items-center gap-2.5 text-xs font-medium text-foreground"
                         >
                           <Trash2
                             size={13}
@@ -156,17 +154,17 @@ export default function ConfirmationDialog({
                   )}
 
                   {/* ── Footer ── */}
-                  <div className="flex flex-col gap-3 pt-1">
+                  <div className="flex flex-col gap-2.5 pt-1">
                     <Button
                       variant="destructive"
-                      className="w-full rounded-2xl font-black uppercase tracking-widest text-[11px] h-12"
+                      className="w-full rounded-full font-semibold text-xs h-11 active:scale-95 transition-transform"
                       onClick={handleConfirm}
                     >
                       {confirmLabel}
                     </Button>
                     <Button
                       variant="outline"
-                      className="w-full rounded-2xl font-black uppercase tracking-widest text-[11px] h-12"
+                      className="w-full rounded-full font-semibold text-xs h-11 border-border active:scale-95 transition-transform"
                       onClick={() => onOpenChange(false)}
                     >
                       {cancelLabel}

@@ -154,20 +154,17 @@ export default function TravelCompanionPage() {
     <div className="w-full min-w-0 max-w-5xl mx-auto">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
-              <Plane size={24} className="sm:hidden" />
-              <Plane size={28} className="hidden sm:block" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tighter text-foreground">
-                Travel Companion
-              </h1>
-              <p className="text-[10px] sm:text-[11px] md:text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-80 mt-0.5">
-                Global Health Intelligence
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-[16px] bg-[#f5f5f7] dark:bg-[#272729] border border-border flex items-center justify-center text-primary shrink-0">
+            <Plane size={24} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-[-0.022em] text-foreground">
+              Travel Companion
+            </h1>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1">
+              Global Health Intelligence
+            </p>
           </div>
         </div>
       </motion.div>
@@ -176,16 +173,14 @@ export default function TravelCompanionPage() {
       <div className="space-y-4 mb-8">
         <TravelMap isAnimating={isAnimating} destination={destination} userCoords={userCoords} userCountry={userCountry} />
 
-        <div className="glass-card p-4 md:p-8 rounded-3xl shadow-xl border-primary/10 overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
-          
-          <div className="flex flex-col gap-4 relative z-10">
+        <div className="p-6 rounded-[18px] border border-border bg-card overflow-hidden">
+          <div className="flex flex-col gap-4">
             <div className="w-full space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1 block opacity-80">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
                 Where are you heading?
               </label>
               <div className="relative group">
-                <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input 
                   value={destination}
                   onChange={(e) => {
@@ -194,7 +189,7 @@ export default function TravelCompanionPage() {
                   }}
                   onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                   placeholder="Enter country (e.g. Kenya, France...)"
-                  className="w-full h-14 pl-12 pr-4 rounded-2xl bg-background border border-border outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/30 transition-all text-base font-bold shadow-sm"
+                  className="w-full h-11 pl-11 pr-4 rounded-full bg-background border border-border outline-none focus:border-primary transition-colors text-sm font-medium"
                 />
               </div>
 
@@ -209,12 +204,12 @@ export default function TravelCompanionPage() {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-full h-10 rounded-xl text-xs bg-muted/20 border-border/50 text-muted-foreground font-semibold">
+                  <SelectTrigger className="w-full h-11 rounded-full text-xs bg-muted/20 border-border text-muted-foreground font-medium px-4">
                     <SelectValue placeholder="Or select common travel corridor..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-2xl border-border bg-card">
                     <SelectGroup>
-                      <SelectLabel className="text-[10px] font-black uppercase tracking-wider text-primary">
+                      <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-primary">
                         East Africa Corridor
                       </SelectLabel>
                       {["Kenya", "Tanzania", "Rwanda", "South Sudan", "DR Congo", "Burundi"].map((c) => (
@@ -224,7 +219,7 @@ export default function TravelCompanionPage() {
                       ))}
                     </SelectGroup>
                     <SelectGroup>
-                      <SelectLabel className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                      <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                         Popular Global Destinations
                       </SelectLabel>
                       {["United Kingdom", "United Arab Emirates", "United States", "India", "South Africa", "Canada"].map((c) => (
@@ -241,12 +236,12 @@ export default function TravelCompanionPage() {
             <Button 
               onClick={handleAnalyze}
               disabled={loading || !destination || medicines.length === 0}
-              className="w-full h-14 rounded-2xl text-[15px] font-black shadow-lg shadow-primary/20 active:scale-95 transition-all"
+              className="w-full h-11 rounded-full text-sm font-semibold active:scale-95 transition-transform"
             >
               {loading ? (
-                <Loader2 size={20} className="animate-spin mr-2" />
+                <Loader2 size={18} className="animate-spin mr-2" />
               ) : (
-                <Sparkles size={20} className="mr-2" />
+                <Sparkles size={18} className="mr-2" />
               )}
               Analyze Trip
             </Button>
@@ -293,51 +288,50 @@ export default function TravelCompanionPage() {
             className="space-y-8"
           >
             {/* Boarding Pass Header */}
-            <motion.div variants={item} className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-blue-500/50 rounded-[2rem] blur opacity-30 group-hover:opacity-50 transition duration-1000" />
-              <div className="relative bg-card rounded-[2rem] overflow-hidden border border-border shadow-2xl">
+            <motion.div variants={item}>
+              <div className="rounded-[18px] overflow-hidden border border-border bg-[#f5f5f7] dark:bg-[#272729]">
                 {/* Main pass body */}
-                <div className="p-5 sm:p-8">
+                <div className="p-6">
                   {/* Passenger / Status row */}
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-0.5">Passenger</p>
-                      <h4 className="text-lg sm:text-2xl font-black">{userProfile?.name || "Member"}</h4>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Passenger</p>
+                      <h4 className="text-xl font-bold tracking-tight text-foreground">{userProfile?.name || "Member"}</h4>
                     </div>
                     <div className="text-right">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-0.5">Status</p>
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-[9px] font-black uppercase">Verified</span>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Status</p>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-semibold uppercase">Verified</span>
                     </div>
                   </div>
 
                   {/* Route row */}
                   <div className="flex items-center gap-2 sm:gap-4">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">From</p>
-                      <h3 className="text-xl sm:text-3xl font-black tracking-tighter truncate">{originLabel}</h3>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">From</p>
+                      <h3 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground truncate">{originLabel}</h3>
                     </div>
                     <div className="flex flex-col items-center gap-1 px-2 sm:px-6 shrink-0">
                       <div className="w-16 sm:w-24 h-[1px] bg-border relative">
                         <Plane size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
                       </div>
-                      <span className="text-[7px] font-bold text-muted-foreground uppercase whitespace-nowrap">Direct</span>
+                      <span className="text-[9px] font-semibold text-muted-foreground uppercase whitespace-nowrap">Direct</span>
                     </div>
                     <div className="flex-1 text-right min-w-0">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">To</p>
-                      <h3 className="text-xl sm:text-3xl font-black tracking-tighter text-primary uppercase truncate">{destination}</h3>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">To</p>
+                      <h3 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-primary uppercase truncate">{destination}</h3>
                     </div>
                   </div>
                 </div>
 
                 {/* Stub (date + boarding) */}
-                <div className="border-t border-dashed border-border/50 bg-primary/[0.02] px-5 sm:px-8 py-4 flex items-center justify-between gap-4">
+                <div className="border-t border-dashed border-border bg-background/50 px-6 py-4 flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest text-primary mb-0.5">Date</p>
-                    <p className="text-sm font-black">{new Date().toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' })}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Date</p>
+                    <p className="text-sm font-semibold text-foreground">{new Date().toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' })}</p>
                   </div>
                   <div className="flex-1 max-w-[180px]">
-                    <div className="w-full h-10 bg-muted/30 rounded-lg border border-dashed border-border flex items-center justify-center">
-                      <span className="text-[9px] font-bold text-muted-foreground tracking-[0.4em] uppercase">BOARDING</span>
+                    <div className="w-full h-9 bg-muted/40 rounded-full border border-dashed border-border flex items-center justify-center">
+                      <span className="text-[9px] font-semibold text-muted-foreground tracking-[0.3em] uppercase">BOARDING PASS</span>
                     </div>
                   </div>
                 </div>
@@ -348,24 +342,24 @@ export default function TravelCompanionPage() {
               {/* Equivalents */}
               {Array.isArray(advice.equivalents) && advice.equivalents.length > 0 && (
                 <motion.div variants={item} className="md:col-span-2 space-y-4">
-                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground px-2 flex items-center gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 flex items-center gap-2">
                     <Pill size={14} className="text-primary" /> Local Pharmacy Equivalents
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {advice.equivalents.map((eq: any, idx: number) => (
-                      <div key={idx} className="p-6 rounded-[2rem] bg-card border border-border shadow-sm flex flex-col justify-between group hover:border-primary/30 transition-all hover:shadow-md">
+                      <div key={idx} className="p-5 rounded-[18px] bg-card border border-border flex flex-col justify-between transition-colors">
                         <div className="mb-4">
                           <div className="flex items-center gap-1.5 mb-1.5">
-                            <span className="text-[9px] font-black uppercase text-muted-foreground/70 tracking-widest">Your Med:</span>
-                            <span className="text-xs font-bold text-muted-foreground truncate">{eq.original}</span>
+                            <span className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wider">Your Med:</span>
+                            <span className="text-xs font-medium text-muted-foreground truncate">{eq.original}</span>
                           </div>
-                          <p className="text-lg sm:text-xl font-black text-foreground tracking-tight">{eq.equivalent}</p>
+                          <p className="text-lg font-bold text-foreground tracking-tight">{eq.equivalent}</p>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
-                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                             <CheckCircle2 size={16} />
+                           <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                             <CheckCircle2 size={14} />
                            </div>
-                           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ask in {destination}</span>
+                           <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Ask in {destination}</span>
                         </div>
                       </div>
                     ))}
@@ -375,20 +369,20 @@ export default function TravelCompanionPage() {
 
               {/* Timezone Advice */}
               {advice.timezoneAdvice && (
-                <motion.div variants={item} className="p-8 rounded-[2.5rem] bg-blue-500/5 border border-blue-500/10 backdrop-blur-xl relative overflow-hidden group">
-                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+                <motion.div variants={item} className="p-6 rounded-[18px] bg-card border border-border relative overflow-hidden">
+                   <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 pointer-events-none">
                      <Clock size={80} />
                    </div>
                    <div className="relative z-10">
-                     <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 shadow-inner">
-                       <Globe size={24} />
+                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-4">
+                       <Globe size={20} />
                      </div>
-                     <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 mb-4">
+                     <h3 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">
                        Timezone Dosing Strategy
                      </h3>
                      <MessageRenderer 
                        text={advice.timezoneAdvice} 
-                       className="text-[13.5px] sm:text-sm text-foreground/90 leading-relaxed font-normal [&_p]:font-normal [&_li]:font-normal [&_strong]:font-black [&_strong]:text-blue-600 dark:[&_strong]:text-blue-400" 
+                       className="text-xs text-foreground/90 leading-relaxed font-normal [&_p]:font-normal [&_li]:font-normal [&_strong]:font-semibold [&_strong]:text-foreground" 
                      />
                    </div>
                 </motion.div>
@@ -396,20 +390,20 @@ export default function TravelCompanionPage() {
 
               {/* Customs Notes */}
               {advice.customsNotes && (
-                <motion.div variants={item} className="p-8 rounded-[2.5rem] bg-amber-500/5 border border-amber-500/10 backdrop-blur-xl relative overflow-hidden group">
-                   <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+                <motion.div variants={item} className="p-6 rounded-[18px] bg-card border border-border relative overflow-hidden">
+                   <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 pointer-events-none">
                      <ShieldAlert size={80} />
                    </div>
                    <div className="relative z-10">
-                     <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-600 mb-6 shadow-inner">
-                       <ShieldAlert size={24} />
+                     <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-4">
+                       <ShieldAlert size={20} />
                      </div>
-                     <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-600 mb-4">
+                     <h3 className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3">
                        Customs & Legal Notes
                      </h3>
                      <MessageRenderer 
                        text={advice.customsNotes} 
-                       className="text-[13.5px] sm:text-sm text-foreground/90 leading-relaxed font-normal [&_p]:font-normal [&_li]:font-normal [&_strong]:font-black [&_strong]:text-amber-600 dark:[&_strong]:text-amber-400" 
+                       className="text-xs text-foreground/90 leading-relaxed font-normal [&_p]:font-normal [&_li]:font-normal [&_strong]:font-semibold [&_strong]:text-amber-600 dark:[&_strong]:text-amber-400" 
                      />
                    </div>
                 </motion.div>
@@ -417,31 +411,31 @@ export default function TravelCompanionPage() {
 
               {/* Health Risks */}
               {advice.healthRisks && (
-                <motion.div variants={item} className="md:col-span-2 p-8 rounded-[2.5rem] bg-destructive/5 border border-destructive/10">
-                   <div className="flex items-center gap-4 mb-8">
-                     <div className="w-12 h-12 rounded-2xl bg-destructive/20 flex items-center justify-center text-destructive shadow-inner">
-                       <Activity size={24} />
+                <motion.div variants={item} className="md:col-span-2 p-6 rounded-[18px] bg-card border border-border">
+                   <div className="flex items-center gap-3 mb-6">
+                     <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center text-destructive">
+                       <Activity size={20} />
                      </div>
                      <div>
-                       <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-destructive">
+                       <h3 className="text-xs font-semibold uppercase tracking-wider text-destructive">
                          Destination Health Risks
                        </h3>
-                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Stay Vigilant</p>
+                       <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">Stay Vigilant</p>
                      </div>
                    </div>
-                   <div className="px-2">
+                   <div>
                       {typeof advice.healthRisks === 'string' ? (
                         <MessageRenderer 
                           text={advice.healthRisks} 
-                          className="text-[13.5px] sm:text-sm text-foreground/90 leading-relaxed font-normal [&_p]:font-normal [&_li]:font-normal [&_strong]:font-black [&_strong]:text-destructive" 
+                          className="text-xs text-foreground/90 leading-relaxed font-normal [&_p]:font-normal [&_li]:font-normal [&_strong]:font-semibold [&_strong]:text-destructive" 
                         />
                       ) : Array.isArray(advice.healthRisks) ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                           {advice.healthRisks.map((risk: string, i: number) => (
-                            <div key={i} className="flex gap-4 p-4 rounded-2xl bg-background/40 border border-border/50">
-                              <AlertCircle size={18} className="text-destructive shrink-0 mt-0.5" />
+                            <div key={i} className="flex gap-3 p-4 rounded-[14px] bg-muted/30 border border-border">
+                              <AlertCircle size={16} className="text-destructive shrink-0 mt-0.5" />
                               <div className="flex-1 min-w-0">
-                                <MessageRenderer text={risk} className="text-sm font-medium leading-snug" />
+                                <MessageRenderer text={risk} className="text-xs font-medium leading-relaxed" />
                               </div>
                             </div>
                           ))}
@@ -468,50 +462,50 @@ export default function TravelCompanionPage() {
                 const draEntry = staticDRA || (aiDRA ? { authority: aiDRA.service, number: aiDRA.number } : null);
 
                 return (
-                  <motion.div variants={item} className="md:col-span-2 rounded-[2.5rem] overflow-hidden border border-border shadow-sm">
+                  <motion.div variants={item} className="md:col-span-2 rounded-[18px] overflow-hidden border border-border bg-card">
                     {/* Section header */}
-                    <div className="px-6 pt-6 pb-4 border-b border-border/50 flex items-center gap-3">
+                    <div className="px-6 py-4 border-b border-border flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Phone size={20} className="text-primary" />
+                        <Phone size={18} className="text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-foreground">Important Contacts</h3>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Save before you travel</p>
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">Important Contacts</h3>
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">Save before you travel</p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border/50">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border">
                       {/* Ambulance */}
                       {ambulance && (
-                        <div className="p-6 flex flex-col gap-3 bg-destructive/[0.03]">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-destructive/15 flex items-center justify-center">
-                              <Siren size={16} className="text-destructive" />
+                        <div className="p-6 flex flex-col gap-2 bg-destructive/[0.02]">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-destructive/15 flex items-center justify-center">
+                              <Siren size={14} className="text-destructive" />
                             </div>
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-destructive">Ambulance / EMS</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-destructive">Ambulance / EMS</span>
                           </div>
-                          <p className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">{ambulance.number}</p>
-                          <p className="text-[10px] font-bold text-muted-foreground">{ambulance.service}</p>
+                          <p className="text-2xl font-bold text-foreground tracking-tight">{ambulance.number}</p>
+                          <p className="text-xs font-medium text-muted-foreground">{ambulance.service}</p>
                         </div>
                       )}
 
                       {/* Drug Regulatory Authority */}
                       {draEntry && (
-                        <div className="p-6 flex flex-col gap-3 bg-primary/[0.02]">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center">
-                              <ShieldCheck size={16} className="text-primary" />
+                        <div className="p-6 flex flex-col gap-2 bg-primary/[0.02]">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+                              <ShieldCheck size={14} className="text-primary" />
                             </div>
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">Drug Regulatory Authority</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">Drug Regulatory Authority</span>
                           </div>
-                          <p className="text-lg sm:text-xl font-black text-foreground tracking-tight leading-tight break-words">{draEntry.number}</p>
-                          <p className="text-[10px] font-bold text-muted-foreground leading-snug">{draEntry.authority}</p>
+                          <p className="text-xl font-bold text-foreground tracking-tight leading-tight break-words">{draEntry.number}</p>
+                          <p className="text-xs font-medium text-muted-foreground leading-relaxed">{draEntry.authority}</p>
                           {'website' in draEntry && draEntry.website && (
                             <a
                               href={draEntry.website}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[10px] font-black text-primary underline underline-offset-2 hover:opacity-70 transition-opacity truncate"
+                              className="text-xs font-semibold text-primary underline underline-offset-2 hover:opacity-70 transition-opacity truncate mt-1"
                             >
                               {draEntry.website.replace(/^https?:\/\/www\./, '')}
                             </a>
@@ -532,13 +526,12 @@ export default function TravelCompanionPage() {
             exit={{ opacity: 0 }}
             className="flex flex-col items-center justify-center p-12"
           >
-            <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-8 relative">
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-              <Plane size={40} className="text-primary relative z-10" />
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-6">
+              <Plane size={32} className="text-muted-foreground" />
             </div>
-            <p className="text-center text-muted-foreground font-bold max-w-sm leading-relaxed uppercase tracking-widest text-[10px]">
+            <p className="text-center text-muted-foreground font-semibold max-w-sm leading-relaxed uppercase tracking-wider text-[11px]">
               Ready for your next adventure?<br/>
-              <span className="text-foreground/60">Enter a destination to generate your health pass.</span>
+              <span className="text-foreground/70">Enter a destination to generate your health pass.</span>
             </p>
           </motion.div>
         )}

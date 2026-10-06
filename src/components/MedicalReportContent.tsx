@@ -14,7 +14,7 @@ import {
   Clock,
   TrendingUp,
   Stethoscope
-} from "lucide-react";
+} from "@/lib/icons";
 
 interface MedicalReportContentProps {
   patientName: string;

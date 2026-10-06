@@ -18,14 +18,50 @@ export default {
       fontSize: {
         xs: "0.75rem",
         sm: "0.875rem",
-        base: "1rem",
+        base: "1.0625rem", // 17px Apple default body
         lg: "1.125rem",
-        xl: "1.25rem",
-        "2xl": "1.5rem",
-        "3xl": "1.875rem",
+        xl: "1.3125rem", // 21px tagline
+        "2xl": "1.75rem", // 28px lead
+        "3xl": "2.125rem", // 34px display-md
+        "4xl": "2.5rem", // 40px display-lg
+        "5xl": "3.5rem", // 56px hero-display
+        "body-17": ["17px", { lineHeight: "1.47", letterSpacing: "-0.374px" }],
+        "body-strong": ["17px", { lineHeight: "1.24", letterSpacing: "-0.374px" }],
+        "caption-apple": ["14px", { lineHeight: "1.43", letterSpacing: "-0.224px" }],
+        "caption-strong": ["14px", { lineHeight: "1.29", letterSpacing: "-0.224px" }],
+        "fine-print": ["12px", { lineHeight: "1.0", letterSpacing: "-0.12px" }],
+        "micro-legal": ["10px", { lineHeight: "1.3", letterSpacing: "-0.08px" }],
       },
       fontFamily: {
-        sans: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"],
+        sans: [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "SF Pro Text",
+          "SF Pro Display",
+          "Inter",
+          "system-ui",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica",
+          "Arial",
+          "sans-serif",
+        ],
+        display: [
+          "SF Pro Display",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Inter",
+          "system-ui",
+          "sans-serif",
+        ],
+        text: [
+          "SF Pro Text",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Inter",
+          "system-ui",
+          "sans-serif",
+        ],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -33,6 +69,14 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        parchment: "hsl(var(--parchment))",
+        pearl: "hsl(var(--pearl))",
+        "tile-1": "hsl(var(--tile-1))",
+        "tile-2": "hsl(var(--tile-2))",
+        "tile-3": "hsl(var(--tile-3))",
+        "action-blue": "#0066cc",
+        "action-blue-focus": "#0071e3",
+        "sky-blue": "#2997ff",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -81,11 +125,20 @@ export default {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-        xl: "calc(var(--radius) + 4px)",
-        "2xl": "calc(var(--radius) + 8px)",
+        none: "0px",
+        xs: "5px",
+        sm: "8px",
+        md: "11px",
+        lg: "18px",
+        pill: "9999px",
+        full: "9999px",
+        "2xl": "18px",
+        "3xl": "24px",
+      },
+      boxShadow: {
+        product: "rgba(0, 0, 0, 0.22) 3px 5px 30px 0px",
+        "product-dark": "rgba(0, 0, 0, 0.55) 3px 5px 30px 0px",
+        subtle: "0 1px 2px 0 rgba(0, 0, 0, 0.04)",
       },
       keyframes: {
         "accordion-down": {

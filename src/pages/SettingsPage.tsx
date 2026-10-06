@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   ArrowLeft, Shield, Trash2, Moon, Lock, 
-  User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw
+  User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw,
+  Bell, Smartphone, Clock, Zap, ExternalLink, Play, ChevronDown
 } from "@/lib/icons";
-import { Bell, Smartphone, Clock, Zap, ExternalLink, Play, ChevronDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
@@ -274,7 +274,7 @@ export default function SettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6"
       >
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-[-0.022em] mb-2">
           {t("settings.title")}
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -289,15 +289,13 @@ export default function SettingsPage() {
         className="space-y-4"
       >
         {/* 1. Profile Section */}
-        <motion.div variants={itemVariants} className="premium-card relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16" />
-          
+        <motion.div variants={itemVariants} className="apple-card p-6 relative overflow-hidden">
           <div className="flex items-center gap-4 mb-6 relative z-10">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-              <User size={32} />
+            <div className="w-16 h-16 rounded-[14px] bg-secondary flex items-center justify-center text-foreground border border-border">
+              <User size={30} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground tracking-tight">
+              <h2 className="text-xl font-bold text-foreground tracking-[-0.015em]">
                 {userProfile?.name || "Anonymous User"}
               </h2>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -705,7 +703,7 @@ export default function SettingsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-xl h-10 px-6 text-[11px] font-black uppercase tracking-widest border-border/80 hover:bg-destructive/5 hover:text-destructive transition-colors"
+                className="rounded-full h-9 px-4 text-xs font-semibold border-border hover:bg-destructive/10 hover:text-destructive transition-colors active:scale-95"
                 onClick={() => {
                   logoutUser();
                   toast({ title: t("settings.logout") });
@@ -717,7 +715,7 @@ export default function SettingsPage() {
             </div>
           ) : (
             <Button 
-              className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-primary/10" 
+              className="w-full rounded-full h-11 text-sm font-semibold bg-[#0066cc] dark:bg-[#0071e3] hover:opacity-95 text-white active:scale-95" 
               onClick={() => navigate("/auth")}
             >
               Sign In to Dawa Lens
@@ -726,9 +724,9 @@ export default function SettingsPage() {
         </motion.div>
 
         {/* 5. Danger Zone */}
-        <motion.div variants={itemVariants} className="p-6 rounded-3xl border border-destructive/10 bg-destructive/5">
+        <motion.div variants={itemVariants} className="p-6 rounded-[18px] border border-destructive/20 bg-destructive/5">
           <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-xl bg-destructive/10 text-destructive">
+            <div className="p-2 rounded-[10px] bg-destructive/10 text-destructive">
               <Trash2 size={18} />
             </div>
             <h3 className="font-bold text-destructive tracking-tight">{t("settings.danger_zone")}</h3>
@@ -740,7 +738,7 @@ export default function SettingsPage() {
           
           <Button
             variant="destructive"
-            className="w-full rounded-2xl h-12 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-destructive/10"
+            className="w-full rounded-full h-11 text-sm font-semibold active:scale-95"
             onClick={() => setClearDialogOpen(true)}
           >
             {t("settings.clear_data")}

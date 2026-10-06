@@ -12,7 +12,7 @@ import {
   Globe, 
   Rocket,
   Sparkles
-} from "lucide-react";
+} from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
 
@@ -97,36 +97,23 @@ export default function WelcomePage() {
   const Icon = step.icon;
 
   return (
-    <div className="h-[100dvh] min-h-[100dvh] flex flex-col bg-background relative overflow-hidden selection:bg-primary/20">
-      {/* Dynamic Background Glow Orbs */}
-      <motion.div 
-        className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] rounded-full blur-[100px] opacity-50 pointer-events-none"
-        animate={{ backgroundColor: step.color }}
-        transition={{ duration: 1, ease: "easeInOut" }}
-      />
-      <motion.div 
-        className="absolute bottom-[-10%] right-[-10%] w-[70vw] h-[70vw] max-w-[700px] max-h-[700px] rounded-full blur-[120px] opacity-40 pointer-events-none"
-        animate={{ backgroundColor: step.color }}
-        transition={{ duration: 1.5, ease: "easeInOut" }}
-      />
-
+    <div className="h-[100dvh] min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       {/* Header (Logo & Skip) */}
-      <div className="relative z-20 flex items-center justify-between p-4 sm:p-6 shrink-0">
+      <div className="relative z-20 flex items-center justify-between p-5 sm:p-6 shrink-0 border-b border-border/40">
         <motion.div 
-          initial={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2.5"
         >
-          <img src={LOGO_BASE64} alt="Dawa Lens Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" />
-          <span className="font-black text-foreground tracking-tighter text-lg sm:text-xl">Dawa Lens</span>
+          <img src={LOGO_BASE64} alt="Dawa Lens Logo" className="w-8 h-8 object-contain" />
+          <span className="font-bold text-foreground tracking-tight text-lg">Dawa Lens</span>
         </motion.div>
-        <Button 
-          variant="ghost" 
-          className="text-muted-foreground/60 hover:text-foreground font-semibold tracking-wide"
+        <button 
+          className="text-xs font-semibold text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-full hover:bg-secondary transition-colors"
           onClick={handleFinish}
         >
           Skip
-        </Button>
+        </button>
       </div>
 
       {/* Main Content Area */}
@@ -134,35 +121,28 @@ export default function WelcomePage() {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
-            initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
-            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="w-full flex flex-col items-center"
           >
-            {/* Frosted Glass Icon Container */}
+            {/* Apple Icon Capsule */}
             <motion.div 
-              className="relative w-28 h-28 sm:w-36 sm:h-36 mb-6 sm:mb-8 rounded-[2rem] sm:rounded-[2.5rem] bg-card/40 border border-border/50 backdrop-blur-2xl shadow-2xl flex items-center justify-center group"
-              initial={{ y: 20 }}
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="relative w-28 h-28 sm:w-32 sm:h-32 mb-8 rounded-[24px] bg-[#f5f5f7] dark:bg-[#272729] border border-border flex items-center justify-center"
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.4 }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-[2rem] sm:rounded-[2.5rem] pointer-events-none" />
-              <Icon strokeWidth={1.5} className={`w-14 h-14 sm:w-18 sm:h-18 ${step.iconColor} drop-shadow-xl`} />
-              
-              {/* Inner Glow corresponding to step color */}
-              <motion.div 
-                className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] blur-xl -z-10 opacity-40"
-                animate={{ backgroundColor: step.color }}
-              />
+              <Icon size={48} className={step.iconColor} />
             </motion.div>
 
             {/* Typography */}
-            <div className="text-center space-y-3 sm:space-y-4 w-full">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-foreground tracking-tighter leading-tight drop-shadow-sm">
+            <div className="text-center space-y-3 w-full">
+              <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-[-0.022em] leading-tight">
                 {step.title}
               </h1>
-              <p className="text-sm sm:text-[15px] md:text-base text-muted-foreground/80 font-medium leading-relaxed px-2">
+              <p className="text-[17px] text-muted-foreground font-normal leading-relaxed px-4">
                 {step.subtitle}
               </p>
             </div>
@@ -171,43 +151,36 @@ export default function WelcomePage() {
       </div>
 
       {/* Footer (Navigation & Progress) */}
-      <div className="relative z-20 px-6 pb-8 sm:pb-12 pt-4 sm:pt-6 w-full max-w-md mx-auto flex flex-col items-center gap-6 sm:gap-8 shrink-0">
+      <div className="relative z-20 px-6 pb-8 sm:pb-10 pt-4 w-full max-w-md mx-auto flex flex-col items-center gap-6 shrink-0">
         
         {/* Segmented Progress Bar */}
-        <div className="w-full flex gap-1.5 h-1.5 px-4">
+        <div className="w-full flex gap-1.5 h-1 px-4">
           {ONBOARDING_STEPS.map((_, i) => (
-            <div key={i} className="flex-1 h-full rounded-full bg-muted/40 overflow-hidden relative">
-              <motion.div 
-                className="absolute inset-0 bg-primary origin-left"
-                initial={{ scaleX: 0 }}
-                animate={{ 
-                  scaleX: i < currentStep ? 1 : i === currentStep ? 1 : 0,
-                  opacity: i === currentStep ? [0.5, 1] : 1
-                }}
-                transition={{ 
-                  scaleX: { duration: 0.4, ease: "easeOut" },
-                  opacity: i === currentStep ? { duration: 1, repeat: Infinity, repeatType: "reverse" } : { duration: 0 }
-                }}
+            <div key={i} className="flex-1 h-full rounded-full bg-muted/60 overflow-hidden relative">
+              <div 
+                className={`h-full rounded-full transition-all duration-300 ${
+                  i <= currentStep ? "bg-[#0066cc] dark:bg-[#2997ff]" : "bg-transparent"
+                }`}
               />
             </div>
           ))}
         </div>
 
-        {/* Action Button */}
-        <Button
+        {/* Action Button - Apple Action Blue Pill */}
+        <button
           onClick={handleNext}
-          className="w-full h-14 rounded-2xl text-[17px] font-bold shadow-xl shadow-primary/20 active:scale-[0.98] transition-all bg-primary/90 hover:bg-primary backdrop-blur-sm group"
+          className="w-full h-12 rounded-full text-base font-semibold transition-transform active:scale-95 bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 flex items-center justify-center gap-2"
         >
           {currentStep === ONBOARDING_STEPS.length - 1 ? (
-            <span className="flex items-center justify-center w-full gap-2">
-              Get Started <Rocket className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </span>
+            <>
+              Get Started <Rocket size={18} />
+            </>
           ) : (
-            <span className="flex items-center justify-center w-full gap-2">
-              Continue <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </span>
+            <>
+              Continue <ChevronRight size={18} />
+            </>
           )}
-        </Button>
+        </button>
       </div>
     </div>
   );

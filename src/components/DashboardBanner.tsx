@@ -107,54 +107,33 @@ export function DashboardBanner() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="relative mb-10 premium-card overflow-hidden group"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="relative mb-8 rounded-[20px] bg-card border border-border p-6 sm:p-7 transition-colors shadow-xs"
     >
-      {/* Calm background shapes */}
-      <motion.div 
-        animate={{ 
-          scale: [1, 1.1, 1],
-          x: [0, 10, 0],
-          y: [0, -10, 0]
-        }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        style={{ backgroundColor: "hsla(158, 64%, 88%, 0.4)" }}
-        className="absolute -top-10 -right-10 w-40 h-40 rounded-full blur-3xl pointer-events-none"
-      />
-      <motion.div 
-        animate={{ 
-          scale: [1, 1.2, 1],
-          x: [0, -15, 0],
-          y: [0, 15, 0]
-        }}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        style={{ backgroundColor: "hsla(261, 71%, 88%, 0.4)" }}
-        className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full blur-3xl pointer-events-none"
-      />
-
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-xl">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-primary/10">
-              <Sparkles size={14} className="text-primary" />
-            </div>
-            <span className="section-title mb-0">Wellness Pulse</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-bold uppercase tracking-wider">
+              <Sparkles size={12} />
+              Wellness Pulse
+            </span>
           </div>
-          
+
           {renderQuote()}
 
-          <div className="flex items-center gap-6 pt-2">
+          <div className="flex items-center gap-6 pt-1">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">7-Day Consistency</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">7-Day Consistency</span>
               <div className="flex items-center gap-2 mt-1">
-                <TrendingUp size={16} className="text-success" />
+                <TrendingUp size={16} className="text-emerald-600 dark:text-emerald-400" />
                 <span className="text-xl font-bold text-foreground tracking-tight">{adherencePercent}%</span>
               </div>
             </div>
-            <div className="w-[1px] h-8 bg-border" />
+            <div className="w-px h-8 bg-border" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Success Streak</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Success Streak</span>
               <div className="flex items-center gap-2 mt-1">
                 <Calendar size={16} className="text-primary" />
                 <span className="text-xl font-bold text-foreground tracking-tight">
@@ -165,13 +144,12 @@ export function DashboardBanner() {
           </div>
         </div>
 
-
         <button 
           onClick={() => navigate('/report')}
-          className="self-start md:self-center group/btn flex items-center gap-3 bg-primary text-primary-foreground px-6 py-3 rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
+          className="self-start md:self-center flex items-center gap-2 bg-primary text-primary-foreground h-11 px-5 rounded-full font-semibold text-xs tracking-wide hover:bg-primary/90 transition-all active:scale-95 shrink-0"
         >
-          <span className="text-xs font-bold uppercase tracking-wider">Detailed Report</span>
-          <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+          <span>Detailed Report</span>
+          <ArrowRight size={14} />
         </button>
       </div>
     </motion.div>

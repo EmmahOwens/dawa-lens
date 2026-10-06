@@ -304,22 +304,22 @@ export default function FamilyHubPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6"
       >
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground">
               {isProfessionalMode ? "Client Hub" : "Family Hub"}
             </h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] opacity-60">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1">
               {patients.length + 1} Profiles Managed
             </p>
           </div>
           <button
             onClick={handleOpenAdd}
-            className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+            className="w-10 h-10 rounded-full bg-[#0066cc] dark:bg-[#0071e3] text-white flex items-center justify-center active:scale-95 transition-transform"
           >
-            <UserPlus size={22} />
+            <UserPlus size={18} />
           </button>
         </div>
       </motion.div>
@@ -333,15 +333,15 @@ export default function FamilyHubPage() {
               setSelectedPatientId(val === "self" ? null : val);
             }}
           >
-            <SelectTrigger className="w-full h-12 rounded-2xl bg-card border-2 border-primary/20 text-xs font-bold shadow-sm">
+            <SelectTrigger className="w-full h-11 rounded-full bg-card border border-border text-xs font-semibold">
               <SelectValue placeholder="Switch Profile..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="self" className="text-xs font-bold">
+              <SelectItem value="self" className="text-xs font-semibold">
                 👤 {userProfile?.name || "You (Primary Account)"}
               </SelectItem>
               {patients.map((p) => (
-                <SelectItem key={p.id} value={p.id} className="text-xs font-bold">
+                <SelectItem key={p.id} value={p.id} className="text-xs font-semibold">
                   {p.relation ? `👥 ${p.name} (${p.relation})` : `👥 ${p.name}`}
                 </SelectItem>
               ))}
@@ -350,36 +350,34 @@ export default function FamilyHubPage() {
         </div>
       )}
 
-      {/* Active Member Detail Panel */}
+      {/* Active Member Detail Panel - Apple Near-Black Tile 1 / Parchment */}
       <motion.div
         layout
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mb-10 p-6 rounded-[2.5rem] bg-card border-2 border-primary/20 shadow-2xl shadow-primary/5 relative overflow-hidden group"
+        className="mb-8 p-6 rounded-[18px] border border-border bg-[#f5f5f7] dark:bg-[#272729] relative overflow-hidden"
       >
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500" />
-
         <div className="relative z-10">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+              <div className="w-14 h-14 rounded-[14px] bg-secondary flex items-center justify-center text-foreground border border-border">
                 {(() => {
                   const pat = patients.find((p) => p.id === selectedPatientId);
                   return pat && typeof pat.age === "number" && pat.age < 12 ? (
-                    <Baby size={32} />
+                    <Baby size={28} />
                   ) : (
-                    <UserRound size={32} />
+                    <UserRound size={28} />
                   );
                 })()}
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-0.5">
                   Managing Profile
                 </p>
-                <h2 className="text-2xl font-black tracking-tight text-foreground">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-[-0.015em] text-foreground">
                   {currentSelection.name}
                 </h2>
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {(currentSelection as any).relation ||
                     (isProfessionalMode ? "Client" : "Family")}
                 </span>
@@ -388,31 +386,31 @@ export default function FamilyHubPage() {
             {selectedPatientId && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="p-2 rounded-xl hover:bg-secondary transition-colors text-muted-foreground">
-                    <MoreVertical size={20} />
+                  <button className="p-2 rounded-full hover:bg-secondary transition-colors text-muted-foreground">
+                    <MoreVertical size={18} />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="rounded-2xl p-2 min-w-[160px] shadow-2xl border-border/40"
+                  className="rounded-2xl p-2 min-w-[160px] border-border"
                 >
                   <DropdownMenuItem
-                    className="rounded-xl p-3 focus:bg-primary/5 focus:text-primary cursor-pointer gap-3 font-bold text-xs"
+                    className="rounded-xl p-2.5 focus:bg-primary/5 focus:text-primary cursor-pointer gap-2 font-semibold text-xs"
                     onClick={() => {
                       const p = patients.find((p) => p.id === selectedPatientId);
                       if (p) handleOpenEdit(p);
                     }}
                   >
-                    <Edit2 size={16} /> Edit Profile
+                    <Edit2 size={14} /> Edit Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="rounded-xl p-3 focus:bg-destructive/5 focus:text-destructive text-destructive cursor-pointer gap-3 font-bold text-xs"
+                    className="rounded-xl p-2.5 focus:bg-destructive/5 focus:text-destructive text-destructive cursor-pointer gap-2 font-semibold text-xs"
                     onClick={() => {
                       const p = patients.find((p) => p.id === selectedPatientId);
                       if (p) setPatientToDelete(p);
                     }}
                   >
-                    <Trash2 size={16} /> Delete Profile
+                    <Trash2 size={14} /> Delete Profile
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -420,38 +418,38 @@ export default function FamilyHubPage() {
           </div>
 
           {/* Quick Health Summary */}
-          <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40">
-              <div className="flex items-center gap-2 mb-2">
-                <Pill size={14} className="text-primary" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="p-3.5 rounded-[11px] bg-card border border-border">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Pill size={13} className="text-primary" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Medicines
                 </span>
               </div>
-              <p className="text-2xl font-black text-foreground">
+              <p className="text-xl font-bold text-foreground">
                 {activeStats?.meds ?? 0}
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40">
-              <div className="flex items-center gap-2 mb-2">
-                <Bell size={14} className="text-amber-500" />
+            <div className="p-3.5 rounded-[11px] bg-card border border-border">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Bell size={13} className="text-amber-500" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Reminders
                 </span>
               </div>
-              <p className="text-2xl font-black text-foreground">
+              <p className="text-xl font-bold text-foreground">
                 {activeStats?.reminders ?? 0}
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp size={14} className="text-emerald-500" />
+            <div className="p-3.5 rounded-[11px] bg-card border border-border">
+              <div className="flex items-center gap-1.5 mb-1">
+                <TrendingUp size={13} className="text-emerald-500" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Adherence
                 </span>
               </div>
               <p
-                className={`text-2xl font-black ${
+                className={`text-xl font-bold ${
                   activeStats?.adherenceRate === null
                     ? "text-muted-foreground"
                     : activeStats.adherenceRate >= 80
@@ -467,10 +465,10 @@ export default function FamilyHubPage() {
                   : "—"}
               </p>
             </div>
-            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/40">
-              <div className="flex items-center gap-2 mb-2">
+            <div className="p-3.5 rounded-[11px] bg-card border border-border">
+              <div className="flex items-center gap-1.5 mb-1">
                 <AlertTriangle
-                  size={14}
+                  size={13}
                   className={
                     activeStats?.missedToday
                       ? "text-destructive"
@@ -478,11 +476,11 @@ export default function FamilyHubPage() {
                   }
                 />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Missed Today
+                  Missed
                 </span>
               </div>
               <p
-                className={`text-2xl font-black ${
+                className={`text-xl font-bold ${
                   activeStats?.missedToday
                     ? "text-destructive"
                     : "text-foreground"
@@ -496,16 +494,18 @@ export default function FamilyHubPage() {
           {/* Member Actions */}
           <div className="grid grid-cols-2 gap-3">
             <Button
+              variant="outline"
               onClick={() => handleNavigate("/reminders")}
-              className="rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 bg-primary/10 text-primary hover:bg-primary/20 border-none"
+              className="rounded-full h-11 text-xs font-semibold gap-1.5 border-border active:scale-95"
             >
-              <Bell size={14} /> View Reminders
+              <Bell size={13} /> View Reminders
             </Button>
             <Button
+              variant="outline"
               onClick={() => handleNavigate("/history")}
-              className="rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 bg-secondary text-foreground hover:bg-secondary/80 border-none"
+              className="rounded-full h-11 text-xs font-semibold gap-1.5 border-border active:scale-95"
             >
-              <HistoryIcon size={14} /> Health History
+              <HistoryIcon size={13} /> Health History
             </Button>
             <Button
               onClick={() =>
@@ -518,9 +518,9 @@ export default function FamilyHubPage() {
                   },
                 })
               }
-              className="col-span-2 rounded-2xl h-14 font-black uppercase text-[10px] tracking-widest gap-2 shadow-lg shadow-primary/10"
+              className="col-span-2 rounded-full h-11 text-xs font-semibold gap-1.5 bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 active:scale-95"
             >
-              <Plus size={16} /> Add Medication Schedule
+              <Plus size={15} /> Add Medication Schedule
             </Button>
           </div>
         </div>
@@ -570,48 +570,46 @@ export default function FamilyHubPage() {
             <motion.div
               variants={item}
               onClick={() => setSelectedPatientId(null)}
-              className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer relative group ${
+              className={`p-5 rounded-[18px] border transition-all cursor-pointer relative group ${
                 selectedPatientId === null
-                  ? "border-primary bg-primary/5 shadow-xl shadow-primary/5"
-                  : "border-border/40 bg-card hover:border-primary/30"
+                  ? "border-[#0066cc] dark:border-[#2997ff] bg-primary/5"
+                  : "border-border bg-card hover:border-foreground/20"
               }`}
             >
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-4">
                 <div
-                  className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
+                  className={`w-12 h-12 rounded-[11px] flex items-center justify-center transition-all ${
                     selectedPatientId === null
-                      ? "bg-primary text-primary-foreground shadow-lg"
+                      ? "bg-[#0066cc] dark:bg-[#0071e3] text-white"
                       : "bg-secondary text-muted-foreground"
                   }`}
                 >
-                  <UserRound size={28} />
+                  <UserRound size={24} />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <p className="text-lg font-black text-foreground tracking-tight leading-tight">
+                    <p className="text-base font-bold text-foreground tracking-tight leading-tight">
                       {userProfile?.name || "Primary User"}
                     </p>
                     <Badge
                       variant="outline"
-                      className="text-[8px] font-black uppercase tracking-tighter border-muted-foreground/20 text-muted-foreground"
+                      className="text-[9px] font-bold uppercase tracking-wider rounded-full px-2 py-0 border-border text-muted-foreground"
                     >
                       Self
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest opacity-60">
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-tight">
                       {memberStats["self"]?.meds ?? 0} Meds •{" "}
                       {memberStats["self"]?.reminders ?? 0} Reminders
                     </span>
                     {memberStats["self"]?.adherenceRate !== null &&
                       memberStats["self"]?.adherenceRate !== undefined && (
                         <span
-                          className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                             memberStats["self"].adherenceRate >= 80
-                              ? "bg-emerald-500/10 text-emerald-600"
-                              : memberStats["self"].adherenceRate >= 50
-                              ? "bg-amber-500/10 text-amber-600"
-                              : "bg-destructive/10 text-destructive"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                           }`}
                         >
                           {memberStats["self"].adherenceRate}%
@@ -620,11 +618,11 @@ export default function FamilyHubPage() {
                   </div>
                 </div>
                 <ChevronRight
-                  size={18}
+                  size={16}
                   className={`text-muted-foreground transition-transform ${
                     selectedPatientId === null
-                      ? "translate-x-1 text-primary"
-                      : "opacity-30"
+                      ? "translate-x-0.5 text-[#0066cc] dark:text-[#2997ff]"
+                      : "opacity-40"
                   }`}
                 />
               </div>
@@ -635,14 +633,14 @@ export default function FamilyHubPage() {
               <motion.div
                 key={patient.id}
                 variants={item}
-                className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer relative group ${
+                className={`p-5 rounded-[18px] border transition-all cursor-pointer relative group ${
                   selectedPatientId === patient.id
-                    ? "border-primary bg-primary/5 shadow-xl shadow-primary/5"
-                    : "border-border/40 bg-card hover:border-primary/30"
+                    ? "border-[#0066cc] dark:border-[#2997ff] bg-primary/5"
+                    : "border-border bg-card hover:border-foreground/20"
                 }`}
                 onClick={() => setSelectedPatientId(patient.id)}
               >
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-4">
                   {(() => {
                     const colorDotMap: Record<string, string> = {
                       blue: "bg-blue-500/15 text-blue-500",
@@ -654,37 +652,37 @@ export default function FamilyHubPage() {
                     };
                     const colorClass =
                       selectedPatientId === patient.id
-                        ? "bg-primary text-primary-foreground shadow-lg"
+                        ? "bg-[#0066cc] dark:bg-[#0071e3] text-white"
                         : patient.color && colorDotMap[patient.color]
                         ? colorDotMap[patient.color]
                         : "bg-secondary text-muted-foreground";
                     return (
                       <div
-                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${colorClass}`}
+                        className={`w-12 h-12 rounded-[11px] flex items-center justify-center transition-all ${colorClass}`}
                       >
                         {typeof patient.age === "number" && patient.age < 12 ? (
-                          <Baby size={28} />
+                          <Baby size={24} />
                         ) : (
-                          <UserRound size={28} />
+                          <UserRound size={24} />
                         )}
                       </div>
                     );
                   })()}
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="text-lg font-black text-foreground tracking-tight leading-tight">
+                      <p className="text-base font-bold text-foreground tracking-tight leading-tight">
                         {patient.name}
                       </p>
                       <Badge
                         variant="outline"
-                        className="text-[8px] font-black uppercase tracking-tighter border-muted-foreground/20 text-muted-foreground"
+                        className="text-[9px] font-bold uppercase tracking-wider rounded-full px-2 py-0 border-border text-muted-foreground"
                       >
                         {patient.relation ||
                           (isProfessionalMode ? "Client" : "Family")}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <span className="text-[9px] uppercase font-black text-muted-foreground tracking-widest opacity-60">
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-tight">
                         {memberStats[patient.id]?.meds ?? 0} Meds •{" "}
                         {memberStats[patient.id]?.reminders ?? 0} Reminders
                       </span>
@@ -692,23 +690,19 @@ export default function FamilyHubPage() {
                         memberStats[patient.id]?.adherenceRate !==
                           undefined && (
                           <span
-                            className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
-                              (memberStats[patient.id]?.adherenceRate ?? 0) >=
-                              80
-                                ? "bg-emerald-500/10 text-emerald-600"
-                                : (memberStats[patient.id]?.adherenceRate ??
-                                    0) >= 50
-                                ? "bg-amber-500/10 text-amber-600"
-                                : "bg-destructive/10 text-destructive"
+                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                              (memberStats[patient.id]?.adherenceRate ?? 0) >= 80
+                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                             }`}
                           >
                             {memberStats[patient.id].adherenceRate}%
                           </span>
                         )}
                       {(memberStats[patient.id]?.missedToday ?? 0) > 0 && (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive flex items-center gap-1">
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive flex items-center gap-1">
                           <AlertTriangle size={8} />{" "}
-                          {memberStats[patient.id].missedToday} missed today
+                          {memberStats[patient.id].missedToday} missed
                         </span>
                       )}
                     </div>
@@ -750,9 +744,9 @@ export default function FamilyHubPage() {
             </SheetDescription>
           </SheetHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                 Full Name
               </label>
               <input
@@ -761,14 +755,14 @@ export default function FamilyHubPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className="w-full h-16 px-6 rounded-2xl bg-secondary border-none outline-none focus:ring-2 ring-primary/20 transition-all font-bold tracking-tight text-lg"
+                className="w-full h-11 px-4 rounded-full border border-border bg-card text-foreground outline-none focus:border-primary transition-colors font-medium text-sm"
                 placeholder="e.g. John Doe"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                   Relation
                 </label>
                 <input
@@ -776,14 +770,14 @@ export default function FamilyHubPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, relation: e.target.value })
                   }
-                  className="w-full h-16 px-6 rounded-2xl bg-secondary border-none outline-none focus:ring-2 ring-primary/20 transition-all font-bold text-sm"
+                  className="w-full h-11 px-4 rounded-full border border-border bg-card text-foreground outline-none focus:border-primary transition-colors font-medium text-sm"
                   placeholder={
                     isProfessionalMode ? "e.g. Client" : "e.g. Father"
                   }
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                   Age
                 </label>
                 <input
@@ -792,14 +786,14 @@ export default function FamilyHubPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, age: e.target.value })
                   }
-                  className="w-full h-16 px-6 rounded-2xl bg-secondary border-none outline-none focus:ring-2 ring-primary/20 transition-all font-bold text-sm"
+                  className="w-full h-11 px-4 rounded-full border border-border bg-card text-foreground outline-none focus:border-primary transition-colors font-medium text-sm"
                   placeholder="Years"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                 Gender
               </label>
               <div className="flex gap-3">
@@ -810,10 +804,10 @@ export default function FamilyHubPage() {
                     onClick={() =>
                       setFormData({ ...formData, gender: g })
                     }
-                    className={`flex-1 h-14 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all border-2 ${
+                    className={`flex-1 h-11 rounded-full font-semibold text-xs uppercase tracking-wider transition-all border active:scale-95 ${
                       formData.gender === g
-                        ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20"
-                        : "bg-transparent border-border/40 text-muted-foreground"
+                        ? "bg-primary border-primary text-primary-foreground shadow-sm"
+                        : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/40"
                     }`}
                   >
                     {g}
@@ -823,11 +817,11 @@ export default function FamilyHubPage() {
             </div>
 
             {/* Profile Color */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                 Profile Color
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-2.5">
                 {[
                   { key: "blue", dot: "bg-blue-500" },
                   { key: "rose", dot: "bg-rose-500" },
@@ -840,10 +834,10 @@ export default function FamilyHubPage() {
                     key={key}
                     type="button"
                     onClick={() => setFormData({ ...formData, color: key })}
-                    className={`w-10 h-10 rounded-full ${dot} transition-all border-4 ${
+                    className={`w-8 h-8 rounded-full ${dot} transition-all border-2 ${
                       formData.color === key
-                        ? "border-foreground scale-110 shadow-lg"
-                        : "border-transparent scale-100"
+                        ? "border-foreground scale-105 shadow-sm"
+                        : "border-transparent opacity-70 hover:opacity-100"
                     }`}
                   />
                 ))}
@@ -851,8 +845,8 @@ export default function FamilyHubPage() {
             </div>
 
             {/* Profile Type */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                 Profile Type
               </label>
               <div className="flex gap-3">
@@ -861,10 +855,10 @@ export default function FamilyHubPage() {
                     key={t}
                     type="button"
                     onClick={() => setFormData({ ...formData, type: t })}
-                    className={`flex-1 h-12 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all border-2 ${
+                    className={`flex-1 h-11 rounded-full font-semibold text-xs uppercase tracking-wider transition-all border active:scale-95 ${
                       formData.type === t
-                        ? "bg-primary border-primary text-primary-foreground shadow-lg shadow-primary/20"
-                        : "bg-transparent border-border/40 text-muted-foreground"
+                        ? "bg-primary border-primary text-primary-foreground shadow-sm"
+                        : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/40"
                     }`}
                   >
                     {t === "family" ? "Family" : "Client"}
@@ -874,8 +868,8 @@ export default function FamilyHubPage() {
             </div>
 
             {/* Conditions */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                 Conditions (optional)
               </label>
               <input
@@ -883,17 +877,17 @@ export default function FamilyHubPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, conditions: e.target.value })
                 }
-                className="w-full h-14 px-6 rounded-2xl bg-secondary border-none outline-none focus:ring-2 ring-primary/20 transition-all font-medium text-sm"
+                className="w-full h-11 px-4 rounded-full border border-border bg-card text-foreground outline-none focus:border-primary transition-colors font-medium text-sm"
                 placeholder="e.g. Hypertension, Diabetes"
               />
-              <p className="text-[9px] text-muted-foreground ml-1 opacity-60">
+              <p className="text-[10px] text-muted-foreground ml-1">
                 Separate multiple with commas
               </p>
             </div>
 
             {/* Allergies */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
                 Allergies (optional)
               </label>
               <input
@@ -901,18 +895,18 @@ export default function FamilyHubPage() {
                 onChange={(e) =>
                   setFormData({ ...formData, allergies: e.target.value })
                 }
-                className="w-full h-14 px-6 rounded-2xl bg-secondary border-none outline-none focus:ring-2 ring-primary/20 transition-all font-medium text-sm"
+                className="w-full h-11 px-4 rounded-full border border-border bg-card text-foreground outline-none focus:border-primary transition-colors font-medium text-sm"
                 placeholder="e.g. Penicillin, Sulfa drugs"
               />
-              <p className="text-[9px] text-muted-foreground ml-1 opacity-60">
+              <p className="text-[10px] text-muted-foreground ml-1">
                 Separate multiple with commas
               </p>
             </div>
 
-            <SheetFooter className="pt-8">
+            <SheetFooter className="pt-6">
               <Button
                 type="submit"
-                className="w-full rounded-2xl text-[10px] uppercase font-black tracking-[0.2em] h-16 shadow-2xl shadow-primary/20"
+                className="w-full h-11 rounded-full text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-transform"
               >
                 {editingPatient ? "Save Changes" : "Create Profile"}
               </Button>
@@ -926,30 +920,30 @@ export default function FamilyHubPage() {
         open={!!patientToDelete}
         onOpenChange={(open) => !open && setPatientToDelete(null)}
       >
-        <AlertDialogContent className="rounded-[2.5rem] p-8 border-none shadow-2xl">
+        <AlertDialogContent className="rounded-[20px] p-6 sm:p-7 border border-border bg-card shadow-2xl">
           <AlertDialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center mb-4">
-              <AlertCircle size={24} />
+            <div className="w-14 h-14 rounded-[16px] bg-[#f5f5f7] dark:bg-[#272729] border border-border text-destructive flex items-center justify-center mb-4">
+              <AlertCircle size={26} />
             </div>
-            <AlertDialogTitle className="text-2xl font-black tracking-tight">
+            <AlertDialogTitle className="text-xl font-bold tracking-[-0.022em] text-foreground">
               Are you absolutely sure?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+            <AlertDialogDescription className="text-xs text-muted-foreground leading-relaxed">
               This will permanently delete the health profile for{" "}
-              <span className="text-foreground font-bold">
+              <span className="text-foreground font-semibold">
                 {patientToDelete?.name}
               </span>
               . All associated medications and reminders for this profile will
               also be removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="pt-6 gap-3">
-            <AlertDialogCancel className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-14 bg-secondary border-none">
+          <AlertDialogFooter className="pt-6 gap-2.5">
+            <AlertDialogCancel className="rounded-full font-semibold text-xs h-11 border-border active:scale-95 transition-transform">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="rounded-2xl font-black uppercase text-[10px] tracking-widest h-14 bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-xl shadow-destructive/20"
+              className="rounded-full font-semibold text-xs h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90 active:scale-95 transition-transform"
             >
               Delete Profile
             </AlertDialogAction>

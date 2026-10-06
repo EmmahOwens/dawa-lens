@@ -743,12 +743,12 @@ export default function DawaGPT() {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border/50 bg-background"
+            className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border bg-card active:scale-95 transition-transform"
             style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.35 + 4.5rem)' }}
             aria-label="Open DawaGPT"
           >
             <div className="w-full h-full flex items-center justify-center overflow-hidden">
-              <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-10 h-10 object-contain transition-transform group-hover:scale-110" />
+              <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-9 h-9 object-contain transition-transform group-hover:scale-105" />
             </div>
           </motion.button>
         )}
@@ -756,7 +756,7 @@ export default function DawaGPT() {
 
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center pointer-events-none p-0 md:p-6 bg-background/10 md:bg-background/30 backdrop-blur-[2px]">
+          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center pointer-events-none p-0 md:p-6 bg-black/40 backdrop-blur-sm">
             <motion.div
               role="dialog"
               aria-modal="true"
@@ -772,29 +772,29 @@ export default function DawaGPT() {
               onDragEnd={(_e, info) => {
                 if (info.offset.y > 60 || info.velocity.y > 500) setIsOpen(false);
               }}
-              className="bg-[#f9f8f6] dark:bg-[#1a1a1a] w-full md:max-w-3xl h-[88dvh] md:h-[90dvh] max-h-[100dvh] rounded-t-3xl md:rounded-2xl shadow-2xl border border-border/40 flex flex-col pointer-events-auto overflow-hidden"
+              className="bg-[#f5f5f7] dark:bg-[#161617] w-full md:max-w-3xl h-[88dvh] md:h-[90dvh] max-h-[100dvh] rounded-t-[28px] md:rounded-[24px] shadow-2xl border border-border flex flex-col pointer-events-auto overflow-hidden"
             >
-              {/* Top Drag Header Zone — Only swipes/drags starting from here trigger window dismissal */}
+              {/* Top Drag Header Zone */}
               <div
                 className="select-none touch-none cursor-grab active:cursor-grabbing shrink-0"
                 onPointerDown={(e) => dragControls.start(e)}
                 {...panelSwipe}
               >
-                {/* Drag handle — only visible on mobile where the panel slides up */}
+                {/* Drag handle */}
                 <div className="md:hidden flex justify-center pt-3 pb-1">
-                  <div className="w-10 h-1 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/30 transition-colors" />
+                  <div className="w-10 h-1 rounded-full bg-muted-foreground/30 hover:bg-muted-foreground/40 transition-colors" />
                 </div>
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-border/30 bg-background/50 backdrop-blur-md flex items-center justify-between">
+                <div className="px-6 py-4 border-b border-border bg-background/80 backdrop-blur-md flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex items-center justify-center">
-                      <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-6 h-6 object-contain" />
+                    <div className="w-9 h-9 rounded-[10px] overflow-hidden border border-border bg-[#f5f5f7] dark:bg-[#272729] flex items-center justify-center shrink-0">
+                      <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-7 h-7 object-contain" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-base tracking-tight text-foreground flex items-center gap-2">
+                      <h3 className="font-bold text-base tracking-[-0.022em] text-foreground flex items-center gap-2">
                         DawaGPT
                         {!isOnline && (
-                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                          <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full">
                             Offline
                           </span>
                         )}
@@ -804,22 +804,21 @@ export default function DawaGPT() {
                   <button
                     onClick={() => setIsOpen(false)}
                     onPointerDown={(e) => e.stopPropagation()}
-                    className="p-2 hover:bg-muted/50 rounded-lg transition-all active:scale-95 cursor-pointer"
+                    className="w-8 h-8 rounded-full border border-border hover:bg-muted/60 flex items-center justify-center transition-all active:scale-95 cursor-pointer text-muted-foreground hover:text-foreground"
                   >
-                    <X size={18} className="text-muted-foreground hover:text-foreground transition-colors" />
+                    <X size={16} />
                   </button>
                 </div>
               </div>
-
 
               {/* Chat Messages */}
               <div className="relative flex-1 min-h-0 flex flex-col">
                 <div
                   ref={scrollRef}
                   onScroll={handleScroll}
-                  className="flex-1 overflow-y-auto p-4 md:p-10 space-y-10 scroll-smooth bg-transparent"
+                  className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 scroll-smooth bg-transparent"
                 >
-                  <div className="max-w-2xl mx-auto w-full space-y-10">
+                  <div className="max-w-2xl mx-auto w-full space-y-8">
                     {messages.map((m, index) => {
                       const isLatest = index === messages.length - 1;
                       return (
@@ -830,15 +829,15 @@ export default function DawaGPT() {
                           animate={{ opacity: 1, y: 0 }}
                           className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
                         >
-                          <div className={`flex gap-4 max-w-[90%] md:max-w-[85%] min-w-0 ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                          <div className={`flex gap-3 max-w-[90%] md:max-w-[85%] min-w-0 ${m.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                             {m.role === "assistant" && (
-                              <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-1">
+                              <div className="w-8 h-8 rounded-[10px] overflow-hidden border border-border bg-[#f5f5f7] dark:bg-[#272729] flex-shrink-0 flex items-center justify-center mt-1">
                                 <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
                               </div>
                             )}
-                            <div className={`min-w-0 px-1 py-1 ${m.role === "user"
-                                ? "bg-[#f0f0f0] dark:bg-[#2a2a2a] text-foreground rounded-2xl px-5 py-3 shadow-sm"
-                                : "text-foreground leading-relaxed"
+                            <div className={`min-w-0 ${m.role === "user"
+                                ? "bg-primary text-primary-foreground rounded-[18px] rounded-br-[4px] px-4 py-2.5"
+                                : "text-foreground leading-relaxed px-1 py-1"
                               }`}>
                               {m.role === "assistant" ? (
                                 <div className="prose prose-sm dark:prose-invert max-w-none min-w-0">
@@ -846,7 +845,7 @@ export default function DawaGPT() {
                                     text={m.text}
                                     onNavigate={() => setIsOpen(false)}
                                   />
-                                  {/* FIX (Bug 3): Visible retry button when action object was missing */}
+                                  {/* Visible retry button when action object was missing */}
                                   {m.id === actionMissingBotId && !isTyping && (
                                     <motion.div
                                       initial={{ opacity: 0, y: 6 }}
@@ -856,7 +855,7 @@ export default function DawaGPT() {
                                       <button
                                         onClick={handleRetryAction}
                                         disabled={isTyping}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors cursor-pointer"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors cursor-pointer"
                                       >
                                         <RotateCcw className="w-3 h-3" />
                                         Retry action
@@ -865,7 +864,7 @@ export default function DawaGPT() {
                                   )}
                                 </div>
                               ) : (
-                                <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.text}</p>
+                                <p className="text-sm font-normal leading-relaxed whitespace-pre-wrap">{m.text}</p>
                               )}
                             </div>
                           </div>
@@ -873,8 +872,8 @@ export default function DawaGPT() {
                       );
                     })}
                     {isTyping && (
-                      <div className="flex justify-start gap-4">
-                        <div className="w-8 h-8 rounded-lg overflow-hidden border border-border/50 bg-background flex-shrink-0 flex items-center justify-center mt-1">
+                      <div className="flex justify-start gap-3">
+                        <div className="w-8 h-8 rounded-[10px] overflow-hidden border border-border bg-[#f5f5f7] dark:bg-[#272729] flex-shrink-0 flex items-center justify-center mt-1">
                           <img src="/dawa-gpt.png" alt="AI" className="w-6 h-6 object-contain" />
                         </div>
                         <div className="flex items-center gap-1.5 py-3">
@@ -883,7 +882,7 @@ export default function DawaGPT() {
                               key={i}
                               animate={{ opacity: [0.3, 1, 0.3] }}
                               transition={{ duration: 1, repeat: Infinity, delay, ease: "easeInOut" }}
-                              className="block w-1.5 h-1.5 rounded-full bg-muted-foreground/40"
+                              className="block w-1.5 h-1.5 rounded-full bg-primary"
                             />
                           ))}
                         </div>
@@ -902,7 +901,7 @@ export default function DawaGPT() {
                       transition={{ duration: 0.15 }}
                       onClick={scrollToLatestMessage}
                       aria-label="Scroll to latest message"
-                      className="absolute bottom-4 right-6 md:right-10 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background/95 dark:bg-card/95 text-foreground border border-border/60 shadow-lg backdrop-blur-md hover:bg-accent text-xs font-medium cursor-pointer transition-all active:scale-95"
+                      className="absolute bottom-4 right-6 md:right-10 z-20 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-card/95 text-foreground border border-border shadow-md backdrop-blur-md hover:bg-accent text-xs font-semibold cursor-pointer transition-all active:scale-95"
                     >
                       <ChevronDown className="w-4 h-4 text-primary" />
                       <span>Latest message</span>
@@ -912,16 +911,16 @@ export default function DawaGPT() {
               </div>
 
               {/* Footer / Input */}
-              <div className="p-4 md:p-8 bg-transparent">
-                <div className="max-w-2xl mx-auto w-full space-y-4">
+              <div className="p-4 md:p-6 bg-transparent">
+                <div className="max-w-2xl mx-auto w-full space-y-3">
                   {/* Prompt Suggestions */}
                   {(messages.length === 0 || lastMsg?.role === "assistant") && activeSuggestions.length > 0 && !isTyping && (
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                       {activeSuggestions.map((suggestion, i) => (
                         <button
                           key={i}
                           onClick={() => handleSend(suggestion)}
-                          className="whitespace-nowrap px-4 py-2 rounded-xl bg-background border border-border/50 text-xs font-medium text-muted-foreground hover:bg-muted/30 transition-all shrink-0"
+                          className="whitespace-nowrap px-3.5 py-1.5 rounded-full bg-card border border-border text-xs font-medium text-foreground hover:bg-muted active:scale-95 transition-all shrink-0"
                         >
                           {suggestion}
                         </button>
@@ -929,7 +928,7 @@ export default function DawaGPT() {
                     </div>
                   )}
 
-                  <div className="relative flex items-end gap-2 bg-background border border-border/60 rounded-2xl p-2 shadow-sm focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                  <div className="relative flex items-end gap-2 bg-card border border-border rounded-[24px] p-1.5 shadow-sm focus-within:border-primary transition-colors">
                     <textarea
                       ref={textareaRef}
                       value={inputValue}
@@ -947,19 +946,19 @@ export default function DawaGPT() {
                       }
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}
-                      className="bg-transparent border-none text-[15px] resize-none outline-none px-3 py-2 min-h-[44px] max-h-[200px] placeholder:text-muted-foreground/50 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="bg-transparent border-none text-sm resize-none outline-none px-3 py-2 min-h-[40px] max-h-[160px] placeholder:text-muted-foreground text-foreground w-full font-normal disabled:opacity-50 disabled:cursor-not-allowed"
                       rows={1}
                     />
                     <Button
                       onClick={() => handleSend(inputValue)}
                       disabled={isTyping || !inputValue.trim()}
                       size="icon"
-                      className="rounded-xl h-10 w-10 shrink-0 bg-primary hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="rounded-full h-10 w-10 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      <Send size={18} />
+                      <Send size={16} />
                     </Button>
                   </div>
-                  <p className="text-[10px] text-center text-muted-foreground/60 px-4">
+                  <p className="text-[10px] text-center text-muted-foreground px-4">
                     {!isOnline
                       ? "Offline mode active. Dose logging, reminders, and cabinet actions work offline."
                       : "DawaGPT can make mistakes. Please verify important medical information."}

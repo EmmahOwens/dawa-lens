@@ -45,46 +45,46 @@ export default function PermissionRequest({
           />
           
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-sm rounded-[2.5rem] border border-border/50 bg-card p-8 shadow-2xl z-10"
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative w-full max-w-sm rounded-[20px] border border-border bg-card p-6 sm:p-7 shadow-2xl z-10"
           >
             <button
               onClick={onClose}
-              className="absolute right-6 top-6 rounded-full p-2 text-muted-foreground hover:bg-muted transition-colors"
+              className="absolute right-5 top-5 rounded-full p-2 text-muted-foreground hover:bg-muted transition-colors"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
 
-            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 text-primary mx-auto">
-              <Icon size={40} />
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[16px] bg-[#f5f5f7] dark:bg-[#272729] border border-border text-primary mx-auto">
+              <Icon size={26} />
             </div>
 
-            <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold tracking-tight mb-2">{title}</h3>
-              <p className="text-muted-foreground leading-relaxed">
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold tracking-[-0.022em] text-foreground mb-1.5">{title}</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xs mx-auto">
                 {description}
               </p>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               <Button 
                 onClick={handleConfirm}
-                className="h-14 rounded-2xl text-lg font-bold shadow-lg shadow-primary/20"
+                className="h-11 rounded-full text-sm font-semibold active:scale-95 transition-transform"
               >
                 Allow {permissionName}
               </Button>
               <Button 
                 variant="ghost" 
                 onClick={onClose}
-                className="h-14 rounded-2xl text-muted-foreground font-medium"
+                className="h-11 rounded-full text-xs text-muted-foreground font-semibold hover:bg-muted/50 active:scale-95 transition-transform"
               >
                 Maybe later
               </Button>
             </div>
 
-            <p className="mt-6 text-center text-[10px] text-muted-foreground uppercase tracking-widest font-medium opacity-50">
+            <p className="mt-5 text-center text-[10px] text-muted-foreground uppercase tracking-wider font-semibold opacity-60">
               Native System Request follows
             </p>
           </motion.div>

@@ -9,7 +9,7 @@ import { ImpactStyle } from "@capacitor/haptics";
 import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
 
-// Custom hook to detect when the bottom navigation bar should be hidden (forms, input focus, keyboard, overlays)
+// Custom hook to detect when the bottom navigation bar should be hidden
 function useSmartHideBottomNav() {
   const location = useLocation();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -33,7 +33,7 @@ function useSmartHideBottomNav() {
     };
   }, []);
 
-  // 2. Input focus (Universal for web + native mobile browsers)
+  // 2. Input focus (Universal)
   useEffect(() => {
     const handleFocusChange = () => {
       const activeEl = document.activeElement;
@@ -54,8 +54,6 @@ function useSmartHideBottomNav() {
 
     document.addEventListener("focusin", handleFocusChange);
     document.addEventListener("focusout", handleFocusChange);
-
-    // Initial check
     handleFocusChange();
 
     return () => {
@@ -64,25 +62,21 @@ function useSmartHideBottomNav() {
     };
   }, []);
 
-  // 3. Dialog / Sheet open (Universal via MutationObserver)
+  // 3. Dialog / Sheet open
   useEffect(() => {
     const checkDialogs = () => {
       const dialogElement = document.querySelector(
         '[role="dialog"], [role="alertdialog"]'
       );
-      const hasModal = !!dialogElement || document.body.style.pointerEvents === 'none';
+      const hasModal = !!dialogElement || document.body.style.pointerEvents === "none";
       setIsDialogOpen(hasModal);
     };
 
-    // Initial check
     checkDialogs();
 
-    // Debounce with rAF to coalesce rapid DOM mutations during route
-    // transitions — prevents the observer from firing hundreds of times
-    // and locking the main thread on low-end Android devices.
     let rafId: number | null = null;
     const observer = new MutationObserver(() => {
-      if (rafId !== null) return; // already scheduled
+      if (rafId !== null) return;
       rafId = requestAnimationFrame(() => {
         rafId = null;
         checkDialogs();
@@ -102,7 +96,7 @@ function useSmartHideBottomNav() {
     };
   }, []);
 
-  // 4. Form routes (e.g. AddReminderPage /reminders/new)
+  // 4. Form routes
   const isFormRoute =
     location.pathname.startsWith("/reminders/new") ||
     location.pathname.includes("/new") ||
@@ -110,7 +104,6 @@ function useSmartHideBottomNav() {
 
   return isKeyboardVisible || isInputFocused || isDialogOpen || isFormRoute;
 }
-
 
 export default function BottomNav() {
   const location = useLocation();
@@ -139,14 +132,14 @@ export default function BottomNav() {
     <AnimatePresence>
       {!shouldHide && (
         <motion.nav
-          initial={{ y: 80, opacity: 0, scale: 0.95 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 80, opacity: 0, scale: 0.95 }}
-          transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          className="fixed bottom-1.5 left-0 right-0 z-50 mx-auto max-w-[22rem] md:hidden px-4"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.35 + 0.35rem)' }}
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 32 }}
+          className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-[21rem] md:hidden px-3"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) * 0.4 + 0.6rem)" }}
         >
-          <div className="flex items-center justify-between rounded-[2rem] bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/10 dark:border-white/5 px-4 py-2.5 relative shadow-2xl">
+          <div className="flex items-center justify-between rounded-full bg-white/85 dark:bg-[#1d1d1f]/85 backdrop-blur-2xl border border-border/80 px-3 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)]">
             {/* Left Side Items */}
             <div className="flex flex-1 justify-around items-center">
               {navItems.slice(0, 2).map((item) => (
@@ -154,26 +147,29 @@ export default function BottomNav() {
               ))}
             </div>
 
-            {/* Central Scan Button */}
+            {/* Central Apple Action Blue Scan Button */}
             <NavLink
               to="/scan"
               aria-label={t("nav.scan")}
               onClick={() => NativeService.haptics.impact(ImpactStyle.Medium)}
-              className="relative flex h-14 w-14 items-center justify-center -mt-6"
+              className="relative flex h-11 w-11 items-center justify-center shrink-0 mx-1 active:scale-95 transition-transform"
             >
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="absolute h-full w-full rounded-full bg-primary shadow-[0_4px_14px_rgba(0,122,255,0.4)] flex items-center justify-center text-primary-foreground border-2 border-background gpu-accel"
-              >
-                <Camera size={24} strokeWidth={2.5} />
-              </motion.div>
+              <div className="h-full w-full rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-sm">
+                <Camera size={20} />
+              </div>
             </NavLink>
 
             {/* Right Side Items */}
             <div className="flex flex-1 justify-around items-center">
               {navItems.slice(2).map((item) => (
-                <NavItem key={item.to} {...item} active={location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to))} />
+                <NavItem
+                  key={item.to}
+                  {...item}
+                  active={
+                    location.pathname === item.to ||
+                    (item.to !== "/" && location.pathname.startsWith(item.to))
+                  }
+                />
               ))}
             </div>
           </div>
@@ -183,46 +179,47 @@ export default function BottomNav() {
   );
 }
 
-function NavItem({ to, icon: Icon, label, active, badge }: { to: string, icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>, label: string, active: boolean, badge?: boolean }) {
+function NavItem({
+  to,
+  icon: Icon,
+  label,
+  active,
+  badge,
+}: {
+  to: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  active: boolean;
+  badge?: boolean;
+}) {
   return (
     <NavLink
       to={to}
       aria-label={label}
       onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
-      className="relative flex flex-col items-center justify-center w-12 h-12 group"
+      className="relative flex flex-col items-center justify-center w-11 h-11 active:scale-95 transition-transform"
     >
-      <motion.div
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.92 }}
-        className="relative flex flex-col items-center"
-      >
+      <div className="relative flex flex-col items-center">
         <Icon
-          size={24}
-          className={`relative z-10 transition-colors duration-300 ${active ? "text-primary dark:text-foreground" : "text-muted-foreground group-hover:text-foreground"}`}
-          strokeWidth={active ? 2.5 : 2}
+          size={20}
+          className={`transition-colors duration-200 ${
+            active ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
+          }`}
         />
-        
+
         {badge && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive border-2 border-background z-20"
-          />
+          <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
         )}
 
-        {/* macOS Dock style dot indicator */}
+        {/* Apple subtle active dot */}
         {active && (
           <motion.div
-            layoutId="nav-indicator"
-            className="absolute -bottom-3 w-1.5 h-1.5 rounded-full bg-primary dark:bg-foreground"
-            transition={{
-              type: "spring",
-              stiffness: 380,
-              damping: 30,
-            }}
+            layoutId="apple-nav-dot"
+            className="absolute -bottom-2 w-1 h-1 rounded-full bg-primary"
+            transition={{ type: "spring", stiffness: 450, damping: 35 }}
           />
         )}
-      </motion.div>
+      </div>
     </NavLink>
   );
 }
