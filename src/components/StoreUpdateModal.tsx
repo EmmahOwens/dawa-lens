@@ -96,87 +96,76 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/80 backdrop-blur-md" 
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
         onClick={downloadState === 'downloading' ? undefined : onClose}
       />
       
       <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, scale: 0.9, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-card border border-border w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
+        exit={{ opacity: 0, scale: 0.9, y: 15 }}
+        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+        className="relative bg-card border border-border w-full max-w-sm rounded-[20px] shadow-xl overflow-hidden flex flex-col"
       >
-        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-primary/20 to-transparent -z-10"></div>
-        
-        <div className="p-8 flex flex-col items-center text-center">
-            <motion.div 
-              animate={
-                downloadState === 'downloading'
-                  ? { rotate: 0, y: [0, -4, 0] }
-                  : { rotate: [3, -3, 3], y: [0, -10, 0] }
-              }
-              transition={{ 
-                repeat: Infinity, 
-                duration: downloadState === 'downloading' ? 1.5 : 4,
-                ease: "easeInOut"
-              }}
-              className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-2xl transition-colors duration-300 ${
+        <div className="p-7 flex flex-col items-center text-center">
+            <div 
+              className={`w-14 h-14 rounded-full flex items-center justify-center mb-5 border transition-colors duration-300 ${
                 downloadState === 'error'
-                  ? 'bg-destructive text-destructive-foreground shadow-destructive/40'
+                  ? 'bg-destructive/10 text-destructive border-destructive/20'
                   : downloadState === 'installing'
-                  ? 'bg-green-500 text-white shadow-green-500/40'
-                  : 'bg-primary text-primary-foreground shadow-primary/40'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  : 'bg-primary/10 text-primary border-primary/20'
               }`}
             >
                 {downloadState === 'error' ? (
-                  <AlertTriangle className="w-10 h-10" />
+                  <AlertTriangle className="w-7 h-7" />
                 ) : downloadState === 'installing' ? (
-                  <CheckCircle className="w-10 h-10" />
+                  <CheckCircle className="w-7 h-7" />
                 ) : (
-                  <Rocket className="w-10 h-10" />
+                  <Rocket className="w-7 h-7" />
                 )}
-            </motion.div>
+            </div>
             
-            <h3 className="text-2xl font-black text-foreground mb-2 tracking-tight">
-              {downloadState === 'error' ? 'Update Failed' : downloadState === 'installing' ? 'Almost Done!' : 'New Update Live!'}
+            <h3 className="text-xl font-bold text-foreground mb-1.5 tracking-tight">
+              {downloadState === 'error' ? 'Update Failed' : downloadState === 'installing' ? 'Almost Done' : 'Software Update'}
             </h3>
             
-            <div className="flex items-center gap-3 mb-6 bg-muted px-4 py-2 rounded-2xl border border-border">
-                <span className="text-xs font-bold text-muted-foreground font-mono">{currentVersion}</span>
-                <ArrowRight className="w-3 h-3 text-primary" />
-                <span className="text-xs font-black text-primary font-mono">{newVersion}</span>
+            <div className="inline-flex items-center gap-2 mb-5 bg-muted/60 px-3 py-1 rounded-full border border-border">
+                <span className="text-xs font-medium text-muted-foreground font-mono">{currentVersion}</span>
+                <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                <span className="text-xs font-semibold text-primary font-mono">{newVersion}</span>
             </div>
 
             {/* Progress bar — shown during download */}
             {downloadState === 'downloading' && (
-              <div className="w-full mb-6">
-                <div className="w-full h-3 bg-muted rounded-full overflow-hidden border border-border">
+              <div className="w-full mb-5">
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden border border-border">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full"
+                    className="h-full bg-primary rounded-full"
                     initial={{ width: '0%' }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 font-mono">{progress}% complete</p>
+                <p className="text-xs text-muted-foreground mt-1.5 font-mono">{progress}% complete</p>
               </div>
             )}
 
-            <p className="text-muted-foreground text-sm leading-relaxed mb-6 font-medium">
+            <p className="text-muted-foreground text-xs leading-relaxed mb-6 font-medium">
               {downloadState === 'error'
                 ? errorMessage
                 : downloadState === 'installing'
-                ? 'The install prompt should appear shortly. Follow the on-screen instructions to complete the update.'
-                : 'A new version is available with improvements and new features. Update now to stay synced!'}
+                ? 'The installer will launch shortly. Follow the prompts to finish updating.'
+                : 'A new version of Dawa Lens is available with performance and security enhancements.'}
             </p>
 
-            <div className="w-full space-y-3">
+            <div className="w-full space-y-2.5">
                 {downloadState === 'error' && (
                   <button
                     onClick={handleBrowserDownload}
-                    className="w-full py-4 rounded-2xl font-bold text-base bg-primary text-primary-foreground shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                    className="w-full h-11 rounded-full font-semibold text-xs bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-2"
                   >
-                    <ExternalLink className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    <ExternalLink className="w-4 h-4" />
                     <span>Download via Browser</span>
                   </button>
                 )}
@@ -184,24 +173,24 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
                 <button 
                     onClick={downloadState === 'error' ? handleDownload : downloadState === 'idle' ? handleDownload : undefined}
                     disabled={downloadState === 'downloading' || downloadState === 'installing'}
-                    className={`w-full rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group ${
+                    className={`w-full h-11 rounded-full font-semibold text-xs transition-all flex items-center justify-center gap-2 ${
                       downloadState === 'downloading' || downloadState === 'installing'
-                        ? 'py-4 text-lg bg-muted text-muted-foreground cursor-not-allowed shadow-none'
+                        ? 'bg-muted text-muted-foreground cursor-not-allowed'
                         : downloadState === 'error'
-                        ? 'py-3.5 text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:scale-[1.02] active:scale-95 shadow-sm'
-                        : 'py-4 text-lg bg-primary text-primary-foreground shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95'
+                        ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80 active:scale-95'
+                        : 'bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95'
                     }`}
                 >
                     {downloadState === 'downloading' ? (
                       <motion.div
-                        className="w-5 h-5 border-2 border-muted-foreground border-t-transparent rounded-full"
+                        className="w-4 h-4 border-2 border-muted-foreground border-t-transparent rounded-full"
                         animate={{ rotate: 360 }}
                         transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
                       />
                     ) : downloadState === 'error' ? (
-                      <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
+                      <RefreshCw className="w-4 h-4" />
                     ) : (
-                      <Download className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
+                      <Download className="w-4 h-4" />
                     )}
                     <span>{getStatusText()}</span>
                 </button>
@@ -209,16 +198,13 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
                 {downloadState !== 'downloading' && (
                   <button 
                       onClick={onClose}
-                      className="w-full py-3 rounded-2xl text-muted-foreground font-bold hover:bg-muted transition-colors text-xs uppercase tracking-widest"
+                      className="w-full h-10 rounded-full text-muted-foreground font-semibold hover:bg-muted transition-colors text-xs active:scale-95"
                   >
-                      {downloadState === 'installing' ? 'Close' : 'Maybe Later'}
+                      {downloadState === 'installing' ? 'Close' : 'Later'}
                   </button>
                 )}
             </div>
         </div>
-        
-        {/* Decorative corner */}
-        <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
       </motion.div>
     </div>
   );

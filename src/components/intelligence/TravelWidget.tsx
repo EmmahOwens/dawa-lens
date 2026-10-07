@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Plane, MapPin, Globe, ShieldAlert, Sparkles, CheckCircle2 } from "@/lib/icons";
+import { Plane, Globe, Sparkles, MapPin } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import MessageRenderer from "@/components/MessageRenderer";
 
@@ -25,36 +24,33 @@ export function TravelWidget() {
   return (
     <div className="space-y-6">
       <section>
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Travel Intelligence
           </h4>
           <Plane size={14} className="text-primary" />
         </div>
 
         {cachedAdvice ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Active Destination Card */}
-            <motion.div
-              whileHover={{ scale: 1.01 }}
-              className="bg-primary/5 backdrop-blur-md border border-primary/20 rounded-[1.75rem] p-5 shadow-sm space-y-3"
-            >
+            <div className="bg-card border border-border rounded-[18px] p-5 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                  <div className="p-2 rounded-full bg-primary/10 text-primary">
                     <Globe size={15} />
                   </div>
                   <div>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-primary">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                       Trip Active
                     </span>
-                    <p className="text-sm font-black text-foreground tracking-tight">
+                    <p className="text-sm font-semibold text-foreground tracking-tight">
                       {destination || "International Trip"}
                     </p>
                   </div>
                 </div>
                 {Array.isArray(cachedAdvice.equivalents) && cachedAdvice.equivalents.length > 0 && (
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600">
+                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                     {cachedAdvice.equivalents.length} Equivalents
                   </span>
                 )}
@@ -62,14 +58,14 @@ export function TravelWidget() {
 
               {/* Timezone Snapshot */}
               {cachedAdvice.timezoneAdvice && (
-                <div className="pt-2 border-t border-border/40 space-y-1">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                <div className="pt-2.5 border-t border-border space-y-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                     Timezone Strategy
                   </span>
-                  <div className="text-[11px] text-foreground/90 font-medium leading-snug line-clamp-3">
+                  <div className="text-xs text-muted-foreground font-medium leading-relaxed line-clamp-3">
                     <MessageRenderer
                       text={cachedAdvice.timezoneAdvice}
-                      className="text-[11px] leading-snug [&_strong]:text-blue-600 dark:[&_strong]:text-blue-400"
+                      className="text-xs leading-relaxed"
                     />
                   </div>
                 </div>
@@ -77,19 +73,19 @@ export function TravelWidget() {
 
               {/* Customs Snapshot */}
               {cachedAdvice.customsNotes && (
-                <div className="pt-2 border-t border-border/40 space-y-1">
-                  <span className="text-[9px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                <div className="pt-2.5 border-t border-border space-y-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
                     Customs Alert
                   </span>
-                  <div className="text-[11px] text-foreground/90 font-medium leading-snug line-clamp-3">
+                  <div className="text-xs text-muted-foreground font-medium leading-relaxed line-clamp-3">
                     <MessageRenderer
                       text={cachedAdvice.customsNotes}
-                      className="text-[11px] leading-snug [&_strong]:text-amber-600 dark:[&_strong]:text-amber-400"
+                      className="text-xs leading-relaxed"
                     />
                   </div>
                 </div>
               )}
-            </motion.div>
+            </div>
 
             {/* Quick Ask DawaGPT */}
             <button
@@ -98,24 +94,21 @@ export function TravelWidget() {
                   `What are the important medicine travel rules and customs requirements for traveling to ${destination || "my destination"}?`
                 )
               }
-              className="w-full text-left p-3.5 rounded-2xl bg-primary/10 hover:bg-primary/15 border border-primary/20 text-xs font-bold text-primary transition-all flex items-center justify-between group active:scale-95 shadow-xs"
+              className="w-full min-h-[44px] px-4 py-2.5 rounded-full bg-primary/10 hover:bg-primary/15 border border-primary/20 text-xs font-semibold text-primary transition-transform active:scale-95 flex items-center justify-between"
             >
               <span>Ask DawaGPT about {destination || "Trip"}</span>
-              <Sparkles size={14} className="text-primary group-hover:rotate-12 transition-transform shrink-0" />
+              <Sparkles size={14} className="text-primary shrink-0" />
             </button>
           </div>
         ) : (
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-primary/5 backdrop-blur-md border border-primary/20 rounded-[2rem] p-6 shadow-sm hover:shadow-primary/5 transition-all space-y-4"
-          >
-            <div className="flex items-center gap-3">
+          <div className="bg-card border border-border rounded-[18px] p-5 shadow-xs space-y-3.5">
+            <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-full bg-primary/10 text-primary">
-                <MapPin size={16} />
+                <MapPin size={15} />
               </div>
-              <p className="text-[12px] font-black uppercase tracking-tight">Trip Analysis</p>
+              <p className="text-xs font-semibold text-foreground tracking-tight">Trip Analysis</p>
             </div>
-            <p className="text-[11px] leading-relaxed text-foreground/80 font-medium">
+            <p className="text-xs leading-relaxed text-muted-foreground font-medium">
               Enter your destination in the Travel Companion to analyze cross-border medication regulations, generic equivalents, and local health advisory data.
             </p>
 
@@ -123,12 +116,12 @@ export function TravelWidget() {
               onClick={() =>
                 openDawaGPTWithPrompt("What should I prepare before traveling abroad with prescription medications?")
               }
-              className="w-full text-left p-3 rounded-xl bg-background/60 hover:bg-background/90 border border-border/60 text-[10px] font-bold text-foreground/80 transition-all flex items-center justify-between group active:scale-95"
+              className="w-full min-h-[44px] px-4 py-2.5 rounded-full bg-secondary hover:bg-secondary/80 border border-border text-xs font-semibold text-foreground transition-transform active:scale-95 flex items-center justify-between"
             >
               <span>Travel Checklist Prompt</span>
-              <Sparkles size={12} className="text-primary group-hover:rotate-12 transition-transform shrink-0" />
+              <Sparkles size={13} className="text-primary shrink-0" />
             </button>
-          </motion.div>
+          </div>
         )}
       </section>
     </div>

@@ -89,33 +89,30 @@ export default function WellnessInsightCard({ insight, loading, onRefresh }: Wel
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="premium-card bg-gradient-to-br from-primary/5 via-card to-card border-primary/20 relative overflow-hidden"
+      className="rounded-[18px] bg-card border border-border p-5 shadow-xs relative overflow-hidden"
     >
-      {/* Decorative background */}
-      <Sparkles className="absolute -right-6 -top-6 text-primary/5 w-28 h-28 rotate-12" />
-
       {/* Header row */}
       <div className="flex items-start justify-between mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner shrink-0">
-            <Brain size={22} />
+          <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+            <Brain size={20} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="text-sm font-black uppercase tracking-tight text-foreground/90">
+              <h4 className="text-xs font-semibold tracking-tight text-foreground">
                 Wellness Intelligence
               </h4>
               {insight.source === "local" && (
-                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground">
+                <span className="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-muted border border-border text-muted-foreground">
                   Local
                 </span>
               )}
             </div>
-            <div className={`inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.border} border`}>
+            <div className={`inline-flex items-center gap-1.5 mt-1 px-2.5 py-0.5 rounded-full ${cfg.bg} ${cfg.border} border`}>
               <StatusIcon size={11} className={cfg.color} />
-              <span className={`text-[10px] font-black uppercase tracking-wider ${cfg.color}`}>
+              <span className={`text-[10px] font-semibold uppercase tracking-wider ${cfg.color}`}>
                 {cfg.label}
               </span>
             </div>
@@ -128,19 +125,19 @@ export default function WellnessInsightCard({ insight, loading, onRefresh }: Wel
             <button
               type="button"
               onClick={onRefresh}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors active:scale-95"
               title="Refresh Wellness Insights"
             >
-              <RefreshCw size={13} />
+              <RefreshCw size={14} />
             </button>
           )}
           <div className="text-right">
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60 mb-1">
+            <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">
               Health Score
             </p>
-            <div className="text-3xl font-black text-primary tracking-tighter leading-none">
+            <div className="text-2xl font-bold text-primary tracking-tight leading-none">
               {scorePercent}
-              <span className="text-xs opacity-40 ml-0.5">/100</span>
+              <span className="text-xs font-normal text-muted-foreground ml-0.5">/100</span>
             </div>
           </div>
         </div>

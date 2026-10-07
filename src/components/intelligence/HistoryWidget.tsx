@@ -1,8 +1,6 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { History, Activity } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
-import { useTranslation } from "react-i18next";
 import { toDate } from "@/lib/utils";
 
 export function HistoryWidget() {
@@ -10,45 +8,42 @@ export function HistoryWidget() {
   const recentLogs = doseLogs.filter((l) => l.action !== "snoozed").slice(0, 5);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <section>
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Recent Activity</h4>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Recent Activity</h4>
           <Activity size={14} className="text-primary" />
         </div>
         
         {recentLogs.length > 0 ? (
-          <div className="space-y-3">
-            {recentLogs.map((log, i) => (
-              <motion.div 
+          <div className="space-y-2.5">
+            {recentLogs.map((log) => (
+              <div 
                 key={log.id}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-background/40 backdrop-blur-sm border border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm"
+                className="bg-card border border-border rounded-[18px] p-4 flex items-center justify-between shadow-xs"
               >
                 <div className="flex flex-col">
-                  <span className="text-[12px] font-black">{log.medicineName}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase font-medium mt-0.5">
+                  <span className="text-xs font-semibold text-foreground">{log.medicineName}</span>
+                  <span className="text-[10px] text-muted-foreground font-medium mt-0.5">
                     {toDate(log.actionTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
-                <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wide ${
                   log.action === "taken" 
-                    ? "bg-success/10 text-success border border-success/20" 
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" 
                     : log.action === "skipped" 
-                      ? "bg-muted text-muted-foreground border border-border/50" 
+                      ? "bg-secondary text-muted-foreground border border-border" 
                       : "bg-destructive/10 text-destructive border border-destructive/20"
                 }`}>
                   {log.action}
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         ) : (
-          <div className="bg-background/40 backdrop-blur-sm border border-border/50 rounded-2xl p-6 text-center">
-            <History size={24} className="mx-auto text-muted-foreground/40 mb-2" />
-            <p className="text-[11px] font-medium text-muted-foreground">No recent logs found.</p>
+          <div className="bg-card border border-border rounded-[18px] p-6 text-center">
+            <History size={20} className="mx-auto text-muted-foreground/40 mb-2" />
+            <p className="text-xs font-medium text-muted-foreground">No recent logs recorded.</p>
           </div>
         )}
       </section>

@@ -1,69 +1,70 @@
 import React from "react";
-import { motion } from "framer-motion";
-import { Zap, Camera, Terminal, ShieldCheck } from "@/lib/icons";
-import { useTranslation } from "react-i18next";
-
-import { RiveMoji } from "../rive/RiveMoji";
+import { Zap, Camera, Terminal, ShieldCheck, Check } from "@/lib/icons";
 
 export function ScanWidget() {
-  const { t } = useTranslation();
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Precision Guide */}
       <section>
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Precision Guide</h4>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Precision Guide</h4>
           <Camera size={14} className="text-primary" />
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {[
             { text: "Natural lighting", done: true },
             { text: "Zero surface glare", done: false },
             { text: "Steady capture", done: false }
           ].map((item, i) => (
-            <motion.div 
+            <div 
               key={i} 
-              whileHover={{ x: 5 }}
-              className="bg-background/40 backdrop-blur-sm border border-border/50 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all"
+              className="bg-card border border-border rounded-[14px] p-3.5 flex items-center justify-between shadow-xs"
             >
-              <span className="text-[10px] font-black text-foreground/70 uppercase tracking-widest">{item.text}</span>
-              <div className={`w-3 h-3 rounded-full ${item.done ? "bg-success shadow-[0_0_12px_rgba(34,197,94,0.6)]" : "bg-muted/50 border border-border"}`} />
-            </motion.div>
+              <span className="text-xs font-medium text-foreground">{item.text}</span>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                item.done 
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20" 
+                  : "bg-muted text-muted-foreground border border-border"
+              }`}>
+                {item.done ? <Check size={12} strokeWidth={2.5} /> : <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />}
+              </div>
+            </div>
           ))}
         </div>
       </section>
 
-      {/* AI Processing Log */}
+      {/* Live AI Diagnostics */}
       <section>
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Live AI Diagnostics</h4>
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Live Diagnostics</h4>
           <Terminal size={14} className="text-muted-foreground" />
         </div>
-        <div className="bg-zinc-950/95 backdrop-blur-md rounded-[1.5rem] p-5 font-mono text-[9px] text-primary/70 space-y-2 border border-zinc-800 shadow-2xl relative overflow-hidden group">
-           <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-10 transition-opacity">
-              <Zap size={40} className="text-primary" />
-           </div>
-           <p className="flex items-center gap-2"><span className="text-success font-black"><RiveMoji emoji="✔" size={12} /></span> <span className="opacity-80">CAMERA_FEED_READY</span></p>
-           <p className="flex items-center gap-2"><span className="text-primary animate-pulse font-black">●</span> <span className="text-primary/90 font-bold">ANALYZING_LIGHTING_V2.4</span></p>
-           <p className="flex items-center gap-2 opacity-30"><span className="font-black">_</span> <span>WAITING_FOR_USER_CAPTURE_INPUT</span></p>
+        <div className="bg-card border border-border rounded-[18px] p-4 text-xs space-y-2.5 font-mono shadow-xs">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="font-semibold text-[11px]">CAMERA_FEED_READY</span>
+          </div>
+          <div className="flex items-center gap-2 text-primary">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="font-semibold text-[11px]">ANALYZING_LIGHTING</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+            <span className="font-medium text-[11px]">AWAITING_CAPTURE</span>
+          </div>
         </div>
       </section>
 
       {/* Security Badge */}
-      <motion.div 
-        whileHover={{ scale: 1.02 }}
-        className="bg-success/5 border border-success/20 rounded-[1.5rem] p-5 flex items-center gap-4 shadow-sm"
-      >
-        <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
-           <ShieldCheck size={20} className="text-success" />
+      <div className="bg-card border border-border rounded-[18px] p-4 flex items-center gap-3.5 shadow-xs">
+        <div className="h-10 w-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+          <ShieldCheck size={18} />
         </div>
         <div>
-           <p className="text-[10px] text-success/90 font-black uppercase tracking-[0.1em]">NDA Verified</p>
-           <p className="text-[9px] text-success/60 font-bold uppercase tracking-widest mt-0.5">National Drug Authority Standard</p>
+          <p className="text-xs font-semibold text-foreground tracking-tight">NDA Verified Standard</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">National Drug Authority compliant scanning</p>
         </div>
-      </motion.div>
+      </div>
     </div>
-
   );
 }

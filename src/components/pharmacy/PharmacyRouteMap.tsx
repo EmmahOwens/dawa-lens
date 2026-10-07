@@ -609,16 +609,16 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="absolute top-3 right-3 z-20 flex items-center gap-2 rounded-2xl bg-card/90 backdrop-blur-md px-3.5 py-2 border border-border/60 shadow-lg text-foreground"
+              className="absolute top-3 right-3 z-20 flex items-center gap-2 rounded-full bg-card/85 backdrop-blur-md px-3.5 py-1.5 border border-border shadow-xs text-foreground"
             >
               {isRouteLoading ? (
-                <div className="flex items-center gap-2 text-xs font-bold text-teal-600 dark:text-teal-400">
+                <div className="flex items-center gap-2 text-xs font-semibold text-teal-600 dark:text-teal-400">
                   <RefreshCw className="size-3.5 animate-spin" />
                   <span>Routing…</span>
                 </div>
               ) : route ? (
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-teal-600 dark:text-teal-400">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-teal-600 dark:text-teal-400">
                     {route.mode === "boda_boda" ? (
                       <Bike className="size-3.5" />
                     ) : route.mode === "walking" ? (
@@ -629,7 +629,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
                     <span>{route.distanceKm} km</span>
                   </div>
                   <span className="text-[10px] text-muted-foreground">·</span>
-                  <span className="text-xs font-extrabold text-foreground">
+                  <span className="text-xs font-bold text-foreground">
                     {formatDuration(route.durationMinutes)}
                   </span>
                 </div>
@@ -654,23 +654,23 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
               onClick={handleToggleFullscreen}
               title="Exit Full Screen (Esc)"
               aria-label="Exit Full Screen"
-              className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl bg-card/95 backdrop-blur-xl border border-border/60 shadow-lg text-foreground hover:bg-card active:scale-95 transition-all text-xs font-bold"
+              className="flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-card/90 backdrop-blur-md border border-border shadow-xs text-foreground hover:bg-card active:scale-95 transition-all text-xs font-semibold"
             >
-              <Minimize2 className="size-4 text-teal-600 dark:text-teal-400" />
+              <Minimize2 className="size-3.5 text-teal-600 dark:text-teal-400" />
               <span>Exit Full Screen</span>
-              <kbd className="text-[10px] text-muted-foreground ml-1 font-mono px-1.5 py-0.5 rounded bg-muted/60">Esc</kbd>
+              <kbd className="text-[10px] text-muted-foreground ml-1 font-mono px-1.5 py-0.5 rounded-full bg-muted/60">Esc</kbd>
             </button>
 
             {/* Transport Mean Selector */}
-            <div className="flex items-center rounded-2xl bg-card/95 backdrop-blur-xl p-1 border border-border/60 shadow-lg gap-0.5">
+            <div className="flex items-center rounded-full bg-card/90 backdrop-blur-md p-1 border border-border shadow-xs gap-0.5">
               <button
                 type="button"
                 onClick={() => handleTransportChange("boda_boda")}
                 title="Boda Boda (Motorcycle)"
                 aria-label="Boda Boda route"
-                className={`flex items-center gap-1.5 h-8 px-2.5 rounded-xl text-xs font-extrabold transition-all ${
+                className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-semibold transition-all ${
                   currentTransport === "boda_boda"
-                    ? `${activeThemeBg} text-white shadow-sm`
+                    ? `${activeThemeBg} text-white shadow-xs`
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 }`}
               >
@@ -682,9 +682,9 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
                 onClick={() => handleTransportChange("driving")}
                 title="Driving (Car)"
                 aria-label="Driving route"
-                className={`flex items-center gap-1.5 h-8 px-2.5 rounded-xl text-xs font-extrabold transition-all ${
+                className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-semibold transition-all ${
                   currentTransport === "driving"
-                    ? `${activeThemeBg} text-white shadow-sm`
+                    ? `${activeThemeBg} text-white shadow-xs`
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 }`}
               >
@@ -696,9 +696,9 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
                 onClick={() => handleTransportChange("walking")}
                 title="Walking"
                 aria-label="Walking route"
-                className={`flex items-center gap-1.5 h-8 px-2.5 rounded-xl text-xs font-extrabold transition-all ${
+                className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-semibold transition-all ${
                   currentTransport === "walking"
-                    ? `${activeThemeBg} text-white shadow-sm`
+                    ? `${activeThemeBg} text-white shadow-xs`
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 }`}
               >
@@ -708,7 +708,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
             </div>
 
             {/* Live Distance & ETA badge */}
-            <div className="flex items-center gap-1.5 h-10 px-3.5 rounded-2xl bg-card/95 backdrop-blur-xl border border-border/60 shadow-lg text-foreground text-xs font-extrabold">
+            <div className="flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-card/90 backdrop-blur-md border border-border shadow-xs text-foreground text-xs font-semibold">
               {isRouteLoading ? (
                 <div className="flex items-center gap-1.5 text-teal-600 dark:text-teal-400">
                   <RefreshCw className="size-3.5 animate-spin" />
@@ -727,13 +727,13 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
           </div>
 
           {/* Top Center: Outlet Switcher (Pharmacies vs Drug Shops) */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 hidden md:flex items-center p-1 rounded-2xl bg-card/95 backdrop-blur-xl border border-border/60 shadow-lg pointer-events-auto gap-1">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 hidden md:flex items-center p-1 rounded-full bg-card/90 backdrop-blur-md border border-border shadow-xs pointer-events-auto gap-0.5">
             <button
               type="button"
               onClick={() => handleOutletTabChange("pharmacy")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 currentOutletTab === "pharmacy"
-                  ? "bg-teal-600 text-white shadow-sm"
+                  ? "bg-teal-600 text-white shadow-xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               }`}
             >
@@ -743,9 +743,9 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
             <button
               type="button"
               onClick={() => handleOutletTabChange("drug_shop")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 currentOutletTab === "drug_shop"
-                  ? "bg-amber-600 text-white shadow-sm"
+                  ? "bg-amber-600 text-white shadow-xs"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
               }`}
             >

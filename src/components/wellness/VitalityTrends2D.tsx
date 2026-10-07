@@ -136,28 +136,25 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
   const isNoData = data.every((d) => d.energy === null && d.mood === null && d.adherence === 100);
 
   return (
-    <div className="w-full rounded-2xl bg-card/90 dark:bg-[#0D121F]/90 border border-border/70 dark:border-white/10 p-5 shadow-lg dark:shadow-2xl relative overflow-hidden flex flex-col gap-4 backdrop-blur-md">
-      {/* Background ambient lighting */}
-      <div className="absolute -top-12 -right-12 w-64 h-64 bg-primary/10 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="w-full rounded-[18px] bg-card border border-border p-5 shadow-xs relative overflow-hidden flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between relative z-10">
-        <h3 className="text-sm sm:text-base font-bold text-foreground tracking-wide flex items-center gap-2">
-          <TrendingUp size={16} className="text-primary" /> VITALITY TRENDS
+        <h3 className="text-sm font-semibold text-foreground tracking-tight flex items-center gap-2">
+          <TrendingUp size={16} className="text-primary" /> Vitality Trends
         </h3>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 bg-muted/50 dark:bg-white/5 border border-border/50 dark:border-white/10 px-2.5 py-1 rounded-full">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/60 border border-border px-2.5 py-0.5 rounded-full">
           7-Day Snapshot
         </span>
       </div>
 
       <div className="relative w-full select-none z-10" style={{ paddingTop: "41.67%" }}>
         {isNoData && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-accent/5 z-20 rounded-2xl border border-dashed border-border/50 backdrop-blur-xs">
-            <Activity size={28} className="text-muted-foreground/40 mb-2" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/20 z-20 rounded-[14px] border border-dashed border-border backdrop-blur-xs">
+            <Activity size={24} className="text-muted-foreground/40 mb-1.5" />
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               No activity data yet
             </p>
-            <p className="text-[8px] font-bold text-muted-foreground/40 mt-0.5 uppercase tracking-tighter">
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
               Log your wellness in the Wellness Hub
             </p>
           </div>

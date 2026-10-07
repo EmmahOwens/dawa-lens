@@ -57,33 +57,33 @@ export const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
 
   return (
     <div
-      className={`rounded-3xl border border-border/60 bg-gradient-to-br from-card/95 via-card/80 to-card/90 p-5 shadow-xl backdrop-blur-xl transition-all ${className}`}
+      className={`rounded-[18px] border border-border bg-card p-5 shadow-xs transition-all ${className}`}
     >
       {/* Header Banner */}
-      <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-border/40 flex-wrap">
+      <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-border flex-wrap">
         <div className="flex items-center gap-2.5">
-          <div className="rounded-xl bg-primary/10 p-2 text-primary border border-primary/20">
-            <Pill size={20} />
+          <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+            <Pill size={18} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-black tracking-tight text-foreground">
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">
                 FDA Clinical Intelligence
               </h3>
               {ndc?.deaSchedule && (
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-[10px] font-bold">
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] font-semibold rounded-full">
                   {ndc.deaSchedule}
                 </Badge>
               )}
             </div>
-            <p className="text-[11px] font-medium text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground font-medium">
               Official labeling & surveillance ground
             </p>
           </div>
         </div>
 
         {/* Regulatory Trust Badge */}
-        <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-500 border border-emerald-500/20">
+        <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
           <CheckCircle2 size={13} />
           <span>Trust Index {trustIndex?.score || 85}%</span>
         </div>
@@ -105,14 +105,14 @@ export const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
           {contraConflicts.map((c, i) => (
             <div
               key={`contra-${i}`}
-              className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3 flex items-start gap-2.5"
+              className="rounded-[14px] border border-destructive/20 bg-destructive/5 p-3.5 flex items-start gap-2.5"
             >
-              <ShieldAlert size={18} className="text-red-500 shrink-0 mt-0.5" />
+              <ShieldAlert size={16} className="text-destructive shrink-0 mt-0.5" />
               <div>
-                <h5 className="text-xs font-bold text-red-400">
+                <h5 className="text-xs font-semibold text-destructive">
                   Comorbidity Alert: {c.condition}
                 </h5>
-                <p className="text-[11px] text-foreground/80 font-medium leading-relaxed">
+                <p className="text-[11px] text-foreground/80 font-normal leading-relaxed mt-0.5">
                   {c.detail}
                 </p>
               </div>
@@ -122,14 +122,14 @@ export const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
           {allergenConflicts.map((a, i) => (
             <div
               key={`allergen-${i}`}
-              className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2.5"
+              className="rounded-[14px] border border-amber-500/20 bg-amber-500/5 p-3.5 flex items-start gap-2.5"
             >
-              <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+              <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
               <div>
-                <h5 className="text-xs font-bold text-amber-400">
+                <h5 className="text-xs font-semibold text-amber-600 dark:text-amber-400">
                   Inactive Ingredient Allergen: {a.allergy}
                 </h5>
-                <p className="text-[11px] text-foreground/80 font-medium leading-relaxed">
+                <p className="text-[11px] text-foreground/80 font-normal leading-relaxed mt-0.5">
                   {a.detail}
                 </p>
               </div>
@@ -139,46 +139,46 @@ export const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
       )}
 
       {/* Segmented Navigation */}
-      <div className="flex rounded-2xl bg-muted/40 p-1 mb-4">
+      <div className="flex rounded-full bg-muted/60 p-1 mb-4 border border-border">
         <button
           onClick={() => setActiveTab("safety")}
-          className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
+          className={`flex-1 py-1 text-xs font-semibold rounded-full transition-all ${
             activeTab === "safety"
-              ? "bg-card text-foreground shadow-sm"
+              ? "bg-card text-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Special Precautions
+          Precautions
         </button>
         <button
           onClick={() => setActiveTab("events")}
-          className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
+          className={`flex-1 py-1 text-xs font-semibold rounded-full transition-all ${
             activeTab === "events"
-              ? "bg-card text-foreground shadow-sm"
+              ? "bg-card text-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Real-World Signals ({topReactions.length})
+          Signals ({topReactions.length})
         </button>
         <button
           onClick={() => setActiveTab("storage")}
-          className={`flex-1 py-1.5 text-xs font-bold rounded-xl transition-all ${
+          className={`flex-1 py-1 text-xs font-semibold rounded-full transition-all ${
             activeTab === "storage"
-              ? "bg-card text-foreground shadow-sm"
+              ? "bg-card text-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Climate & Storage
+          Storage
         </button>
       </div>
 
       {/* Tab 1: Special Precautions */}
       {activeTab === "safety" && (
-        <div className="space-y-3 text-xs">
+        <div className="space-y-2.5 text-xs">
           {/* Pregnancy & Nursing */}
           {(safetyAlerts.pregnancyRisk || safetyAlerts.nursingWarning) && (
-            <div className="rounded-2xl bg-muted/30 p-3 border border-border/40">
-              <div className="flex items-center gap-2 mb-1 text-primary font-bold">
+            <div className="rounded-[14px] bg-muted/40 p-3.5 border border-border">
+              <div className="flex items-center gap-2 mb-1 text-primary font-semibold">
                 <Heart size={14} />
                 <span>Pregnancy & Nursing Guidance</span>
               </div>
@@ -190,8 +190,8 @@ export const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
 
           {/* Pediatric & Geriatric */}
           {(safetyAlerts.pediatricPrecaution || safetyAlerts.geriatricPrecaution) && (
-            <div className="rounded-2xl bg-muted/30 p-3 border border-border/40">
-              <div className="flex items-center gap-2 mb-1 text-primary font-bold">
+            <div className="rounded-[14px] bg-muted/40 p-3.5 border border-border">
+              <div className="flex items-center gap-2 mb-1 text-primary font-semibold">
                 <Activity size={14} />
                 <span>Age-Specific Precautions</span>
               </div>
@@ -203,10 +203,10 @@ export const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
 
           {/* Mechanism of Action */}
           {label?.mechanismOfAction && (
-            <div className="rounded-2xl bg-muted/30 p-3 border border-border/40">
-              <div className="flex items-center gap-2 mb-1 text-foreground font-bold">
+            <div className="rounded-[14px] bg-muted/40 p-3.5 border border-border">
+              <div className="flex items-center gap-2 mb-1 text-foreground font-semibold">
                 <Info size={14} />
-                <span>Mechanism of Action (How it Works)</span>
+                <span>Mechanism of Action</span>
               </div>
               <p className="text-muted-foreground leading-relaxed line-clamp-3">
                 {label.mechanismOfAction}
@@ -222,27 +222,27 @@ export const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
           {topReactions.length > 0 ? (
             <div className="space-y-2.5">
               <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1 font-semibold">
-                <span>Reported Adverse Reaction</span>
+                <span>Reported Reaction</span>
                 <span>Frequency (%)</span>
               </div>
               {topReactions.slice(0, 6).map((item, idx) => (
                 <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-bold text-foreground">
+                  <div className="flex justify-between text-xs font-semibold text-foreground">
                     <span>{item.reaction}</span>
-                    <span className="text-muted-foreground">{item.percentage}%</span>
+                    <span className="text-muted-foreground font-normal">{item.percentage}%</span>
                   </div>
-                  <div className="h-1.5 w-full bg-muted/40 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden border border-border/40">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.max(item.percentage, 8)}%` }}
-                      transition={{ duration: 0.5, delay: idx * 0.05 }}
-                      className="h-full bg-gradient-to-r from-primary to-amber-500 rounded-full"
+                      transition={{ duration: 0.4, delay: idx * 0.04 }}
+                      className="h-full bg-primary rounded-full"
                     />
                   </div>
                 </div>
               ))}
-              <p className="text-[10px] text-muted-foreground/80 mt-3 italic leading-snug">
-                * Note: FAERS data reflects voluntary post-market user reports and does not prove clinical causality.
+              <p className="text-[10px] text-muted-foreground mt-3 italic leading-snug">
+                * FAERS reflects post-market voluntary reports and does not prove clinical causality.
               </p>
             </div>
           ) : (

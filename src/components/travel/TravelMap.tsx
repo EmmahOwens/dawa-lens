@@ -801,7 +801,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
 
       {/* Origin label */}
       <div className="absolute top-3 left-3 z-10 flex flex-col pointer-events-none">
-        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-foreground/50 bg-background/70 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1">
+        <span className="text-[10px] font-semibold text-muted-foreground bg-card/80 backdrop-blur-md px-3 py-1 rounded-full border border-border shadow-xs flex items-center gap-1.5">
           <RiveMoji emoji="📍" size={12} /> Current Location
         </span>
       </div>
@@ -816,7 +816,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
             exit={{ opacity: 0, y: 6 }}
             className="absolute bottom-3 right-3 z-10 flex flex-col items-end pointer-events-none"
           >
-            <span className="text-xs font-black text-white bg-primary px-3 py-1 rounded-full shadow-lg shadow-primary/30 flex items-center gap-1">
+            <span className="text-xs font-semibold text-primary-foreground bg-primary px-3.5 py-1.5 rounded-full shadow-xs flex items-center gap-1.5">
               <RiveMoji emoji="✈️" size={14} /> {destination}
             </span>
           </motion.div>
@@ -832,10 +832,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ delay: 0.8 }}
-            className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/30 bg-background/80 backdrop-blur-sm shadow-sm"
+            className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-3 py-1 rounded-full border border-primary/20 bg-card/85 backdrop-blur-md shadow-xs text-primary"
           >
-            <Plane size={10} className="text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-wider text-primary">En Route</span>
+            <Plane size={11} className="text-primary" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider">En Route</span>
           </motion.div>
         )}
       </AnimatePresence>

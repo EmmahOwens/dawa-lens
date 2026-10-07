@@ -545,8 +545,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
-    "mtime": 1783705917.8219104,
-    "ast_hash": "4e9cdcd20adab1611b9c12cdc4e3b262",
+    "mtime": 1791350639.184362,
+    "ast_hash": "85afb8f6b59319a4bb0baee5b33e59d9",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AppShell.tsx": {
@@ -630,13 +630,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/OfflineOverlay.tsx": {
-    "mtime": 1787287814.4923844,
-    "ast_hash": "6aa4d2e05f7b76db3ac7d4824935a40e",
+    "mtime": 1791350804.982449,
+    "ast_hash": "524964a669d9afaed206f868ed04b898",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PageLoader.tsx": {
-    "mtime": 1783788730.8821146,
-    "ast_hash": "3c78181d48e3f7105cfdb41fd4cd10b0",
+    "mtime": 1791352201.826951,
+    "ast_hash": "b64a69bc53735c3d8cd2d268486f5d37",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PageTransition.tsx": {
@@ -655,8 +655,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/PremiumLoader.tsx": {
-    "mtime": 1782019201.7504103,
-    "ast_hash": "b4d3c01a05708d294e882dfb69f9dfcb",
+    "mtime": 1791352471.4210303,
+    "ast_hash": "f7afe01fcbbf03a70a760e5dad0d724c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/SplashScreen.tsx": {
@@ -670,8 +670,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/StoreUpdateModal.tsx": {
-    "mtime": 1790845478.8617003,
-    "ast_hash": "606ccf360c56a0ccbe1845c0f349e524",
+    "mtime": 1791350710.6960988,
+    "ast_hash": "f1bf8b823a9844092d25c8ef1968857d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/SuccessState.tsx": {
@@ -720,53 +720,53 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/FamilyHubWidget.tsx": {
-    "mtime": 1778881360.853093,
-    "ast_hash": "e15705d174db8102927b10e5ff366112",
+    "mtime": 1791352754.725332,
+    "ast_hash": "0dd3dba02a5b0916e8c3963f11a63606",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/HistoryWidget.tsx": {
-    "mtime": 1789040746.7146177,
-    "ast_hash": "f6039c4582967813323527ab0b66e3df",
+    "mtime": 1791352778.8525677,
+    "ast_hash": "425b6a279b8d93b407c98ffeaed034a3",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/InteractionsWidget.tsx": {
-    "mtime": 1789634221.5674527,
-    "ast_hash": "9e1969de27de2298fb0534939f48d1a1",
+    "mtime": 1791352992.5750818,
+    "ast_hash": "5129c98e260f4420af8f34c5ad4a7475",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/MedDetailsWidget.tsx": {
-    "mtime": 1779814403.3650508,
-    "ast_hash": "ac7148f3462291c850b11b2f349e03df",
+    "mtime": 1791352807.8315158,
+    "ast_hash": "e0c60f2a8db92d1ddb8586d7045ed0cc",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/RemindersWidget.tsx": {
-    "mtime": 1790000612.664284,
-    "ast_hash": "85d725cdd76bca250d741e7cc0e3f998",
+    "mtime": 1791352903.5030508,
+    "ast_hash": "f6ef3b276529d0c1ba617401a4f2809e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/ReportWidget.tsx": {
-    "mtime": 1787131707.9448466,
-    "ast_hash": "25c12087a5cb797e473d659bceec3c15",
+    "mtime": 1791352822.0444963,
+    "ast_hash": "3b69c132dcd2ba0d0b43248e4a7f77be",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/ScanWidget.tsx": {
-    "mtime": 1788124272.5490043,
-    "ast_hash": "3a68e5fe2675dbec473ba385143abf20",
+    "mtime": 1791352864.854201,
+    "ast_hash": "1942109cde8d4ce3b78452cc0da8a4ac",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/SettingsWidget.tsx": {
-    "mtime": 1778881360.8510978,
-    "ast_hash": "fe7ab34e3f1239886714e0e9a6050bdd",
+    "mtime": 1791352838.078195,
+    "ast_hash": "e7470d865c7321a526d3e44424c923ae",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/TravelWidget.tsx": {
-    "mtime": 1789629411.1620526,
-    "ast_hash": "aa6313d70cffc93e0b5b91c784836e51",
+    "mtime": 1791352928.1694033,
+    "ast_hash": "2351edbcb211b6ff6c68cdc040d5fab4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/WellnessWidget.tsx": {
-    "mtime": 1789629464.5263028,
-    "ast_hash": "7dc34714b5fe6a19617ed3847d8bb759",
+    "mtime": 1791352884.7051783,
+    "ast_hash": "3d4facc1f727701ed9aadecf85191640",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/rive/RiveAnimation.tsx": {
@@ -780,8 +780,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/travel/TravelMap.tsx": {
-    "mtime": 1790340517.484502,
-    "ast_hash": "e84b9999b45823019c999d95266a96f6",
+    "mtime": 1791351570.7928057,
+    "ast_hash": "854721b925cc9c0e57c74c403b96ba7d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/ARInstruction.tsx": {
@@ -1035,13 +1035,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/wellness/VitalityTrends2D.tsx": {
-    "mtime": 1787041275.2736006,
-    "ast_hash": "d6dcdef4eeb19f80bb9d53a3c4a62f88",
+    "mtime": 1791351946.13676,
+    "ast_hash": "c61f723b2076b6d567bcc0490d346cb7",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/wellness/WellnessInsightCard.tsx": {
-    "mtime": 1789117679.2997382,
-    "ast_hash": "f24061cd5d23e51a6d0bafddd46f804e",
+    "mtime": 1791351975.5098724,
+    "ast_hash": "94302ad9f6968ce85e44ebd8b68784d0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
@@ -2375,13 +2375,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/fda/FdaBoxedWarningBadge.tsx": {
-    "mtime": 1787138550.0951073,
-    "ast_hash": "79f49f22f5b84053651a6062755da072",
+    "mtime": 1791350882.5324483,
+    "ast_hash": "3052afb9ec373c84ed260bed0bc6161c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/fda/FdaSafetyOverviewCard.tsx": {
-    "mtime": 1789026088.3445172,
-    "ast_hash": "89f40b82a6f8b7c66ffffbc4f6bf9d51",
+    "mtime": 1791350945.5938447,
+    "ast_hash": "e8b61c55d38f1187b3b8a771ae7b8ae1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/openFdaClient.ts": {
@@ -2395,8 +2395,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/MedVaultWidget.tsx": {
-    "mtime": 1787229885.8572607,
-    "ast_hash": "ba556fcf2b37de4b61a5f41585ffedcb",
+    "mtime": 1791352946.0741208,
+    "ast_hash": "4e6ec0f1f62e256820ef6e786a4bb60b",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/__tests__/dawaGptMedVaultIntelligence.test.ts": {
@@ -2520,8 +2520,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/pharmacy/PharmacyRouteMap.tsx": {
-    "mtime": 1790579201.8111598,
-    "ast_hash": "d6bf6aeea840331916d669b4eff6ac5b",
+    "mtime": 1791351526.3680317,
+    "ast_hash": "a9c7f34f4971416abaaa6c83b5f1e8ad",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/travel/__tests__/TravelMap.test.tsx": {
@@ -2620,8 +2620,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/MobileWatchdogResolveButton.tsx": {
-    "mtime": 1789114428.2497227,
-    "ast_hash": "f22b0ccd17a6c9a985c7ae47bc13d088",
+    "mtime": 1791352733.9658651,
+    "ast_hash": "608dc2af35b57943c95576d76f14d1f1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/intelligence/__tests__/MobileWatchdogResolveButton.test.tsx": {

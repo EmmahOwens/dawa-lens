@@ -58,64 +58,51 @@ export default function OfflineOverlay() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/60 backdrop-blur-xl"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
-            className="mx-4 max-w-sm w-full rounded-3xl border border-border bg-card p-8 text-center shadow-2xl"
+            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            className="max-w-sm w-full rounded-[20px] border border-border bg-card p-7 text-center shadow-xl"
           >
-            <div className="relative mx-auto mb-6 flex h-24 w-24 items-center justify-center">
-              <motion.div
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.1, 0.2, 0.1],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="absolute inset-0 rounded-full bg-primary"
-              />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <WifiOff size={32} />
-              </div>
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-primary">
+              <WifiOff size={26} />
             </div>
 
-            <h2 className="mb-2 text-2xl font-bold tracking-tight text-foreground">
+            <h2 className="mb-1.5 text-xl font-bold tracking-tight text-foreground">
               Connection Lost
             </h2>
-            <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
+            <p className="mb-6 text-xs leading-relaxed text-muted-foreground font-medium">
               This feature requires an internet connection. Your{" "}
               <span className="font-semibold text-foreground">reminders</span>{" "}
-              are still accessible offline.
+              remain fully accessible offline.
             </p>
 
-            <Button
-              onClick={handleRetry}
-              disabled={retrying}
-              className="group w-full rounded-xl transition-all duration-300 active:scale-[0.98]"
-              size="lg"
-            >
-              <RefreshCw
-                size={18}
-                className={`mr-2 transition-transform ${retrying ? "animate-spin" : "group-hover:rotate-180"}`}
-              />
-              Try Again
-            </Button>
+            <div className="space-y-2.5">
+              <Button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="w-full h-11 rounded-full font-semibold text-xs active:scale-95 transition-all shadow-none"
+              >
+                <RefreshCw
+                  size={15}
+                  className={`mr-2 ${retrying ? "animate-spin" : ""}`}
+                />
+                Try Again
+              </Button>
 
-            <Button
-              onClick={() => navigate("/reminders")}
-              variant="outline"
-              className="w-full mt-2 rounded-xl transition-all duration-300 active:scale-[0.98]"
-              size="lg"
-            >
-              Go to Reminders
-            </Button>
+              <Button
+                onClick={() => navigate("/reminders")}
+                variant="outline"
+                className="w-full h-11 rounded-full font-semibold text-xs border border-border active:scale-95 transition-all"
+              >
+                Go to Reminders
+              </Button>
+            </div>
 
-            <p className="mt-4 text-[10px] uppercase tracking-widest text-muted-foreground/50 font-semibold">
+            <p className="mt-5 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
               Offline Mode Active
             </p>
           </motion.div>
