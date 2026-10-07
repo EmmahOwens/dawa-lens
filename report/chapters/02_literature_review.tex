@@ -1,7 +1,7 @@
 \chapter{Literature Review}
 \label{ch:litreview}
 
-This chapter reviews relevant academic, technical, and clinical literature that underpins the design and implementation of Dawa Lens. It examines core engineering concepts, evaluates existing technological solutions for medication adherence, and identifies critical gaps in current systems. Furthermore, the chapter articulates the theoretical framework guiding the study and introduces the conceptual framework mapping the engineering artifacts to intended clinical outcomes in Uganda's outpatient healthcare setting.
+This chapter reviews published engineering and clinical literature that underpins the development of Dawa Lens. It examines core engineering concepts, evaluates existing technological solutions for medication adherence, and identifies critical gaps in current systems. Furthermore, the chapter articulates the theoretical framework guiding the study and introduces the conceptual framework mapping the engineering artifacts to intended clinical outcomes in Uganda's outpatient healthcare setting.
 
 \section{Review of Relevant Concepts}
 
@@ -13,11 +13,11 @@ Mobile Health (mHealth) utilizes mobile computing to deliver clinical services, 
 
 \subsection{Optical Character Recognition (OCR) and Lightweight Edge Computer Vision}
 
-Optical Character Recognition (OCR) enables automated electronic conversion of images into machine-encoded text streams \cite{smith2007tesseract}, facilitating digitization of medicine boxes, prescription labels, and blister packaging \cite{dayer2013smartphone}. Recent breakthroughs in deep learning \cite{lecun2015deep} and real-time edge object detection paradigms \cite{redmon2016yolo} have enabled lightweight mobile vision models that run entirely on client devices. In resource-constrained mobile environments, modern architectures deploy client-side WebAssembly (Wasm) workers executing asynchronously without freezing the UI thread. To overcome character misclassifications arising from curved packaging reflections, low ambient lighting, or font degradation, raw OCR outputs are post-processed through lexical fuzzy matching against standardized clinical formularies such as RxNorm \cite{rxnorm2024}.
+Optical Character Recognition (OCR) enables automated electronic conversion of images into machine-encoded text streams \cite{smith2007tesseract}, facilitating digitization of medicine boxes, prescription labels, and blister packaging \cite{dayer2013smartphone}. Recent developments in deep learning \cite{lecun2015deep} and real-time edge object detection frameworks \cite{redmon2016yolo} have enabled lightweight mobile vision models that run entirely on client devices. In resource-constrained mobile environments, modern architectures deploy client-side WebAssembly (Wasm) workers executing asynchronously without freezing the UI thread. To overcome character misclassifications arising from curved packaging reflections, low ambient lighting, or font degradation, raw OCR outputs are post-processed through lexical fuzzy matching against standardized clinical formularies such as RxNorm \cite{rxnorm2024}.
 
 \subsection{Distributed State Synchronization and Offline-First Storage Architectures}
 
-Offline-first software engineering stipulates that an application must provide full read, write, and computational functionality in the absence of network connectivity \cite{kleppmann2017designing}. Under Brewer's CAP theorem \cite{brewer2000cap}, continuous Availability and Partition tolerance are paramount in healthcare: patients must always be able to view schedules and log doses offline. This is realized using browser-standard IndexedDB paired with a transactional FIFO mutation queue \cite{kleppmann2017designing}. Upon network reconnection, an asynchronous synchronization protocol transfers local mutations to Firebase Firestore while resolving timestamp conflicts via deterministic last-write-wins (LWW) or Conflict-Free Replicated Data Type (CRDT) mechanics \cite{shapiro2011crdt}.
+Offline-first software engineering requires that an application maintain full local data access and execution capabilities in the absence of network connectivity \cite{kleppmann2017designing}. Under Brewer's CAP theorem \cite{brewer2000cap}, continuous Availability and Partition tolerance are paramount in healthcare: patients must always be able to view schedules and log doses offline. This is realized using browser-standard IndexedDB paired with a transactional FIFO mutation queue \cite{kleppmann2017designing}. Upon network reconnection, an asynchronous synchronization protocol transfers local mutations to Firebase Firestore while resolving timestamp conflicts via deterministic last-write-wins (LWW) or Conflict-Free Replicated Data Type (CRDT) mechanics \cite{shapiro2011crdt}.
 
 \subsection{Pharmacodynamics and Indigenous Dietary Biochemical Realities}
 
@@ -39,7 +39,7 @@ A critical evaluation of existing approaches highlights the necessity of an inte
 
 \section{Research Gap}
 
-Table~\ref{tab:lit_comparison} synthesizes existing medication management paradigms against the engineering specifications of Dawa Lens.
+Table~\ref{tab:lit_comparison} synthesizes existing medication management approaches against the engineering specifications of Dawa Lens.
 
 \begin{table}[!htbp]
   \centering
@@ -66,7 +66,7 @@ The primary engineering gap addressed by this research is the \textbf{absence of
 
 \section{Theoretical and Conceptual Framework}
 
-This research is anchored within the \textbf{Information-Motivation-Behavioral Skills (IMB) Model of Adherence} \cite{fisher1992changing, who2003adherence}, the \textbf{Technology Acceptance Model (TAM)} \cite{davis1989perceived}, and the \textbf{Design Science Research (DSR)} framework \cite{hevner2004design}. The IMB model posits that adherence is governed by actionable information (addressed by on-device OCR and dietary screening), personal and social motivation (supported by Family Hub caregiver synchronization), and behavioral skills (reinforced by deterministic alarms and refill tracking). TAM complements this by modeling how perceived ease of use and perceived usefulness govern user adoption of digital health innovations among outpatients and caregivers. DSR guides the iterative design, implementation, and empirical evaluation of the primary artifact (Dawa Lens).
+This research is anchored within the \textbf{Information-Motivation-Behavioral Skills (IMB) Model of Adherence} \cite{fisher1992changing, who2003adherence}, the \textbf{Technology Acceptance Model (TAM)} \cite{davis1989perceived}, and the \textbf{Design Science Research (DSR)} framework \cite{hevner2004design}. The IMB model posits that adherence is governed by actionable information (addressed by on-device OCR and dietary screening), personal and social motivation (supported by Family Hub caregiver synchronization), and behavioral skills (reinforced by deterministic alarms and refill tracking). TAM complements this by modeling how perceived ease of use and perceived usefulness govern user adoption of digital health tools among outpatients and caregivers. DSR guides the iterative engineering and evaluation of the primary artifact (Dawa Lens).
 
 Figure~\ref{fig:framework} illustrates the conceptual framework developed for this study.
 

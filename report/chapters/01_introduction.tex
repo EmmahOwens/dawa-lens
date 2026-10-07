@@ -1,15 +1,15 @@
 \chapter{Introduction}
 \label{ch:intro}
 
-This chapter introduces the research project, establishing the clinical, technological, and socio-economic context of outpatient medication management in Uganda. It articulates the core problem of medication non-adherence and pharmaceutical errors in resource-constrained environments, presents general and specific engineering objectives, outlines research questions, and justifies the necessity and scope of the proposed solution.
+This chapter introduces the research project, establishing the clinical background, technical constraints, and social context of outpatient medication management in Uganda. It articulates the core problem of medication non-adherence and pharmaceutical errors in resource-constrained environments, presents general and specific engineering objectives, outlines research questions, and justifies the necessity and scope of the proposed system.
 
 \section{Background}
 
-Human-centered computer engineering plays an increasingly vital role in addressing systemic challenges within modern healthcare delivery, particularly in developing nations where public health infrastructure faces chronic resource limitations \cite{who2017medication, mechael2009case}. In Uganda, outpatient clinical care is characterized by marked institutional fragmentation across national and regional referral hospitals (such as Mulago and Soroti Regional Referral Hospitals), private clinics, health centre dispensaries, and retail drug outlets \cite{moh2023performance, kintu2021development}. In the absence of an interoperable Electronic Health Record (EHR) infrastructure, medical histories and dosing instructions exist almost exclusively in physical, hand-written paper exercise booklets carried by patients \cite{kintu2021development}. This structural reality places the entire operational burden of medication compliance upon patients and their informal domestic caregivers \cite{ware2009social}.
+Human-centered computer engineering plays a direct role in addressing systemic challenges within healthcare delivery, particularly in developing nations where public health infrastructure faces chronic resource limitations \cite{who2017medication, mechael2009case}. In Uganda, outpatient clinical care is characterized by institutional fragmentation across national and regional referral hospitals (such as Mulago and Soroti Regional Referral Hospitals), private clinics, health centre dispensaries, and retail drug outlets \cite{moh2023performance, kintu2021development}. In the absence of an interoperable Electronic Health Record (EHR) infrastructure, medical histories and dosing instructions exist almost exclusively in physical, hand-written paper exercise booklets carried by patients \cite{kintu2021development}. This structural reality places the operational burden of medication compliance upon patients and their informal domestic caregivers \cite{ware2009social}.
 
-This challenge is severely compounded by the high prevalence of co-morbid chronic conditions. Non-communicable diseases such as hypertension and type-2 diabetes frequently co-exist with chronic infectious diseases including HIV/AIDS and Tuberculosis (TB), alongside recurrent acute episodes of malaria \cite{moh2023guidelines}. Outpatients are routinely prescribed polypharmacy regimens consisting of concurrent antiretroviral therapy (ARV), antihypertensives, oral hypoglycemic agents, and antibiotics \cite{muddu2021hypertension}. Managing these complex combinations requires strict adherence to variable dosing intervals, meal-timing instructions, and dietary precautions.
+This challenge is compounded by the high prevalence of co-morbid chronic conditions. Non-communicable diseases such as hypertension and type-2 diabetes frequently co-exist with chronic infectious diseases including HIV/AIDS and Tuberculosis (TB), alongside recurrent acute episodes of malaria \cite{moh2023guidelines}. Outpatients are routinely prescribed polypharmacy regimens consisting of concurrent antiretroviral therapy (ARV), antihypertensives, oral hypoglycemic agents, and antibiotics \cite{muddu2021hypertension}. Managing these complex combinations requires strict adherence to variable dosing intervals, meal-timing instructions, and dietary precautions.
 
-Despite the critical importance of treatment compliance, physical packaging conventions in community pharmacies create severe barriers to safe usage. Due to economic constraints, community pharmacies frequently dispense generic pharmaceuticals by cutting multi-dose blister foils into smaller strips or repackaging loose tablets into unmarked paper envelopes devoid of manufacturer outer packaging or Patient Information Leaflets (PILs) \cite{who2017medication, nda2024register}. Patients with low health literacy or visual impairments cannot decipher pharmaceutical names, strengths, expiration dates, or contraindications \cite{parker2016health}. Furthermore, outpatients face unique biochemical challenges ignored by standard medical literature, which documents drug interactions almost exclusively against Western diets \cite{bushra2011food, bailey2013grapefruit}. In contrast, Ugandan staples such as steamed green bananas (\textit{Matooke}) and silver fish (\textit{Mukene}) possess potent pharmacokinetic properties---specifically high potassium concentrations in \textit{Matooke} and multivalent calcium/iron chelation in \textit{Mukene}---that directly alter drug efficacy and safety \cite{fao2019food, bushra2011food}. While smartphone adoption is expanding rapidly across Uganda \cite{dayer2013smartphone}, existing commercial adherence applications are cloud-tethered, cease functioning during routine network outages, consume costly data bundles, and omit indigenous dietary safety \cite{kintu2021development}. To bridge this divide, an intelligent, offline-first smart reminder tool is urgently needed.
+Despite the importance of treatment compliance, physical packaging conventions in community pharmacies create severe barriers to safe usage. Due to economic constraints, community pharmacies frequently dispense generic pharmaceuticals by cutting multi-dose blister foils into smaller strips or repackaging loose tablets into unmarked paper envelopes devoid of manufacturer outer packaging or Patient Information Leaflets (PILs) \cite{who2017medication, nda2024register}. Patients with low health literacy or visual impairments cannot decipher pharmaceutical names, strengths, expiration dates, or contraindications \cite{parker2016health}. Furthermore, outpatients face unique biochemical challenges ignored by standard medical literature, which documents drug interactions almost exclusively against Western diets \cite{bushra2011food, bailey2013grapefruit}. In contrast, Ugandan staples such as steamed green bananas (\textit{Matooke}) and silver fish (\textit{Mukene}) possess potent pharmacokinetic properties---specifically high potassium concentrations in \textit{Matooke} and multivalent calcium/iron chelation in \textit{Mukene}---that directly alter drug efficacy and safety \cite{fao2019food, bushra2011food}. While smartphone adoption is expanding across Uganda \cite{dayer2013smartphone}, existing commercial adherence applications are cloud-tethered, cease functioning during routine network outages, consume costly data bundles, and omit indigenous dietary safety \cite{kintu2021development}. To address this gap, an offline-first smart reminder tool is required.
 
 \section{Problem Statement}
 
@@ -25,24 +25,24 @@ Medication non-adherence and unintentional pharmacological errors represent an a
 
 \subsection{General Objective}
 
-The general objective of this research project is to design, develop, and empirically evaluate \textbf{Dawa Lens}, an offline-first smart medicine reminder application that integrates on-device optical character recognition, localized dietary and drug interaction intelligence, deterministic offline alarm scheduling, and caregiver synchronization to improve medication adherence and safety in low-resource outpatient settings.
+The general objective of this research project is to develop and evaluate \textbf{Dawa Lens}, an offline-first smart medicine reminder application that integrates on-device optical character recognition, localized dietary and drug interaction intelligence, deterministic offline alarm scheduling, and caregiver synchronization to improve medication adherence and safety in low-resource outpatient settings.
 
 \subsection{Specific Objectives}
 
 To achieve the general objective, the project will pursue the following specific objectives:
 \begin{enumerate}[label=(\roman*),noitemsep,topsep=2pt]
-  \item To elicit clinical, technological, and user requirements for an offline-first medication management system tailored to Ugandan outpatient realities, incorporating National Drug Authority (NDA) licensing datasets and indigenous dietary interaction profiles.
-  \item To design and implement an edge-compatible computer vision and optical character recognition (OCR) pipeline capable of accurately identifying medication names, strengths, and dosages from physical packaging and blister strips on standard mobile devices.
+  \item To elicit clinical guidelines, technical requirements, and user needs for an offline-first medication management system tailored to Ugandan outpatient realities, incorporating National Drug Authority (NDA) licensing datasets and indigenous dietary interaction profiles.
+  \item To design and implement an edge-compatible computer vision and optical character recognition (OCR) pipeline capable of accurately identifying drug names, dosage strengths, and packaging labels from physical packaging and blister strips on standard mobile devices.
   \item To develop the offline-first application architecture, implementing local relational caching, deterministic offline reminder scheduling, and an indigenous food-drug interaction screening engine.
   \item To integrate a multi-profile Family Hub synchronization module and a web-based clinical dashboard extension that enables caregivers and healthcare providers to monitor longitudinal adherence trends and generate clinical summary reports.
-  \item To test, validate, and evaluate the functional performance, reminder reliability, and user acceptance of the complete system using technical benchmarks and the standardized System Usability Scale (SUS).
+  \item To evaluate the functional performance, reminder reliability, and user acceptance of the complete system using technical benchmarks and the standardized System Usability Scale (SUS).
 \end{enumerate}
 
 \section{Research Questions}
 
 The study seeks to address four research questions corresponding to the specific objectives:
 \begin{enumerate}[label=RQ\arabic*:,noitemsep,topsep=2pt]
-  \item What clinical, dietary, and operational requirements must be satisfied to support effective, culturally grounded outpatient medication management in Uganda?
+  \item What clinical guidelines, dietary factors, and operational constraints must be satisfied to support effective, culturally grounded outpatient medication management in Uganda?
   \item How effectively can on-device optical character recognition identify generic medication packaging under variable smartphone camera resolutions and ambient lighting conditions?
   \item How can an offline-first data persistence architecture guarantee deterministic reminder delivery and accurate dietary interaction checks during total network disconnection?
   \item What is the measured usability, user satisfaction, and perceived utility of the integrated smart reminder application among patients and family caregivers in Uganda?
@@ -52,7 +52,7 @@ Table~\ref{tab:rq_alignment} synthesizes the direct alignment connecting each re
 
 \begin{table}[!htbp]
   \centering
-  \caption{Alignment matrix of research questions, specific objectives, methods, and deliverables.}
+  \caption{Alignment matrix linking research questions to objectives, engineering methods, and deliverables.}
   \label{tab:rq_alignment}
   \footnotesize
   \setlength{\tabcolsep}{3.5pt}
@@ -60,20 +60,20 @@ Table~\ref{tab:rq_alignment} synthesizes the direct alignment connecting each re
     \toprule
     \textbf{Question} & \textbf{Specific Objective} & \textbf{Engineering Methodology} & \textbf{Expected Deliverable / Metric} \\
     \midrule
-    \textbf{RQ1} & Obj.~(i): Requirements Elicitation & Document review \& stakeholder consultations & Formal SRS document; calibrated Ugandan food-drug interaction dataset. \\
+    \textbf{RQ1} & Obj.~(i): Requirements Elicitation & Document review \& stakeholder consultations & Formal SRS document, with a calibrated Ugandan food-drug interaction dataset. \\
     \midrule
-    \textbf{RQ2} & Obj.~(ii): Computer Vision Pipeline & Tesseract.js Wasm edge OCR \& fuzzy lexical matching & Character Error Rate (CER) $< 5\%$; entity extraction F1-score $\ge 0.92$. \\
+    \textbf{RQ2} & Obj.~(ii): Computer Vision Pipeline & Tesseract.js Wasm edge OCR \& fuzzy lexical matching & Character Error Rate (CER) $< 5\%$, with entity extraction F1-score $\ge 0.92$. \\
     \midrule
-    \textbf{RQ3} & Obj.~(iii): Offline Architecture & IndexedDB local caching \& deterministic exact alarms & 100\% offline availability; alarm trigger fidelity $\ge 99.5\%$. \\
+    \textbf{RQ3} & Obj.~(iii): Offline Architecture & IndexedDB local caching \& deterministic exact alarms & 100\% offline availability, with alarm trigger fidelity $\ge 99.5\%$. \\
     \midrule
-    \textbf{RQ4} & Obj.~(iv) \& (v): Evaluation & Family Hub telemetry \& standardized SUS survey & Usability score $\ge 75/100$; measured adherence lift $\ge 35\%$. \\
+    \textbf{RQ4} & Obj.~(iv) \& (v): Evaluation & Family Hub telemetry \& standardized SUS survey & Usability score $\ge 75/100$, with measured adherence lift $\ge 35\%$. \\
     \bottomrule
   \end{tabularx}
 \end{table}
 
 \section{Justification and Significance of the Study}
 
-Undertaking this research is urgent due to the severe clinical and economic consequences of medication mismanagement in Uganda. Sub-optimal adherence accelerates chronic disease progression, precipitates diabetic crises, and causes therapeutic failure in HIV and TB care \cite{who2003adherence, haberer2013realtime}, imposing severe hospitalization costs on impoverished households \cite{moh2023performance}. Existing commercial solutions fail because they depend on ubiquitous broadband, ignore Sub-Saharan diets, and charge unsustainable subscription fees. By leveraging mobile edge computing to perform offline OCR, local biochemical screening, and independent device-level alarm execution, this project directly addresses the root causes of adherence failure in low-resource settings.
+Undertaking this research addresses the severe clinical and economic consequences of medication mismanagement in Uganda. Sub-optimal adherence accelerates chronic disease progression, precipitates diabetic crises, and causes therapeutic failure in HIV and TB care \cite{who2003adherence, haberer2013realtime}, imposing severe hospitalization costs on impoverished households \cite{moh2023performance}. Existing commercial solutions fail because they depend on ubiquitous broadband, ignore Sub-Saharan diets, and charge unsustainable subscription fees. By applying mobile edge computing to perform offline OCR, local biochemical screening, and independent device-level alarm execution, this project directly addresses the root causes of adherence failure in low-resource settings.
 
 The outcomes benefit key stakeholders: (1)~\textbf{Patients} gain a culturally tailored tool that simplifies regimens, warns against dietary hazards, and ensures timely doses; (2)~\textbf{Family Caregivers} receive remote telemetry over dependents' adherence; (3)~\textbf{Practitioners} obtain doctor-ready longitudinal adherence reports; (4)~\textbf{National Drug Authority (NDA)} gains public support in directing citizens toward licensed pharmacies; and (5)~\textbf{Academic Community} gains empirical benchmarks for on-device mobile health computing in Africa.
 
@@ -81,4 +81,4 @@ The outcomes benefit key stakeholders: (1)~\textbf{Patients} gain a culturally t
 
 The technical scope encompasses a hybrid Android mobile application packaged via Capacitor 8 and a companion web PWA, featuring on-device Wasm OCR, offline IndexedDB storage with Firestore sync, indigenous food-drug interaction screening (\textit{Matooke}, \textit{Mukene}, \textit{Kalo}, \textit{G-nut sauce}, \textit{Nakati}, \textit{Dodo}), deterministic local notifications, an NDA pharmacy locator, and clinical PDF report generation. Robotic hardware and autonomous diagnostic prescribing are explicitly excluded. The geographical scope focuses on outpatient cohorts in Eastern Uganda (Soroti) and Central Uganda (Kampala/Wakiso), executed over an eight-month period across the 2026/2027 academic year.
 
-The remainder of this report is organized as follows: Chapter~\ref{ch:litreview} reviews relevant literature, existing systems, and theoretical frameworks; Chapter~\ref{ch:methodology} presents the system architecture, development approach, testing protocols, and risk register; Chapter~\ref{ch:conclusion} concludes the proposal; and the Appendices provide the workplan schedule, research instruments, and technical specifications.
+The remainder of this report is organized across three chapters and an appendix. Chapter~\ref{ch:litreview} reviews relevant literature, existing systems, and theoretical frameworks. Chapter~\ref{ch:methodology} presents the system architecture, development approach, testing protocols, and risk register. Chapter~\ref{ch:conclusion} concludes the proposal, while the Appendices provide the workplan schedule, research instruments, and technical specifications.

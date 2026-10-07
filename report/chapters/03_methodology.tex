@@ -1,16 +1,16 @@
 \chapter{Proposed Methodology}
 \label{ch:methodology}
 
-This chapter details the engineering methodology and empirical research procedures proposed to design, develop, and evaluate Dawa Lens. It outlines the research design, presents the multi-tiered system architecture, specifies the iterative development lifecycle, and describes data collection and requirements elicitation protocols. Furthermore, the chapter articulates functional and non-functional specifications, development tools, testing and usability evaluation strategies, and ethical safeguards.
+This chapter details the engineering methodology and empirical research procedures proposed to build and evaluate Dawa Lens. It outlines the research design, presents the multi-tiered system architecture, specifies the iterative development lifecycle, and describes data collection and requirements elicitation protocols. Furthermore, the chapter articulates functional and non-functional specifications, development tools, testing protocols, and ethical safeguards.
 
 \section{Research Design}
 
-This project adopts an \textbf{Applied Engineering Design Science Research (DSR)} methodology \cite{hevner2004design}, structured across six sequential phases: (1)~\textbf{Problem Identification:} delineating outpatient adherence barriers in Uganda via clinical guidelines and stakeholder reviews; (2)~\textbf{Solution Objectives:} establishing quantitative engineering metrics (sub-second offline launch latency, $\ge 95\%$ OCR character accuracy, and 100\% offline schedule availability); (3)~\textbf{Artifact Design and Development:} architecting edge computer vision, local IndexedDB persistence, deterministic alarms, and localized food-drug interaction logic; (4)~\textbf{Demonstration:} deploying laboratory testbeds simulating intermittent cellular connectivity and low-cost smartphone constraints; (5)~\textbf{Empirical Evaluation:} measuring technical benchmarks (CER, trigger latency) and conducting a 2-week field pilot ($N=50$) using the standardized System Usability Scale (SUS); and (6)~\textbf{Communication:} documenting contributions in this proposal and the final thesis at Soroti University.
+This project adopts an \textbf{Applied Engineering Design Science Research (DSR)} methodology \cite{hevner2004design}, structured across six sequential phases: (1)~\textbf{Problem Identification}, delineating outpatient adherence barriers in Uganda via clinical guidelines and stakeholder reviews; (2)~\textbf{Solution Objectives}, establishing quantitative engineering metrics (sub-second offline launch latency, $\ge 95\%$ OCR character accuracy, and 100\% offline schedule availability); (3)~\textbf{Artifact Design and Development}, architecting edge computer vision, local IndexedDB persistence, deterministic alarms, and localized food-drug interaction logic; (4)~\textbf{Demonstration}, deploying laboratory testbeds simulating intermittent cellular connectivity and low-cost smartphone constraints; (5)~\textbf{Empirical Evaluation}, measuring technical benchmarks (CER, trigger latency) and conducting a 2-week field pilot ($N=50$) using the standardized System Usability Scale (SUS); and (6)~\textbf{Communication}, documenting contributions in this proposal and the final thesis at Soroti University.
 
 \section{System Architecture}
 \label{sec:architecture}
 
-The proposed architecture of Dawa Lens follows an offline-first, edge-native paradigm minimizing cloud dependency. Figure~\ref{fig:architecture} illustrates the four operational tiers:
+The proposed architecture of Dawa Lens follows an offline-first, edge-native model minimizing cloud dependency. Figure~\ref{fig:architecture} illustrates the four operational tiers:
 
 \begin{figure}[!htbp]
   \centering
@@ -21,14 +21,14 @@ The proposed architecture of Dawa Lens follows an offline-first, edge-native par
 
 \begin{itemize}[noitemsep,topsep=2pt]
   \item \textbf{Tier 1: Client Presentation Tier:} Implemented in React 18, Vite 8, and TypeScript, packaged for Android via Capacitor 8. It encompasses the core mobile touch UI, a responsive Progressive Web App (PWA) extension for clinical PDF export, a Family Hub caregiver interface, and an interactive NDA licensed pharmacy locator.
-  \item \textbf{Tier 2: Offline-First Persistence \& Scheduling Tier:} Employs browser-standard IndexedDB (via Dexie.js) as the local source of truth. A deterministic scheduler leverages native exact alarm APIs (\texttt{SCHEDULE\_EXACT\_ALARM}) for reliable offline alerting, while an offline FIFO mutation queue buffers local edits with exponential-backoff retry.
+  \item \textbf{Tier 2: Offline-First Persistence \& Scheduling Tier:} Employs browser-standard IndexedDB (via Dexie.js) as the local source of truth. A deterministic scheduler uses native exact alarm APIs (\texttt{SCHEDULE\_EXACT\_ALARM}) for reliable offline alerting, while an offline FIFO mutation queue buffers local edits with exponential-backoff retry.
   \item \textbf{Tier 3: Clinical Pharmacology \& Vision Pipeline Tier:} Executes Tesseract.js compiled to WebAssembly (Wasm) inside an asynchronous Web Worker to extract packaging text on-device. An inference engine checks active ingredients against RxNorm contraindications and screens indigenous food interactions (\textit{Matooke} and \textit{Mukene}).
   \item \textbf{Tier 4: Cloud Repository \& Regulatory Gateway Tier:} Uses Firebase Cloud Firestore for cross-device caregiver replication, hosts the verified National Drug Authority (NDA) pharmacy registry, and provides an optional Gemini 2.0 Flash fallback for Luganda voice synthesis when bandwidth permits.
 \end{itemize}
 
 \section{Development Lifecycle and Requirements Elicitation}
 
-Software development follows an \textbf{Iterative Agile/Prototyping} lifecycle across five two-week sprints: Sprint~1 (Architecture \& IndexedDB setup); Sprint~2 (Deterministic alarm scheduler); Sprint~3 (Edge Wasm OCR pipeline); Sprint~4 (Clinical food-drug matrix \& NDA directory); and Sprint~5 (Family Hub sync, PWA PDF export, and integration testing).
+Software development follows an \textbf{Iterative Agile/Prototyping} lifecycle across five two-week sprints: Sprint~1 (Architecture \& IndexedDB setup), Sprint~2 (Deterministic alarm scheduler), Sprint~3 (Edge Wasm OCR pipeline), Sprint~4 (Clinical food-drug matrix \& NDA directory), and Sprint~5 (Family Hub sync, PWA PDF export, and integration testing).
 
 Requirements are elicited through: (1)~\textbf{Document Review} of the \textit{Uganda Clinical Guidelines 2023} \cite{moh2023guidelines}, the \textit{NDA Register of Licensed Drug Outlets} \cite{nda2024register}, and FAO Eastern Africa Food Tables \cite{fao2019food}; (2)~\textbf{Stakeholder Consultations} in Eastern Uganda with community pharmacists ($N=6$) and chronic disease outpatients ($N=10$) in Soroti Municipality; and (3)~\textbf{Technical Profiling} of entry-tier smartphones (Transsion Tecno and Infinix series) to quantify memory limits and camera constraints. System datasets are compiled from NLM RxNorm \cite{rxnorm2024}, the NDA register \cite{nda2024register}, and FAO nutrition tables \cite{fao2019food}.
 
@@ -46,13 +46,13 @@ Table~\ref{tab:tools_technologies} enumerates the development stack, test device
     \toprule
     \textbf{Category} & \textbf{Tool / Technology} & \textbf{Engineering Purpose / Justification} \\
     \midrule
-    \textbf{Workstation} & Linux (Ubuntu 24.04 LTS), 16GB RAM, Core i7 & Primary development environment for coding, testing, and compilation. \\
+    \textbf{Workstation} & Linux (Ubuntu 24.04 LTS), 16GB RAM, Core i7 & Primary development environment for software implementation and local testing. \\
     \textbf{Test Handsets} & Tecno Spark (Android 11), Samsung Galaxy A-series (Android 14) & Representative real-world test devices reflecting entry-tier and mid-tier handsets in Uganda. \\
     \textbf{Frontend} & React 18, Vite 8, TypeScript & Component-based client architecture providing type safety and rapid rendering. \\
-    \textbf{Mobile Runtime} & Capacitor 8 Core & Native bridge providing access to device camera, filesystem, and local notifications. \\
-    \textbf{Local Datastore} & IndexedDB via Dexie.js & Transactional client-side database for robust offline storage. \\
+    \textbf{Mobile Runtime} & Capacitor 8 Core & Native bridge providing access to device hardware, local filesystem, and system notifications. \\
+    \textbf{Local Datastore} & IndexedDB via Dexie.js & Transactional client-side database for durable offline storage. \\
     \textbf{Computer Vision} & Tesseract.js (Wasm / Web Worker) & Edge-compatible OCR executing client-side without cloud API reliance. \\
-    \textbf{Cloud Services} & Firebase Firestore, Firebase Auth & Scalable cloud synchronization, authentication, and secure remote backup. \\
+    \textbf{Cloud Services} & Firebase Firestore, Firebase Auth & Scalable cloud database, user authentication, and encrypted backup. \\
     \textbf{Styling \& UI} & Tailwind CSS, Lucide Icons & Responsive, utility-first styling ensuring touch accessibility. \\
     \textbf{Testing Suites} & Vitest, Playwright, Chrome DevTools & Unit testing, end-to-end integration testing, and performance profiling. \\
     \bottomrule
@@ -90,7 +90,7 @@ System requirements are partitioned into Functional Requirements (Table~\ref{tab
     \toprule
     \textbf{Req ID} & \textbf{Requirement Title} & \textbf{The System Shall...} & \textbf{Primary Actor} & \textbf{Target Obj.} & \textbf{Priority} \\
     \midrule
-    \textbf{FR1} & Automated Packaging Scanning & Capture blister packaging images and extract drug name, dosage, and form using on-device Wasm OCR. & Patient & Obj.~(ii) & Must Have \\
+    \textbf{FR1} & Automated Packaging Scanning & Capture blister packaging images and extract drug identity and dosage parameters using on-device Wasm OCR. & Patient & Obj.~(ii) & Must Have \\
     \midrule
     \textbf{FR2} & Deterministic Offline Schedule & Support interval, time-specific, and meal-aligned dosing schedules stored in local persistence. & Patient & Obj.~(iii) & Must Have \\
     \midrule
@@ -104,7 +104,7 @@ System requirements are partitioned into Functional Requirements (Table~\ref{tab
     \midrule
     \textbf{FR7} & Clinical PDF Report Generator & Export longitudinal adherence percentages, missed dose records, and logged vitals as standardized PDF summaries. & Clinician & Obj.~(iv) & Should Have \\
     \midrule
-    \textbf{FR8} & Holistic Wellness Journal & Enable logging of physiological vitals (blood pressure, blood glucose) and self-reported adverse symptoms. & Patient & Obj.~(iii) & Could Have \\
+    \textbf{FR8} & Health Metrics Journal & Enable logging of physiological vitals (blood pressure, blood glucose) and self-reported adverse symptoms. & Patient & Obj.~(iii) & Could Have \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -121,7 +121,7 @@ System requirements are partitioned into Functional Requirements (Table~\ref{tab
     \midrule
     \textbf{NFR1} & Offline Availability & Core scheduling, alarms, dose logging, and food screening must operate with 0\% network dependence. & 100\% offline availability & Disconnected sandbox testing \\
     \midrule
-    \textbf{NFR2} & Execution Latency & Local database queries and edge OCR packaging parsing must execute without UI thread freeze. & OCR $< 2.5\,\text{s}$; DB $< 50\,\text{ms}$ & Chrome DevTools \& Android profiler \\
+    \textbf{NFR2} & Execution Latency & Local database queries and edge OCR packaging parsing must execute without UI thread freeze. & OCR $< 2.5\,\text{s}$, DB $< 50\,\text{ms}$ & Chrome DevTools \& Android profiler \\
     \midrule
     \textbf{NFR3} & Alarm Reliability & Scheduled dose reminder alarms must fire accurately at the designated time across Doze states. & $\ge 99.5\%$ on-time trigger fidelity & Automated timing log delta analysis \\
     \midrule
@@ -129,7 +129,7 @@ System requirements are partitioned into Functional Requirements (Table~\ref{tab
     \midrule
     \textbf{NFR5} & Hardware Efficiency & Background reminder scheduling and local queue processes must minimize battery drain on budget devices. & $< 3\%$ battery drain per 24 hours & Android Battery Historian benchmark \\
     \midrule
-    \textbf{NFR6} & Security \& Privacy & Local health records isolated in sandboxed storage; cloud synchronization encrypted via TLS 1.3. & Zero unencrypted plaintext transmission & Network packet inspection (Wireshark) \\
+    \textbf{NFR6} & Security \& Privacy & Local health records isolated in sandboxed storage, with cloud synchronization encrypted via TLS 1.3. & Zero unencrypted plaintext transmission & Network packet inspection (Wireshark) \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -150,15 +150,15 @@ The system will undergo multi-tier verification: automated Vitest unit testing, 
     \midrule
     \textbf{Unit Test} & Recurrence Engine & Leap-year, timezone shift, irregular interval dosing & Deterministic computation of next dosing epoch timestamp & 100\% pass (Vitest) \\
     \midrule
-    \textbf{Unit Test} & Food Interaction Guard & Co-ingestion: Enalapril + Matooke; Ciprofloxacin + Mukene & Automated trigger of Level 3 contraindication warning alert & 100\% rule recall \\
+    \textbf{Unit Test} & Food Interaction Guard & Co-ingestion: Enalapril + Matooke, Ciprofloxacin + Mukene & Automated trigger of Level 3 contraindication warning alert & 100\% rule recall \\
     \midrule
-    \textbf{Integration} & Offline Mutation Queue & Create reminder $\to$ airplane mode $\to$ log 5 doses $\to$ reconnect & Zero data loss; ordered FIFO flush to Firestore with retry backoff & 0\% drop rate \\
+    \textbf{Integration} & Offline Mutation Queue & Create reminder $\to$ airplane mode $\to$ log 5 doses $\to$ reconnect & Zero data loss, with ordered FIFO flush to Firestore with retry backoff & 0\% drop rate \\
     \midrule
-    \textbf{Edge Stress} & Wasm Packaging OCR & 100 degraded/curved blister foils under low ambient light ($<50\,\text{lux}$) & Binarization filter enhancement; drug name and dosage parsed & CER $< 5.0\%$; latency $<2.5\,\text{s}$ \\
+    \textbf{Edge Stress} & Wasm Packaging OCR & 100 degraded/curved blister foils under low ambient light ($<50\,\text{lux}$) & Binarization filter enhancement; drug name and strength parsed & CER $< 5.0\%$, latency $<2.5\,\text{s}$ \\
     \midrule
-    \textbf{Edge Stress} & Local Notification Daemon & Device in Android deep Doze standby for 6 continuous hours & Exact alarm wakes CPU partial lock; audio-visual alert fires & Trigger delta $\Delta t \le 1.0\,\text{s}$ \\
+    \textbf{Edge Stress} & Local Notification Daemon & Device in Android deep Doze standby for 6 continuous hours & Exact alarm wakes CPU partial lock, and audio-visual alert fires & Trigger delta $\Delta t \le 1.0\,\text{s}$ \\
     \midrule
-    \textbf{Field Pilot} & End-to-End System & 2-week continuous outpatient deployment across $N=50$ users & Longitudinal dose logging; weekly PDF report generation & SUS Score $\ge 75/100$ \\
+    \textbf{Field Pilot} & End-to-End System & 2-week continuous outpatient deployment across $N=50$ users & Longitudinal dose logging and weekly PDF report generation & SUS Score $\ge 75/100$ \\
     \bottomrule
   \end{tabularx}
 \end{table}
@@ -173,17 +173,17 @@ The system will undergo multi-tier verification: automated Vitest unit testing, 
     \toprule
     \textbf{Identified Risk} & \textbf{Likelihood} & \textbf{Impact} & \textbf{Engineering Mitigation Strategy} \\
     \midrule
-    \textbf{OCR Failure on Damaged Foil} & Medium & High & Implement fallback manual search with auto-suggest formulary lookup; allow user editing of extracted OCR fields. \\
+    \textbf{OCR Failure on Damaged Foil} & Medium & High & Implement fallback manual search with auto-suggest formulary lookup, allowing user editing of extracted OCR fields. \\
     \midrule
     \textbf{OS Background Alarm Throttling} & Medium & High & Utilize platform exact alarm permissions (\texttt{SCHEDULE\_EXACT\_ALARM}) and persistent local notification channels. \\
     \midrule
     \textbf{Intermittent Cellular Connectivity} & High & Medium & Enforce offline-first architecture with local IndexedDB persistence and transactional FIFO mutation queues. \\
     \midrule
-    \textbf{Participant Attrition in Pilot} & Medium & Medium & Recruit an oversampled cohort ($N=60$) to ensure target sample size ($N=50$) is achieved; provide airtime stipends. \\
+    \textbf{Participant Attrition in Pilot} & Medium & Medium & Recruit an oversampled cohort ($N=60$) to ensure target sample size ($N=50$) is achieved, with airtime stipends provided. \\
     \midrule
     \textbf{Incomplete Local Food Data} & Low & High & Scope food rules to prominent, scientifically verified staples (\textit{Matooke}, \textit{Mukene}, \textit{G-nut sauce}) validated by clinical pharmacists. \\
     \midrule
-    \textbf{Scope Creep Delaying Submission} & Medium & High & Adhere strictly to 5-sprint Agile plan; prioritize core mobile reminder app before secondary web extensions. \\
+    \textbf{Scope Creep Delaying Submission} & Medium & High & Adhere strictly to 5-sprint Agile plan, prioritizing core mobile reminder app before secondary web extensions. \\
     \bottomrule
   \end{tabularx}
 \end{table}
