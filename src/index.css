@@ -322,3 +322,162 @@ main,
 .overflow-y-auto {
   overscroll-behavior: contain;
 }
+
+/* Bento Grid Micro-animations & Interactive Effects */
+@keyframes bento-scanner {
+  0% {
+    top: 4%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 94%;
+    opacity: 0;
+  }
+}
+
+.animate-bento-scanner {
+  animation: bento-scanner 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes bento-float-plane {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  35% {
+    transform: translate(2px, -3px) rotate(3deg);
+  }
+  70% {
+    transform: translate(-1px, 2px) rotate(-1.5deg);
+  }
+}
+
+.animate-bento-plane {
+  animation: bento-float-plane 3.6s ease-in-out infinite;
+}
+
+@keyframes bento-heartbeat {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(244, 63, 94, 0));
+  }
+  14% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 7px rgba(244, 63, 94, 0.4));
+  }
+  28% {
+    transform: scale(1.02);
+    filter: drop-shadow(0 0 2px rgba(244, 63, 94, 0.2));
+  }
+  42% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 5px rgba(244, 63, 94, 0.3));
+  }
+  70% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0px rgba(244, 63, 94, 0));
+  }
+}
+
+.animate-bento-heartbeat {
+  animation: bento-heartbeat 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes bento-bell-swing {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-bento-bell {
+  transform-origin: top center;
+  animation: bento-bell-swing 3.2s ease-in-out infinite;
+}
+
+@keyframes bento-shield-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.animate-bento-shield {
+  animation: bento-shield-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes bento-pill-float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(6deg);
+  }
+}
+
+.animate-bento-pill {
+  animation: bento-pill-float 3.5s ease-in-out infinite;
+}
+
+@keyframes bento-radar-ping {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  70%, 100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.animate-bento-ping {
+  animation: bento-radar-ping 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes bento-bar-1 { 0%, 100% { height: 35%; } 50% { height: 85%; } }
+@keyframes bento-bar-2 { 0%, 100% { height: 75%; } 50% { height: 40%; } }
+@keyframes bento-bar-3 { 0%, 100% { height: 50%; } 50% { height: 95%; } }
+@keyframes bento-bar-4 { 0%, 100% { height: 90%; } 50% { height: 30%; } }
+
+.animate-bento-bar-1 { animation: bento-bar-1 2s ease-in-out infinite; }
+.animate-bento-bar-2 { animation: bento-bar-2 2.3s ease-in-out infinite; }
+.animate-bento-bar-3 { animation: bento-bar-3 1.8s ease-in-out infinite; }
+.animate-bento-bar-4 { animation: bento-bar-4 2.1s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-bento-scanner,
+  .animate-bento-plane,
+  .animate-bento-heartbeat,
+  .animate-bento-bell,
+  .animate-bento-shield,
+  .animate-bento-pill,
+  .animate-bento-ping,
+  .animate-bento-bar-1,
+  .animate-bento-bar-2,
+  .animate-bento-bar-3,
+  .animate-bento-bar-4 {
+    animation: none !important;
+  }
+}
+

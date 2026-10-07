@@ -413,201 +413,300 @@ export default function Dashboard() {
           Tools &amp; Services
         </h2>
 
-        {/* Apple Utility Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-
+        {/* Apple Dynamic Bento Grid */}
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3.5"
+        >
           {/* Hero Tile: Quick Scan (col-span-2) */}
-          <button
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.98 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[0].to)}
-            className="col-span-2 sm:col-span-2 rounded-[18px] p-6 min-h-[170px] flex flex-col justify-between items-start text-left border border-border bg-[#272729] text-white hover:brightness-105 active:scale-[0.98] transition-all"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 sm:p-6 min-h-[175px] sm:min-h-[195px] flex flex-col justify-between items-start text-left border border-white/10 bg-gradient-to-br from-neutral-900 via-neutral-900 to-indigo-950/70 text-white relative overflow-hidden group shadow-md hover:shadow-xl hover:shadow-cyan-500/10 transition-all duration-300"
           >
-            <div className="flex items-center justify-between w-full">
-              <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white">
-                <Camera size={20} />
+            {/* Animated Laser Scanning Beam */}
+            <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_14px_rgba(34,211,238,0.9)] animate-bento-scanner pointer-events-none" />
+
+            {/* Ambient Apple Intelligence Glows */}
+            <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/25 transition-all duration-700" />
+            <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-violet-600/20 rounded-full blur-3xl pointer-events-none group-hover:bg-violet-600/30 transition-all duration-700" />
+
+            {/* Header: Camera Squircle + AI Vision Badge */}
+            <div className="flex items-center justify-between w-full relative z-10">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center text-cyan-300 group-hover:scale-105 group-hover:border-cyan-400/40 transition-all duration-300 shadow-sm">
+                <Camera size={20} className="group-hover:rotate-6 transition-transform duration-300" />
               </div>
-              <span className="text-[11px] font-normal px-2.5 py-0.5 rounded-full bg-white/10 text-white/90">
-                AI Vision
+              <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-white/95 flex items-center gap-1.5 shadow-xs">
+                <Sparkles size={11} className="text-cyan-300 animate-pulse" />
+                <span>AI Vision</span>
               </span>
             </div>
 
-            <div>
-              <p className="text-[12px] font-normal text-[#cccccc] mb-0.5">Recognition</p>
-              <h3 className="text-[22px] font-semibold leading-tight tracking-tight text-white">
+            {/* Footer Text */}
+            <div className="relative z-10">
+              <p className="text-[11px] font-semibold tracking-wider uppercase text-cyan-300/80 mb-0.5">Recognition</p>
+              <h3 className="text-[22px] sm:text-[24px] font-semibold leading-tight tracking-tight text-white">
                 Quick Scan
               </h3>
-              <p className="text-[13px] text-[#cccccc] mt-1 font-normal">
+              <p className="text-[13px] text-white/70 mt-1 font-normal leading-snug">
                 Identify pills, bottles, and prescriptions instantly
               </p>
             </div>
-          </button>
+          </motion.button>
 
-          {/* Metric Tile: Adherence */}
-          <button
+          {/* Metric Tile: Adherence (col-span-1) */}
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate("/history")}
-            className="col-span-1 rounded-[18px] p-4.5 min-h-[120px] flex flex-col justify-between text-left border border-border bg-card hover:border-primary/40 active:scale-[0.97] transition-all"
+            className="col-span-1 rounded-[22px] p-4.5 min-h-[128px] flex flex-col justify-between text-left border border-border/80 bg-card/80 hover:bg-card dark:bg-card/60 backdrop-blur-xl hover:border-sky-500/40 hover:shadow-lg hover:shadow-sky-500/5 group relative overflow-hidden transition-all duration-300"
           >
-            <div className="flex items-center justify-between w-full">
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary">
-                <History size={16} />
+            <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-sky-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-sky-500/20 transition-all" />
+            <div className="flex items-center justify-between w-full relative z-10">
+              <div className="w-8.5 h-8.5 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 group-hover:scale-110 transition-transform duration-300">
+                <History size={16} className="group-hover:-rotate-45 transition-transform duration-500" />
               </div>
+              {/* Apple Activity Progress Ring */}
+              <svg width="32" height="32" viewBox="0 0 36 36" className="transform -rotate-90 shrink-0">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted/40" />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="14"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeDasharray="88"
+                  strokeDashoffset={88 - (88 * Math.min(Math.max(adherencePercent, 0), 100)) / 100}
+                  strokeLinecap="round"
+                  className="text-sky-500 transition-all duration-1000 ease-out"
+                />
+              </svg>
             </div>
-            <div>
-              <p className="text-[22px] font-semibold leading-none tracking-tight text-foreground">
+            <div className="relative z-10">
+              <p className="text-[22px] font-semibold leading-none tracking-tight text-foreground flex items-baseline">
                 {adherencePercent}<span className="text-[13px] font-normal text-muted-foreground ml-0.5">%</span>
               </p>
-              <p className="text-[12px] font-normal text-muted-foreground mt-1">Adherence</p>
+              <p className="text-[12px] text-muted-foreground font-medium mt-1">Adherence</p>
             </div>
-          </button>
+          </motion.button>
 
-          {/* Metric Tile: Pill Stock */}
-          <button
+          {/* Metric Tile: Pill Stock / Med Vault (col-span-1) */}
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate("/medvault")}
-            className="col-span-1 rounded-[18px] p-4.5 min-h-[120px] flex flex-col justify-between text-left border border-border bg-card hover:border-primary/40 active:scale-[0.97] transition-all"
+            className="col-span-1 rounded-[22px] p-4.5 min-h-[128px] flex flex-col justify-between text-left border border-border/80 bg-card/80 hover:bg-card dark:bg-card/60 backdrop-blur-xl hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/5 group relative overflow-hidden transition-all duration-300"
           >
-            <div className="flex items-center justify-between w-full">
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary">
-                <Package2 size={16} />
+            <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/20 transition-all" />
+            <div className="flex items-center justify-between w-full relative z-10">
+              <div className="w-8.5 h-8.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform duration-300">
+                <Package2 size={16} className="group-hover:-translate-y-0.5 transition-transform duration-300" />
+              </div>
+              {/* Dynamic Inventory Level Equalizer Bars */}
+              <div className="flex items-end gap-[3px] h-5.5 px-0.5 shrink-0">
+                <span className="w-[3px] rounded-full bg-emerald-500 animate-bento-bar-1" />
+                <span className="w-[3px] rounded-full bg-emerald-500 animate-bento-bar-2" />
+                <span className="w-[3px] rounded-full bg-emerald-500 animate-bento-bar-3" />
+                <span className="w-[3px] rounded-full bg-emerald-500 animate-bento-bar-4" />
               </div>
             </div>
-            <div>
+            <div className="relative z-10">
               <p className="text-[22px] font-semibold leading-none tracking-tight text-foreground">
-                {formatCompactNumber(totalPillsCount)}
+                {formatCompactNumber(totalPillsCount)}<span className="text-[11px] font-normal text-muted-foreground ml-1">units</span>
               </p>
-              <p className="text-[12px] font-normal text-muted-foreground mt-1">Med Vault</p>
+              <p className="text-[12px] text-muted-foreground font-medium mt-1">Med Vault</p>
             </div>
-          </button>
+          </motion.button>
 
-          {/* Wide Tile: Family Hub (col-span-2) */}
-          <button
+          {/* Wide Tile: Family Hub / Circle of Care (col-span-2) */}
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.98 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[1].to)}
-            className="col-span-2 sm:col-span-2 rounded-[18px] p-4.5 min-h-[80px] flex items-center gap-3.5 border border-border bg-card hover:border-primary/40 active:scale-[0.98] transition-all"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-4.5 min-h-[82px] flex items-center gap-3.5 border border-border/80 bg-card/80 hover:bg-card dark:bg-card/60 backdrop-blur-xl hover:border-teal-500/40 hover:shadow-lg hover:shadow-teal-500/5 group relative overflow-hidden transition-all duration-300"
           >
-            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
+            <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-teal-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-teal-500/20 transition-all" />
+            <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform duration-300 shrink-0">
               <Users size={18} />
             </div>
-            <div className="flex-1 text-left min-w-0">
+            <div className="flex-1 text-left min-w-0 relative z-10">
               <p className="text-[15px] font-medium leading-tight text-foreground truncate">
                 {quickActions[1].label}
               </p>
-              <p className="text-[12px] text-muted-foreground mt-0.5">Circle of Care</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+                Circle of Care
+              </p>
             </div>
-            <div className="flex -space-x-1.5 shrink-0">
+            <div className="flex -space-x-1.5 shrink-0 relative z-10">
               {patients.slice(0, 3).map((p, idx) => (
                 <div
                   key={p.id || idx}
-                  className="w-6 h-6 rounded-full border border-card bg-muted text-[10px] font-medium text-foreground flex items-center justify-center uppercase"
+                  className="w-6.5 h-6.5 rounded-full border border-card bg-muted text-[10px] font-medium text-foreground flex items-center justify-center uppercase shadow-xs group-hover:translate-x-0.5 transition-transform"
                 >
                   {p.name.charAt(0)}
                 </div>
               ))}
               {patients.length === 0 && (
-                <div className="w-6 h-6 rounded-full border border-dashed border-border flex items-center justify-center text-muted-foreground">
-                  <Plus size={10} />
+                <div className="w-6.5 h-6.5 rounded-full border border-dashed border-teal-500/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                  <Plus size={11} />
                 </div>
               )}
             </div>
-          </button>
+          </motion.button>
 
           {/* Metric Tile: Reminders (col-span-1) */}
-          <button
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate("/reminders")}
-            className="col-span-1 rounded-[18px] p-4.5 min-h-[120px] flex flex-col justify-between text-left border border-border bg-card hover:border-primary/40 active:scale-[0.97] transition-all"
+            className="col-span-1 rounded-[22px] p-4.5 min-h-[128px] flex flex-col justify-between text-left border border-border/80 bg-card/80 hover:bg-card dark:bg-card/60 backdrop-blur-xl hover:border-violet-500/40 hover:shadow-lg hover:shadow-violet-500/5 group relative overflow-hidden transition-all duration-300"
           >
-            <div className="flex items-center justify-between w-full">
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary">
-                <Bell size={16} />
+            <div className="absolute -top-6 -right-6 w-20 h-20 bg-violet-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-violet-500/20 transition-all" />
+            <div className="flex items-center justify-between w-full relative z-10">
+              <div className="w-8.5 h-8.5 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-500 group-hover:scale-110 transition-transform duration-300">
+                <Bell size={16} className="animate-bento-bell" />
               </div>
-              <span className="text-[11px] font-normal text-muted-foreground">
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
                 {takenToday}/{expectedDosesToday}
               </span>
             </div>
-            <div>
+            <div className="relative z-10">
               <p className="text-[14px] font-medium text-foreground leading-tight">Reminders</p>
               <p className="text-[12px] text-muted-foreground mt-0.5">
                 {expectedDosesToday - takenToday <= 0 ? "Completed" : `${expectedDosesToday - takenToday} remaining`}
               </p>
             </div>
-          </button>
+          </motion.button>
 
           {/* Small Tile: Wellness (col-span-1) */}
-          <button
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[2].to)}
-            className="col-span-1 rounded-[18px] p-4.5 min-h-[120px] flex flex-col justify-between text-left border border-border bg-card hover:border-primary/40 active:scale-[0.97] transition-all"
+            className="col-span-1 rounded-[22px] p-4.5 min-h-[128px] flex flex-col justify-between text-left border border-border/80 bg-card/80 hover:bg-card dark:bg-card/60 backdrop-blur-xl hover:border-rose-500/40 hover:shadow-lg hover:shadow-rose-500/5 group relative overflow-hidden transition-all duration-300"
           >
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary">
-              <Heart size={16} />
+            <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-rose-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-rose-500/20 transition-all" />
+            <div className="flex items-center justify-between w-full relative z-10">
+              <div className="w-8.5 h-8.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 group-hover:scale-110 transition-transform duration-300">
+                <Heart size={16} className="animate-bento-heartbeat" />
+              </div>
+              <span className="w-2 h-2 rounded-full bg-rose-500/40 animate-pulse" />
             </div>
-            <div>
+            <div className="relative z-10">
               <p className="text-[14px] font-medium text-foreground leading-tight">Wellness</p>
               <p className="text-[12px] text-muted-foreground mt-0.5">Health Log</p>
             </div>
-          </button>
+          </motion.button>
 
           {/* Metric Tile: Medications Cabinet (col-span-1) */}
-          <button
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate("/medications")}
-            className="col-span-1 rounded-[18px] p-4.5 min-h-[120px] flex flex-col justify-between text-left border border-border bg-card hover:border-primary/40 active:scale-[0.97] transition-all"
+            className="col-span-1 rounded-[22px] p-4.5 min-h-[128px] flex flex-col justify-between text-left border border-border/80 bg-card/80 hover:bg-card dark:bg-card/60 backdrop-blur-xl hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 group relative overflow-hidden transition-all duration-300"
           >
-            <div className="flex items-center justify-between">
-              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary">
-                <Pill size={16} />
+            <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-indigo-500/20 transition-all" />
+            <div className="flex items-center justify-between relative z-10">
+              <div className="w-8.5 h-8.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform duration-300">
+                <Pill size={16} className="animate-bento-pill group-hover:rotate-45 transition-transform duration-500" />
               </div>
-              <span className="text-[11px] font-normal text-muted-foreground">{scopedMedicines.length}</span>
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                {scopedMedicines.length}
+              </span>
             </div>
-            <div>
+            <div className="relative z-10">
               <p className="text-[14px] font-medium text-foreground leading-tight">Medications</p>
               <p className="text-[12px] text-muted-foreground mt-0.5">Cabinet</p>
             </div>
-          </button>
+          </motion.button>
 
           {/* Small Tile: Travel (col-span-1) */}
-          <button
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[3].to)}
-            className="col-span-1 rounded-[18px] p-4.5 min-h-[120px] flex flex-col justify-between text-left border border-border bg-card hover:border-primary/40 active:scale-[0.97] transition-all"
+            className="col-span-1 rounded-[22px] p-4.5 min-h-[128px] flex flex-col justify-between text-left border border-border/80 bg-card/80 hover:bg-card dark:bg-card/60 backdrop-blur-xl hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/5 group relative overflow-hidden transition-all duration-300"
           >
-            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary">
-              <Plane size={16} />
+            <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-blue-500/10 rounded-full blur-2xl pointer-events-none group-hover:bg-blue-500/20 transition-all" />
+            <div className="w-8.5 h-8.5 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform duration-300 relative z-10">
+              <Plane size={16} className="animate-bento-plane" />
             </div>
-            <div>
+            <div className="relative z-10">
               <p className="text-[14px] font-medium text-foreground leading-tight">Travel</p>
               <p className="text-[12px] text-muted-foreground mt-0.5">Companion</p>
             </div>
-          </button>
+          </motion.button>
 
           {/* Wide Tile: Safety Check (col-span-2) */}
-          <button
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.98 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[4].to)}
-            className="col-span-2 sm:col-span-2 rounded-[18px] p-4.5 min-h-[80px] flex items-center gap-3.5 border border-border bg-card hover:border-primary/40 active:scale-[0.98] transition-all"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-4.5 min-h-[82px] flex items-center gap-3.5 border border-border/80 bg-card/80 hover:bg-card dark:bg-card/60 backdrop-blur-xl hover:border-amber-500/40 hover:shadow-lg hover:shadow-amber-500/5 group relative overflow-hidden transition-all duration-300"
           >
-            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
-              <ShieldAlert size={18} />
+            <div className="absolute -right-8 -bottom-8 w-28 h-28 bg-amber-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/20 transition-all" />
+            <div className="relative w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform duration-300 shrink-0">
+              <span className="absolute inset-0 rounded-xl bg-amber-500/20 animate-bento-ping pointer-events-none" />
+              <ShieldAlert size={18} className="animate-bento-shield relative z-10" />
             </div>
-            <div className="flex-1 text-left min-w-0">
+            <div className="flex-1 text-left min-w-0 relative z-10">
               <p className="text-[15px] font-medium leading-tight text-foreground">Safety Check</p>
-              <p className="text-[12px] text-muted-foreground mt-0.5">Rx Interactions</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">Rx Interactions &amp; Allergies</p>
             </div>
-            <span className="text-[12px] font-normal px-3 py-1 rounded-full bg-muted text-foreground border border-border shrink-0">
+            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-amber-500/10 group-hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/20 transition-colors shrink-0 relative z-10">
               Review
             </span>
-          </button>
+          </motion.button>
 
-          {/* Wide Tile: Reports (col-span-2, sm:col-span-4) */}
-          <button
+          {/* Wide Tile: Medical Reports (col-span-2, sm:col-span-4) */}
+          <motion.button
+            variants={item}
+            whileTap={{ scale: 0.98 }}
+            whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[7].to)}
-            className="col-span-2 sm:col-span-4 rounded-[18px] p-4.5 min-h-[80px] flex items-center gap-3.5 border border-border bg-card hover:border-primary/40 active:scale-[0.98] transition-all"
+            className="col-span-2 sm:col-span-4 rounded-[22px] p-4.5 min-h-[86px] flex items-center gap-3.5 border border-border/80 bg-card/80 hover:bg-card dark:bg-card/60 backdrop-blur-xl hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 group relative overflow-hidden transition-all duration-300"
           >
-            <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-primary shrink-0">
-              <FileText size={18} />
+            <div className="absolute -left-6 -bottom-6 w-28 h-28 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-all" />
+            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300 shrink-0">
+              <FileText size={18} className="group-hover:rotate-6 transition-transform duration-300" />
             </div>
-            <div className="flex-1 text-left min-w-0">
+            <div className="flex-1 text-left min-w-0 relative z-10">
               <p className="text-[15px] font-medium leading-tight text-foreground">Medical Reports</p>
               <p className="text-[12px] text-muted-foreground mt-0.5">Clinical PDF Export &amp; Analytics</p>
             </div>
-            <span className="text-[12px] font-normal px-3 py-1 rounded-full bg-muted text-foreground border border-border shrink-0">
+            {/* Clinical ECG / Sparkline Trend Graphic */}
+            <div className="hidden sm:block shrink-0 w-24 h-7 opacity-75 group-hover:opacity-100 transition-opacity relative z-10">
+              <svg className="w-full h-full" viewBox="0 0 70 22" fill="none">
+                <path
+                  d="M2 18 C 12 18, 16 7, 26 12 C 36 17, 42 3, 52 8 C 60 12, 64 5, 68 4"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-indigo-500 dark:text-indigo-400"
+                />
+                <circle cx="68" cy="4" r="2.5" fill="currentColor" className="text-indigo-500 dark:text-indigo-400 animate-pulse" />
+              </svg>
+            </div>
+            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-muted group-hover:bg-muted/80 text-foreground border border-border/80 transition-colors shrink-0 relative z-10">
               Export
             </span>
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </div>
 
       {/* 8. Wellness Pulse */}

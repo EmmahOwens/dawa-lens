@@ -81,6 +81,8 @@ export type IconProps = {
   style?: React.CSSProperties;
   /** Override the Iconly set style */
   set?: "bold" | "broken" | "bulk" | "light" | "two-tone" | "curved";
+  fill?: string;
+  fillOpacity?: number | string;
 };
 
 /** Drop-in replacement for the LucideIcon type used in the app */
