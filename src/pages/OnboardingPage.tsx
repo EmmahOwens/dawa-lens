@@ -7,8 +7,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AppleDatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -110,48 +109,19 @@ export default function OnboardingPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="dob" className="text-xs font-semibold text-foreground uppercase tracking-wider">Date of Birth</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-full h-11 pl-4 text-left font-normal bg-card border-border hover:bg-muted text-foreground transition-all rounded-full text-sm",
-                        !dateOfBirth && "text-muted-foreground",
-                        loading && "opacity-50 cursor-not-allowed"
-                      )}
-                      disabled={loading}
-                    >
-                      <CalendarIcon className="mr-2.5 h-4 w-4 text-muted-foreground" />
-                      {dateOfBirth ? (
-                        format(new Date(dateOfBirth), "MMMM d, yyyy")
-                      ) : (
-                        <span>Select your date of birth</span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 border-border rounded-[18px]" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dateOfBirth ? new Date(dateOfBirth) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          const offset = date.getTimezoneOffset();
-                          const localDate = new Date(date.getTime() - (offset*60*1000));
-                          setDateOfBirth(localDate.toISOString().split('T')[0]);
-                        } else {
-                          setDateOfBirth("");
-                        }
-                      }}
-                      disabled={(date) =>
-                        date > new Date() || date < new Date("1900-01-01")
-                      }
-                      initialFocus
-                      captionLayout="dropdown-buttons"
-                      fromYear={1900}
-                      toYear={new Date().getFullYear()}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <AppleDatePicker
+                  id="dob"
+                  value={dateOfBirth ? new Date(dateOfBirth) : undefined}
+                  onChange={(date, dateStr) => {
+                    setDateOfBirth(dateStr || "");
+                  }}
+                  disabled={(date) =>
+                    date > new Date() || date < new Date("1900-01-01")
+                  }
+                  fromYear={1900}
+                  toYear={new Date().getFullYear()}
+                  placeholder="Select your date of birth"
+                />
                 <p className="text-[11px] text-muted-foreground mt-1">
                   Used to calculate your age for dosage safety checks.
                 </p>

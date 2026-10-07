@@ -830,8 +830,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/calendar.tsx": {
-    "mtime": 1778881360.8471074,
-    "ast_hash": "86f0a9ac117be68c425655641a6eec45",
+    "mtime": 1791354048.6208746,
+    "ast_hash": "2d8864b4ce9dedac14a7c8bf5c018b7e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/card.tsx": {
@@ -1160,8 +1160,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AddReminderPage.tsx": {
-    "mtime": 1791295755.9947875,
-    "ast_hash": "1c9f01eb0d648db2c03a282de684ee95",
+    "mtime": 1791354959.023102,
+    "ast_hash": "6c344ee81997d4a4b69312a30cc7ccec",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AuthPage.tsx": {
@@ -1210,8 +1210,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/OnboardingPage.tsx": {
-    "mtime": 1791294006.8043356,
-    "ast_hash": "3bfc954ab9b405b508e275cc252a0ad5",
+    "mtime": 1791355366.3457832,
+    "ast_hash": "77f4a6fdd7ac3a3f2b75477b6160dc75",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/RemindersPage.tsx": {
@@ -4752,6 +4752,16 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/DESIGN.md": {
     "mtime": 1791284477.876115,
     "ast_hash": "9b1bde505a01daafb7e07263fe388bbe",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/date-picker.tsx": {
+    "mtime": 1791355583.1632388,
+    "ast_hash": "5e6075d94e9d20e077cca455328353b8",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/time-picker.tsx": {
+    "mtime": 1791355465.5521827,
+    "ast_hash": "1db4bda10e100115d8274b34ad221275",
     "semantic_hash": ""
   }
 }

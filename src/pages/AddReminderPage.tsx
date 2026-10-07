@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound, WifiOff, Package, AlertTriangle } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AppleTimePicker } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -657,12 +658,10 @@ export default function AddReminderPage() {
               </Label>
               <div className="space-y-3">
                 {times.map((t, idx) => (
-                  <Input
+                  <AppleTimePicker
                     key={idx}
-                    type="time"
                     value={t}
-                    onChange={(e) => {
-                      const newTime = e.target.value;
+                    onChange={(newTime) => {
                       if (!newTime) {
                         const newTimes = [...times];
                         newTimes[idx] = "";
@@ -678,7 +677,6 @@ export default function AddReminderPage() {
                         setTimes(newTimes);
                       }
                     }}
-                    className="h-12 rounded-xl border-border/50 bg-muted/20 focus:bg-background transition-all font-medium text-lg"
                   />
                 ))}
               </div>
