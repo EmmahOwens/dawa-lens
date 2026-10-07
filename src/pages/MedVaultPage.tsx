@@ -771,52 +771,58 @@ export default function MedVaultPage() {
       </div>
 
       {/* Hero Stats Tile */}
-      <div className="relative overflow-hidden rounded-[18px] border border-border p-6 mb-8 bg-[#272729] text-white transition-all">
+      <div className="relative overflow-hidden rounded-[22px] border border-teal-400/25 p-6 mb-8 bg-gradient-to-br from-[#0f766e] via-[#115e59] to-[#042f2e] text-white shadow-lg shadow-teal-950/20 transition-all">
+        {/* Ambient Jewel Glows */}
+        <div className="absolute -top-16 -right-16 w-48 h-48 bg-teal-400/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-white">
+            <div className="h-8 w-8 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-teal-100 shadow-xs">
               <Package2 size={16} />
             </div>
-            <span className="text-[12px] font-normal text-[#cccccc]">
+            <span className="text-[12px] font-medium text-teal-100">
               Supply Overview
             </span>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-white">{tracked.length}</p>
-              <p className="text-[12px] text-[#cccccc] mt-0.5">
+              <p className="text-[28px] sm:text-[34px] font-bold leading-tight tracking-tight text-white">{tracked.length}</p>
+              <p className="text-[12px] font-medium text-teal-100/80 mt-0.5">
                 Tracked
               </p>
             </div>
             <div>
-              <p className="text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-white">{totalTablets}</p>
-              <p className="text-[12px] text-[#cccccc] mt-0.5">
+              <p className="text-[28px] sm:text-[34px] font-bold leading-tight tracking-tight text-white">{totalTablets}</p>
+              <p className="text-[12px] font-medium text-teal-100/80 mt-0.5">
                 Total Units
               </p>
             </div>
             <div>
-              <p className={`text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight ${criticalCount > 0 ? "text-[#ff453a]" : "text-white"}`}>
+              <p className={`text-[28px] sm:text-[34px] font-bold leading-tight tracking-tight ${criticalCount > 0 ? "text-rose-300 drop-shadow-sm" : "text-white"}`}>
                 {criticalCount}
               </p>
-              <p className="text-[12px] text-[#cccccc] mt-0.5">
+              <p className="text-[12px] font-medium text-teal-100/80 mt-0.5">
                 Critical
               </p>
             </div>
           </div>
 
           {(criticalCount > 0 || warningCount > 0) && (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
-              <div className="flex items-center gap-2 text-[12px] text-[#cccccc]">
-                <AlertTriangle size={13} className={criticalCount > 0 ? "text-[#ff453a]" : "text-[#ff9f0a]"} />
-                {criticalCount > 0
-                  ? `${criticalCount} medicine${criticalCount > 1 ? "s" : ""} critically low`
-                  : `${warningCount} medicine${warningCount > 1 ? "s" : ""} running low`}
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/15">
+              <div className="flex items-center gap-2 text-[12px] text-teal-100 font-medium">
+                <AlertTriangle size={13} className={criticalCount > 0 ? "text-rose-300" : "text-amber-300"} />
+                <span>
+                  {criticalCount > 0
+                    ? `${criticalCount} medicine${criticalCount > 1 ? "s" : ""} critically low`
+                    : `${warningCount} medicine${warningCount > 1 ? "s" : ""} running low`}
+                </span>
               </div>
 
               <button
                 onClick={() => handleOpenPharmacyFinder(null)}
-                className="h-8 px-4 rounded-full bg-white/10 hover:bg-white/15 text-white text-[12px] font-normal transition-all active:scale-95"
+                className="h-8 px-4 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[12px] font-medium transition-all active:scale-95 shadow-xs"
               >
                 Find Pharmacy
               </button>
