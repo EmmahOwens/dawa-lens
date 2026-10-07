@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,8 @@ import {
   AlertTriangle,
   UserRound,
   MoreVertical,
+  Clock,
+  Search,
 } from "@/lib/icons";
 import { useApp, Medicine } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
@@ -48,37 +50,181 @@ import ConfirmationDialog from "@/components/ConfirmationDialog";
 
 const UNITS = ["tablets", "capsules", "ml", "puffs", "drops", "units"];
 
-const COLORS = [
-  { name: "blue", value: "bg-blue-500", border: "border-blue-500/20", text: "text-blue-500", bgLight: "bg-blue-500/10" },
-  { name: "green", value: "bg-emerald-500", border: "border-emerald-500/20", text: "text-emerald-500", bgLight: "bg-emerald-500/10" },
-  { name: "purple", value: "bg-violet-500", border: "border-violet-500/20", text: "text-violet-500", bgLight: "bg-violet-500/10" },
-  { name: "rose", value: "bg-rose-500", border: "border-rose-500/20", text: "text-rose-500", bgLight: "bg-rose-500/10" },
-  { name: "amber", value: "bg-amber-500", border: "border-amber-500/20", text: "text-amber-500", bgLight: "bg-amber-500/10" },
-  { name: "slate", value: "bg-slate-600", border: "border-slate-600/20", text: "text-slate-600", bgLight: "bg-slate-600/10" },
-];
+export interface ColorTheme {
+  name: string;
+  label: string;
+  value: string;
+  gradient: string;
+  bgGlow: string;
+  bgLight: string;
+  text: string;
+  border: string;
+  borderHover: string;
+  accentBar: string;
+  ring: string;
+  shadowColor: string;
+}
 
-const ICONS = [
+export const COLOR_THEMES: Record<string, ColorTheme> = {
+  blue: {
+    name: "blue",
+    label: "Sky Blue",
+    value: "bg-blue-500",
+    gradient: "from-sky-500 to-blue-600",
+    bgGlow: "from-sky-500/[0.08] via-blue-500/[0.03] to-transparent",
+    bgLight: "bg-sky-500/10 dark:bg-sky-500/20",
+    text: "text-sky-600 dark:text-sky-400",
+    border: "border-sky-500/25 dark:border-sky-500/35",
+    borderHover: "hover:border-sky-500/50 hover:shadow-sky-500/10",
+    accentBar: "bg-sky-500",
+    ring: "#0284c7",
+    shadowColor: "sky-500/25",
+  },
+  green: {
+    name: "green",
+    label: "Emerald",
+    value: "bg-emerald-500",
+    gradient: "from-emerald-400 to-teal-600",
+    bgGlow: "from-emerald-500/[0.08] via-teal-500/[0.03] to-transparent",
+    bgLight: "bg-emerald-500/10 dark:bg-emerald-500/20",
+    text: "text-emerald-600 dark:text-emerald-400",
+    border: "border-emerald-500/25 dark:border-emerald-500/35",
+    borderHover: "hover:border-emerald-500/50 hover:shadow-emerald-500/10",
+    accentBar: "bg-emerald-500",
+    ring: "#059669",
+    shadowColor: "emerald-500/25",
+  },
+  purple: {
+    name: "purple",
+    label: "Royal Violet",
+    value: "bg-violet-500",
+    gradient: "from-purple-500 to-indigo-600",
+    bgGlow: "from-purple-500/[0.08] via-indigo-500/[0.03] to-transparent",
+    bgLight: "bg-purple-500/10 dark:bg-purple-500/20",
+    text: "text-purple-600 dark:text-purple-400",
+    border: "border-purple-500/25 dark:border-purple-500/35",
+    borderHover: "hover:border-purple-500/50 hover:shadow-purple-500/10",
+    accentBar: "bg-purple-500",
+    ring: "#7c3aed",
+    shadowColor: "purple-500/25",
+  },
+  rose: {
+    name: "rose",
+    label: "Coral Rose",
+    value: "bg-rose-500",
+    gradient: "from-rose-500 to-pink-600",
+    bgGlow: "from-rose-500/[0.08] via-pink-500/[0.03] to-transparent",
+    bgLight: "bg-rose-500/10 dark:bg-rose-500/20",
+    text: "text-rose-600 dark:text-rose-400",
+    border: "border-rose-500/25 dark:border-rose-500/35",
+    borderHover: "hover:border-rose-500/50 hover:shadow-rose-500/10",
+    accentBar: "bg-rose-500",
+    ring: "#e11d48",
+    shadowColor: "rose-500/25",
+  },
+  amber: {
+    name: "amber",
+    label: "Warm Amber",
+    value: "bg-amber-500",
+    gradient: "from-amber-400 to-orange-500",
+    bgGlow: "from-amber-500/[0.08] via-orange-500/[0.03] to-transparent",
+    bgLight: "bg-amber-500/10 dark:bg-amber-500/20",
+    text: "text-amber-600 dark:text-amber-400",
+    border: "border-amber-500/25 dark:border-amber-500/35",
+    borderHover: "hover:border-amber-500/50 hover:shadow-amber-500/10",
+    accentBar: "bg-amber-500",
+    ring: "#d97706",
+    shadowColor: "amber-500/25",
+  },
+  teal: {
+    name: "teal",
+    label: "Fresh Teal",
+    value: "bg-teal-500",
+    gradient: "from-teal-400 to-cyan-600",
+    bgGlow: "from-teal-500/[0.08] via-cyan-500/[0.03] to-transparent",
+    bgLight: "bg-teal-500/10 dark:bg-teal-500/20",
+    text: "text-teal-600 dark:text-teal-400",
+    border: "border-teal-500/25 dark:border-teal-500/35",
+    borderHover: "hover:border-teal-500/50 hover:shadow-teal-500/10",
+    accentBar: "bg-teal-500",
+    ring: "#0d9488",
+    shadowColor: "teal-500/25",
+  },
+  indigo: {
+    name: "indigo",
+    label: "Deep Indigo",
+    value: "bg-indigo-500",
+    gradient: "from-indigo-500 to-blue-700",
+    bgGlow: "from-indigo-500/[0.08] via-blue-500/[0.03] to-transparent",
+    bgLight: "bg-indigo-500/10 dark:bg-indigo-500/20",
+    text: "text-indigo-600 dark:text-indigo-400",
+    border: "border-indigo-500/25 dark:border-indigo-500/35",
+    borderHover: "hover:border-indigo-500/50 hover:shadow-indigo-500/10",
+    accentBar: "bg-indigo-500",
+    ring: "#4f46e5",
+    shadowColor: "indigo-500/25",
+  },
+  fuchsia: {
+    name: "fuchsia",
+    label: "Berry Fuchsia",
+    value: "bg-fuchsia-500",
+    gradient: "from-fuchsia-500 to-rose-600",
+    bgGlow: "from-fuchsia-500/[0.08] via-rose-500/[0.03] to-transparent",
+    bgLight: "bg-fuchsia-500/10 dark:bg-fuchsia-500/20",
+    text: "text-fuchsia-600 dark:text-fuchsia-400",
+    border: "border-fuchsia-500/25 dark:border-fuchsia-500/35",
+    borderHover: "hover:border-fuchsia-500/50 hover:shadow-fuchsia-500/10",
+    accentBar: "bg-fuchsia-500",
+    ring: "#c026d3",
+    shadowColor: "fuchsia-500/25",
+  },
+};
+
+export const COLOR_KEYS = Object.keys(COLOR_THEMES);
+
+export const COLORS = COLOR_KEYS.map((k) => COLOR_THEMES[k]);
+
+export const ICONS = [
   { name: "pill", icon: Pill },
   { name: "tablet", icon: Tablets },
   { name: "liquid", icon: Droplets },
   { name: "syringe", icon: Syringe },
 ];
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+export const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   pill: Pill,
   tablet: Tablets,
   liquid: Droplets,
   syringe: Syringe,
 };
 
-const colorMap: Record<string, { ring: string; bg: string; text: string; border: string }> = {
-  blue: { ring: "#3b82f6", bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/20" },
-  green: { ring: "#10b981", bg: "bg-emerald-500/10", text: "text-emerald-500", border: "border-emerald-500/20" },
-  purple: { ring: "#8b5cf6", bg: "bg-violet-500/10", text: "text-violet-500", border: "border-violet-500/20" },
-  rose: { ring: "#f43f5e", bg: "bg-rose-500/10", text: "text-rose-500", border: "border-rose-500/20" },
-  amber: { ring: "#f59e0b", bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/20" },
-  slate: { ring: "#64748b", bg: "bg-slate-500/10", text: "text-slate-500", border: "border-slate-500/20" },
-};
+/**
+ * Returns a stable, vibrant color theme for any medication.
+ * If the user explicitly set a non-default color, it uses that.
+ * If undefined or the default "blue", it deterministically hashes
+ * the name + id across our 8 vibrant palettes so each medication card
+ * gets an attractive, individual color identity.
+ */
+export function getMedicineTheme(med: Medicine): ColorTheme {
+  if (med.color && med.color !== "blue" && COLOR_THEMES[med.color]) {
+    return COLOR_THEMES[med.color];
+  }
+  let hash = 0;
+  const seed = (med.name || "med") + (med.id || "");
+  for (let i = 0; i < seed.length; i++) {
+    hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const pickedKey = COLOR_KEYS[Math.abs(hash) % COLOR_KEYS.length];
+  return COLOR_THEMES[pickedKey] || COLOR_THEMES.blue;
+}
+
+// Backward-compatible colorMap
+const colorMap: Record<string, { ring: string; bg: string; text: string; border: string }> = Object.fromEntries(
+  Object.entries(COLOR_THEMES).map(([k, v]) => [
+    k,
+    { ring: v.ring, bg: v.bgLight, text: v.text, border: v.border },
+  ])
+);
 
 // ─── Add/Edit Sheet Component ───────────────────────────────────────────────
 
@@ -94,7 +240,10 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
   const [name, setName] = useState(medicine?.name ?? "");
   const [dosage, setDosage] = useState(medicine?.dosage ?? "");
   const [genericName, setGenericName] = useState(medicine?.genericName ?? "");
-  const [color, setColor] = useState(medicine?.color ?? "blue");
+  const initialColor = medicine
+    ? (medicine.color && COLOR_THEMES[medicine.color] ? medicine.color : getMedicineTheme(medicine).name)
+    : "blue";
+  const [color, setColor] = useState(initialColor);
   const [icon, setIcon] = useState(medicine?.icon ?? "pill");
   const [notes, setNotes] = useState(medicine?.notes ?? "");
 
@@ -357,43 +506,107 @@ function MedicineSheet({ medicine, onClose, onSave }: MedicineSheetProps) {
             </div>
           </div>
 
-          {/* Section: Color & Icon Picker */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-3 border-t border-border">
-            <div className="space-y-3">
-              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">Medication Theme Color</Label>
-              <div className="flex gap-2.5">
-                {COLORS.map((c) => (
-                  <button
-                    key={c.name}
-                    onClick={() => setColor(c.name)}
-                    className={`w-8 h-8 rounded-full ${c.value} transition-all relative ${
-                      color === c.name ? "ring-2 ring-primary ring-offset-2 scale-105" : "opacity-60 hover:opacity-100"
-                    }`}
-                  >
-                    {color === c.name && <Check size={14} className="text-white absolute inset-0 m-auto" />}
-                  </button>
-                ))}
+          {/* Section: Color Theme & Icon Picker */}
+          <div className="space-y-4 pt-3 border-t border-border">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
+                  Medication Theme Color
+                </Label>
+                <span className="text-xs font-bold capitalize text-foreground">
+                  {COLOR_THEMES[color]?.label || color}
+                </span>
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">Medication Icon</Label>
-              <div className="flex gap-3">
-                {ICONS.map((i) => {
-                  const IconComp = i.icon;
+              <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                {COLOR_KEYS.map((k) => {
+                  const t = COLOR_THEMES[k];
+                  const isSelected = color === k;
                   return (
                     <button
-                      key={i.name}
-                      onClick={() => setIcon(i.name)}
-                      className={`w-10 h-10 rounded-[12px] flex items-center justify-center transition-all active:scale-95 ${
-                        icon === i.name ? "bg-primary text-primary-foreground shadow-sm" : "bg-muted/40 border border-border text-muted-foreground hover:bg-muted"
+                      key={k}
+                      type="button"
+                      onClick={() => setColor(k)}
+                      className={`group flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all active:scale-95 ${
+                        isSelected
+                          ? "border-primary bg-primary/10 shadow-sm"
+                          : "border-border/60 hover:border-border hover:bg-muted/40"
                       }`}
                     >
-                      <IconComp size={18} />
+                      <div
+                        className={`w-7 h-7 rounded-full bg-gradient-to-br ${t.gradient} relative flex items-center justify-center shadow-xs transition-transform group-hover:scale-105`}
+                      >
+                        {isSelected && <Check size={14} className="text-white drop-shadow-sm" />}
+                      </div>
+                      <span className="text-[10px] font-semibold text-muted-foreground leading-none">
+                        {t.label.split(" ")[0]}
+                      </span>
                     </button>
                   );
                 })}
               </div>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ml-1">
+                Medication Icon
+              </Label>
+              <div className="flex gap-3">
+                {ICONS.map((i) => {
+                  const IconComp = i.icon;
+                  const isSelected = icon === i.name;
+                  return (
+                    <button
+                      key={i.name}
+                      type="button"
+                      onClick={() => setIcon(i.name)}
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all active:scale-95 ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105"
+                          : "bg-muted/40 border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <IconComp size={20} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Live Visual Card Preview */}
+            <div className="pt-2">
+              {(() => {
+                const previewTheme = COLOR_THEMES[color] || COLOR_THEMES.blue;
+                const PreviewIconComp = iconMap[icon] || Pill;
+                return (
+                  <div className={`p-4 rounded-[20px] border ${previewTheme.border} bg-card relative overflow-hidden shadow-xs`}>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${previewTheme.bgGlow} pointer-events-none`} />
+                    <div className={`absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full ${previewTheme.accentBar}`} />
+                    <div className="relative z-10 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${previewTheme.gradient} text-white flex items-center justify-center shadow-md shadow-black/10 shrink-0 border border-white/20`}>
+                          <PreviewIconComp className="size-5.5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-foreground truncate">
+                              {name.trim() || "Medicine Name"}
+                            </p>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${previewTheme.bgLight} ${previewTheme.text} border ${previewTheme.border}`}>
+                              {dosage.trim() || "Dosage"}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground italic truncate mt-0.5">
+                            {genericName.trim() || "Live Appearance Preview"}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
+                        Preview
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
@@ -576,17 +789,56 @@ export default function MedicationsPage() {
   const [selectedMed, setSelectedMed] = useState<Medicine | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Medicine | null>(null);
+  const [filter, setFilter] = useState<"all" | "in-stock" | "low-stock" | "untracked">("all");
 
-  // Filter list by search query
+  // Summary statistics for inventory
+  const stats = useMemo(() => {
+    let inStock = 0;
+    let lowStock = 0;
+    let untracked = 0;
+
+    scopedMedicines.forEach((med) => {
+      if (med.currentQuantity === undefined) {
+        untracked++;
+      } else {
+        const refill = calculateRefillStatus(med, scopedReminders);
+        if (med.currentQuantity === 0 || refill?.isLow || refill?.isWarning) {
+          lowStock++;
+        } else {
+          inStock++;
+        }
+      }
+    });
+
+    return { total: scopedMedicines.length, inStock, lowStock, untracked };
+  }, [scopedMedicines, scopedReminders]);
+
+  // Filter list by search query and active tab
   const filteredMedicines = useMemo(() => {
     return scopedMedicines.filter((m) => {
-      const q = searchQuery.toLowerCase();
-      return (
-        m.name.toLowerCase().includes(q) ||
-        (m.genericName?.toLowerCase().includes(q) ?? false)
-      );
+      const q = searchQuery.toLowerCase().trim();
+      if (q) {
+        const matchesName = m.name.toLowerCase().includes(q);
+        const matchesGeneric = m.genericName?.toLowerCase().includes(q) ?? false;
+        if (!matchesName && !matchesGeneric) return false;
+      }
+
+      if (filter === "in-stock") {
+        if (m.currentQuantity === undefined) return false;
+        const refill = calculateRefillStatus(m, scopedReminders);
+        return m.currentQuantity > 0 && !refill?.isLow && !refill?.isWarning;
+      }
+      if (filter === "low-stock") {
+        if (m.currentQuantity === undefined) return false;
+        const refill = calculateRefillStatus(m, scopedReminders);
+        return m.currentQuantity === 0 || refill?.isLow || refill?.isWarning;
+      }
+      if (filter === "untracked") {
+        return m.currentQuantity === undefined;
+      }
+      return true;
     });
-  }, [scopedMedicines, searchQuery]);
+  }, [scopedMedicines, searchQuery, filter, scopedReminders]);
 
   const handleSaveMedicine = async (formData: any) => {
     if (selectedMed) {
@@ -644,16 +896,16 @@ export default function MedicationsPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+            className="h-9 w-9 rounded-full bg-muted/60 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all shadow-xs"
           >
             <ArrowLeft size={16} />
           </button>
           <div>
-            <h1 className="text-[28px] sm:text-[34px] font-semibold tracking-tight text-foreground leading-none">
+            <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-foreground leading-none">
               Medications
             </h1>
-            <p className="text-[12px] text-muted-foreground mt-0.5">
-              Prescription Inventory
+            <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
+              Prescription Inventory · {scopedMedicines.length} Saved
             </p>
           </div>
         </div>
@@ -663,9 +915,9 @@ export default function MedicationsPage() {
             setSelectedMed(null);
             setIsSheetOpen(true);
           }}
-          className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-5 py-2 rounded-full text-[13px] font-normal hover:brightness-105 active:scale-95 transition-all shadow-none"
+          className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-5 py-2.5 rounded-full text-[13px] font-semibold hover:brightness-110 active:scale-95 transition-all shadow-md shadow-blue-500/25"
         >
-          <Plus size={14} /> Add Medicine
+          <Plus size={15} /> Add Medicine
         </button>
       </div>
 
@@ -689,47 +941,101 @@ export default function MedicationsPage() {
         </motion.div>
       )}
 
-      {/* Search Bar */}
-      <div className="mb-6">
-        <Input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search saved medications..."
-          className="h-11 rounded-full border-border bg-card px-5 text-[15px] focus:border-primary transition-all"
-        />
-      </div>
-
       {/* Quick Navigation Panel */}
-      <div className="grid grid-cols-2 gap-3 mb-8">
+      <div className="grid grid-cols-2 gap-3 mb-6">
         <button
           onClick={() => navigate("/medvault")}
-          className="flex items-center justify-between p-4.5 rounded-[18px] border border-border bg-card hover:border-primary/40 transition-all text-left active:scale-[0.98]"
+          className="group relative overflow-hidden flex items-center justify-between p-4 rounded-[20px] border border-emerald-500/25 bg-gradient-to-br from-emerald-500/[0.08] via-teal-500/[0.03] to-card hover:border-emerald-500/45 hover:shadow-md hover:shadow-emerald-500/10 transition-all text-left active:scale-[0.98]"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-9 w-9 bg-muted text-primary rounded-full flex items-center justify-center shrink-0">
-              <Package2 size={16} />
+            <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/25 group-hover:scale-105 transition-transform">
+              <Package2 size={18} />
             </div>
-            <div>
-              <span className="font-medium text-[14px] text-foreground block leading-tight">Med Vault</span>
-              <span className="text-[12px] text-muted-foreground block leading-none mt-0.5">Track pill supply</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-[14px] text-foreground leading-tight">Med Vault</span>
+              </div>
+              <span className="text-[12px] text-muted-foreground block truncate mt-0.5">Track pill supply & refills</span>
             </div>
           </div>
         </button>
         <button
           onClick={() => navigate("/reminders/new")}
-          className="flex items-center justify-between p-4.5 rounded-[18px] border border-border bg-card hover:border-primary/40 transition-all text-left active:scale-[0.98]"
+          className="group relative overflow-hidden flex items-center justify-between p-4 rounded-[20px] border border-indigo-500/25 bg-gradient-to-br from-indigo-500/[0.08] via-blue-500/[0.03] to-card hover:border-indigo-500/45 hover:shadow-md hover:shadow-indigo-500/10 transition-all text-left active:scale-[0.98]"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-9 w-9 bg-muted text-primary rounded-full flex items-center justify-center shrink-0">
-              <PlusCircle size={16} />
+            <div className="h-10 w-10 bg-gradient-to-br from-indigo-500 to-blue-600 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-indigo-500/25 group-hover:scale-105 transition-transform">
+              <PlusCircle size={18} />
             </div>
-            <div>
-              <span className="font-medium text-[14px] text-foreground block leading-tight">Add Reminder</span>
-              <span className="text-[12px] text-muted-foreground block leading-none mt-0.5">Schedule a dose</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-[14px] text-foreground leading-tight">Add Reminder</span>
+              </div>
+              <span className="text-[12px] text-muted-foreground block truncate mt-0.5">Schedule dose & alerts</span>
             </div>
           </div>
         </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative mb-3">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search saved medications or generic names..."
+          className="h-11 rounded-full border-border/80 bg-card/90 pl-11 pr-10 text-[14px] focus:border-primary shadow-xs transition-all"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Filter / Inventory Status Chips */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-6">
+        {[
+          { id: "all", label: "All", count: stats.total },
+          { id: "in-stock", label: "In Stock", count: stats.inStock, dot: "bg-emerald-500" },
+          { id: "low-stock", label: "Low / Out", count: stats.lowStock, dot: "bg-amber-500", pulse: stats.lowStock > 0 },
+          { id: "untracked", label: "Untracked", count: stats.untracked, dot: "bg-slate-400" },
+        ].map((tab) => {
+          const isActive = filter === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id as typeof filter)}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                isActive
+                  ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
+                  : "bg-card border border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              {tab.dot && (
+                <span
+                  className={`size-2 rounded-full ${tab.dot} ${
+                    tab.pulse && !isActive ? "animate-pulse" : ""
+                  }`}
+                />
+              )}
+              <span>{tab.label}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Medications List */}
@@ -773,7 +1079,7 @@ export default function MedicationsPage() {
       ) : (
         <div className="space-y-4">
           {filteredMedicines.map((med) => {
-            const colors = colorMap[med.color || "blue"] || colorMap.blue;
+            const theme = getMedicineTheme(med);
             const IconComp = iconMap[med.icon || "pill"] || Pill;
 
             // Refill / Stock Details
@@ -781,19 +1087,27 @@ export default function MedicationsPage() {
             const refillStatus = calculateRefillStatus(med, scopedReminders);
             const isOutOfStock = med.currentQuantity === 0;
 
-            const stockText = isTracked
+            const stockCountText = isTracked
               ? `${med.currentQuantity} ${med.unit || "units"} left`
               : "Stock not tracked";
 
             const badgeCls = !isTracked
-              ? "bg-muted/50 text-muted-foreground border-border/40"
+              ? "bg-muted/70 text-muted-foreground border-border/50"
               : isOutOfStock
-              ? "bg-red-500/15 text-red-500 border-red-500/30"
+              ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
               : refillStatus?.isLow
-              ? "bg-red-500/15 text-red-500 border-red-500/30 animate-pulse"
+              ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
               : refillStatus?.isWarning
-              ? "bg-amber-500/15 text-amber-600 border-amber-500/30"
-              : "bg-emerald-500/15 text-emerald-600 border-emerald-500/30";
+              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+              : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+
+            const badgeDotCls = !isTracked
+              ? "bg-slate-400"
+              : isOutOfStock || refillStatus?.isLow
+              ? "bg-rose-500"
+              : refillStatus?.isWarning
+              ? "bg-amber-500"
+              : "bg-emerald-500";
 
             const badgeText = !isTracked
               ? "Untracked"
@@ -805,89 +1119,137 @@ export default function MedicationsPage() {
               ? "Low Stock"
               : "In Stock";
 
+            const stockPercentage =
+              isTracked && med.totalQuantity && med.totalQuantity > 0
+                ? Math.min(100, Math.max(0, Math.round(((med.currentQuantity ?? 0) / med.totalQuantity) * 100)))
+                : null;
+
             return (
               <motion.div
                 key={med.id}
                 layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative overflow-hidden rounded-[18px] border border-border bg-card p-5 transition-all hover:border-primary/40"
+                exit={{ opacity: 0, scale: 0.98 }}
+                className={`group relative overflow-hidden rounded-[22px] border ${theme.border} bg-card p-5 transition-all duration-200 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/25 ${theme.borderHover}`}
               >
-                <div className="flex items-start justify-between gap-4">
-                  {/* Left Side: Icon & Info */}
-                  <div className="flex items-start gap-3.5 min-w-0">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-muted text-primary border border-border">
-                      <IconComp className="size-5" />
+                {/* Soft ambient gradient wash */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${theme.bgGlow} pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity`} />
+
+                {/* Vertical accent strip on left border */}
+                <div className={`absolute left-0 top-3 bottom-3 w-1.25 rounded-r-full ${theme.accentBar} opacity-90`} />
+
+                <div className="relative z-10 flex items-start justify-between gap-3.5">
+                  {/* Left Side: Avatar & Information */}
+                  <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                    {/* Vibrant Gradient Icon Avatar */}
+                    <div
+                      className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${theme.gradient} text-white shadow-md shadow-black/10 border border-white/20 group-hover:scale-105 transition-transform duration-200`}
+                    >
+                      <IconComp className="size-6 text-white" />
                     </div>
 
-                    <div className="min-w-0 pt-0.5">
-                      <h4 className="text-[16px] font-semibold tracking-tight text-foreground leading-tight truncate">
-                        {med.name}
-                      </h4>
-                      <p className="text-[13px] text-muted-foreground mt-0.5">{med.dosage}</p>
+                    <div className="min-w-0 pt-0.5 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-[16px] font-bold tracking-tight text-foreground leading-tight truncate">
+                          {med.name}
+                        </h3>
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${theme.bgLight} ${theme.text} border ${theme.border}`}>
+                          {med.dosage}
+                        </span>
+                      </div>
+
                       {med.genericName && (
                         <p className="text-[12px] text-muted-foreground/80 italic truncate mt-0.5">
                           {med.genericName}
                         </p>
                       )}
+
                       {med.notes && (
-                        <p className="text-[10px] text-muted-foreground mt-1.5 bg-muted/30 px-2 py-0.5 rounded border border-border/20 w-fit">
-                          💡 {med.notes}
-                        </p>
+                        <div className="mt-2 text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/20 w-fit flex items-center gap-1.5 shadow-xs">
+                          <span>💡</span>
+                          <span className="truncate max-w-[200px] sm:max-w-[340px]">{med.notes}</span>
+                        </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Right Side: Status Badge */}
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${badgeCls}`}>
+                  {/* Right Side: Status Badge & Stock */}
+                  <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
+                    <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${badgeCls} flex items-center gap-1.5 shadow-xs`}>
+                      <span
+                        className={`size-1.5 rounded-full ${badgeDotCls} ${
+                          refillStatus?.isLow || isOutOfStock ? "animate-pulse" : ""
+                        }`}
+                      />
                       {badgeText}
                     </span>
-                    <span className="text-[10px] font-medium text-muted-foreground">
-                      {stockText}
+                    <span className="text-[11px] font-bold text-foreground">
+                      {stockCountText}
                     </span>
                   </div>
                 </div>
 
-                {/* Bottom Row Actions */}
-                <div className="mt-4 pt-3 border-t border-border/30 flex justify-between items-center">
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                {/* Stock Level Progress Bar if tracked */}
+                {stockPercentage !== null && (
+                  <div className="relative z-10 mt-3 pt-0.5">
+                    <div className="h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isOutOfStock || refillStatus?.isLow
+                            ? "bg-rose-500"
+                            : refillStatus?.isWarning
+                            ? "bg-amber-500"
+                            : theme.accentBar
+                        }`}
+                        style={{ width: `${Math.max(4, stockPercentage)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Bottom Row Actions & Supply Meta */}
+                <div className="relative z-10 mt-3.5 pt-3 border-t border-border/40 flex justify-between items-center">
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     {!isTracked ? (
                       <button
                         onClick={() => {
                           setSelectedMed(med);
                           setIsSheetOpen(true);
                         }}
-                        className="text-primary hover:underline font-bold"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
                       >
-                        Enable Stock Tracker
+                        <Package2 size={13} />
+                        <span>Enable Stock Tracker</span>
                       </button>
                     ) : refillStatus?.daysRemaining !== null ? (
-                      <span className="font-semibold text-muted-foreground/80">
-                        {refillStatus.dosesRemaining !== null ? `${refillStatus.dosesRemaining} doses (` : ""}
-                        ~{refillStatus.daysRemaining} days left
-                        {refillStatus.dosesRemaining !== null ? ")" : ""}
-                      </span>
+                      <div className="flex items-center gap-1.5 font-medium text-foreground/80">
+                        <Clock size={12} className="text-muted-foreground" />
+                        <span>
+                          {refillStatus.dosesRemaining !== null ? `${refillStatus.dosesRemaining} doses · ` : ""}
+                          ~{refillStatus.daysRemaining} days left
+                        </span>
+                      </div>
                     ) : (
-                      <span className="text-[9px] italic">No active doses/schedule</span>
+                      <span className="text-[10px] italic text-muted-foreground">No active schedule</span>
                     )}
                   </div>
 
                   {/* Desktop action buttons */}
-                  <div className="hidden sm:flex gap-2">
+                  <div className="hidden sm:flex items-center gap-1.5">
                     <button
                       onClick={() => {
                         setSelectedMed(med);
                         setIsSheetOpen(true);
                       }}
-                      className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border/50 transition-all active:scale-90"
+                      className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-border/40 transition-all active:scale-90"
                       title="Edit"
                     >
                       <Edit2 size={13} />
                     </button>
                     <button
                       onClick={() => setDeleteTarget(med)}
-                      className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 border border-border/50 transition-all active:scale-90"
+                      className="p-2 rounded-xl text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 border border-border/40 transition-all active:scale-90"
                       title="Delete"
                     >
                       <Trash2 size={13} />
@@ -899,7 +1261,7 @@ export default function MedicationsPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
-                          className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-border/50 transition-all active:scale-90 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                          className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-border/40 transition-all active:scale-90 min-h-[36px] min-w-[36px] flex items-center justify-center"
                           aria-label="Medication options"
                         >
                           <MoreVertical size={15} />
