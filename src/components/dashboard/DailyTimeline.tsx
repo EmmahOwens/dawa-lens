@@ -4,6 +4,7 @@ import { Pill, Check, Clock, AlertCircle, RefreshCw } from "@/lib/icons";
 import { Reminder, DoseLog } from "@/contexts/AppContext";
 import confetti from "canvas-confetti";
 import { toDate } from "@/lib/utils";
+import { getMedicineTheme, iconMap } from "@/lib/medicineTheme";
 import {
   todayAt,
   getMedicationKey,
@@ -59,22 +60,29 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
     <div className="mb-8 overflow-hidden">
       <div className="flex items-center justify-between mb-3">
         <h2 className="section-title mb-0 flex items-center gap-2">
-          <Clock size={13} />
+          <Clock size={13} className="text-primary" />
           Daily Schedule
         </h2>
-        <span className="text-[12px] font-normal text-muted-foreground">
+        <span className="text-[12px] font-medium text-muted-foreground bg-secondary/60 px-2.5 py-0.5 rounded-full border border-border/40">
           {new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
         </span>
       </div>
 
       {slots.length === 0 ? (
-        <div className="w-full py-8 text-center bg-card rounded-[18px] border border-border">
-          <p className="text-[14px] text-muted-foreground">No reminders scheduled for today</p>
+        <div className="w-full py-8 px-4 text-center bg-gradient-to-b from-card to-card/60 rounded-[22px] border border-border/70 shadow-xs flex flex-col items-center justify-center gap-2">
+          <div className="w-10 h-10 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+            <Clock size={18} />
+          </div>
+          <p className="text-[14px] font-semibold text-foreground">No reminders scheduled for today</p>
+          <p className="text-[12px] text-muted-foreground">All caught up! Check back when your next dose is due.</p>
         </div>
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-3 pt-1 no-scrollbar snap-x overscroll-x-contain">
           {slots.map((entry, index) => {
             const { reminder: r, displayTime, scheduledISO, offsetMinutes, log, slotIndex, isActioned } = entry;
+            const theme = getMedicineTheme({ name: r.medicineName, id: r.id, color: r.color });
+            const IconComp = iconMap[r.icon || "pill"] || Pill;
+
             const isTaken = log?.action === "taken";
             const isSkipped = log?.action === "skipped";
             const isMissed = log?.action === "missed";
@@ -90,31 +98,39 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                 initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.03 }}
-                className={`flex-shrink-0 w-44 snap-start rounded-[18px] p-4 border transition-all relative ${
+                className={`flex-shrink-0 w-48 snap-start rounded-[22px] p-4 border transition-all relative overflow-hidden shadow-xs ${
                   isNextDose
-                    ? "bg-card border-primary ring-1 ring-primary/40"
+                    ? `bg-card ${theme.border} ring-2 ring-primary/60 shadow-lg shadow-primary/10`
                     : isActionable
-                      ? "bg-card border-primary/40"
+                      ? `bg-card ${theme.border} hover:border-primary/60 hover:shadow-md`
                       : isTaken
-                        ? "bg-muted/40 border-border opacity-70"
+                        ? "bg-muted/40 border-border/60 opacity-75"
                         : isActioned
-                          ? "bg-muted/30 border-border opacity-60"
-                          : "bg-card border-border"
+                          ? "bg-muted/30 border-border/50 opacity-65"
+                          : `bg-card ${theme.border} hover:shadow-md`
                 }`}
               >
-                <div className="flex flex-col gap-3 h-full justify-between">
+                {/* Ambient theme glow */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${theme.bgGlow} pointer-events-none opacity-60`} />
+
+                {/* Left accent bar */}
+                <div
+                  className={`absolute left-0 top-3 bottom-3 w-1 rounded-r-full ${
+                    isTaken ? "bg-emerald-500" : isMissed ? "bg-rose-500" : isSkipped ? "bg-muted-foreground/40" : theme.accentBar
+                  }`}
+                />
+
+                <div className="relative z-10 flex flex-col gap-3 h-full justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
                         isTaken
-                          ? "bg-success/15 text-success"
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                           : isMissed
-                            ? "bg-destructive/15 text-destructive"
+                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
                             : isSkipped
-                              ? "bg-muted text-muted-foreground"
-                              : isActionable
-                                ? "bg-primary/15 text-primary"
-                                : "bg-muted text-muted-foreground"
+                              ? "bg-muted text-muted-foreground border border-border/50"
+                              : `bg-gradient-to-br ${theme.gradient} text-white shadow-sm border border-white/20`
                       }`}>
                         <AnimatePresence mode="wait" initial={false}>
                           <motion.div
@@ -125,18 +141,18 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                             transition={{ duration: 0.15 }}
                           >
                             {isTaken ? (
-                              <Check size={16} />
+                              <Check size={15} />
                             ) : isMissed || isSkipped ? (
-                              <AlertCircle size={16} />
+                              <AlertCircle size={15} />
                             ) : (
-                              <Pill size={16} />
+                              <IconComp className="size-4 text-white" />
                             )}
                           </motion.div>
                         </AnimatePresence>
                       </div>
 
                       {isNextDose && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground shadow-xs animate-pulse">
                           Next
                         </span>
                       )}
