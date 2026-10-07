@@ -14,6 +14,8 @@ interface LottieMojiProps {
    */
   active?: boolean;
   className?: string;
+  /** Whether inactive state should be forced to grayscale(1). Defaults to false so emojis stay colorful. */
+  grayscaleInactive?: boolean;
 }
 
 const NOTO_BASE = "https://fonts.gstatic.com/s/e/notoemoji/latest";
@@ -76,6 +78,7 @@ export const LottieMoji: React.FC<LottieMojiProps> = ({
   emoji,
   size = 48,
   active = false,
+  grayscaleInactive = false,
   className,
 }) => {
   const dotLottieRef = useRef<DotLottie | null>(null);
@@ -160,8 +163,8 @@ export const LottieMoji: React.FC<LottieMojiProps> = ({
           position: "absolute",
           fontSize: size * 0.72,
           lineHeight: 1,
-          filter: active ? "none" : "grayscale(1)",
-          opacity: active ? 1 : 0.45,
+          filter: !active && grayscaleInactive ? "grayscale(1)" : "none",
+          opacity: active ? 1 : grayscaleInactive ? 0.45 : 0.85,
           transition: "filter 0.25s ease, opacity 0.25s ease",
           userSelect: "none",
           pointerEvents: "none",
@@ -180,8 +183,8 @@ export const LottieMoji: React.FC<LottieMojiProps> = ({
           position: "relative",
           width: "100%",
           height: "100%",
-          filter: active ? "none" : "grayscale(1)",
-          opacity: active ? 1 : 0.45,
+          filter: !active && grayscaleInactive ? "grayscale(1)" : "none",
+          opacity: active ? 1 : grayscaleInactive ? 0.45 : 0.85,
           transition: "filter 0.25s ease, opacity 0.25s ease",
         }}
       />
