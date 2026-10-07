@@ -1,4 +1,4 @@
- import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +20,9 @@ import {
   Location,
   Navigation,
   MoreVertical,
+  Clock,
+  Search,
+  X,
 } from "@/lib/icons";
 import { useApp, Medicine } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
@@ -45,26 +48,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import {
+  ColorTheme,
+  COLOR_THEMES,
+  getMedicineTheme,
+  iconMap,
+} from "@/lib/medicineTheme";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const UNITS = ["tablets", "capsules", "ml", "puffs", "drops", "units"];
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  pill: Pill,
-  tablet: Tablets,
-  liquid: Droplets,
-  syringe: Syringe,
-};
-
-const colorMap: Record<string, { ring: string; bg: string; text: string; border: string }> = {
-  blue: { ring: "#3b82f6", bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/20" },
-  green: { ring: "#10b981", bg: "bg-emerald-500/10", text: "text-emerald-500", border: "border-emerald-500/20" },
-  purple: { ring: "#8b5cf6", bg: "bg-violet-500/10", text: "text-violet-500", border: "border-violet-500/20" },
-  rose: { ring: "#f43f5e", bg: "bg-rose-500/10", text: "text-rose-500", border: "border-rose-500/20" },
-  amber: { ring: "#f59e0b", bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/20" },
-  slate: { ring: "#64748b", bg: "bg-slate-500/10", text: "text-slate-500", border: "border-slate-500/20" },
-};
+const colorMap: Record<string, { ring: string; bg: string; text: string; border: string }> = Object.fromEntries(
+  Object.entries(COLOR_THEMES).map(([k, v]) => [
+    k,
+    { ring: v.ring, bg: v.bgLight, text: v.text, border: v.border },
+  ])
+);
 
 /** Animated circular SVG progress ring */
 function StockRing({
@@ -384,19 +384,19 @@ interface StockCardProps {
 }
 
 function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, isLow, isWarning, isOutOfStock, onRefill, onFindPharmacy }: StockCardProps) {
-  const colors = colorMap[medicine.color || "blue"] || colorMap.blue;
+  const theme = getMedicineTheme(medicine);
   const IconComp = iconMap[medicine.icon || "pill"] || Pill;
   const total = medicine.totalQuantity || medicine.currentQuantity || 1;
   const current = medicine.currentQuantity ?? 0;
   const pct = total > 0 ? Math.round((current / total) * 100) : 0;
 
   const statusLabel = isOutOfStock
-    ? { text: "Out of Stock", cls: "bg-red-500/15 text-red-500 border-red-500/30" }
+    ? { text: "Out of Stock", cls: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30", dot: "bg-rose-500", pulse: false }
     : isLow
-    ? { text: "Critical — Refill Now", cls: "bg-red-500/15 text-red-500 border-red-500/30 animate-pulse" }
+    ? { text: "Critical Supply", cls: "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30", dot: "bg-rose-500", pulse: true }
     : isWarning
-    ? { text: "Low Stock", cls: "bg-amber-500/15 text-amber-600 border-amber-500/30" }
-    : { text: "In Stock", cls: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" };
+    ? { text: "Running Low", cls: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30", dot: "bg-amber-500", pulse: true }
+    : { text: "In Stock", cls: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30", dot: "bg-emerald-500", pulse: false };
 
   return (
     <motion.div
@@ -404,80 +404,114 @@ function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, is
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`relative overflow-hidden rounded-3xl border bg-card p-5 shadow-sm transition-all ${
+      className={`group relative overflow-hidden rounded-[24px] border ${
         isLow || isOutOfStock
-          ? "border-red-500/30 shadow-red-500/5"
+          ? "border-rose-500/40 shadow-rose-500/10"
           : isWarning
-          ? "border-amber-500/30"
-          : "border-border/50"
-      }`}
+          ? "border-amber-500/40 shadow-amber-500/10"
+          : `${theme.border} ${theme.borderHover} shadow-black/5`
+      } bg-card p-5 sm:p-5.5 shadow-sm transition-all duration-200 hover:shadow-lg`}
     >
-      {/* Critical pulse glow */}
-      {(isLow || isOutOfStock) && (
-        <div className="absolute inset-0 rounded-3xl border-2 border-red-500/20 animate-pulse pointer-events-none" />
-      )}
+      {/* Soft ambient theme glow */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${theme.bgGlow} pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity`} />
 
-      <div className="flex items-start gap-4">
-        {/* Progress Ring */}
+      {/* Vertical accent indicator bar */}
+      <div
+        className={`absolute left-0 top-3.5 bottom-3.5 w-1.25 rounded-r-full ${
+          isLow || isOutOfStock ? "bg-rose-500" : isWarning ? "bg-amber-500" : theme.accentBar
+        } opacity-90`}
+      />
+
+      <div className="relative z-10 flex items-start gap-4">
+        {/* Progress Ring with elevated Gradient Icon Avatar */}
         <div className="relative flex-shrink-0">
           <StockRing
             current={current}
             total={total}
             size={76}
             strokeWidth={6}
-            color={colors.ring}
+            color={isLow || isOutOfStock ? "#ef4444" : isWarning ? "#f59e0b" : theme.ring}
             critical={isLow || isOutOfStock}
             warning={isWarning}
           />
           {/* Center icon */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${colors.bg} ${colors.text}`}>
-              <IconComp className="size-4" />
+            <div
+              className={`w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br ${theme.gradient} text-white shadow-md shadow-black/10 border border-white/20 group-hover:scale-105 transition-transform duration-200`}
+            >
+              <IconComp className="size-5 text-white" />
             </div>
           </div>
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0 pt-1">
+        <div className="flex-1 min-w-0 pt-0.5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-base font-black tracking-tight text-foreground leading-tight truncate">
-                {medicine.name}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-[17px] font-bold tracking-tight text-foreground leading-tight truncate">
+                  {medicine.name}
+                </h3>
+                {medicine.dosage && (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${theme.bgLight} ${theme.text} border ${theme.border}`}>
+                    {medicine.dosage}
+                  </span>
+                )}
+              </div>
               {medicine.genericName && (
-                <p className="text-[10px] text-muted-foreground truncate">{medicine.genericName}</p>
+                <p className="text-[11px] text-muted-foreground/80 italic truncate mt-0.5">{medicine.genericName}</p>
               )}
             </div>
-            <span className={`flex-shrink-0 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${statusLabel.cls}`}>
+            <span className={`flex-shrink-0 text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border ${statusLabel.cls} flex items-center gap-1.5 shadow-xs`}>
+              <span className={`size-1.5 rounded-full ${statusLabel.dot} ${statusLabel.pulse ? "animate-pulse" : ""}`} />
               {statusLabel.text}
             </span>
           </div>
 
           {/* Pill & Dose count */}
-          <div className="mt-2 flex items-baseline gap-2 flex-wrap">
-            <span className={`text-3xl font-black leading-none ${isLow || isOutOfStock ? "text-red-500" : isWarning ? "text-amber-500" : "text-foreground"}`}>
+          <div className="mt-2.5 flex items-baseline gap-2 flex-wrap">
+            <span className={`text-3xl font-black leading-none ${
+              isLow || isOutOfStock ? "text-rose-500" : isWarning ? "text-amber-500" : "text-foreground"
+            }`}>
               {current}
             </span>
             <span className="text-xs font-bold text-muted-foreground">
               {medicine.unit || "units"} left
             </span>
             {dosesRemaining !== null && (
-              <span className="text-[11px] font-extrabold text-teal-600 dark:text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-lg">
+              <span className={`text-[11px] font-bold ${theme.text} ${theme.bgLight} border ${theme.border} px-2.5 py-0.5 rounded-lg`}>
                 {dosesRemaining} {dosesRemaining === 1 ? "dose" : "doses"}
               </span>
             )}
-            <span className="text-xs text-muted-foreground/50 ml-0.5">({pct}%)</span>
+            <span className="text-xs text-muted-foreground/60 font-medium">({pct}%)</span>
+          </div>
+
+          {/* Linear Stock Progress Bar */}
+          <div className="mt-2.5">
+            <div className="h-1.5 w-full bg-muted/40 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  isLow || isOutOfStock ? "bg-rose-500" : isWarning ? "bg-amber-500" : theme.accentBar
+                }`}
+                style={{ width: `${Math.min(100, Math.max(3, pct))}%` }}
+              />
+            </div>
           </div>
 
           {/* Days remaining and frequency subtitle */}
           {daysRemaining !== null && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <p className={`text-[11px] font-bold ${isLow || isOutOfStock ? "text-red-500" : isWarning ? "text-amber-500" : "text-muted-foreground"}`}>
-                {isOutOfStock
-                  ? "⛔ No doses left"
-                  : `~${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} of supply`}
-              </p>
-              <span className="text-[10px] text-muted-foreground/70">
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <div className={`flex items-center gap-1.5 text-[11px] font-bold ${
+                isLow || isOutOfStock ? "text-rose-600 dark:text-rose-400" : isWarning ? "text-amber-600 dark:text-amber-400" : "text-foreground/80"
+              }`}>
+                <Clock size={12} className="shrink-0" />
+                <span>
+                  {isOutOfStock
+                    ? "⛔ No doses left"
+                    : `~${daysRemaining} day${daysRemaining !== 1 ? "s" : ""} of supply`}
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-foreground/75">
                 · {medicine.frequencyPerDay || 1} dose{(medicine.frequencyPerDay || 1) !== 1 ? "s" : ""}/day ({medicine.dosagePerDose || 1} {medicine.unit || "unit"}/dose
                 {dailyDoseTotal && dailyDoseTotal > 0 ? ` · ${dailyDoseTotal}/day` : ""})
               </span>
@@ -487,45 +521,45 @@ function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, is
       </div>
 
       {/* Desktop Card Actions */}
-      <div className="hidden sm:flex mt-4 items-center justify-between pt-2 border-t border-border/30 gap-2 flex-wrap">
+      <div className="hidden sm:flex mt-4 items-center justify-between pt-2.5 border-t border-border/40 gap-2 flex-wrap">
         <a
           href={`/medicine/${encodeURIComponent(medicine.name)}`}
-          className="inline-flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors"
+          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-primary transition-colors"
         >
-          <Info className="size-3 text-primary" /> FDA Safety & Storage
+          <Info className="size-3.5 text-primary" /> FDA Safety & Storage
         </a>
 
         <div className="flex items-center gap-2">
           <button
             onClick={onFindPharmacy}
             title="Find nearest NDA-licensed pharmacies to refill"
-            className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 transition-all active:scale-95 shadow-sm"
+            className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-xl border border-teal-500/30 bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-300 transition-all active:scale-95 shadow-xs"
           >
-            <Compass className="size-3 text-teal-600 dark:text-teal-400" />
+            <Compass className="size-3.5 text-teal-600 dark:text-teal-400" />
             <span>Find NDA Pharmacy</span>
           </button>
 
           <button
             onClick={onRefill}
-            className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all active:scale-95 ${
+            className={`flex items-center gap-1.5 text-[11px] font-bold px-3.5 py-1.5 rounded-xl border transition-all active:scale-95 ${
               isLow || isOutOfStock
-                ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20"
-                : "bg-muted/50 text-muted-foreground border-border/50 hover:bg-muted"
+                ? "bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/25 hover:bg-rose-600"
+                : "bg-primary text-primary-foreground border-primary shadow-xs hover:bg-primary/90"
             }`}
           >
-            <RefreshCw className="size-3" />
-            Refill
+            <RefreshCw className="size-3.5" />
+            <span>Refill Stock</span>
           </button>
         </div>
       </div>
 
       {/* Mobile Card Actions */}
-      <div className="sm:hidden mt-4 flex items-center justify-between pt-2 border-t border-border/30">
+      <div className="sm:hidden mt-4 flex items-center justify-between pt-2.5 border-t border-border/40">
         <button
           onClick={onRefill}
-          className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3.5 py-2 rounded-xl border transition-all active:scale-95 min-h-[38px] ${
+          className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-xl border transition-all active:scale-95 min-h-[38px] ${
             isLow || isOutOfStock
-              ? "bg-red-500 text-white border-red-500 shadow-md shadow-red-500/20"
+              ? "bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/20"
               : "bg-primary text-primary-foreground border-primary shadow-sm"
           }`}
         >
@@ -569,7 +603,7 @@ function StockCard({ medicine, daysRemaining, dosesRemaining, dailyDoseTotal, is
 // ─── Untracked Card ───────────────────────────────────────────────────────────
 
 function UntrackedCard({ medicine, onSetup }: { medicine: Medicine; onSetup: () => void }) {
-  const colors = colorMap[medicine.color || "blue"] || colorMap.blue;
+  const theme = getMedicineTheme(medicine);
   const IconComp = iconMap[medicine.icon || "pill"] || Pill;
 
   return (
@@ -577,20 +611,29 @@ function UntrackedCard({ medicine, onSetup }: { medicine: Medicine; onSetup: () 
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-3 p-4 rounded-2xl border bg-muted/20 ${colors.border} transition-all`}
+      className={`group relative overflow-hidden flex items-center gap-3.5 p-4 rounded-2xl border ${theme.border} bg-card transition-all hover:shadow-md ${theme.borderHover}`}
     >
-      <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${colors.bg} ${colors.text}`}>
-        <IconComp className="size-4" />
+      <div className={`absolute left-0 top-2.5 bottom-2.5 w-1 rounded-r-full ${theme.accentBar} opacity-80`} />
+      <div className={`flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br ${theme.gradient} text-white shadow-sm border border-white/20`}>
+        <IconComp className="size-5 text-white" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-foreground truncate">{medicine.name}</p>
-        <p className="text-[10px] text-muted-foreground">Stock not tracked</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-bold text-foreground truncate">{medicine.name}</p>
+          {medicine.dosage && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${theme.bgLight} ${theme.text} border ${theme.border}`}>
+              {medicine.dosage}
+            </span>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-0.5">Stock not tracked in Med Vault</p>
       </div>
       <button
         onClick={onSetup}
-        className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 border border-primary/20 px-2.5 py-1.5 rounded-xl flex-shrink-0 transition-all active:scale-95"
+        className="flex items-center gap-1.5 text-[11px] font-bold text-teal-700 dark:text-teal-300 bg-teal-500/10 border border-teal-500/25 hover:bg-teal-500/20 px-3 py-1.5 rounded-xl flex-shrink-0 transition-all active:scale-95 shadow-xs"
       >
-        Track <ChevronRight className="size-3" />
+        <span>Track Stock</span>
+        <ChevronRight className="size-3.5" />
       </button>
     </motion.div>
   );
@@ -614,6 +657,8 @@ export default function MedVaultPage() {
   const [pharmacyFinderMedicine, setPharmacyFinderMedicine] = useState<Medicine | null | undefined>(undefined);
   const [showLocationPermission, setShowLocationPermission] = useState(false);
   const [pendingPharmacyMedicine, setPendingPharmacyMedicine] = useState<Medicine | null | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "in-stock" | "low-stock" | "critical" | "untracked">("all");
 
   const { status: geoStatus, requestLocation } = useGeolocation({ autoRequest: false });
 
@@ -635,12 +680,17 @@ export default function MedVaultPage() {
   }, [scopedMedicines, scopedReminders]);
 
   // Split: tracked (has currentQuantity) vs untracked
-  const tracked = medicineStatuses.filter(
-    ({ medicine }) => medicine.currentQuantity !== undefined
-  );
-  const untracked = medicineStatuses.filter(
-    ({ medicine }) => medicine.currentQuantity === undefined
-  );
+  const tracked = useMemo(() => {
+    return medicineStatuses.filter(
+      ({ medicine }) => medicine.currentQuantity !== undefined
+    );
+  }, [medicineStatuses]);
+
+  const untracked = useMemo(() => {
+    return medicineStatuses.filter(
+      ({ medicine }) => medicine.currentQuantity === undefined
+    );
+  }, [medicineStatuses]);
 
   // Summary stats
   const totalTablets = tracked.reduce(
@@ -648,11 +698,50 @@ export default function MedVaultPage() {
     0
   );
   const criticalCount = tracked.filter(
-    ({ status }) => status && status.isLow
+    ({ medicine, status }) => (medicine.currentQuantity === 0) || (status && status.isLow)
   ).length;
   const warningCount = tracked.filter(
-    ({ status }) => status && status.isWarning
+    ({ medicine, status }) => (medicine.currentQuantity ?? 0) > 0 && status && status.isWarning && !status.isLow
   ).length;
+  const inStockCount = tracked.filter(
+    ({ medicine, status }) => (medicine.currentQuantity ?? 0) > 0 && !status?.isLow && !status?.isWarning
+  ).length;
+
+  // Filtered lists
+  const filteredTracked = useMemo(() => {
+    if (filter === "untracked") return [];
+    return tracked.filter(({ medicine, status }) => {
+      const q = searchQuery.toLowerCase().trim();
+      if (q) {
+        const matchesName = medicine.name.toLowerCase().includes(q);
+        const matchesGeneric = medicine.genericName?.toLowerCase().includes(q) ?? false;
+        if (!matchesName && !matchesGeneric) return false;
+      }
+      if (filter === "in-stock") {
+        return (medicine.currentQuantity ?? 0) > 0 && !status?.isLow && !status?.isWarning;
+      }
+      if (filter === "low-stock") {
+        return (medicine.currentQuantity ?? 0) > 0 && status?.isWarning && !status?.isLow;
+      }
+      if (filter === "critical") {
+        return (medicine.currentQuantity ?? 0) === 0 || (status && status.isLow);
+      }
+      return true;
+    });
+  }, [tracked, searchQuery, filter]);
+
+  const filteredUntracked = useMemo(() => {
+    if (filter !== "all" && filter !== "untracked") return [];
+    return untracked.filter(({ medicine }) => {
+      const q = searchQuery.toLowerCase().trim();
+      if (q) {
+        const matchesName = medicine.name.toLowerCase().includes(q);
+        const matchesGeneric = medicine.genericName?.toLowerCase().includes(q) ?? false;
+        if (!matchesName && !matchesGeneric) return false;
+      }
+      return true;
+    });
+  }, [untracked, searchQuery, filter]);
 
   const handleRefillSave = async (
     qty: number,
@@ -700,16 +789,16 @@ export default function MedVaultPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-95 transition-all"
+            className="h-9 w-9 rounded-full bg-muted/60 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all shadow-xs"
           >
             <ArrowLeft size={16} />
           </button>
           <div>
-            <h1 className="text-[28px] sm:text-[34px] font-semibold tracking-tight text-foreground leading-none">
+            <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-foreground leading-none">
               Med Vault
             </h1>
-            <p className="text-[12px] text-muted-foreground mt-0.5">
-              Pill supply &amp; stock tracker
+            <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
+              Pill Supply &amp; Stock Tracker · {tracked.length} Active
             </p>
           </div>
         </div>
@@ -717,16 +806,16 @@ export default function MedVaultPage() {
         <div className="hidden sm:flex items-center gap-2">
           <button
             onClick={() => handleOpenPharmacyFinder(null)}
-            className="flex items-center gap-1.5 text-[12px] font-normal bg-muted border border-border hover:bg-muted/80 text-foreground px-4 py-2 rounded-full transition-all active:scale-95"
+            className="flex items-center gap-1.5 text-[12px] font-semibold bg-muted/60 border border-border/70 hover:bg-muted text-foreground px-4 py-2 rounded-full transition-all active:scale-95 shadow-xs"
           >
-            <Compass className="size-3.5 text-primary" />
+            <Compass className="size-3.5 text-teal-600 dark:text-teal-400" />
             <span>NDA Pharmacies</span>
           </button>
           <button
             onClick={() => navigate("/medications")}
-            className="flex items-center gap-1.5 text-[12px] font-normal bg-primary text-primary-foreground px-4 py-2 rounded-full transition-all active:scale-95 shadow-none"
+            className="flex items-center gap-1.5 text-[12px] font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-full transition-all active:scale-95 shadow-md shadow-blue-500/20 hover:brightness-105"
           >
-            <Pill className="size-3.5" />
+            <Pill className="size-3.5 text-white" />
             <span>Medications</span>
           </button>
         </div>
@@ -736,7 +825,7 @@ export default function MedVaultPage() {
           <button
             onClick={() => handleOpenPharmacyFinder(null)}
             aria-label="Find NDA Pharmacies"
-            className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300 transition-all active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center"
+            className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300 transition-all active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center shadow-xs"
             title="Find NDA Pharmacies"
           >
             <Compass className="size-4 text-teal-600 dark:text-teal-400" />
@@ -744,7 +833,7 @@ export default function MedVaultPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="p-2.5 rounded-xl bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground transition-all active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center"
+                className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-muted-foreground hover:text-foreground transition-all active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center shadow-xs"
                 aria-label="More navigation options"
               >
                 <MoreVertical size={16} />
@@ -771,40 +860,48 @@ export default function MedVaultPage() {
       </div>
 
       {/* Hero Stats Tile */}
-      <div className="relative overflow-hidden rounded-[22px] border border-teal-400/25 p-6 mb-8 bg-gradient-to-br from-[#0f766e] via-[#115e59] to-[#042f2e] text-white shadow-lg shadow-teal-950/20 transition-all">
+      <div className="relative overflow-hidden rounded-[26px] border border-teal-500/30 p-6 mb-6 bg-gradient-to-br from-[#0d9488] via-[#0f766e] to-[#042f2e] text-white shadow-xl shadow-teal-950/20 transition-all">
         {/* Ambient Jewel Glows */}
-        <div className="absolute -top-16 -right-16 w-48 h-48 bg-teal-400/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-56 h-56 bg-teal-300/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-56 h-56 bg-emerald-400/15 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-teal-100 shadow-xs">
-              <Package2 size={16} />
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3.5 py-1 shadow-xs">
+              <div className="h-2 w-2 rounded-full bg-teal-300 shadow-[0_0_8px_#5eead4]" />
+              <span className="text-[11px] font-semibold tracking-normal text-white">
+                Live Inventory Overview
+              </span>
             </div>
-            <span className="text-[12px] font-medium text-teal-100">
-              Supply Overview
-            </span>
+
+            <button
+              onClick={() => handleOpenPharmacyFinder(null)}
+              className="hidden sm:inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[11px] font-medium transition-all active:scale-95 shadow-xs"
+            >
+              <Compass size={12} />
+              <span>Nearby Pharmacies</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-[28px] sm:text-[34px] font-bold leading-tight tracking-tight text-white">{tracked.length}</p>
+              <p className="text-[30px] sm:text-[38px] font-black leading-tight tracking-tight text-white">{tracked.length}</p>
               <p className="text-[12px] font-medium text-teal-100/80 mt-0.5">
-                Tracked
+                Tracked Meds
               </p>
             </div>
             <div>
-              <p className="text-[28px] sm:text-[34px] font-bold leading-tight tracking-tight text-white">{totalTablets}</p>
+              <p className="text-[30px] sm:text-[38px] font-black leading-tight tracking-tight text-white">{totalTablets}</p>
               <p className="text-[12px] font-medium text-teal-100/80 mt-0.5">
                 Total Units
               </p>
             </div>
             <div>
-              <p className={`text-[28px] sm:text-[34px] font-bold leading-tight tracking-tight ${criticalCount > 0 ? "text-rose-300 drop-shadow-sm" : "text-white"}`}>
+              <p className={`text-[30px] sm:text-[38px] font-black leading-tight tracking-tight ${criticalCount > 0 ? "text-rose-300 drop-shadow-sm" : "text-white"}`}>
                 {criticalCount}
               </p>
               <p className="text-[12px] font-medium text-teal-100/80 mt-0.5">
-                Critical
+                Critical Needs
               </p>
             </div>
           </div>
@@ -812,23 +909,86 @@ export default function MedVaultPage() {
           {(criticalCount > 0 || warningCount > 0) && (
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/15">
               <div className="flex items-center gap-2 text-[12px] text-teal-100 font-medium">
-                <AlertTriangle size={13} className={criticalCount > 0 ? "text-rose-300" : "text-amber-300"} />
+                <AlertTriangle size={14} className={criticalCount > 0 ? "text-rose-300 animate-pulse" : "text-amber-300"} />
                 <span>
                   {criticalCount > 0
-                    ? `${criticalCount} medicine${criticalCount > 1 ? "s" : ""} critically low`
-                    : `${warningCount} medicine${warningCount > 1 ? "s" : ""} running low`}
+                    ? `${criticalCount} medicine${criticalCount > 1 ? "s" : ""} critically low or depleted`
+                    : `${warningCount} medicine${warningCount > 1 ? "s" : ""} running low on supply`}
                 </span>
               </div>
 
               <button
                 onClick={() => handleOpenPharmacyFinder(null)}
-                className="h-8 px-4 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[12px] font-medium transition-all active:scale-95 shadow-xs"
+                className="h-8 px-4 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[12px] font-semibold transition-all active:scale-95 shadow-xs flex items-center gap-1.5"
               >
-                Find Pharmacy
+                <Compass size={13} />
+                <span>Find NDA Pharmacy</span>
               </button>
             </div>
           )}
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative mb-3">
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search inventory by medicine or generic name..."
+          className="h-11 rounded-full border-border/80 bg-card/90 pl-11 pr-10 text-[14px] focus:border-teal-500 shadow-xs transition-all"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
+      {/* Filter Chips */}
+      <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-6">
+        {[
+          { id: "all", label: "All Inventory", count: tracked.length },
+          { id: "in-stock", label: "Good Supply", count: inStockCount, dot: "bg-emerald-500" },
+          { id: "low-stock", label: "Running Low", count: warningCount, dot: "bg-amber-500", pulse: warningCount > 0 },
+          { id: "critical", label: "Critical", count: criticalCount, dot: "bg-rose-500", pulse: criticalCount > 0 },
+          { id: "untracked", label: "Untracked", count: untracked.length, dot: "bg-slate-400" },
+        ].map((tab) => {
+          const isActive = filter === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id as typeof filter)}
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+                isActive
+                  ? "bg-teal-600 text-white shadow-sm shadow-teal-600/25"
+                  : "bg-card border border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              {tab.dot && (
+                <span
+                  className={`size-2 rounded-full ${tab.dot} ${
+                    tab.pulse && !isActive ? "animate-pulse" : ""
+                  }`}
+                />
+              )}
+              <span>{tab.label}</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Loading */}
@@ -861,14 +1021,38 @@ export default function MedVaultPage() {
             <Plus size={14} /> Manage Medications
           </button>
         </motion.div>
+      ) : filteredTracked.length === 0 && filteredUntracked.length === 0 ? (
+        /* No matches for search/filter */
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center justify-center py-16 rounded-3xl border border-dashed border-border/50 bg-accent/10 text-center gap-3 px-6"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-600">
+            <Package2 size={24} />
+          </div>
+          <p className="text-base font-bold text-foreground">No matching medications</p>
+          <p className="text-xs text-muted-foreground max-w-[260px]">
+            No items match your filter or search query. Try clearing filters or searching with a different name.
+          </p>
+          <button
+            onClick={() => {
+              setSearchQuery("");
+              setFilter("all");
+            }}
+            className="mt-2 text-xs font-bold text-teal-600 dark:text-teal-400 hover:underline"
+          >
+            Reset Filters
+          </button>
+        </motion.div>
       ) : (
         <>
           {/* Tracked medicines */}
-          {tracked.length > 0 && (
+          {filteredTracked.length > 0 && (
             <div className="mb-8">
               <h2 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
                 <CheckCircle size={12} className="text-teal-500" />
-                Tracked ({tracked.length})
+                Tracked Inventory ({filteredTracked.length})
               </h2>
               <motion.div
                 variants={container}
@@ -878,7 +1062,7 @@ export default function MedVaultPage() {
               >
                 <AnimatePresence>
                   {/* Critical first, then warning, then OK */}
-                  {[...tracked]
+                  {[...filteredTracked]
                     .sort((a, b) => {
                       const getOrder = (item: typeof a) => {
                         if ((item.medicine.currentQuantity ?? 0) === 0) return 0;
@@ -889,12 +1073,11 @@ export default function MedVaultPage() {
                       const orderA = getOrder(a);
                       const orderB = getOrder(b);
                       if (orderA !== orderB) return orderA - orderB;
-                      // Sub-sort by quantity ascending
                       return (a.medicine.currentQuantity ?? 0) - (b.medicine.currentQuantity ?? 0);
                     })
                     .map(({ medicine, status }) => {
                       const days = status?.daysRemaining ?? null;
-                      const isCritical = status?.isLow ?? false;
+                      const isCritical = (medicine.currentQuantity ?? 0) === 0 || (status?.isLow ?? false);
                       const isWarn = status?.isWarning ?? false;
                       const isOut = (medicine.currentQuantity ?? 0) === 0;
                       return (
@@ -918,17 +1101,17 @@ export default function MedVaultPage() {
           )}
 
           {/* Untracked medicines */}
-          {untracked.length > 0 && (
+          {filteredUntracked.length > 0 && (
             <div>
               <h2 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
                 <Info size={12} />
-                Not Tracked ({untracked.length})
+                Not Tracked in Med Vault ({filteredUntracked.length})
               </h2>
               <p className="text-xs text-muted-foreground mb-4">
-                Add pill counts to these medicines to enable Med Vault tracking.
+                Add pill counts to these medicines to enable stock tracking and automatic refill alerts.
               </p>
-              <div className="space-y-2">
-                {untracked.map(({ medicine }) => (
+              <div className="space-y-2.5">
+                {filteredUntracked.map(({ medicine }) => (
                   <UntrackedCard
                     key={medicine.id}
                     medicine={medicine}
