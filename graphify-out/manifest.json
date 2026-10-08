@@ -1,11 +1,11 @@
 {
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/build.gradle": {
-    "mtime": 1791361410.621512,
-    "ast_hash": "2f7c9adca0f53a8e71e309a9874adc59",
+    "mtime": 1791389595.754283,
+    "ast_hash": "bfa42ee877b2c0220b8f5af5f0135799",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/capacitor.build.gradle": {
-    "mtime": 1791367994.672983,
+    "mtime": 1791389836.6118422,
     "ast_hash": "9b35e0fc18571d0c6f5e7d22816089a8",
     "semantic_hash": ""
   },
@@ -15,32 +15,32 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/capacitor.config.json": {
-    "mtime": 1791367993.6381211,
+    "mtime": 1791389836.3268354,
     "ast_hash": "33edbf88c50f2cd8c808801b2fa3aad5",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/capacitor.plugins.json": {
-    "mtime": 1791367994.3745773,
+    "mtime": 1791389836.556841,
     "ast_hash": "fc3af61e2564b137d4e2bb3b5d7da54b",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/rolldown-runtime-Cyuzqnbw.js": {
-    "mtime": 1791367993.5163896,
+    "mtime": 1791389836.262834,
     "ast_hash": "47eb6677670791246ef846196dea27ee",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/cordova.js": {
-    "mtime": 1791367994.6550188,
+    "mtime": 1791389836.606842,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/cordova_plugins.js": {
-    "mtime": 1791367994.6560166,
+    "mtime": 1791389836.606842,
     "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/manifest.json": {
-    "mtime": 1791367993.4575193,
+    "mtime": 1791389836.2368333,
     "ast_hash": "885a7cb9fb2e346513d71f309cbc252a",
     "semantic_hash": ""
   },
@@ -145,17 +145,17 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/capacitor-cordova-android-plugins/build.gradle": {
-    "mtime": 1791367994.6839612,
+    "mtime": 1791389836.6148422,
     "ast_hash": "2af61653d70c95d20802c8b5c433ba90",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/capacitor-cordova-android-plugins/cordova.variables.gradle": {
-    "mtime": 1791367994.6859572,
+    "mtime": 1791389836.615842,
     "ast_hash": "d2372a0ae9aa60abb8d03e7f06bf9194",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/capacitor.settings.gradle": {
-    "mtime": 1791367994.671985,
+    "mtime": 1791389836.610842,
     "ast_hash": "b7f5c595718453f236355eb0937878f8",
     "semantic_hash": ""
   },
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/package.json": {
-    "mtime": 1791361392.1178493,
-    "ast_hash": "acef30b9dc74f183efa7f0bab09037bf",
+    "mtime": 1791389550.7692392,
+    "ast_hash": "a9a849c55febe507d8ded9af55bb07eb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/playwright-fixture.ts": {
@@ -1910,17 +1910,17 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/index.html": {
-    "mtime": 1791367993.4565215,
-    "ast_hash": "e5c41214112ecfcfd636bcc77362da8b",
+    "mtime": 1791389836.2368333,
+    "ast_hash": "6cb8d3a07f32c87652d5d405859a9748",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/offline.html": {
-    "mtime": 1791367993.4565215,
+    "mtime": 1791389836.2368333,
     "ast_hash": "8de77f178acf7de5b348285436c6d22c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/robots.txt": {
-    "mtime": 1791367993.458517,
+    "mtime": 1791389836.2368333,
     "ast_hash": "f9dff89adf98833e676de2205921996a",
     "semantic_hash": ""
   },
@@ -1950,12 +1950,12 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/dawa-gpt.png": {
-    "mtime": 1791367993.458517,
+    "mtime": 1791389836.2378335,
     "ast_hash": "e11727d0282cbaa15432cadb50df2a06",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/logo.png": {
-    "mtime": 1791367993.458517,
+    "mtime": 1791389836.2378335,
     "ast_hash": "5f30f7b971f47ffc0dd8a6a88d85f5e3",
     "semantic_hash": ""
   },
@@ -2190,37 +2190,37 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/icons/icon-128.webp": {
-    "mtime": 1791367993.5662796,
+    "mtime": 1791389836.304835,
     "ast_hash": "b61e4b2ab9f2a7707575f75fbf64b0f0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/icons/icon-192.webp": {
-    "mtime": 1791367993.5712686,
+    "mtime": 1791389836.299835,
     "ast_hash": "ec66b526b3c0722a9d74ef8af134851a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/icons/icon-256.webp": {
-    "mtime": 1791367993.5732641,
+    "mtime": 1791389836.303835,
     "ast_hash": "0324a381d3e8b1f825d5a11741379b67",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/icons/icon-48.webp": {
-    "mtime": 1791367993.5732641,
+    "mtime": 1791389836.303835,
     "ast_hash": "8cf555c8197f186df01fdcddfbc4b76b",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/icons/icon-512.webp": {
-    "mtime": 1791367993.5712686,
+    "mtime": 1791389836.300835,
     "ast_hash": "3f9b968563ce6cf3a7d3fe1ca4582b52",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/icons/icon-72.webp": {
-    "mtime": 1791367993.5732641,
+    "mtime": 1791389836.303835,
     "ast_hash": "16989e45c8cf6767690884df8d7a0f53",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/icons/icon-96.webp": {
-    "mtime": 1791367993.5722663,
+    "mtime": 1791389836.300835,
     "ast_hash": "053b744da8ab7e218bf8310e05f0032a",
     "semantic_hash": ""
   },
@@ -2479,18 +2479,13 @@
     "ast_hash": "6146323fa5fff888afc09b8bbcf2980d",
     "semantic_hash": ""
   },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/LottieMoji-0Ih8CYxJ.js": {
-    "mtime": 1791367993.4924424,
-    "ast_hash": "48de0a8c28820cfe7f8af2829b90f297",
-    "semantic_hash": ""
-  },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/animation-bundle-Dei51B7w.js": {
-    "mtime": 1791367993.504416,
+    "mtime": 1791389836.258834,
     "ast_hash": "0c4e33b4a5d87748f4013a2d65695a38",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/motion-bundle-0fiBFIpe.js": {
-    "mtime": 1791367993.5163896,
+    "mtime": 1791389836.261834,
     "ast_hash": "da90b5cf07d4b7825200e819361ee4aa",
     "semantic_hash": ""
   },
@@ -2565,7 +2560,7 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/firebase-bundle-CJ3ou2_n.js": {
-    "mtime": 1791367993.4904468,
+    "mtime": 1791389836.2458336,
     "ast_hash": "545fad0d4593fec99aa935852caa0589",
     "semantic_hash": ""
   },
@@ -2660,7 +2655,7 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/clinicalAssessmentService-DlDApfP2.js": {
-    "mtime": 1791367993.504416,
+    "mtime": 1791389836.258834,
     "ast_hash": "a0fe0e29f2b7d2560eadbc1db0e75730",
     "semantic_hash": ""
   },
@@ -4115,22 +4110,22 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ocrWorker-BMI_fU-r.js": {
-    "mtime": 1791367993.508407,
+    "mtime": 1791389836.259834,
     "ast_hash": "5d064d9149a12ce9422141cc4d2f1746",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/tesseract/core/tesseract-core-lstm.wasm.js": {
-    "mtime": 1791367993.5433302,
+    "mtime": 1791389836.2738342,
     "ast_hash": "a3c227d2e04b7be5d1ef50d75f3a5ee3",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/tesseract/core/tesseract-core-simd-lstm.wasm.js": {
-    "mtime": 1791367993.5473213,
+    "mtime": 1791389836.2738342,
     "ast_hash": "2bd630487581a49b7d7cce1bfe42314c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/tesseract/worker.min.js": {
-    "mtime": 1791367993.494438,
+    "mtime": 1791389836.2558339,
     "ast_hash": "b1ab464237e687b323da236fff45ba05",
     "semantic_hash": ""
   },
@@ -4175,27 +4170,27 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/capacitor-core-C7Bj1KQc.js": {
-    "mtime": 1791367993.5074093,
+    "mtime": 1791389836.258834,
     "ast_hash": "d48c654e58ae3f7bdf4134dffcc66e64",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/maplibre-B3pnapOF.js": {
-    "mtime": 1791367993.5114005,
+    "mtime": 1791389836.259834,
     "ast_hash": "4bc2dca65b62c3a2d79956c8e2662f22",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/maplibre-gl-worker-B_UUdgGG.js": {
-    "mtime": 1791367993.4914446,
+    "mtime": 1791389836.2498338,
     "ast_hash": "0dad5780534b602b860b13b01bfdefad",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/nativeAlarm-CgtN9G66.js": {
-    "mtime": 1791367993.4764776,
+    "mtime": 1791389836.2448337,
     "ast_hash": "8e492f1aca146706a505e943f3681c1c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/nativeService-B5qXP9Oa.js": {
-    "mtime": 1791367993.5034182,
+    "mtime": 1791389836.2558339,
     "ast_hash": "cd4f41770657388ecbfda1c7ebe17938",
     "semantic_hash": ""
   },
@@ -4215,12 +4210,12 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/dawa-gpt.webp": {
-    "mtime": 1791367993.4575193,
+    "mtime": 1791389836.2368333,
     "ast_hash": "fd613d9e4a03cb80686acbf76be65267",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/logo.webp": {
-    "mtime": 1791367993.464504,
+    "mtime": 1791389836.2368333,
     "ast_hash": "21be7d7664e29d2540a28b04f644f4e3",
     "semantic_hash": ""
   },
@@ -4365,52 +4360,52 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-bell-notification-933.mp3": {
-    "mtime": 1791367993.4964335,
+    "mtime": 1791389836.257834,
     "ast_hash": "1a1f9b0362edd260023a5c7e89af57c4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-guitar-notification-alert-2320.mp3": {
-    "mtime": 1791367993.4964335,
+    "mtime": 1791389836.257834,
     "ast_hash": "d27e842c03d7d23e1154b6ae587989fe",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-happy-bells-notification-937.mp3": {
-    "mtime": 1791367993.5034182,
+    "mtime": 1791389836.2558339,
     "ast_hash": "72524e8458431ce8f3e5799386e09b6d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-long-pop-2358.mp3": {
-    "mtime": 1791367993.5024204,
+    "mtime": 1791389836.258834,
     "ast_hash": "bbb6908a16c3a0862e8cebe4b6285848",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-positive-notification-951.mp3": {
-    "mtime": 1791367993.5034182,
+    "mtime": 1791389836.260834,
     "ast_hash": "f0aff6f3d2688a3947fed0b8d36ecfac",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-sci-fi-click-900.mp3": {
-    "mtime": 1791367993.4954357,
+    "mtime": 1791389836.2568338,
     "ast_hash": "77f5a281e90d4b5cbf41c715f3b2f318",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-software-interface-back-2575.mp3": {
-    "mtime": 1791367993.4954357,
+    "mtime": 1791389836.2568338,
     "ast_hash": "f88532a7b93498668b5b6e3fa55a9e96",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-software-interface-start-2574.mp3": {
-    "mtime": 1791367993.4954357,
+    "mtime": 1791389836.2558339,
     "ast_hash": "ce1456765cac2d7f945b021e6cd278c8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-uplifting-flute-notification-2317.mp3": {
-    "mtime": 1791367993.5024204,
+    "mtime": 1791389836.258834,
     "ast_hash": "652514d0533017f42a716d349029ebb9",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/notification_sounds/mixkit-urgent-simple-tone-loop-2976.mp3": {
-    "mtime": 1791367993.5024204,
+    "mtime": 1791389836.257834,
     "ast_hash": "d68b277731a74e2a7b1fce843463dfdf",
     "semantic_hash": ""
   },
@@ -4575,82 +4570,82 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/AppContext-CxZI1tlE.js": {
-    "mtime": 1791367993.5054138,
+    "mtime": 1791389836.2508337,
     "ast_hash": "42529bd2b011b1b18fcf55ad01286c97",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/FdaBoxedWarningBadge-BYF2CBIn.js": {
-    "mtime": 1791367993.4874532,
+    "mtime": 1791389836.2458336,
     "ast_hash": "3c6fa5d04156388613377c70e147c795",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/PremiumLoader-jCFM2_rI.js": {
-    "mtime": 1791367993.5123982,
+    "mtime": 1791389836.260834,
     "ast_hash": "cb7ac4ee811533daea3d9195028cf9be",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/SuccessState-BSkr0y4x.js": {
-    "mtime": 1791367993.508407,
+    "mtime": 1791389836.259834,
     "ast_hash": "a3e0303938c3d0879c201ae26cfa0c59",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/VerifyEmailPage-CYogGJ3D.js": {
-    "mtime": 1791367993.473484,
+    "mtime": 1791389836.2448337,
     "ast_hash": "76297fc7db9e710e0e65688e3e24f5bb",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/badge-CxsCPquY.js": {
-    "mtime": 1791367993.504416,
+    "mtime": 1791389836.258834,
     "ast_hash": "6b0e07a82f0704d444c18ef7411cc39f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/dialog-D3JalVlc.js": {
-    "mtime": 1791367993.508407,
+    "mtime": 1791389836.258834,
     "ast_hash": "0abec94d0ae69067312c5d851a39d0c2",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/icons-CeOOvFAv.js": {
-    "mtime": 1791367993.4924424,
+    "mtime": 1791389836.2518337,
     "ast_hash": "bd540a9c3834946953a68f7d14bd1fcc",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/label-Bh7dOwky.js": {
-    "mtime": 1791367993.508407,
+    "mtime": 1791389836.259834,
     "ast_hash": "d583bbdafe2a600312f9a900c7417642",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/pdf-bundle-7wu5aR-5.js": {
-    "mtime": 1791367993.483462,
+    "mtime": 1791389836.2478337,
     "ast_hash": "03e1d41506ba7623b268da1108864f63",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/popover-kq9m_hf_.js": {
-    "mtime": 1791367993.489449,
+    "mtime": 1791389836.2468336,
     "ast_hash": "377190186e4f696dc89fa42ef0fddc3a",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/select-UA-oorpu.js": {
-    "mtime": 1791367993.4764776,
+    "mtime": 1791389836.2458336,
     "ast_hash": "c8d247d8f54987feedfa57945e3b2d4c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/switch-DsznYKXV.js": {
-    "mtime": 1791367993.494438,
+    "mtime": 1791389836.258834,
     "ast_hash": "b8c17bb0ee0710f0d2bea302a8401799",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ui-kit-DZ4ZClGy.js": {
-    "mtime": 1791367993.4934402,
+    "mtime": 1791389836.2518337,
     "ast_hash": "3c3690b756a6c877a6f31972d99af69d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/utils-DhK6QBfW.js": {
-    "mtime": 1791367993.4914446,
+    "mtime": 1791389836.2498338,
     "ast_hash": "6d3e82160b5bce92a9aab68399f6eb31",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/vendor-D9XJN6Rl.js": {
-    "mtime": 1791367993.4864554,
+    "mtime": 1791389836.2488337,
     "ast_hash": "521f645eb155c113feffd43c6feae8b2",
     "semantic_hash": ""
   },
@@ -4659,124 +4654,229 @@
     "ast_hash": "888ec339a304186696912df26830f73a",
     "semantic_hash": ""
   },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/AddReminderPage-DtrsHD30.js": {
-    "mtime": 1791367993.5074093,
-    "ast_hash": "388ab1ffedab05a9d28b714feefb8329",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/AuthPage-jtXIgT4R.js": {
-    "mtime": 1791367993.5074093,
-    "ast_hash": "80e67e49a064effe37e584398ae8725a",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ConfirmationDialog-BnVqdjgK.js": {
-    "mtime": 1791367993.4924424,
-    "ast_hash": "4a1810d2b2bde5e9c4b8815c4d06bc7c",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/DailyTimeline-Dgn6rPIR.js": {
-    "mtime": 1791367993.4904468,
-    "ast_hash": "3a4abc7f20207834edb32342db18bb96",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/Dashboard-QNrOGdeB.js": {
-    "mtime": 1791367993.4934402,
-    "ast_hash": "db246f89863af9c1d018537c0c9f42e5",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/FamilyHubPage-BXca4JXN.js": {
-    "mtime": 1791367993.504416,
-    "ast_hash": "168ec61b61d6d7eca6eaf1cc123e94fb",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/HistoryPage-B9FRmXSM.js": {
-    "mtime": 1791367993.509405,
-    "ast_hash": "45a420846a0dcbae2e3aac784df03bbb",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/InteractionsPage-CdZVAHr6.js": {
-    "mtime": 1791367993.494438,
-    "ast_hash": "52ae00653be368822f8c65c4988880cb",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/MedVaultPage-DCE8DHQX.js": {
-    "mtime": 1791367993.4924424,
-    "ast_hash": "fc5356f487a2125f1f7328801af3c3d5",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/MedicationsPage-Bpe2ZFF5.js": {
-    "mtime": 1791367993.494438,
-    "ast_hash": "582062f3e780a72ea665a7e95eb25996",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/MedicineInfoPage-DeESSDuk.js": {
-    "mtime": 1791367993.4934402,
-    "ast_hash": "55237d945e959620d6bdc54b7bd9c0d6",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/NotFound-CqpkJqBp.js": {
-    "mtime": 1791367993.5034182,
-    "ast_hash": "6279edfef4877c9274f7ad22b357629a",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/OnboardingPage-Btu4fkK0.js": {
-    "mtime": 1791367993.5114005,
-    "ast_hash": "66d65e39862c4e1b469e9b5585077a41",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/RemindersPage-BK7U-kzg.js": {
-    "mtime": 1791367993.4914446,
-    "ast_hash": "0a6bee74b54ff8bb0d57aa304ae60a16",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ReportPage-D1qRBYrP.js": {
-    "mtime": 1791367993.4904468,
-    "ast_hash": "685ae9498b56facbe1e6f74e7ac1e117",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ResultsPage-CO-n-b0Z.js": {
-    "mtime": 1791367993.4764776,
-    "ast_hash": "beac6cccd9793329fd5ce551d9740bfa",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ScanPage-BHgdqQ_N.js": {
-    "mtime": 1791367993.508407,
-    "ast_hash": "a3b32208affbf02c2f5aa5e785807ef3",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/SettingsPage-CU2noJYf.js": {
-    "mtime": 1791367993.5074093,
-    "ast_hash": "009b52cea2f354a892a324aa97652d6f",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/TravelCompanionPage-Cu3XuZsA.js": {
-    "mtime": 1791367993.4924424,
-    "ast_hash": "2793ef2e04a1de3f29b385d9c2f15cb6",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/WelcomePage-C6b8Ef7Y.js": {
-    "mtime": 1791367993.4764776,
-    "ast_hash": "b039f97a4708b3d35ae3c510c3528d8f",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/WellnessPage-BZ2_AxZV.js": {
-    "mtime": 1791367993.4764776,
-    "ast_hash": "3f0e7074ed00bfd2e6b1abb8c3fcf884",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/alert-dialog-C7YQH8dP.js": {
-    "mtime": 1791367993.5074093,
-    "ast_hash": "d60c4c50a10bbe7cf8e3942a16b5ddad",
-    "semantic_hash": ""
-  },
-  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/index-BFPr7pAB.js": {
-    "mtime": 1791367993.514394,
-    "ast_hash": "80c40964b98561470ae87e294d39a83e",
-    "semantic_hash": ""
-  },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/medicineTheme-CGogULQ3.js": {
-    "mtime": 1791367993.4764776,
+    "mtime": 1791389836.2448337,
     "ast_hash": "8c8aea7553093e1ec95ec6b8ef286c46",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/tools/cleanse.sh": {
+    "mtime": 1791384194.8659444,
+    "ast_hash": "677735a8a063e73f2e68ba3685a64d04",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/tools/deslop.py": {
+    "mtime": 1791384194.8669443,
+    "ast_hash": "06cd038723b42ab715cf1b4017a20aca",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/tools/test_cleanse.sh": {
+    "mtime": 1791384194.8669443,
+    "ast_hash": "f74332d2da66712af5aa1533238105d6",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/tools/test_deslop.py": {
+    "mtime": 1791384194.8669443,
+    "ast_hash": "c0823e8fb803409ba1d2e6f1c5bf0448",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/AddReminderPage-C3QQ-Sad.js": {
+    "mtime": 1791389836.2458336,
+    "ast_hash": "7e73987a5eda23576975ed9680b8d8ae",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/AuthPage-B6c0NAiW.js": {
+    "mtime": 1791389836.2448337,
+    "ast_hash": "12f7b1742f43065e2783cd92d33d4c8b",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ConfirmationDialog-Cz-BoHoH.js": {
+    "mtime": 1791389836.2458336,
+    "ast_hash": "85d35bbf006eabb023fad681e5afbe64",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/DailyTimeline-BWzvGwK5.js": {
+    "mtime": 1791389836.258834,
+    "ast_hash": "20528a3580a2363c8f4ec37b3babfca1",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/Dashboard-C90IJGlo.js": {
+    "mtime": 1791389836.2478337,
+    "ast_hash": "240cbe15f338ecf027f49fadc4d95c4b",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/FamilyHubPage-DvtloWiJ.js": {
+    "mtime": 1791389836.2468336,
+    "ast_hash": "2f46465c9206d2abe246a76ce545c73d",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/HistoryPage-DvC5wwL9.js": {
+    "mtime": 1791389836.2478337,
+    "ast_hash": "1c9e6259d10974c97d1f73001b553550",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/InteractionsPage-DeyUVwGf.js": {
+    "mtime": 1791389836.259834,
+    "ast_hash": "0ead4d45ef9c5cbf8ae3c6da11013e02",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/LottieMoji-DttFB3y4.js": {
+    "mtime": 1791389836.258834,
+    "ast_hash": "afb090236f426b29920fa555340bd5da",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/MedVaultPage-DFiVMDxg.js": {
+    "mtime": 1791389836.2478337,
+    "ast_hash": "55f3501db6b308a7f772f9ea59031f6d",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/MedicationsPage-DGjaHYx8.js": {
+    "mtime": 1791389836.259834,
+    "ast_hash": "89fdff3ab320716713ac692dbe138bcf",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/MedicineInfoPage-ltqXyXny.js": {
+    "mtime": 1791389836.257834,
+    "ast_hash": "48e2085e3a2ecbb6a203521b4effc19b",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/NotFound-BS-rSwMV.js": {
+    "mtime": 1791389836.259834,
+    "ast_hash": "6a3d6b1bf589e6a28120560ae20603a6",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/OnboardingPage-CoDCPqP-.js": {
+    "mtime": 1791389836.2468336,
+    "ast_hash": "d0759e3c3919e3ea6f273870d120a3be",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/RemindersPage-DzyzzV41.js": {
+    "mtime": 1791389836.2498338,
+    "ast_hash": "a1d091ea59bbc2e812c12c73f2a20058",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ReportPage-Dq60aTCB.js": {
+    "mtime": 1791389836.2458336,
+    "ast_hash": "4e6824cea5d6b8a1a87410f4e429aaab",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ResultsPage-CGRT6ZIP.js": {
+    "mtime": 1791389836.2478337,
+    "ast_hash": "9f6857a1fb951cca8ef1708f25297964",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/ScanPage-Bq8nis8i.js": {
+    "mtime": 1791389836.2448337,
+    "ast_hash": "d507b0de8fc606876d6f8af4cfb752ca",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/SettingsPage-B1QL28y5.js": {
+    "mtime": 1791389836.259834,
+    "ast_hash": "52156b990f02953d4de5d5f02664e743",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/TravelCompanionPage-Cc0CtGa2.js": {
+    "mtime": 1791389836.2478337,
+    "ast_hash": "e325e585b8e570b7a89f79803e578ff5",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/WelcomePage-B5-048f4.js": {
+    "mtime": 1791389836.2498338,
+    "ast_hash": "e1c14a05d71da02d8765c0065683f4ee",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/WellnessPage-CzyJ1jGW.js": {
+    "mtime": 1791389836.2478337,
+    "ast_hash": "65d745334d085db8baa27edd12ab86fa",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/alert-dialog-DEORu8Wy.js": {
+    "mtime": 1791389836.2518337,
+    "ast_hash": "d957bd9641efa1ae6f7ff8e485cc1672",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/index-DdWtnvFO.js": {
+    "mtime": 1791389836.268834,
+    "ast_hash": "6e7b4466224b66ffada493a1fc37442c",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/.github/workflows/slop.yml": {
+    "mtime": 1791384194.7589443,
+    "ast_hash": "1139e56ea45f866e68b5ae2bae0a4635",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/README.md": {
+    "mtime": 1791384194.7639444,
+    "ast_hash": "bd6f90549384124745e2683e4a01b741",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/SKILL.md": {
+    "mtime": 1791384194.7639444,
+    "ast_hash": "db180d5688c75c0ed7675a21f22de9d9",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/examples/gate-sample.txt": {
+    "mtime": 1791384194.8629444,
+    "ast_hash": "cec35095491783c99ee3a7820b618756",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/examples/jasper-live-run.md": {
+    "mtime": 1791384194.8629444,
+    "ast_hash": "a9c828efca807fb21aa67966647aee6d",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/examples/ridgeline-roofing.md": {
+    "mtime": 1791384194.8639443,
+    "ast_hash": "ee752af972f967b240545c419dcc4fd0",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/prompts/cleanse.txt": {
+    "mtime": 1791384194.8649442,
+    "ast_hash": "e76d37dac683239a44eebb96bdf26cc5",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/references/principles.md": {
+    "mtime": 1791384194.8649442,
+    "ast_hash": "2aa0c308b70ed885b635b8dc7ad9a53e",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/references/signs-of-ai-writing.md": {
+    "mtime": 1791384194.8649442,
+    "ast_hash": "fa7a962edaa49ea8ffc1ed34db6eb4e2",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/references/sources.md": {
+    "mtime": 1791384194.8649442,
+    "ast_hash": "470e77ed2b42e3042fb8eb549fa3e09f",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/docs/img/hero.png": {
+    "mtime": 1791384194.7969444,
+    "ast_hash": "fa9c159839bd8f41ee2710dcc54d5552",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/docs/img/rule-1-vocab.png": {
+    "mtime": 1791384194.8159442,
+    "ast_hash": "b3934bf688410af8a73f2f66a4e146c6",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/docs/img/rule-2-phrases.png": {
+    "mtime": 1791384194.8309443,
+    "ast_hash": "b72f69bfa53cf396968ff32fdb302c41",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/docs/img/rule-3-punctuation.png": {
+    "mtime": 1791384194.8409443,
+    "ast_hash": "f745d61ea5f93eeb086ebc526af92feb",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/docs/img/rule-4-rhythm.png": {
+    "mtime": 1791384194.8479443,
+    "ast_hash": "631634e20b013e06f930c1af466f1d77",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/docs/img/rule-5-conversion.png": {
+    "mtime": 1791384194.8609443,
+    "ast_hash": "2164120892e55ac2820c94c938587807",
     "semantic_hash": ""
   }
 }
