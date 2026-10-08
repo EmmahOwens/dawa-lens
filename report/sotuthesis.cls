@@ -36,15 +36,19 @@
 \RequirePackage[a4paper]{geometry}
 \RequirePackage{setspace}
 \RequirePackage{titlesec}
-\RequirePackage{titletoc}
-\RequirePackage{tocloft}
 \RequirePackage{fancyhdr}
 \RequirePackage{graphicx}
 \RequirePackage{xcolor}
 \RequirePackage{caption}
 \RequirePackage{enumitem}
 \RequirePackage{amsmath,amssymb}
-\RequirePackage[hidelinks]{hyperref}
+\RequirePackage[
+  hidelinks,
+  plainpages=false,
+  pdfpagelabels=true,
+  hypertexnames=true,
+  linktoc=all
+]{hyperref}
 \RequirePackage{microtype}
 \RequirePackage{xstring}
 \RequirePackage{indentfirst}
@@ -64,7 +68,7 @@
 }
 
 %% ---------- Line spacing & paragraph ----------
-\onehalfspacing
+\setstretch{1.5}
 \setlength{\parindent}{1.25em}
 \raggedbottom
 
@@ -95,6 +99,11 @@
   {\centering\normalfont\bfseries\fontsize{18pt}{22pt}\selectfont}
   {\chaptertitlename\ \thechapter}
   {0.6em}
+  {}
+\titleformat{name=\chapter,numberless}
+  {\centering\normalfont\bfseries\fontsize{18pt}{22pt}\selectfont}
+  {}
+  {0pt}
   {}
 \titlespacing*{\chapter}{0pt}{0pt}{16pt}
 
@@ -367,6 +376,7 @@
 %% ---------- Copyright Authorization page ----------
 \newcommand{\makecopyrightauth}{
   \chapter*{Copyright Authorization}
+  \phantomsection
   \addcontentsline{toc}{chapter}{Copyright Authorization}
   \thispagestyle{sotunoheader}
   \noindent
@@ -409,6 +419,7 @@
 
 \newcommand{\makedeclaration}{
   \chapter*{Statement of Declaration}
+  \phantomsection
   \addcontentsline{toc}{chapter}{Statement of Declaration}
   \thispagestyle{sotunoheader}
   \noindent
@@ -433,6 +444,7 @@
 %% ---------- Approval page ----------
 \newcommand{\makeapproval}{
   \chapter*{Approval}
+  \phantomsection
   \addcontentsline{toc}{chapter}{Approval}
   \thispagestyle{sotunoheader}
   \noindent
@@ -468,6 +480,7 @@
 %% ---------- Abstract environment ----------
 \newenvironment{thesisabstract}{
   \chapter*{Abstract}
+  \phantomsection
   \addcontentsline{toc}{chapter}{Abstract}
   \thispagestyle{sotumain}
   \markright{Abstract}
@@ -478,6 +491,7 @@
 %% ---------- Dedication ----------
 \newenvironment{dedication}{
   \chapter*{Dedication}
+  \phantomsection
   \addcontentsline{toc}{chapter}{Dedication}
   \thispagestyle{sotunoheader}
   \centering
@@ -488,6 +502,7 @@
 %% ---------- Acknowledgement ----------
 \newenvironment{acknowledgement}{
   \chapter*{Acknowledgements}
+  \phantomsection
   \addcontentsline{toc}{chapter}{Acknowledgements}
   \thispagestyle{sotunoheader}
 }{
@@ -497,6 +512,7 @@
 %% ---------- List of Abbreviations ----------
 \newenvironment{abbreviations}{
   \chapter*{List of Abbreviations}
+  \phantomsection
   \addcontentsline{toc}{chapter}{List of Abbreviations}
   \thispagestyle{sotumain}
   \markright{List of Abbreviations}
@@ -511,7 +527,9 @@
 
 %% ---------- Front matter numbering (roman) and main matter (arabic) ----------
 \newcommand{\frontmatterstart}{
+  \clearpage
   \pagenumbering{roman}
+  \hypersetup{pageanchor=true}
   \pagestyle{sotumain}
 }
 \newcommand{\mainmatterstart}{
@@ -534,6 +552,7 @@
 % the Appendix A/B/C lettering scheme from \appendix.
 \newenvironment{publishedworks}{
   \chapter*{Published Works}
+  \phantomsection
   \addcontentsline{toc}{chapter}{Published Works}
   \markright{Published Works}
   \begin{enumerate}[label={[\arabic*]}]
@@ -543,22 +562,26 @@
 }
 
 %% ---------- List of Figures / Tables headings into ToC ----------
+\newbool{sotu@firstappendix}
 \AtBeginDocument{
+  \hypersetup{pageanchor=false}
   \renewcommand{\listfigurename}{List of Figures}
   \renewcommand{\listtablename}{List of Tables}
   \renewcommand{\contentsname}{Table of Contents}
   \renewcommand{\bibname}{References}
   % Ensure the running header shows the correct title on the
   % Table of Contents / List of Figures / List of Tables pages
-  % (including any continuation pages), since the kernel's own
-  % \tableofcontents/\listoffigures/\listoftables call \markright
-  % with an UPPERCASE title via \@mkboth -- override \@mkboth
-  % within each command's scope so it uses our preferred title
-  % and capitalisation instead, consistently on every page.
+  % and that each TOC entry links to the exact page.
   \let\sotu@oldtoc\tableofcontents
   \renewcommand{\tableofcontents}{%
-    \addcontentsline{toc}{chapter}{\contentsname}%
+    \clearpage
     \begingroup
+    \let\sotu@origchapter\chapter
+    \def\chapter*##1{%
+      \sotu@origchapter*{##1}%
+      \phantomsection
+      \addcontentsline{toc}{chapter}{##1}%
+    }%
     \def\@mkboth##1##2{\markright{\contentsname}}%
     \sotu@oldtoc
     \endgroup
@@ -567,18 +590,28 @@
   \let\sotu@oldlof\listoffigures
   \renewcommand{\listoffigures}{%
     \clearpage
-    \addcontentsline{toc}{chapter}{\listfigurename}%
     \begingroup
+    \let\sotu@origchapter\chapter
+    \def\chapter*##1{%
+      \sotu@origchapter*{##1}%
+      \phantomsection
+      \addcontentsline{toc}{chapter}{##1}%
+    }%
     \def\@mkboth##1##2{\markright{\listfigurename}}%
     \sotu@oldlof
     \endgroup
-    \IfStrEq{\@reporttype}{proposal}{\vspace{1.2cm}}{\clearpage}%
+    \clearpage
   }
   \let\sotu@oldlot\listoftables
   \renewcommand{\listoftables}{%
-    \IfStrEq{\@reporttype}{proposal}{}{\clearpage}%
-    \addcontentsline{toc}{chapter}{\listtablename}%
+    \clearpage
     \begingroup
+    \let\sotu@origchapter\chapter
+    \def\chapter*##1{%
+      \sotu@origchapter*{##1}%
+      \phantomsection
+      \addcontentsline{toc}{chapter}{##1}%
+    }%
     \def\@mkboth##1##2{\markright{\listtablename}}%
     \sotu@oldlot
     \endgroup
@@ -587,7 +620,14 @@
   \let\sotu@oldbib\thebibliography
   \let\sotu@oldendbib\endthebibliography
   \renewcommand{\thebibliography}[1]{%
+    \clearpage
     \begingroup
+    \let\sotu@origchapter\chapter
+    \def\chapter*##1{%
+      \sotu@origchapter*{##1}%
+      \phantomsection
+      \addcontentsline{toc}{chapter}{##1}%
+    }%
     \def\@mkboth##1##2{\markright{\bibname}}%
     \sotu@oldbib{#1}%
   }
@@ -595,15 +635,22 @@
     \sotu@oldendbib
     \endgroup
   }
-  % Insert a top-level "Appendix" entry into the Table of Contents
-  % the moment \appendix is called, so it appears above the
-  % individual "Appendix A", "Appendix B", ... chapter entries
-  % that LaTeX already adds automatically via \chapter.
+  % Insert a top-level "Appendices" entry into the Table of Contents
+  % when the first appendix chapter is created, ensuring it links to
+  % the exact page where appendices begin.
   \let\sotu@oldappendix\appendix
   \renewcommand{\appendix}{%
+    \clearpage
     \sotu@oldappendix
-    \addcontentsline{toc}{chapter}{Appendix}%
+    \booltrue{sotu@firstappendix}%
   }
+  \pretocmd{\chapter}{%
+    \ifbool{sotu@firstappendix}{%
+      \boolfalse{sotu@firstappendix}%
+      \phantomsection
+      \addcontentsline{toc}{chapter}{Appendices}%
+    }{}%
+  }{}{}
 }
 
 \endinput
