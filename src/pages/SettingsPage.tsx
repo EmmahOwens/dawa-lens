@@ -12,7 +12,6 @@ import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import pkg from "../../package.json";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
@@ -766,7 +765,7 @@ export default function SettingsPage() {
 
       <div className="mt-12 text-center">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-30">
-          Dawa Lens v{pkg.version} • Secure Health Data
+          Dawa Lens • Secure Health Data
         </p>
       </div>
     </div>
