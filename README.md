@@ -1,122 +1,128 @@
-# 💊 Dawa Lens — Intelligence-Driven Medication Safety & Care Ecosystem
+<div align="center">
 
-[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black)](https://reactjs.org/)
+<img src="public/assets/readme/logo-animated.svg" alt="Dawa Lens — Animated Logo & Core Pillars" width="100%" />
+
+<br />
+
+# Dawa Lens
+
+**A personal pharmacist in your pocket, built for patients and families in Uganda.**
+
+[![Version](https://img.shields.io/badge/version-1.8.2-0ea5e9?style=flat-square)](package.json)
+[![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Capacitor](https://img.shields.io/badge/Capacitor-8.0-119EFF?style=flat-square&logo=capacitor&logoColor=white)](https://capacitorjs.com/)
+[![Rust](https://img.shields.io/badge/Rust-JNI%20Search-DEA584?style=flat-square&logo=rust&logoColor=black)](rust/README.md)
 [![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%26%20Auth-FFCA28?style=flat-square&logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![Vite](https://img.shields.io/badge/Vite-8.0-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D24.14-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/License-Proprietary-red?style=flat-square)](LICENSE)
+[![Live Web App](https://img.shields.io/badge/Live%20App-dawalens256.vercel.app-10b981?style=flat-square&logo=vercel&logoColor=white)](https://dawalens256.vercel.app)
 
-> **Empowering patients, families, and healthcare providers across Uganda with instant computer vision medication recognition, real-time drug interaction safeguards, context-aware AI clinical support, and synchronized family caregiving.**
+[Explore the Live App](https://dawalens256.vercel.app) · [What It Does](#-what-dawa-lens-does) · [Under the Hood](#-how-it-works-under-the-hood) · [Quick Start](#-getting-started) · [Rust Offline Engine](rust/README.md)
 
----
-
-## 📖 Table of Contents
-
-- [The Story & Mission](#-the-story--mission)
-- [Why Dawa Lens?](#-why-dawa-lens)
-- [Core Capabilities](#-core-capabilities)
-  - [1. Visual Pill & Prescription Scanner](#1-visual-pill--prescription-scanner)
-  - [2. DawaGPT — Context-Aware Clinical AI](#2-dawagpt--context-aware-clinical-ai)
-  - [3. Drug & Food Interaction Guard](#3-drug--food-interaction-guard)
-  - [4. Family Hub & Caregiver Network](#4-family-hub--caregiver-network)
-  - [5. Intelligent Reminders & Travel Companion](#5-intelligent-reminders--travel-companion)
-  - [6. Holistic Wellness Journal & Adherence Analytics](#6-holistic-wellness-journal--adherence-analytics)
-  - [7. Doctor-Ready Clinical Reports](#7-doctor-ready-clinical-reports)
-  - [8. Offline-First Resilience & Live Updates](#8-offline-first-resilience--live-updates)
-  - [9. Official NDA Uganda Pharmacy Locator](#9-official-nda-uganda-pharmacy-locator)
-- [System Architecture](#-system-architecture)
-- [Technology Stack](#-technology-stack)
-- [Database & Data Architecture](#-database--data-architecture)
-- [Getting Started & Local Development](#-getting-started--local-development)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Environment Configuration](#environment-configuration)
-  - [Running the Application](#running-the-application)
-- [Available Scripts](#-available-scripts)
-- [Testing & Quality Assurance](#-testing--quality-assurance)
-- [Deployment & Distribution](#-deployment--distribution)
-- [Security, Privacy & Data Protection](#-security-privacy--data-protection)
-- [Contributing & Code Standards](#-contributing--code-standards)
-- [License & Acknowledgments](#-license--acknowledgments)
+</div>
 
 ---
 
-## 🌍 The Story & Mission
+## Why We Built This
 
-In Uganda and many healthcare systems worldwide, managing multiple prescriptions is fraught with preventable risks. Unlabelled generic packages, faded prescription slips, missed doses during hectic routines, and dangerous drug-drug or drug-food interactions frequently lead to avoidable complications and hospital readmissions.
+If you have ever cared for an older parent in Uganda or managed a multi-drug prescription yourself, you already know how easily things go wrong. Clinics and pharmacies often dispense loose tablets in small paper envelopes with a few numbers scribbled on the front (`2 x 3`). Two days later, the ink smudges, blister foils get separated from their boxes, and nobody is quite sure which capsule is the antibiotic and which one is for blood pressure.
 
-**Dawa Lens** was conceived to solve these challenges at their root. By bridging high-performance mobile engineering with modern multimodal artificial intelligence, Dawa Lens transforms any everyday smartphone into a vigilant, empathetic personal pharmacist. Whether you are managing your own chronic condition, caring for an aging parent, or coordinating treatments for your children, Dawa Lens brings clarity, confidence, and peace of mind to every single dose.
+Most pill reminder apps treat medication safety like an alarm clock problem. They ring a bell at 8:00 AM, assuming you have steady internet, a brand-new phone that never kills background apps, and prescriptions from a Western pharmacy chain.
+
+**Dawa Lens** was built for how people actually live and take medicine across East Africa:
+
+- **Point your camera at a pill or blister strip** to see what it is, what strength it carries, and how to take it.
+- **Check interactions with everyday Ugandan meals**—like knowing that calcium-rich *mukene* (silver fish) can block ciprofloxacin absorption, or that potassium-rich *matooke* needs caution alongside certain blood pressure drugs.
+- **Keep alarms alive on real Android phones** (including Tecno, Infinix, Xiaomi, or Samsung handsets) using a native Kotlin foreground watchdog that operating system battery savers do not silently kill.
+- **Work without mobile data** by running OCR in a background WebWorker, fuzzy-matching drug names in under a millisecond through a compiled Rust library (`libdawa_search.so`), and evaluating clinical rules on the device when the network drops.
+
+<br />
+
+<div align="center">
+  <img src="public/assets/readme/vision-scanner-hero.jpg" alt="Scanning a blister pack and capsule with Dawa Lens" width="100%" />
+  <p><em>Point your phone at a blister pack or loose capsule to read its imprint and check for interactions in seconds.</em></p>
+</div>
 
 ---
 
-## 💡 Why Dawa Lens?
-
-Traditional medication apps are often little more than rigid alarm clocks. They fail to understand what medication is actually in your hand, ignore how different drugs interact, and break down when network connectivity drops or when traveling across timezones.
-
-Dawa Lens takes a fundamentally holistic approach:
-
-* **It Sees:** State-of-the-art on-device OCR and vision AI analyze pill shapes, colors, markings, and blister packs in seconds.
-* **It Understands:** Built-in intelligence doesn't just check a box—it cross-references your complete regimen with clinical databases and FDA interaction catalogs.
-* **It Protects:** Proactive warnings flag adverse drug combinations, duplicate therapies, and food contraindications before ingestion.
-* **It Connects:** Caregivers and family members share synchronized visibility into adherence, ensuring vulnerable loved ones never miss critical treatments.
-* **It Adapts:** Timezone-shifting algorithms and battery-optimization-resilient alerts guarantee notifications trigger accurately whether you're at home, offline, or flying abroad.
-
----
-
-## ✨ Core Capabilities
+## ✨ What Dawa Lens Does
 
 ### 1. Visual Pill & Prescription Scanner
-- **Dual-Engine Recognition**: Combines client-side `Tesseract.js` for ultra-fast text extraction with cloud multimodal LLMs (Llama 3/4 via Groq and Google Gemini 2.0 Flash fallback) to identify medications from packaging, blister foils, or loose pills.
-- **Instant Dosage & Direction Parsing**: Automatically extracts medication names, strengths (e.g., `500mg`), dosages, frequencies, and expiry dates directly into your inventory.
-- **Barcode & QR Integration**: Supports rapid lookup via standard pharmaceutical codes.
-
-### 2. DawaGPT — Context-Aware Clinical AI
-- **Holistic Patient Context**: Unlike generic AI chatbots, DawaGPT has real-time awareness of your active medicine cabinet, recent dose logs, reported symptoms, and wellness history.
-- **Plain-Language Explanations**: Translates dense medical jargon and side-effect leaflets into clear, digestible guidance.
-- **Multi-Turn Dialogue**: Ask follow-up questions such as *"Can I take this with milk?"*, *"What should I do if I missed my morning dose?"*, or *"Why is my head hurting after taking this new pill?"*.
-- **Clinical Safeguards**: Built with strict boundary prompts ensuring critical emergency queries are immediately directed to emergency medical services.
-
-### 3. Drug & Food Interaction Guard
-- **Automated Regimen Scanning**: Every time a new medication is added, Dawa Lens runs deep interaction cross-checks against all active medications.
-- **Severity Stratification**: Highlights interactions categorized from mild considerations to severe contraindications with actionable recommendations.
-- **Dietary & Lifestyle Alerts**: Identifies foods, supplements, alcohol, and caffeine interactions (e.g., avoiding grapefruit with certain statins or calcium with specific antibiotics).
-- **FDA & Pharmacopeia Insights**: Direct access to clinical monograph summaries and safety advisories.
-
-### 4. Family Hub & Caregiver Network
-- **Multi-Profile Management**: Seamlessly manage dependent profiles (children, elderly parents, chronic care patients) under a single master account or via shared access.
-- **Role-Based Isolation**: Secure permission gates distinguish between primary patients, secondary family viewers, and authorized professional caregivers.
-- **Remote Adherence Visibility**: Receive instant status updates when a dependent takes or skips a scheduled dose.
-
-### 5. Intelligent Reminders & Travel Companion
-- **High-Reliability Alarms**: Utilizes native Capacitor local notifications paired with a custom Battery Optimization Defense to avoid aggressive OS background app-killing.
-- **Timezone Drift Compensation**: When traveling across borders, the Travel Companion recalculates interval-based regimens (e.g., every 8 hours) to prevent accidental overdose or missed intervals.
-- **Flexible Scheduling**: Supports daily, interval, cyclical (e.g., 21 days on, 7 days off), specific weekdays, and as-needed (PRN) medication schedules.
-
-### 6. Holistic Wellness Journal & Adherence Analytics
-- **Symptom & Mood Correlation**: Log daily mood, energy levels, sleep quality, and physical symptoms to uncover how medications correlate with daily wellbeing.
-- **Adherence Streaks & Badges**: Positive reinforcement mechanics that reward consistent adherence habits.
-- **Interactive Visualizations**: Rich visual trendlines and charts powered by Recharts show adherence rates over 7-day, 30-day, and custom time horizons.
-
-### 7. Doctor-Ready Clinical Reports
-- **One-Click PDF Generation**: Export comprehensive, beautifully formatted medical summaries using client-side `jspdf` and backend `pdfkit` pipelines.
-- **Consultation Prep**: Summaries include active drug lists, adherence percentages, logged side-effects, and wellness patterns ready to share with physicians or pharmacists.
-
-### 8. Offline-First Resilience & Live Updates
-- **Zero-Connectivity Continuity**: Full offline CRUD operations backed by IndexedDB and local Firestore caching.
-- **Background Sync**: Automatic conflict resolution and data synchronization as soon as internet connectivity returns.
-- **Over-The-Air (OTA) Updates**: Integrated with Capgo to deliver critical updates and bug fixes directly to users without waiting for app store review cycles.
-
-### 9. Official NDA Uganda Pharmacy Locator
-- **Verified Pharmacy Registry**: Direct integration with the official National Drug Authority (NDA) Uganda licensed register of pharmacies.
-- **Proximity & Route Navigation**: GPS distance calculation and walking/driving route lines to the nearest licensed pharmacy.
-- **One-Click Refill Synchronization**: Seamlessly locate licensed dispensaries and record refills directly into `MedVault`.
+Instead of typing long chemical names by hand, you can snap a photo of a pill, blister foil, or prescription slip.
+- **On-device OCR**: A dedicated `Tesseract.js` WebWorker reads packaging text, strengths (like `500mg`), expiry dates, and NDA/NAFDAC registration numbers without freezing the screen.
+- **Cloud Vision Cascade**: When you are online, multimodal models (Llama Vision via Groq and Google Gemini 2.0/2.5 Flash) inspect pill imprints and physical markings. If the connection takes longer than 2.5 seconds, Dawa Lens falls back to its local rule engine so you are never left waiting.
+- **Sub-millisecond Rust Fuzzy Search**: Misspelled or partially read OCR strings pass through `dawa-search`, a native Rust library compiled to Android JNI that runs Jaro-Winkler similarity against the Uganda Essential Medicines List (EMLU) and WHO Model List.
 
 ---
 
-## 🏛 System Architecture
+### 2. Local Diet & Drug Interaction Guard
+Taking two incompatible drugs, or pairing the right pill with the wrong meal, can make a treatment fail or cause avoidable side effects. Every time you add a medicine to your cabinet, Dawa Lens cross-checks your active prescriptions against NIH RxNorm, OpenFDA, and a local clinical rule table.
+
+<div align="center">
+  <img src="public/assets/readme/uganda-care-ecosystem.jpg" alt="Ugandan dietary interaction checks, caregiver sync, and NDA pharmacy locator" width="100%" />
+  <p><em>Culturally grounded food-drug checks, real-time family dose updates, and verified NDA Uganda pharmacies.</em></p>
+</div>
+
+What makes this guard practical in Uganda is that it knows local food:
+- **Mukene (Silver Fish) & Tetracyclines / Fluoroquinolones**: Flags calcium chelation with drugs like doxycycline and ciprofloxacin so you know to space your dose by two hours.
+- **Steamed Matooke & ACE Inhibitors / Potassium-Sparing Diuretics**: Warns patients on lisinopril, enalapril, or spironolactone when high potassium intake could become risky.
+- **Groundnut (G-Nut) Sauce & Fat-Sensitive Regimens**: Notes delayed gastric emptying or altered absorption where timing with meals matters.
+
+---
+
+### 3. DawaGPT — An AI Pharmacist That Knows Your Cabinet
+
+<img src="public/dawa-gpt.webp" alt="DawaGPT Assistant" width="130" align="right" />
+
+Asking a general-purpose chatbot about a symptom usually gives you a textbook wall of disclaimers because it has no idea what medicines you are actually taking.
+
+**DawaGPT** reads from your active medicine cabinet and recent dose logs before answering. You can ask plain questions in **English, Luganda, or Swahili**:
+- *"Can I take my morning tablet with milk or chai?"*
+- *"I forgot my 8:00 AM dose and it is now 1:00 PM—should I take it now or wait?"*
+- *"I started feeling dizzy two days after adding this new capsule. Could they be related?"*
+
+Before any question leaves your phone, personal identifiers (names, phone numbers, national IDs) are stripped from the prompt. If a message describes warning signs of a medical emergency, DawaGPT stops speculating and directs you straight to emergency care.
+
+---
+
+### 4. Family Hub & Caregiver Sync
+Caregiving is rarely a solo job. One sibling might buy the refills in Kampala while another lives with a parent upcountry.
+- **Shared Dependent Profiles**: Manage children, aging parents, or chronic-care patients from one account with separate schedules and stock counters.
+- **Live Dose Confirmations**: When a parent taps **Take Dose** on their notification, family caregivers see the confirmation sync through Cloud Firestore.
+- **Doctor-Ready PDF Summaries**: Before a clinic visit, export a clean PDF report showing active medications, 30-day adherence rates, and logged side effects.
+
+---
+
+### 5. NDA Uganda Licensed Pharmacy Locator & Travel Map
+- **1,800+ Verified NDA Pharmacies**: Scraped and geo-indexed from the official National Drug Authority (NDA) Uganda register. You can sort licensed pharmacies by Haversine distance even when offline and log refills straight into your `MedVault`.
+- **Timezone Drift Protection**: Crossing timezones on an 8-hour antibiotic or antiretroviral schedule can cause accidental double-dosing. The `TravelMap` companion (built on `MapLibre GL` and offline `PMTiles`) recalculates dose intervals as you travel.
+
+---
+
+## 🔧 How It Works Under the Hood
+
+<div align="center">
+  <img src="public/assets/readme/offline-guardian-flow.svg" alt="Dawa Lens 4-Stage Offline-First Pipeline" width="100%" />
+</div>
+
+<br />
+
+Web apps wrapped in Capacitor often fail at medication reminders because mobile operating systems aggressively kill background web views to save battery. Dawa Lens solves this by splitting the workload across four layers:
+
+1. **Native Kotlin Watchdog (`android/`)**:
+   - `AdherenceGuardianService.kt` runs as an Android foreground service (`FOREGROUND_SERVICE_TYPE_DATA_SYNC`) that survives Xiaomi MIUI, Samsung OneUI, and Transsion (Tecno/Infinix HiOS) battery killers.
+   - `NativeRecurrenceEngine.kt` schedules exact OS-level alarms via `AlarmManager.setExactAndAllowWhileIdle()`.
+   - `NativeActionReceiver.kt` handles **Take**, **Snooze (15m)**, and **Skip** taps directly from the notification tray without spinning up the Chromium engine.
+2. **Rust JNI Search (`rust/`)**:
+   - `libdawa_search.so` compiles for `arm64-v8a`, `armeabi-v7a`, and `x86_64`, matching noisy OCR text against essential medicines in under a millisecond with zero network calls.
+3. **Offline-First Client (`src/`)**:
+   - React 18, TypeScript 5.8, Zustand, TanStack Query v5, and encrypted IndexedDB storage keep the app usable with zero connectivity and sync deltas to Firestore once a connection returns.
+4. **Express API & Multi-Provider AI Gateway (`server/`)**:
+   - Shields API keys, enforces token-bucket rate limits and Helmet CSP headers, and routes clinical queries across Groq, Google Gemini, Cerebras, SambaNova, or OpenFDA.
+
+<details>
+<summary><strong>📐 View Full System Architecture Diagram (Mermaid)</strong></summary>
+<br />
 
 ```mermaid
 %%{init: {
@@ -131,56 +137,47 @@ Dawa Lens takes a fundamentally holistic approach:
     'clusterBkg': '#0b1120',
     'clusterBorder': '#334155',
     'edgeLabelBackground': '#1e293b',
-    'fontFamily': 'Geist, Inter, system-ui, -apple-system, sans-serif',
+    'fontFamily': 'Inter, system-ui, -apple-system, sans-serif',
     'fontSize': '12px'
   }
 }}%%
 flowchart TD
-    %% Presentation Tier
     subgraph ClientUI ["📱 Presentation & UI Layer · React 18 + Vite 8"]
-        UI_Dash(["<b>📊 Dashboard & Analytics</b><br/><span style='font-size:10px;color:#94a3b8'>Tailwind CSS 3.4 · Radix UI · Recharts</span>"]):::client
+        UI_Dash(["<b>📊 Dashboard & Analytics</b><br/><span style='font-size:10px;color:#94a3b8'>Tailwind CSS 3.4 · Radix UI · Framer Motion</span>"]):::client
         UI_Vault["<b>💊 MedVault & Refills</b><br/><span style='font-size:10px;color:#94a3b8'>Uganda NDA Directory · Geo-Locator</span>"]:::client
         UI_Scan["<b>📷 Visual Scanner Studio</b><br/><span style='font-size:10px;color:#94a3b8'>Blister Pack & Pill Capture · WebWorker OCR</span>"]:::focal
-        UI_Chat["<b>🧠 DawaGPT Assistant</b><br/><span style='font-size:10px;color:#94a3b8'>Context-Aware · Luganda/Swahili Support</span>"]:::client
+        UI_Chat["<b>🧠 DawaGPT Assistant</b><br/><span style='font-size:10px;color:#94a3b8'>Context-Aware · English / Luganda / Swahili</span>"]:::client
         UI_Travel["<b>✈️ TravelMap Companion</b><br/><span style='font-size:10px;color:#94a3b8'>MapLibre GL · Timezone Drift Recomputation</span>"]:::client
         UI_Family["<b>👨‍👩‍👧 Family Hub</b><br/><span style='font-size:10px;color:#94a3b8'>Multi-Dependent · Caregiver Sync</span>"]:::client
     end
 
-    %% Native Android Execution Layer
-    subgraph AndroidLayer ["⚡ Native Android Core · Capacitor 8 + Kotlin"]
+    subgraph AndroidLayer ["⚡ Native Android & Rust Core · Capacitor 8 + Kotlin + JNI"]
         K_Guardian[["<b>🛡️ AdherenceGuardianService</b><br/><span style='font-size:10px;color:#c084fc'>Foreground Watchdog · Persistent Notification</span>"]]:::native
         K_Engine[["<b>⏰ NativeRecurrenceEngine</b><br/><span style='font-size:10px;color:#c084fc'>On-Device AlarmManager · Exact Alarms</span>"]]:::native
         K_Receiver[["<b>🎯 NativeActionReceiver</b><br/><span style='font-size:10px;color:#c084fc'>Headless Action: Take / Snooze / Skip</span>"]]:::native
-        K_Gate[["<b>🔋 BatteryOptimizationGate</b><br/><span style='font-size:10px;color:#c084fc'>OEM Autostart Intent Resolver</span>"]]:::native
+        K_Rust[["<b>🦀 libdawa_search.so (Rust)</b><br/><span style='font-size:10px;color:#c084fc'>Sub-ms Jaro-Winkler EMLU Fuzzy Match</span>"]]:::native
     end
 
-    %% Client State & Offline Persistence Tier
     subgraph OfflineSync ["💾 Client State & Offline Persistence Tier"]
         S_Query[("<b>⚡ State & Query Cache</b><br/><span style='font-size:10px;color:#34d399'>TanStack Query v5 · Zustand Store</span>")]:::offline
-        S_Storage[("<b>🗄️ Secure Local Storage</b><br/><span style='font-size:10px;color:#34d399'>Encrypted IndexedDB · Capacitor Preferences</span>")]:::offline
-        S_Fallback{{"<b>🔬 LocalClinicalAssessment</b><br/><span style='font-size:10px;color:#34d399'>Zero-Latency Fallback · Heuristic Engine</span>"}}:::offlineHighlight
+        S_Storage[("<b>🗄️ Local Storage</b><br/><span style='font-size:10px;color:#34d399'>IndexedDB · Capacitor Preferences</span>")]:::offline
+        S_Fallback{{"<b>🔬 LocalClinicalAssessment</b><br/><span style='font-size:10px;color:#34d399'>Offline Fallback · Diet & Drug Rules</span>"}}:::offlineHighlight
         S_OCR[["<b>📜 Tesseract.js OCR Worker</b><br/><span style='font-size:10px;color:#34d399'>Isolated Background WebWorker Thread</span>"]]:::offline
-        S_Quotes["<b>📖 10k-Quote Deterministic Hash</b><br/><span style='font-size:10px;color:#34d399'>Epoch-Day Calendar Rotation Engine</span>"]:::offline
     end
 
-    %% Backend Gateway Tier
     subgraph BackendAPI ["🚀 Backend API Gateway · Node.js 24 + Express 4.21"]
-        API_Gate[["<b>🛡️ Express API Gateway</b><br/><span style='font-size:10px;color:#fbbf24'>Token Bucket Rate Limiter · Helmet CSP</span>"]]:::gateway
-        API_Auth["<b>🔑 Firebase Admin JWT Guard</b><br/><span style='font-size:10px;color:#fbbf24'>Decoded Claims · Scope Verification</span>"]:::gateway
-        API_Cascade[["<b>🔀 Multi-Tier AI Cascade</b><br/><span style='font-size:10px;color:#fbbf24'>Prompt Engineering · 2.5s Timeout Fallback</span>"]]:::gateway
-        API_PDF["<b>📄 Medical PDF Pipeline</b><br/><span style='font-size:10px;color:#fbbf24'>PDFKit Server & jsPDF Client Engines</span>"]:::gateway
+        API_Gate[["<b>🛡️ Express API Gateway</b><br/><span style='font-size:10px;color:#fbbf24'>Rate Limiter · Helmet Security Headers</span>"]]:::gateway
+        API_Auth["<b>🔑 Firebase Admin JWT Guard</b><br/><span style='font-size:10px;color:#fbbf24'>Token & Scope Verification</span>"]:::gateway
+        API_Cascade[["<b>🔀 Multi-Tier AI Cascade</b><br/><span style='font-size:10px;color:#fbbf24'>Groq · Gemini · 2.5s Timeout Fallback</span>"]]:::gateway
     end
 
-    %% Cloud Infrastructure Tier
-    subgraph ExternalServices ["☁️ Cloud Infrastructure & Authoritative APIs"]
-        C_Firestore[("<b>🔥 Cloud Firestore</b><br/><span style='font-size:10px;color:#818cf8'>Delta Synchronization · Security Rules</span>")]:::cloud
-        C_Auth(["<b>🔐 Firebase Authentication</b><br/><span style='font-size:10px;color:#818cf8'>OAuth 2.0 · JWT Provider</span>"]):::cloud
-        C_Gemini[["<b>🤖 Google Gemini 2.5/1.5 Flash</b><br/><span style='font-size:10px;color:#818cf8'>Multimodal Active Ingredient Detection</span>"]]:::cloud
-        C_RxNorm[("<b>🏛️ NIH RxNorm & OpenFDA</b><br/><span style='font-size:10px;color:#818cf8'>Clinical Drug-Drug Interaction Matrix</span>")]:::cloud
+    subgraph ExternalServices ["☁️ Cloud Infrastructure & Clinical Registries"]
+        C_Firestore[("<b>🔥 Cloud Firestore</b><br/><span style='font-size:10px;color:#818cf8'>Delta Sync · Role-Based Security Rules</span>")]:::cloud
+        C_Gemini[["<b>🤖 Groq & Google Gemini Flash</b><br/><span style='font-size:10px;color:#818cf8'>Multimodal Pill & Imprint Detection</span>"]]:::cloud
+        C_RxNorm[("<b>🏛️ NIH RxNorm & OpenFDA</b><br/><span style='font-size:10px;color:#818cf8'>Clinical Drug Interaction Matrix</span>")]:::cloud
         C_NDA[("<b>🇺🇬 Uganda NDA Registry</b><br/><span style='font-size:10px;color:#818cf8'>1,800+ Licensed Pharmacies Directory</span>")]:::cloud
     end
 
-    %% Styling Classes
     classDef client fill:#0f172a,stroke:#38bdf8,stroke-width:1.5px,color:#f8fafc;
     classDef focal fill:#1e1b4b,stroke:#ec4899,stroke-width:2px,color:#fdf2f8;
     classDef native fill:#1e1b4b,stroke:#a855f7,stroke-width:1.8px,color:#f8fafc;
@@ -189,25 +186,22 @@ flowchart TD
     classDef gateway fill:#2a1a05,stroke:#f59e0b,stroke-width:1.5px,color:#f8fafc;
     classDef cloud fill:#0d1836,stroke:#60a5fa,stroke-width:1.5px,color:#f8fafc;
 
-    %% Subgraph Styling
     style ClientUI fill:#080d1a,stroke:#0284c7,stroke-width:1.5px,stroke-dasharray: 4 2,color:#38bdf8;
     style AndroidLayer fill:#10091d,stroke:#9333ea,stroke-width:1.5px,stroke-dasharray: 4 2,color:#c084fc;
     style OfflineSync fill:#061410,stroke:#059669,stroke-width:1.5px,stroke-dasharray: 4 2,color:#34d399;
     style BackendAPI fill:#140e04,stroke:#d97706,stroke-width:1.5px,stroke-dasharray: 4 2,color:#fbbf24;
     style ExternalServices fill:#091024,stroke:#4f46e5,stroke-width:1.5px,stroke-dasharray: 4 2,color:#818cf8;
 
-    %% Connectors
-    ClientUI ==>|Capacitor Bridge IPC| AndroidLayer
+    ClientUI ==>|Capacitor Bridge & JNI| AndroidLayer
     ClientUI -->|Local Queries| OfflineSync
     AndroidLayer -->|Alarm Signals| OfflineSync
 
     OfflineSync --> S_Storage
-    S_Storage <==>|Encrypted HTTPS Sync| C_Firestore
+    S_Storage <==>|HTTPS Delta Sync| C_Firestore
     OfflineSync -->|Authenticated REST| API_Gate
 
     API_Gate --> API_Auth
     API_Gate --> API_Cascade
-    API_Gate --> API_PDF
 
     API_Cascade -->|Multimodal Inference| C_Gemini
     API_Cascade -->|Interaction Lookup| C_RxNorm
@@ -216,283 +210,144 @@ flowchart TD
     UI_Vault -->|Haversine Proximity Query| C_NDA
 ```
 
-### Directory Structure Overview
+</details>
+
+---
+
+## 🗂️ Project Layout
 
 ```text
 dawa-lens/
-├── src/                          # Frontend Application Root (React 18 + Vite)
-│   ├── components/               # Modular UI Components (Radix Primitives & Custom)
-│   │   ├── dashboard/            # Home dashboard cards, metrics, and adherence banners
-│   │   ├── fda/                  # Drug safety & interaction search components
-│   │   ├── intelligence/         # AI analysis cards and insight panels
-│   │   ├── travel/               # Timezone adjusters and trip medication planners
-│   │   ├── ui/                   # Reusable atomic UI elements (buttons, dialogs, inputs)
-│   │   ├── wellness/             # Mood, sleep, and symptom logging widgets
-│   │   ├── DawaGPT.tsx           # Context-aware conversational AI interface
-│   │   └── BatteryOptimizationGate.tsx # Mobile notification reliability guard
-│   ├── contexts/                 # Global React Contexts (Auth, Patient, Theme)
-│   ├── hooks/                    # Custom hooks for network, sensors, and database queries
-│   ├── lib/                      # External client setups (Firebase client, i18n, utils)
-│   ├── pages/                    # Route Views (Dashboard, Scan, Medications, Family, etc.)
-│   ├── services/                 # API client services, offline sync, and notification managers
-│   ├── types/                    # Comprehensive TypeScript type definitions
-│   └── index.css                 # Tailwind CSS design system and theme variables
-├── server/                       # Backend API Engine (Node.js + Express)
-│   ├── src/
-│   │   ├── middleware/           # Auth verification, rate limiting, and error guards
-│   │   ├── routes/               # Modular REST endpoints (AI, Vision, FDA, Patients, Logs)
-│   │   ├── db.js                 # Firebase Admin SDK initialization
-│   │   └── index.js              # Express server entry point and CORS configuration
-│   └── package.json              # Server dependencies and scripts
-├── android/                      # Native Android Project (Capacitor bindings & manifests)
-├── firestore.rules               # Enterprise-grade Firestore security and access policies
-├── capacitor.config.ts           # Native runtime configuration (App ID, splash, plugins)
-├── vite.config.ts                # Vite bundler, PWA config, and path aliases
-└── vitest.config.ts              # Unit and integration test runner configuration
+├── src/                          # Frontend application (React 18 + TypeScript + Vite 8)
+│   ├── components/               # UI components (Scanner, DawaGPT, FDA search, Travel, Wellness)
+│   ├── contexts/                 # Auth, App state, Multilingual (EN/LG/SW), and Theme contexts
+│   ├── hooks/                    # Custom hooks for sensors, network state, and data queries
+│   ├── pages/                    # Route views (Dashboard, Scan, Medications, Family, Pharmacies)
+│   ├── services/                 # Offline clinical assessment, OCR worker, NDA pharmacy locator
+│   └── types/                    # Shared TypeScript definitions
+├── server/                       # Express API gateway (Node.js >= 24.14)
+│   └── src/
+│       ├── middleware/           # Firebase JWT verification, rate limiters, error handlers
+│       ├── routes/               # REST endpoints (/api/v1/vision, /ai, /fda, /medicines, etc.)
+│       └── index.js              # Express entrypoint and security middleware
+├── android/                      # Native Android project (Kotlin guardian service & exact alarms)
+├── rust/                         # Rust crate (dawa-search) for sub-ms offline Jaro-Winkler search
+├── scripts/                      # Python scrapers & data fusion scripts for NDA Uganda pharmacies
+├── firestore.rules               # Role-based Firestore security rules
+└── capacitor.config.ts           # Capacitor 8 native bridge configuration
 ```
 
 ---
 
-## 💻 Technology Stack
-
-| Layer | Technologies |
-| :--- | :--- |
-| **Frontend Framework** | [React 18.3](https://react.dev/) with [TypeScript 5.8](https://www.typescriptlang.org/) |
-| **Build & Tooling** | [Vite 8](https://vitejs.dev/) with SWC React plugin |
-| **Styling & Design** | [Tailwind CSS 3.4](https://tailwindcss.com/), [Radix UI Primitives](https://www.radix-ui.com/), [Framer Motion](https://www.framer.com/motion/) |
-| **State & Data Fetching** | [TanStack Query v5](https://tanstack.com/query), [Zustand](https://github.com/pmndrs/zustand), React Context |
-| **Mobile & Native Bridge**| [Capacitor 8](https://capacitorjs.com/) (Camera, Notifications, Haptics, Preferences, Network, Geolocation) |
-| **Backend Runtime** | [Node.js 24](https://nodejs.org/) & [Express 4.21](https://expressjs.com/) |
-| **Database & Auth** | [Firebase Firestore](https://firebase.google.com/docs/firestore) & [Firebase Authentication](https://firebase.google.com/docs/auth) |
-| **Artificial Intelligence**| [Groq Cloud](https://groq.com/) (Llama 3/4 Vision & Chat) + [Google Gemini 2.0 Flash](https://ai.google.dev/) fallback |
-| **Computer Vision / OCR** | [Tesseract.js 7.0](https://tesseract.projectnaptha.com/) + Multimodal Vision LLMs |
-| **Data Visualization** | [Recharts](https://recharts.org/) |
-| **Document Generation** | [PDFKit](https://pdfkit.org/) & [jsPDF](https://github.com/parallax/jsPDF) |
-| **Testing Suite** | [Vitest](https://vitest.dev/), [React Testing Library](https://testing-library.com/), [Playwright](https://playwright.dev/) |
-
----
-
-## 🗄 Database & Data Architecture
-
-Data in Dawa Lens is structured in Cloud Firestore with strict user and caregiver isolation:
-
-```
-firestore-root/
-│
-├── users/{userId}
-│   ├── profile: { name, email, phone, timezone, preferences, isCaregiver }
-│   └── settings: { notificationSound, hapticsEnabled, theme, language }
-│
-├── medicines/{medicineId}
-│   ├── userId: string (Owner)
-│   ├── patientId: string (Target individual)
-│   ├── name: string, genericName: string, strength: string
-│   ├── instructions: string, foodRequirements: string
-│   ├── totalStock: number, remainingStock: number, refillThreshold: number
-│   └── interactions: Array<{ drug: string, severity: string, description: string }>
-│
-├── reminders/{reminderId}
-│   ├── userId: string, medicineId: string, patientId: string
-│   ├── timeSlots: Array<string> (e.g. ["08:00", "20:00"])
-│   ├── daysOfWeek: Array<number>
-│   ├── dosage: string
-│   └── isActive: boolean
-│
-├── doseLogs/{logId}
-│   ├── userId: string, reminderId: string, medicineId: string
-│   ├── scheduledTime: Timestamp, loggedTime: Timestamp
-│   ├── status: "taken" | "skipped" | "delayed"
-│   └── notes: string
-│
-├── wellnessLogs/{logId}
-│   ├── userId: string, patientId: string, date: string
-│   ├── mood: number (1-5), energy: number (1-5), sleepHours: number
-│   ├── symptoms: Array<string>
-│   └── notes: string
-│
-└── patients/{patientId}
-    ├── caregiverId: string (Managing user)
-    ├── name: string, relationship: string, dateOfBirth: string
-    └── emergencyContact: { name: string, phone: string }
-```
-
----
-
-## 🚀 Getting Started & Local Development
+## 🚀 Getting Started
 
 ### Prerequisites
+- **Node.js** `>= 24.14.1` and `npm` (or `bun`)
+- **Firebase project** with Authentication and Firestore enabled
+- **Android Studio + JDK 17+** *(optional, only needed when building the native Android app)*
+- **Rust + `cargo-ndk`** *(optional, only needed if recompiling `rust/src/search.rs`)*
 
-Ensure you have the following installed on your machine:
-- **Node.js**: `v24.14.1` or higher
-- **npm** or **bun** package manager
-- **Firebase CLI**: `npm install -g firebase-tools`
-- **Android Studio** (Optional, for Android mobile builds)
-- **Java JDK**: Version 17+ (for Android builds)
+### 1. Clone and install dependencies
 
----
+```bash
+git clone https://github.com/EmmahOwens/dawa-lens.git
+cd dawa-lens
 
-### Installation
+# Install frontend dependencies
+npm install
 
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/EmmahOwens/dawa-lens.git
-   cd dawa-lens
-   ```
-
-2. **Install Frontend & Root Dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Install Backend Dependencies:**
-   ```bash
-   cd server
-   npm install
-   cd ..
-   ```
-
----
-
-### Environment Configuration
-
-Create the necessary environment variable files for both frontend and backend:
-
-#### Frontend (`.env` in the root directory):
-```env
-VITE_FIREBASE_API_KEY=your_firebase_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_API_BASE_URL=http://localhost:5000/api
+# Install backend dependencies
+cd server && npm install && cd ..
 ```
 
-#### Backend (`server/.env` in the server directory):
+### 2. Configure environment variables
+
+Copy `.env.example` to `.env` in the repository root for the Vite frontend:
+
+```env
+VITE_FIREBASE_API_KEY="your-firebase-api-key"
+VITE_FIREBASE_AUTH_DOMAIN="your-project.firebaseapp.com"
+VITE_FIREBASE_PROJECT_ID="your-project-id"
+VITE_FIREBASE_STORAGE_BUCKET="your-project.appspot.com"
+VITE_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
+VITE_FIREBASE_APP_ID="your-app-id"
+
+# Backend API URL (defaults to localhost:5000/api/v1 in development)
+VITE_API_URL=http://localhost:5000/api/v1
+```
+
+Create `server/.env` for the Express gateway:
+
 ```env
 PORT=5000
 NODE_ENV=development
 GROQ_API_KEY=your_groq_api_key
 GEMINI_API_KEY=your_gemini_api_key
+OPENFDA_API_KEY=your_optional_openfda_key
 FIREBASE_PROJECT_ID=your_project_id
 FIREBASE_CLIENT_EMAIL=your_service_account_email
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 ```
 
----
+### 3. Run locally
 
-### Running the Application
-
-1. **Start the Express API Server:**
-   ```bash
-   cd server
-   npm run dev
-   ```
-   *The backend will boot on `http://localhost:5000` with active request logging and rate limiting.*
-
-2. **Start the Vite Frontend Development Server:**
-   ```bash
-   npm run dev
-   ```
-   *Open your browser and navigate to `http://localhost:8080` (or `http://localhost:5173`).*
-
-3. **Run on Native Android:**
-   ```bash
-   npm run build
-   npx cap sync android
-   npx cap open android
-   ```
-   *Android Studio will open the pre-configured project ready for deployment to an emulator or physical device.*
-
----
-
-## 📜 Available Scripts
-
-| Command | Working Directory | Description |
-| :--- | :--- | :--- |
-| `npm run dev` | `/` (Root) | Launch Vite frontend development server with HMR |
-| `npm run build` | `/` (Root) | Compile production-ready web assets into `dist/` |
-| `npm run build:dev` | `/` (Root) | Build bundle with source maps enabled for debugging |
-| `npm run preview` | `/` (Root) | Preview the production build locally |
-| `npm run lint` | `/` (Root) | Run ESLint across TypeScript and React components |
-| `npm run test` | `/` (Root) | Execute Vitest unit and integration test suite |
-| `npm run test:watch` | `/` (Root) | Run Vitest in interactive watch mode |
-| `npm run cap:sync` | `/` (Root) | Build web assets and synchronize them to Capacitor Android |
-| `npm run deploy:web` | `/` (Root) | Compile bundle and deploy directly to Firebase Hosting |
-| `npm run dev` | `/server` | Start Express backend with Nodemon hot-reloading |
-| `npm start` | `/server` | Start Express backend in production mode |
-
----
-
-## 🧪 Testing & Quality Assurance
-
-Dawa Lens maintains a high standard of software reliability with end-to-end and component test coverage:
+Open two terminals:
 
 ```bash
-# Run unit and integration tests
-npm run test
+# Terminal 1 — Start the Express API server (http://localhost:5000)
+cd server
+npm run dev
+```
 
-# Run tests in continuous watch mode during development
-npm run test:watch
+```bash
+# Terminal 2 — Start the Vite frontend (http://localhost:5173)
+npm run dev
+```
 
-# Execute Playwright end-to-end browser tests
-npx playwright test
+### 4. Build for Android (Optional)
 
-# Check code cleanliness and linting rules
-npm run lint
+```bash
+npm run cap:sync
+npx cap open android
+```
+
+If you edit the offline drug index in `rust/src/search.rs`, rebuild the JNI shared libraries with:
+
+```bash
+cd rust && ./build-android.sh
 ```
 
 ---
 
-## 🚢 Deployment & Distribution
+## 🛠️ Common Scripts
 
-### Web Hosting
-- **Firebase Hosting**: Primary production web deployment with global CDN caching and automatic SSL.
-- **Vercel**: Continuous integration preview and staging deployment at [`https://dawalens256.vercel.app`](https://dawalens256.vercel.app).
-
-### Android Native Release
-1. Build the production web bundle: `npm run build`
-2. Sync assets with native Android: `npx cap sync android`
-3. Generate signed Android App Bundle (`.aab`) in Android Studio
-4. Upload to Google Play Console for production or internal track distribution
-
-### Over-The-Air (OTA) Updates
-- Configured with **Capgo** for instantaneous frontend updates, hotfixes, and translation bundle refreshes without requiring full App Store re-reviews.
-
----
-
-## 🔒 Security, Privacy & Data Protection
-
-Because Dawa Lens handles sensitive health data, security is engineered into every tier:
-
-* **Strict Firestore Security Rules**: Granular security rules enforce that users can strictly read and write their own medication records and explicitly shared dependent files.
-* **PII Sanitization in AI Workflows**: Prompts dispatched to LLM providers are scrubbed of identifying personal data (such as user full names, national IDs, or exact contact info).
-* **Network & API Hardening**:
-  - Helmet.js security headers (CSP, HSTS, X-Frame-Options, XSS protection).
-  - Rate limiting on public and AI-computation endpoints to prevent abuse.
-  - Strict CORS origin whitelisting.
-* **Encrypted Storage**: Sensitive persistent settings and local caches are stored using encrypted device preferences and HTTPS-only transport.
+| Command | Directory | What it does |
+| :--- | :--- | :--- |
+| `npm run dev` | `/` | Start the Vite development server with hot reload |
+| `npm run build` | `/` | Build production web bundle into `dist/` |
+| `npm run test` | `/` | Run the Vitest unit and integration test suite |
+| `npm run test:watch` | `/` | Run Vitest in interactive watch mode |
+| `npm run lint` | `/` | Check TypeScript and React files with ESLint |
+| `npm run cap:sync` | `/` | Build web assets and sync them to the Capacitor Android project |
+| `npm run scrape:nda` | `/` | Refresh the licensed pharmacy list from the Uganda NDA registry |
+| `npm run deploy:web` | `/` | Build and deploy the web app to Firebase Hosting |
+| `npm run dev` | `/server` | Run the Express API server with Nodemon |
+| `npm start` | `/server` | Run the Express API server in production mode |
 
 ---
 
-## 🤝 Contributing & Code Standards
+## 🔒 Privacy, Security & Clinical Boundaries
 
-Dawa Lens follows strict software craftsmanship principles:
-
-1. **Modular Architecture**: Separate UI presentation from business logic using custom hooks and centralized services.
-2. **Type Safety**: Strictly typed TypeScript with zero unvalidated `any` types.
-3. **Branching Strategy**:
-   - `main`: Production-ready release branch.
-   - `feature/*`: Specific feature additions.
-   - `fix/*`: Bug fixes and hotfixes.
-4. **Pull Requests**: Ensure all tests pass (`npm run test`) and linter checks succeed (`npm run lint`) prior to submitting PRs.
+- **Medical Disclaimer**: Dawa Lens is a clinical support and medication adherence tool, not a replacement for a licensed physician or pharmacist. Emergency symptoms trigger immediate referrals to local emergency services.
+- **PII Stripping Before AI Calls**: Personal identifiers are removed before medication or symptom context is sent to cloud LLM providers.
+- **Scoped Firestore Rules**: `firestore.rules` enforces strict document ownership so patients and authorized family caregivers can only access permitted records.
+- **Hardened Gateway**: The Express API enforces `helmet` security headers, strict CORS origin checks, `zod` schema validation, and route-specific rate limiters (`/vision`, `/ai`, `/fda`, `/users`).
 
 ---
 
-## 📄 License & Acknowledgments
+<div align="center">
 
-© 2026 **Dawa Lens Team**. All rights reserved.
+**Built with care for patients and families across Uganda.**  
+© 2026 Dawa Lens Team · [Live Web App](https://dawalens256.vercel.app)
 
-*Built with passion to elevate medication safety, health literacy, and coordinated care across Uganda and the globe.*
-
-
+</div>

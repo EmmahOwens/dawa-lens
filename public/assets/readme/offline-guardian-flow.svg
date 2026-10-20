@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 260" width="100%" height="260" role="img" aria-label="Dawa Lens Edge-to-Cloud Pipeline">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="line1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <style>
+      .title { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; font-size: 13px; font-weight: 700; fill: #f8fafc; }
+      .sub { font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; font-size: 11px; fill: #94a3b8; }
+      .tag { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; font-weight: 600; }
+      .flow-dash {
+        stroke-dasharray: 8 6;
+        animation: dashMove 1.4s linear infinite;
+      }
+      @keyframes dashMove {
+        to { stroke-dashoffset: -28; }
+      }
+    </style>
+  </defs>
+
+  <rect width="920" height="260" rx="20" fill="url(#bg)" stroke="#1e293b" stroke-width="1.5"/>
+
+  <!-- Animated Connector Lines -->
+  <line class="flow-dash" x1="225" y1="130" x2="265" y2="130" stroke="#38bdf8" stroke-width="2"/>
+  <line class="flow-dash" x1="455" y1="130" x2="495" y2="130" stroke="#10b981" stroke-width="2"/>
+  <line class="flow-dash" x1="685" y1="130" x2="715" y2="130" stroke="#a855f7" stroke-width="2"/>
+
+  <!-- Stage 1: Camera & OCR -->
+  <g transform="translate(25, 38)">
+    <rect width="200" height="184" rx="16" fill="#111827" stroke="#0284c7" stroke-width="1.4"/>
+    <rect x="16" y="16" width="84" height="22" rx="6" fill="#0c4a6e"/>
+    <text x="58" y="31" text-anchor="middle" class="tag" fill="#38bdf8">1 · CAPTURE</text>
+    <text x="16" y="62" class="title">Pill &amp; Blister Scan</text>
+    <text x="16" y="84" class="sub">• Tesseract.js WebWorker</text>
+    <text x="16" y="104" class="sub">• Imprint &amp; strength parse</text>
+    <text x="16" y="124" class="sub">• NAFDAC / NDA batch read</text>
+    <rect x="16" y="142" width="168" height="26" rx="8" fill="#0f172a" stroke="#1e293b"/>
+    <text x="100" y="159" text-anchor="middle" class="tag" fill="#38bdf8">Zero UI Thread Blocking</text>
+  </g>
+
+  <!-- Stage 2: Rust & Offline Clinical Engine -->
+  <g transform="translate(260, 38)">
+    <rect width="200" height="184" rx="16" fill="#111827" stroke="#059669" stroke-width="1.4"/>
+    <rect x="16" y="16" width="104" height="22" rx="6" fill="#064e3b"/>
+    <text x="68" y="31" text-anchor="middle" class="tag" fill="#34d399">2 · ON-DEVICE</text>
+    <text x="16" y="62" class="title">Rust + Local Rules</text>
+    <text x="16" y="84" class="sub">• libdawa_search.so (JNI)</text>
+    <text x="16" y="104" class="sub">• Jaro-Winkler EMLU index</text>
+    <text x="16" y="124" class="sub">• Local diet &amp; drug checks</text>
+    <rect x="16" y="142" width="168" height="26" rx="8" fill="#0f172a" stroke="#1e293b"/>
+    <text x="100" y="159" text-anchor="middle" class="tag" fill="#34d399">&lt;1ms Offline Fallback</text>
+  </g>
+
+  <!-- Stage 3: Cloud AI & FDA Cascade -->
+  <g transform="translate(490, 38)">
+    <rect width="200" height="184" rx="16" fill="#111827" stroke="#d97706" stroke-width="1.4"/>
+    <rect x="16" y="16" width="108" height="22" rx="6" fill="#451a03"/>
+    <text x="70" y="31" text-anchor="middle" class="tag" fill="#fbbf24">3 · CLOUD CASCADE</text>
+    <text x="16" y="62" class="title">AI &amp; Clinical APIs</text>
+    <text x="16" y="84" class="sub">• Groq Llama Vision / Chat</text>
+    <text x="16" y="104" class="sub">• Gemini 2.0/2.5 Flash</text>
+    <text x="16" y="124" class="sub">• OpenFDA &amp; NIH RxNorm</text>
+    <rect x="16" y="142" width="168" height="26" rx="8" fill="#0f172a" stroke="#1e293b"/>
+    <text x="100" y="159" text-anchor="middle" class="tag" fill="#fbbf24">2.5s Timeout Guard</text>
+  </g>
+
+  <!-- Stage 4: Kotlin Native Guardian -->
+  <g transform="translate(710, 38)">
+    <rect width="185" height="184" rx="16" fill="#111827" stroke="#9333ea" stroke-width="1.4"/>
+    <rect x="16" y="16" width="106" height="22" rx="6" fill="#3b0764"/>
+    <text x="69" y="31" text-anchor="middle" class="tag" fill="#c084fc">4 · NATIVE GUARD</text>
+    <text x="16" y="62" class="title">Kotlin Watchdog</text>
+    <text x="16" y="84" class="sub">• Exact AlarmManager</text>
+    <text x="16" y="104" class="sub">• Headless Take / Snooze</text>
+    <text x="16" y="124" class="sub">• Firestore family sync</text>
+    <rect x="16" y="142" width="153" height="26" rx="8" fill="#0f172a" stroke="#1e293b"/>
+    <text x="92" y="159" text-anchor="middle" class="tag" fill="#c084fc">Beats OEM Killers</text>
+  </g>
+</svg>
