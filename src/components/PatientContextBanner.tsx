@@ -60,6 +60,20 @@ const COLOR_SCHEMES: Record<
     dot: "bg-violet-500",
     exit: "hover:bg-violet-500/20",
   },
+  teal: {
+    bg: "bg-teal-500/10",
+    border: "border-teal-500/25",
+    text: "text-teal-600 dark:text-teal-400",
+    dot: "bg-teal-500",
+    exit: "hover:bg-teal-500/20",
+  },
+  indigo: {
+    bg: "bg-indigo-500/10",
+    border: "border-indigo-500/25",
+    text: "text-indigo-600 dark:text-indigo-400",
+    dot: "bg-indigo-500",
+    exit: "hover:bg-indigo-500/20",
+  },
   slate: {
     bg: "bg-slate-500/10",
     border: "border-slate-500/25",
