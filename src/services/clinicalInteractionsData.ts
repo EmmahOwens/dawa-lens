@@ -16,7 +16,7 @@ export interface ClinicalDrugDef {
   synonyms: string[];
 }
 
-export interface ClinicalInteractionRule {
+interface ClinicalInteractionRule {
   id: string;
   primary: string; // canonical drug ID or class ID
   secondary: string; // canonical drug ID or class ID
@@ -421,7 +421,7 @@ export const CANONICAL_DRUGS: Record<string, ClinicalDrugDef> = {
 };
 
 // ── 2. Curated Clinical Drug-Drug Interaction Rules ──────────────────────────
-export const CLINICAL_INTERACTION_RULES: ClinicalInteractionRule[] = [
+const CLINICAL_INTERACTION_RULES: ClinicalInteractionRule[] = [
   // 1. NSAID + Anticoagulant (e.g. Ibuprofen + Warfarin / Apixaban)
   {
     id: 'nsaid_anticoagulant',
@@ -707,7 +707,7 @@ export const CLINICAL_INTERACTION_RULES: ClinicalInteractionRule[] = [
 
 // ── 3. Normalization & Matching Helpers ─────────────────────────────────────
 
-export const normalizeDrugString = (str?: string | null): string => {
+const normalizeDrugString = (str?: string | null): string => {
   return (str || '')
     .toLowerCase()
     .trim()

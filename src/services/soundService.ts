@@ -186,7 +186,7 @@ export interface SoundPreferences {
   categories: Record<SoundCategoryKey, string>;
 }
 
-export const DEFAULT_SOUND_PREFERENCES: SoundPreferences = {
+const DEFAULT_SOUND_PREFERENCES: SoundPreferences = {
   enabled: true,
   volume: 0.8,
   categories: {

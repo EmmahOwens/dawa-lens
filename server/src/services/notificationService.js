@@ -59,10 +59,3 @@ export const sendPushNotification = async (userId, { title, body, data = {} }) =
     console.error(`Error sending notification to ${userId}:`, error.message);
   }
 };
-
-/**
- * Broadcast notification to multiple users.
- */
-export const broadcastNotification = async (userIds, payload) => {
-  return Promise.all(userIds.map(id => sendPushNotification(id, payload)));
-};

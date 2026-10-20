@@ -7,20 +7,13 @@ import { toDate } from "@/lib/utils";
 import { getMedicineTheme, iconMap } from "@/lib/medicineTheme";
 import {
   todayAt,
-  getMedicationKey,
-  getLogMinutes,
   getCircularDiffMinutes,
   computeDailyTimelineSlots,
-  TimelineSlotEntry,
 } from "@/lib/timelineSchedule";
 
 export {
   todayAt,
-  getMedicationKey,
-  getLogMinutes,
   getCircularDiffMinutes,
-  computeDailyTimelineSlots,
-  type TimelineSlotEntry,
 };
 
 interface DailyTimelineProps {

@@ -4,12 +4,6 @@ import AppError from '../utils/AppError.js';
 
 const medicinesCol = db.collection('medicines');
 
-export const getMedicineById = async (id) => {
-  const doc = await medicinesCol.doc(id).get();
-  if (!doc.exists) return null;
-  return { id: doc.id, _id: doc.id, ...doc.data() };
-};
-
 export const getAllMedicines = async (userId, patientId) => {
   let query = medicinesCol.where('userId', '==', userId);
   if (patientId) {

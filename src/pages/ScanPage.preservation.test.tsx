@@ -91,14 +91,6 @@ vi.mock("@capacitor/camera", () => ({
   CameraSource: { Photos: "PHOTOS" },
 }));
 
-// Mock NativeCamera plugin (not used on web, but import must resolve)
-const mockStartScan = vi.fn();
-vi.mock("@/plugins/nativeCamera", () => ({
-  NativeCamera: {
-    startScan: (...args: unknown[]) => mockStartScan(...args),
-  },
-}));
-
 // Mock @capacitor/haptics (used by NativeService → PermissionRequest)
 vi.mock("@capacitor/haptics", () => ({
   Haptics: {
@@ -181,7 +173,6 @@ beforeEach(() => {
   mockApplyConstraints.mockResolvedValue(undefined);
   mockGetCapabilities.mockReturnValue({ torch: true });
   mockNavigate.mockReturnValue(undefined);
-  mockStartScan.mockReturnValue(new Promise(() => {})); // never resolves on web
 });
 
 afterEach(() => {

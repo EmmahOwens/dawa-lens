@@ -1,12 +1,11 @@
 /**
- * Contextual Suggestion Engine for DawaGPT (Backend)
+ * Contextual Suggestion Engine for DawaGPT (Shared Backend & Frontend)
  *
  * Ensures all suggested prompts dynamically and accurately match the immediate
  * conversation topic, medications, symptoms, and user actions, replacing generic
  * boilerplate with natural, high-relevance follow-ups.
  */
 
-// Common generic boilerplate prompts that indicate missing conversation grounding
 const GENERIC_BOILERPLATE_PATTERNS = [
   /^check medications$/i,
   /^view reminders$/i,
@@ -20,164 +19,152 @@ const GENERIC_BOILERPLATE_PATTERNS = [
   /^check my medications$/i,
 ];
 
-/**
- * Determines whether a suggestions array consists of generic boilerplate
- * that lacks specific grounding in the immediate conversation.
- */
 export function isGenericBoilerplate(suggestions) {
   if (!Array.isArray(suggestions) || suggestions.length === 0) return true;
-  
-  // Count how many suggestions match generic boilerplate patterns
-  const genericCount = suggestions.filter(s => {
+  const genericCount = suggestions.filter((s) => {
     if (typeof s !== 'string') return true;
     const trimmed = s.trim();
-    return GENERIC_BOILERPLATE_PATTERNS.some(pat => pat.test(trimmed));
+    return GENERIC_BOILERPLATE_PATTERNS.some((pat) => pat.test(trimmed));
   }).length;
-
-  // If 2 or more of the suggestions are generic boilerplate, flag for contextual enrichment
   return genericCount >= 2;
 }
 
-/**
- * Common symptoms and health conditions mapped to intuitive follow-up suggestions
- */
 const SYMPTOM_PATTERNS = [
   {
     regex: /\b(headache|migraine|omutwe)\b/i,
     suggestions: [
-      "Safe home remedies for headache",
-      "Which painkiller is safest for me?",
-      "When should I see a doctor?"
+      'Safe home remedies for headache',
+      'Which painkiller is safest for me?',
+      'When should I see a doctor?'
     ]
   },
   {
     regex: /\b(fever|temperature|musujja|chills)\b/i,
     suggestions: [
-      "Safe ways to reduce fever",
-      "Could this be malaria or infection?",
-      "Warning signs that need urgent care"
+      'Safe ways to reduce fever',
+      'Could this be malaria or infection?',
+      'Warning signs that need urgent care'
     ]
   },
   {
     regex: /\b(malaria|coartem|artemether|lumefantrine)\b/i,
     suggestions: [
-      "What food to take with Coartem?",
-      "What if I vomit my malaria dose?",
-      "How long until I feel better?"
+      'What food to take with Coartem?',
+      'What if I vomit my malaria dose?',
+      'How long until I feel better?'
     ]
   },
   {
     regex: /\b(stomach\s*ache|stomachache|nausea|vomit(ing)?|gastritis|ulcer|olubuto)\b/i,
     suggestions: [
-      "Gentle foods that soothe nausea",
-      "Which medicines irritate the stomach?",
-      "When to consult a doctor"
+      'Gentle foods that soothe nausea',
+      'Which medicines irritate the stomach?',
+      'When to consult a doctor'
     ]
   },
   {
     regex: /\b(dizzy|dizziness|lightheaded|vertigo)\b/i,
     suggestions: [
-      "Could my medicine cause dizziness?",
-      "What should I do right now?",
-      "Check my blood pressure"
+      'Could my medicine cause dizziness?',
+      'What should I do right now?',
+      'Check my blood pressure'
     ]
   },
   {
     regex: /\b(cough|flu|cold|sore throat|congestion|catarrh)\b/i,
     suggestions: [
-      "Soothing drinks for cough and throat",
-      "Do cold meds interact with my pills?",
-      "How long does this usually last?"
+      'Soothing drinks for cough and throat',
+      'Do cold meds interact with my pills?',
+      'How long does this usually last?'
     ]
   },
   {
     regex: /\b(diarrhea|loose stool|dehydration|ors)\b/i,
     suggestions: [
-      "How to prepare ORS at home",
-      "Safe foods to eat with diarrhea",
-      "When is dehydration an emergency?"
+      'How to prepare ORS at home',
+      'Safe foods to eat with diarrhea',
+      'When is dehydration an emergency?'
     ]
   },
   {
     regex: /\b(hypertension|high blood pressure|bp|amlodipine|lisinopril|losartan)\b/i,
     suggestions: [
-      "Foods that help manage blood pressure",
-      "What if I forget my BP dose?",
-      "Common side effects of BP meds"
+      'Foods that help manage blood pressure',
+      'What if I forget my BP dose?',
+      'Common side effects of BP meds'
     ]
   },
   {
     regex: /\b(diabetes|blood sugar|metformin|glibenclamide|insulin)\b/i,
     suggestions: [
-      "Signs of low blood sugar (hypo)",
-      "Best meal timing for Metformin",
-      "Foods to moderate with diabetes"
+      'Signs of low blood sugar (hypo)',
+      'Best meal timing for Metformin',
+      'Foods to moderate with diabetes'
     ]
   },
   {
     regex: /\b(pregnant|pregnancy|expecting|breastfeeding|nursing)\b/i,
     suggestions: [
-      "Which medicines are safe in pregnancy?",
-      "Safe remedies for morning sickness",
-      "Consulting NDA pregnancy guidelines"
+      'Which medicines are safe in pregnancy?',
+      'Safe remedies for morning sickness',
+      'Consulting NDA pregnancy guidelines'
     ]
   },
   {
     regex: /\b(allergy|allergic|rash|itching|hives)\b/i,
     suggestions: [
-      "Is this an allergic drug reaction?",
-      "Signs of severe anaphylaxis",
-      "Safe antihistamine options"
+      'Is this an allergic drug reaction?',
+      'Signs of severe anaphylaxis',
+      'Safe antihistamine options'
     ]
   }
 ];
 
-/**
- * Common dietary and food interaction patterns
- */
 const DIET_PATTERNS = [
   {
     regex: /\b(alcohol|waragi|beer|wine|spirits|kasese|malwa)\b/i,
     suggestions: [
-      "How long after alcohol can I take meds?",
-      "Why is alcohol dangerous with Flagyl?",
-      "Check liver safety with Panadol"
+      'How long after alcohol can I take meds?',
+      'Why is alcohol dangerous with Flagyl?',
+      'Check liver safety with Panadol'
     ]
   },
   {
     regex: /\b(milk|dairy|yogurt|mukene|calcium)\b/i,
     suggestions: [
-      "How many hours to space dairy?",
-      "Does milk weaken antibiotics?",
-      "Best non-dairy drinks with medicine"
+      'How many hours to space dairy?',
+      'Does milk weaken antibiotics?',
+      'Best non-dairy drinks with medicine'
     ]
   },
   {
     regex: /\b(grapefruit|grapefruit juice)\b/i,
     suggestions: [
-      "Why does grapefruit block drug breakdown?",
-      "Which medications does it affect?",
-      "Safe alternative fruit juices"
+      'Why does grapefruit block drug breakdown?',
+      'Which medications does it affect?',
+      'Safe alternative fruit juices'
     ]
   },
   {
     regex: /\b(matooke|posho|kalo|g-nut|bushera|food|meal|eat|swallow)\b/i,
     suggestions: [
-      "Should I take my pills before or after meals?",
-      "Does G-nut sauce boost absorption?",
-      "Best soft foods for swallowing pills"
+      'Should I take my pills before or after meals?',
+      'Does G-nut sauce boost absorption?',
+      'Best soft foods for swallowing pills'
     ]
   }
 ];
 
-/**
- * Extract active entities (drugs, symptoms, action context) from messages
- */
+const COMMON_DRUGS = [
+  'Panadol', 'Paracetamol', 'Ibuprofen', 'Amoxicillin', 'Coartem', 'Metronidazole',
+  'Flagyl', 'Metformin', 'Ciprofloxacin', 'Amlodipine', 'Omeprazole', 'Diclofenac',
+  'Cetirizine', 'Azithromycin', 'Artemether', 'Lumefantrine', 'Warfarin', 'Aspirin'
+];
+
 function extractContextEntities(text, medicines = []) {
-  const norm = (text || "").toLowerCase();
-  
-  // 1. Detect known medicines mentioned in text or from user's cabinet
+  const norm = (text || '').toLowerCase();
   const matchedMeds = [];
+
   if (Array.isArray(medicines)) {
     for (const m of medicines) {
       if (m?.name && norm.includes(m.name.toLowerCase())) {
@@ -188,14 +175,8 @@ function extractContextEntities(text, medicines = []) {
     }
   }
 
-  // Also check common Uganda/global drugs if not in cabinet
-  const commonDrugs = [
-    "Panadol", "Paracetamol", "Ibuprofen", "Amoxicillin", "Coartem", "Metronidazole",
-    "Flagyl", "Metformin", "Ciprofloxacin", "Amlodipine", "Omeprazole", "Diclofenac",
-    "Cetirizine", "Azithromycin", "Artemether", "Lumefantrine", "Warfarin", "Aspirin"
-  ];
-  for (const d of commonDrugs) {
-    if (norm.includes(d.toLowerCase()) && !matchedMeds.some(m => m.toLowerCase() === d.toLowerCase())) {
+  for (const d of COMMON_DRUGS) {
+    if (norm.includes(d.toLowerCase()) && !matchedMeds.some((m) => m.toLowerCase() === d.toLowerCase())) {
       matchedMeds.push(d);
     }
   }
@@ -203,22 +184,201 @@ function extractContextEntities(text, medicines = []) {
   return { matchedMeds, norm };
 }
 
-/**
- * Generate 3 context-aware suggestions directly matching the conversation.
- */
+function getActionSuggestions(action, matchedMeds) {
+  if (!action?.type) return null;
+  const medName = action.payload?.medicineName || action.payload?.name || matchedMeds[0] || 'my medicine';
+  switch (action.type) {
+    case 'ADD_REMINDER':
+      return [
+        'Set an evening reminder',
+        `What food to take with ${medName}?`,
+        `Does ${medName} have side effects?`
+      ];
+    case 'LOG_DOSE':
+      return [
+        `When is my next dose of ${medName}?`,
+        'Log another dose',
+        'How many doses left in vault?'
+      ];
+    case 'UPDATE_MEDICINE':
+      return [
+        `How many days supply is ${medName}?`,
+        `Set a reminder for ${medName}`,
+        'When will I need a refill?'
+      ];
+    case 'LOG_WELLNESS':
+      return [
+        'Safe remedies to soothe symptoms',
+        'When should I see a doctor?',
+        'Can I take medication for this?'
+      ];
+    default:
+      return null;
+  }
+}
+
+function getQueryIntentSuggestions(lastUserMsg, norm, matchedMeds) {
+  if (/\b(remind|alarm|schedule)\b/i.test(lastUserMsg)) {
+    const med = matchedMeds[0] || 'this medicine';
+    return [
+      `What food to take with ${med}?`,
+      `What if I miss a dose of ${med}?`,
+      'How many days of supply do I have?'
+    ];
+  }
+  if (/\b(refill|stock|vault|pill count|supply|doses left|days left)\b/i.test(lastUserMsg)) {
+    const med = matchedMeds[0] || 'my meds';
+    return [
+      `How many days of ${med} are left?`,
+      'Which medicines need restocking?',
+      'Set reminder before stock runs out'
+    ];
+  }
+  if (
+    /\b(duplicat|same class|same task|taking both|together|interact|conflict)\b/i.test(norm) &&
+    matchedMeds.length >= 2
+  ) {
+    return [
+      `Which is safer: ${matchedMeds[0]} or ${matchedMeds[1]}?`,
+      'Can I alternate them safely?',
+      'How many hours between doses?'
+    ];
+  }
+  return null;
+}
+
+function getMedicationSuggestions(matchedMeds, norm) {
+  if (matchedMeds.length === 0) return null;
+  const primaryMed = matchedMeds[0];
+
+  if (/\b(food|eat|drink|milk|alcohol|matooke|meal)\b/i.test(norm)) {
+    return [
+      `Can I take ${primaryMed} with milk?`,
+      `What foods should I avoid with ${primaryMed}?`,
+      `Should I take ${primaryMed} with meals?`
+    ];
+  }
+  if (/\b(side effect|reaction|danger|safe|harm|bad)\b/i.test(norm)) {
+    return [
+      `Common side effects of ${primaryMed}`,
+      `What if I feel dizzy after ${primaryMed}?`,
+      `When to call a doctor for ${primaryMed}`
+    ];
+  }
+  return [
+    `What foods go well with ${primaryMed}?`,
+    `What if I miss a dose of ${primaryMed}?`,
+    `Does ${primaryMed} interact with anything?`
+  ];
+}
+
+function resolvePatientAge(userProfile, activePatient) {
+  if (activePatient?.age !== undefined && activePatient?.age !== null) return activePatient.age;
+  if (activePatient?.dateOfBirth) {
+    return new Date().getFullYear() - new Date(activePatient.dateOfBirth).getFullYear();
+  }
+  if (userProfile?.age !== undefined && userProfile?.age !== null) return userProfile.age;
+  if (userProfile?.dateOfBirth) {
+    return new Date().getFullYear() - new Date(userProfile.dateOfBirth).getFullYear();
+  }
+  return undefined;
+}
+
+function getDemographicSuggestions(userProfile, activePatient, norm) {
+  const patientAge = resolvePatientAge(userProfile, activePatient);
+  if (patientAge === undefined || patientAge === null) return null;
+
+  if (patientAge < 12 || /\b(child|baby|infant|toddler|pediatric)\b/i.test(norm)) {
+    return [
+      'Chewable medication options',
+      'Can I crush tablets in porridge?',
+      'Safe drinks for children'
+    ];
+  }
+  if (patientAge >= 65 || /\b(senior|elderly|grandma|grandpa)\b/i.test(norm)) {
+    return [
+      'Swallowing tips for seniors',
+      'Soothing foods to take with pills',
+      'Checking drug interactions'
+    ];
+  }
+  return null;
+}
+
+const PAGE_SUGGESTIONS_MAP = [
+  {
+    key: '/interactions',
+    suggestions: [
+      'Does Panadol interact with Ibuprofen?',
+      'Is Matooke safe with my meds?',
+      'Can I drink alcohol with antibiotics?'
+    ]
+  },
+  {
+    key: '/medvault',
+    suggestions: [
+      'How many days of meds do I have left?',
+      'Which medications are low on stock?',
+      'How is days of supply calculated?'
+    ]
+  },
+  {
+    key: '/reminders',
+    suggestions: [
+      'Add a medicine reminder for 8:00 AM',
+      'What are my scheduled doses today?',
+      'How to pause or snooze a reminder'
+    ]
+  },
+  {
+    key: '/wellness',
+    suggestions: [
+      'Log how I am feeling today',
+      'Safe home remedies for headache',
+      'How to improve my vitality score'
+    ]
+  },
+  {
+    key: '/family',
+    suggestions: [
+      'Check family medication schedules',
+      'Add a family member or dependent',
+      'Check interactions for family'
+    ]
+  },
+  {
+    key: '/travel',
+    suggestions: [
+      'Calculate travel medication supply',
+      'Adjusting doses across time zones',
+      'Carrying prescriptions through customs'
+    ]
+  }
+];
+
+function getPageSuggestions(currentPage) {
+  if (!currentPage) return null;
+  const matched = PAGE_SUGGESTIONS_MAP.find((entry) => currentPage.includes(entry.key));
+  return matched ? matched.suggestions : null;
+}
+
+function getLastRoleMessageText(messages, role) {
+  if (!Array.isArray(messages)) return '';
+  const msg = messages.filter((m) => m.role === role).pop();
+  return msg?.content || msg?.text || '';
+}
+
 export function generateContextualSuggestions({
   messages = [],
-  userQuery = "",
-  assistantText = "",
+  userQuery = '',
+  assistantText = '',
   medicines = [],
-  reminders = [],
   userProfile = null,
   activePatient = null,
   currentPage = null,
   action = null,
   existingSuggestions = []
 } = {}) {
-  // If valid, highly specific suggestions were already provided by the model and NOT generic boilerplate, keep them!
   if (
     Array.isArray(existingSuggestions) &&
     existingSuggestions.length >= 2 &&
@@ -227,186 +387,30 @@ export function generateContextualSuggestions({
     return existingSuggestions.slice(0, 3);
   }
 
-  // Derive conversation text from available parameters
-  const lastUserMsg = userQuery || (
-    Array.isArray(messages)
-      ? messages.filter(m => m.role === 'user').pop()?.content || messages.filter(m => m.role === 'user').pop()?.text || ""
-      : ""
-  );
-  const lastAssistantMsg = assistantText || (
-    Array.isArray(messages)
-      ? messages.filter(m => m.role === 'assistant').pop()?.content || messages.filter(m => m.role === 'assistant').pop()?.text || ""
-      : ""
-  );
+  const lastUserMsg = userQuery || getLastRoleMessageText(messages, 'user');
+  const lastAssistantMsg = assistantText || getLastRoleMessageText(messages, 'assistant');
+  const { matchedMeds, norm } = extractContextEntities(`${lastUserMsg} ${lastAssistantMsg}`, medicines);
 
-  const combinedText = `${lastUserMsg} ${lastAssistantMsg}`;
-  const { matchedMeds, norm } = extractContextEntities(combinedText, medicines);
+  const byAction = getActionSuggestions(action, matchedMeds);
+  if (byAction) return byAction.slice(0, 3);
 
-  const suggestions = [];
+  const byIntent = getQueryIntentSuggestions(lastUserMsg, norm, matchedMeds);
+  if (byIntent) return byIntent.slice(0, 3);
 
-  // 1. Action-Based Suggestions (if an action was executed)
-  if (action && action.type) {
-    const medName = action.payload?.medicineName || action.payload?.name || matchedMeds[0] || "my medicine";
-    switch (action.type) {
-      case "ADD_REMINDER":
-        suggestions.push("Set an evening reminder");
-        suggestions.push(`What food to take with ${medName}?`);
-        suggestions.push(`Does ${medName} have side effects?`);
-        return suggestions.slice(0, 3);
-      case "LOG_DOSE":
-        suggestions.push(`When is my next dose of ${medName}?`);
-        suggestions.push("Log another dose");
-        suggestions.push("How many doses left in vault?");
-        return suggestions.slice(0, 3);
-      case "UPDATE_MEDICINE":
-        suggestions.push(`How many days supply is ${medName}?`);
-        suggestions.push(`Set a reminder for ${medName}`);
-        suggestions.push("When will I need a refill?");
-        return suggestions.slice(0, 3);
-      case "LOG_WELLNESS":
-        suggestions.push("Safe remedies to soothe symptoms");
-        suggestions.push("When should I see a doctor?");
-        suggestions.push("Can I take medication for this?");
-        return suggestions.slice(0, 3);
-    }
+  const byMed = getMedicationSuggestions(matchedMeds, norm);
+  if (byMed) return byMed.slice(0, 3);
+
+  for (const item of [...SYMPTOM_PATTERNS, ...DIET_PATTERNS]) {
+    if (item.regex.test(norm)) return item.suggestions.slice(0, 3);
   }
 
-  // 2. Direct Action Intent in Query (e.g. reminder, refill, dose log)
-  if (/\b(remind|alarm|schedule)\b/i.test(lastUserMsg)) {
-    const med = matchedMeds[0] || "this medicine";
-    suggestions.push(`What food to take with ${med}?`);
-    suggestions.push(`What if I miss a dose of ${med}?`);
-    suggestions.push("How many days of supply do I have?");
-    return suggestions.slice(0, 3);
-  }
+  const byDemographics = getDemographicSuggestions(userProfile, activePatient, norm);
+  if (byDemographics) return byDemographics;
 
-  if (/\b(refill|stock|vault|pill count|supply|doses left|days left)\b/i.test(lastUserMsg)) {
-    const med = matchedMeds[0] || "my meds";
-    suggestions.push(`How many days of ${med} are left?`);
-    suggestions.push("Which medicines need restocking?");
-    suggestions.push("Set reminder before stock runs out");
-    return suggestions.slice(0, 3);
-  }
+  const byPage = getPageSuggestions(currentPage);
+  if (byPage) return byPage;
 
-  // 3. Therapeutic Duplication / Interaction Context
-  if (
-    /\b(duplicat|same class|same task|taking both|together|interact|conflict)\b/i.test(norm) &&
-    matchedMeds.length >= 2
-  ) {
-    suggestions.push(`Which is safer: ${matchedMeds[0]} or ${matchedMeds[1]}?`);
-    suggestions.push("Can I alternate them safely?");
-    suggestions.push("How many hours between doses?");
-    return suggestions.slice(0, 3);
-  }
-
-  // 4. Specific Medication Context
-  if (matchedMeds.length > 0) {
-    const primaryMed = matchedMeds[0];
-    
-    // Check if query was about food or drinks
-    if (/\b(food|eat|drink|milk|alcohol|matooke|meal)\b/i.test(norm)) {
-      suggestions.push(`Can I take ${primaryMed} with milk?`);
-      suggestions.push(`What foods should I avoid with ${primaryMed}?`);
-      suggestions.push(`Should I take ${primaryMed} with meals?`);
-      return suggestions.slice(0, 3);
-    }
-
-    // Check if query was about side effects or safety
-    if (/\b(side effect|reaction|danger|safe|harm|bad)\b/i.test(norm)) {
-      suggestions.push(`Common side effects of ${primaryMed}`);
-      suggestions.push(`What if I feel dizzy after ${primaryMed}?`);
-      suggestions.push(`When to call a doctor for ${primaryMed}`);
-      return suggestions.slice(0, 3);
-    }
-
-    // Default medication follow-ups
-    suggestions.push(`What foods go well with ${primaryMed}?`);
-    suggestions.push(`What if I miss a dose of ${primaryMed}?`);
-    suggestions.push(`Does ${primaryMed} interact with anything?`);
-    return suggestions.slice(0, 3);
-  }
-
-  // 5. Symptom / Health Condition Context
-  for (const item of SYMPTOM_PATTERNS) {
-    if (item.regex.test(norm)) {
-      return item.suggestions.slice(0, 3);
-    }
-  }
-
-  // 6. Dietary Context
-  for (const item of DIET_PATTERNS) {
-    if (item.regex.test(norm)) {
-      return item.suggestions.slice(0, 3);
-    }
-  }
-
-  // 7. Demographic / Patient-Specific Context
-  const patientAge = activePatient?.age ?? userProfile?.age;
-  if (patientAge !== undefined && patientAge !== null) {
-    if (patientAge < 12 || /\b(child|baby|infant|toddler|pediatric)\b/i.test(norm)) {
-      return [
-        "Chewable medication options",
-        "Can I crush tablets in porridge?",
-        "Safe drinks for children"
-      ];
-    }
-    if (patientAge >= 65 || /\b(senior|elderly|grandma|grandpa)\b/i.test(norm)) {
-      return [
-        "Swallowing tips for seniors",
-        "Soothing foods to take with pills",
-        "Checking drug interactions"
-      ];
-    }
-  }
-
-  // 8. Route / Feature Context (when conversation is just starting or empty)
-  if (currentPage) {
-    if (currentPage.includes("/interactions")) {
-      return [
-        "Does Panadol interact with Ibuprofen?",
-        "Is Matooke safe with my meds?",
-        "Can I drink alcohol with antibiotics?"
-      ];
-    }
-    if (currentPage.includes("/medvault")) {
-      return [
-        "How many days of meds do I have left?",
-        "Which medications are low on stock?",
-        "How is days of supply calculated?"
-      ];
-    }
-    if (currentPage.includes("/reminders")) {
-      return [
-        "Add a medicine reminder for 8:00 AM",
-        "What are my scheduled doses today?",
-        "How to pause or snooze a reminder"
-      ];
-    }
-    if (currentPage.includes("/wellness")) {
-      return [
-        "Log how I am feeling today",
-        "Safe home remedies for headache",
-        "How to improve my vitality score"
-      ];
-    }
-    if (currentPage.includes("/family-hub")) {
-      return [
-        "Check family medication schedules",
-        "Add a family member or dependent",
-        "Check interactions for family"
-      ];
-    }
-    if (currentPage.includes("/travel")) {
-      return [
-        "Calculate travel medication supply",
-        "Adjusting doses across time zones",
-        "Carrying prescriptions through customs"
-      ];
-    }
-  }
-
-  // 9. Fallback based on user's active prescriptions (if any)
-  if (Array.isArray(medicines) && medicines.length > 0) {
+  if (Array.isArray(medicines) && medicines.length > 0 && medicines[0]?.name) {
     const med = medicines[0].name;
     return [
       `When should I take ${med}?`,
@@ -415,10 +419,9 @@ export function generateContextualSuggestions({
     ];
   }
 
-  // 10. Intelligent Default Health Companion Prompts (contextual & conversational)
   return [
-    "Check drug & food safety",
-    "What foods pair well with medicines?",
-    "How to manage side effects"
+    'Check drug & food safety',
+    'What foods pair well with medicines?',
+    'How to manage side effects'
   ];
 }

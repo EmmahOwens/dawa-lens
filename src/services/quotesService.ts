@@ -16,7 +16,7 @@ import { NativeAlarm, AlarmNotification } from "@/plugins/nativeAlarm";
 import { notify } from "@/lib/notifications";
 import { soundService } from "@/services/soundService";
 import { Capacitor } from "@capacitor/core";
-import { DoseLog, Reminder, WellnessLog } from "@/contexts/AppContext";
+import type { DoseLog, Reminder, WellnessLog } from "@/contexts/AppContext";
 import {
   addDays,
   startOfDay,
@@ -61,10 +61,10 @@ export {
 };
 
 // ─── Channel IDs ────────────────────────────────────────────────────────────
-export const CHANNEL_QUOTES    = "dawa_quotes_v2";
-export const CHANNEL_WELLNESS  = "dawa_wellness_v2";
-export const CHANNEL_HYDRATION = "dawa_hydration_v2";
-export const CHANNEL_STREAKS   = "dawa_streaks_v2";
+const CHANNEL_QUOTES    = "dawa_quotes_v2";
+const CHANNEL_WELLNESS  = "dawa_wellness_v2";
+const CHANNEL_HYDRATION = "dawa_hydration_v2";
+const CHANNEL_STREAKS   = "dawa_streaks_v2";
 
 // ─── localStorage keys ───────────────────────────────────────────────────────
 const ENGAGEMENT_LOCAL_IDS_KEY = "dawa_engagement_local_ids";
@@ -91,7 +91,7 @@ function setTime(date: Date, h: number, m: number, s = 0, ms = 0): Date {
 }
 
 // ─── Create Android notification channels ────────────────────────────────────
-export async function createEngagementChannels(): Promise<void> {
+async function createEngagementChannels(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   if (Capacitor.getPlatform() !== "android") return;
   try {
@@ -502,7 +502,7 @@ export function getWellnessNudgeQuote(date: Date = new Date()): string {
   return WELLNESS_NUDGE_MESSAGES[index] ?? WELLNESS_NUDGE_MESSAGES[0];
 }
 
-export async function scheduleWellnessNudge(wellnessLogs: WellnessLog[]): Promise<void> {
+async function scheduleWellnessNudge(wellnessLogs: WellnessLog[]): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   const todayKey = new Date().toDateString();
   const dedupeKey = `dawa_wellness_nudge_${todayKey}`;

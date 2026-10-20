@@ -21,7 +21,7 @@ import {
 } from "@/lib/icons";
 
 /** Valid internal application routes that can be navigated to. */
-export const VALID_APP_ROUTES = new Set([
+const VALID_APP_ROUTES = new Set([
   "/",
   "/reminders",
   "/reminders/new",
@@ -40,7 +40,7 @@ export const VALID_APP_ROUTES = new Set([
 ]);
 
 /** Maps DawaGPT custom/alias routes to actual application page routes. */
-export const GPT_ROUTE_MAP: Record<string, string> = {
+const GPT_ROUTE_MAP: Record<string, string> = {
   // Home / Dashboard
   "/": "/",
   "/dashboard": "/",

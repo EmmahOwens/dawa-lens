@@ -4,7 +4,12 @@ import { PushNotifications, ActionPerformed as PushActionPerformed } from "@capa
 import { Capacitor } from "@capacitor/core";
 import { useApp } from "@/contexts/AppContext";
 import { usePatientScope } from "@/hooks/usePatientScope";
-import { registerNotificationActions, migrateNotificationChannels } from "@/services/reminderService";
+import {
+  registerNotificationActions,
+  migrateNotificationChannels,
+  isReminderScheduledOnDate,
+  parseNotificationExtra,
+} from "@/services/reminderService";
 import { soundService } from "@/services/soundService";
 import { toast } from "sonner";
 import {
@@ -17,21 +22,6 @@ import {
   setMilliseconds,
 } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { isReminderScheduledOnDate } from "@/services/reminderService";
-
-export const parseNotificationExtra = (rawExtra: unknown): Record<string, any> => {
-  if (!rawExtra) return {};
-  if (typeof rawExtra === "object") return rawExtra as Record<string, any>;
-  if (typeof rawExtra === "string") {
-    try {
-      const parsed = JSON.parse(rawExtra);
-      return typeof parsed === "object" && parsed !== null ? parsed : {};
-    } catch {
-      return {};
-    }
-  }
-  return {};
-};
 
 export const NotificationHandler = () => {
   const navigate = useNavigate();

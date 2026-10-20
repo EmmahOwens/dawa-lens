@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { X, Send, Bot, Sparkles, ChevronDown, RotateCcw, WifiOff } from "@/lib/icons";
+import { X, Send, Bot, Sparkles, ChevronDown, RotateCcw, WifiOff, Navigation } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
@@ -17,6 +17,8 @@ import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { getContextualSuggestions, isGenericBoilerplate } from "@/lib/contextualSuggestions";
 import { PharmacyFinderModal } from "@/components/pharmacy/PharmacyFinderModal";
+import PermissionRequest from "@/components/PermissionRequest";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { Medicine } from "@/contexts/AppContext";
 
 const SAMPLE_PROMPTS = [
@@ -179,18 +181,31 @@ export default function DawaGPT() {
   // NDA Pharmacy Locator modal state for DawaGPT
   const [pharmacyModalMed, setPharmacyModalMed] = useState<Medicine | null>(null);
   const [isPharmacyModalOpen, setIsPharmacyModalOpen] = useState(false);
+  const [showLocationPermission, setShowLocationPermission] = useState(false);
+  const [pendingPharmacyMed, setPendingPharmacyMed] = useState<Medicine | null>(null);
+
+  const { status: geoStatus, requestLocation } = useGeolocation({ autoRequest: false });
+
+  const handleTriggerPharmacyModal = useCallback((med: Medicine | null) => {
+    if (geoStatus === "granted") {
+      setPharmacyModalMed(med);
+      setIsPharmacyModalOpen(true);
+    } else {
+      setPendingPharmacyMed(med);
+      setShowLocationPermission(true);
+    }
+  }, [geoStatus]);
 
   useEffect(() => {
     const handleOpenPharmacy = (e: Event) => {
       const customEvent = e as CustomEvent<{ medicineName?: string }>;
       const medName = customEvent.detail?.medicineName;
       const matched = medName ? allMedicines.find(m => m.name.toLowerCase().includes(medName.toLowerCase())) : (allMedicines[0] || null);
-      setPharmacyModalMed(matched || ({ name: medName || "Medication", dosage: "" } as any));
-      setIsPharmacyModalOpen(true);
+      handleTriggerPharmacyModal(matched || ({ name: medName || "Medication", dosage: "" } as any));
     };
     window.addEventListener("open-pharmacy-modal", handleOpenPharmacy);
     return () => window.removeEventListener("open-pharmacy-modal", handleOpenPharmacy);
-  }, [allMedicines]);
+  }, [allMedicines, handleTriggerPharmacyModal]);
 
   const placeholder = useTypewriterPlaceholder(SAMPLE_PROMPTS, {
     isPaused: isFocused || inputValue !== "" || isTyping
@@ -982,6 +997,31 @@ export default function DawaGPT() {
           onClose={() => setIsPharmacyModalOpen(false)}
         />
       )}
+
+      {/* Location Permission Modal for Pharmacy Locator */}
+      <PermissionRequest
+        isOpen={showLocationPermission}
+        onClose={() => {
+          setShowLocationPermission(false);
+          setPendingPharmacyMed(null);
+        }}
+        onConfirm={async () => {
+          setShowLocationPermission(false);
+          const target = pendingPharmacyMed;
+          setPendingPharmacyMed(null);
+          try {
+            await requestLocation();
+          } catch (err) {
+            console.warn("Location request failed:", err);
+          }
+          setPharmacyModalMed(target);
+          setIsPharmacyModalOpen(true);
+        }}
+        title="Enable Location Services"
+        description="Allow DawaLens to access your device location to discover the nearest NDA-licensed pharmacies in Uganda and display real-time walking and driving routes."
+        icon={Navigation}
+        permissionName="Location"
+      />
     </>
   );
 }

@@ -36,7 +36,7 @@ if (typeof window !== "undefined") {
     });
 }
 
-export const analytics = analyticsInstance;
+const analytics = analyticsInstance;
 export const auth = getAuth(app);
 
 // Audit Recommendation: Default web clients to in-memory Firestore cache to prevent

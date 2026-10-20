@@ -10,7 +10,7 @@ import {
 } from "@/plugins/nativeAlarm";
 import { notify } from "@/lib/notifications";
 import { Capacitor } from "@capacitor/core";
-import { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
+import type { Reminder, DoseLog, Medicine } from "@/contexts/AppContext";
 import { calculateRefillStatus, CRITICAL_STOCK_THRESHOLD } from "@/services/refillService";
 import {
   addDays,
@@ -964,7 +964,7 @@ export const scheduleAdjustmentNotification = async ({
  * Deduped per medicine per day via localStorage so it doesn't spam on every
  * foreground resume.
  */
-export const scheduleRefillNotifications = async (
+const scheduleRefillNotifications = async (
   medicines: Medicine[],
   reminders: Reminder[]
 ): Promise<void> => {
@@ -1443,7 +1443,7 @@ export const cancelSingleReminder = async (reminderId: string): Promise<void> =>
 /**
  * Reconciles native authoritative alarm schedules upon app foregrounding.
  */
-export const reconcileAuthoritativeSchedules = async (
+const reconcileAuthoritativeSchedules = async (
   reminders: Reminder[],
   doseLogs: DoseLog[],
   medicines?: Medicine[]

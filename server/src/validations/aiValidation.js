@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const medicineInputSchema = z.object({
+const medicineInputSchema = z.object({
   id: z.string().max(100).optional(),
   name: z.string().min(1).max(200),
   genericName: z.string().max(200).optional(),
@@ -16,7 +16,7 @@ export const medicineInputSchema = z.object({
   isConflict: z.boolean().optional(),
 }).strip();
 
-export const doseLogInputSchema = z.object({
+const doseLogInputSchema = z.object({
   id: z.string().max(100).optional(),
   medicineName: z.string().max(200),
   action: z.enum(['taken', 'skipped', 'missed', 'snoozed']),
@@ -27,7 +27,7 @@ export const doseLogInputSchema = z.object({
   reminderId: z.string().max(100).optional(),
 }).strip();
 
-export const wellnessLogInputSchema = z.object({
+const wellnessLogInputSchema = z.object({
   id: z.string().max(100).optional(),
   type: z.string().max(50).optional(),
   timestamp: z.string().max(100).optional(),
@@ -40,7 +40,7 @@ export const wellnessLogInputSchema = z.object({
   data: z.record(z.string(), z.unknown()).optional(),
 }).strip();
 
-export const reminderInputSchema = z.object({
+const reminderInputSchema = z.object({
   id: z.string().max(100).optional(),
   medicineName: z.string().max(200),
   dose: z.string().max(100).optional(),
@@ -50,7 +50,7 @@ export const reminderInputSchema = z.object({
   medicineId: z.string().max(100).nullable().optional(),
 }).strip();
 
-export const patientInputSchema = z.object({
+const patientInputSchema = z.object({
   id: z.string().max(100).optional(),
   name: z.string().max(100).optional(),
   age: z.number().min(0).max(150).nullable().optional(),
@@ -65,7 +65,7 @@ export const patientInputSchema = z.object({
   notes: z.string().max(1000).optional(),
 }).strip();
 
-export const userProfileInputSchema = z.object({
+const userProfileInputSchema = z.object({
   id: z.string().max(100).optional(),
   name: z.string().max(100).optional(),
   email: z.string().max(200).nullable().optional(),
@@ -78,7 +78,7 @@ export const userProfileInputSchema = z.object({
   language: z.string().max(50).optional(),
 }).strip();
 
-export const vitalitySummaryInputSchema = z.object({
+const vitalitySummaryInputSchema = z.object({
   name: z.string().max(100).optional(),
   adherence: z.number().nullable().optional(),
   energy: z.number().nullable().optional(),

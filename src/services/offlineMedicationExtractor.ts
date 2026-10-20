@@ -15,10 +15,10 @@
  * or entered explicitly by the user or healthcare professional.
  */
 
-import { PillMatch, PillIdResponse } from "./pillIdService";
+import type { PillMatch, PillIdResponse } from "./pillIdService";
 import { CANONICAL_DRUGS } from "./clinicalInteractionsData";
 
-export interface FormularyItem {
+interface FormularyItem {
   id: string;
   name: string;
   genericName: string;
@@ -30,7 +30,7 @@ export interface FormularyItem {
 }
 
 // ── Curated East Africa / WHO Essential Formulary ──────────────────────────────
-export const LOCAL_FORMULARY: FormularyItem[] = [
+const LOCAL_FORMULARY: FormularyItem[] = [
   // Analgesics & Antipyretics
   {
     id: "paracetamol",

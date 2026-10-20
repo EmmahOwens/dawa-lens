@@ -163,44 +163,12 @@ export interface PatientContext {
   allergies?: string[];
 }
 
-export interface RxNormConceptResponse {
-  success: boolean;
-  concept?: {
-    rxcui: string;
-    canonicalName: string;
-    rawName: string;
-    unii: string | null;
-    activeIngredients: string[];
-    brandSynonyms: string[];
-    searchTerms: string[];
-  };
-}
-
 const CACHE_PREFIX = 'fda_cache_';
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
 interface CacheWrapper<T> {
   data: T;
   timestamp: number;
-}
-
-/**
- * Resolve a medication query into its canonical RxNorm concept (RxCUI, USAN name, UNII, ingredients).
- */
-export async function resolveDrugConcept(query: string): Promise<RxNormConceptResponse['concept'] | null> {
-  if (!query || !query.trim()) return null;
-
-  try {
-    const res = await fetch(`${BASE_URL}/fda/resolve-concept?query=${encodeURIComponent(query.trim())}`, {
-      headers: await authHeaders(),
-    });
-    if (!res.ok) return null;
-    const data: RxNormConceptResponse = await res.json();
-    return data.concept || null;
-  } catch (err) {
-    console.warn('[openFdaClient] Concept resolution failed:', err);
-    return null;
-  }
 }
 
 /**
@@ -293,65 +261,5 @@ export async function checkFdaMultiSafety(
       })),
       recalls: [],
     };
-  }
-}
-
-/**
- * Fetch FDA drug recalls.
- */
-export async function getFdaRecalls(drugName: string): Promise<{ hasActiveRecalls: boolean; recalls: FdaRecall[] }> {
-  if (!drugName) return { hasActiveRecalls: false, recalls: [] };
-
-  try {
-    const res = await fetch(`${BASE_URL}/fda/recalls?drug=${encodeURIComponent(drugName)}`, {
-      headers: await authHeaders(),
-    });
-    if (!res.ok) return { hasActiveRecalls: false, recalls: [] };
-    return await res.json();
-  } catch {
-    return { hasActiveRecalls: false, recalls: [] };
-  }
-}
-
-/**
- * Fetch FAERS real-world adverse event signals.
- */
-export async function getFdaAdverseEvents(
-  drugName: string,
-  ageGroup?: number,
-  sex?: number
-): Promise<{ drugName: string; totalSampleReports: number; topReactions: FdaAdverseReaction[] } | null> {
-  if (!drugName) return null;
-
-  try {
-    const params = new URLSearchParams({ drug: drugName });
-    if (ageGroup) params.append('ageGroup', ageGroup.toString());
-    if (sex) params.append('sex', sex.toString());
-
-    const res = await fetch(`${BASE_URL}/fda/adverse-events?${params.toString()}`, {
-      headers: await authHeaders(),
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Autocomplete suggestions using openFDA NDC, RxNorm spelling, & synonym dictionaries.
- */
-export async function getFdaAutocomplete(query: string): Promise<string[]> {
-  if (!query || query.trim().length < 2) return [];
-
-  try {
-    const res = await fetch(`${BASE_URL}/fda/autocomplete?q=${encodeURIComponent(query)}`, {
-      headers: await authHeaders(),
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.suggestions || [];
-  } catch {
-    return [];
   }
 }

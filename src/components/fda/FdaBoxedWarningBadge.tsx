@@ -9,7 +9,7 @@ interface FdaBoxedWarningBadgeProps {
   className?: string;
 }
 
-export const FdaBoxedWarningBadge: React.FC<FdaBoxedWarningBadgeProps> = ({
+const FdaBoxedWarningBadge: React.FC<FdaBoxedWarningBadgeProps> = ({
   warning,
   drugName,
   initiallyExpanded = false,

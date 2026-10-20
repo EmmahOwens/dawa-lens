@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
+  "entry": [
+    "src/main.tsx",
+    "server/src/index.js"
+  ],
+  "ignorePatterns": [
+    "public/tesseract/**"
+  ],
+  "ignoreDependencies": [
+    "@capacitor/android",
+    "@capacitor/assets",
+    "tailwindcss-animate"
+  ]
+}

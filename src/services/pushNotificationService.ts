@@ -66,7 +66,7 @@ export async function initPushNotifications(userId: string): Promise<string | nu
 /**
  * Persists the registered FCM token to the user document in Firestore and local storage.
  */
-export async function saveTokenToFirestore(userId: string, token: string): Promise<void> {
+async function saveTokenToFirestore(userId: string, token: string): Promise<void> {
   if (!userId || !token) return;
 
   try {
@@ -90,6 +90,6 @@ export async function saveTokenToFirestore(userId: string, token: string): Promi
 /**
  * Returns the cached FCM token from local storage.
  */
-export async function getStoredFcmToken(): Promise<string | null> {
+async function getStoredFcmToken(): Promise<string | null> {
   return storage.getItem<string | null>(FCM_TOKEN_STORAGE_KEY, null);
 }

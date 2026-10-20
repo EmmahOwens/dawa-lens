@@ -103,16 +103,6 @@ vi.mock("@capacitor/camera", () => ({
   CameraSource: { Photos: "PHOTOS" },
 }));
 
-// Mock NativeCamera plugin — startScan never resolves by default (simulates
-// the native camera being open; we are testing the React UI layer, not the
-// native activity itself)
-const mockStartScan = vi.fn();
-vi.mock("@/plugins/nativeCamera", () => ({
-  NativeCamera: {
-    startScan: (...args: unknown[]) => mockStartScan(...args),
-  },
-}));
-
 // Mock navigator.mediaDevices.getUserMedia so jsdom doesn't throw
 Object.defineProperty(globalThis.navigator, "mediaDevices", {
   writable: true,
@@ -182,7 +172,6 @@ beforeEach(() => {
 
   // Default: permission granted — native scan runs in background (never resolves)
   mockCheckPermissions.mockResolvedValue({ camera: "granted" });
-  mockStartScan.mockReturnValue(new Promise(() => {})); // never resolves
   mockNavigate.mockReturnValue(undefined);
 });
 
@@ -201,7 +190,6 @@ describe("Bug Condition — Scan Page Permanent Loader on Capacitor", () => {
     async () => {
       // Arrange: permission granted → showPermissionModal stays false
       mockCheckPermissions.mockResolvedValue({ camera: "granted" });
-      mockStartScan.mockReturnValue(new Promise(() => {})); // native camera open, never resolves
 
       // Act
       renderScanPageNative();
@@ -270,7 +258,6 @@ describe("Bug Condition — Scan Page Permanent Loader on Capacitor", () => {
     async () => {
       // First mount
       mockCheckPermissions.mockResolvedValue({ camera: "granted" });
-      mockStartScan.mockReturnValue(new Promise(() => {}));
 
       const { unmount } = renderScanPageNative();
 
@@ -285,7 +272,6 @@ describe("Bug Condition — Scan Page Permanent Loader on Capacitor", () => {
 
       // Second mount (re-mounting simulates returning to /scan)
       mockCheckPermissions.mockResolvedValue({ camera: "granted" });
-      mockStartScan.mockReturnValue(new Promise(() => {}));
 
       renderScanPageNative();
 
@@ -321,7 +307,6 @@ describe("Bug Condition — Scan Page Permanent Loader on Capacitor", () => {
             // All combinations represent isBugCondition=true:
             //   isNativePlatform=true, showWebScanner=false (initial), showPermissionModal=false
             mockCheckPermissions.mockResolvedValue({ camera: "granted" });
-            mockStartScan.mockReturnValue(new Promise(() => {}));
             mockNavigate.mockReturnValue(undefined);
 
             // Note: scanMode and facingMode are internal state — we render the

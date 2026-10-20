@@ -15,7 +15,7 @@ export interface OfflineGazetteerEntry {
   synonyms?: string[];
 }
 
-export const UGANDA_GAZETTEER: OfflineGazetteerEntry[] = [
+const UGANDA_GAZETTEER: OfflineGazetteerEntry[] = [
   // ─── Kampala Suburbs & Neighborhoods ──────────────────────────────────────────
   { name: "Kampala Central", district: "Kampala", region: "Central", type: "city", coordinates: [32.5825, 0.3163], synonyms: ["City Centre", "CBD", "Downtown"] },
   { name: "Kololo", district: "Kampala", region: "Central", type: "suburb", coordinates: [32.5936, 0.3292], synonyms: ["Kololo Hill", "Upper Kololo"] },

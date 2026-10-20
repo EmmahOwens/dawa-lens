@@ -48,7 +48,6 @@ import ConfirmationDialog from "@/components/ConfirmationDialog";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 export {
-  type ColorTheme,
   COLOR_THEMES,
   COLOR_KEYS,
   COLORS,

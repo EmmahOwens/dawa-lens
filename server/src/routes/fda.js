@@ -1,5 +1,6 @@
 import express from 'express';
 import * as openFdaService from '../services/openFdaService.js';
+import { checkDuplicateTherapy } from '../services/therapeuticDuplicationService.js';
 import { resolveRxNormConcept, getSpellingSuggestions } from '../services/rxNormService.js';
 import { fdaLimiter } from '../middleware/rateLimiter.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -241,7 +242,7 @@ router.post('/check-safety', protect, fdaLimiter, async (req, res, next) => {
     }
 
     // Check duplicate therapies
-    const duplicateTherapies = await openFdaService.checkDuplicateTherapy(medications);
+    const duplicateTherapies = await checkDuplicateTherapy(medications);
 
     const hasCriticalAlert =
       boxedWarnings.length > 0 ||

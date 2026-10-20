@@ -17,7 +17,6 @@ import { preloadOCRModel } from "@/services/visionService";
 import { deferToIdle } from "@/lib/idleCallback";
 import { initLifecycle, onForeground, hasNetwork } from "@/lib/appLifecycle";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import OfflineOverlay from "@/components/OfflineOverlay";
 import DawaGPT from "@/components/DawaGPT";
 import DawaGPTOfflineModal from "@/components/DawaGPTOfflineModal";
 import { Capacitor } from "@capacitor/core";
@@ -310,7 +309,6 @@ const App = () => {
               <ErrorBoundary name="AppRoot" resetKey={location.pathname}>
                 <AppContent />
                 <NotificationHandler />
-                <OfflineOverlay />
                 <Toaster richColors closeButton position="top-center" />
                 <ErrorBoundary name="DawaGPT">
                   <DawaGPTRoot />

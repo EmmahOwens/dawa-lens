@@ -2,10 +2,10 @@ import * as React from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from "@/lib/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
+import { CalendarPicker } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
-export interface DatePickerProps {
+interface DatePickerProps {
   value?: Date | string | null;
   onChange: (date: Date | undefined, dateStr?: string) => void;
   placeholder?: string;
@@ -120,7 +120,7 @@ export function AppleDatePicker({
           </div>
         )}
 
-        <Calendar
+        <CalendarPicker
           mode="single"
           selected={selectedDate}
           onSelect={handleSelect}
@@ -134,6 +134,3 @@ export function AppleDatePicker({
     </Popover>
   );
 }
-
-export { AppleDatePicker as DatePicker };
-export default AppleDatePicker;

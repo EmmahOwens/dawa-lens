@@ -20,6 +20,18 @@ export function minutesToTimeStr(totalMinutes) {
 }
 
 /**
+ * Computes the minute interval between two consecutive slots (with wrap-around).
+ */
+export function getInterSlotInterval(times, fromIdx, toIdx) {
+  if (!times || times.length <= 1) return 24 * 60;
+  const fromMins = timeStrToMinutes(times[fromIdx]);
+  const toMins = timeStrToMinutes(times[toIdx % times.length]);
+  let diff = toMins - fromMins;
+  if (diff <= 0) diff += 24 * 60;
+  return diff;
+}
+
+/**
  * Parses and validates a comma-separated list of "HH:mm" time strings.
  */
 export function parseReminderTimes(timeStr) {
@@ -36,19 +48,6 @@ export function parseReminderTimes(timeStr) {
 }
 
 /**
- * Computes the interval in minutes between slot `fromIndex` and slot `toIndex`.
- * Handles wrap-around midnight naturally.
- */
-export function getInterSlotInterval(times, fromIndex, toIndex) {
-  if (times.length <= 1) return 24 * 60;
-  const fromMins = timeStrToMinutes(times[fromIndex]);
-  const toMins = timeStrToMinutes(times[toIndex]);
-  let diff = toMins - fromMins;
-  if (diff <= 0) diff += 24 * 60;
-  return diff;
-}
-
-/**
  * Finds the slot index that corresponds to the given scheduled datetime or time string.
  */
 export function findSlotIndexForTime(times, scheduledDateOrStr) {
@@ -58,7 +57,7 @@ export function findSlotIndexForTime(times, scheduledDateOrStr) {
       ? new Date(scheduledDateOrStr)
       : scheduledDateOrStr;
 
-  if (isNaN(dateObj.getTime())) return 0;
+  if (!dateObj || isNaN(dateObj.getTime())) return 0;
 
   const targetHHmm = `${dateObj.getHours().toString().padStart(2, '0')}:${dateObj
     .getMinutes()
@@ -97,6 +96,7 @@ export function calculateDynamicSchedule(times, slotIndex, actualTakeTime) {
       newTimes: times || [],
       newTimeStr: (times || []).join(','),
       hasChanges: false,
+      adjustedSubsequentCount: 0,
     };
   }
 
@@ -121,5 +121,6 @@ export function calculateDynamicSchedule(times, slotIndex, actualTakeTime) {
     newTimes,
     newTimeStr,
     hasChanges,
+    adjustedSubsequentCount: Math.max(0, times.length - 1),
   };
 }

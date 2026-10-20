@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseNotificationExtra } from "../NotificationHandler";
+import { parseNotificationExtra } from "@/services/reminderService";
 
 describe("NotificationHandler - parseNotificationExtra", () => {
   it("should return empty object for null or undefined", () => {

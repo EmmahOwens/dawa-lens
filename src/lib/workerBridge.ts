@@ -3,7 +3,7 @@
  * Provides type-safe fire-and-forget and request/response patterns for Web Workers.
  */
 
-export interface WorkerMessage<T = unknown> {
+interface WorkerMessage<T = unknown> {
   topic: string;
   id?: string;
   payload?: T;

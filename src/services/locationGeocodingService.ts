@@ -234,7 +234,7 @@ export async function searchPhotonSuggestions(
 /**
  * Search address suggestions using a Pelias-compatible endpoint.
  */
-export async function searchPeliasSuggestions(
+async function searchPeliasSuggestions(
   query: string,
   peliasBaseUrl: string,
   options: GeocodeSearchOptions = {}
@@ -289,7 +289,7 @@ import {
   OfflineGazetteerEntry,
 } from "@/data/ugandaGazetteer";
 
-export function formatGazetteerPlace(entry: OfflineGazetteerEntry): GeocodedPlace {
+function formatGazetteerPlace(entry: OfflineGazetteerEntry): GeocodedPlace {
   return {
     id: `gazetteer-${entry.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
     name: entry.name,

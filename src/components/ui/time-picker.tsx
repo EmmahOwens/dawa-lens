@@ -3,7 +3,7 @@ import { Clock, ChevronUp, ChevronDown, Check, Sparkles } from "@/lib/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export interface TimePickerProps {
+interface TimePickerProps {
   value: string; // "HH:mm" in 24h format e.g. "08:30" or "14:15"
   onChange: (time: string) => void;
   className?: string;
@@ -163,7 +163,7 @@ function ClockFace({
  * AppleTimePickerCore
  * The interactive panel with segmented hour/minute drums, AM/PM toggle, and clock face.
  */
-export function AppleTimePickerCore({
+function AppleTimePickerCore({
   value,
   onChange,
   onDone,
@@ -441,6 +441,3 @@ export function AppleTimePicker({
     </Popover>
   );
 }
-
-export { AppleTimePicker as TimePicker };
-export default AppleTimePicker;

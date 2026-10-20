@@ -20,7 +20,7 @@ import {
 } from "../services/pharmacyService";
 import { applyCommunityFeedback } from "../services/pharmacyFeedbackService";
 
-export interface CustomPharmacyLocation {
+interface CustomPharmacyLocation {
   coords: [number, number]; // [lng, lat]
   label: string;
   place?: GeocodedPlace;
@@ -30,14 +30,16 @@ export function useNearbyPharmacies() {
   const { location, status: geoStatus, requestLocation } = useGeolocation();
   const { isOnline } = useNetworkStatus();
 
+  const isGpsIssue = geoStatus === "error" || geoStatus === "denied";
   const isNetworkIssue = !isOnline || geoStatus === "error";
 
   const resolved = useMemo(() => {
     return resolvePharmacyCoordinates({
       liveLocation: geoStatus === "granted" ? location : null,
       hasNetworkIssue: isNetworkIssue,
+      hasGpsIssue: isGpsIssue,
     });
-  }, [location, geoStatus, isNetworkIssue]);
+  }, [location, geoStatus, isNetworkIssue, isGpsIssue]);
 
   const userCoords = resolved.coords;
   const locationSource = resolved.source; // "live" | "previous" | "default"
@@ -46,7 +48,7 @@ export function useNearbyPharmacies() {
 
   // Persist live location when successfully obtained and online
   useEffect(() => {
-    if (location && geoStatus === "granted" && !isNetworkIssue) {
+    if (location && geoStatus === "granted" && !isNetworkIssue && !isGpsIssue) {
       saveLastKnownLocation({
         latitude: location.latitude,
         longitude: location.longitude,
@@ -54,7 +56,7 @@ export function useNearbyPharmacies() {
         countryCode: location.countryCode,
       });
     }
-  }, [location, geoStatus, isNetworkIssue]);
+  }, [location, geoStatus, isNetworkIssue, isGpsIssue]);
 
   // ── Custom Location (Geocoded via Photon / Pelias) ───────────────────────────
   const [customLocation, setCustomLocationState] = useState<CustomPharmacyLocation | null>(null);
@@ -62,6 +64,12 @@ export function useNearbyPharmacies() {
   const setCustomLocation = useCallback(
     (coords: [number, number], label: string, place?: GeocodedPlace) => {
       setCustomLocationState({ coords, label, place });
+      // Persist user selected location as last known for future offline/GPS fallback
+      saveLastKnownLocation({
+        latitude: coords[1],
+        longitude: coords[0],
+        district: label.split(",")[0]?.trim(),
+      });
     },
     []
   );
@@ -77,7 +85,9 @@ export function useNearbyPharmacies() {
 
   const activeLocationLabel = useMemo(() => {
     if (customLocation) return customLocation.label;
-    if (isUsingPreviousLocation) return "Previous Saved Location";
+    if (isUsingPreviousLocation) {
+      return "Previous Saved Location";
+    }
     if (isUsingDefaultLocation) return "Kampala (Default)";
     return "Device GPS Location";
   }, [customLocation, isUsingPreviousLocation, isUsingDefaultLocation]);
@@ -302,6 +312,7 @@ export function useNearbyPharmacies() {
     isUsingPreviousLocation,
     isUsingDefaultLocation,
     isNetworkIssue,
+    isGpsIssue,
     geoStatus,
     requestLocation,
     // Pharmacies (outlets)

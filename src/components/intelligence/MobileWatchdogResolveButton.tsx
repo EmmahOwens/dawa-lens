@@ -119,5 +119,3 @@ export const MobileWatchdogResolveButton: React.FC<MobileWatchdogResolveButtonPr
     </button>
   );
 };
-
-export default MobileWatchdogResolveButton;

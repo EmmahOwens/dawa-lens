@@ -163,4 +163,31 @@ describe("useNearbyPharmacies Hook - Network Resilience & Location Fallback", ()
     expect(result.current.userCoords).toEqual([32.5825, 0.3476]);
     expect(result.current.isCustomLocation).toBe(false);
   });
+
+  it("uses previously stored location when GPS error or denial occurs and previous location exists", () => {
+    // User had their location saved in Entebbe
+    saveLastKnownLocation({
+      latitude: 0.0512,
+      longitude: 32.4637,
+      district: "Wakiso",
+    });
+
+    // Device has GPS error or permission denied
+    mockIsOnline = true;
+    mockGeoState = {
+      location: null,
+      status: "denied",
+      error: "Location permission denied",
+      requestLocation: vi.fn(),
+    };
+
+    const { result } = renderHook(() => useNearbyPharmacies());
+
+    expect(result.current.userCoords[0]).toBeCloseTo(32.4637);
+    expect(result.current.userCoords[1]).toBeCloseTo(0.0512);
+    expect(result.current.locationSource).toBe("previous");
+    expect(result.current.isUsingPreviousLocation).toBe(true);
+    expect(result.current.isGpsIssue).toBe(true);
+    expect(result.current.top5Pharmacies.length).toBeGreaterThan(0);
+  });
 });

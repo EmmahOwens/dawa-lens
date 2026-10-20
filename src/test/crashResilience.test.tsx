@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
-import { stringToHash } from "@/services/reminderService";
-import { parseNotificationExtra } from "@/components/NotificationHandler";
+import { stringToHash, parseNotificationExtra } from "@/services/reminderService";
 import MessageRenderer from "@/components/MessageRenderer";
 import { calculateRefillStatus } from "@/services/refillService";
 

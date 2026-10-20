@@ -7,7 +7,7 @@ import {
   getLastKnownLocation,
 } from "../services/pharmacyService";
 
-export interface UserLocation {
+interface UserLocation {
   latitude: number;
   longitude: number;
   country: string | null;

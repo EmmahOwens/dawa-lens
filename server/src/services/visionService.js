@@ -134,7 +134,7 @@ const toInlineImagePart = (imageBase64) => {
  * Safely parses and repairs JSON returned by AI models.
  * Handles markdown fences, outer commentary, trailing commas, and truncated arrays.
  */
-export const safeParsePillIdJson = (raw) => {
+const safeParsePillIdJson = (raw) => {
   if (!raw || typeof raw !== 'string') return null;
 
   // 1. Strip markdown fences and whitespace
@@ -272,7 +272,7 @@ const normaliseMatches = (raw) => {
 
 // ── Gemini Text model ────────────────────────────────────────
 
-export const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
+const identifyWithGemini = async (ocrText, patientAge, imageBase64) => {
   const apiKey = getGeminiApiKeyForScan();
 
   // Multimodal request: the photo is the primary identification source, the
@@ -418,7 +418,7 @@ const enrichMatchesWithFda = async (matches) => {
  * @param {number} [patientAge] - Optional patient age for clinical context.
  * @returns {Promise<object>}
  */
-export const identifyWithDawaGPT = async (ocrText, patientAge) => {
+const identifyWithDawaGPT = async (ocrText, patientAge) => {
   const prompt = getTextFallbackPillIdPrompt(ocrText, patientAge);
   const messages = [{ role: 'user', content: prompt }];
 

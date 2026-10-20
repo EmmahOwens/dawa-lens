@@ -32,15 +32,6 @@ export interface NdaPharmacy {
   verifiedByNda?: boolean;
 }
 
-export interface EnrichedPharmacy extends NdaPharmacy {
-  overtureId?: string;
-  osmId?: string;
-  confidenceScore?: number;
-  openingHours?: string;
-  verifiedByNda?: boolean;
-  dataSource?: "nda_official" | "overture_fused" | "overture_osm_fused" | "community_verified";
-}
-
 export type PharmacyTransportMode = "boda_boda" | "driving" | "walking";
 
 export interface PharmacyRoute {
@@ -59,18 +50,8 @@ export interface PharmacyFilterOptions {
   limit?: number;
 }
 
-export const NDA_SOURCE_METADATA = {
-  authority: "National Drug Authority (NDA)",
-  fullName: "National Drug Authority Uganda",
-  country: "Uganda",
-  portalUrl: "https://www.nda.or.ug",
-  registerName: "Official Register of Licensed Drug Outlets & Pharmacies",
-  verificationStatement: "Verified and licensed by the National Drug Authority (NDA) Uganda under the National Drug Policy and Authority Act.",
-} as const;
-
 export const DEFAULT_KAMPALA_COORDS: [number, number] = [32.5825, 0.3476]; // [lng, lat]
-export const KAMPALA_LAT_LNG = { latitude: 0.3476, longitude: 32.5825 } as const;
-export const LAST_KNOWN_LOCATION_STORAGE_KEY = "dawa_pharmacy_last_location";
+const LAST_KNOWN_LOCATION_STORAGE_KEY = "dawa_pharmacy_last_location";
 
 export interface SavedPharmacyLocation {
   latitude: number;
@@ -166,6 +147,7 @@ export function clearLastKnownLocation(): void {
 export interface ResolveCoordinatesOptions {
   liveLocation?: { latitude: number; longitude: number } | null;
   hasNetworkIssue?: boolean;
+  hasGpsIssue?: boolean;
 }
 
 export interface ResolvedCoordinates {
@@ -175,15 +157,15 @@ export interface ResolvedCoordinates {
 
 /**
  * Resolves user coordinates for the NDA Pharmacy locator:
- * - If online and live GPS location is available -> uses live location.
- * - If there is a network issue (or live location unavailable):
+ * - If online and live GPS location is available (without GPS or network issues) -> uses live location.
+ * - If there is a network issue, GPS issue, or live location is unavailable:
  *     1. Uses the previous location if one was previously recorded.
- *     2. If no previous location exists (e.g. first-time user with network issue), defaults to Kampala.
+ *     2. If no previous location exists (e.g. first-time user with network/GPS issue), defaults to Kampala.
  */
 export function resolvePharmacyCoordinates(
   options: ResolveCoordinatesOptions = {}
 ): ResolvedCoordinates {
-  const { liveLocation, hasNetworkIssue = false } = options;
+  const { liveLocation, hasNetworkIssue = false, hasGpsIssue = false } = options;
 
   const hasValidLive =
     liveLocation &&
@@ -192,8 +174,8 @@ export function resolvePharmacyCoordinates(
     typeof liveLocation.longitude === "number" &&
     !isNaN(liveLocation.longitude);
 
-  // If we have valid live GPS and NO network issue, use live location
-  if (hasValidLive && !hasNetworkIssue) {
+  // If we have valid live GPS and NO network/GPS issue, use live location
+  if (hasValidLive && !hasNetworkIssue && !hasGpsIssue) {
     return {
       coords: [liveLocation.longitude, liveLocation.latitude],
       source: "live",

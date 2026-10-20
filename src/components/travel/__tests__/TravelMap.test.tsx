@@ -91,7 +91,7 @@ vi.mock("framer-motion", () => ({
   ),
 }));
 
-vi.mock("../rive/RiveMoji", () => ({
+vi.mock("@/components/rive/RiveMoji", () => ({
   RiveMoji: ({ emoji }: { emoji: string }) => <span>{emoji}</span>,
 }));
 

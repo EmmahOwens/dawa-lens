@@ -1,7 +1,7 @@
 import { Capacitor } from "@capacitor/core";
 import { NativeSqlite, type SqlParam } from "@/plugins/nativeSqlite";
 import { storage } from "../lib/storage";
-import { Medicine, Reminder, DoseLog, Patient, WellnessLog, ScheduleAuditLog } from "../contexts/AppContext";
+import type { Medicine, Reminder, DoseLog, Patient, WellnessLog, ScheduleAuditLog } from "../contexts/AppContext";
 
 const LOCAL_MEDS_KEY = "dawa_local_medicines";
 const LOCAL_REMS_KEY = "dawa_local_reminders";
@@ -17,7 +17,7 @@ export function setActiveUserScope(userId: string | null): void {
   activeUserId = userId;
 }
 
-export function getPartitionKey(baseKey: string): string {
+function getPartitionKey(baseKey: string): string {
   return activeUserId ? `${baseKey}_${activeUserId}` : baseKey;
 }
 
@@ -26,7 +26,7 @@ export function getPartitionKey(baseKey: string): string {
  * Binds ONLY the fields explicitly present (not undefined) in `updates`.
  * Completely prevents partial updates from erasing omitted columns with NULL.
  */
-export function buildDynamicSqlUpdate(
+function buildDynamicSqlUpdate(
   tableName: string,
   id: string,
   columnMapping: Record<string, string>,
@@ -92,7 +92,7 @@ export async function initLocalPersistence(): Promise<void> {
   return initPromise;
 }
 
-export async function ensureSqliteReady(): Promise<boolean> {
+async function ensureSqliteReady(): Promise<boolean> {
   if (!Capacitor.isNativePlatform()) return false;
   if (!sqliteReady && initPromise) {
     try {

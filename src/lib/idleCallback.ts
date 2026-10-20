@@ -11,12 +11,12 @@ interface IdleDeadline {
   timeRemaining: () => number;
 }
 
-export const requestIdleCallback: (cb: IdleRequestCallback) => number =
+const requestIdleCallback: (cb: IdleRequestCallback) => number =
   typeof (window as any).requestIdleCallback === 'function'
     ? (window as any).requestIdleCallback.bind(window)
     : (cb: IdleRequestCallback) => window.setTimeout(() => cb(), 1);
 
-export const cancelIdleCallback: (id: number) => void =
+const cancelIdleCallback: (id: number) => void =
   typeof (window as any).cancelIdleCallback === 'function'
     ? (window as any).cancelIdleCallback.bind(window)
     : (id: number) => window.clearTimeout(id);
@@ -27,15 +27,4 @@ export const cancelIdleCallback: (id: number) => void =
  */
 export function deferToIdle(fn: () => void): number {
   return requestIdleCallback(fn);
-}
-
-/**
- * Defer a function with a maximum timeout.
- * The function will run during idle time OR after the timeout, whichever comes first.
- */
-export function deferToIdleWithTimeout(fn: () => void, timeoutMs: number): number {
-  if (typeof (window as any).requestIdleCallback === 'function') {
-    return (window as any).requestIdleCallback(fn, { timeout: timeoutMs });
-  }
-  return window.setTimeout(fn, Math.min(timeoutMs, 100));
 }

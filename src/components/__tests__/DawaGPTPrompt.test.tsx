@@ -85,7 +85,7 @@ vi.mock("@/hooks/usePatientScope", () => ({
   }),
 }));
 
-vi.mock("@/hooks/useToast", () => ({
+vi.mock("@/hooks/use-toast", () => ({
   useToast: () => ({
     toast: vi.fn(),
   }),

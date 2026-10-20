@@ -22,6 +22,7 @@ import {
   Layers,
   Bike,
   Car,
+  Walk,
   Maximize2,
   Minimize2,
   Building,
@@ -38,7 +39,6 @@ import {
 import {
   initPmtilesProtocol,
   COMPOSITE_PHARMACY_MAP_STYLE,
-  ESRI_SATELLITE_STYLE,
   OFFLINE_UGANDA_STYLE,
 } from "@/services/mapTileService";
 
@@ -668,7 +668,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
                     {route.mode === "boda_boda" ? (
                       <Bike className="size-3.5" />
                     ) : route.mode === "walking" ? (
-                      <Navigation className="size-3.5" />
+                      <Walk className="size-3.5" />
                     ) : (
                       <Car className="size-3.5" />
                     )}
@@ -748,7 +748,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                 }`}
               >
-                <Navigation className="size-3.5" />
+                <Walk className="size-3.5" />
                 <span>Walk</span>
               </button>
             </div>
@@ -1112,7 +1112,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
                         : "text-muted-foreground"
                     }`}
                   >
-                    <Navigation className="size-4" />
+                    <Walk className="size-4" />
                   </button>
                 </div>
 

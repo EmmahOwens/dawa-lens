@@ -1,6 +1,5 @@
 import { db } from '../db.js';
 import AppError from '../utils/AppError.js';
-import * as medicineService from './medicineService.js';
 import { sendPushNotification } from './notificationService.js';
 import * as autonomousService from './autonomousService.js';
 import {

@@ -153,7 +153,7 @@ const PRIMARY_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 const FALLBACK_STYLE = 'https://tiles.openfreemap.org/styles/bright';
 
 // Standalone offline style using bundled 177-country GeoJSON polygons
-export const OFFLINE_WORLD_STYLE: maplibregl.StyleSpecification = {
+const OFFLINE_WORLD_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
     'world-land': {

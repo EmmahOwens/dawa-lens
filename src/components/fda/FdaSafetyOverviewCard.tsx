@@ -20,14 +20,12 @@ interface FdaSafetyOverviewCardProps {
   profile: FdaDrugProfile | null;
   isLoading?: boolean;
   className?: string;
-  patientName?: string;
 }
 
-export const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
+const FdaSafetyOverviewCard: React.FC<FdaSafetyOverviewCardProps> = ({
   profile,
   isLoading = false,
   className = "",
-  patientName,
 }) => {
   const [activeTab, setActiveTab] = useState<"safety" | "events" | "storage">("safety");
   const [isExpanded, setIsExpanded] = useState(false);

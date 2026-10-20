@@ -1,6 +1,6 @@
 import { auth } from "@/lib/firebase";
 import { Capacitor } from "@capacitor/core";
-import {
+import type {
   Medicine,
   Reminder,
   UserProfile,
@@ -8,7 +8,7 @@ import {
   WellnessLog,
   Patient,
 } from "../contexts/AppContext";
-import { AIAction } from "./aiAssistantService";
+import type { AIAction } from "./aiAssistantService";
 
 const getBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_URL;

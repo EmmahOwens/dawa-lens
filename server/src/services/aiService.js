@@ -3,22 +3,26 @@ import dotenv from 'dotenv';
 import { Readable } from 'stream';
 import AppError from '../utils/AppError.js';
 import { retrieveMedicalKnowledge } from './vectorService.js';
-import * as medicineService from './medicineService.js';
-import * as reminderService from './reminderService.js';
-import * as doseLogService from './doseLogService.js';
-import * as patientService from './patientService.js';
 import { rateLimitManager } from './rateLimitManager.js';
 import { getFoodKnowledgePrompt, LOCAL_FOODS } from './localFoodService.js';
-import { fetchDrugLabel, checkDuplicateTherapy } from './openFdaService.js';
+import { fetchDrugLabel } from './openFdaService.js';
 import {
   fetchClinicalGroundingForQuery,
   formatDuplicateTherapyWatchdogContext,
   isSameTaskOrDuplicateQuery,
-  detectDuplicateTherapiesSync,
-  findLocalTherapeuticClass,
-  extractDrugsFromQuery
+  checkDuplicateTherapy
 } from './therapeuticDuplicationService.js';
 import { generateContextualSuggestions, isGenericBoilerplate } from '../utils/contextualSuggestions.js';
+import {
+  normalizeAIAction,
+  enforceGenderHonorifics,
+  userRequestedReminder,
+  extractDeterministicAction,
+  getDailyDoseRate as getServerDailyDoseRate,
+  formatActionExecutionMessage,
+  buildReminderClarificationResponse,
+  buildAgeTailoredFoodGuidance
+} from '../utils/aiDeterministicUtils.js';
 
 dotenv.config();
 
@@ -95,7 +99,7 @@ const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
 /**
  * Global AI error handler to ensure all errors returned are "operational" AppErrors.
  */
-export function handleAiError(err) {
+function handleAiError(err) {
   if (err.isOperational) throw err;
 
   console.error("AI Service Error:", err);
@@ -127,7 +131,7 @@ const GROQ_KEYS = [GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3].filter(Boolean)
 const GROQ_KEY_SUFFIXES = ['', '-key2', '-key3'];
 let groqKeyIndex = 0;
 
-export const getActiveGroqKeys = () => {
+const getActiveGroqKeys = () => {
   return GROQ_KEYS.length > 0 ? GROQ_KEYS : [process.env.GROQ_API_KEY, process.env.GROQ_API_KEY_2, process.env.GROQ_API_KEY_3].filter(Boolean);
 };
 
@@ -178,15 +182,7 @@ const EMERGENCY_RESPONSE = {
   action: null
 };
 
-/**
- * Fallback chat / completion with Gemini (supports dynamic prompt & schema)
- */
-const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096, temperature = 0.7, customSystemPrompt = null, isJson = true) => {
-  const geminiKeys = [GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean);
-  if (geminiKeys.length === 0) {
-    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
-  }
-
+const buildGeminiContentsAndInstruction = (finalMessages, customSystemPrompt = null) => {
   const rawSystemMsg = customSystemPrompt || finalMessages.find(m => m.role === 'system')?.content;
   const GEMINI_NATIVE_SYSTEM_INSTRUCTION_CHAR_LIMIT = 16000;
   let nativeSystemInstruction = null;
@@ -213,7 +209,6 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
     }
   }
 
-  // Transform OpenAI/Groq messages format to Gemini format
   const rawContents = finalMessages
     .filter(m => m.role !== 'system')
     .map(m => ({
@@ -221,14 +216,10 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
       parts: [{ text: (typeof m.content === 'string' && m.content.trim().length > 0) ? m.content : ' ' }]
     }));
 
-  // If system instruction was too large for the native field, inject the FULL copy
-  // as the very FIRST user-role chat context turn (bypasses ~16k systemInstruction cap;
-  // normal chat context supports 1M+ tokens for Gemini 2.5 Flash).
   if (prependedSystemAsUserTurn) {
     rawContents.unshift(prependedSystemAsUserTurn);
   }
 
-  // Merge consecutive turns with the same role for Gemini API compliance
   const contents = [];
   for (const c of rawContents) {
     if (contents.length > 0 && contents[contents.length - 1].role === c.role) {
@@ -238,12 +229,25 @@ const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096
     }
   }
 
-  // Gemini requires at least one content part, and the last turn MUST be 'user'
   if (contents.length === 0) {
     contents.push({ role: 'user', parts: [{ text: 'Hello' }] });
   } else if (contents[contents.length - 1].role !== 'user') {
     contents.push({ role: 'user', parts: [{ text: 'Please continue.' }] });
   }
+
+  return { contents, nativeSystemInstruction };
+};
+
+/**
+ * Fallback chat / completion with Gemini (supports dynamic prompt & schema)
+ */
+const callGeminiChat = async (finalMessages, priority = 'high', maxTokens = 4096, temperature = 0.7, customSystemPrompt = null, isJson = true) => {
+  const geminiKeys = [GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean);
+  if (geminiKeys.length === 0) {
+    throw new AppError('AI service is temporarily unavailable. Please try again later.', 503);
+  }
+
+  const { contents, nativeSystemInstruction } = buildGeminiContentsAndInstruction(finalMessages, customSystemPrompt);
 
   const fn = async () => {
     const generationConfig = {
@@ -376,52 +380,7 @@ const callGeminiChatStream = async (finalMessages, priority = 'high', maxTokens 
   const geminiKeys = [GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean);
   if (geminiKeys.length === 0) return null;
 
-  const rawSystemMsg = customSystemPrompt || finalMessages.find(m => m.role === 'system')?.content;
-  const GEMINI_NATIVE_SYSTEM_INSTRUCTION_CHAR_LIMIT = 16000;
-  let nativeSystemInstruction = null;
-  let prependedSystemAsUserTurn = null;
-
-  if (rawSystemMsg && typeof rawSystemMsg === 'string' && rawSystemMsg.trim().length > 0) {
-    if (rawSystemMsg.length <= GEMINI_NATIVE_SYSTEM_INSTRUCTION_CHAR_LIMIT) {
-      nativeSystemInstruction = rawSystemMsg;
-    } else {
-      const newline = rawSystemMsg.indexOf('\n');
-      const firstParagraphEnd = rawSystemMsg.indexOf('\n\n') !== -1 ? rawSystemMsg.indexOf('\n\n') : (newline !== -1 ? newline : 1500);
-      const distilledHead = rawSystemMsg.slice(0, Math.min(firstParagraphEnd + 1, 1500)).trim();
-      nativeSystemInstruction = `${distilledHead}\n\nFollow all detailed clinical instructions strictly.`;
-      prependedSystemAsUserTurn = {
-        role: 'user',
-        parts: [{ text: `=== SYSTEM INSTRUCTIONS ===\n\n${rawSystemMsg}\n\n=== END OF INSTRUCTIONS ===` }]
-      };
-    }
-  }
-
-  const rawContents = finalMessages
-    .filter(m => m.role !== 'system')
-    .map(m => ({
-      role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: (typeof m.content === 'string' && m.content.trim().length > 0) ? m.content : ' ' }]
-    }));
-
-  if (prependedSystemAsUserTurn) {
-    rawContents.unshift(prependedSystemAsUserTurn);
-  }
-
-  const contents = [];
-  for (const c of rawContents) {
-    if (contents.length > 0 && contents[contents.length - 1].role === c.role) {
-      contents[contents.length - 1].parts[0].text += '\n\n' + c.parts[0].text;
-    } else {
-      contents.push(c);
-    }
-  }
-
-  if (contents.length === 0) {
-    contents.push({ role: 'user', parts: [{ text: 'Hello' }] });
-  } else if (contents[contents.length - 1].role !== 'user') {
-    contents.push({ role: 'user', parts: [{ text: 'Please continue.' }] });
-  }
-
+  const { contents, nativeSystemInstruction } = buildGeminiContentsAndInstruction(finalMessages, customSystemPrompt);
   const candidateModels = Array.from(new Set([GEMINI_MODEL, 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'].filter(Boolean)));
 
   for (const gKey of geminiKeys) {
@@ -1548,7 +1507,7 @@ export const getHealthDiscoveries = async (priority = 'low') => {
   });
 };
 
-export const isComplexTask = (text) => {
+const isComplexTask = (text) => {
   if (!text) return false;
   const lower = text.toLowerCase().trim();
   if (text.length > 500) return true;
@@ -1578,7 +1537,7 @@ export const isComplexTask = (text) => {
   return false;
 };
 
-export const isLikelyActionRequest = (text, messagesContext = []) => {
+const isLikelyActionRequest = (text, messagesContext = []) => {
   if (!text) return false;
   const lower = text.toLowerCase().trim();
 
@@ -1650,7 +1609,7 @@ export const isLikelyActionRequest = (text, messagesContext = []) => {
  * This avoids the latency of generating embeddings and querying Firestore for simple greetings,
  * general app navigation, or clear user action commands.
  */
-export const shouldRetrieveMedicalKnowledge = (text) => {
+const shouldRetrieveMedicalKnowledge = (text) => {
   if (!text || text.length < 3) return false;
   const lower = text.toLowerCase().trim();
 
@@ -1673,7 +1632,7 @@ export const shouldRetrieveMedicalKnowledge = (text) => {
  * Sanitizes markdown links in DawaGPT outputs to ensure all links resolve
  * strictly to internal in-app routes and strips non-existent or external URLs.
  */
-export function sanitizeMarkdownLinks(text) {
+function sanitizeMarkdownLinks(text) {
   if (typeof text !== 'string') return text;
 
   // Remove support@dawalens.ug and any dawalens.ug references
@@ -1752,54 +1711,6 @@ export function sanitizeMarkdownLinks(text) {
 
     return `[${label}](/)`;
   });
-}
-
-/**
- * Deterministic cultural honorific guardrail.
- * Ensures DawaGPT strictly respects patient gender and never misgenders
- * male users as "Nyabo" or female users as "Ssebo".
- */
-export function enforceGenderHonorifics(text, gender, userName = '') {
-  if (!text || typeof text !== 'string') return text || '';
-  const normGender = typeof gender === 'string' ? gender.trim().toLowerCase() : null;
-  const isMale = normGender === 'male' || normGender === 'man' || normGender === 'm';
-  const isFemale = normGender === 'female' || normGender === 'woman' || normGender === 'f';
-
-  let result = text;
-  const nonNameWords = new Set(['is', 'means', 'refers', 'represents', 'translates', 'stands', 'defined', 'can', 'should', 'would', 'will', 'and', 'or', 'to', 'for', 'in']);
-
-  if (isMale) {
-    result = result.replace(/\bNyabo\s+([A-Z][a-zA-Z'-]*)/g, (match, p1) => {
-      if (nonNameWords.has(p1.toLowerCase())) return match;
-      return `Ssebo ${p1}`;
-    });
-    result = result.replace(/\b(Oli\s+otya|Wasuze\s+otya|Osiibye\s+otya|Gyebaleko|Bambi|Webale(?:\s+nnyo)?|Kale|Ki\s+kati)(?:,\s*|\s+)Nyabo\b/gi, (match, greet) => {
-      const hasComma = match.includes(',');
-      return `${greet}${hasComma ? ', ' : ' '}Ssebo`;
-    });
-    result = result.replace(/\bNyabo\s*([,!:?])/g, 'Ssebo$1');
-    result = result.replace(/\bnyabo\s*([,!:?])/g, 'ssebo$1');
-  } else if (isFemale) {
-    result = result.replace(/\b(?:Ssebo|Sebbo)\s+([A-Z][a-zA-Z'-]*)/g, (match, p1) => {
-      if (nonNameWords.has(p1.toLowerCase())) return match;
-      return `Nyabo ${p1}`;
-    });
-    result = result.replace(/\b(Oli\s+otya|Wasuze\s+otya|Osiibye\s+otya|Gyebaleko|Bambi|Webale(?:\s+nnyo)?|Kale|Ki\s+kati)(?:,\s*|\s+)(?:Ssebo|Sebbo)\b/gi, (match, greet) => {
-      const hasComma = match.includes(',');
-      return `${greet}${hasComma ? ', ' : ' '}Nyabo`;
-    });
-    result = result.replace(/\b(?:Ssebo|Sebbo)\s*([,!:?])/g, 'Nyabo$1');
-    result = result.replace(/\b(?:ssebo|sebbo)\s*([,!:?])/g, 'nyabo$1');
-  } else {
-    result = result.replace(/\b(?:Nyabo|Ssebo|Sebbo)\s+([A-Z][a-zA-Z'-]*)/g, (match, p1) => {
-      if (nonNameWords.has(p1.toLowerCase())) return match;
-      return p1;
-    });
-    result = result.replace(/\b(Oli\s+otya|Wasuze\s+otya|Osiibye\s+otya|Gyebaleko|Bambi|Webale(?:\s+nnyo)?|Kale|Ki\s+kati)\s+(?:Nyabo|Ssebo|Sebbo)\b/gi, '$1');
-    result = result.replace(/^(?:Nyabo|Ssebo|Sebbo),\s*/gim, '');
-  }
-
-  return result;
 }
 
 export const chatWithDawaGPT = async (params, priority = 'high') => {
@@ -1958,866 +1869,12 @@ export const chatWithDawaGPT = async (params, priority = 'high') => {
   }
 };
 
-async function executeAiAction(action, userId, userMedicines = [], selectedPatientId = null) {
-  const { type, payload } = action;
-  if (!type || !payload) throw new Error('Action type and payload are required');
-  const data = { ...payload, userId };
-  if (!data.patientId) data.patientId = selectedPatientId;
-
-  switch (type) {
-    case 'ADD_MEDICINE': return await medicineService.createMedicine(data);
-    case 'UPDATE_MEDICINE': return await medicineService.updateMedicine(payload.id, data);
-    case 'ADD_REMINDER':
-      if (!data.medicineId && data.medicineName && userMedicines.length > 0) {
-        const match = userMedicines.find(m =>
-          m.name.toLowerCase() === data.medicineName.toLowerCase() ||
-          (m.genericName && m.genericName.toLowerCase() === data.medicineName.toLowerCase())
-        );
-        if (match) {
-          data.medicineId = match.id;
-          data.color = data.color || match.color;
-          data.icon = data.icon || match.icon;
-        }
-      }
-      return await reminderService.createReminder(data);
-    case 'UPDATE_REMINDER': return await reminderService.updateReminder(payload.id, data, userId);
-    case 'REMOVE_REMINDER': return await reminderService.deleteReminder(payload.id, userId);
-    case 'LOG_DOSE': return await doseLogService.createDoseLog(data);
-    case 'LOG_WELLNESS':
-      if (data.type === 'symptom') {
-        const mood = data.data?.mood;
-        const energy = data.data?.energy;
-        const symptoms = data.data?.symptoms || [];
-        if (!data.data?.aiReflection && (mood !== undefined || energy !== undefined || symptoms.length > 0)) {
-          try {
-            const reflectionData = await getEmotionReflection(mood, energy, symptoms, userMedicines);
-            if (reflectionData) {
-              data.data = {
-                ...data.data,
-                aiReflection: reflectionData
-              };
-            }
-          } catch (e) {
-            console.error("Failed to generate reflection in executeAiAction:", e);
-          }
-        }
-      }
-      return await wellnessService.createWellnessLog(data);
-    case 'ADD_PATIENT': return await patientService.createPatient(data);
-    default: throw new Error(`Unknown action type: ${type}`);
-  }
-}
-export function distributeTimes(startTime = "08:00", freq = 1) {
-  if (!startTime || !startTime.includes(":")) return [startTime || "08:00"];
-  const [hStr, mStr] = startTime.split(":");
-  const h = Number(hStr);
-  const m = Number(mStr);
-  if (isNaN(h) || isNaN(m)) return [startTime];
-  if (freq <= 1) {
-    const hh = String(h % 24).padStart(2, "0");
-    const mm = String(m % 60).padStart(2, "0");
-    return [`${hh}:${mm}`];
-  }
-  const intervalHours = 24 / freq;
-  const newTimes = [];
-  for (let i = 0; i < freq; i++) {
-    const totalMinutes = Math.round(h * 60 + m + i * intervalHours * 60) % (24 * 60);
-    const newH = Math.floor(totalMinutes / 60);
-    const newM = Math.floor(totalMinutes % 60);
-    newTimes.push(`${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`);
-  }
-  return newTimes;
-}
-
-export function formatTimeDisplay(timeStr) {
-  if (!timeStr) return "8:00 AM";
-  if (timeStr.includes(",")) {
-    const parts = timeStr.split(",").map(t => formatTimeDisplay(t.trim()));
-    if (parts.length === 1) return parts[0];
-    if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
-    return `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
-  }
-  const [hStr, mStr] = timeStr.split(':');
-  let h = parseInt(hStr, 10);
-  const m = mStr ? mStr.padStart(2, '0') : "00";
-  const ampm = h >= 12 ? "PM" : "AM";
-  if (h > 12) h -= 12;
-  if (h === 0) h = 12;
-  return `${h}:${m} ${ampm}`;
-}
-
-/**
- * Normalizes an AI action into standard { type, payload, confirmMessage } format.
- * Infers missing 'type' and unwraps root-level properties into 'payload'
- * when smaller or alternative LLMs emit unnested action objects.
- */
-export const normalizeAIAction = (rawAction) => {
-  if (!rawAction || typeof rawAction !== "object") return null;
-
-  let type = rawAction.type || null;
-  let payload;
-
-  if (rawAction.payload && typeof rawAction.payload === "object" && !Array.isArray(rawAction.payload)) {
-    payload = { ...rawAction.payload };
-  } else if (rawAction.data && typeof rawAction.data === "object" && !Array.isArray(rawAction.data)) {
-    payload = { ...rawAction.data };
-  } else {
-    payload = { ...rawAction };
-  }
-
-  delete payload.type;
-  delete payload.confirmMessage;
-  delete payload.requiresConfirmation;
-
-  const timeVal = payload.time || payload.times || payload.reminderTime;
-  const medNameVal = payload.medicineName || payload.name || payload.medication;
-  if (!payload.medicineName && medNameVal) payload.medicineName = medNameVal;
-  if (!payload.time && timeVal) payload.time = timeVal;
-  if (payload.currentQuantity === undefined) {
-    if (payload.quantity !== undefined) payload.currentQuantity = payload.quantity;
-    else if (payload.stock !== undefined) payload.currentQuantity = payload.stock;
-  }
-
-  // Infer missing action type based on recognized field signatures
-  if (!type) {
-    if (payload.time && (payload.medicineName || payload.medicineId || payload.dose)) {
-      type = "ADD_REMINDER";
-    } else if (payload.currentQuantity !== undefined) {
-      type = "UPDATE_MEDICINE";
-    } else if (payload.targetRoute) {
-      type = "NAVIGATE_PAGE";
-    } else if (payload.snoozeMinutes !== undefined) {
-      type = "SNOOZE_REMINDER";
-    } else if (payload.status === "taken" || payload.status === "missed" || payload.scheduledTime || payload.action === "taken" || payload.action === "skipped") {
-      type = "LOG_DOSE";
-    } else if (payload.mood !== undefined || payload.energy !== undefined || payload.symptoms || payload.aiReflection) {
-      type = "LOG_WELLNESS";
-    } else if (payload.patientName && (payload.relation || payload.age || payload.gender || payload.dateOfBirth)) {
-      type = "ADD_PATIENT";
-    } else if (payload.patientId !== undefined || (payload.patientName !== undefined && !payload.dose && !payload.time && !payload.dosage)) {
-      type = "SWITCH_PATIENT_SCOPE";
-    } else if ((payload.name || payload.medicineName) && (payload.dosage || payload.dosagePerDose || payload.unit)) {
-      type = "ADD_MEDICINE";
-    }
-  }
-
-  if (!payload.name && (type === "ADD_MEDICINE" || type === "UPDATE_MEDICINE" || type === "REMOVE_MEDICINE") && medNameVal) {
-    payload.name = medNameVal;
-  }
-
-  if (!type) return null;
-
-  const normalized = {
-    type,
-    payload
-  };
-  if (rawAction.confirmMessage !== undefined) {
-    normalized.confirmMessage = rawAction.confirmMessage;
-  }
-  if (rawAction.requiresConfirmation !== undefined) {
-    normalized.requiresConfirmation = rawAction.requiresConfirmation;
-  }
-  return normalized;
-};
-
-/**
- * Strict verification that the user explicitly asked to add or schedule a reminder.
- * A reminder MUST ONLY be created if the user directly asked for one,
- * or if they are in an active multi-turn flow replying to a reminder time prompt they initiated.
- */
-export const userRequestedReminder = (text, history = []) => {
-  if (!text || typeof text !== "string") return false;
-  const lower = text.toLowerCase().trim();
-
-  // 1. If user is explicitly deleting/removing/pausing a reminder, they are NOT asking to add one
-  if (/\b(?:delete|remove|cancel|stop|pause|mute|disable|turn off|clear)\b/i.test(lower)) {
-    return false;
-  }
-
-  // 2. If user is asking medical questions or side effects or inquiries without explicit reminder request
-  const isMedOrInquiry = /\b(side effects?|adverse effects?|can i take|should i take|is it safe|interact|interaction|what is|what are|how much|tell me about|show me|list|view|check)\b/i.test(lower);
-
-  // 3. Direct explicit phrases in the user prompt asking to add/set a reminder or alarm
-  const explicitAddReminderRegex = /\b(?:remind(?:\s+me)?(?:\s+to\s+take|\s+about)?|(?:set(?:\s*up)?|add|create|schedule|make|give\s+me|put|need|want)(?:\s+a)?\s+reminder|alarm\s+for|set\s+(?:an?\s+)?alarm|new\s+reminder|reminder\s+for|reminder\s+schedule)\b/i;
-
-  if (explicitAddReminderRegex.test(lower) && !isMedOrInquiry) {
-    return true;
-  }
-
-  // 4. Active multi-turn flow: User previously asked for a reminder in this conversation,
-  // assistant asked for the starting time/dosage, and user is now answering with that time/parameter
-  if (Array.isArray(history) && history.length >= 1) {
-    const isAssistant = (m) => m && (m.role === "assistant" || m.sender === "dawagpt" || m.sender === "assistant");
-    const isUser = (m) => m && (m.role === "user" || m.sender === "user");
-    const getMsgText = (m) => String(m.text || m.content || "").toLowerCase();
-
-    const prevAssistant = [...history].reverse().find(isAssistant);
-    if (prevAssistant) {
-      const prevAssistantText = getMsgText(prevAssistant);
-      const asksForReminderTime = /\b(what time.*(?:first dose|take|start|reminder)|starting time|when would you like to take|what time would you like to take)\b/i.test(prevAssistantText);
-      const isTimeAnswer = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d{1,2}:\d{2})\b/i.test(lower);
-
-      if (asksForReminderTime && isTimeAnswer && !isMedOrInquiry) {
-        // Confirm that the user initiated a reminder request earlier in this thread
-        const userInitiatedReminder = history.some(m => isUser(m) && explicitAddReminderRegex.test(getMsgText(m)));
-        if (userInitiatedReminder) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
-};
-
-export const extractDeterministicAction = (text, medicines = [], reminders = [], patients = [], history = []) => {
-  if (!text) return null;
-  const lower = text.toLowerCase().trim();
-
-  // 1. Guard against medical, safety, side-effects, or informational questions
-  // These are clinical questions meant for LLM reasoning, NOT agentic action executions!
-  const isMedQuestion =
-    /\b(can i take|should i take|is it safe|interact|interaction|safe to|together|can i use|should i use|side effects?|adverse effects?|what is|what are|tell me about|how do i take|dosage of|how much|when should i take|info on|details about|benefits of)\b/i.test(lower) ||
-    isSameTaskOrDuplicateQuery(lower, medicines);
-
-  if (isMedQuestion) {
-    return null;
-  }
-
-  // 2. Guard against pure inquiries that do not contain action verbs
-  // e.g. "What are my reminders?", "Show my medications", "List my pills", "Do I have any alarms?"
-  const isActionCommand = /\b(add|create|delete|remove|refill|restock|schedule|log|record|update|change|reschedule|pause|resume|undo|revert|snooze|switch)\b/i.test(lower);
-  const isQuestionOrInquiry = /^(what|which|how|tell me|show me|list|check|view|display|can you tell|do i have|are there|when is|when are)\b/i.test(lower);
-  if (isQuestionOrInquiry && !isActionCommand) {
-    return null;
-  }
-
-  // 3. Multi-turn synthesis: ONLY when user is answering an assistant's question about an action parameter
-  let effectiveText = lower;
-  let isAnsweringTimePrompt = false;
-
-  if (Array.isArray(history) && history.length >= 1) {
-    const isAssistant = (m) => m && (m.role === "assistant" || m.sender === "dawagpt" || m.sender === "assistant");
-    const getMsgText = (m) => String(m.text || m.content || "").trim();
-
-    const prevAssistant = [...history].reverse().find(isAssistant);
-    if (prevAssistant) {
-      // Strip markdown links and brackets to avoid pulling in footer URLs like [Medication Reminders](/reminders)
-      const cleanPrevAssistant = getMsgText(prevAssistant)
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-        .toLowerCase();
-
-      const asksForTime = /\b(what time|starting time|first dose|when would you like to take|what time would you like to take)\b/i.test(cleanPrevAssistant);
-      const isTimeAnswer = /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d{1,2}:\d{2})\b/i.test(lower);
-
-      if (asksForTime && isTimeAnswer && !isMedQuestion) {
-        isAnsweringTimePrompt = true;
-        effectiveText = `${cleanPrevAssistant} ${lower}`.trim();
-      }
-    }
-  }
-
-  // 1. UNDO_DOSE_LOG
-  const isUndoDose = /\b(undo(\s+my)?(\s+last)?\s+(dose|log|record)|revert(\s+my)?\s+dose|cancel(\s+my)?(\s+last)?\s+dose|i didn't take|didn't take my dose|made a mistake.*take)\b/i.test(lower);
-  if (isUndoDose) {
-    return {
-      type: "UNDO_DOSE_LOG",
-      payload: {},
-      confirmMessage: "Reverted your last dose log and restored your Med Vault inventory."
-    };
-  }
-
-  // 2. SWITCH_PATIENT_SCOPE
-  const switchMatch = lower.match(/\b(?:switch\s+(?:to|context\s+to|profile\s+to)|view\s+profile\s+(?:for|of)|show\s+me\s+profile\s+(?:for|of))\s+([a-z0-9\s'-]+)/i);
-  if (switchMatch) {
-    const rawTarget = switchMatch[1].replace(/'s.*/, '').trim();
-    if (['me', 'myself', 'self', 'my account', 'my profile'].includes(rawTarget)) {
-      return {
-        type: "SWITCH_PATIENT_SCOPE",
-        payload: { patientId: null, patientName: "Self" },
-        confirmMessage: "Switched context back to your personal health profile."
-      };
-    }
-    const matchedPatient = patients.find(p => p.name.toLowerCase().includes(rawTarget) || rawTarget.includes(p.name.toLowerCase()));
-    if (matchedPatient) {
-      return {
-        type: "SWITCH_PATIENT_SCOPE",
-        payload: { patientId: matchedPatient.id, patientName: matchedPatient.name },
-        confirmMessage: `Switched active context to ${matchedPatient.name}.`
-      };
-    }
-  }
-
-  // 3. SNOOZE_REMINDER
-  const snoozeMatch = lower.match(/\bsnooze(?:\s+my)?(?:\s+[a-z0-9-]+)?(?:\s+reminder|\s+alarm)?\s+(?:for\s+)?(\d+)\s*(?:mins?|minutes?)\b/i);
-  if (snoozeMatch) {
-    const snoozeMinutes = parseInt(snoozeMatch[1], 10) || 15;
-    return {
-      type: "SNOOZE_REMINDER",
-      payload: { snoozeMinutes },
-      confirmMessage: `Snoozed your reminder for ${snoozeMinutes} minutes.`
-    };
-  }
-
-  // 4. TOGGLE_REMINDER (Pause/Resume)
-  const isPause = /\b(pause|turn off|disable|mute)\s+(?:all\s+)?(?:my\s+)?(?:medication\s+|medicine\s+)?(?:reminders?|alarms?)\b/i.test(lower);
-  const isResume = /\b(resume|turn on|enable|unmute)\s+(?:all\s+)?(?:my\s+)?(?:medication\s+|medicine\s+)?(?:reminders?|alarms?)\b/i.test(lower);
-  if (isPause || isResume) {
-    const enabled = isResume;
-    return {
-      type: "TOGGLE_REMINDER",
-      payload: { enabled },
-      confirmMessage: enabled ? "All active medication reminders have been resumed." : "Your medication reminders have been paused."
-    };
-  }
-
-  // 5. REMOVE_REMINDER
-  const removeRemMatch =
-    lower.match(/\b(?:delete|remove|cancel|stop)\s+(?:(?:my|the|that|this)\s+)?(?:(?:medication\s+|medicine\s+)?(?:reminders?|alarms?))\s*(?:for\s+([a-z0-9-]+))?\b/i) ||
-    lower.match(/\b(?:delete|remove|cancel)\s+([a-z0-9-]+)\s+(?:reminder|alarm)\b/i) ||
-    lower.match(/\bstop\s+reminding\s+me\s+(?:about|for|to\s+take)\s+([a-z0-9-]+)\b/i);
-
-  if (removeRemMatch) {
-    let medQuery = (removeRemMatch[1] || "").trim();
-    if (!medQuery && Array.isArray(history) && history.length > 0) {
-      // Check if previous assistant message mentioned a medicine or reminder
-      const prevAssistant = [...history].reverse().find(m => m && (m.role === "assistant" || m.sender === "dawagpt" || m.sender === "assistant"));
-      const prevRaw = String(prevAssistant?.text || prevAssistant?.content || "");
-      const prevText = prevRaw.toLowerCase();
-      const mentionedMed = medicines.find(m => m.name && prevText.includes(m.name.toLowerCase())) ||
-                           reminders.find(r => r.medicineName && prevText.includes(r.medicineName.toLowerCase()));
-      if (mentionedMed) {
-        medQuery = mentionedMed.name || mentionedMed.medicineName;
-      } else {
-        const boldMatch = prevRaw.match(/\*\*(?:take\s+)?([A-Za-z0-9-]+)\*\*/i) ||
-                          prevRaw.match(/\b(?:reminder\s+(?:for|to\s+take)|to\s+take)\s+\*?\*?([A-Za-z0-9-]+)\*?\*?/i);
-        if (boldMatch && !["you", "your", "the", "a", "all"].includes(boldMatch[1].toLowerCase())) {
-          medQuery = boldMatch[1];
-        }
-      }
-    }
-
-    let matchedReminder = medQuery
-      ? reminders.find(r => r.medicineName && r.medicineName.toLowerCase().includes(medQuery.toLowerCase()))
-      : (reminders.length === 1 ? reminders[0] : null);
-
-    if (!matchedReminder && medQuery) {
-      matchedReminder = reminders.find(r => r.medicineName.toLowerCase() === medQuery.toLowerCase());
-    }
-
-    const medName = matchedReminder?.medicineName || medQuery || "the medication";
-    return {
-      type: "REMOVE_REMINDER",
-      payload: {
-        id: matchedReminder?.id || null,
-        medicineName: medName
-      },
-      confirmMessage: `Removed reminder for ${medName}.`
-    };
-  }
-
-  // 6. UPDATE_REMINDER (Reschedule/Change time)
-  const updateRemMatch = lower.match(/\b(?:change|move|reschedule|update|shift)\s+(?:my\s+)?([a-z0-9-]+)?\s*(?:reminder|alarm|schedule)\s*(?:to|for|at)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i);
-  if (updateRemMatch) {
-    const medQuery = (updateRemMatch[1] || "").trim();
-    const rawTime = updateRemMatch[2];
-    const normalizedTime = rawTime ? formatTimeDisplay(rawTime) : "08:00";
-    let matchedReminder = reminders.find(r => medQuery && r.medicineName.toLowerCase().includes(medQuery.toLowerCase()));
-    return {
-      type: "UPDATE_REMINDER",
-      payload: {
-        id: matchedReminder?.id || null,
-        medicineName: matchedReminder?.medicineName || medQuery || "Reminder",
-        time: rawTime
-      },
-      confirmMessage: `Updated reminder time for ${matchedReminder?.medicineName || medQuery || "your medication"} to ${normalizedTime}.`
-    };
-  }
-
-  // 7. REMOVE_MEDICINE
-  const removeMedMatch = lower.match(/\b(?:delete|remove|archive|stop\s+taking)\s+(?:the\s+|my\s+)?(?:medicine|medication|drug|pill)?\s*([a-z0-9-]+)(?:\s+from\s+(?:my\s+)?(?:cabinet|medications?|meds?|vault))?\b/i);
-  if (removeMedMatch && !lower.includes("reminder") && !lower.includes("alarm") && !lower.includes("patient") && !lower.includes("member")) {
-    const medQuery = removeMedMatch[1].trim();
-    if (!['a', 'the', 'my', 'some', 'this'].includes(medQuery.toLowerCase())) {
-      const matchedMed = medicines.find(m => m.name.toLowerCase().includes(medQuery.toLowerCase()));
-      return {
-        type: "REMOVE_MEDICINE",
-        payload: {
-          id: matchedMed?.id || null,
-          name: matchedMed?.name || (medQuery.charAt(0).toUpperCase() + medQuery.slice(1))
-        },
-        confirmMessage: `Removed ${matchedMed?.name || medQuery} from your medicine cabinet.`
-      };
-    }
-  }
-
-  // 8. ADD_PATIENT
-  const addPatientMatch = lower.match(/\b(?:add|create|register)\s+(?:a\s+|my\s+)?(?:family\s+member|dependent|client|patient|child|parent|mother|father|son|daughter|relative)\s+([a-z0-9\s'-]+)/i);
-  if (addPatientMatch) {
-    const rawInfo = addPatientMatch[1].trim();
-    const ageMatch = lower.match(/\bage\s+(\d{1,3})\b/i) || lower.match(/\b(\d{1,3})\s*(?:years?\s*old|yrs?\s*old|yo)\b/i);
-    const age = ageMatch ? parseInt(ageMatch[1], 10) : undefined;
-    const gender = /\b(female|mother|daughter|girl|woman)\b/i.test(lower) ? 'female' : /\b(male|father|son|boy|man)\b/i.test(lower) ? 'male' : undefined;
-    const cleanName = rawInfo.split(/,\s*|\s+(?:age|\d+|who|with)\b/i)[0].trim();
-    const formattedName = cleanName.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    let relation = "Family";
-    if (lower.includes("mother") || lower.includes("mama")) relation = "Mother";
-    else if (lower.includes("father") || lower.includes("baba")) relation = "Father";
-    else if (lower.includes("son")) relation = "Son";
-    else if (lower.includes("daughter")) relation = "Daughter";
-    else if (lower.includes("child") || lower.includes("baby")) relation = "Child";
-    else if (lower.includes("client")) relation = "Client";
-
-    return {
-      type: "ADD_PATIENT",
-      payload: {
-        name: formattedName || "New Member",
-        age,
-        gender,
-        relation,
-        type: lower.includes("client") ? "client" : "family"
-      },
-      confirmMessage: `Added ${formattedName || "family member"} to your Family Hub.`
-    };
-  }
-
-  // 9. BATCH_ADD_REGIMEN (e.g. Coartem 3-day treatment)
-  const isRegimen = /\b(?:add|start|set up)\s+(?:a\s+)?(?:\d+[- ]day\s+)?(?:treatment|regimen|course|treatment\s+regimen|malaria\s*treatment)\s*(?:of|for)?\s*([a-z0-9-]+)\b/i.test(lower);
-  if (isRegimen) {
-    const regMatch = lower.match(/\b(?:of|for)\s+([a-z0-9-]+)/i);
-    const medName = regMatch ? (regMatch[1].charAt(0).toUpperCase() + regMatch[1].slice(1)) : "Coartem (Artemether/Lumefantrine)";
-    return {
-      type: "BATCH_ADD_REGIMEN",
-      payload: {
-        medicineName: medName,
-        dosage: "20/120mg",
-        durationDays: 3,
-        frequency: "twice daily",
-        times: "08:00,20:00"
-      },
-      confirmMessage: `Set up 3-day treatment regimen and reminders for ${medName}.`
-    };
-  }
-
-  // 10. NAVIGATE_PAGE
-  const navMatch = lower.match(/\b(?:go to|take me to|open|navigate to)\s+(?:the\s+|my\s+)?(medvault|med\s*vault|inventory|stock|reminders?|alarms?|medications?|cabinet|history|logs|wellness|wellness\s*hub|family|family\s*hub|dependents?|interactions?|safety|safety\s*guard|travel|travel\s*companion|reports?|doctor\s*report|scanner|scan|settings?)\b/i);
-  if (navMatch && !lower.includes("page") && !lower.includes("how") && !lower.includes("link") && !lower.startsWith("show") && !lower.includes("add") && !lower.includes("remind me") && !lower.includes("log") && !lower.includes("refill")) {
-    const rawTarget = navMatch[1].toLowerCase().replace(/\s+/g, '');
-    let targetRoute = "/";
-    if (rawTarget.includes("medvault") || rawTarget.includes("inventory") || rawTarget.includes("stock")) targetRoute = "/medvault";
-    else if (rawTarget.includes("reminder") || rawTarget.includes("alarm")) targetRoute = "/reminders";
-    else if (rawTarget.includes("medication") || rawTarget.includes("cabinet")) targetRoute = "/medications";
-    else if (rawTarget.includes("history") || rawTarget.includes("log")) targetRoute = "/history";
-    else if (rawTarget.includes("wellness")) targetRoute = "/wellness";
-    else if (rawTarget.includes("family") || rawTarget.includes("dependent")) targetRoute = "/family";
-    else if (rawTarget.includes("interaction") || rawTarget.includes("safety")) targetRoute = "/interactions";
-    else if (rawTarget.includes("travel")) targetRoute = "/travel";
-    else if (rawTarget.includes("report")) targetRoute = "/report";
-    else if (rawTarget.includes("scan")) targetRoute = "/scan";
-    else if (rawTarget.includes("setting")) targetRoute = "/settings";
-
-    return {
-      type: "NAVIGATE_PAGE",
-      payload: { targetRoute },
-      confirmMessage: `Navigating to ${targetRoute}.`
-    };
-  }
-
-  // 11. OPEN_PHARMACY_MODAL
-  const isPharmacyFinder = /\b(find\s+(?:a\s+)?pharmacy|where\s+(?:can\s+i|to)\s+buy|nearest\s+pharmacy|pharmacies\s+near\s+me|open\s+pharmacy\s+finder|locate\s+pharmacy)\b/i.test(lower);
-  if (isPharmacyFinder) {
-    const medMatch = lower.match(/\b(?:buy|find|for)\s+([a-z0-9-]+)\b/i);
-    const targetMed = medMatch && !['a', 'the', 'some', 'me', 'pharmacy', 'medicine', 'pills'].includes(medMatch[1].toLowerCase()) ? (medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1)) : undefined;
-    return {
-      type: "OPEN_PHARMACY_MODAL",
-      payload: { medicineName: targetMed },
-      confirmMessage: `Opening National Drug Authority (NDA) pharmacy locator${targetMed ? ` for ${targetMed}` : ""}.`
-    };
-  }
-
-  // 12. ADD_REMINDER - STRICT: Only execute when the user explicitly asked for a reminder!
-  const isReminderIntent = userRequestedReminder(lower, history);
-
-  if (isReminderIntent) {
-    // Strict time pattern detection to prevent numbers like "2 tablets", "500mg", "3 times" from being parsed as hours
-    let explicitTime = null;
-
-    // Pattern 1: Explicit 12-hour time with am/pm (e.g., "8am", "8:30pm", "8 am", "11:00 PM")
-    const ampmMatch = lower.match(/\b(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b/i) ||
-                      (isAnsweringTimePrompt ? effectiveText.match(/\b(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b/i) : null);
-    // Pattern 2: 24-hour clock or colon time (e.g., "08:00", "17:00", "20:30")
-    const colonMatch = lower.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/) ||
-                       (isAnsweringTimePrompt ? effectiveText.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/) : null);
-    // Pattern 3: Standalone "at <hour>" or "start at <hour>" (e.g., "at 8", "start at 17", "at 9 o'clock")
-    const atHourMatch = lower.match(/\b(?:start(?:ing)?\s+at|\bat)\s+([01]?\d|2[0-3])(?::([0-5]\d))?\s*(am|pm)?\b/i) ||
-                        (isAnsweringTimePrompt ? effectiveText.match(/\b(?:start(?:ing)?\s+at|\bat)\s+([01]?\d|2[0-3])(?::([0-5]\d))?\s*(am|pm)?\b/i) : null);
-    // Pattern 4: "<hour> o'clock" (e.g., "8 o'clock")
-    const oclockMatch = lower.match(/\b([01]?\d|2[0-3])\s*o'?clock\s*(am|pm)?\b/i) ||
-                        (isAnsweringTimePrompt ? effectiveText.match(/\b([01]?\d|2[0-3])\s*o'?clock\s*(am|pm)?\b/i) : null);
-
-    const activeMatch = ampmMatch || colonMatch || atHourMatch || oclockMatch;
-    if (activeMatch) {
-      let hours = parseInt(activeMatch[1], 10);
-      const minutes = activeMatch[2] ? parseInt(activeMatch[2], 10) : 0;
-      const meridiem = (activeMatch[3] || (activeMatch[0].match(/am|pm/i)?.[0]))?.toLowerCase();
-
-      if (meridiem === 'pm' && hours < 12) hours += 12;
-      if (meridiem === 'am' && hours === 12) hours = 0;
-
-      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-        explicitTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-      }
-    }
-
-    let matchedMed = medicines
-      .filter(m => (m.name && lower.includes(m.name.toLowerCase())) || (m.genericName && lower.includes(m.genericName.toLowerCase())))
-      .sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0))[0];
-
-    if (!matchedMed && isAnsweringTimePrompt) {
-      matchedMed = medicines
-        .filter(m => (m.name && effectiveText.includes(m.name.toLowerCase())) || (m.genericName && effectiveText.includes(m.genericName.toLowerCase())))
-        .sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0))[0];
-    }
-
-    // If medication exists in Med Vault / Medications:
-    if (matchedMed) {
-      // If user did not provide a starting time, return null so DawaGPT asks for the starting time
-      if (!explicitTime) {
-        return null;
-      }
-
-      // Read dosage: User's explicit prompt dosage overrides, otherwise strictly follow Med Vault / Medications
-      const userDoseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|mcg|tablets?|pills?|capsules?|drops?|puffs?))\b/i);
-      const dose = userDoseMatch ? userDoseMatch[1] : (
-        matchedMed.dosagePerDose
-          ? `${matchedMed.dosagePerDose} ${matchedMed.unit || 'tablets'}`
-          : (matchedMed.dosage || "1 tablet")
-      );
-
-      // Read daily frequency: User's explicit frequency overrides, then assistant prompt / history context if answering prompt, otherwise strictly follow Med Vault / Medications
-      let freq = matchedMed.frequencyPerDay && matchedMed.frequencyPerDay > 0 ? matchedMed.frequencyPerDay : 1;
-      let repeatSchedule = freq > 1 ? "custom" : "daily";
-
-      const freqSourceText = lower.includes("twice") || lower.includes("thrice") || lower.includes("times") || lower.includes("once") || lower.includes("weekly")
-        ? lower
-        : (isAnsweringTimePrompt ? effectiveText.toLowerCase() : lower);
-
-      if (freqSourceText.includes("weekly")) {
-        repeatSchedule = "weekly";
-        freq = 1;
-      } else if (freqSourceText.includes("once")) {
-        repeatSchedule = "once";
-        freq = 1;
-      } else if (freqSourceText.includes("twice") || freqSourceText.includes("2 times") || freqSourceText.includes("2x") || freqSourceText.includes("two times")) {
-        freq = 2;
-        repeatSchedule = "custom";
-      } else if (freqSourceText.includes("three times") || freqSourceText.includes("thrice") || freqSourceText.includes("3 times") || freqSourceText.includes("3x")) {
-        freq = 3;
-        repeatSchedule = "custom";
-      } else if (freqSourceText.includes("four times") || freqSourceText.includes("4 times") || freqSourceText.includes("4x")) {
-        freq = 4;
-        repeatSchedule = "custom";
-      }
-
-      const timesList = distributeTimes(explicitTime, freq);
-      const finalTimeStr = timesList.join(",");
-      const freqDesc = freq > 1 ? `${freq} times a day` : repeatSchedule;
-
-      return {
-        type: "ADD_REMINDER",
-        payload: {
-          medicineName: matchedMed.name,
-          medicineId: matchedMed.id,
-          dose,
-          time: finalTimeStr,
-          repeatSchedule,
-          frequencyPerDay: freq
-        },
-        confirmMessage: `Reminder set for ${matchedMed.name} (${dose}) at ${formatTimeDisplay(finalTimeStr)} (${freqDesc}).`
-      };
-    }
-
-    // Medication does NOT exist in the cabinet/vault.
-    // Return null so DawaGPT can ask for dosage and frequency.
-    return null;
-  }
-
-  // 13. LOG_DOSE
-  const isDoseLogIntent = /\b(i took|i've taken|i just took|i already took|log (that )?i took|record (that )?i took|mark (my )?.* as taken|i missed|i skipped)\b/i.test(lower);
-  if (isDoseLogIntent) {
-    const isMissed = /\b(missed|skipped|forgot)\b/i.test(lower);
-    const status = isMissed ? "missed" : "taken";
-
-    let matchedMed = medicines.find(m => m.name && lower.includes(m.name.toLowerCase()));
-    let medName = matchedMed ? matchedMed.name : null;
-
-    if (!medName) {
-      const medMatch = lower.match(/(?:took|taken|missed|skipped)\s+(?:my\s+)?([a-z0-9\-]+)/i);
-      if (medMatch && !['my', 'the', 'a', 'dose', 'medicine', 'pills'].includes(medMatch[1].toLowerCase())) {
-        medName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
-      } else {
-        medName = medicines[0]?.name || "Medication";
-      }
-    }
-
-    return {
-      type: "LOG_DOSE",
-      payload: {
-        medicineName: medName,
-        medicineId: matchedMed?.id || null,
-        status,
-        timestamp: new Date().toISOString()
-      },
-      confirmMessage: `Logged ${medName} as ${status}.`
-    };
-  }
-
-  // 14. UPDATE_MEDICINE (Med Vault Refill)
-  const isRefillIntent = /\b(refill(ed)?|restock(ed)?|top\s*up|topped\s*up|update stock|set stock|purchased|bought|added\s+\d+\s*(?:more\s+)?(?:pills?|tablets?))\b/i.test(lower);
-  if (isRefillIntent) {
-    const qtyMatch = lower.match(/\b(?:to|with|by|have|bought|purchased|added)?\s*(\d+)\s*(?:pills?|tablets?|capsules?|units?|bottles?)?\b/i) ||
-                     lower.match(/(\d+)\s*(?:pills?|tablets?|capsules?|units?|bottles?)/i);
-    const qty = qtyMatch ? parseInt(qtyMatch[1], 10) : null;
-
-    let matchedMed = medicines.find(m => {
-      if (!m.name) return false;
-      const medLower = m.name.toLowerCase();
-      const genLower = m.genericName ? m.genericName.toLowerCase() : "";
-      if (lower.includes(medLower) || (genLower && lower.includes(genLower))) return true;
-      const tokens = medLower.split(/\s+/).filter(t => t.length > 2 && !/^\d+mg$/i.test(t));
-      return tokens.some(tok => lower.includes(tok));
-    });
-    if (!matchedMed && medicines.length === 1) matchedMed = medicines[0];
-
-    if (matchedMed && qty !== null) {
-      return {
-        type: "UPDATE_MEDICINE",
-        payload: {
-          id: matchedMed.id,
-          name: matchedMed.name,
-          currentQuantity: qty,
-          totalQuantity: Math.max(matchedMed.totalQuantity || 0, qty)
-        },
-        confirmMessage: `Updated ${matchedMed.name} stock to ${qty}.`
-      };
-    }
-  }
-
-  // 15. ADD_MEDICINE (Direct Cabinet Addition)
-  const isAddMedIntent = !isMedQuestion && (
-    /\b(?:add|put|register|save)\s+(?:a\s+|my\s+)?(?:new\s+)?(?:medicine|medication|pill|drug|tablet|prescription)\b/i.test(lower) ||
-    /\b(?:add|put)\s+([a-z0-9-]+(?:\s+[a-z0-9-]+)?)\s+(?:to\s+(?:my\s+)?(?:cabinet|medications?|meds?|vault|inventory))\b/i.test(lower) ||
-    (/\b(?:add|register)\s+([a-z0-9-]+)\s+(\d+(?:\.\d+)?\s*(?:mg|g|ml|tablets?|pills?|capsules?|mcg))\b/i.test(lower) && !isReminderIntent)
-  );
-  if (isAddMedIntent) {
-    let name = "Medication";
-    const nameMatch = lower.match(/\b(?:add|put|register|new)\s+(?:a\s+|my\s+)?(?:new\s+)?(?:medicine|medication|pill|drug|tablet)?\s*(?:called\s+|named\s+)?([a-z0-9-]+(?:\s+[a-z0-9-]+)?)/i);
-    if (nameMatch && !['a', 'the', 'my', 'some', 'new', 'to', 'in'].includes(nameMatch[1].toLowerCase())) {
-      name = nameMatch[1].split(/\s+(?:to|in|at|dosage|\d+mg|\d+\s*mg)/)[0].trim();
-      name = name.charAt(0).toUpperCase() + name.slice(1);
-    }
-
-    const doseMatch = lower.match(/\b(\d+(?:\.\d+)?\s*(?:mg|g|ml|mcg|tablets?|pills?|capsules?|drops?|puffs?))\b/i);
-    const dosage = doseMatch ? doseMatch[1] : "500mg";
-
-    let dosagePerDose = 1;
-    const dosagePerDoseMatch = lower.match(/\b(\d+)\s*(?:tablets?|pills?|capsules?|drops?|puffs?)\s*(?:per\s+dose|each\s+time|twice|three|daily|per\s+day)?\b/i);
-    if (dosagePerDoseMatch) {
-      dosagePerDose = parseInt(dosagePerDoseMatch[1], 10) || 1;
-    }
-
-    let frequencyPerDay = 1;
-    if (lower.includes("twice") || lower.includes("2x") || lower.includes("2 times") || lower.includes("two times")) frequencyPerDay = 2;
-    else if (lower.includes("three times") || lower.includes("3x") || lower.includes("thrice") || lower.includes("3 times")) frequencyPerDay = 3;
-    else if (lower.includes("four times") || lower.includes("4x") || lower.includes("4 times")) frequencyPerDay = 4;
-
-    let unit = "tablets";
-    if (lower.includes("capsule")) unit = "capsules";
-    else if (lower.includes("ml") || lower.includes("syrup") || lower.includes("liquid")) unit = "ml";
-    else if (lower.includes("puff") || lower.includes("inhaler")) unit = "puffs";
-    else if (lower.includes("drop")) unit = "drops";
-
-    const qtyMatch = lower.match(/\b(?:with|have|total\s+of)?\s*(\d+)\s*(?:pills?|tablets?|capsules?|units?|bottles?)\b/i);
-    const totalQuantity = qtyMatch ? parseInt(qtyMatch[1], 10) : 30;
-
-    let time = null;
-    const explicitTimeMatch =
-      lower.match(/\b(?:remind(?:\s+me)?\s+at|\bat)\s+(1[0-2]|0?[1-9]|2[0-3])(?::([0-5]\d))?\s*(am|pm)?\b/i) ||
-      lower.match(/\b(1[0-2]|0?[1-9])(?::([0-5]\d))?\s*(am|pm)\b/i) ||
-      lower.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
-
-    if (explicitTimeMatch) {
-      let hours = parseInt(explicitTimeMatch[1], 10);
-      const minutes = explicitTimeMatch[2] ? parseInt(explicitTimeMatch[2], 10) : 0;
-      const meridiem = (explicitTimeMatch[3] || explicitTimeMatch[0].match(/am|pm/i)?.[0])?.toLowerCase();
-      if (meridiem === 'pm' && hours < 12) hours += 12;
-      if (meridiem === 'am' && hours === 12) hours = 0;
-      if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-        time = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-      }
-    }
-
-    return {
-      type: "ADD_MEDICINE",
-      payload: {
-        name,
-        dosage,
-        dosagePerDose,
-        frequencyPerDay,
-        totalQuantity,
-        currentQuantity: totalQuantity,
-        unit,
-        reminderSchedule: time ? {
-          time,
-          dose: `${dosagePerDose} ${unit}`,
-          repeatSchedule: frequencyPerDay === 2 ? "custom" : "daily"
-        } : undefined
-      },
-      confirmMessage: `Added **${name}** (${dosage}) to your medicine cabinet.`
-    };
-  }
-
-  // 16. LOG_WELLNESS (Guard against medication questions)
-  if (isMedQuestion) return null;
-
-  const wellnessData = extractWellnessData(text);
-  if (wellnessData) {
-    const moodLabels = { 1: "Low", 2: "Meh", 3: "Okay", 4: "Good", 5: "Great" };
-    const moodStr = moodLabels[wellnessData.mood] || `${wellnessData.mood}/5`;
-    const symSummary = wellnessData.symptoms.length > 0 ? wellnessData.symptoms.join(', ') : 'none';
-
-    return {
-      type: "LOG_WELLNESS",
-      payload: {
-        type: "symptom",
-        data: {
-          mood: wellnessData.mood,
-          energy: wellnessData.energy,
-          symptoms: wellnessData.symptoms,
-          notes: wellnessData.notes
-        }
-      },
-      confirmMessage: `Recorded wellness check-in (mood: ${moodStr} [${wellnessData.mood}/5], vitality: ${wellnessData.energy * 20}%, symptoms: ${symSummary}).`
-    };
-  }
-
-  return null;
-};
-
-export function extractWellnessData(text) {
-  if (!text) return null;
-  const lower = text.toLowerCase().trim();
-
-  // Guard against medication questions
-  const isMedQuestion = /\b(can i take|should i take|is it safe|interact|safe to|together|can i use|should i use)\b/i.test(lower);
-  if (isMedQuestion) return null;
-
-  const isWellnessIntent = /\b(log (my )?(mood|symptoms?|wellness|energy)|feeling|i feel|i'm feeling|i am feeling|i have (a|an)?\s*(headache|stomachache|stomach\s*ache|migraine|fever|cough|cramp|pain)|headache|stomachache|stomach\s*ache|dizzy|dizziness|nausea|fatigue|fever|ecstatic|thrilled|overjoyed|very\s*happy|super\s*happy|so\s*happy|extremely\s*happy|happy|delighted|joyful|depressed|sad|unwell|sick|omutwe|olubuto|musujja)\b/i.test(lower);
-
-  if (!isWellnessIntent) return null;
-
-  const symptoms = [];
-
-  // Physical symptoms (aligned with Wellness Hub standard categories)
-  if (/\b(headache|migraine|omutwe|head\s*ache|head\s*hurts?)\b/i.test(lower)) {
-    symptoms.push("Headache");
-  }
-  if (/\b(stomachache|stomach\s*ache|olubuto|tummy\s*ache|belly\s*ache|abdominal\s*pain|cramps?|indigestion)\b/i.test(lower)) {
-    symptoms.push("Stomach Ache");
-  }
-  if (/\b(fever|musujja|high\s*temp(erature)?|feverish|chills)\b/i.test(lower)) {
-    symptoms.push("Fever");
-  }
-  if (/\b(dizzy|dizziness|lightheaded(ness)?|vertigo)\b/i.test(lower)) {
-    symptoms.push("Dizziness");
-  }
-  if (/\b(nausea|nauseous|vomit(ing)?|throwing\s*up|queasy)\b/i.test(lower)) {
-    symptoms.push("Nausea");
-  }
-  if (/\b(fatigue|exhaust(ed|ion)?|tired|weak(ness)?|drained|worn\s*out|no\s*energy|low\s*energy)\b/i.test(lower)) {
-    symptoms.push("Fatigue");
-  }
-  if (/\b(pain|hurts?|aching|sore|obulumi|body\s*ache)\b/i.test(lower)) {
-    if (!symptoms.includes("Headache") && !symptoms.includes("Stomach Ache")) {
-      symptoms.push("Pain");
-    }
-  }
-  if (/\b(cough(ing)?|ekifuba)\b/i.test(lower)) {
-    symptoms.push("Cough");
-  }
-
-  // Mental / Emotional symptoms (aligned with Wellness Hub standard categories)
-  const isEcstatic = /\b(ecstatic|thrilled|overjoyed|on\s*cloud\s*nine|blissful|extremely\s*happy|so\s*happy|super\s*happy|very\s*happy)\b/i.test(lower);
-  const isHappy = isEcstatic || /\b(happy|cheerful|joyful|delighted|in\s*a\s*great\s*mood|feeling\s*great|amazing|fantastic)\b/i.test(lower);
-  const isRelaxed = /\b(relaxed|calm|peaceful|serene|chill)\b/i.test(lower);
-  const isFocused = /\b(good\s*focus|focused|sharp|productive)\b/i.test(lower);
-  const isAnxious = /\b(anxious|anxiety|nervous|worried|panicky)\b/i.test(lower);
-  const isStressed = /\b(stressed|stress|overwhelmed|under\s*pressure)\b/i.test(lower);
-  const isIrritable = /\b(irritable|irritated|annoyed|cranky|grumpy)\b/i.test(lower);
-
-  if (isHappy) symptoms.push("Happy");
-  if (isRelaxed) symptoms.push("Relaxed");
-  if (isFocused) symptoms.push("Good Focus");
-  if (isAnxious) symptoms.push("Anxious");
-  if (isStressed) symptoms.push("Stressed");
-  if (isIrritable) symptoms.push("Irritable");
-
-  // Determine Mood (1 to 5 scale)
-  let mood = 3;
-  const isSevere = /\b(severe|terrible|awful|unbearable|horrible|excruciating|depressed|miserable|agony)\b/i.test(lower);
-  const hasPhysicalIllness = symptoms.some(s => ["Headache", "Stomach Ache", "Fever", "Nausea", "Dizziness", "Pain", "Cough"].includes(s));
-
-  if (isEcstatic) {
-    mood = 5;
-  } else if (isHappy) {
-    mood = 4;
-  } else if (isRelaxed || isFocused) {
-    mood = 4;
-  } else if (isSevere) {
-    mood = 1;
-  } else if (hasPhysicalIllness || isAnxious || isStressed || isIrritable || /\b(sad|down|bad|unwell|sick)\b/i.test(lower)) {
-    mood = 2;
-  } else if (/\b(okay|fine|alright|neutral|meh)\b/i.test(lower)) {
-    mood = lower.includes("meh") ? 2 : 3;
-  }
-
-  // Determine Energy (1 to 5 scale)
-  let energy = 3;
-  const isExhausted = /\b(exhaust(ed|ion)?|drained|fatigued|depleted|no\s*energy|burned\s*out|completely\s*tired|dead\s*tired)\b/i.test(lower);
-  const isHighEnergy = /\b(full\s*of\s*energy|bursting\s*with\s*energy|super\s*energetic|hyper|invigorated|high\s*energy|energetic|feeling\s*strong)\b/i.test(lower);
-
-  if (isEcstatic || isHighEnergy) {
-    energy = 5;
-  } else if (isExhausted) {
-    energy = 1;
-  } else if (mood === 5) {
-    energy = isHighEnergy ? 5 : 4;
-  } else if (mood === 4) {
-    energy = isRelaxed ? 3 : 4;
-  } else if (isSevere) {
-    energy = 1;
-  } else if (hasPhysicalIllness || symptoms.includes("Fatigue") || /\b(tired|sluggish|weak|low\s*energy)\b/i.test(lower)) {
-    energy = 2;
-  } else if (mood === 2) {
-    energy = 2;
-  } else {
-    energy = 3;
-  }
-
-  return {
-    mood,
-    energy,
-    symptoms,
-    notes: text,
-  };
-}
-
 /**
  * Intelligent Local Clinical Fallback
  * Provides domain-specific, clinically accurate responses and action dispatching
  * when cloud AI APIs are cold-starting, offline, rate-limited, or lack external API keys.
  */
-export function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null, targetPatient = null, currentPage = null, patients = [], messages = []) {
+function generateBackendClinicalFallback(lastUserMsg, medicines = [], reminders = [], userProfile = null, targetPatient = null, currentPage = null, patients = [], messages = []) {
   const norm = (lastUserMsg || '').toLowerCase().trim();
   const activeGender = targetPatient?.gender || userProfile?.gender;
   const normGender = typeof activeGender === 'string' ? activeGender.trim().toLowerCase() : '';
@@ -2834,203 +1891,18 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
   // 2. Deterministic Action Dispatching (All full-system agentic actions)
   const action = normalizeAIAction(extractDeterministicAction(norm, medicines, reminders, patients, messages));
   if (action) {
-    if (action.type === "ADD_MEDICINE") {
-      const remText = action.payload.reminderSchedule ? ` Companion reminder set for **${formatTimeDisplay(action.payload.reminderSchedule.time)}**.` : "";
-      return {
-        text: `I've added **${action.payload.name}** (${action.payload.dosage}) to your medicine cabinet.${remText}\n\nYou can [view your active prescriptions in My Medications](/medications) or [track stock in Med Vault](/medvault).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Cabinet Guard",
-        action
-      };
-    }
-    if (action.type === "REMOVE_MEDICINE") {
-      return {
-        text: `I've removed **${action.payload.name}** from your active medicine cabinet.\n\nYou can [review your updated cabinet in My Medications](/medications).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Cabinet Guard",
-        action
-      };
-    }
-    if (action.type === "ADD_REMINDER") {
-      const displayTime = action.payload.time ? formatTimeDisplay(action.payload.time) : "8:00 AM";
-      const freqCount = action.payload.time?.includes(",") ? action.payload.time.split(",").length : (action.payload.frequencyPerDay || 1);
-      const freqText = freqCount > 1 ? ` ${freqCount} times a day` : ` ${action.payload.repeatSchedule || "daily"}`;
-      return {
-        text: `I've set up a reminder for you to take **${action.payload.medicineName}** (${action.payload.dose})${freqText} at **${displayTime}**.\n\nYou can [view or manage your schedule in Medication Reminders](/reminders) or [check stock in Med Vault](/medvault).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Schedule Guard",
-        action
-      };
-    }
-    if (action.type === "UPDATE_REMINDER") {
-      const displayTime = action.payload.time ? formatTimeDisplay(action.payload.time) : "new time";
-      return {
-        text: `I've updated your reminder for **${action.payload.medicineName}** to **${displayTime}**.\n\nYou can [review all alarms in Medication Reminders](/reminders).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Schedule Guard",
-        action
-      };
-    }
-    if (action.type === "REMOVE_REMINDER") {
-      return {
-        text: `I've removed the reminder for **${action.payload.medicineName}**.\n\nYou can [manage remaining alarms in Medication Reminders](/reminders).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Schedule Guard",
-        action
-      };
-    }
-    if (action.type === "TOGGLE_REMINDER") {
-      const statusText = action.payload.enabled ? "resumed" : "paused";
-      return {
-        text: `I have **${statusText}** your medication reminders.\n\nYou can [view or toggle individual alarms in Medication Reminders](/reminders).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Schedule Guard",
-        action
-      };
-    }
-    if (action.type === "SNOOZE_REMINDER") {
-      return {
-        text: `Snoozed your medication reminder for **${action.payload.snoozeMinutes || 15} minutes**. I'll alert you again shortly!`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Schedule Guard",
-        action
-      };
-    }
-    if (action.type === "LOG_DOSE") {
-      const statusVerb = action.payload.status === 'taken' ? 'took' : 'missed';
-      return {
-        text: `I've logged that you **${statusVerb}** your dose of **${action.payload.medicineName}**.\n\nYou can [review your adherence streak in Dose History](/history).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Adherence Guard",
-        action
-      };
-    }
-    if (action.type === "UNDO_DOSE_LOG") {
-      return {
-        text: `I've reverted your last logged dose and restored your pill count in Med Vault.\n\nYou can [check your updated logs in Dose History](/history).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Adherence Guard",
-        action
-      };
-    }
-    if (action.type === "UPDATE_MEDICINE") {
-      return {
-        text: `I've updated your Med Vault: **${action.payload.name}** stock is now set to **${action.payload.currentQuantity} tablets**.\n\nYou can [view and track your pill supply in Med Vault](/medvault).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Med Vault",
-        action
-      };
-    }
-    if (action.type === "ADD_PATIENT") {
-      return {
-        text: `I've added **${action.payload.name}**${action.payload.relation ? ` (${action.payload.relation})` : ""} to your Family Hub.\n\nYou can [manage multi-dependent profiles in Family Hub](/family).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Family Hub Guard",
-        action
-      };
-    }
-    if (action.type === "SWITCH_PATIENT_SCOPE") {
-      return {
-        text: `Active context switched to **${action.payload.patientName || "Personal Profile"}**.\n\nAll subsequent queries and schedules are now scoped to this profile. You can [view family profiles in Family Hub](/family).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Family Hub Guard",
-        action
-      };
-    }
-    if (action.type === "BATCH_ADD_REGIMEN") {
-      return {
-        text: `I've configured the 3-day treatment course and alarms for **${action.payload.medicineName}** (${action.payload.frequency} at ${action.payload.times}).\n\nYou can [manage these alarms in Medication Reminders](/reminders).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Schedule Guard",
-        action
-      };
-    }
-    if (action.type === "NAVIGATE_PAGE") {
-      return {
-        text: `Navigating directly to [${action.payload.targetRoute}](${action.payload.targetRoute}).`,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Navigator Guard",
-        action
-      };
-    }
-    if (action.type === "OPEN_PHARMACY_MODAL") {
-      return {
-        text: `Opening the official **NDA Uganda Pharmacy Finder**${action.payload.medicineName ? ` for **${action.payload.medicineName}**` : ""}. Locating licensed dispensaries near you...`,
-        suggestions: ["Find 24/7 pharmacies", "Call nearest pharmacy", "Check pill stock"],
-        source: "NDA Locator Guard",
-        action
-      };
-    }
-    if (action.type === "LOG_WELLNESS") {
-      const moodVal = Number(action.payload.data?.mood) || 3;
-      const energyVal = Number(action.payload.data?.energy) || 3;
-      const symptomsList = action.payload.data?.symptoms || [];
-      const symStr = symptomsList.length > 0 ? symptomsList.join(', ') : 'general check-in';
-      const moodLabels = { 1: "Low", 2: "Meh", 3: "Okay", 4: "Good", 5: "Great / Ecstatic" };
-      const moodDisplay = moodLabels[moodVal] || `${moodVal}/5`;
-
-      const isPositiveVibe = moodVal >= 4 && !symptomsList.some(s => ["Headache", "Stomach Ache", "Fever", "Nausea", "Dizziness", "Pain", "Cough"].includes(s));
-
-      const responseText = isPositiveVibe
-        ? `That's wonderful to hear${greeting}! 🌟 I've recorded your positive vibe in the Wellness Hub (Mood: **${moodDisplay}**, Vitality: **${energyVal * 20}%**). Keep embracing that great vitality!\n\nYou can [review your wellness logs in Wellness Hub](/wellness).`
-        : `I've recorded this in your Wellness Hub (Mood: **${moodDisplay}**, Vitality: **${energyVal * 20}%**, Symptoms: **${symStr}**). Bambi${greeting}, please rest, stay well-hydrated, and consult a healthcare professional if symptoms persist.\n\nYou can [review your wellness logs in Wellness Hub](/wellness).`;
-
-      return {
-        text: responseText,
-        suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-        source: "Wellness Guard",
-        action
-      };
-    }
+    const formatted = formatActionExecutionMessage(action, greeting);
     return {
-      text: action.confirmMessage || "Action completed.",
-      suggestions: generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
-      source: "Clinical Guard",
+      text: formatted?.text || action.confirmMessage || "Action completed.",
+      suggestions: formatted?.suggestions || generateContextualSuggestions({ userQuery: norm, medicines, reminders, action }),
+      source: formatted?.source || "Clinical Guard",
       action
     };
   }
 
   // 2.5 Handle Reminder Intent when no action was generated (clarification needed)
-  const isReminderIntent = userRequestedReminder(norm, messages);
-  if (isReminderIntent) {
-    const matchedMed = (medicines || [])
-      .filter(m => (m.name && norm.includes(m.name.toLowerCase())) || (m.genericName && norm.includes(m.genericName.toLowerCase())))
-      .sort((a, b) => (b.name?.length || 0) - (a.name?.length || 0))[0];
-
-    if (matchedMed) {
-      // Case 1: Medicine exists in Med Vault / Medications, but user didn't provide starting time
-      const doseStr = matchedMed.dosagePerDose
-        ? `${matchedMed.dosagePerDose} ${matchedMed.unit || "tablets"}`
-        : (matchedMed.dosage || "1 tablet");
-      const freqVal = matchedMed.frequencyPerDay && matchedMed.frequencyPerDay > 0 ? matchedMed.frequencyPerDay : 1;
-      const freqStr = freqVal > 1 ? `${freqVal} times a day` : "once daily";
-
-      return {
-        text: `I found **${matchedMed.name}** in your Med Vault, prescribed as **${doseStr}, ${freqStr}**.\n\nWhat time would you like to take your first dose so I can set up your reminder schedule?`,
-        suggestions: ["Start at 7:00 AM", "Start at 8:00 AM", "Start at 9:00 AM", "Take at 8:00 PM"],
-        source: "Schedule Guard",
-        action: null
-      };
-    }
-
-    // Case 2: Medicine does NOT exist in Med Vault / Medications
-    let targetMedName = "this medication";
-    const medMatch = norm.match(/(?:take|reminder\s+for|set\s+a\s+reminder\s+for|add\s+a\s+reminder\s+for|remind\s+me\s+to\s+take|remind\s+me\s+for|alarm\s+for|for)\s+([a-z0-9-]+)/i);
-    if (medMatch && !['a', 'my', 'the', 'some', 'me', 'daily', 'twice', 'an', 'once', 'alarm'].includes(medMatch[1].toLowerCase())) {
-      targetMedName = medMatch[1].charAt(0).toUpperCase() + medMatch[1].slice(1);
-    }
-
-    return {
-      text: `I couldn't find **${targetMedName}** in your Medications or Med Vault cabinet.\n\nTo set up the right reminder schedule for you, could you please tell me:\n1. **What is your prescribed dosage** (e.g., *1 tablet*, *500mg*, or *10ml*)?\n2. **How often should you take it** (e.g., *once daily*, *twice a day*, or *3 times a day*) and at what preferred times?\n\nYou can also [add it to your medicine cabinet](/medications) or [track stock in Med Vault](/medvault) so I can automatically sync your dosage and refill alerts.`,
-      suggestions: [
-        "1 tablet once daily at 8am",
-        "2 tablets twice daily at 8am",
-        "2 tablets 3 times daily at 8am",
-        `Add ${targetMedName} to cabinet`
-      ],
-      source: "Schedule Guard",
-      action: null
-    };
+  if (userRequestedReminder(norm, messages)) {
+    return buildReminderClarificationResponse(norm, medicines);
   }
 
   // 3. Official Uganda Support Directory (only if explicitly asked for contacts/support)
@@ -3053,31 +1925,16 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
   }
 
   // 4. Age-Aware Food, Chewables & Drinks Clinical Guidance (Local & Global Foods)
-  const isFoodDrinkQuery = (
-    norm.includes('food') ||
-    norm.includes('eat') ||
-    norm.includes('drink') ||
-    norm.includes('chew') ||
-    norm.includes('chewable') ||
-    norm.includes('swallow') ||
-    norm.includes('meal') ||
-    norm.includes('take with') ||
-    norm.includes('beverage') ||
-    norm.includes('applesauce') ||
-    norm.includes('yogurt') ||
-    norm.includes('oatmeal') ||
-    norm.includes('bushera') ||
-    norm.includes('matooke') ||
-    norm.includes('g-nut') ||
-    norm.includes('posho')
-  );
+  const foodDrinkKeywords = [
+    'food', 'eat', 'drink', 'chew', 'chewable', 'swallow', 'meal', 'take with',
+    'beverage', 'applesauce', 'yogurt', 'oatmeal', 'bushera', 'matooke', 'g-nut', 'posho'
+  ];
 
-  if (isFoodDrinkQuery) {
+  if (foodDrinkKeywords.some(k => norm.includes(k))) {
     const queryAge = extractAgeFromQuery(norm);
     const profileAge = calculateAge(targetPatient?.age ?? targetPatient?.dateOfBirth ?? userProfile?.age ?? userProfile?.dateOfBirth);
     const resolvedAge = queryAge !== null ? queryAge : profileAge;
 
-    // Detect target drug
     let matchedMed = (medicines || []).find(m => m.name && norm.includes(m.name.toLowerCase()));
     if (!matchedMed) {
       if (norm.includes('panadol') || norm.includes('paracetamol')) matchedMed = { name: 'Panadol (Paracetamol)' };
@@ -3090,69 +1947,7 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
       else if (medicines && medicines.length > 0) matchedMed = medicines[0];
     }
     const medName = matchedMed?.name || 'your medication';
-
-    // Pediatric guidance (< 12 yrs or explicitly for child/baby/infant)
-    if (resolvedAge !== null && resolvedAge < 12) {
-      const ageDetail = resolvedAge === 0 ? 'an infant' : resolvedAge <= 3 ? `a toddler (${resolvedAge} yrs)` : `a child (${resolvedAge} yrs)`;
-      return {
-        text: `Here is age-tailored food, chewables, and drink guidance for **${medName}** for ${ageDetail}${greeting}:\n\n` +
-          `• 🍬 **Chewable & Liquid Alternatives**: Swallowing whole pills is a serious choking risk for young children. Ask your pharmacist or clinician for **chewable tablets**, **orally dispersible tablets (ODTs)**, or **oral syrups/suspensions**.\n` +
-          `• 🥣 **Soft Food Vehicles for Crushed Meds**: If the tablet is approved by a doctor or pharmacist to be crushed (never crush extended-release or coated pills), mix the dose into 1–2 teaspoons of smooth, palatable food:\n` +
-          `  - **Everyday options**: Smooth applesauce, plain yogurt, fruit puree, or oatmeal.\n` +
-          `  - **Local Ugandan options**: Warm smooth *Bushera* (millet porridge) or mashed soft *Matooke*.\n` +
-          `  - *Instruction*: Have the child take the spoonful immediately without chewing, followed by a drink.\n` +
-          `• 💧 **Safe Drinks**: Ample water, breast milk, infant formula, or oral rehydration solution (ORS). If taking antibiotics like Ciprofloxacin, space high-calcium dairy by at least 2 hours.\n` +
-          `• ⚠️ **Critical Pediatric Warning**: **NEVER give honey** to infants under 1 year of age due to the severe risk of infant botulism. Avoid whole nuts, crunchy raw vegetables, or hard chewables due to choking hazards.\n\n` +
-          `You can [check drug & food interactions in Interactions Guard](/interactions) or [review active medications](/medications).`,
-        suggestions: ["Chewable medication options", "Safe drinks with medication", "Check drug interactions"],
-        source: "Clinical Pediatric Guard",
-        action: null
-      };
-    }
-
-    // Geriatric guidance (65+ yrs or elderly)
-    if (resolvedAge !== null && resolvedAge >= 65) {
-      return {
-        text: `Here is age-tailored food and beverage guidance for **${medName}** for seniors (Age: ${resolvedAge} yrs)${greeting}:\n\n` +
-          `• 🥣 **Soft & Moist Foods (Swallowing Ease)**: To prevent swallowing difficulties (presbyphagia) and soothe the stomach:\n` +
-          `  - **Local Ugandan options**: Steamed soft *Matooke*, warm smooth *Bushera* (millet/sorghum porridge), or steamed *Luwombo*.\n` +
-          `  - **Everyday staples**: Warm oatmeal, Greek yogurt, soft scrambled eggs, applesauce, or pureed vegetable soups.\n` +
-          `• 💧 **Swallowing Technique & Drinks**: Take a sip of water first to lubricate your throat, swallow the pill with a full glass of water (250ml) while sitting upright, and **remain sitting or standing upright for at least 30 minutes** to avoid esophageal irritation.\n` +
-          `• ⚠️ **Nutritional & Drug Cautions**:\n` +
-          `  - *Potassium*: If taking blood pressure or heart medications (ACE inhibitors like Lisinopril, ARBs, or Spironolactone), avoid excessive high-potassium foods (*Matooke*, bananas, avocados) or potassium salt substitutes.\n` +
-          `  - *Calcium Spacing*: Space high-calcium foods (*Mukene*, dairy, fortified milks) at least 2 hours apart from thyroid medications (Levothyroxine) or certain antibiotics.\n` +
-          `  - *Grapefruit & Alcohol*: Strictly avoid grapefruit juice and alcohol/Waragi.\n\n` +
-          `You can [check drug & food interactions in Interactions Guard](/interactions) or [review active medications](/medications).`,
-        suggestions: ["Safe foods for seniors", "Check drug interactions", "View active medications"],
-        source: "Clinical Geriatric Guard",
-        action: null
-      };
-    }
-
-    // Adult / General guidance
-    const isFatSoluble = /coartem|artemether|lumefantrine|griseofulvin|isotretinoin|vitamin d/i.test(medName);
-    const fatGuidance = isFatSoluble
-      ? `• 🥑 **Healthy Fats for Absorption (Crucial)**: **${medName}** requires dietary fats to be absorbed effectively into the bloodstream:\n` +
-        `  - **Local options**: *G-nut sauce* (groundnut stew) or *Eshabwe*.\n` +
-        `  - **Everyday options**: Fresh avocado, whole milk, eggs, peanut butter, or yogurt.\n`
-      : `• 🍲 **Stomach Buffers**: To buffer the stomach lining and prevent gastric irritation:\n` +
-        `  - **Local options**: Steamed *Matooke*, *Posho*, or *Kalo*.\n` +
-        `  - **Everyday staples**: Plain oatmeal, white rice, toast, crackers, or plain yogurt.\n`;
-
-    return {
-      text: `Here is recommended food, chewables, and drink guidance for **${medName}**${greeting}:\n\n` +
-        fatGuidance +
-        `• 💧 **Drink Pairings & Hydration**: Always take your medication with a **full glass of plain water** (250ml+) to ensure the tablet dissolves smoothly in your stomach and prevents esophageal irritation.\n` +
-        `• 🍬 **Chewables & Formulation Notes**: If you struggle with swallowing solid tablets, ask your doctor or pharmacist about chewable tablets, dispersible tablets, or smooth oral suspensions.\n` +
-        `• ⚠️ **Key Dietary Warnings**:\n` +
-        `  - **Alcohol & Waragi**: Strictly avoid with Paracetamol (liver damage) and Metronidazole (severe violent reaction).\n` +
-        `  - **Grapefruit & Grapefruit Juice**: Avoid with statins and blood pressure medications (blocks CYP3A4 enzyme).\n` +
-        `  - **Calcium & Mukene**: Space calcium-rich foods and dairy at least 2 hours away from fluoroquinolone (Ciprofloxacin) and tetracycline antibiotics.\n\n` +
-        `You can [check your drug & food interactions in Interactions Guard](/interactions) to test specific dishes.`,
-      suggestions: ["What foods should I avoid?", "Can I take with milk?", "Check drug interactions"],
-      source: "Dietary Safety Guard",
-      action: null
-    };
+    return buildAgeTailoredFoodGuidance(medName, resolvedAge, greeting);
   }
 
   // 5. Honest Service Status Notice
@@ -3174,6 +1969,169 @@ export function generateBackendClinicalFallback(lastUserMsg, medicines = [], rem
   };
 }
 
+function buildFakeDawaGptStream(jsonResp, ctx) {
+  const { lastUserMsg, messages, medicines, reminders, patients, userProfile, targetPatient, currentPage } = ctx;
+  return new Readable({
+    read() {
+      const rawText = jsonResp.text || "";
+      let cleanText = sanitizeMarkdownLinks(rawText
+        .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
+        .replace(/\n\s*\{\s*"(?:text|message|response|suggestions|source|action)"[\s\S]*\}\s*$/i, '')
+        .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
+        .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
+        .trim());
+
+      if (!cleanText && rawText) {
+        try {
+          const parsed = JSON.parse(rawText.trim());
+          if (parsed && (parsed.text || parsed.message || parsed.response)) {
+            cleanText = sanitizeMarkdownLinks((parsed.text || parsed.message || parsed.response).trim());
+          }
+        } catch (_) {}
+      }
+      const activeGender = targetPatient?.gender || userProfile?.gender;
+      const activeName = targetPatient?.name || userProfile?.name || '';
+      cleanText = enforceGenderHonorifics(cleanText, activeGender, activeName);
+
+      let candidateAction = normalizeAIAction(jsonResp.action);
+      if (candidateAction && candidateAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
+        console.warn("[aiService] Suppressed unsolicited streaming ADD_REMINDER action because user did not ask for a reminder");
+        candidateAction = null;
+      }
+      if (!candidateAction) {
+        let fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
+        if (fallbackAction && fallbackAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
+          fallbackAction = null;
+        }
+        if (!fallbackAction && cleanText) {
+          fallbackAction = extractDeterministicAction(cleanText, medicines || [], reminders || [], patients || [], messages || []);
+          if (fallbackAction && fallbackAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
+            fallbackAction = null;
+          }
+        }
+        if (fallbackAction) {
+          candidateAction = normalizeAIAction(fallbackAction);
+        }
+      }
+
+      const normalizedAction = candidateAction || null;
+      const enrichedSuggestions = generateContextualSuggestions({
+        messages,
+        userQuery: lastUserMsg,
+        assistantText: cleanText,
+        medicines,
+        reminders,
+        userProfile,
+        activePatient: targetPatient,
+        currentPage,
+        action: normalizedAction,
+        existingSuggestions: jsonResp.suggestions
+      });
+      const metadata = JSON.stringify({ suggestions: enrichedSuggestions, source: jsonResp.source || "DawaGPT", action: normalizedAction });
+      const data = JSON.stringify({ choices: [{ delta: { content: cleanText + "\n###METADATA###\n" + metadata } }] });
+      this.push(`data: ${data}\n\n`);
+      this.push(`data: [DONE]\n\n`);
+      this.push(null);
+    }
+  });
+}
+
+async function tryOpenAiProviderStream({
+  apiKey,
+  urls,
+  models,
+  rateLimitKey,
+  finalMessages,
+  chatMaxTokens,
+  lastUserMsgForRl,
+  priority,
+  timeout = 6000,
+  extraHeaders = {},
+  providerLabel,
+  onSuccess
+}) {
+  if (!apiKey) return null;
+  for (const url of urls) {
+    for (const model of models) {
+      try {
+        const fn = async () => {
+          const response = await axios.post(
+            url,
+            { model, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 },
+            {
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                ...extraHeaders
+              },
+              responseType: 'stream',
+              timeout
+            }
+          );
+          return response.data;
+        };
+        const stream = await rateLimitManager.enqueue(fn, rateLimitKey, lastUserMsgForRl, priority, 3, true);
+        if (onSuccess) onSuccess(url, model);
+        return stream;
+      } catch (err) {
+        console.warn(
+          `Stream Fallback: ${providerLabel} (${model}) failed.`,
+          err.response?.data?.error?.message || err.response?.data || err.message
+        );
+      }
+    }
+  }
+  return null;
+}
+
+async function tryGroqProviderStream(finalMessages, chatMaxTokens, lastUserMsgForRl, priority) {
+  if (GROQ_KEYS.length === 0) return null;
+  const groqCandidateModels = Array.from(new Set([
+    GROQ_MODEL,
+    'openai/gpt-oss-120b',
+    'qwen/qwen3.6-27b',
+    GROQ_LIGHT_MODEL,
+    'openai/gpt-oss-20b'
+  ].filter(Boolean)));
+
+  for (const modelId of groqCandidateModels) {
+    const isReasoning = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
+    const effectiveTokens = isReasoning ? Math.max(chatMaxTokens, 4096) : chatMaxTokens;
+
+    for (let keyIdx = 0; keyIdx < GROQ_KEYS.length; keyIdx++) {
+      try {
+        const groqKey = GROQ_KEYS[keyIdx];
+        const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
+        const baseModelKey = (modelId.includes('120b') || modelId.includes('70b') || modelId === GROQ_MODEL || modelId === GROQ_SCOUT_MODEL) ? 'groq-70b'
+          : (modelId.includes('20b') || modelId.includes('8b') || modelId === GROQ_LIGHT_MODEL) ? 'groq-8b'
+          : 'groq-qwen';
+        const modelKey = `${baseModelKey}${keySuffix}`;
+
+        const fn = async () => {
+          const payload = {
+            model: modelId,
+            messages: finalMessages,
+            stream: true,
+            max_tokens: effectiveTokens,
+            temperature: 0.7
+          };
+          if (isReasoning) payload.reasoning_format = 'hidden';
+          const response = await axios.post(GROQ_API_URL, payload, {
+            headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+            responseType: 'stream', timeout: 6000
+          });
+          return response.data;
+        };
+        return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 1, true);
+      } catch (err) {
+        console.warn(`Stream Fallback: Groq (${modelId}) key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
+      }
+    }
+  }
+  console.warn("Stream Fallback: All Groq models and keys exhausted. Cascading to SambaNova Cloud...");
+  return null;
+}
+
 export const streamChatWithDawaGPT = async (params, priority = 'high') => {
   try {
     const { messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, selectedPatientId, currentPage } = params;
@@ -3182,6 +2140,8 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
 
     const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.text || messages.filter(m => m.role === 'user').pop()?.content;
     const targetPatient = selectedPatientId && patients?.length ? patients.find(p => p.id === selectedPatientId) : null;
+    const streamCtx = { lastUserMsg, messages, medicines, reminders, patients, userProfile, targetPatient, currentPage };
+    const createFakeStream = (jsonResp) => buildFakeDawaGptStream(jsonResp, streamCtx);
 
     if (detectEmergency(lastUserMsg)) {
       return new Readable({
@@ -3197,7 +2157,6 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
 
     const isComplex = isComplexTask(lastUserMsg);
 
-    // Fast-path: Instant (<20ms) execution for clear deterministic action requests
     const deterministicAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
     if (deterministicAction) {
       const fallbackResp = generateBackendClinicalFallback(lastUserMsg, medicines, reminders, userProfile, targetPatient, currentPage, patients || [], messages || []);
@@ -3206,10 +2165,6 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
       }
     }
 
-    // Route ALL action-intent requests to JSON mode (chatWithDawaGPT) where the
-    // action object is reliably structured. Raw streaming mode is unreliable for
-    // actions because smaller fallback models often fail to produce valid
-    // ###METADATA### JSON — silently dropping the action object.
     if (isLikelyActionRequest(lastUserMsg, messages)) {
       try {
         const result = await chatWithDawaGPT(params, priority);
@@ -3230,277 +2185,89 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     });
 
     const chatMaxTokens = isComplex ? 8192 : 4096;
-    // For rate-limit estimation, use only the last user message (not the full context
-    // including the DawaGPT system prompt) to avoid false TPM budget exhaustion.
     const lastUserMsgForRl = [{ role: 'user', content: lastUserMsg || 'hi' }];
 
-    function createFakeStream(jsonResp) {
-      return new Readable({
-        read() {
-          const rawText = jsonResp.text || "";
-          let cleanText = sanitizeMarkdownLinks(rawText
-            .replace(/(?:###\s*METADATA\s*###|---\s*METADATA\s*---|###\s*Metadata\s*###|###METADATA###|---METADATA---)[\s\S]*$/i, '')
-            .replace(/\n\s*\{\s*"(?:text|message|response|suggestions|source|action)"[\s\S]*\}\s*$/i, '')
-            .replace(/\[(?:Previous\s+)?suggestions(?:\s+offered)?:\s*.*?\]/gis, '')
-            .replace(/(?:\r?\n\s*[-*_]{3,}\s*)+$/g, '')
-            .trim());
-
-          if (!cleanText && rawText) {
-            try {
-              const parsed = JSON.parse(rawText.trim());
-              if (parsed && (parsed.text || parsed.message || parsed.response)) {
-                cleanText = sanitizeMarkdownLinks((parsed.text || parsed.message || parsed.response).trim());
-              }
-            } catch (_) {}
-          }
-          const activeGender = targetPatient?.gender || userProfile?.gender;
-          const activeName = targetPatient?.name || userProfile?.name || '';
-          cleanText = enforceGenderHonorifics(cleanText, activeGender, activeName);
-
-          let candidateAction = normalizeAIAction(jsonResp.action);
-          if (candidateAction && candidateAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
-            console.warn("[aiService] Suppressed unsolicited streaming ADD_REMINDER action because user did not ask for a reminder");
-            candidateAction = null;
-          }
-          if (!candidateAction) {
-            let fallbackAction = extractDeterministicAction(lastUserMsg, medicines || [], reminders || [], patients || [], messages || []);
-            if (fallbackAction && fallbackAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
-              fallbackAction = null;
-            }
-            if (!fallbackAction && cleanText) {
-              fallbackAction = extractDeterministicAction(cleanText, medicines || [], reminders || [], patients || [], messages || []);
-              if (fallbackAction && fallbackAction.type === "ADD_REMINDER" && !userRequestedReminder(lastUserMsg, messages)) {
-                fallbackAction = null;
-              }
-            }
-            if (fallbackAction) {
-              candidateAction = normalizeAIAction(fallbackAction);
-            }
-          }
-
-          const normalizedAction = candidateAction || null;
-          const enrichedSuggestions = generateContextualSuggestions({
-            messages,
-            userQuery: lastUserMsg,
-            assistantText: cleanText,
-            medicines,
-            reminders,
-            userProfile,
-            activePatient: targetPatient,
-            currentPage,
-            action: normalizedAction,
-            existingSuggestions: jsonResp.suggestions
-          });
-          const metadata = JSON.stringify({ suggestions: enrichedSuggestions, source: jsonResp.source || "DawaGPT", action: normalizedAction });
-          const data = JSON.stringify({ choices: [{ delta: { content: cleanText + "\n###METADATA###\n" + metadata } }] });
-          this.push(`data: ${data}\n\n`);
-          this.push(`data: [DONE]\n\n`);
-          this.push(null);
-        }
+    // 1. Cerebras
+    if (isComplex) {
+      const cerebrasStream = await tryOpenAiProviderStream({
+        apiKey: CEREBRAS_API_KEY,
+        urls: [CEREBRAS_API_URL],
+        models: [CEREBRAS_MODEL],
+        rateLimitKey: 'cerebras-120b',
+        finalMessages,
+        chatMaxTokens,
+        lastUserMsgForRl,
+        priority,
+        timeout: 7000,
+        providerLabel: 'Cerebras'
       });
+      if (cerebrasStream) return cerebrasStream;
     }
 
-    // 1. Try Cerebras for complex streaming if configured
-    if (CEREBRAS_API_KEY && isComplex) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(CEREBRAS_API_URL, { model: CEREBRAS_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${CEREBRAS_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 7000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'cerebras-120b', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: Cerebras failed.", err.message);
-      }
-    }
+    // 2. Groq across candidate active models & keys
+    const groqStream = await tryGroqProviderStream(finalMessages, chatMaxTokens, lastUserMsgForRl, priority);
+    if (groqStream) return groqStream;
 
-    // 2. Try Groq across candidate active models (gpt-oss-120b, qwen3.6-27b, gpt-oss-20b) and all independent accounts
-    if (GROQ_KEYS.length > 0) {
-      const groqCandidateModels = Array.from(new Set([
-        GROQ_MODEL,
-        'openai/gpt-oss-120b',
-        'qwen/qwen3.6-27b',
-        GROQ_LIGHT_MODEL,
-        'openai/gpt-oss-20b'
-      ].filter(Boolean)));
-
-      for (const modelId of groqCandidateModels) {
-        const isReasoning = typeof modelId === 'string' && (modelId.includes('gpt-oss') || modelId.includes('qwen') || modelId.includes('deepseek-r1') || modelId.includes('qwq'));
-        const effectiveTokens = isReasoning ? Math.max(chatMaxTokens, 4096) : chatMaxTokens;
-
-        for (let keyIdx = 0; keyIdx < GROQ_KEYS.length; keyIdx++) {
-          try {
-            const groqKey = GROQ_KEYS[keyIdx];
-            const keySuffix = GROQ_KEY_SUFFIXES[keyIdx] || '';
-            const baseModelKey = (modelId.includes('120b') || modelId.includes('70b') || modelId === GROQ_MODEL || modelId === GROQ_SCOUT_MODEL) ? 'groq-70b'
-              : (modelId.includes('20b') || modelId.includes('8b') || modelId === GROQ_LIGHT_MODEL) ? 'groq-8b'
-              : 'groq-qwen';
-            const modelKey = `${baseModelKey}${keySuffix}`;
-
-            const fn = async () => {
-              const payload = {
-                model: modelId,
-                messages: finalMessages,
-                stream: true,
-                max_tokens: effectiveTokens,
-                temperature: 0.7
-              };
-              if (isReasoning) payload.reasoning_format = 'hidden';
-              const response = await axios.post(GROQ_API_URL, payload, {
-                headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
-                responseType: 'stream', timeout: 6000
-              });
-              return response.data;
-            };
-            // failFast MUST be true so any rate limit (429/TPM) immediately cascades to the next key/model/provider
-            return await rateLimitManager.enqueue(fn, modelKey, lastUserMsgForRl, priority, 1, true);
-          } catch (err) {
-            console.warn(`Stream Fallback: Groq (${modelId}) key${keyIdx + 1} failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
-          }
+    // 3-8. OpenAI-compatible streaming providers
+    const openAiProviders = [
+      {
+        apiKey: SAMBANOVA_API_KEY,
+        urls: [SAMBANOVA_API_URL],
+        models: [SAMBANOVA_MODEL],
+        rateLimitKey: 'sambanova-70b',
+        providerLabel: 'SambaNova'
+      },
+      {
+        apiKey: NVIDIA_API_KEY,
+        urls: [NVIDIA_API_URL],
+        models: [NVIDIA_MODEL],
+        rateLimitKey: 'nvidia-nemotron',
+        providerLabel: 'NVIDIA NIM'
+      },
+      {
+        apiKey: OPENROUTER_API_KEY,
+        urls: [OPENROUTER_API_URL],
+        models: Array.from(new Set([OPENROUTER_MODEL, 'meta-llama/llama-3.3-70b-instruct:free', 'meta-llama/llama-3.1-8b-instruct:free', 'mistralai/mistral-7b-instruct:free', 'google/gemma-2-9b-it:free'].filter(Boolean))),
+        rateLimitKey: 'openrouter-free',
+        extraHeaders: { 'HTTP-Referer': 'https://dawalens.web.app', 'X-Title': 'Dawa-Lens' },
+        providerLabel: 'OpenRouter'
+      },
+      {
+        apiKey: MISTRAL_API_KEY,
+        urls: [MISTRAL_API_URL],
+        models: Array.from(new Set([MISTRAL_MODEL, 'mistral-small-latest', 'open-mistral-nemo', 'open-mistral-7b'].filter(Boolean))),
+        rateLimitKey: 'mistral-small',
+        providerLabel: 'Mistral AI'
+      },
+      {
+        apiKey: SILICONFLOW_API_KEY,
+        urls: [SILICONFLOW_API_URL],
+        models: Array.from(new Set([SILICONFLOW_MODEL, 'Qwen/Qwen2.5-7B-Instruct', 'deepseek-ai/DeepSeek-V3', 'meta-llama/Meta-Llama-3.1-8B-Instruct'].filter(Boolean))),
+        rateLimitKey: 'siliconflow-qwen',
+        providerLabel: 'SiliconFlow'
+      },
+      {
+        apiKey: Z_AI_API_KEY,
+        urls: zaiWorkingEndpoint ? [zaiWorkingEndpoint] : Z_AI_ENDPOINTS,
+        models: zaiWorkingModel ? [zaiWorkingModel] : Array.from(new Set([Z_AI_MODEL, ...Z_AI_MODELS])),
+        rateLimitKey: 'zai-glm-5-flash',
+        providerLabel: 'Z.ai',
+        onSuccess: (url, model) => {
+          zaiWorkingEndpoint = url;
+          zaiWorkingModel = model;
         }
       }
-      console.warn("Stream Fallback: All Groq models and keys exhausted. Cascading to SambaNova Cloud...");
-    }
+    ];
 
-    // 3. Try SambaNova Cloud (70B)
-    if (SAMBANOVA_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(SAMBANOVA_API_URL, { model: SAMBANOVA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${SAMBANOVA_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 6000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'sambanova-70b', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: SambaNova failed, trying NVIDIA NIM...", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 4. Try NVIDIA NIM
-    if (NVIDIA_API_KEY) {
-      try {
-        const fn = async () => {
-          const response = await axios.post(NVIDIA_API_URL, { model: NVIDIA_MODEL, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-            headers: { 'Authorization': `Bearer ${NVIDIA_API_KEY}`, 'Content-Type': 'application/json' },
-            responseType: 'stream', timeout: 6000
-          });
-          return response.data;
-        };
-        return await rateLimitManager.enqueue(fn, 'nvidia-nemotron', lastUserMsgForRl, priority, 3, true);
-      } catch (err) {
-        console.warn("Stream Fallback: NVIDIA NIM failed.", err.response?.data?.error?.message || err.response?.data || err.message);
-      }
-    }
-
-    // 5. Try OpenRouter Free across candidate models
-    if (OPENROUTER_API_KEY) {
-      const openRouterCandidates = Array.from(new Set([
-        OPENROUTER_MODEL,
-        'meta-llama/llama-3.3-70b-instruct:free',
-        'meta-llama/llama-3.1-8b-instruct:free',
-        'mistralai/mistral-7b-instruct:free',
-        'google/gemma-2-9b-it:free'
-      ].filter(Boolean)));
-
-      for (const orModel of openRouterCandidates) {
-        try {
-          const fn = async () => {
-            const response = await axios.post(OPENROUTER_API_URL, { model: orModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-              headers: {
-                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                'HTTP-Referer': 'https://dawalens.web.app',
-                'X-Title': 'Dawa-Lens',
-                'Content-Type': 'application/json'
-              },
-              responseType: 'stream', timeout: 6000
-            });
-            return response.data;
-          };
-          return await rateLimitManager.enqueue(fn, 'openrouter-free', lastUserMsgForRl, priority, 3, true);
-        } catch (err) {
-          console.warn(`Stream Fallback: OpenRouter (${orModel}) failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
-        }
-      }
-    }
-
-    // 6. Try Mistral AI across candidate models
-    if (MISTRAL_API_KEY) {
-      const mistralCandidates = Array.from(new Set([
-        MISTRAL_MODEL,
-        'mistral-small-latest',
-        'open-mistral-nemo',
-        'open-mistral-7b'
-      ].filter(Boolean)));
-
-      for (const mistralModel of mistralCandidates) {
-        try {
-          const fn = async () => {
-            const response = await axios.post(MISTRAL_API_URL, { model: mistralModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-              headers: { 'Authorization': `Bearer ${MISTRAL_API_KEY}`, 'Content-Type': 'application/json' },
-              responseType: 'stream', timeout: 6000
-            });
-            return response.data;
-          };
-          return await rateLimitManager.enqueue(fn, 'mistral-small', lastUserMsgForRl, priority, 3, true);
-        } catch (err) {
-          console.warn(`Stream Fallback: Mistral AI (${mistralModel}) failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
-        }
-      }
-    }
-
-    // 7. Try SiliconFlow across candidate models
-    if (SILICONFLOW_API_KEY) {
-      const siliconCandidates = Array.from(new Set([
-        SILICONFLOW_MODEL,
-        'Qwen/Qwen2.5-7B-Instruct',
-        'deepseek-ai/DeepSeek-V3',
-        'meta-llama/Meta-Llama-3.1-8B-Instruct'
-      ].filter(Boolean)));
-
-      for (const sfModel of siliconCandidates) {
-        try {
-          const fn = async () => {
-            const response = await axios.post(SILICONFLOW_API_URL, { model: sfModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-              headers: { 'Authorization': `Bearer ${SILICONFLOW_API_KEY}`, 'Content-Type': 'application/json' },
-              responseType: 'stream', timeout: 6000
-            });
-            return response.data;
-          };
-          return await rateLimitManager.enqueue(fn, 'siliconflow-qwen', lastUserMsgForRl, priority, 3, true);
-        } catch (err) {
-          console.warn(`Stream Fallback: SiliconFlow (${sfModel}) failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
-        }
-      }
-    }
-
-    // 8. Try Z.ai across candidate endpoints and models
-    if (Z_AI_API_KEY) {
-      const zaiEndpointsToTry = zaiWorkingEndpoint ? [zaiWorkingEndpoint] : Z_AI_ENDPOINTS;
-      const zaiModelsToTry = zaiWorkingModel ? [zaiWorkingModel] : Array.from(new Set([Z_AI_MODEL, ...Z_AI_MODELS]));
-
-      for (const url of zaiEndpointsToTry) {
-        for (const targetModel of zaiModelsToTry) {
-          try {
-            const fn = async () => {
-              const response = await axios.post(url, { model: targetModel, messages: finalMessages, stream: true, max_tokens: chatMaxTokens, temperature: 0.7 }, {
-                headers: { 'Authorization': `Bearer ${Z_AI_API_KEY}`, 'Content-Type': 'application/json' },
-                responseType: 'stream', timeout: 6000
-              });
-              return response.data;
-            };
-            const stream = await rateLimitManager.enqueue(fn, 'zai-glm-5-flash', lastUserMsgForRl, priority, 3, true);
-            zaiWorkingEndpoint = url;
-            zaiWorkingModel = targetModel;
-            return stream;
-          } catch (err) {
-            console.warn(`Stream Fallback: Z.ai (${targetModel} @ ${url}) failed.`, err.response?.data?.error?.message || err.response?.data || err.message);
-          }
-        }
-      }
+    for (const p of openAiProviders) {
+      const stream = await tryOpenAiProviderStream({
+        ...p,
+        finalMessages,
+        chatMaxTokens,
+        lastUserMsgForRl,
+        priority
+      });
+      if (stream) return stream;
     }
 
     // 11. Try Gemini direct with native SSE streaming and zero-thinking budget
@@ -3518,8 +2285,6 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
     }
 
     // 12. Final Resilient Fallback: Route through application-wide unified callAiWithFallback
-    // Guarantees DawaGPT follows the exact same resilient multi-provider AI API fallback
-    // as all other working AI features (Adherence Coach, Wellness Insight, Safety checks, etc.)
     try {
       console.log("Stream Fallback: Cascading DawaGPT to unified AI API fallback (callAiWithFallback)...");
       const fallbackResult = await callAiWithFallback(finalMessages, {
@@ -3529,26 +2294,17 @@ export const streamChatWithDawaGPT = async (params, priority = 'high') => {
         isComplex
       });
 
-      let displayText = "";
-      let suggestions = [];
-      let source = "AI Fallback";
-      let action = null;
-
-      if (typeof fallbackResult === 'object' && fallbackResult !== null) {
-        displayText = fallbackResult.text || fallbackResult.message || fallbackResult.response || "";
-        if (Array.isArray(fallbackResult.suggestions)) suggestions = fallbackResult.suggestions;
-        if (fallbackResult.source) source = fallbackResult.source;
-        if (fallbackResult.action) action = fallbackResult.action;
-      } else {
-        displayText = String(fallbackResult || "");
-      }
+      const isObj = typeof fallbackResult === 'object' && fallbackResult !== null;
+      const displayText = isObj
+        ? (fallbackResult.text || fallbackResult.message || fallbackResult.response || "")
+        : String(fallbackResult || "");
 
       if (displayText) {
         return createFakeStream({
           text: displayText,
-          suggestions,
-          source,
-          action
+          suggestions: isObj && Array.isArray(fallbackResult.suggestions) ? fallbackResult.suggestions : [],
+          source: (isObj && fallbackResult.source) || "AI Fallback",
+          action: (isObj && fallbackResult.action) || null
         });
       }
     } catch (unifiedCascadeErr) {
@@ -3658,69 +2414,13 @@ function userAskedForAllMeds(text) {
   return keywords.some(keyword => lower.includes(keyword));
 }
 
-export const LOW_STOCK_THRESHOLD = 3;     // Days: amber warning (3 days)
-export const CRITICAL_STOCK_THRESHOLD = 2; // Days: red critical alert (<= 2 days)
-
-/**
- * Calculates total daily units consumed for a medicine based on dosage per dose,
- * daily frequency, and active scheduled reminders — matching Med Vault's exact formula.
- */
-export function getServerDailyDoseRate(medicine, reminders = []) {
-  const { id, name, dosagePerDose, frequencyPerDay } = medicine;
-  const doseVal = dosagePerDose && dosagePerDose > 0 ? dosagePerDose : 1;
-  const freqVal = frequencyPerDay && frequencyPerDay > 0 ? frequencyPerDay : 1;
-  const defaultDailyRate = doseVal * freqVal;
-
-  // Find all enabled reminders for this medicine (matching ID or case-insensitive name)
-  const medReminders = (reminders || []).filter(
-    (r) =>
-      r.enabled !== false &&
-      (r.medicineId === id ||
-        (!r.medicineId && r.medicineName?.trim().toLowerCase() === name?.trim().toLowerCase()))
-  );
-
-  if (medReminders.length === 0) {
-    return defaultDailyRate;
-  }
-
-  let dailyDoseSum = 0;
-
-  for (const rem of medReminders) {
-    const parsedRemDose = parseFloat(rem.dose);
-    const slotDose =
-      dosagePerDose && dosagePerDose > 0
-        ? dosagePerDose
-        : !isNaN(parsedRemDose) && parsedRemDose > 0
-        ? parsedRemDose
-        : 1;
-
-    const timesCount = (rem.time || "")
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean).length || 1;
-
-    if (rem.repeatSchedule === "daily") {
-      dailyDoseSum += slotDose * timesCount;
-    } else if (rem.repeatSchedule === "custom") {
-      const daysCount =
-        rem.repeatDays && rem.repeatDays.length > 0 ? rem.repeatDays.length : 7;
-      dailyDoseSum += (slotDose * timesCount * daysCount) / 7;
-    } else if (rem.repeatSchedule === "weekly") {
-      const daysCount =
-        rem.repeatDays && rem.repeatDays.length > 0 ? rem.repeatDays.length : 1;
-      dailyDoseSum += (slotDose * timesCount * daysCount) / 7;
-    } else {
-      dailyDoseSum += slotDose * timesCount;
-    }
-  }
-
-  return dailyDoseSum > 0 ? dailyDoseSum : defaultDailyRate;
-}
+const LOW_STOCK_THRESHOLD = 3;     // Days: amber warning (3 days)
+const CRITICAL_STOCK_THRESHOLD = 2; // Days: red critical alert (<= 2 days)
 
 /**
  * Calculates doses remaining and days remaining for a medicine — matching Med Vault's exact logic.
  */
-export function calculateServerRefillStatus(medicine, reminders = []) {
+function calculateServerRefillStatus(medicine, reminders = []) {
   const { id, name, currentQuantity, totalQuantity, dosagePerDose, frequencyPerDay, unit } = medicine;
   const stockQty = currentQuantity !== undefined ? currentQuantity : totalQuantity;
 
@@ -3791,7 +2491,7 @@ export function calculateServerRefillStatus(medicine, reminders = []) {
 /**
  * Builds rich, unambiguous Med Vault stock summary for DawaGPT context.
  */
-export function buildMedVaultSummary(medicines = [], reminders = []) {
+function buildMedVaultSummary(medicines = [], reminders = []) {
   const trackedMeds = (medicines || []).filter(
     (m) => m.currentQuantity !== undefined || m.totalQuantity !== undefined
   );
@@ -3815,7 +2515,7 @@ export function buildMedVaultSummary(medicines = [], reminders = []) {
 /**
  * Resolves exact age in years from either a numeric age or a date-of-birth string.
  */
-export function calculateAge(dobOrAge) {
+function calculateAge(dobOrAge) {
   if (dobOrAge === null || dobOrAge === undefined || dobOrAge === '') return null;
   if (typeof dobOrAge === 'number' && !isNaN(dobOrAge)) {
     return (dobOrAge >= 0 && dobOrAge <= 150) ? dobOrAge : null;
@@ -3841,7 +2541,7 @@ export function calculateAge(dobOrAge) {
 /**
  * Extracts explicit age or demographic keywords from a user query.
  */
-export function extractAgeFromQuery(query) {
+function extractAgeFromQuery(query) {
   if (!query || typeof query !== 'string') return null;
   const lower = query.toLowerCase();
 
@@ -3867,7 +2567,7 @@ export function extractAgeFromQuery(query) {
  * providing read access to demographics, conditions, allergies, clinical notes,
  * assigned medications, and reminders without duplicate account owner bloat.
  */
-export function buildFamilyHubSummary(
+function buildFamilyHubSummary(
   patients = [],
   medicines = [],
   reminders = [],
@@ -3901,7 +2601,7 @@ export function buildFamilyHubSummary(
   }).join("\n");
 }
 
-export async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isStreaming = false, isComplex = true, selectedPatientId = null, currentPage = null }) {
+async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLogs, reminders, wellnessLogs, vitalitySummary, patients, isStreaming = false, isComplex = true, selectedPatientId = null, currentPage = null }) {
   // Thinking models feature 128k-1M context windows — allow rich conversational history (up to 20 messages)
   const recentMessages = messages.slice(-20);
   const lastUserMsg = recentMessages.filter(m => m.role === 'user').pop()?.text || recentMessages.filter(m => m.role === 'user').pop()?.content || "";
@@ -4332,7 +3032,7 @@ export const testZaiProvider = async () => {
 /**
  * Diagnostic test specifically for NVIDIA NIM provider
  */
-export const testNvidiaNimProvider = async () => {
+const testNvidiaNimProvider = async () => {
   if (!NVIDIA_API_KEY) {
     return {
       status: 'not_configured',
@@ -4378,7 +3078,7 @@ export const testNvidiaNimProvider = async () => {
 /**
  * Diagnostic test specifically for SiliconFlow provider
  */
-export const testSiliconFlowProvider = async () => {
+const testSiliconFlowProvider = async () => {
   if (!SILICONFLOW_API_KEY) {
     return {
       status: 'not_configured',

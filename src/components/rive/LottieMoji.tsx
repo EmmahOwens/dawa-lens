@@ -191,5 +191,3 @@ export const LottieMoji: React.FC<LottieMojiProps> = ({
     </motion.div>
   );
 };
-
-export default LottieMoji;

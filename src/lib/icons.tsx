@@ -15,7 +15,6 @@ import {
   AddUser as IAddUser,
   ArrowLeft as IArrowLeft,
   ArrowRight as IArrowRight,
-  Bookmark as IBookmark,
   Buy as IBuy,
   Calendar as ICalendar,
   Camera as ICamera,
@@ -32,7 +31,6 @@ import {
   Discovery as IDiscovery,
   Document as IDocument,
   Download as IDownload,
-  Filter as IFilter,
   Graph as IGraph,
   Heart as IHeart,
   Hide as IHide,
@@ -158,36 +156,36 @@ export const Home = iconly(IHome);
 export const Camera = iconly(ICamera);
 export const SwitchCamera = iconly(ICamera); // repurposed; Iconly has no SwitchCamera
 export const Bell = iconly(INotification);
-export const BellIcon = iconly(INotification);
-export const BellPlus = iconly(INotification);
+const BellIcon = iconly(INotification);
+const BellPlus = iconly(INotification);
 export const History = iconly(ITimeSquare);
 export const Settings = iconly(ISetting);
 export const Users = iconly(ITwoUsers);
 export const User = iconly(IUser);
 export const UserRound = iconly(IUser);
-export const UserSquare2 = iconly(IUser);
+const UserSquare2 = iconly(IUser);
 export const UserPlus = iconly(IAddUser);
 export const Clock = iconly(ITimeCircle);
-export const CalendarClock = iconly(ICalendar);
+const CalendarClock = iconly(ICalendar);
 export const Calendar = iconly(ICalendar);
-export const CalendarIcon = iconly(ICalendar);
+const CalendarIcon = iconly(ICalendar);
 export const Search = iconly(ISearch);
 export const Heart = iconly(IHeart);
-export const Heart2 = iconly(IHeart);
+const Heart2 = iconly(IHeart);
 export const FileText = iconly(IDocument);
 export const Download = iconly(IDownload);
-export const PaperDownload = iconly(IPaperDownload);
+const PaperDownload = iconly(IPaperDownload);
 export const Upload = iconly(IUpload);
 export const Send = iconly(ISend);
 export const Mail = iconly(IMessage);
-export const MessageSquare = iconly(IChat);
+const MessageSquare = iconly(IChat);
 export const Lock = iconly(ILock);
 export const Eye = iconly(IShow);
 export const EyeOff = iconly(IHide);
 export const Shield = iconly(IShieldDone);
 export const ShieldCheck = iconly(IShieldDone);
 export const ShieldAlert = iconly(IShieldFail);
-export const ShieldQuestion = iconly(IShieldFail);
+const ShieldQuestion = iconly(IShieldFail);
 export const Siren = iconly(IDanger);
 export const ArrowLeft = iconly(IArrowLeft);
 export const ArrowRight = iconly(IArrowRight);
@@ -195,7 +193,7 @@ export const ChevronLeft = iconly(IChevronLeft);
 export const ChevronRight = iconly(IChevronRight);
 export const ChevronDown = iconly(IChevronDown);
 export const ChevronUp = iconly(IChevronUp);
-export const MoreHorizontal = iconly(IMoreCircle);
+const MoreHorizontal = iconly(IMoreCircle);
 export const Plus = iconly(IPlus);
 export const PlusCircle = iconly(IPlus);
 export const CopyPlus = iconly(IPaperPlus);
@@ -205,9 +203,9 @@ export const CloseSquare = iconly(ICloseSquare);
 export const Check = iconly(ITickSquare);
 export const CheckCircle = iconly(ITickSquare);
 export const CheckCircle2 = iconly(ITickSquare);
-export const ClipboardCheck = iconly(ITickSquare);
-export const Star = iconly(IStar);
-export const Trophy = iconly(IStar); // closest Iconly match
+const ClipboardCheck = iconly(ITickSquare);
+const Star = iconly(IStar);
+const Trophy = iconly(IStar); // closest Iconly match
 export const Plane = iconly(ISend);
 export const ExternalLink = iconly(IDiscovery);
 export const MapPin = iconly(ILocation);
@@ -224,10 +222,8 @@ export const TrendingDown = iconly(IGraph);
 export const Info = iconly(IInfoCircle);
 export const AlertCircle = iconly(IDanger);
 export const AlertTriangle = iconly(IDanger);
-export const Filter = iconly(IFilter);
 export const Package = iconly(IBuy);
 export const Package2 = iconly(IBuy);
-export const Flag = iconly(IBookmark);
 export const PanelLeft = iconly(ICategory);
 export const Zap = iconly(IScan);
 export const WifiOff = svg(
@@ -491,7 +487,7 @@ export const ThumbsDown = svg(
   </>
 );
 
-export const Dot = svg(
+const Dot = svg(
   <circle cx="12.1" cy="12.1" r="1" fill="currentColor" />
 );
 
@@ -499,7 +495,7 @@ export const Circle = svg(
   <circle cx="12" cy="12" r="10" />
 );
 
-export const GripVertical = svg(
+const GripVertical = svg(
   <>
     <circle cx="9" cy="12" r="1" fill="currentColor" />
     <circle cx="9" cy="5" r="1" fill="currentColor" />
@@ -711,6 +707,17 @@ export const Bike = svg(
   </>
 );
 
+/** Human figure walking / Pedestrian */
+const Footprints = svg(
+  <>
+    <circle cx="13" cy="4" r="1.2" />
+    <path d="m7 21 3-4 1-3" />
+    <path d="m16 21-2-4-3-3 1-6" />
+    <path d="m6 12 2-3 4-1 3 3 3 1" />
+  </>
+);
+export const Walk = Footprints;
+
 /** Layers / Map Basemap Switcher */
 export const Layers = svg(
   <>
@@ -734,7 +741,7 @@ export const Play = svg(
 );
 
 /** Help / Question mark circle */
-export const HelpCircle = svg(
+const HelpCircle = svg(
   <>
     <circle cx="12" cy="12" r="10" />
     <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
@@ -833,8 +840,3 @@ export const VolumeX = svg(
     <line x1="16" y1="9" x2="22" y2="15" />
   </>
 );
-
-// ─── Re-exports / extras ─────────────────────────────────────────────────────
-
-/** Alias kept for files that use `import { LucideIcon }` as a type */
-export type { IconType as IconComponent };

@@ -29,14 +29,14 @@ export function todayAt(hhmm: string, dayOffset = 0, baseDate: Date = new Date()
  * Reminders sharing the same patient and medicine (either by normalized name or medicineId)
  * belong to the same medication regimen.
  */
-export function getMedicationKey(r: Reminder): string {
+function getMedicationKey(r: Reminder): string {
   const patientKey = (r.patientId || "owner").trim();
   const medId = (r.medicineId || "").trim();
   const cleanName = (r.medicineName || "").trim().toLowerCase();
   return `${patientKey}:${medId || cleanName || r.id}`;
 }
 
-export function getLogMinutes(log: DoseLog): number | null {
+function getLogMinutes(log: DoseLog): number | null {
   if (log.scheduledTime) {
     const trimmed = log.scheduledTime.trim();
     if (/^\d{1,2}:\d{2}$/.test(trimmed)) {

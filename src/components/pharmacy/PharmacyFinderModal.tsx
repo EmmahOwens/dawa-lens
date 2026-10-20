@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Car,
   Bike,
+  Walk,
   Search,
   RefreshCw,
   Info,
@@ -25,7 +26,6 @@ import {
   ShieldCheck,
   Phone,
   ArrowRight,
-  Filter,
   Location,
   WifiOff,
   Pill,
@@ -122,7 +122,6 @@ function Top5Card({
 function SelectedCard({
   outlet,
   route,
-  isRouteLoading,
   transportMode,
   medicine,
   onRefillLogged,
@@ -134,7 +133,6 @@ function SelectedCard({
 }: {
   outlet: NdaPharmacy;
   route: ReturnType<typeof useNearbyPharmacies>["route"];
-  isRouteLoading: boolean;
   transportMode: PharmacyTransportMode;
   medicine?: Medicine | null;
   onRefillLogged?: (m: Medicine, p: NdaPharmacy) => void;
@@ -314,6 +312,7 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
     isCustomLocation,
     isUsingPreviousLocation,
     isNetworkIssue,
+    isGpsIssue,
     geoStatus,
     requestLocation,
     // Pharmacies
@@ -664,7 +663,7 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Navigation className="size-3.5" /> Walk
+                  <Walk className="size-3.5" /> Walk
                 </button>
               </div>
             </div>
@@ -686,7 +685,7 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                       <WifiOff className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
                       <span className="truncate">
                         {isUsingPreviousLocation
-                          ? "Network issue detected. Using your previous location (offline mode)."
+                          ? "Network issue detected. Using your previously stored location (offline mode)."
                           : "Network issue detected. Defaulting to Kampala area."}
                       </span>
                     </div>
@@ -695,13 +694,13 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
                       Retry GPS
                     </Button>
                   </div>
-                ) : (geoStatus === "denied" || geoStatus === "error") && (
+                ) : (geoStatus === "denied" || geoStatus === "error" || isGpsIssue) && (
                   <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <Location className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
                       <span className="truncate">
                         {isUsingPreviousLocation
-                          ? "Location disabled. Showing your previous location."
+                          ? "GPS issue detected. Using your previously stored location."
                           : "Location disabled. Showing default Kampala area."}
                       </span>
                     </div>
@@ -903,7 +902,6 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
               <SelectedCard
                 outlet={selectedPharmacy}
                 route={route}
-                isRouteLoading={isRouteLoading}
                 transportMode={transportMode}
                 medicine={selectedMed}
                 onRefillLogged={(m, p) => onRefillLogged?.(m, p)}

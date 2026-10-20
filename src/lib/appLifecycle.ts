@@ -24,13 +24,6 @@ const onBackgroundCallbacks: LifecycleCallback[] = [];
 const onNetworkChangeCallbacks: ((connected: boolean) => void)[] = [];
 
 /**
- * Check if the app is currently in the foreground.
- */
-export function isForeground(): boolean {
-  return foreground;
-}
-
-/**
  * Check if the device has a network connection.
  */
 export function hasNetwork(): boolean {
@@ -46,18 +39,6 @@ export function onForeground(cb: LifecycleCallback): () => void {
   return () => {
     const idx = onForegroundCallbacks.indexOf(cb);
     if (idx !== -1) onForegroundCallbacks.splice(idx, 1);
-  };
-}
-
-/**
- * Register a callback for when the app goes to the background.
- * Returns an unsubscribe function.
- */
-export function onBackground(cb: LifecycleCallback): () => void {
-  onBackgroundCallbacks.push(cb);
-  return () => {
-    const idx = onBackgroundCallbacks.indexOf(cb);
-    if (idx !== -1) onBackgroundCallbacks.splice(idx, 1);
   };
 }
 

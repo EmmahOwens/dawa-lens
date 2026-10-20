@@ -13,7 +13,7 @@ const getVoyageApiKey = () => process.env.VOYAGEAI_API || process.env.VOYAGE_API
  * @param {string} text - Text to embed.
  * @returns {Promise<number[]|null>} Array of floats or null.
  */
-export const generateVoyageEmbedding = async (text) => {
+const generateVoyageEmbedding = async (text) => {
   const apiKey = getVoyageApiKey();
   if (!apiKey || !text) return null;
 
@@ -46,7 +46,7 @@ export const generateVoyageEmbedding = async (text) => {
  * @param {string} text - Text to embed.
  * @returns {Promise<number[]|null>} Array of floats (768-dim) or null.
  */
-export const generateGeminiEmbedding = async (text) => {
+const generateGeminiEmbedding = async (text) => {
   const apiKey = getGeminiApiKey();
   if (!apiKey || !text) return null;
 
@@ -67,7 +67,7 @@ export const generateGeminiEmbedding = async (text) => {
 /**
  * Diagnostic test specifically for Voyage AI provider
  */
-export const testVoyageAiProvider = async () => {
+const testVoyageAiProvider = async () => {
   const apiKey = getVoyageApiKey();
   if (!apiKey) {
     return {

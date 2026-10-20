@@ -122,5 +122,3 @@ export const RiveAnimation: React.FC<RiveAnimationProps> = ({
     </div>
   );
 };
-
-export default RiveAnimation;

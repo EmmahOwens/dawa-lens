@@ -132,7 +132,7 @@ describe("MedVaultPage - Location Permission Dialog for Find NDA Pharmacy", () =
     expect(screen.queryByText(/Enable Location Services/i)).not.toBeInTheDocument();
 
     // Click "Find NDA Pharmacy" button on the tracked medicine card
-    const findBtn = screen.getByRole("button", { name: /Find NDA Pharmacy/i });
+    const findBtn = screen.getByTitle("Find nearest NDA-licensed pharmacies to refill");
     fireEvent.click(findBtn);
 
     // Permission dialog box must appear requiring location services
@@ -155,8 +155,8 @@ describe("MedVaultPage - Location Permission Dialog for Find NDA Pharmacy", () =
 
     render(<MedVaultPage />);
 
-    // Click "Find NDA Pharmacy"
-    const findBtn = screen.getByRole("button", { name: /Find NDA Pharmacy/i });
+    // Click "Find NDA Pharmacy" on tracked medicine card
+    const findBtn = screen.getByTitle("Find nearest NDA-licensed pharmacies to refill");
     fireEvent.click(findBtn);
 
     // Confirm dialog
@@ -178,7 +178,7 @@ describe("MedVaultPage - Location Permission Dialog for Find NDA Pharmacy", () =
     render(<MedVaultPage />);
 
     // Click "Find NDA Pharmacy"
-    const findBtn = screen.getByRole("button", { name: /Find NDA Pharmacy/i });
+    const findBtn = screen.getByTitle("Find nearest NDA-licensed pharmacies to refill");
     fireEvent.click(findBtn);
 
     expect(screen.getByText(/Enable Location Services/i)).toBeInTheDocument();
@@ -197,7 +197,7 @@ describe("MedVaultPage - Location Permission Dialog for Find NDA Pharmacy", () =
     testState.geoStatus = "granted";
     render(<MedVaultPage />);
 
-    const findBtn = screen.getByRole("button", { name: /Find NDA Pharmacy/i });
+    const findBtn = screen.getByTitle("Find nearest NDA-licensed pharmacies to refill");
     fireEvent.click(findBtn);
 
     // Permission dialog should NOT appear
@@ -211,19 +211,40 @@ describe("MedVaultPage - Location Permission Dialog for Find NDA Pharmacy", () =
     testState.geoStatus = "denied";
     render(<MedVaultPage />);
 
-    const headerBtn = screen.getByRole("button", { name: /^NDA Pharmacies$/i });
-    fireEvent.click(headerBtn);
+    const headerBtns = screen.getAllByRole("button", { name: /NDA Pharmacies/i });
+    fireEvent.click(headerBtns[0]);
 
     expect(screen.getByText(/Enable Location Services/i)).toBeInTheDocument();
   });
 
-  it("shows location dialog when selecting 'Top 5 NDA Pharmacies' banner button with ungranted location", () => {
+  it("shows location dialog when selecting 'Nearby Pharmacies' hero banner button with ungranted location", () => {
     testState.geoStatus = "denied";
     render(<MedVaultPage />);
 
-    const bannerBtn = screen.getByRole("button", { name: /^Top 5 NDA Pharmacies$/i });
+    const bannerBtn = screen.getByRole("button", { name: /Nearby Pharmacies/i });
     fireEvent.click(bannerBtn);
 
     expect(screen.getByText(/Enable Location Services/i)).toBeInTheDocument();
+  });
+
+  it("still opens pharmacy finder modal using previous location fallback if location request fails on confirm", async () => {
+    testState.geoStatus = "idle";
+    mockRequestLocation.mockImplementation(async () => {
+      testState.geoStatus = "error";
+      throw new Error("GPS signal unavailable");
+    });
+
+    render(<MedVaultPage />);
+
+    const findBtn = screen.getByTitle("Find nearest NDA-licensed pharmacies to refill");
+    fireEvent.click(findBtn);
+
+    const allowBtn = screen.getByRole("button", { name: /Allow Location/i });
+    fireEvent.click(allowBtn);
+
+    await waitFor(() => {
+      expect(mockRequestLocation).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId("pharmacy-finder-modal")).toBeInTheDocument();
+    });
   });
 });

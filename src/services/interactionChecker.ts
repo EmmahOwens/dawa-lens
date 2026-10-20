@@ -11,7 +11,7 @@ import {
   isSameDrugSubstance,
   resolveCanonicalDrug,
 } from "./clinicalInteractionsData";
-import { Medicine } from "../contexts/AppContext";
+import type { Medicine } from "../contexts/AppContext";
 
 const NLM_API_BASE = "https://rxnav.nlm.nih.gov/REST";
 

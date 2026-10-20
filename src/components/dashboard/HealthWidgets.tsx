@@ -13,7 +13,7 @@ interface HealthWidgetsProps {
   onAddLog: (type: "food" | "symptom", data: any) => void;
 }
 
-export interface MoodOption {
+interface MoodOption {
   value: number;
   icon: React.ComponentType<{ className?: string }>;
   emoji: string;
