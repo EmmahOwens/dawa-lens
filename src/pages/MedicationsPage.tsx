@@ -764,9 +764,12 @@ export default function MedicationsPage() {
             setSelectedMed(null);
             setIsSheetOpen(true);
           }}
-          className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-5 py-2.5 rounded-full text-[13px] font-semibold hover:brightness-110 active:scale-95 transition-all shadow-md shadow-blue-500/25"
+          aria-label="Add Medicine"
+          title="Add Medicine"
+          className="h-9 w-9 sm:h-auto sm:w-auto p-0 sm:px-5 sm:py-2.5 inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white rounded-full text-[13px] font-semibold hover:brightness-110 active:scale-95 transition-all shadow-md shadow-blue-500/25 flex-shrink-0"
         >
-          <Plus size={15} /> Add Medicine
+          <Plus size={18} className="sm:w-[15px] sm:h-[15px]" />
+          <span className="hidden sm:inline">Add Medicine</span>
         </button>
       </div>
 

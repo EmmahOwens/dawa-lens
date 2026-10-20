@@ -560,8 +560,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BottomNav.tsx": {
-    "mtime": 1792508739.1796613,
-    "ast_hash": "b6ca6f5d46c0c5bbde8569a2753029f3",
+    "mtime": 1792509483.6539533,
+    "ast_hash": "43bbdf38b3ca6dd50d02c8426271bc61",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ConfirmationDialog.test.tsx": {
@@ -2240,8 +2240,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/MedicationsPage.tsx": {
-    "mtime": 1791365086.3742566,
-    "ast_hash": "f0638bdb4b0c2dc32f73b0b04a1414d3",
+    "mtime": 1792509718.2955887,
+    "ast_hash": "b75d1439cfcd6359915889f3dde4a752",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useNetworkStatus.ts": {
