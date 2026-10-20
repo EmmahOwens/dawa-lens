@@ -19,6 +19,7 @@ import { initLifecycle, onForeground, hasNetwork } from "@/lib/appLifecycle";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import OfflineOverlay from "@/components/OfflineOverlay";
 import DawaGPT from "@/components/DawaGPT";
+import DawaGPTOfflineModal from "@/components/DawaGPTOfflineModal";
 import { Capacitor } from "@capacitor/core";
 import { Camera } from "@capacitor/camera";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -91,6 +92,19 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 }
 
 import { usePatientScope } from "@/hooks/usePatientScope";
+
+function DawaGPTRoot() {
+  const { isDawaGPTOfflineModalOpen, setIsDawaGPTOfflineModalOpen } = useApp();
+  return (
+    <>
+      <DawaGPT />
+      <DawaGPTOfflineModal
+        isOpen={isDawaGPTOfflineModalOpen}
+        onClose={() => setIsDawaGPTOfflineModalOpen(false)}
+      />
+    </>
+  );
+}
 
 const AppContent = () => {
   const {
@@ -299,7 +313,7 @@ const App = () => {
                 <OfflineOverlay />
                 <Toaster richColors closeButton position="top-center" />
                 <ErrorBoundary name="DawaGPT">
-                  <DawaGPT />
+                  <DawaGPTRoot />
                 </ErrorBoundary>
                 {showUpdateModal && Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android" && (
                   <StoreUpdateModal

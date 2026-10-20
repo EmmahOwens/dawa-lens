@@ -13,7 +13,7 @@ interface AIInsightCardProps {
 }
 
 export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
-  const { wellnessLogs, medicines, doseLogs, setIsDawaGPTOpen } = useApp();
+  const { wellnessLogs, medicines, doseLogs, openDawaGPTWithPrompt } = useApp();
 
   const today = new Date().toDateString();
 
@@ -184,7 +184,7 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
 
         {/* Apple Pill CTA */}
         <button
-          onClick={() => setIsDawaGPTOpen(true)}
+          onClick={() => openDawaGPTWithPrompt()}
           className="inline-flex items-center gap-1.5 h-9 px-5 rounded-full bg-primary text-primary-foreground text-[13px] font-normal hover:brightness-105 active:scale-95 transition-all"
         >
           <span>Ask DawaGPT</span>

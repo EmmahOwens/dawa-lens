@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { aiApi } from "@/services/api";
 import { generateLocalClinicalAssessment } from "@/services/clinicalAssessmentService";
+import { storage } from "@/lib/storage";
 import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
 import { LottieMoji } from "@/components/rive/LottieMoji";
 import { RiveMoji } from "@/components/rive/RiveMoji";
@@ -136,23 +137,43 @@ export default function WellnessPage() {
 
   const fetchWellnessInsight = async (forceRefresh = false) => {
     if (!forceRefresh) {
-      const cached = (() => {
-        try {
-          const item = sessionStorage.getItem("dawa_wellness_page_insight");
-          return item ? JSON.parse(item) : null;
-        } catch {
-          return null;
+      try {
+        const item = sessionStorage.getItem("dawa_wellness_page_insight");
+        if (item) {
+          setInsight(JSON.parse(item));
+          return;
         }
-      })();
+      } catch {}
 
-      if (cached) {
-        setInsight(cached);
-        return;
-      }
+      try {
+        const persistentItem = await storage.getItem<string | null>("dawa_wellness_page_insight", null);
+        if (persistentItem) {
+          const parsed = JSON.parse(persistentItem);
+          setInsight(parsed);
+          try {
+            sessionStorage.setItem("dawa_wellness_page_insight", persistentItem);
+          } catch {}
+          return;
+        }
+      } catch {}
     }
 
     if (scopedWellnessLogs.length === 0 && scopedDoseLogs.length === 0 && scopedMedicines.length === 0) return;
     setInsightLoading(true);
+
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+    if (isOffline) {
+      const local = generateLocalClinicalAssessment(scopedDoseLogs, scopedWellnessLogs, scopedMedicines);
+      setInsight(local);
+      try {
+        const str = JSON.stringify(local);
+        sessionStorage.setItem("dawa_wellness_page_insight", str);
+        await storage.setItem("dawa_wellness_page_insight", str);
+      } catch {}
+      setInsightLoading(false);
+      return;
+    }
+
     try {
       const res = await aiApi.getWellnessInsight({
         doseLogs: scopedDoseLogs,
@@ -177,15 +198,19 @@ export default function WellnessPage() {
         };
         setInsight(normalized);
         try {
-          sessionStorage.setItem("dawa_wellness_page_insight", JSON.stringify(normalized));
+          const str = JSON.stringify(normalized);
+          sessionStorage.setItem("dawa_wellness_page_insight", str);
+          await storage.setItem("dawa_wellness_page_insight", str);
         } catch (e) {
-          console.error("Failed to save wellness page insight to sessionStorage", e);
+          console.error("Failed to save wellness page insight to storage", e);
         }
       } else {
         const local = generateLocalClinicalAssessment(scopedDoseLogs, scopedWellnessLogs, scopedMedicines);
         setInsight(local);
         try {
-          sessionStorage.setItem("dawa_wellness_page_insight", JSON.stringify(local));
+          const str = JSON.stringify(local);
+          sessionStorage.setItem("dawa_wellness_page_insight", str);
+          await storage.setItem("dawa_wellness_page_insight", str);
         } catch {}
       }
     } catch (err) {
@@ -193,7 +218,9 @@ export default function WellnessPage() {
       const local = generateLocalClinicalAssessment(scopedDoseLogs, scopedWellnessLogs, scopedMedicines);
       setInsight(local);
       try {
-        sessionStorage.setItem("dawa_wellness_page_insight", JSON.stringify(local));
+        const str = JSON.stringify(local);
+        sessionStorage.setItem("dawa_wellness_page_insight", str);
+        await storage.setItem("dawa_wellness_page_insight", str);
       } catch {}
     } finally {
       setInsightLoading(false);
@@ -204,31 +231,44 @@ export default function WellnessPage() {
     fetchWellnessInsight();
   }, [scopedWellnessLogs, scopedDoseLogs, scopedMedicines]);
 
-  const fetchNutritionalGuidance = async () => {
-    const cached = (() => {
+  const fetchNutritionalGuidance = async (forceRefresh = false) => {
+    if (!forceRefresh) {
       try {
         const item = sessionStorage.getItem("dawa_nutritional_guidance");
-        return item ? JSON.parse(item) : null;
-      } catch {
-        return null;
-      }
-    })();
+        if (item) {
+          setGuidance(JSON.parse(item));
+          return;
+        }
+      } catch {}
 
-    if (cached) {
-      setGuidance(cached);
-      return;
+      try {
+        const persistentItem = await storage.getItem<string | null>("dawa_nutritional_guidance", null);
+        if (persistentItem) {
+          const parsed = JSON.parse(persistentItem);
+          setGuidance(parsed);
+          try {
+            sessionStorage.setItem("dawa_nutritional_guidance", persistentItem);
+          } catch {}
+          return;
+        }
+      } catch {}
     }
 
     if (scopedMedicines.length === 0) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      return;
+    }
     setGuidanceLoading(true);
     try {
       const res = await aiApi.getNutritionalGuidance({ medicines: scopedMedicines });
       if (res) {
         setGuidance(res);
         try {
-          sessionStorage.setItem("dawa_nutritional_guidance", JSON.stringify(res));
+          const str = JSON.stringify(res);
+          sessionStorage.setItem("dawa_nutritional_guidance", str);
+          await storage.setItem("dawa_nutritional_guidance", str);
         } catch (e) {
-          console.error("Failed to save nutritional guidance to sessionStorage", e);
+          console.error("Failed to save nutritional guidance to storage", e);
         }
       }
     } catch (err) {

@@ -33,7 +33,13 @@ export type OfflineOpType =
   | "delete-dose-log"
   | "add-medicine"
   | "update-medicine"
-  | "delete-medicine";
+  | "delete-medicine"
+  | "add-patient"
+  | "update-patient"
+  | "delete-patient"
+  | "add-wellness-log"
+  | "delete-wellness-log"
+  | "update-profile";
 
 export interface OfflineOp {
   /** A stable client-side ID so we don't replay the same op twice. */
@@ -213,7 +219,9 @@ async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
     }
 
     case "add-reminder":
-    case "add-medicine": {
+    case "add-medicine":
+    case "add-patient":
+    case "add-wellness-log": {
       // Use setDoc with the locally generated ID so the entity stays stable
       // across offline → online transitions. addDoc would create a new ID.
       if (!op.data) throw new Error("Missing data for add op");
@@ -223,7 +231,9 @@ async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
 
     case "update-reminder":
     case "update-dose-log":
-    case "update-medicine": {
+    case "update-medicine":
+    case "update-patient":
+    case "update-profile": {
       if (!op.data) throw new Error("Missing data for update op");
 
       // Timestamp-aware conflict resolution: prevent stale offline update from clobbering newer cloud data
@@ -251,7 +261,9 @@ async function replayOp(db: Firestore, op: OfflineOp): Promise<void> {
 
     case "delete-reminder":
     case "delete-medicine":
-    case "delete-dose-log": {
+    case "delete-dose-log":
+    case "delete-patient":
+    case "delete-wellness-log": {
       try {
         if (op.type === "delete-dose-log") {
           try {

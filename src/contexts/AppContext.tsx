@@ -412,6 +412,8 @@ type AppContextType = {
   isInitializing: boolean;
   isDawaGPTOpen: boolean;
   setIsDawaGPTOpen: (v: boolean) => void;
+  isDawaGPTOfflineModalOpen: boolean;
+  setIsDawaGPTOfflineModalOpen: (v: boolean) => void;
   dawaGPTInitialPrompt: string | null;
   setDawaGPTInitialPrompt: (prompt: string | null) => void;
   openDawaGPTWithPrompt: (prompt?: string) => void;
@@ -564,21 +566,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadLocal("med_userId", null)
   );
   const [isDawaGPTOpen, setIsDawaGPTOpen] = useState(false);
+  const [isDawaGPTOfflineModalOpen, setIsDawaGPTOfflineModalOpen] = useState(false);
   const [dawaGPTInitialPrompt, setDawaGPTInitialPrompt] = useState<string | null>(null);
 
   const openDawaGPTWithPrompt = useCallback((prompt?: string) => {
     if (!isOnline) {
-      toast({
-        title: "DawaGPT Offline",
-        description: "DawaGPT requires an internet connection. Reminders remain accessible offline.",
-      });
+      setIsDawaGPTOfflineModalOpen(true);
       return;
     }
     if (prompt) {
       setDawaGPTInitialPrompt(prompt);
     }
     setIsDawaGPTOpen(true);
-  }, [isOnline, toast]);
+  }, [isOnline]);
   const [isIntelligenceCollapsed, setIntelligenceCollapsedState] = useState(
     () => loadLocal("med_intelligence_collapsed", false)
   );
@@ -2339,20 +2339,70 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const docRef = doc(db, "wellnessLogs", localId);
           await setDoc(docRef, logData);
         } catch (err) {
-          console.warn("[AppContext] Failed to sync wellness log (non-fatal):", err);
+          console.warn("[AppContext] Failed to sync wellness log, enqueuing:", err);
+          enqueueOp({
+            type: "add-wellness-log",
+            collection: "wellnessLogs",
+            docId: localId,
+            data: logData,
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
         }
+      } else {
+        enqueueOp({
+          type: "add-wellness-log",
+          collection: "wellnessLogs",
+          docId: localId,
+          data: logData,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
       }
     }
   };
 
   const deleteWellnessLog = async (id: string) => {
-    if (storageMode === "local") {
+    // 1. Remove locally instantly
+    try {
       await localPersistence.wellnessLogs.remove(id);
-      setWellnessLogs((p) => p.filter((l) => l.id !== id));
-    } else {
-      const docRef = doc(db, "wellnessLogs", id);
-      await deleteDoc(docRef);
-      // onSnapshot listener will auto-update state
+    } catch (e) {
+      console.warn("[AppContext] Failed to remove wellness log locally:", e);
+    }
+
+    // 2. Optimistic UI update & cache sync
+    setWellnessLogs((p) => {
+      const next = p.filter((l) => l.id !== id);
+      storage.setItem(CLOUD_CACHE_WELLNESS_KEY, next);
+      return next;
+    });
+
+    if (storageMode === "local") return;
+
+    if (currentUserId) {
+      if (isOnline) {
+        try {
+          const docRef = doc(db, "wellnessLogs", id);
+          await deleteDoc(docRef);
+        } catch (err) {
+          console.warn("[AppContext] Failed to delete wellness log from cloud, enqueuing:", err);
+          enqueueOp({
+            type: "delete-wellness-log",
+            collection: "wellnessLogs",
+            docId: id,
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
+        }
+      } else {
+        enqueueOp({
+          type: "delete-wellness-log",
+          collection: "wellnessLogs",
+          docId: id,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
+      }
     }
   };
 
@@ -2548,24 +2598,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       if (!currentUserId) throw new Error("Not logged in");
 
-      const docRef = doc(collection(db, "patients"));
-      const docId = docRef.id;
+      const localPatientId = `lpat-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
       const patientData = sanitizeFirestoreData({
         ...patient,
         managedBy: currentUserId,
         createdAt: new Date().toISOString(),
       });
-      const newPatient = { ...patientData, id: docId } as Patient;
+      const newPatient = { ...patientData, id: localPatientId } as Patient;
 
-      // Optimistic update
-      setPatients((prev) => [...prev, newPatient]);
-
+      // 1. Save locally instantly
       try {
-        await setDoc(docRef, patientData);
-      } catch (error) {
-        // Rollback optimistic update
-        setPatients((prev) => prev.filter((p) => p.id !== docId));
-        throw error;
+        await localPersistence.patients.create(newPatient);
+      } catch (e) {
+        console.warn("[AppContext] Failed to save patient locally:", e);
+      }
+
+      // 2. Optimistic UI update & cache sync
+      setPatients((prev) => {
+        const next = [...prev.filter((p) => p.id !== localPatientId), newPatient];
+        storage.setItem(CLOUD_CACHE_PATIENTS_KEY, next);
+        return next;
+      });
+
+      // 3. Sync to Firestore in background or queue if offline
+      if (isOnline) {
+        try {
+          const docRef = doc(db, "patients", localPatientId);
+          await setDoc(docRef, patientData);
+        } catch (err) {
+          console.warn("[AppContext] Failed to sync new patient, enqueuing:", err);
+          enqueueOp({
+            type: "add-patient",
+            collection: "patients",
+            docId: localPatientId,
+            data: patientData,
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
+        }
+      } else {
+        enqueueOp({
+          type: "add-patient",
+          collection: "patients",
+          docId: localPatientId,
+          data: patientData,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
       }
     }
   };
@@ -2576,99 +2655,129 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPatients((prev) =>
         prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
       );
-    } else {
-      if (!currentUserId) throw new Error("Not logged in");
+      return;
+    }
 
-      let previousPatient: Patient | undefined;
-      setPatients((prev) => {
-        return prev.map((p) => {
-          if (p.id === id) {
-            previousPatient = p;
-            return { ...p, ...updates };
-          }
-          return p;
-        });
-      });
+    if (!currentUserId) throw new Error("Not logged in");
 
+    // 1. Save locally instantly
+    try {
+      await localPersistence.patients.update(id, updates);
+    } catch (e) {
+      console.warn("[AppContext] Failed to update patient locally:", e);
+    }
+
+    // 2. Optimistic UI update & cache sync
+    setPatients((prev) => {
+      const next = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
+      storage.setItem(CLOUD_CACHE_PATIENTS_KEY, next);
+      return next;
+    });
+
+    // 3. Sync to Firestore in background or queue if offline
+    if (isOnline) {
       try {
         const docRef = doc(db, "patients", id);
         await updateDoc(docRef, sanitizeFirestoreData(updates));
-      } catch (error) {
-        if (previousPatient) {
-          const backup = previousPatient;
-          setPatients((prev) =>
-            prev.map((p) => (p.id === id ? backup : p))
-          );
-        }
-        throw error;
+      } catch (err) {
+        console.warn("[AppContext] Failed to sync patient update, enqueuing:", err);
+        enqueueOp({
+          type: "update-patient",
+          collection: "patients",
+          docId: id,
+          data: sanitizeFirestoreData(updates),
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
       }
+    } else {
+      enqueueOp({
+        type: "update-patient",
+        collection: "patients",
+        docId: id,
+        data: sanitizeFirestoreData(updates),
+        userId: currentUserId,
+      });
+      setPendingOfflineOps(getPendingCount());
     }
   };
 
   const deletePatient = async (id: string) => {
     if (!currentUserId && storageMode !== "local") throw new Error("Not logged in");
 
-    // Backup current state for rollback
-    const backupPatients = [...patients];
-    const backupMedicines = [...medicines];
-    const backupReminders = [...reminders];
-    const backupDoseLogs = [...doseLogs];
-    const backupWellnessLogs = [...wellnessLogs];
-
     const relatedMeds = medicines.filter((m) => m.patientId === id);
     const relatedRems = reminders.filter((r) => r.patientId === id);
     const relatedLogs = doseLogs.filter((l) => l.patientId === id);
 
-    // Optimistic local update
-    setMedicines((prev) => prev.filter((m) => m.patientId !== id));
-    setReminders((prev) => prev.filter((r) => r.patientId !== id));
-    setDoseLogs((prev) => prev.filter((l) => l.patientId !== id));
-    setWellnessLogs((prev) => prev.filter((w) => w.patientId !== id));
-    setPatients((prev) => prev.filter((p) => p.id !== id));
+    // 1. Cascade delete associated items locally and queue them
+    for (const med of relatedMeds) {
+      await deleteMedicine(med.id);
+    }
+    for (const rem of relatedRems) {
+      await deleteReminder(rem.id);
+    }
+    for (const l of relatedLogs) {
+      await deleteDoseLog(l.id);
+    }
 
+    // 2. Local persistence delete
     try {
-      // Cascade delete associated items
-      for (const med of relatedMeds) {
-        await deleteMedicine(med.id);
-      }
-      for (const rem of relatedRems) {
-        await deleteReminder(rem.id);
-      }
-      for (const l of relatedLogs) {
-        await deleteDoseLog(l.id);
-      }
+      await localPersistence.patients.remove(id);
+    } catch (e) {
+      console.warn("[AppContext] Failed to delete patient locally:", e);
+    }
 
-      if (storageMode === "local") {
-        await localPersistence.patients.remove(id);
-      } else {
-        // Delete wellness logs from cloud
+    // 3. Optimistic local UI update
+    setPatients((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      storage.setItem(CLOUD_CACHE_PATIENTS_KEY, next);
+      return next;
+    });
+
+    if (selectedPatientId === id) setSelectedPatientId(null);
+
+    if (storageMode === "local") return;
+
+    // 4. Sync delete to Firestore in background or queue if offline
+    if (currentUserId) {
+      if (isOnline) {
         try {
-          const wQuery = query(
-            collection(db, "wellnessLogs"),
-            where("patientId", "==", id),
-            where("userId", "==", currentUserId)
-          );
-          const snapshot = await getDocs(wQuery);
-          for (const docSnap of snapshot.docs) {
-            await deleteDoc(doc(db, "wellnessLogs", docSnap.id));
+          // Delete wellness logs associated with this patient from cloud
+          try {
+            const wQuery = query(
+              collection(db, "wellnessLogs"),
+              where("patientId", "==", id),
+              where("userId", "==", currentUserId)
+            );
+            const snapshot = await getDocs(wQuery);
+            for (const docSnap of snapshot.docs) {
+              await deleteDoc(doc(db, "wellnessLogs", docSnap.id));
+            }
+          } catch (wErr) {
+            console.warn("[AppContext] Failed to cascade delete cloud wellness logs:", wErr);
           }
-        } catch (e) {
-          console.error("Failed to cascade delete wellness logs:", e);
+
+          const docRef = doc(db, "patients", id);
+          await deleteDoc(docRef);
+        } catch (err) {
+          console.warn("[AppContext] Failed to sync patient delete, enqueuing:", err);
+          enqueueOp({
+            type: "delete-patient",
+            collection: "patients",
+            docId: id,
+            userId: currentUserId,
+          });
+          setPendingOfflineOps(getPendingCount());
         }
-
-        const docRef = doc(db, "patients", id);
-        await deleteDoc(docRef);
+      } else {
+        enqueueOp({
+          type: "delete-patient",
+          collection: "patients",
+          docId: id,
+          userId: currentUserId,
+        });
+        setPendingOfflineOps(getPendingCount());
       }
-
-      if (selectedPatientId === id) setSelectedPatientId(null);
-    } catch (error) {
-      // Rollback all updates on error
-      setPatients(backupPatients);
-      setMedicines(backupMedicines);
-      setReminders(backupReminders);
-      setDoseLogs(backupDoseLogs);
-      setWellnessLogs(backupWellnessLogs);
-      throw error;
     }
   };
 
@@ -2770,6 +2879,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isInitializing,
         isDawaGPTOpen,
         setIsDawaGPTOpen,
+        isDawaGPTOfflineModalOpen,
+        setIsDawaGPTOfflineModalOpen,
         dawaGPTInitialPrompt,
         setDawaGPTInitialPrompt,
         openDawaGPTWithPrompt,

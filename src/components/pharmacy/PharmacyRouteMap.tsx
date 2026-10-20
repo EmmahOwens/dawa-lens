@@ -39,6 +39,7 @@ import {
   initPmtilesProtocol,
   COMPOSITE_PHARMACY_MAP_STYLE,
   ESRI_SATELLITE_STYLE,
+  OFFLINE_UGANDA_STYLE,
 } from "@/services/mapTileService";
 
 export interface PharmacyRouteMapProps {
@@ -167,9 +168,21 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
   routeRef.current = route;
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== "undefined" ? navigator.onLine : true));
   const [mapMode, setMapMode] = useState<"streets" | "satellite">("streets");
   const mapModeRef = useRef<"streets" | "satellite">("streets");
   mapModeRef.current = mapMode;
+
+  useEffect(() => {
+    const onOn = () => setIsOnline(true);
+    const onOff = () => setIsOnline(false);
+    window.addEventListener("online", onOn);
+    window.addEventListener("offline", onOff);
+    return () => {
+      window.removeEventListener("online", onOn);
+      window.removeEventListener("offline", onOff);
+    };
+  }, []);
 
   // ── Helper: Attach route source & styling layers ───────────────────────────
   const setupRouteLayers = useCallback((map: Map, isSatellite: boolean) => {
@@ -251,16 +264,19 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     }
   }, []);
 
-  // ── 1. Initialize MapLibre with unified composite style ──────────────────────
+  // ── 1. Initialize MapLibre with unified composite style or offline Uganda style ──
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     try {
       initPmtilesProtocol(maplibregl);
 
+      const isOfflineInitial = typeof navigator !== "undefined" && !navigator.onLine;
+      const initialStyle = isOfflineInitial ? OFFLINE_UGANDA_STYLE : COMPOSITE_PHARMACY_MAP_STYLE;
+
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
-        style: COMPOSITE_PHARMACY_MAP_STYLE,
+        style: initialStyle,
         center: userCoords,
         zoom: 13,
         attributionControl: false,
@@ -269,7 +285,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         cooperativeGestures: true,
       });
 
-      map.on("load", () => {
+      const handleReady = () => {
         try {
           map.resize();
           setupRouteLayers(map, mapModeRef.current === "satellite");
@@ -277,19 +293,49 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         } catch (loadErr) {
           console.warn("[PharmacyRouteMap] Error on map load:", loadErr);
         }
+      };
+
+      map.on("load", handleReady);
+      map.on("styledata", handleReady);
+
+      map.on("error", (e) => {
+        const errorMsg = e.error?.message || "";
+        const isFatal = !map.isStyleLoaded() || errorMsg.includes("Failed to fetch") || (typeof navigator !== "undefined" && !navigator.onLine);
+        if (isFatal) {
+          try {
+            map.setStyle(OFFLINE_UGANDA_STYLE);
+          } catch {}
+        }
       });
 
+      const handleWindowOnline = () => {
+        try {
+          map.setStyle(COMPOSITE_PHARMACY_MAP_STYLE);
+        } catch {}
+      };
+
+      const handleWindowOffline = () => {
+        try {
+          map.setStyle(OFFLINE_UGANDA_STYLE);
+        } catch {}
+      };
+
+      window.addEventListener("online", handleWindowOnline);
+      window.addEventListener("offline", handleWindowOffline);
+
       mapRef.current = map;
+
+      return () => {
+        window.removeEventListener("online", handleWindowOnline);
+        window.removeEventListener("offline", handleWindowOffline);
+        if (mapRef.current) {
+          mapRef.current.remove();
+          mapRef.current = null;
+        }
+      };
     } catch (initErr) {
       console.error("[PharmacyRouteMap] Initialization failed:", initErr);
     }
-
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
   }, [setupRouteLayers, userCoords]);
 
   // ── ResizeObserver to handle modal spring animations seamlessly ───────────
@@ -1244,6 +1290,13 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
             </div>
           )}
         </>
+      )}
+
+      {/* Offline Mode Indicator */}
+      {!isOnline && (
+        <div className="absolute z-20 top-3 right-3 flex items-center gap-1.5 px-3 py-1 rounded-xl bg-card/90 backdrop-blur-md border border-amber-500/30 text-amber-500 text-[10px] font-bold shadow-md">
+          <span>Offline Uganda Map</span>
+        </div>
       )}
 
       {/* ── Recenter & Satellite Map Controls ── */}

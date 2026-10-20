@@ -249,6 +249,11 @@ export default function ResultsPage() {
                       <div>
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <h3 className="text-lg font-bold text-card-foreground leading-tight">{r.name}</h3>
+                          {r.unverifiedNotice && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-2.5 py-0.5 rounded-full border border-sky-500/20">
+                              <Check size={11} /> {r.unverifiedNotice}
+                            </span>
+                          )}
                           {r.ndcValidated && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
                               <Check size={11} /> NDC Verified

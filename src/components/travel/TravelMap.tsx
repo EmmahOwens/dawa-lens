@@ -7,6 +7,8 @@ import { Plane, Globe } from "@/lib/icons";
 import { RiveMoji } from "../rive/RiveMoji";
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 
+import worldLandData from '@/data/maps/worldLand.json';
+
 // Register MapLibre GL worker URL globally for Vite bundling
 if (typeof (maplibregl as any).setWorkerUrl === 'function') {
   (maplibregl as any).setWorkerUrl(mapWorkerUrl);
@@ -149,6 +151,45 @@ const ALIAS_MAP: Record<string, string> = {
 // OpenFreeMap is the most reliable free tile source for MapLibre v5 & v6
 const PRIMARY_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 const FALLBACK_STYLE = 'https://tiles.openfreemap.org/styles/bright';
+
+// Standalone offline style using bundled 177-country GeoJSON polygons
+export const OFFLINE_WORLD_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'world-land': {
+      type: 'geojson',
+      data: worldLandData as any,
+    },
+  },
+  layers: [
+    {
+      id: 'world-background',
+      type: 'background',
+      paint: {
+        'background-color': '#0d1527',
+      },
+    },
+    {
+      id: 'world-land-fill',
+      type: 'fill',
+      source: 'world-land',
+      paint: {
+        'fill-color': '#1e293b',
+        'fill-opacity': 0.95,
+      },
+    },
+    {
+      id: 'world-land-borders',
+      type: 'line',
+      source: 'world-land',
+      paint: {
+        'line-color': '#3b82f6',
+        'line-width': 0.8,
+        'line-opacity': 0.6,
+      },
+    },
+  ],
+};
 
 // Clean fallback raster style using OpenStreetMap tiles (no API key, no watermark)
 const RASTER_BACKUP_STYLE: maplibregl.StyleSpecification = {
@@ -449,6 +490,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
   const animFrameRef = useRef<number | null>(null);
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+
+  useEffect(() => {
+    const handleOn = () => setIsOnline(true);
+    const handleOff = () => setIsOnline(false);
+    window.addEventListener('online', handleOn);
+    window.addEventListener('offline', handleOff);
+    return () => {
+      window.removeEventListener('online', handleOn);
+      window.removeEventListener('offline', handleOff);
+    };
+  }, []);
 
   // Destination coordinates: try static lookup first, then async geocoding
   const [destCoords, setDestCoords] = useState<[number, number] | null>(null);
@@ -507,18 +560,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
           },
         });
 
-        // Error handling – swap to fallback style on fatal failure
+        // Error handling – swap to bundled offline style on fatal or network failure
         map.on('error', (e) => {
           console.warn('[TravelMap] MapLibre event:', e);
           const errorMsg = e.error?.message || '';
-          const isFatal = !map.isStyleLoaded() || errorMsg.includes('Worker failed') || errorMsg.includes('Failed to fetch');
+          const isFatal = !map.isStyleLoaded() || errorMsg.includes('Worker failed') || errorMsg.includes('Failed to fetch') || (typeof navigator !== 'undefined' && !navigator.onLine);
           if (isFatal && !fallbackApplied) {
             fallbackApplied = true;
-            console.warn('[TravelMap] Primary style failed, switching to fallback style...');
+            console.warn('[TravelMap] Remote tiles failed or offline, switching to bundled offline world style...');
             try {
-              map.setStyle(FALLBACK_STYLE);
+              map.setStyle(OFFLINE_WORLD_STYLE);
             } catch (styleErr) {
-              console.warn('[TravelMap] Failed to set fallback style:', styleErr);
+              console.warn('[TravelMap] Failed to set offline world style:', styleErr);
             }
           }
         });
@@ -588,9 +641,33 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
       }
     };
 
-    const result = initMap(PRIMARY_STYLE);
+    const initialStyle = (typeof navigator !== 'undefined' && !navigator.onLine)
+      ? OFFLINE_WORLD_STYLE
+      : PRIMARY_STYLE;
+    const result = initMap(initialStyle);
+
+    const handleWindowOnline = () => {
+      if (mapRef.current) {
+        try {
+          mapRef.current.setStyle(PRIMARY_STYLE);
+        } catch {}
+      }
+    };
+
+    const handleWindowOffline = () => {
+      if (mapRef.current) {
+        try {
+          mapRef.current.setStyle(OFFLINE_WORLD_STYLE);
+        } catch {}
+      }
+    };
+
+    window.addEventListener('online', handleWindowOnline);
+    window.addEventListener('offline', handleWindowOffline);
 
     return () => {
+      window.removeEventListener('online', handleWindowOnline);
+      window.removeEventListener('offline', handleWindowOffline);
       if (result) {
         clearTimeout(result.timer);
         result.resizeObserver?.disconnect();
@@ -805,6 +882,14 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
           <RiveMoji emoji="📍" size={12} /> Current Location
         </span>
       </div>
+
+      {/* Offline Mode Badge */}
+      {!isOnline && (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-amber-500/30 bg-card/90 backdrop-blur-md shadow-xs text-amber-500">
+          <Globe size={11} className="text-amber-500" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider">Offline Map</span>
+        </div>
+      )}
 
       {/* Destination label */}
       <AnimatePresence>

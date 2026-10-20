@@ -4,8 +4,48 @@ import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 
 import mapWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+import ugandaBoundaryData from "@/data/maps/ugandaBoundary.json";
 
 export const LOCAL_MAP_PACK_FILENAME = "uganda.pmtiles";
+
+// Standalone vector offline style using bundled Uganda administrative boundary GeoJSON
+export const OFFLINE_UGANDA_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    "uganda-boundary": {
+      type: "geojson",
+      data: ugandaBoundaryData as any,
+    },
+  },
+  layers: [
+    {
+      id: "uganda-bg",
+      type: "background",
+      paint: {
+        "background-color": "#0d1527",
+      },
+    },
+    {
+      id: "uganda-fill",
+      type: "fill",
+      source: "uganda-boundary",
+      paint: {
+        "fill-color": "#132338",
+        "fill-opacity": 0.95,
+      },
+    },
+    {
+      id: "uganda-border",
+      type: "line",
+      source: "uganda-boundary",
+      paint: {
+        "line-color": "#10b981",
+        "line-width": 1.5,
+        "line-opacity": 0.8,
+      },
+    },
+  ],
+};
 
 // Default Firebase Storage / CDN URL for Uganda PMTiles package
 export const FIREBASE_PMTILES_STORAGE_URL =

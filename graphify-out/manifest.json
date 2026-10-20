@@ -540,8 +540,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1790845513.6628864,
-    "ast_hash": "9e2281a6691fd65b15c50e38fa140ef6",
+    "mtime": 1792504258.8701925,
+    "ast_hash": "8bed763f84a06f51866452162505a337",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -580,8 +580,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPT.tsx": {
-    "mtime": 1791298979.502593,
-    "ast_hash": "a00f3f8b956cd7136580a10dae416f32",
+    "mtime": 1792504350.7107208,
+    "ast_hash": "bd0fd597ab49be9f4b03bd19179efaea",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ErrorBoundary.tsx": {
@@ -690,8 +690,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/dashboard/AIInsightCard.tsx": {
-    "mtime": 1791286940.5375721,
-    "ast_hash": "978d8a08384fea7199011758d1ac45f0",
+    "mtime": 1792504298.066981,
+    "ast_hash": "e73b5e2ff8d970510d0ec7fb133c4fc6",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/dashboard/DailyTimeline.tsx": {
@@ -780,8 +780,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/travel/TravelMap.tsx": {
-    "mtime": 1791351570.7928057,
-    "ast_hash": "854721b925cc9c0e57c74c403b96ba7d",
+    "mtime": 1792504905.6051126,
+    "ast_hash": "d0be73807eda6ea44c00a8925e02e7b1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ui/ARInstruction.tsx": {
@@ -1045,8 +1045,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/contexts/AppContext.tsx": {
-    "mtime": 1790582367.6710055,
-    "ast_hash": "25f99888e6b4eb0c4f53722f33e10262",
+    "mtime": 1792504162.5797858,
+    "ast_hash": "54d65e3e4443ae8fef0c1f62a9251680",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/__tests__/useAIActions.properties.test.ts": {
@@ -1220,13 +1220,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ReportPage.tsx": {
-    "mtime": 1791296627.6863637,
-    "ast_hash": "308f2556537ba922a4e1994195fd7483",
+    "mtime": 1792505251.8563502,
+    "ast_hash": "bfa899851ff7b72d60cd15be3918e282",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ResultsPage.tsx": {
-    "mtime": 1791295585.340513,
-    "ast_hash": "665308f9a0ef8de4bffdd8d4c27edc77",
+    "mtime": 1792504512.833066,
+    "ast_hash": "9c546167ec25ecaa1331004c1f173af2",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ScanPage.bug-condition.test.tsx": {
@@ -1270,8 +1270,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx": {
-    "mtime": 1791292479.3016887,
-    "ast_hash": "9dc5a364fe4477ddd284e65ba4de47bf",
+    "mtime": 1792505298.6661508,
+    "ast_hash": "8df43ddaf138be0acde46353f333a7cc",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/app-updater.ts": {
@@ -1400,8 +1400,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/pillIdService.ts": {
-    "mtime": 1790242785.4100144,
-    "ast_hash": "2f5f7ed3aab566e1ccc85775c55e6e07",
+    "mtime": 1792504480.530181,
+    "ast_hash": "37fb1373fa1370cfb0ed57bc71dfd26c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/refillService.ts": {
@@ -2250,8 +2250,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/offlineQueue.ts": {
-    "mtime": 1789039999.0842645,
-    "ast_hash": "7a201e1c963f48fed36326b45d8d9dff",
+    "mtime": 1792503841.0457976,
+    "ast_hash": "842fcd28593123cb7c85e27775b068ae",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useSwipeToDismiss.ts": {
@@ -2515,8 +2515,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/pharmacy/PharmacyRouteMap.tsx": {
-    "mtime": 1791351526.3680317,
-    "ast_hash": "a9c7f34f4971416abaaa6c83b5f1e8ad",
+    "mtime": 1792505009.9509568,
+    "ast_hash": "7ea2a1763646c97900fac85327744aa4",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/travel/__tests__/TravelMap.test.tsx": {
@@ -4145,8 +4145,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/mapTileService.ts": {
-    "mtime": 1790341502.953065,
-    "ast_hash": "a96e844b8e238f05194da1568bc40e6d",
+    "mtime": 1792504923.970083,
+    "ast_hash": "685ca4e500cb389b26097924b2bdbd33",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/pharmacyFeedbackService.ts": {
@@ -4877,6 +4877,31 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/SlopMonster/docs/img/rule-5-conversion.png": {
     "mtime": 1791384194.8609443,
     "ast_hash": "2164120892e55ac2820c94c938587807",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/DawaGPTOfflineModal.tsx": {
+    "mtime": 1792504008.591997,
+    "ast_hash": "7c23614f65dc66928857066d674256e4",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/__tests__/DawaGPTOfflineModal.test.tsx": {
+    "mtime": 1792505700.7222211,
+    "ast_hash": "ac36bec7db8f0dc5919f59d98217bebe",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/data/maps/ugandaBoundary.json": {
+    "mtime": 1792504566.329891,
+    "ast_hash": "20eefaf44e95e5ce10527ca6839c5dc2",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/data/maps/worldLand.json": {
+    "mtime": 1792504566.328891,
+    "ast_hash": "4ef1fb3a98a15e48ec0e510a6e462ece",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/offlineMedicationExtractor.ts": {
+    "mtime": 1792504414.7434375,
+    "ast_hash": "69b9fd51dd81c2e8b1571616b0cec2b8",
     "semantic_hash": ""
   }
 }

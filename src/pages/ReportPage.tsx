@@ -38,6 +38,7 @@ import {
 import { aiApi } from "@/services/api";
 import { generateLocalClinicalAssessment } from "@/services/clinicalAssessmentService";
 import { VitalityTrends2D } from "@/components/wellness/VitalityTrends2D";
+import { storage } from "@/lib/storage";
 import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
 import { calculateVitalitySummary } from "@/lib/vitalityUtils";
@@ -196,19 +197,27 @@ export default function ReportPage() {
   const [showPreview, setShowPreview] = useState(false);
   const isNative = Capacitor.isNativePlatform();
 
-  const fetchInsights = useCallback(async () => {
-    const cached = (() => {
+  const fetchInsights = useCallback(async (forceRefresh = false) => {
+    if (!forceRefresh) {
       try {
         const item = sessionStorage.getItem(cacheKey);
-        return item ? JSON.parse(item) : null;
-      } catch {
-        return null;
-      }
-    })();
+        if (item) {
+          setInsights(JSON.parse(item));
+          return;
+        }
+      } catch {}
 
-    if (cached) {
-      setInsights(cached);
-      return;
+      try {
+        const persistentItem = await storage.getItem<string | null>(cacheKey, null);
+        if (persistentItem) {
+          const parsed = JSON.parse(persistentItem);
+          setInsights(parsed);
+          try {
+            sessionStorage.setItem(cacheKey, persistentItem);
+          } catch {}
+          return;
+        }
+      } catch {}
     }
 
     if (scopedDoseLogs.length === 0 && scopedMedicines.length === 0) {
@@ -216,6 +225,27 @@ export default function ReportPage() {
       return;
     }
     setLoading(true);
+
+    const isOffline = typeof navigator !== "undefined" && !navigator.onLine;
+
+    // When offline, execute the on-device clinical assessment immediately without waiting for network failure
+    if (isOffline) {
+      const local = generateLocalClinicalAssessment(
+        scopedDoseLogs,
+        scopedWellnessLogs,
+        scopedMedicines.filter((m) => !m.isConflict),
+        resolvedPatient
+      );
+      setInsights(local);
+      try {
+        const str = JSON.stringify(local);
+        sessionStorage.setItem(cacheKey, str);
+        await storage.setItem(cacheKey, str);
+      } catch {}
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await aiApi.getWellnessInsight({
         doseLogs: scopedDoseLogs.slice(0, 70),
@@ -234,9 +264,11 @@ export default function ReportPage() {
         const enriched = { ...(res as any), source: "ai" as const };
         setInsights(enriched);
         try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(enriched));
+          const str = JSON.stringify(enriched);
+          sessionStorage.setItem(cacheKey, str);
+          await storage.setItem(cacheKey, str);
         } catch (e) {
-          console.error("Failed to save clinical assessment to sessionStorage", e);
+          console.error("Failed to save clinical assessment to storage", e);
         }
       } else {
         const local = generateLocalClinicalAssessment(
@@ -247,7 +279,9 @@ export default function ReportPage() {
         );
         setInsights(local);
         try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(local));
+          const str = JSON.stringify(local);
+          sessionStorage.setItem(cacheKey, str);
+          await storage.setItem(cacheKey, str);
         } catch {}
       }
     } catch (err) {
@@ -260,7 +294,9 @@ export default function ReportPage() {
       );
       setInsights(local);
       try {
-        sessionStorage.setItem(cacheKey, JSON.stringify(local));
+        const str = JSON.stringify(local);
+        sessionStorage.setItem(cacheKey, str);
+        await storage.setItem(cacheKey, str);
       } catch {}
     } finally {
       setLoading(false);
@@ -268,21 +304,36 @@ export default function ReportPage() {
   }, [cacheKey, scopedDoseLogs, scopedWellnessLogs, scopedMedicines, resolvedPatient]);
 
   useEffect(() => {
-    const cached = (() => {
+    let cancelled = false;
+    async function loadInitial() {
       try {
         const item = sessionStorage.getItem(cacheKey);
-        return item ? JSON.parse(item) : null;
-      } catch {
-        return null;
+        if (item) {
+          setInsights(JSON.parse(item));
+          return;
+        }
+      } catch {}
+
+      try {
+        const persistentItem = await storage.getItem<string | null>(cacheKey, null);
+        if (persistentItem && !cancelled) {
+          const parsed = JSON.parse(persistentItem);
+          setInsights(parsed);
+          try {
+            sessionStorage.setItem(cacheKey, persistentItem);
+          } catch {}
+          return;
+        }
+      } catch {}
+
+      if (!cancelled) {
+        fetchInsights();
       }
-    })();
-
-    if (cached) {
-      setInsights(cached);
-      return;
     }
-
-    fetchInsights();
+    loadInitial();
+    return () => {
+      cancelled = true;
+    };
   }, [cacheKey, fetchInsights]);
 
   const handlePrint = () => {
@@ -836,8 +887,11 @@ export default function ReportPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    sessionStorage.removeItem(cacheKey);
-                    fetchInsights();
+                    try {
+                      sessionStorage.removeItem(cacheKey);
+                      storage.removeItem(cacheKey);
+                    } catch {}
+                    fetchInsights(true);
                   }}
                   disabled={loading}
                   className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
@@ -1070,7 +1124,7 @@ export default function ReportPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={fetchInsights}
+                    onClick={() => fetchInsights(true)}
                     className="mt-4 text-xs font-semibold rounded-full gap-2 border-border active:scale-95 transition-transform"
                   >
                     <Sparkles size={13} className="text-primary" />

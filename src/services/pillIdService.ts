@@ -1,5 +1,7 @@
 import { visionApi } from './api';
 import { extractTextFromImage } from './visionService';
+import { extractMedicationFromOcr } from './offlineMedicationExtractor';
+import { hasNetwork } from '@/lib/appLifecycle';
 
 export interface PillMatch {
   name: string;
@@ -46,7 +48,7 @@ function isTransientScanError(err: any): boolean {
 function isNetworkError(err: any): boolean {
   return (
     err instanceof TypeError ||
-    /failed to fetch|networkerror|load failed|internet connection/i.test(
+    /failed to fetch|networkerror|load failed|internet connection|network request failed/i.test(
       err?.message || ""
     )
   );
@@ -76,36 +78,64 @@ function describeScanFailure(err: any): string {
 }
 
 export async function identifyPill(base64Image: string, patientAge?: string): Promise<PillIdResponse> {
+  // 1. Run local OCR first (non-fatal: if local OCR fails, multimodal Gemini reads the image directly)
+  let ocrText = "";
   try {
-    // 1. Run local OCR first (non-fatal: if local OCR fails, multimodal Gemini reads the image directly)
-    let ocrText = "";
-    try {
-      ocrText = await extractTextFromImage(base64Image);
-    } catch (ocrErr) {
-      console.warn('[pillIdService] Local OCR unavailable or failed, falling back to direct multimodal image scan:', ocrErr);
+    ocrText = await extractTextFromImage(base64Image);
+  } catch (ocrErr) {
+    console.warn('[pillIdService] Local OCR unavailable or failed, falling back to direct multimodal image scan:', ocrErr);
+  }
+
+  // Strip the data:image/jpeg;base64, prefix if it exists
+  const cleanImage = base64Image ? base64Image.replace(/^data:image\/\w+;base64,/, '') : '';
+
+  const hasImage = Boolean(cleanImage && cleanImage.length > 50);
+  const hasText = Boolean(ocrText && ocrText.trim().length > 0);
+
+  if (!hasImage && !hasText) {
+    throw new Error('No medication image or label text detected. Please make sure the medication is facing the camera, holds steady, and matches the scan box.');
+  }
+
+  // If device is offline, immediately parse OCR text using our ultra-lightweight on-device formulary
+  if (!hasNetwork() || (typeof navigator !== "undefined" && !navigator.onLine)) {
+    if (hasText) {
+      console.info("[pillIdService] Device is offline — extracting medication concept via on-device formulary");
+      const offlineResult = extractMedicationFromOcr(ocrText);
+      if (offlineResult.success && offlineResult.matches.length > 0) {
+        return offlineResult;
+      }
     }
+  }
 
-    // Strip the data:image/jpeg;base64, prefix if it exists
-    const cleanImage = base64Image ? base64Image.replace(/^data:image\/\w+;base64,/, '') : '';
-
-    const hasImage = Boolean(cleanImage && cleanImage.length > 50);
-    const hasText = Boolean(ocrText && ocrText.trim().length > 0);
-
-    if (!hasImage && !hasText) {
-      throw new Error('No medication image or label text detected. Please make sure the medication is facing the camera, holds steady, and matches the scan box.');
-    }
-
+  try {
     const payload = { image: cleanImage, patientAge, ocrText: (ocrText || '').trim() };
     let response: unknown;
     try {
       response = await visionApi.identifyPill(payload);
     } catch (apiErr: any) {
+      // If network failed and we have local OCR text, provide instant on-device recognition
+      if (isNetworkError(apiErr) && hasText) {
+        console.info("[pillIdService] Network request failed, using on-device formulary extractor fallback");
+        const offlineResult = extractMedicationFromOcr(ocrText);
+        if (offlineResult.success && offlineResult.matches.length > 0) {
+          return offlineResult;
+        }
+      }
       if (!isTransientScanError(apiErr)) throw apiErr;
       console.warn("[pillIdService] Transient scan failure, retrying once:", apiErr?.message);
       response = await visionApi.identifyPill(payload);
     }
     return response as PillIdResponse;
   } catch (error: any) {
+    // If the error was network-related, attempt on-device formulary fallback before surfacing error
+    if (hasText && (isNetworkError(error) || !hasNetwork())) {
+      console.info("[pillIdService] Final catch fallback to on-device formulary extraction");
+      const offlineResult = extractMedicationFromOcr(ocrText);
+      if (offlineResult.success && offlineResult.matches.length > 0) {
+        return offlineResult;
+      }
+    }
+
     console.error('Pill identification failed:', error);
     // If it's a specific custom error from local validation, propagate directly
     if (error.message && (

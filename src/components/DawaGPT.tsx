@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { X, Send, Bot, Sparkles, ChevronDown, RotateCcw } from "@/lib/icons";
+import { X, Send, Bot, Sparkles, ChevronDown, RotateCcw, WifiOff } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
@@ -98,6 +98,7 @@ export default function DawaGPT() {
     userProfile,
     isDawaGPTOpen: isOpen,
     setIsDawaGPTOpen: setIsOpen,
+    setIsDawaGPTOfflineModalOpen,
     dawaGPTInitialPrompt,
     setDawaGPTInitialPrompt,
     patients,
@@ -731,28 +732,30 @@ export default function DawaGPT() {
 
   return (
     <>
-      {/* Floating Toggle Button - Claude Inspired (hidden when offline) */}
-      <AnimatePresence>
-        {isOnline && (
-          <motion.button
-            key="dawagpt-floating-trigger"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 350, damping: 25 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsOpen(true)}
-            className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border bg-card active:scale-95 transition-transform"
-            style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.35 + 4.5rem)' }}
-            aria-label="Open DawaGPT"
-          >
-            <div className="w-full h-full flex items-center justify-center overflow-hidden">
-              <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-9 h-9 object-contain transition-transform group-hover:scale-105" />
-            </div>
-          </motion.button>
-        )}
-      </AnimatePresence>
+      {/* Floating Toggle Button - Claude Inspired */}
+      <motion.button
+        key="dawagpt-floating-trigger"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 350, damping: 25 }}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => {
+          if (!isOnline) {
+            setIsDawaGPTOfflineModalOpen(true);
+          } else {
+            setIsOpen(true);
+          }
+        }}
+        className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border bg-card active:scale-95 transition-transform"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.35 + 4.5rem)' }}
+        aria-label="Open DawaGPT"
+      >
+        <div className="w-full h-full flex items-center justify-center overflow-hidden">
+          <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-9 h-9 object-contain transition-transform group-hover:scale-105" />
+        </div>
+      </motion.button>
 
       <AnimatePresence>
         {isOpen && (
@@ -939,8 +942,11 @@ export default function DawaGPT() {
                           handleSend(inputValue);
                         }
                       }}
+                      disabled={!isOnline}
                       placeholder={
-                        messages.length > 1
+                        !isOnline
+                          ? "Internet connection required to chat with DawaGPT..."
+                          : messages.length > 1
                           ? "Ask a follow-up or command..."
                           : (placeholder || "Send a message or action...")
                       }
@@ -951,7 +957,7 @@ export default function DawaGPT() {
                     />
                     <Button
                       onClick={() => handleSend(inputValue)}
-                      disabled={isTyping || !inputValue.trim()}
+                      disabled={!isOnline || isTyping || !inputValue.trim()}
                       size="icon"
                       className="rounded-full h-10 w-10 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground active:scale-95 transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
                     >
