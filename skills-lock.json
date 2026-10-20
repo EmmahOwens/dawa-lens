@@ -22,6 +22,12 @@
       "skillPath": "skills/diagram-design/SKILL.md",
       "computedHash": "e01adcceff753d259c534500d993512bf4d37301fa507cd45f2d4c3eaf4c6163"
     },
+    "fallow": {
+      "source": "fallow-rs/fallow-skills",
+      "sourceType": "github",
+      "skillPath": "fallow/skills/fallow/SKILL.md",
+      "computedHash": "2a896ef664676e4d8f416f2c10af5da9b403b7ec96e237a3f20302de2d3686bf"
+    },
     "firebase-ai-logic": {
       "source": "firebase/agent-skills",
       "sourceType": "github",

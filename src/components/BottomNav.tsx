@@ -139,7 +139,7 @@ export default function BottomNav() {
           className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-[21rem] md:hidden px-3"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) * 0.4 + 0.6rem)" }}
         >
-          <div className="flex items-center justify-between rounded-full bg-white/85 dark:bg-[#1d1d1f]/85 backdrop-blur-2xl border border-border/80 px-3 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)]">
+          <div className="flex items-center justify-between rounded-full bg-[#f5f5f7]/80 dark:bg-[#1d1d1f]/80 blur-frost border border-black/[0.08] dark:border-white/[0.12] px-3 py-1.5 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.7),0_8px_24px_-6px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.12),0_8px_24px_-6px_rgba(0,0,0,0.35)]">
             {/* Left Side Items */}
             <div className="flex flex-1 justify-around items-center">
               {navItems.slice(0, 2).map((item) => (
@@ -154,7 +154,7 @@ export default function BottomNav() {
               onClick={() => NativeService.haptics.impact(ImpactStyle.Medium)}
               className="relative flex h-11 w-11 items-center justify-center shrink-0 mx-1 active:scale-95 transition-transform"
             >
-              <div className="h-full w-full rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-sm">
+              <div className="h-full w-full rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.35)] ring-1 ring-black/5 dark:ring-white/10">
                 <Camera size={20} />
               </div>
             </NavLink>
@@ -197,25 +197,25 @@ function NavItem({
       to={to}
       aria-label={label}
       onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
-      className="relative flex flex-col items-center justify-center w-11 h-11 active:scale-95 transition-transform"
+      className="relative flex flex-col items-center justify-center w-11 h-11 rounded-full active:scale-95 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all"
     >
       <div className="relative flex flex-col items-center">
         <Icon
           size={20}
           className={`transition-colors duration-200 ${
-            active ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
+            active ? "text-primary font-semibold" : "text-muted-foreground/85 hover:text-foreground"
           }`}
         />
 
         {badge && (
-          <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive" />
+          <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-[#f5f5f7] dark:ring-[#1d1d1f]" />
         )}
 
         {/* Apple subtle active dot */}
         {active && (
           <motion.div
             layoutId="apple-nav-dot"
-            className="absolute -bottom-2 w-1 h-1 rounded-full bg-primary"
+            className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary"
             transition={{ type: "spring", stiffness: 450, damping: 35 }}
           />
         )}
