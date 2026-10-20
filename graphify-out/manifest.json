@@ -1,7 +1,7 @@
 {
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/build.gradle": {
-    "mtime": 1791389595.754283,
-    "ast_hash": "bfa42ee877b2c0220b8f5af5f0135799",
+    "mtime": 1792507441.6098127,
+    "ast_hash": "2cacbd44bb92e8d6fce5ff6c20107df8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/capacitor.build.gradle": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/package.json": {
-    "mtime": 1791389550.7692392,
-    "ast_hash": "a9a849c55febe507d8ded9af55bb07eb",
+    "mtime": 1792507420.0060458,
+    "ast_hash": "0f53841bd5d00e6645ca78e54e3b5dae",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/playwright-fixture.ts": {
@@ -1220,8 +1220,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ReportPage.tsx": {
-    "mtime": 1792505251.8563502,
-    "ast_hash": "bfa899851ff7b72d60cd15be3918e282",
+    "mtime": 1792507136.4783182,
+    "ast_hash": "d3719f55077c9c1be989f47c7080ad95",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/ResultsPage.tsx": {
@@ -4900,8 +4900,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/offlineMedicationExtractor.ts": {
-    "mtime": 1792504414.7434375,
-    "ast_hash": "69b9fd51dd81c2e8b1571616b0cec2b8",
+    "mtime": 1792506910.060543,
+    "ast_hash": "aa1fc9e602503bffcce58d549ce56bc4",
     "semantic_hash": ""
   }
 }
