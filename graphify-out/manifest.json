@@ -535,8 +535,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/skills-lock.json": {
-    "mtime": 1789133848.1336944,
-    "ast_hash": "3afcfbbc787a83fdec25dc8a058cf871",
+    "mtime": 1792508500.7497044,
+    "ast_hash": "8e358e15fd2ad00d45d688e983fbb8e7",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
@@ -560,8 +560,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BottomNav.tsx": {
-    "mtime": 1791286124.839713,
-    "ast_hash": "19c6b3e8e75d0988d32fae955b5efac8",
+    "mtime": 1792508739.1796613,
+    "ast_hash": "b6ca6f5d46c0c5bbde8569a2753029f3",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/ConfirmationDialog.test.tsx": {
@@ -1250,8 +1250,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.tsx": {
-    "mtime": 1791291214.9849885,
-    "ast_hash": "4886b3c549f99a98d00ff3690ae87a2a",
+    "mtime": 1792508927.451702,
+    "ast_hash": "624e6b666ee47ce1f94e8336a2256b4d",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
@@ -4902,6 +4902,51 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/index-CmrjXy4C.js": {
     "mtime": 1792507855.6629508,
     "ast_hash": "c9a90236c641a88ef19f23ebced7a505",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/fallow/SKILL.md": {
+    "mtime": 1792508500.7217042,
+    "ast_hash": "40f0ea109dcd64b9f7db4d0af6b9b8f7",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/fallow/agents/openai.yaml": {
+    "mtime": 1792508500.7227044,
+    "ast_hash": "9b9141c748e7f1716f9825b5f07bc26f",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/fallow/references/cli-reference.md": {
+    "mtime": 1792508500.7227044,
+    "ast_hash": "a5efd658fc94bf4b17182d2cb6123a9a",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/fallow/references/gotchas.md": {
+    "mtime": 1792508500.7227044,
+    "ast_hash": "177037d6c1c3785610c481411c9f24ff",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/fallow/references/issue-types.md": {
+    "mtime": 1792508500.7227044,
+    "ast_hash": "26d079f34c7c9c8d682b01b7c1bbfb18",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/fallow/references/mcp.md": {
+    "mtime": 1792508500.7227044,
+    "ast_hash": "f91f7c76acf864527ac159d8ff80fcd6",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/fallow/references/node-bindings.md": {
+    "mtime": 1792508500.7227044,
+    "ast_hash": "d41c4b4402e4f51f884fd00d7ba7147d",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/fallow/references/patterns.md": {
+    "mtime": 1792508500.7237043,
+    "ast_hash": "da5da0bf2059476126355f27394a43ab",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/.agents/skills/fallow/references/similar-code.md": {
+    "mtime": 1792508500.7237043,
+    "ast_hash": "f0ae704b1d2cbe1cce0722f654cfd3f7",
     "semantic_hash": ""
   }
 }
