@@ -139,7 +139,7 @@ export default function BottomNav() {
           className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-[21rem] md:hidden px-3"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) * 0.4 + 0.6rem)" }}
         >
-          <div className="flex items-center justify-between rounded-full bg-[#f5f5f7]/80 dark:bg-[#1d1d1f]/80 blur-frost border border-black/[0.08] dark:border-white/[0.12] px-3 py-1.5 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.7),0_8px_24px_-6px_rgba(0,0,0,0.08)] dark:shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.12),0_8px_24px_-6px_rgba(0,0,0,0.35)]">
+          <div className="pointer-events-auto flex items-center justify-between rounded-full bg-white/45 dark:bg-white/10 backdrop-blur-2xl backdrop-saturate-[180%] [-webkit-backdrop-filter:blur(32px)_saturate(180%)] border border-black/[0.08] dark:border-white/10 px-3 py-1.5 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6),0_12px_32px_-4px_rgba(0,0,0,0.12)] dark:shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.1),0_12px_32px_-4px_rgba(0,0,0,0.5)]">
             {/* Left Side Items */}
             <div className="flex flex-1 justify-around items-center">
               {navItems.slice(0, 2).map((item) => (
@@ -203,12 +203,14 @@ function NavItem({
         <Icon
           size={20}
           className={`transition-colors duration-200 ${
-            active ? "text-primary font-semibold" : "text-muted-foreground/85 hover:text-foreground"
+            active
+              ? "text-primary font-semibold"
+              : "text-muted-foreground/85 dark:text-white/75 hover:text-foreground dark:hover:text-white"
           }`}
         />
 
         {badge && (
-          <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-[#f5f5f7] dark:ring-[#1d1d1f]" />
+          <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-white/60 dark:ring-black/60" />
         )}
 
         {/* Apple subtle active dot */}
