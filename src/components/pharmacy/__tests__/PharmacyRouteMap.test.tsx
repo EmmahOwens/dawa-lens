@@ -30,6 +30,7 @@ vi.mock("maplibre-gl", () => {
     addLayer: vi.fn(),
     getLayer: vi.fn(),
     getStyle: vi.fn().mockReturnValue({}),
+    setStyle: vi.fn(),
     getSource: mockGetSource,
     isStyleLoaded: mockIsStyleLoaded,
     resize: mockResize,
@@ -68,6 +69,9 @@ vi.mock("@/services/mapTileService", () => ({
   initPmtilesProtocol: vi.fn(),
   COMPOSITE_PHARMACY_MAP_STYLE: "mapbox://styles/test",
   ESRI_SATELLITE_STYLE: "mapbox://styles/test-sat",
+  OFFLINE_UGANDA_STYLE: { version: 8, sources: {}, layers: [] },
+  checkMapConnectivity: vi.fn().mockResolvedValue(true),
+  subscribeToMapNetworkChanges: vi.fn().mockReturnValue(() => {}),
 }));
 
 const mockPharmacy: NdaPharmacy = {
