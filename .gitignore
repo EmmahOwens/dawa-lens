@@ -6,26 +6,42 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+hub-debug.log*
+*-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Dependencies and Build Output
+node_modules/
+dist/
+dist-ssr/
 *.local
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables & secrets
 .env
+.env.*
+!.env.example
+*.env
+*.env.*
+!*.env.example
+!**/.env.example
 server/.env
+server/.env.*
+!server/.env.example
 .capgo.json
-.env.production
 
 # Business & Pitch Documents
 BUSINESS_MODEL.md
@@ -35,18 +51,40 @@ rust/target/
 .firebase/
 lint_results.txt
 *.tsbuildinfo
-firestore-debug.log*
-ui-debug.log*
+**/*.tsbuildinfo
 coverage/
 .scannerwork/
 
-# Firebase & Android Secrets
+# Graphify local state & cache
+graphify-out/cache/
+graphify-out/.rebuild.lock
+graphify-out/.graphify_python
+graphify-out/.graphify_root
+
+# Firebase & Android Secrets and Builds
 android/app/google-services.json
 **/google-services.json
+local.properties
+**/local.properties
+*.keystore
+*.jks
+android/.gradle/
+android/app/build/
+android/build/
 
 # Local scratch backups & Python cache
 scratch/
 __pycache__/
 *.pyc
 
-
+# LaTeX build artifacts (report)
+report/*.aux
+report/*.bbl
+report/*.blg
+report/*.fdb_latexmk
+report/*.fls
+report/*.lof
+report/*.lot
+report/*.out
+report/*.synctex.gz
+report/*.toc
