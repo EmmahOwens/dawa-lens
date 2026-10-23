@@ -40,6 +40,8 @@ import {
   initPmtilesProtocol,
   COMPOSITE_PHARMACY_MAP_STYLE,
   OFFLINE_UGANDA_STYLE,
+  checkMapConnectivity,
+  subscribeToMapNetworkChanges,
 } from "@/services/mapTileService";
 
 export interface PharmacyRouteMapProps {
@@ -169,20 +171,13 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator !== "undefined" ? navigator.onLine : true));
+  const isOnlineRef = useRef<boolean>(isOnline);
+  isOnlineRef.current = isOnline;
+  const isUsingOfflineStyleRef = useRef<boolean>(typeof navigator !== "undefined" ? !navigator.onLine : false);
   const [mapMode, setMapMode] = useState<"streets" | "satellite">("streets");
   const mapModeRef = useRef<"streets" | "satellite">("streets");
   mapModeRef.current = mapMode;
-
-  useEffect(() => {
-    const onOn = () => setIsOnline(true);
-    const onOff = () => setIsOnline(false);
-    window.addEventListener("online", onOn);
-    window.addEventListener("offline", onOff);
-    return () => {
-      window.removeEventListener("online", onOn);
-      window.removeEventListener("offline", onOff);
-    };
-  }, []);
+  const initialUserCoordsRef = useRef<[number, number]>(userCoords);
 
   // ── Helper: Attach route source & styling layers ───────────────────────────
   const setupRouteLayers = useCallback((map: Map, isSatellite: boolean) => {
@@ -259,6 +254,17 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
           },
         });
       }
+
+      // Sync raster layer visibilities if using composite style
+      if (map.getLayer("streets-layer")) {
+        map.setLayoutProperty("streets-layer", "visibility", isSatellite ? "none" : "visible");
+      }
+      if (map.getLayer("satellite-layer")) {
+        map.setLayoutProperty("satellite-layer", "visibility", isSatellite ? "visible" : "none");
+      }
+      if (map.getLayer("satellite-labels-layer")) {
+        map.setLayoutProperty("satellite-labels-layer", "visibility", isSatellite ? "visible" : "none");
+      }
     } catch (layerErr) {
       console.warn("[PharmacyRouteMap] Error setting up layers:", layerErr);
     }
@@ -268,16 +274,52 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
+    let consecutiveTileErrors = 0;
+    let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
+    let probeInterval: ReturnType<typeof setInterval> | null = null;
+    let isDisposed = false;
+
+    const applyMapStyle = (map: Map, targetOffline: boolean) => {
+      if (isDisposed) return;
+      try {
+        isUsingOfflineStyleRef.current = targetOffline;
+        setIsOnline(!targetOffline);
+        const targetStyle = targetOffline ? OFFLINE_UGANDA_STYLE : COMPOSITE_PHARMACY_MAP_STYLE;
+        if (typeof map.setStyle === "function") {
+          map.setStyle(targetStyle, { diff: false });
+        }
+      } catch (err) {
+        console.warn("[PharmacyRouteMap] Style transition error:", err);
+      }
+    };
+
+    const scheduleOnlineUpgrade = (map: Map, delayMs = 350) => {
+      if (isDisposed) return;
+      if (recoveryTimer) clearTimeout(recoveryTimer);
+      recoveryTimer = setTimeout(async () => {
+        if (isDisposed) return;
+        const reachable = typeof checkMapConnectivity === "function"
+          ? await checkMapConnectivity(3000)
+          : (typeof navigator !== "undefined" ? navigator.onLine : true);
+        if (isDisposed) return;
+        if (reachable) {
+          consecutiveTileErrors = 0;
+          applyMapStyle(map, false);
+        }
+      }, delayMs);
+    };
+
     try {
       initPmtilesProtocol(maplibregl);
 
       const isOfflineInitial = typeof navigator !== "undefined" && !navigator.onLine;
+      isUsingOfflineStyleRef.current = isOfflineInitial;
       const initialStyle = isOfflineInitial ? OFFLINE_UGANDA_STYLE : COMPOSITE_PHARMACY_MAP_STYLE;
 
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
         style: initialStyle,
-        center: userCoords,
+        center: initialUserCoordsRef.current,
         zoom: 13,
         attributionControl: false,
         dragRotate: false,
@@ -286,6 +328,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
       });
 
       const handleReady = () => {
+        if (isDisposed) return;
         try {
           map.resize();
           setupRouteLayers(map, mapModeRef.current === "satellite");
@@ -297,37 +340,97 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
 
       map.on("load", handleReady);
       map.on("styledata", handleReady);
+      map.on("style.load", handleReady);
 
-      map.on("error", (e) => {
-        const errorMsg = e.error?.message || "";
-        const isFatal = !map.isStyleLoaded() || errorMsg.includes("Failed to fetch") || (typeof navigator !== "undefined" && !navigator.onLine);
-        if (isFatal) {
-          try {
-            map.setStyle(OFFLINE_UGANDA_STYLE);
-          } catch {}
+      // Reset error counter whenever a tile loads successfully
+      map.on("data", (e: any) => {
+        if (e?.dataType === "source" && e?.tile) {
+          consecutiveTileErrors = 0;
         }
       });
 
-      const handleWindowOnline = () => {
-        try {
-          map.setStyle(COMPOSITE_PHARMACY_MAP_STYLE);
-        } catch {}
-      };
+      map.on("error", (e: any) => {
+        if (isDisposed || isUsingOfflineStyleRef.current) return;
 
-      const handleWindowOffline = () => {
-        try {
-          map.setStyle(OFFLINE_UGANDA_STYLE);
-        } catch {}
-      };
+        const deviceOffline = typeof navigator !== "undefined" && !navigator.onLine;
+        if (deviceOffline) {
+          applyMapStyle(map, true);
+          return;
+        }
 
-      window.addEventListener("online", handleWindowOnline);
-      window.addEventListener("offline", handleWindowOffline);
+        const errorMsg = String(e?.error?.message || e?.message || "");
+        const isNetworkErr =
+          errorMsg.includes("Failed to fetch") ||
+          errorMsg.includes("NetworkError") ||
+          errorMsg.includes("ERR_INTERNET_DISCONNECTED") ||
+          errorMsg.includes("ERR_NAME_NOT_RESOLVED");
+
+        if (isNetworkErr) {
+          consecutiveTileErrors += 1;
+          // Only fall back to offline style after multiple consecutive tile failures AND confirmed loss of connectivity
+          if (consecutiveTileErrors >= 6) {
+            consecutiveTileErrors = 0;
+            const checkAndFallback = async () => {
+              const reachable = typeof checkMapConnectivity === "function"
+                ? await checkMapConnectivity(2500)
+                : false;
+              if (!isDisposed && !reachable) {
+                applyMapStyle(map, true);
+              }
+            };
+            checkAndFallback();
+          }
+        }
+      });
+
+      const unsubscribeNetwork = typeof subscribeToMapNetworkChanges === "function"
+        ? subscribeToMapNetworkChanges((connected) => {
+            if (isDisposed) return;
+            if (connected) {
+              consecutiveTileErrors = 0;
+              if (isUsingOfflineStyleRef.current) {
+                applyMapStyle(map, false);
+              }
+              scheduleOnlineUpgrade(map, 600);
+            } else {
+              if (!isUsingOfflineStyleRef.current) {
+                applyMapStyle(map, true);
+              } else {
+                setIsOnline(false);
+              }
+            }
+          })
+        : (() => {
+            const onOn = () => applyMapStyle(map, false);
+            const onOff = () => applyMapStyle(map, true);
+            window.addEventListener("online", onOn);
+            window.addEventListener("offline", onOff);
+            return () => {
+              window.removeEventListener("online", onOn);
+              window.removeEventListener("offline", onOff);
+            };
+          })();
+
+      // Periodic recovery check so weak-to-strong internet transitions upgrade automatically
+      // even when navigator.onLine never flipped false -> true
+      probeInterval = setInterval(() => {
+        if (!isDisposed && isUsingOfflineStyleRef.current) {
+          scheduleOnlineUpgrade(map, 50);
+        }
+      }, 6000);
+
+      // If initialized offline (or on weak network), verify actual connectivity right away
+      if (isOfflineInitial) {
+        scheduleOnlineUpgrade(map, 500);
+      }
 
       mapRef.current = map;
 
       return () => {
-        window.removeEventListener("online", handleWindowOnline);
-        window.removeEventListener("offline", handleWindowOffline);
+        isDisposed = true;
+        if (recoveryTimer) clearTimeout(recoveryTimer);
+        if (probeInterval) clearInterval(probeInterval);
+        unsubscribeNetwork();
         if (mapRef.current) {
           mapRef.current.remove();
           mapRef.current = null;
@@ -336,7 +439,7 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     } catch (initErr) {
       console.error("[PharmacyRouteMap] Initialization failed:", initErr);
     }
-  }, [setupRouteLayers, userCoords]);
+  }, [setupRouteLayers]);
 
   // ── ResizeObserver to handle modal spring animations seamlessly ───────────
   useEffect(() => {

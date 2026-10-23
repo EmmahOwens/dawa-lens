@@ -7,6 +7,12 @@ import {
 } from "../clinicalInteractionsData";
 import { checkInteractions } from "../interactionChecker";
 import { detectDuplicateTherapies } from "../therapeuticDuplicationService";
+import {
+  evaluateOfflineHolisticSafety,
+  getAutomaticFoodInteractionsForMeds,
+  generateOfflineNutritionalGuidance,
+  evaluateOfflineMealSafety,
+} from "../foodDrugInteractionService";
 
 describe("Clinical Drug Interactions & Duplicate Neglect Engine", () => {
   describe("Duplicate Neglect & Drug Substance Identity", () => {
@@ -181,6 +187,55 @@ describe("Clinical Drug Interactions & Duplicate Neglect Engine", () => {
       expect(interactions).toHaveLength(1);
       expect(interactions[0].drug1).toContain("Ibuprofen");
       expect(interactions[0].drug2).toContain("Warfarin");
+    });
+
+    it("detects East African essential medicine interactions offline (Coartem + Ciprofloxacin QT risk, Septrin + Lisinopril hyperkalemia)", async () => {
+      const qtInteractions = await checkInteractions(["Coartem", "Ciprofloxacin"]);
+      expect(qtInteractions).toHaveLength(1);
+      expect(qtInteractions[0].severity).toBe("high");
+      expect(qtInteractions[0].clinicalDetails?.title).toContain("QT");
+
+      const septrinInteractions = await checkInteractions(["Septrin", "Lisinopril"]);
+      expect(septrinInteractions).toHaveLength(1);
+      expect(septrinInteractions[0].severity).toBe("high");
+      expect(septrinInteractions[0].clinicalDetails?.title).toContain("Hyperkalemia");
+    });
+  });
+
+  describe("Offline Food-Drug Interaction Engine", () => {
+    it("automatically detects food-drug interactions from the local CSV and rules when offline", () => {
+      const meds = [
+        { name: "Warfarin" },
+        { name: "Ciprofloxacin" },
+        { name: "Coartem" },
+      ];
+      const autoAlerts = getAutomaticFoodInteractionsForMeds(meds);
+      expect(autoAlerts.length).toBeGreaterThanOrEqual(3);
+      expect(autoAlerts.some(a => a.factor.toLowerCase().includes("sukuma") || a.factor.toLowerCase().includes("greens") || a.affectedMedicines.includes("Warfarin"))).toBe(true);
+      expect(autoAlerts.some(a => a.affectedMedicines.includes("Ciprofloxacin"))).toBe(true);
+      expect(autoAlerts.some(a => a.affectedMedicines.includes("Coartem"))).toBe(true);
+    });
+
+    it("evaluates selected lifestyle factors offline (Alcohol + Metronidazole, Grapefruit + Atorvastatin, Bananas + Lisinopril)", () => {
+      const results = evaluateOfflineHolisticSafety(
+        [{ name: "Metronidazole" }, { name: "Atorvastatin" }, { name: "Lisinopril" }],
+        ["Alcohol", "Grapefruit", "Bananas (Potassium)"]
+      );
+      expect(results).toHaveLength(3);
+      expect(results.find(r => r.factor === "Alcohol")?.risk).toBe("High");
+      expect(results.find(r => r.factor === "Grapefruit")?.risk).toBe("High");
+      expect(results.find(r => r.factor === "Bananas (Potassium)")?.risk).toBe("High");
+    });
+
+    it("generates offline nutritional guidance and meal safety verdicts", () => {
+      const guidance = generateOfflineNutritionalGuidance([{ name: "Ciprofloxacin" }, { name: "Metronidazole" }]);
+      expect(guidance.warnings.length).toBeGreaterThan(0);
+      expect(guidance.recommendations.length).toBeGreaterThan(0);
+      expect(guidance.timingAdvice).toContain("Ciprofloxacin");
+
+      const mealCheck = evaluateOfflineMealSafety([{ name: "Ciprofloxacin" }], "Milk and yoghurt breakfast");
+      expect(mealCheck.risk).toBe("High");
+      expect(mealCheck.explanation).toContain("Ciprofloxacin");
     });
   });
 });

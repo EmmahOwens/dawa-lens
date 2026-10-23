@@ -17,6 +17,10 @@ import {
 } from "@/components/ui/select";
 import { aiApi } from "@/services/api";
 import { generateLocalClinicalAssessment } from "@/services/clinicalAssessmentService";
+import {
+  generateOfflineNutritionalGuidance,
+  evaluateOfflineMealSafety,
+} from "@/services/foodDrugInteractionService";
 import { storage } from "@/lib/storage";
 import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
 import { LottieMoji } from "@/components/rive/LottieMoji";
@@ -256,6 +260,13 @@ export default function WellnessPage() {
 
     if (scopedMedicines.length === 0) return;
     if (typeof navigator !== "undefined" && !navigator.onLine) {
+      const offlineGuidance = generateOfflineNutritionalGuidance(scopedMedicines);
+      setGuidance(offlineGuidance);
+      try {
+        const str = JSON.stringify(offlineGuidance);
+        sessionStorage.setItem("dawa_nutritional_guidance", str);
+        await storage.setItem("dawa_nutritional_guidance", str);
+      } catch {}
       return;
     }
     setGuidanceLoading(true);
@@ -270,9 +281,14 @@ export default function WellnessPage() {
         } catch (e) {
           console.error("Failed to save nutritional guidance to storage", e);
         }
+      } else {
+        const offlineGuidance = generateOfflineNutritionalGuidance(scopedMedicines);
+        setGuidance(offlineGuidance);
       }
     } catch (err) {
-      console.error("Failed to fetch nutritional guidance:", err);
+      console.warn("Failed to fetch nutritional guidance, falling back to local clinical engine:", err);
+      const offlineGuidance = generateOfflineNutritionalGuidance(scopedMedicines);
+      setGuidance(offlineGuidance);
     } finally {
       setGuidanceLoading(false);
     }
@@ -360,10 +376,21 @@ export default function WellnessPage() {
 
   const checkMeal = async () => {
     if (!meal) return;
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setMealSafety(evaluateOfflineMealSafety(scopedMedicines, meal));
+      return;
+    }
     setLoading(true);
     try {
       const res = await aiApi.checkMealSafety({ medicines: scopedMedicines, mealDescription: meal });
-      setMealSafety(res);
+      if (res) {
+        setMealSafety(res);
+      } else {
+        setMealSafety(evaluateOfflineMealSafety(scopedMedicines, meal));
+      }
+    } catch (err) {
+      console.warn("AI meal safety check failed, falling back to local clinical engine:", err);
+      setMealSafety(evaluateOfflineMealSafety(scopedMedicines, meal));
     } finally {
       setLoading(false);
     }

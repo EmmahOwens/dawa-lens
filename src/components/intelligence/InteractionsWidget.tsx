@@ -10,7 +10,11 @@ import { checkConditionSafety } from "@/services/conditionInteractionService";
 import { checkFdaMultiSafety, FdaMultiSafetyResult } from "@/services/openFdaClient";
 import { checkInteractions } from "@/services/interactionChecker";
 import { deduplicateMedicationList } from "@/services/clinicalInteractionsData";
-import { ConditionSafetyCheck, ParsedInteraction } from "@/types/interactions";
+import {
+  evaluateOfflineHolisticSafety,
+  getAutomaticFoodInteractionsForMeds,
+} from "@/services/foodDrugInteractionService";
+import { ConditionSafetyCheck, HolisticInteraction, ParsedInteraction } from "@/types/interactions";
 import { MobileWatchdogResolveButton } from "./MobileWatchdogResolveButton";
 import { buildSafetyConsultPrompt } from "@/lib/safetyPromptBuilder";
 import MessageRenderer from "@/components/MessageRenderer";
@@ -27,6 +31,7 @@ export function InteractionsWidget() {
   const [fdaSafety, setFdaSafety] = useState<FdaMultiSafetyResult | null>(null);
   const [interactions, setInteractions] = useState<ParsedInteraction[]>([]);
   const [conditionWarnings, setConditionWarnings] = useState<ConditionSafetyCheck[]>([]);
+  const [selectedDietaryResult, setSelectedDietaryResult] = useState<HolisticInteraction | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Determine active medication set based on selected patient context
@@ -152,6 +157,26 @@ export function InteractionsWidget() {
     { name: "Dairy", icon: GlassWater },
     { name: "Caffeine", icon: Coffee },
   ];
+
+  const autoFoodAlerts = React.useMemo(
+    () => getAutomaticFoodInteractionsForMeds(activeMeds),
+    [medicinesKey]
+  );
+
+  const handleSelectDietaryItem = (factorName: string) => {
+    const [offlineCheck] = evaluateOfflineHolisticSafety(activeMeds, [factorName]);
+    if (offlineCheck) {
+      setSelectedDietaryResult(prev =>
+        prev?.factor === factorName ? null : offlineCheck
+      );
+    }
+    if (typeof navigator === "undefined" || navigator.onLine) {
+      const names = activeMeds.map(m => m.name).join(", ");
+      handleAskDawaGPT(
+        `Does ${factorName} interact with my medications (${names || "cabinet"})? Are there dietary precautions I should follow?`
+      );
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -315,7 +340,7 @@ export function InteractionsWidget() {
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    Cabinet Secure
+                    Cabinet 100% Secure
                   </p>
                   <p className="text-xs font-semibold text-foreground">
                     Zero Known Interactions
@@ -553,16 +578,16 @@ export function InteractionsWidget() {
         <div className="grid grid-cols-2 gap-2">
           {dietaryItems.map((item, idx) => {
             const Icon = item.icon;
+            const isSelected = selectedDietaryResult?.factor === item.name;
             return (
               <button
                 key={idx}
-                onClick={() => {
-                  const names = activeMeds.map(m => m.name).join(", ");
-                  handleAskDawaGPT(
-                    `Does ${item.name} interact with my medications (${names || "cabinet"})? Are there dietary precautions I should follow?`
-                  );
-                }}
-                className="p-3 rounded-[14px] bg-card hover:bg-secondary/60 border border-border flex items-center gap-2.5 transition-colors text-left active:scale-95"
+                onClick={() => handleSelectDietaryItem(item.name)}
+                className={`p-3 rounded-[14px] border flex items-center gap-2.5 transition-colors text-left active:scale-95 ${
+                  isSelected
+                    ? "bg-primary/10 border-primary/40"
+                    : "bg-card hover:bg-secondary/60 border-border"
+                }`}
               >
                 <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                   <Icon size={14} />
@@ -572,13 +597,117 @@ export function InteractionsWidget() {
                     {item.name}
                   </p>
                   <p className="text-[10px] text-muted-foreground font-medium">
-                    Check
+                    {isSelected ? "Active" : "Check"}
                   </p>
                 </div>
               </button>
             );
           })}
         </div>
+
+        {/* Inline Dietary Analysis Card (Works 100% Offline & Online) */}
+        <AnimatePresence>
+          {selectedDietaryResult && (
+            <motion.div
+              key={selectedDietaryResult.factor}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className={`p-3.5 rounded-[16px] bg-card border space-y-2 ${
+                selectedDietaryResult.risk === "High"
+                  ? "border-destructive/30"
+                  : selectedDietaryResult.risk === "Medium"
+                  ? "border-amber-500/30"
+                  : "border-emerald-500/30"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    selectedDietaryResult.risk === "High"
+                      ? "text-destructive bg-destructive/10 border-destructive/20"
+                      : selectedDietaryResult.risk === "Medium"
+                      ? "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20"
+                      : "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                  }`}
+                >
+                  {selectedDietaryResult.factor}:{" "}
+                  {selectedDietaryResult.risk === "Safe"
+                    ? "Compatible"
+                    : `${selectedDietaryResult.risk} Risk`}
+                </span>
+                {typeof navigator !== "undefined" && navigator.onLine && (
+                  <button
+                    onClick={() => {
+                      const names = activeMeds.map(m => m.name).join(", ");
+                      handleAskDawaGPT(
+                        `Does ${selectedDietaryResult.factor} interact with my medications (${names || "cabinet"})? Are there dietary precautions I should follow?`
+                      );
+                    }}
+                    className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 active:scale-95"
+                  >
+                    <span>Ask AI</span>
+                    <ArrowRight size={11} />
+                  </button>
+                )}
+              </div>
+              <div className="text-[11px] text-muted-foreground leading-relaxed">
+                <MessageRenderer
+                  text={selectedDietaryResult.explanation}
+                  className="text-[11px] text-muted-foreground"
+                />
+              </div>
+              <div className="text-[11px] font-medium text-foreground bg-secondary/40 p-2.5 rounded-xl border border-border/50">
+                <MessageRenderer
+                  text={selectedDietaryResult.advice}
+                  className="text-[11px] text-foreground"
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Automatic Food-Drug Interactions for Active Medications */}
+        {!selectedDietaryResult && autoFoodAlerts.length > 0 && (
+          <div className="space-y-2 pt-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">
+              Detected Food Precautions ({autoFoodAlerts.length})
+            </p>
+            <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+              {autoFoodAlerts.map((alert, i) => (
+                <div
+                  key={`food-alert-${i}`}
+                  className={`p-3 rounded-[14px] bg-card border space-y-1.5 ${
+                    alert.risk === "High"
+                      ? "border-destructive/30"
+                      : "border-amber-500/20"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-foreground truncate">
+                      {alert.factor}
+                    </span>
+                    <span
+                      className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border shrink-0 ${
+                        alert.risk === "High"
+                          ? "text-destructive bg-destructive/10 border-destructive/20"
+                          : "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20"
+                      }`}
+                    >
+                      {alert.risk} Risk
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground leading-relaxed">
+                    <MessageRenderer
+                      text={alert.advice}
+                      className="text-[11px] text-muted-foreground"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

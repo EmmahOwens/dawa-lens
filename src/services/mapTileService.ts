@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+import { Network } from "@capacitor/network";
 import * as pmtiles from "pmtiles";
 import type * as maplibregl from "maplibre-gl";
 
@@ -53,24 +55,36 @@ const cartoKeyParam = CARTO_API_KEY ? `?api_key=${encodeURIComponent(CARTO_API_K
 
 /**
  * Unified multi-layer composite map style:
- * Contains both Streets (clean OpenStreetMap or CARTO if key provided) and Satellite (Esri maxzoom 17 + Hybrid labels)
- * in a single style specification.
+ * Contains:
+ * 1. Embedded offline Uganda boundary base layers (instant zero-network fallback under raster tiles)
+ * 2. Streets (CARTO Voyager / OpenStreetMap multi-mirror high-detail tiles)
+ * 3. Satellite (Esri maxzoom 17 + Hybrid labels)
  *
- * Switching between Streets and Satellite is done via layer visibility toggling,
- * completely avoiding map.setStyle() teardowns that wipe out route polylines!
+ * Switching between Offline, Streets, and Satellite is done via layer visibility toggling
+ * or non-diff style application, avoiding destructive route polyline teardowns!
  */
 export const COMPOSITE_PHARMACY_MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
+    "uganda-boundary": {
+      type: "geojson",
+      data: ugandaBoundaryData as any,
+    },
     "streets-source": {
       type: "raster",
       tiles: CARTO_API_KEY
-        ? [`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png${cartoKeyParam}`]
-        : ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        ? [
+            `https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png${cartoKeyParam}`,
+            `https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png${cartoKeyParam}`,
+            `https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png${cartoKeyParam}`,
+          ]
+        : [
+            "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+            "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          ],
       tileSize: 256,
-      attribution: CARTO_API_KEY
-        ? "© OpenStreetMap contributors, © CARTO"
-        : "© OpenStreetMap contributors",
+      attribution: "© OpenStreetMap contributors, © CARTO",
       maxzoom: 19,
     },
     "satellite-source": {
@@ -97,6 +111,32 @@ export const COMPOSITE_PHARMACY_MAP_STYLE: maplibregl.StyleSpecification = {
     },
   },
   layers: [
+    {
+      id: "uganda-bg",
+      type: "background",
+      paint: {
+        "background-color": "#0d1527",
+      },
+    },
+    {
+      id: "uganda-fill",
+      type: "fill",
+      source: "uganda-boundary",
+      paint: {
+        "fill-color": "#132338",
+        "fill-opacity": 0.95,
+      },
+    },
+    {
+      id: "uganda-border",
+      type: "line",
+      source: "uganda-boundary",
+      paint: {
+        "line-color": "#10b981",
+        "line-width": 1.5,
+        "line-opacity": 0.8,
+      },
+    },
     {
       id: "streets-layer",
       type: "raster",
@@ -129,6 +169,113 @@ export const COMPOSITE_PHARMACY_MAP_STYLE: maplibregl.StyleSpecification = {
     },
   ],
 };
+
+/**
+ * Checks whether online map tile servers are actively reachable.
+ * Used to detect when weak/offline networks recover internet access
+ * even when browser `online` events did not fire.
+ */
+export async function checkMapConnectivity(timeoutMs = 3500): Promise<boolean> {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    if (!Capacitor.isNativePlatform()) {
+      return false;
+    }
+  }
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const status = await Network.getStatus();
+      if (!status.connected) return false;
+    } catch {
+      // Fall through to probe
+    }
+  }
+
+  // In unit test environments (jsdom/vitest) without real network fetch, trust navigator.onLine
+  if (typeof process !== "undefined" && (process.env?.VITEST || process.env?.NODE_ENV === "test")) {
+    return typeof navigator !== "undefined" ? navigator.onLine : true;
+  }
+
+  const probeUrls = [
+    "https://tiles.openfreemap.org/styles/positron",
+    "https://a.basemaps.cartocdn.com/rastertiles/voyager/0/0/0.png",
+    "https://tile.openstreetmap.org/0/0/0.png",
+  ];
+
+  for (const url of probeUrls) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, {
+        method: "HEAD",
+        mode: "no-cors",
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (res.ok || res.type === "opaque") {
+        return true;
+      }
+    } catch {
+      clearTimeout(timer);
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Subscribes to both Capacitor native network changes and browser online/offline events.
+ */
+export function subscribeToMapNetworkChanges(
+  onStatusChange: (connected: boolean) => void
+): () => void {
+  let cancelled = false;
+  let nativeHandle: { remove: () => Promise<void> } | null = null;
+
+  const handleOnline = () => {
+    if (!cancelled) onStatusChange(true);
+  };
+  const handleOffline = () => {
+    if (!cancelled) onStatusChange(false);
+  };
+
+  if (typeof window !== "undefined") {
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+  }
+
+  if (Capacitor.isNativePlatform()) {
+    Network.getStatus()
+      .then((status) => {
+        if (!cancelled) onStatusChange(status.connected);
+      })
+      .catch(() => {});
+
+    Network.addListener("networkStatusChange", (status) => {
+      if (!cancelled) onStatusChange(status.connected);
+    })
+      .then((handle) => {
+        if (cancelled) {
+          handle.remove().catch(() => {});
+        } else {
+          nativeHandle = handle;
+        }
+      })
+      .catch(() => {});
+  }
+
+  return () => {
+    cancelled = true;
+    if (typeof window !== "undefined") {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    }
+    if (nativeHandle) {
+      nativeHandle.remove().catch(() => {});
+    }
+  };
+}
 
 let isProtocolRegistered = false;
 let globalProtocolInstance: pmtiles.Protocol | null = null;

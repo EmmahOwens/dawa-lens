@@ -5,6 +5,10 @@ import { useApp } from "@/contexts/AppContext";
 import { checkInteractions, getRxCUI, getSpellingSuggestions } from "@/services/interactionChecker";
 import { HolisticInteraction, ParsedInteraction } from "@/types/interactions";
 import { isSameDrugSubstance, deduplicateMedicationList } from "@/services/clinicalInteractionsData";
+import {
+  evaluateOfflineHolisticSafety,
+  getAutomaticFoodInteractionsForMeds,
+} from "@/services/foodDrugInteractionService";
 import { 
   ShieldAlert, AlertTriangle, Info, CheckCircle2, 
   Search, Plus, Trash2, Share2, X, Coffee, Wine, 
@@ -210,21 +214,45 @@ Please provide concise, patient-friendly guidance:
     toast.info("Cleared selected factors");
   };
 
+  const currentHolisticMeds = activeTab === "cabinet"
+    ? activeMeds
+    : sandboxDrugs.map(d => ({ name: d.name, genericName: "" }));
+
+  const autoFoodInteractions = getAutomaticFoodInteractionsForMeds(currentHolisticMeds);
+  const displayedHolisticReport =
+    holisticReport.length > 0
+      ? holisticReport
+      : lifestyleFactors.length === 0
+      ? autoFoodInteractions
+      : [];
+
   const checkHolistic = async () => {
-    const activeMeds = activeTab === "cabinet" 
-      ? medicines 
+    const medsToEvaluate = activeTab === "cabinet" 
+      ? activeMeds 
       : sandboxDrugs.map(d => ({ name: d.name, genericName: "" }));
 
-    if (activeMeds.length === 0 || lifestyleFactors.length === 0) {
+    if (medsToEvaluate.length === 0 || lifestyleFactors.length === 0) {
       toast.error("Please add medications and select at least one food or lifestyle factor.");
       return;
     }
     
     NativeService.haptics.impact(ImpactStyle.Medium);
     setHolisticLoading(true);
+
+    // Offline-first fallback: evaluate deterministically against local clinical CSV + rules
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      const offlineResults = evaluateOfflineHolisticSafety(medsToEvaluate, lifestyleFactors);
+      setHolisticReport(offlineResults);
+      setHolisticLoading(false);
+      toast.success(
+        `Offline clinical food-drug safety analyzed for ${lifestyleFactors.length} item${lifestyleFactors.length > 1 ? "s" : ""}!`
+      );
+      return;
+    }
+
     try {
       const res = await aiApi.checkHolisticSafety({
-        medicines: activeMeds as any[],
+        medicines: medsToEvaluate as any[],
         lifestyleFactors
       }) as { interactions?: HolisticInteraction[] };
 
@@ -238,11 +266,17 @@ Please provide concise, patient-friendly guidance:
         })
       );
 
-      setHolisticReport(scopedInteractions);
+      if (scopedInteractions.length > 0) {
+        setHolisticReport(scopedInteractions);
+      } else {
+        setHolisticReport(evaluateOfflineHolisticSafety(medsToEvaluate, lifestyleFactors));
+      }
       toast.success(`Holistic safety analyzed for ${lifestyleFactors.length} item${lifestyleFactors.length > 1 ? 's' : ''}!`);
     } catch (err) {
-      console.error("Holistic check failed", err);
-      toast.error("Failed to check lifestyle interactions.");
+      console.warn("Holistic AI check failed, falling back to local clinical food-drug database:", err);
+      const offlineResults = evaluateOfflineHolisticSafety(medsToEvaluate, lifestyleFactors);
+      setHolisticReport(offlineResults);
+      toast.success(`Holistic safety analyzed for ${lifestyleFactors.length} item${lifestyleFactors.length > 1 ? 's' : ''} (Offline Clinical Engine).`);
     } finally {
       setHolisticLoading(false);
     }
@@ -426,8 +460,33 @@ Please provide concise, patient-friendly guidance:
     toast.success("Sandbox cleared.");
   };
 
+  const buildOfflinePlainEnglish = (
+    drug1: string,
+    drug2: string,
+    technicalDesc: string,
+    clinicalDetails?: ParsedInteraction["clinicalDetails"]
+  ): string => {
+    const riskText = clinicalDetails?.mechanism || technicalDesc;
+    const actionText =
+      clinicalDetails?.action ||
+      (clinicalDetails?.spacingHours
+        ? `Space doses of **${drug1}** and **${drug2}** by at least ${clinicalDetails.spacingHours} hours.`
+        : `Avoid combining **${drug1}** and **${drug2}** without consulting your doctor or pharmacist.`);
+    const monitorText =
+      clinicalDetails?.monitoring ||
+      `Contact a healthcare provider immediately if you experience unusual dizziness, bleeding, stomach pain, or unexpected symptoms.`;
+
+    return `- **What happens:** ${riskText}\n- **What to do:** ${actionText}\n- **When to seek help:** ${monitorText}`;
+  };
+
   // AI Translation helper
-  const translateExplanation = async (interactionKey: string, drug1: string, drug2: string, technicalDesc: string) => {
+  const translateExplanation = async (
+    interactionKey: string,
+    drug1: string,
+    drug2: string,
+    technicalDesc: string,
+    clinicalDetails?: ParsedInteraction["clinicalDetails"]
+  ) => {
     if (expandedExplanation === interactionKey) {
       setExpandedExplanation(null);
       return;
@@ -438,6 +497,18 @@ Please provide concise, patient-friendly guidance:
     if (explanations[interactionKey]?.text) return;
 
     NativeService.haptics.impact(ImpactStyle.Light);
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setExplanations(prev => ({
+        ...prev,
+        [interactionKey]: {
+          loading: false,
+          text: buildOfflinePlainEnglish(drug1, drug2, technicalDesc, clinicalDetails),
+        }
+      }));
+      return;
+    }
+
     setExplanations(prev => ({
       ...prev,
       [interactionKey]: { loading: true, text: "" }
@@ -465,14 +536,21 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
 
       setExplanations(prev => ({
         ...prev,
-        [interactionKey]: { loading: false, text: response.text }
+        [interactionKey]: {
+          loading: false,
+          text:
+            response?.text ||
+            buildOfflinePlainEnglish(drug1, drug2, technicalDesc, clinicalDetails),
+        }
       }));
     } catch (err) {
-      console.error("Translation failed", err);
-      toast.error("Failed to explain interaction.");
+      console.warn("AI Translation unavailable, using offline clinical summary:", err);
       setExplanations(prev => ({
         ...prev,
-        [interactionKey]: { loading: false, text: "Could not fetch explanation. Please consult a health worker." }
+        [interactionKey]: {
+          loading: false,
+          text: buildOfflinePlainEnglish(drug1, drug2, technicalDesc, clinicalDetails),
+        }
       }));
     }
   };
@@ -522,9 +600,9 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
       }
     }
 
-    if (holisticReport.length > 0) {
+    if (displayedHolisticReport.length > 0) {
       reportText += `=== HOLISTIC & LIFESTYLE SAFETY ===\n`;
-      holisticReport.forEach(h => {
+      displayedHolisticReport.forEach(h => {
         reportText += `[${h.risk.toUpperCase()} RISK] ${h.factor}\n`;
         if (h.affectedMedicines && h.affectedMedicines.length > 0) {
           reportText += `Affects: ${h.affectedMedicines.join(", ")}\n`;
@@ -891,7 +969,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
 
                     <div className="flex flex-wrap items-center gap-2">
                       <button
-                        onClick={() => translateExplanation(key, interaction.drug1, interaction.drug2, interaction.description)}
+                        onClick={() => translateExplanation(key, interaction.drug1, interaction.drug2, interaction.description, interaction.clinicalDetails)}
                         className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/10 hover:bg-primary/15 text-primary text-[11px] font-semibold transition-all active:scale-95"
                       >
                         {explanations[key]?.loading ? (
@@ -1133,7 +1211,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
 
                     <div className="flex flex-wrap items-center gap-2">
                       <button
-                        onClick={() => translateExplanation(key, interaction.drug1, interaction.drug2, interaction.description)}
+                        onClick={() => translateExplanation(key, interaction.drug1, interaction.drug2, interaction.description, interaction.clinicalDetails)}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/5 hover:bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider transition-all"
                       >
                         {explanations[key]?.loading ? (
@@ -1422,11 +1500,13 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
         </div>
 
         {/* Results display */}
-        {holisticReport.length > 0 && (
+        {displayedHolisticReport.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Safety Analysis for {holisticReport.length} selected item{holisticReport.length > 1 ? "s" : ""}
+                {holisticReport.length > 0
+                  ? `Safety Analysis for ${holisticReport.length} selected item${holisticReport.length > 1 ? "s" : ""}`
+                  : `Detected Food & Dietary Interactions (${displayedHolisticReport.length})`}
               </span>
               <span className="text-[11px] text-muted-foreground/80 font-medium flex items-center gap-1">
                 <Sparkles size={11} className="text-primary" />
@@ -1434,7 +1514,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
               </span>
             </div>
 
-            {holisticReport.map((interaction, idx) => {
+            {displayedHolisticReport.map((interaction, idx) => {
               const isHigh = interaction.risk === "High";
               const isMedium = interaction.risk === "Medium";
               const isLow = interaction.risk === "Low";
@@ -1547,7 +1627,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
           </div>
         )}
 
-        {holisticReport.length === 0 && !holisticLoading && (
+        {displayedHolisticReport.length === 0 && !holisticLoading && (
           <div className="p-12 rounded-2xl border border-dashed border-border/50 flex flex-col items-center text-center opacity-70 bg-muted/5">
              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4 text-muted-foreground/40">
                <Info size={24} />

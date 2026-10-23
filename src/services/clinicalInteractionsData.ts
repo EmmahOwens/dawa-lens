@@ -416,7 +416,99 @@ export const CANONICAL_DRUGS: Record<string, ClinicalDrugDef> = {
     canonicalId: 'iron',
     name: 'Iron (Ferrous Sulfate)',
     genericClass: 'iron_supplement',
-    synonyms: ['ferrous sulfate', 'ferrous gluconate', 'feosol', 'iron supplement', 'orofer'],
+    synonyms: ['ferrous sulfate', 'ferrous gluconate', 'feosol', 'iron supplement', 'orofer', 'fefol', 'ferrous fumarate'],
+  },
+
+  // East Africa / Uganda Essential Formulary Additions
+  amlodipine: {
+    canonicalId: 'amlodipine',
+    name: 'Amlodipine',
+    genericClass: 'dhp_ccb',
+    synonyms: ['norvasc', 'amlopin', 'amlocor'],
+  },
+  nifedipine: {
+    canonicalId: 'nifedipine',
+    name: 'Nifedipine',
+    genericClass: 'dhp_ccb',
+    synonyms: ['adalat', 'procardia'],
+  },
+  propranolol: {
+    canonicalId: 'propranolol',
+    name: 'Propranolol',
+    genericClass: 'beta_blocker',
+    synonyms: ['inderal', 'inno-pran'],
+  },
+  artemether_lumefantrine: {
+    canonicalId: 'artemether_lumefantrine',
+    name: 'Artemether + Lumefantrine (Coartem)',
+    genericClass: 'antimalarial_act',
+    synonyms: ['coartem', 'lumartem', 'lonart', 'artefan', 'artemether', 'lumefantrine'],
+  },
+  quinine: {
+    canonicalId: 'quinine',
+    name: 'Quinine',
+    genericClass: 'antimalarial_act',
+    synonyms: ['quinate', 'quiphate'],
+  },
+  amoxicillin: {
+    canonicalId: 'amoxicillin',
+    name: 'Amoxicillin',
+    genericClass: 'penicillin',
+    synonyms: ['amoxil', 'amoxyl', 'penamox', 'hiconcil', 'augmentin', 'amoxiclav'],
+  },
+  azithromycin: {
+    canonicalId: 'azithromycin',
+    name: 'Azithromycin',
+    genericClass: 'macrolide',
+    synonyms: ['zithromax', 'azithral', 'azitrox', 'z-pack'],
+  },
+  cotrimoxazole: {
+    canonicalId: 'cotrimoxazole',
+    name: 'Co-trimoxazole (Septrin)',
+    genericClass: 'sulfonamide',
+    synonyms: ['septrin', 'bactrim', 'sulfamethoxazole', 'trimethoprim', 'cotrim'],
+  },
+  efavirenz: {
+    canonicalId: 'efavirenz',
+    name: 'Efavirenz',
+    genericClass: 'nnrti_arv',
+    synonyms: ['sustiva', 'stocrin'],
+  },
+  levothyroxine: {
+    canonicalId: 'levothyroxine',
+    name: 'Levothyroxine',
+    genericClass: 'thyroid_hormone',
+    synonyms: ['eltroxin', 'synthroid', 'levoxyl'],
+  },
+  levodopa: {
+    canonicalId: 'levodopa',
+    name: 'Levodopa / Carbidopa',
+    genericClass: 'dopaminergic',
+    synonyms: ['sinemet', 'madopar', 'carbidopa'],
+  },
+  linezolid: {
+    canonicalId: 'linezolid',
+    name: 'Linezolid',
+    genericClass: 'oxazolidinone',
+    synonyms: ['zyvox', 'linospan', 'lizolid'],
+  },
+  prednisolone: {
+    canonicalId: 'prednisolone',
+    name: 'Prednisolone',
+    genericClass: 'corticosteroid',
+    synonyms: ['deltacortril', 'predone', 'prednisone', 'dexamethasone', 'hydrocortisone'],
+  },
+  cetirizine: {
+    canonicalId: 'cetirizine',
+    name: 'Cetirizine',
+    genericClass: 'antihistamine',
+    synonyms: ['zyrtec', 'alerid', 'cetrine', 'piriton', 'chlorpheniramine', 'loratadine'],
+  },
+  diazepam: {
+    canonicalId: 'diazepam',
+    name: 'Diazepam',
+    genericClass: 'sedative',
+    synonyms: ['valium', 'lorazepam', 'ativan', 'alprazolam', 'xanax'],
   },
 };
 
@@ -702,6 +794,158 @@ const CLINICAL_INTERACTION_RULES: ClinicalInteractionRule[] = [
     actionAdvice: 'Take immediate-release low-dose Aspirin at least 30 to 60 minutes BEFORE taking Ibuprofen, or space by at least 8 hours after.',
     spacingHours: 2,
     organRisk: 'Cardiovascular (Loss of Antiplatelet Protection)',
+  },
+
+  // 19. NSAID + Corticosteroid (e.g. Ibuprofen/Diclofenac + Prednisolone/Dexamethasone)
+  {
+    id: 'nsaid_corticosteroid',
+    primary: 'nsaid',
+    secondary: 'corticosteroid',
+    severity: 'high',
+    title: 'Severe Peptic Ulceration & GI Perforation Risk',
+    description: 'Combining an NSAID with a corticosteroid (such as Prednisolone) multiplies the risk of severe gastric ulceration and gastrointestinal bleeding up to 15-fold.',
+    mechanism: 'Dual blockade of arachidonic acid (PLA2) and cyclooxygenase (COX) pathways completely depletes protective gastric mucosal prostaglandins.',
+    actionAdvice: 'Avoid combining oral NSAIDs with steroids. If co-administration is unavoidable, take with food and consult your clinician for a gastroprotective PPI (e.g. Omeprazole).',
+    organRisk: 'Gastrointestinal Tract (Peptic Ulcer & Perforation)',
+  },
+
+  // 20. NSAID + RAAS Inhibitor (e.g. Ibuprofen/Diclofenac + Lisinopril/Losartan)
+  {
+    id: 'nsaid_raas',
+    primary: 'nsaid',
+    secondary: 'raas_inhibitor',
+    severity: 'warning',
+    title: 'Acute Kidney Injury & Antihypertensive Blunting',
+    description: 'NSAIDs blunt the blood-pressure-lowering effect of ACE inhibitors/ARBs and constrict renal afferent arterioles, risking acute kidney injury.',
+    mechanism: 'Inhibition of vasodilatory renal prostaglandins opposes RAAS-mediated efferent arteriolar dilation, collapsing glomerular filtration pressure.',
+    actionAdvice: 'Avoid routine NSAID use if taking blood pressure medications like Lisinopril or Losartan. Use Paracetamol for pain relief and stay well-hydrated.',
+    organRisk: 'Kidneys (Acute Renal Impairment) & Blood Pressure',
+  },
+
+  // 21. NSAID + Loop / Thiazide Diuretic (e.g. Ibuprofen + Furosemide / HCTZ)
+  {
+    id: 'nsaid_loop_diuretic',
+    primary: 'nsaid',
+    secondary: 'loop_diuretic',
+    severity: 'warning',
+    title: 'Reduced Diuretic Efficacy & Nephrotoxicity',
+    description: 'NSAIDs counteract the fluid-clearing and blood-pressure-lowering effects of Furosemide while increasing the risk of kidney damage.',
+    mechanism: 'Inhibition of renal prostaglandin E2 synthesis reduces renal blood flow and sodium excretion.',
+    actionAdvice: 'Monitor for ankle swelling, weight gain, or rising blood pressure. Prefer Paracetamol over NSAIDs.',
+    organRisk: 'Kidneys & Fluid Balance',
+  },
+
+  // 22. Antimalarial ACT (Coartem / Artemether-Lumefantrine) + Fluoroquinolones / Macrolides (QT Prolongation)
+  {
+    id: 'act_fluoroquinolone_qt',
+    primary: 'antimalarial_act',
+    secondary: 'fluoroquinolone',
+    severity: 'high',
+    title: 'Additive QT Interval Prolongation & Arrhythmia Risk',
+    description: 'Co-administering Artemether-Lumefantrine (Coartem) or Quinine with a fluoroquinolone antibiotic (e.g. Ciprofloxacin) increases the risk of dangerous ventricular arrhythmias.',
+    mechanism: 'Additive blockade of cardiac hERG potassium channels delays ventricular repolarization and prolongs the QTc interval.',
+    actionAdvice: 'Consult a clinician before combining Coartem with Ciprofloxacin or Levofloxacin. Seek urgent care if experiencing palpitations, dizziness, or fainting.',
+    organRisk: 'Heart (QT Prolongation / Torsades de Pointes)',
+  },
+  {
+    id: 'act_macrolide_qt',
+    primary: 'antimalarial_act',
+    secondary: 'macrolide',
+    severity: 'high',
+    title: 'Cardiac QT Prolongation & Elevated Lumefantrine Levels',
+    description: 'Macrolide antibiotics (Azithromycin, Clarithromycin, Erythromycin) inhibit lumefantrine metabolism and additively prolong the cardiac QT interval.',
+    mechanism: 'CYP3A4 inhibition increases lumefantrine exposure while both classes delay cardiac ventricular repolarization.',
+    actionAdvice: 'Avoid concurrent use unless directed by a physician; monitor for irregular heartbeat or lightheadedness.',
+    organRisk: 'Heart (Ventricular Arrhythmia)',
+  },
+
+  // 23. Statin (Simvastatin / Atorvastatin) + Amlodipine
+  {
+    id: 'statin_dhp_ccb',
+    primary: 'statin',
+    secondary: 'dhp_ccb',
+    severity: 'moderate',
+    title: 'Increased Statin Exposure & Myopathy Risk',
+    description: 'Amlodipine moderately inhibits the breakdown of Simvastatin and Atorvastatin, increasing the risk of muscle aches and myopathy at high statin doses.',
+    mechanism: 'Weak-to-moderate competitive inhibition of intestinal and hepatic CYP3A4.',
+    actionAdvice: 'Simvastatin dose should not exceed 20 mg daily when taken alongside Amlodipine. Report any unexplained muscle pain or weakness.',
+    organRisk: 'Skeletal Muscle (Myopathy)',
+  },
+
+  // 24. Warfarin / Anticoagulant + Co-trimoxazole (Septrin) / Macrolides / Fluoroquinolones
+  {
+    id: 'anticoagulant_sulfonamide',
+    primary: 'anticoagulant',
+    secondary: 'sulfonamide',
+    severity: 'high',
+    title: 'Severe Bleeding & Acute INR Spike',
+    description: 'Co-trimoxazole (Septrin) strongly potentiates Warfarin and other anticoagulants, causing dangerous spikes in INR and major internal bleeding.',
+    mechanism: 'Potent CYP2C9 inhibition and displacement of warfarin from plasma albumin binding sites.',
+    actionAdvice: 'Avoid Septrin in patients on Warfarin if an alternative antibiotic is available, or reduce Warfarin dose and check INR within 3 days.',
+    organRisk: 'Systemic Coagulation & Hemorrhage',
+  },
+
+  // 25. Co-trimoxazole (Septrin) + RAAS Inhibitors / Spironolactone
+  {
+    id: 'sulfonamide_raas_hyperkalemia',
+    primary: 'sulfonamide',
+    secondary: 'raas_inhibitor',
+    severity: 'high',
+    title: 'Trimethoprim-Induced Hyperkalemia Risk',
+    description: 'Co-trimoxazole (Septrin) combined with an ACE inhibitor or ARB (e.g. Lisinopril, Losartan) can trigger dangerous spikes in serum potassium.',
+    mechanism: 'Trimethoprim blocks epithelial sodium channels (ENaC) in the distal nephron identically to amiloride, impairing potassium excretion.',
+    actionAdvice: 'Monitor serum potassium closely, especially in older adults or patients with kidney impairment, and avoid high-potassium foods.',
+    organRisk: 'Heart (Hyperkalemic Arrhythmia) & Kidneys',
+  },
+
+  // 26. Levothyroxine + Iron / Calcium
+  {
+    id: 'thyroid_iron',
+    primary: 'thyroid_hormone',
+    secondary: 'iron_supplement',
+    severity: 'moderate',
+    title: 'Impaired Thyroid Hormone Absorption',
+    description: 'Iron supplements bind to Levothyroxine in the digestive tract, preventing its absorption and causing hypothyroidism symptoms to return.',
+    mechanism: 'Formation of insoluble ferric-thyroxine complexes in the gastrointestinal lumen.',
+    actionAdvice: 'Space Levothyroxine and iron supplements by at least 4 hours.',
+    spacingHours: 4,
+    organRisk: 'Endocrine (Hypothyroidism Relapse)',
+  },
+  {
+    id: 'thyroid_calcium',
+    primary: 'thyroid_hormone',
+    secondary: 'cation_antacid',
+    severity: 'moderate',
+    title: 'Reduced Levothyroxine Absorption',
+    description: 'Calcium carbonate and antacids adsorb Levothyroxine in the stomach, significantly lowering thyroid hormone levels.',
+    mechanism: 'Non-specific adsorption and chelation in an alkalinized gastric environment.',
+    actionAdvice: 'Take Levothyroxine on an empty stomach at least 4 hours apart from calcium or antacids.',
+    spacingHours: 4,
+    organRisk: 'Endocrine (Sub-therapeutic Thyroid Levels)',
+  },
+
+  // 27. CNS Sedative / Opioid / Antihistamine / TCA Combinations
+  {
+    id: 'sedative_opioid',
+    primary: 'sedative',
+    secondary: 'opioid_serotonergic',
+    severity: 'high',
+    title: 'Profound CNS & Respiratory Depression',
+    description: 'Combining benzodiazepine sedatives (e.g. Diazepam) with opioids (e.g. Tramadol) causes extreme sedation, slowed breathing, coma, and risk of fatal overdose.',
+    mechanism: 'Synergistic central nervous system depression via GABA-A potentiation and mu-opioid receptor agonism.',
+    actionAdvice: 'Avoid combining sedatives and opioid painkillers unless strictly supervised in a clinical setting.',
+    organRisk: 'Brain & Respiratory Center',
+  },
+  {
+    id: 'tca_ssri',
+    primary: 'tca',
+    secondary: 'ssri',
+    severity: 'high',
+    title: 'Serotonin Syndrome & TCA Toxicity',
+    description: 'SSRIs inhibit the liver enzymes that clear Amitriptyline while both raise serotonin, risking Serotonin Syndrome and cardiac arrhythmias.',
+    mechanism: 'CYP2D6 inhibition elevates tricyclic plasma levels alongside additive serotonergic neurotransmission.',
+    actionAdvice: 'Do not combine Amitriptyline with SSRIs without specialist psychiatric monitoring.',
+    organRisk: 'Central Nervous System & Heart Conduction',
   },
 ];
 

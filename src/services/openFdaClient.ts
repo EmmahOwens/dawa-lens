@@ -188,6 +188,12 @@ export async function getFdaDrugProfile(
     return cached.data;
   }
 
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return cached ? cached.data : null;
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
   try {
     const params = new URLSearchParams({ query: query.trim() });
     if (patientContext?.age) params.append('age', patientContext.age.toString());
@@ -197,7 +203,9 @@ export async function getFdaDrugProfile(
 
     const res = await fetch(`${BASE_URL}/fda/drug-profile?${params.toString()}`, {
       headers: await authHeaders(),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!res.ok) {
       if (res.status === 404) return null;
       throw new Error(`FDA Profile fetch failed: ${res.statusText}`);
@@ -207,6 +215,7 @@ export async function getFdaDrugProfile(
     await storage.setItem(normalizedKey, { data, timestamp: Date.now() });
     return data;
   } catch (err) {
+    clearTimeout(timeoutId);
     console.warn('[openFdaClient] Backend fetch failed, checking offline cache:', err);
     return cached ? cached.data : null;
   }
@@ -230,23 +239,7 @@ export async function checkFdaMultiSafety(
     };
   }
 
-  try {
-    const res = await fetch(`${BASE_URL}/fda/check-safety`, {
-      method: 'POST',
-      headers: await authHeaders(),
-      body: JSON.stringify({
-        medications: medications.map((m) => ({ name: m.name, genericName: m.genericName })),
-        patientContext,
-      }),
-    });
-
-    if (!res.ok) {
-      throw new Error(`Safety check failed: ${res.statusText}`);
-    }
-
-    return await res.json();
-  } catch (err) {
-    console.warn('[openFdaClient] Multi safety check failed, falling back to local checks:', err);
+  const buildLocalFallbackResult = (): FdaMultiSafetyResult => {
     const localDuplicates = detectDuplicateTherapies(medications);
     return {
       hasCriticalAlert: localDuplicates.length > 0,
@@ -261,5 +254,34 @@ export async function checkFdaMultiSafety(
       })),
       recalls: [],
     };
+  };
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return buildLocalFallbackResult();
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(`${BASE_URL}/fda/check-safety`, {
+      method: 'POST',
+      headers: await authHeaders(),
+      signal: controller.signal,
+      body: JSON.stringify({
+        medications: medications.map((m) => ({ name: m.name, genericName: m.genericName })),
+        patientContext,
+      }),
+    });
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      throw new Error(`Safety check failed: ${res.statusText}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    clearTimeout(timeoutId);
+    console.warn('[openFdaClient] Multi safety check failed, falling back to local checks:', err);
+    return buildLocalFallbackResult();
   }
 }

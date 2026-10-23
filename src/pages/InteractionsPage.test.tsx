@@ -317,4 +317,21 @@ describe("InteractionsPage - Holistic & Food Safety", () => {
     expect(screen.queryByText(/selected/i)).not.toBeInTheDocument();
     expect(mockToast.info).toHaveBeenCalledWith("Cleared selected factors");
   });
+
+  it("displays food-drug interactions offline when AI holistic API fails or device is offline", async () => {
+    mockCheckHolisticSafety.mockRejectedValueOnce(new Error("Network Error"));
+
+    render(<InteractionsPage />);
+
+    // Select Grapefruit (interacts with Atorvastatin in testState.medicines)
+    fireEvent.click(screen.getByText("Grapefruit"));
+
+    const analyzeBtn = screen.getByRole("button", { name: /analyze \(1\)/i });
+    fireEvent.click(analyzeBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { level: 4, name: /grapefruit/i })).toBeInTheDocument();
+      expect(screen.getByText(/High Risk/i)).toBeInTheDocument();
+    });
+  });
 });

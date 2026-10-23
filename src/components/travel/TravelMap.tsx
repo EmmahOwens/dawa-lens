@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plane, Globe } from "@/lib/icons";
 import { RiveMoji } from "../rive/RiveMoji";
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+import { checkMapConnectivity, subscribeToMapNetworkChanges } from '@/services/mapTileService';
 
 import worldLandData from '@/data/maps/worldLand.json';
 
@@ -491,20 +492,14 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
-
-  useEffect(() => {
-    const handleOn = () => setIsOnline(true);
-    const handleOff = () => setIsOnline(false);
-    window.addEventListener('online', handleOn);
-    window.addEventListener('offline', handleOff);
-    return () => {
-      window.removeEventListener('online', handleOn);
-      window.removeEventListener('offline', handleOff);
-    };
-  }, []);
+  const isUsingOfflineStyleRef = useRef<boolean>(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 
   // Destination coordinates: try static lookup first, then async geocoding
   const [destCoords, setDestCoords] = useState<[number, number] | null>(null);
+  const destCoordsRef = useRef<[number, number] | null>(null);
+  destCoordsRef.current = destCoords;
+  const homeLngLatRef = useRef<[number, number]>(homeLngLat);
+  homeLngLatRef.current = homeLngLat;
 
   useEffect(() => {
     if (!destination) {
@@ -536,7 +531,40 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    let fallbackApplied = false;
+    let consecutiveErrors = 0;
+    let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
+    let probeInterval: ReturnType<typeof setInterval> | null = null;
+    let isDisposed = false;
+
+    const applyMapStyle = (map: Map, targetOffline: boolean) => {
+      if (isDisposed) return;
+      try {
+        isUsingOfflineStyleRef.current = targetOffline;
+        setIsOnline(!targetOffline);
+        const targetStyle = targetOffline ? OFFLINE_WORLD_STYLE : PRIMARY_STYLE;
+        if (typeof map.setStyle === 'function') {
+          map.setStyle(targetStyle, { diff: false });
+        }
+      } catch (err) {
+        console.warn('[TravelMap] Failed to switch map style:', err);
+      }
+    };
+
+    const scheduleOnlineUpgrade = (map: Map, delayMs = 400) => {
+      if (isDisposed) return;
+      if (recoveryTimer) clearTimeout(recoveryTimer);
+      recoveryTimer = setTimeout(async () => {
+        if (isDisposed) return;
+        const reachable = typeof checkMapConnectivity === 'function'
+          ? await checkMapConnectivity(3000)
+          : (typeof navigator !== 'undefined' ? navigator.onLine : true);
+        if (isDisposed) return;
+        if (reachable) {
+          consecutiveErrors = 0;
+          applyMapStyle(map, false);
+        }
+      }, delayMs);
+    };
 
     const initMap = (style: string | maplibregl.StyleSpecification) => {
       if (!mapContainerRef.current) return null;
@@ -560,26 +588,65 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
           },
         });
 
-        // Error handling – swap to bundled offline style on fatal or network failure
-        map.on('error', (e) => {
-          console.warn('[TravelMap] MapLibre event:', e);
-          const errorMsg = e.error?.message || '';
-          const isFatal = !map.isStyleLoaded() || errorMsg.includes('Worker failed') || errorMsg.includes('Failed to fetch') || (typeof navigator !== 'undefined' && !navigator.onLine);
-          if (isFatal && !fallbackApplied) {
-            fallbackApplied = true;
-            console.warn('[TravelMap] Remote tiles failed or offline, switching to bundled offline world style...');
-            try {
-              map.setStyle(OFFLINE_WORLD_STYLE);
-            } catch (styleErr) {
-              console.warn('[TravelMap] Failed to set offline world style:', styleErr);
+        // Reset error counter on successful tile/source data load
+        map.on('data', (e: any) => {
+          if (e?.dataType === 'source' && e?.tile) {
+            consecutiveErrors = 0;
+          }
+        });
+
+        // Error handling – swap to bundled offline style only on confirmed offline or repeated network failures
+        map.on('error', (e: any) => {
+          if (isDisposed || isUsingOfflineStyleRef.current) return;
+
+          const deviceOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+          if (deviceOffline) {
+            applyMapStyle(map, true);
+            return;
+          }
+
+          const errorMsg = String(e?.error?.message || e?.message || '');
+          const isWorkerOrNetworkErr =
+            errorMsg.includes('Worker failed') ||
+            errorMsg.includes('Failed to fetch') ||
+            errorMsg.includes('NetworkError') ||
+            errorMsg.includes('ERR_INTERNET_DISCONNECTED') ||
+            errorMsg.includes('ERR_NAME_NOT_RESOLVED');
+
+          if (isWorkerOrNetworkErr) {
+            consecutiveErrors += 1;
+            if (consecutiveErrors >= 5) {
+              consecutiveErrors = 0;
+              const verifyAndFallback = async () => {
+                const reachable = typeof checkMapConnectivity === 'function'
+                  ? await checkMapConnectivity(2500)
+                  : false;
+                if (!isDisposed && !reachable) {
+                  console.warn('[TravelMap] Network unreachable, switching to bundled offline world style...');
+                  applyMapStyle(map, true);
+                }
+              };
+              verifyAndFallback();
             }
           }
         });
 
         const handleMapReady = () => {
+          if (isDisposed) return;
           try {
             map.resize();
             setupFlightLayers(map);
+
+            // Restore active flight arc coordinates after style swap
+            if (destCoordsRef.current) {
+              const arcSource = map.getSource('flight-arc') as maplibregl.GeoJSONSource | undefined;
+              const arcCoords = buildArcCoordinates(homeLngLatRef.current, destCoordsRef.current);
+              arcSource?.setData({
+                type: 'Feature',
+                properties: {},
+                geometry: { type: 'LineString', coordinates: arcCoords },
+              });
+            }
 
             if (!homeMarkerRef.current) {
               const homeEl = document.createElement('div');
@@ -612,6 +679,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
 
         // Re-attach flight layers and ensure ready state whenever style or map loads
         map.on('styledata', handleMapReady);
+        map.on('style.load', handleMapReady);
         map.on('load', handleMapReady);
 
         mapRef.current = map;
@@ -641,33 +709,58 @@ export const TravelMap: React.FC<TravelMapProps> = ({ isAnimating, destination, 
       }
     };
 
-    const initialStyle = (typeof navigator !== 'undefined' && !navigator.onLine)
-      ? OFFLINE_WORLD_STYLE
-      : PRIMARY_STYLE;
+    const isOfflineInitial = typeof navigator !== 'undefined' && !navigator.onLine;
+    isUsingOfflineStyleRef.current = isOfflineInitial;
+    const initialStyle = isOfflineInitial ? OFFLINE_WORLD_STYLE : PRIMARY_STYLE;
     const result = initMap(initialStyle);
 
-    const handleWindowOnline = () => {
-      if (mapRef.current) {
-        try {
-          mapRef.current.setStyle(PRIMARY_STYLE);
-        } catch {}
-      }
-    };
+    const unsubscribeNetwork = typeof subscribeToMapNetworkChanges === 'function'
+      ? subscribeToMapNetworkChanges((connected) => {
+          if (isDisposed || !mapRef.current) return;
+          if (connected) {
+            consecutiveErrors = 0;
+            if (isUsingOfflineStyleRef.current) {
+              applyMapStyle(mapRef.current, false);
+            }
+            scheduleOnlineUpgrade(mapRef.current, 600);
+          } else {
+            if (!isUsingOfflineStyleRef.current) {
+              applyMapStyle(mapRef.current, true);
+            } else {
+              setIsOnline(false);
+            }
+          }
+        })
+      : (() => {
+          const handleWindowOnline = () => {
+            if (mapRef.current) applyMapStyle(mapRef.current, false);
+          };
+          const handleWindowOffline = () => {
+            if (mapRef.current) applyMapStyle(mapRef.current, true);
+          };
+          window.addEventListener('online', handleWindowOnline);
+          window.addEventListener('offline', handleWindowOffline);
+          return () => {
+            window.removeEventListener('online', handleWindowOnline);
+            window.removeEventListener('offline', handleWindowOffline);
+          };
+        })();
 
-    const handleWindowOffline = () => {
-      if (mapRef.current) {
-        try {
-          mapRef.current.setStyle(OFFLINE_WORLD_STYLE);
-        } catch {}
+    probeInterval = setInterval(() => {
+      if (!isDisposed && isUsingOfflineStyleRef.current && mapRef.current) {
+        scheduleOnlineUpgrade(mapRef.current, 50);
       }
-    };
+    }, 6000);
 
-    window.addEventListener('online', handleWindowOnline);
-    window.addEventListener('offline', handleWindowOffline);
+    if (isOfflineInitial && mapRef.current) {
+      scheduleOnlineUpgrade(mapRef.current, 500);
+    }
 
     return () => {
-      window.removeEventListener('online', handleWindowOnline);
-      window.removeEventListener('offline', handleWindowOffline);
+      isDisposed = true;
+      if (recoveryTimer) clearTimeout(recoveryTimer);
+      if (probeInterval) clearInterval(probeInterval);
+      unsubscribeNetwork();
       if (result) {
         clearTimeout(result.timer);
         result.resizeObserver?.disconnect();
