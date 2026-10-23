@@ -935,8 +935,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/AuthPage.tsx": {
-    "mtime": 1791294431.1435153,
-    "ast_hash": "afe3a92ae800d4440c29fd11088d96ac",
+    "mtime": 1792756781.4992173,
+    "ast_hash": "1cac89424524026ec702f704e6caef07",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/Dashboard.tsx": {
@@ -975,8 +975,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/OnboardingPage.tsx": {
-    "mtime": 1791355366.3457832,
-    "ast_hash": "77f4a6fdd7ac3a3f2b75477b6160dc75",
+    "mtime": 1792756925.6115797,
+    "ast_hash": "d1084752f0f08024ea775c3d7a640fb0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/RemindersPage.tsx": {
@@ -1020,8 +1020,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
-    "mtime": 1791297223.0317426,
-    "ast_hash": "f2dd8d0673196455eb471c47a99d9007",
+    "mtime": 1792756769.8557956,
+    "ast_hash": "e0bb88c12a87d99b5a435de26d500b27",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/VerifyEmailPage.tsx": {
@@ -1030,8 +1030,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WelcomePage.tsx": {
-    "mtime": 1792755247.310135,
-    "ast_hash": "088e2d23719c091fef355fca0d3efb3c",
+    "mtime": 1792756883.030444,
+    "ast_hash": "e0d77f1c237b047b08edd6fec5bf0374",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx": {
@@ -1095,8 +1095,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/draDatabase.ts": {
-    "mtime": 1792755903.2492173,
-    "ast_hash": "c1f1e5f377e75a73ecb23e9994df5a00",
+    "mtime": 1792756225.6648326,
+    "ast_hash": "afc4f9e91487e6c82eb1ac44096a6fc9",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/drugInfoProvider.ts": {
@@ -4652,6 +4652,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-8-ready.webp": {
     "mtime": 1792755156.6996326,
     "ast_hash": "ed3f81c9d8e640633eaa50e8206c4543",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/services/offlineTravelService.ts": {
+    "mtime": 1792756341.58518,
+    "ast_hash": "d72b493c7f9c0fe878b54d49d91a7def",
     "semantic_hash": ""
   }
 }

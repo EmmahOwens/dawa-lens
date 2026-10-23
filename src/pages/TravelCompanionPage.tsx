@@ -20,6 +20,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { TravelMap } from "@/components/travel/TravelMap";
 import { lookupDRA } from "@/services/draDatabase";
+import { generateOfflineTravelAdvice } from "@/services/offlineTravelService";
 import { ShieldCheck, Siren } from "@/lib/icons";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import PermissionRequest from "@/components/PermissionRequest";
@@ -68,17 +69,44 @@ export default function TravelCompanionPage() {
     : null;
   const originLabel = userCountry?.toUpperCase() || (geoStatus === 'requesting' ? '...' : 'HOME');
 
-  const handleAnalyze = async () => {
-    if (!destination || medicines.length === 0) return;
+  const handleAnalyze = async (targetDest?: string) => {
+    const activeDestination = (typeof targetDest === "string" ? targetDest : destination).trim();
+    if (!activeDestination) return;
     setLoading(true);
     setAdvice(null);
     setIsAnimating(true);
-    
+
+    const homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const isDeviceOffline = typeof navigator !== "undefined" && !navigator.onLine;
+
+    const finalizeAdvice = (result: any, delayMs = 800) => {
+      setTimeout(() => {
+        setAdvice(result);
+        try {
+          sessionStorage.setItem("dawa_travel_advice", JSON.stringify(result));
+          sessionStorage.setItem("dawa_travel_destination", activeDestination);
+        } catch (_) {}
+        setLoading(false);
+        setIsAnimating(false);
+      }, delayMs);
+    };
+
+    // If offline or user has no medications yet, immediately use deterministic on-device intelligence
+    if (isDeviceOffline || medicines.length === 0) {
+      const offlineRes = generateOfflineTravelAdvice({
+        medicines,
+        destination: activeDestination,
+        currentCity: userCountry || "Home",
+        homeTimezone,
+      });
+      finalizeAdvice(offlineRes, 600);
+      return;
+    }
+
     try {
-      const homeTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const res = await aiApi.getTravelAdvice({
         medicines,
-        destination,
+        destination: activeDestination,
         currentCity: userCountry || "Home",
         homeTimezone,
       });
@@ -128,25 +156,16 @@ export default function TravelCompanionPage() {
         (res as any).equivalents = allEquivalents.length > 0 ? allEquivalents : parsedEquivalents;
       }
 
-      // Small delay to let animation breathe
-      setTimeout(() => {
-        setAdvice(res);
-        try {
-          sessionStorage.setItem("dawa_travel_advice", JSON.stringify(res));
-          sessionStorage.setItem("dawa_travel_destination", destination);
-        } catch (_) {}
-        setLoading(false);
-        setIsAnimating(false);
-      }, 1500);
+      finalizeAdvice(res, 1000);
     } catch (err: any) {
-      console.error("Travel advice failed", err);
-      toast({
-        title: "Analysis Failed",
-        description: err.message || "Failed to retrieve travel intelligence. Please check your connection and try again.",
-        variant: "destructive",
+      console.warn("Online travel advice failed, falling back to offline travel intelligence:", err);
+      const offlineFallback = generateOfflineTravelAdvice({
+        medicines,
+        destination: activeDestination,
+        currentCity: userCountry || "Home",
+        homeTimezone,
       });
-      setLoading(false);
-      setIsAnimating(false);
+      finalizeAdvice(offlineFallback, 400);
     }
   };
 
@@ -200,7 +219,7 @@ export default function TravelCompanionPage() {
                   onValueChange={(val) => {
                     if (val) {
                       setDestination(val);
-                      setIsAnimating(false);
+                      handleAnalyze(val);
                     }
                   }}
                 >
@@ -234,8 +253,8 @@ export default function TravelCompanionPage() {
             </div>
             
             <Button 
-              onClick={handleAnalyze}
-              disabled={loading || !destination || medicines.length === 0}
+              onClick={() => handleAnalyze()}
+              disabled={loading || !destination}
               className="w-full h-11 rounded-full text-sm font-semibold active:scale-95 transition-transform"
             >
               {loading ? (
@@ -251,21 +270,7 @@ export default function TravelCompanionPage() {
 
       {/* Main Content Area */}
       <AnimatePresence mode="wait">
-        {medicines.length === 0 ? (
-          <motion.div 
-            key="empty-meds"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="p-12 md:p-20 rounded-[3rem] border-2 border-dashed border-border flex flex-col items-center text-center opacity-60"
-          >
-             <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
-                <Pill size={40} className="text-muted-foreground" />
-             </div>
-             <h3 className="text-xl font-bold mb-2">No Medications Found</h3>
-             <p className="text-sm font-medium text-muted-foreground max-w-sm">Please add medications to your profile before generating a travel intelligence report.</p>
-          </motion.div>
-        ) : loading ? (
+        {loading ? (
           <motion.div 
             key="loading"
             initial={{ opacity: 0 }}

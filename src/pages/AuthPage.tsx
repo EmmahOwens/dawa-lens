@@ -242,49 +242,94 @@ export default function AuthPage() {
         }}
       />
 
-      {/* Left Panel: Branding (Desktop Only) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-[#f5f5f7] dark:bg-[#161617] border-r border-border">
-        <div className="relative z-10 p-16 flex flex-col justify-between w-full">
+      {/* Left Panel: Branding & Product Showcase (Desktop Only) */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-[#f5f5f7] via-[#eef3f9] to-[#e4eef9] dark:from-[#161617] dark:via-[#1a1f29] dark:to-[#121927] border-r border-border">
+        {/* Atmospheric Medical Lens Glows */}
+        <div className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#0066cc]/15 dark:bg-[#2997ff]/15 blur-3xl z-0" />
+        <div className="pointer-events-none absolute bottom-12 right-12 w-80 h-80 rounded-full bg-[#0071e3]/10 dark:bg-[#0066cc]/20 blur-3xl z-0" />
+        
+        {/* Subtle Decorative Lens Rings */}
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] h-[540px] rounded-full border border-[#0066cc]/10 dark:border-[#2997ff]/10 z-0" />
+        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] rounded-full border border-[#0066cc]/15 dark:border-[#2997ff]/15 z-0" />
+
+        <div className="relative z-10 p-16 flex flex-col justify-between w-full h-full">
           <div>
+            {/* Logo Badge */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-3.5 mb-14"
+              className="flex items-center gap-3.5 mb-10"
             >
-              <div className="h-11 w-11 rounded-[14px] bg-card border border-border flex items-center justify-center p-2">
+              <div className="h-12 w-12 rounded-[16px] bg-white/90 dark:bg-[#272729]/90 backdrop-blur-md border border-[#0066cc]/20 dark:border-[#2997ff]/30 shadow-md shadow-[#0066cc]/10 flex items-center justify-center p-2.5">
                 <img src={LOGO_BASE64} alt="Dawa Lens" className="w-full h-full object-contain" />
               </div>
-              <span className="text-xl font-bold tracking-tight text-foreground">Dawa Lens</span>
+              <div>
+                <span className="text-xl font-bold tracking-tight text-foreground block">Dawa Lens</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0066cc] dark:text-[#2997ff]">Clinical Intelligence</span>
+              </div>
+            </motion.div>
+
+            {/* Pill Eyebrow */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-[#0066cc]/10 dark:bg-[#2997ff]/15 text-[#0066cc] dark:text-[#2997ff] border border-[#0066cc]/20 mb-6 backdrop-blur-sm"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#0066cc] dark:bg-[#2997ff] animate-pulse" />
+              Verified Medication Safety
             </motion.div>
             
+            {/* Display Headline */}
             <motion.div
               initial={{ opacity: 0, x: -15 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.15 }}
+              transition={{ delay: 0.2 }}
             >
               <h1 className="text-4xl lg:text-5xl font-bold tracking-[-0.022em] leading-[1.1] text-foreground mb-6">
-                Precision Care.<br />Every Dose Matters.
+                Precision Care.<br />
+                <span className="bg-gradient-to-r from-[#0066cc] via-[#0071e3] to-[#2997ff] bg-clip-text text-transparent">
+                  Every Dose Matters.
+                </span>
               </h1>
-              <p className="text-lg text-muted-foreground max-w-md leading-relaxed font-normal">
-                Empowering your medication journey with smart identification and verified clinical safety.
+              <p className="text-base lg:text-[17px] text-muted-foreground max-w-md leading-relaxed font-normal">
+                Empowering your medication journey with smart identification, real-time interaction checks, and verified clinical safety.
               </p>
             </motion.div>
           </div>
 
+          {/* 3 Apple-Style Feature Highlight Cards */}
           <motion.div 
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="grid grid-cols-2 gap-4"
+            transition={{ delay: 0.35 }}
+            className="grid grid-cols-2 gap-3.5 pt-8"
           >
             {[
-              { icon: ShieldCheck, title: "Secure Data", desc: "Private on-device health vaults" },
-              { icon: Heart, title: "Personalized", desc: "Tailored to your prescriptions" },
+              { 
+                icon: ShieldCheck, 
+                title: "Interaction Shield", 
+                desc: "Real-time drug & food conflict alerts",
+                iconColor: "text-[#0066cc] dark:text-[#2997ff]",
+                bgBadge: "bg-[#0066cc]/10 dark:bg-[#2997ff]/15 border-[#0066cc]/20 dark:border-[#2997ff]/30",
+              },
+              { 
+                icon: Heart, 
+                title: "Family Care Vault", 
+                desc: "Personalized multi-profile dosage tracking",
+                iconColor: "text-rose-600 dark:text-rose-400",
+                bgBadge: "bg-rose-500/10 dark:bg-rose-500/15 border-rose-500/20 dark:border-rose-500/30",
+              },
             ].map((feature, i) => (
-              <div key={i} className="p-5 rounded-[18px] bg-card border border-border">
-                <feature.icon className="text-[#0066cc] dark:text-[#2997ff] mb-2.5" size={22} />
+              <div 
+                key={i} 
+                className="p-4 rounded-[18px] bg-white/80 dark:bg-[#272729]/80 backdrop-blur-md border border-border/80 hover:border-[#0066cc]/30 dark:hover:border-[#2997ff]/30 transition-all duration-300 shadow-sm"
+              >
+                <div className={`w-9 h-9 rounded-xl ${feature.bgBadge} border flex items-center justify-center mb-3`}>
+                  <feature.icon className={feature.iconColor} size={20} />
+                </div>
                 <h3 className="font-bold text-sm text-foreground mb-0.5">{feature.title}</h3>
-                <p className="text-xs text-muted-foreground">{feature.desc}</p>
+                <p className="text-xs text-muted-foreground leading-normal">{feature.desc}</p>
               </div>
             ))}
           </motion.div>
@@ -292,11 +337,18 @@ export default function AuthPage() {
       </div>
 
       {/* Right Panel: Auth Forms */}
-      <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto no-scrollbar px-4 py-8 sm:p-8 lg:py-12">
-        <div className="w-full max-w-[400px] space-y-6">
+      <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto no-scrollbar px-4 py-8 sm:p-8 lg:py-12 relative">
+        {/* Subtle Ambient Color in Right Panel */}
+        <div className="pointer-events-none absolute top-0 right-0 w-80 h-80 bg-[#0066cc]/5 dark:bg-[#2997ff]/5 rounded-full blur-3xl z-0" />
+        <div className="pointer-events-none absolute bottom-0 left-0 w-64 h-64 bg-[#0071e3]/5 dark:bg-[#0066cc]/5 rounded-full blur-3xl z-0" />
+
+        <div className="w-full max-w-[420px] space-y-6 relative z-10">
           <div className="lg:hidden text-center mb-6">
-            <img src={LOGO_BASE64} alt="Logo" className="w-14 h-14 mx-auto mb-2.5" />
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Dawa Lens</h2>
+            <div className="w-16 h-16 rounded-[20px] bg-white/90 dark:bg-[#272729]/90 backdrop-blur-md border border-[#0066cc]/20 dark:border-[#2997ff]/30 shadow-md shadow-[#0066cc]/10 flex items-center justify-center p-3 mx-auto mb-3">
+              <img src={LOGO_BASE64} alt="Logo" className="w-full h-full object-contain" />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">Dawa Lens</h2>
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#0066cc] dark:text-[#2997ff]">Clinical Intelligence</span>
           </div>
 
           <AnimatePresence mode="wait">
@@ -306,14 +358,21 @@ export default function AuthPage() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
-                className="rounded-[18px] border border-border bg-card p-6 sm:p-8"
+                className="rounded-[24px] border border-border/80 bg-card/95 backdrop-blur-xl p-7 sm:p-9 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.25)] relative overflow-hidden"
               >
+                {/* Top Subtle Color Accent Line */}
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#0066cc] via-[#0071e3] to-[#2997ff]" />
+
                 <div className="mb-6">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#0066cc]/10 text-[#0066cc] dark:bg-[#2997ff]/15 dark:text-[#2997ff] border border-[#0066cc]/20 mb-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#0066cc] dark:bg-[#2997ff] animate-pulse" />
+                    {isLogin ? "Secure Access" : "Get Started"}
+                  </div>
                   <h2 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground mb-1.5">
                     {isLogin ? "Welcome Back" : "Create Account"}
                   </h2>
                   <p className="text-muted-foreground text-sm">
-                    {isLogin ? "Continue where you left off." : "Create your personalized health lens today."}
+                    {isLogin ? "Sign in to manage prescriptions and safety alerts." : "Create your personalized clinical lens today."}
                   </p>
                 </div>
 
@@ -321,11 +380,11 @@ export default function AuthPage() {
                   {!isLogin && (
                     <div className="space-y-1.5">
                       <Label htmlFor="name" className="text-xs font-semibold text-foreground uppercase tracking-wider">Full Name</Label>
-                      <div className="relative">
-                        <User size={16} className="absolute left-3.5 top-3.5 text-muted-foreground" />
+                      <div className="relative group">
+                        <User size={16} className="absolute left-3.5 top-3.5 text-muted-foreground group-focus-within:text-[#0066cc] dark:group-focus-within:text-[#2997ff] transition-colors" />
                         <Input 
                           id="name" placeholder="John Doe" 
-                          className="pl-10 h-11 rounded-full bg-card border-border text-sm"
+                          className="pl-10 h-11 rounded-full bg-secondary/40 focus:bg-card border-border focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 text-sm transition-all"
                           value={name} onChange={(e) => setName(e.target.value)}
                         />
                       </div>
@@ -334,11 +393,11 @@ export default function AuthPage() {
 
                   <div className="space-y-1.5">
                     <Label htmlFor="email" className="text-xs font-semibold text-foreground uppercase tracking-wider">Email Address</Label>
-                    <div className="relative">
-                      <Mail size={16} className="absolute left-3.5 top-3.5 text-muted-foreground" />
+                    <div className="relative group">
+                      <Mail size={16} className="absolute left-3.5 top-3.5 text-muted-foreground group-focus-within:text-[#0066cc] dark:group-focus-within:text-[#2997ff] transition-colors" />
                       <Input 
                         id="email" type="email" placeholder="you@example.com" 
-                        className="pl-10 h-11 rounded-full bg-card border-border text-sm"
+                        className="pl-10 h-11 rounded-full bg-secondary/40 focus:bg-card border-border focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 text-sm transition-all"
                         value={email} onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
@@ -348,17 +407,17 @@ export default function AuthPage() {
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password" className="text-xs font-semibold text-foreground uppercase tracking-wider">Password</Label>
                       {isLogin && (
-                        <button type="button" onClick={() => setStage("forgot-password")} className="text-xs font-medium text-[#0066cc] dark:text-[#2997ff] hover:underline">
+                        <button type="button" onClick={() => setStage("forgot-password")} className="text-xs font-semibold text-[#0066cc] dark:text-[#2997ff] hover:text-[#0071e3] hover:underline transition-colors">
                           Forgot Password?
                         </button>
                       )}
                     </div>
-                    <div className="relative">
-                      <Lock size={16} className="absolute left-3.5 top-3.5 text-muted-foreground" />
+                    <div className="relative group">
+                      <Lock size={16} className="absolute left-3.5 top-3.5 text-muted-foreground group-focus-within:text-[#0066cc] dark:group-focus-within:text-[#2997ff] transition-colors" />
                       <Input 
                         id="password" type={showPassword ? "text" : "password"} 
                         placeholder="••••••••" 
-                        className="pl-10 pr-10 h-11 rounded-full bg-card border-border text-sm"
+                        className="pl-10 pr-10 h-11 rounded-full bg-secondary/40 focus:bg-card border-border focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 text-sm transition-all"
                         value={password} onChange={(e) => setPassword(e.target.value)}
                       />
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-3.5 text-muted-foreground hover:text-foreground transition-colors">
@@ -377,7 +436,7 @@ export default function AuthPage() {
 
                   <button 
                     type="submit" 
-                    className="w-full h-11 rounded-full text-sm font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 flex items-center justify-center gap-2" 
+                    className="w-full h-12 rounded-full text-base font-semibold bg-gradient-to-r from-[#0066cc] to-[#0071e3] hover:from-[#005bb5] hover:to-[#0066cc] text-white shadow-[0_4px_16px_rgba(0,102,204,0.35)] dark:shadow-[0_4px_16px_rgba(41,151,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,102,204,0.45)] transition-all duration-200 active:scale-95 flex items-center justify-center gap-2" 
                     disabled={loading}
                   >
                     {loading ? <Loader2 className="animate-spin size-4" /> : (isLogin ? "Sign In" : "Create Account")}
@@ -386,12 +445,12 @@ export default function AuthPage() {
 
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
-                  <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-semibold"><span className="bg-card px-2.5 text-muted-foreground">Or</span></div>
+                  <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-semibold"><span className="bg-card px-3 text-muted-foreground">Or continue with</span></div>
                 </div>
 
                 <button 
                   type="button" 
-                  className="w-full h-11 rounded-full border border-border bg-card hover:bg-secondary text-foreground text-sm font-semibold flex items-center justify-center gap-2.5 transition-transform active:scale-95" 
+                  className="w-full h-12 rounded-full border border-border/80 bg-card hover:bg-secondary/70 text-foreground text-sm font-semibold flex items-center justify-center gap-2.5 transition-all duration-200 active:scale-95 shadow-sm" 
                   onClick={handleGoogleSignIn} 
                   disabled={loading}
                 >
@@ -419,32 +478,34 @@ export default function AuthPage() {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
-                className="rounded-[18px] border border-border bg-card p-6 sm:p-8"
+                className="rounded-[24px] border border-border/80 bg-card/95 backdrop-blur-xl p-7 sm:p-9 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.25)] relative overflow-hidden"
               >
-                <button onClick={() => setStage("form")} className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mb-6">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#0066cc] via-[#0071e3] to-[#2997ff]" />
+
+                <button onClick={() => setStage("form")} className="flex items-center gap-1.5 text-xs font-semibold text-[#0066cc] dark:text-[#2997ff] hover:underline transition-colors mb-6">
                   <ArrowLeft size={14} /> Back to Sign In
                 </button>
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold tracking-[-0.022em] text-foreground mb-1.5">Reset Password</h2>
                   <p className="text-muted-foreground text-sm leading-relaxed">
-                    Enter the email associated with your account and we'll send a link to reset your password.
+                    Enter the email associated with your account and we'll send a secure link to reset your credentials.
                   </p>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="email" className="text-xs font-semibold text-foreground uppercase tracking-wider">Email Address</Label>
-                    <div className="relative">
-                      <Mail size={16} className="absolute left-3.5 top-3.5 text-muted-foreground" />
+                    <div className="relative group">
+                      <Mail size={16} className="absolute left-3.5 top-3.5 text-muted-foreground group-focus-within:text-[#0066cc] dark:group-focus-within:text-[#2997ff] transition-colors" />
                       <Input 
                         id="email" type="email" placeholder="you@example.com" 
-                        className="pl-10 h-11 rounded-full bg-card border-border text-sm"
+                        className="pl-10 h-11 rounded-full bg-secondary/40 focus:bg-card border-border focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/20 text-sm transition-all"
                         value={email} onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
                   </div>
                   <button 
                     type="submit" 
-                    className="w-full h-11 rounded-full text-sm font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 flex items-center justify-center gap-2" 
+                    className="w-full h-12 rounded-full text-base font-semibold bg-gradient-to-r from-[#0066cc] to-[#0071e3] hover:from-[#005bb5] hover:to-[#0066cc] text-white shadow-[0_4px_16px_rgba(0,102,204,0.35)] dark:shadow-[0_4px_16px_rgba(41,151,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,102,204,0.45)] transition-all duration-200 active:scale-95 flex items-center justify-center gap-2" 
                     disabled={loading}
                   >
                     {loading ? <Loader2 className="animate-spin size-4" /> : "Send Reset Link"}
@@ -458,34 +519,36 @@ export default function AuthPage() {
                 key="verify"
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="rounded-[18px] border border-border bg-card p-6 sm:p-8 text-center"
+                className="rounded-[24px] border border-border/80 bg-card/95 backdrop-blur-xl p-7 sm:p-9 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.25)] text-center relative overflow-hidden"
               >
-                <div className="w-20 h-20 rounded-[20px] bg-secondary border border-border flex items-center justify-center mx-auto mb-6 relative">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#0066cc] via-[#0071e3] to-[#2997ff]" />
+
+                <div className="w-20 h-20 rounded-[22px] bg-gradient-to-br from-[#0066cc]/10 to-[#2997ff]/20 border border-[#0066cc]/25 flex items-center justify-center mx-auto mb-6 relative shadow-inner">
                   <Mail size={32} className="text-[#0066cc] dark:text-[#2997ff]" />
                 </div>
 
                 <h2 className="text-2xl font-bold tracking-[-0.022em] text-foreground mb-2">Verify Identity</h2>
                 <p className="text-muted-foreground text-sm leading-relaxed mb-6 px-2">
-                  We've sent a secure link to <strong className="text-foreground">{email}</strong>. 
-                  Please confirm your email to activate your Health Lens.
+                  We've sent a secure verification link to <strong className="text-foreground">{email}</strong>. 
+                  Please confirm your email to activate your clinical health lens.
                 </p>
 
                 <div className="space-y-3">
                   <button 
-                    className="w-full h-11 rounded-full text-sm font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 flex items-center justify-center gap-2" 
+                    className="w-full h-12 rounded-full text-base font-semibold bg-gradient-to-r from-[#0066cc] to-[#0071e3] hover:from-[#005bb5] hover:to-[#0066cc] text-white shadow-[0_4px_16px_rgba(0,102,204,0.35)] dark:shadow-[0_4px_16px_rgba(41,151,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,102,204,0.45)] transition-all duration-200 active:scale-95 flex items-center justify-center gap-2" 
                     onClick={() => window.location.reload()}
                   >
                     <CheckCircle2 size={16} /> I've Verified My Email
                   </button>
                   <button 
-                    className="w-full h-11 rounded-full text-xs font-semibold border border-border bg-card hover:bg-secondary text-foreground transition-transform active:scale-95 flex items-center justify-center gap-2" 
+                    className="w-full h-11 rounded-full text-xs font-semibold border border-border/80 bg-card hover:bg-secondary/70 text-foreground transition-transform active:scale-95 flex items-center justify-center gap-2 shadow-sm" 
                     onClick={() => {}} 
                     disabled={resending}
                   >
                     {resending ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : <RefreshCw size={14} />}
                     Resend Code
                   </button>
-                  <button onClick={() => setStage("form")} className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors pt-2">
+                  <button onClick={() => setStage("form")} className="text-xs font-semibold text-[#0066cc] dark:text-[#2997ff] hover:underline transition-colors pt-2 block mx-auto">
                     Back to Form
                   </button>
                 </div>

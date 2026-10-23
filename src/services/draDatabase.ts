@@ -840,6 +840,11 @@ const DESTINATION_ALIASES: Record<string, string> = {
   // Tanzania
   tanzania: 'tanzania',
   unitedrepublicoftanzania: 'tanzania',
+
+  // South Sudan
+  southsudan: 'southsudan',
+  republicofsouthsudan: 'southsudan',
+  juba: 'southsudan',
 };
 
 /**
