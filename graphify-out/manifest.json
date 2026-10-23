@@ -1030,8 +1030,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WelcomePage.tsx": {
-    "mtime": 1792756883.030444,
-    "ast_hash": "e0d77f1c237b047b08edd6fec5bf0374",
+    "mtime": 1792761109.1238973,
+    "ast_hash": "324771fdfe92f4ada7d222a265f42e96",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx": {
@@ -4615,48 +4615,88 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-1-welcome.webp": {
-    "mtime": 1792755155.4207535,
-    "ast_hash": "ab18293fb47ffb86da8c776e2e632909",
+    "mtime": 1792760463.4309685,
+    "ast_hash": "d6a87eb84824c485ed8e4d658a5b9fe5",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-2-scan.webp": {
-    "mtime": 1792755155.5777385,
-    "ast_hash": "6dad5442ece485b582c2e2065c95f2eb",
+    "mtime": 1792758024.6666412,
+    "ast_hash": "547b4219819af525109d5faa462d7bd9",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-3-safety.webp": {
-    "mtime": 1792755155.7377234,
-    "ast_hash": "2a6526a3db9e6347bb3eafcd1889d8d5",
+    "mtime": 1792758024.9266405,
+    "ast_hash": "df32f11f3a18d4f60a8a690ce3ed01ce",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-4-interactions.webp": {
-    "mtime": 1792755155.8927088,
-    "ast_hash": "d4ed9a9616c2f24bc0fc3e80fc108221",
+    "mtime": 1792758025.16864,
+    "ast_hash": "eafd2ea29025a5a2b6ad0bb8d04a06fe",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-5-reminders.webp": {
-    "mtime": 1792755156.0556934,
-    "ast_hash": "15f668cd738bdbf7b81ab298a9801c28",
+    "mtime": 1792760464.0379567,
+    "ast_hash": "5d7de34d814e41d72ec0c80872a6caf1",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-6-family.webp": {
-    "mtime": 1792755156.30167,
-    "ast_hash": "a0603dce993a20f48863594beb6a200c",
+    "mtime": 1792760464.6169455,
+    "ast_hash": "0728fa875a7766e015dd53b103c96fd5",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-7-guidance.webp": {
-    "mtime": 1792755156.51765,
-    "ast_hash": "b359e8aa97a53c56a9df20dd7e7b78f5",
+    "mtime": 1792758025.8956378,
+    "ast_hash": "709e44b4cc8805b8211942589f5484d9",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-8-ready.webp": {
-    "mtime": 1792755156.6996326,
-    "ast_hash": "ed3f81c9d8e640633eaa50e8206c4543",
+    "mtime": 1792758026.150637,
+    "ast_hash": "1415ebbb65aad680486bc66f255c8245",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/services/offlineTravelService.ts": {
     "mtime": 1792756341.58518,
     "ast_hash": "d72b493c7f9c0fe878b54d49d91a7def",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-1-welcome-sm.webp": {
+    "mtime": 1792760463.608965,
+    "ast_hash": "5d4b473ce916168b18157d49d9ab4e79",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-2-scan-sm.webp": {
+    "mtime": 1792758024.750641,
+    "ast_hash": "0a9cbad7c903114d993c47367bd34f78",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-3-safety-sm.webp": {
+    "mtime": 1792758025.0096402,
+    "ast_hash": "452ebca2025022bdeb33ac31d1eac6b5",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-4-interactions-sm.webp": {
+    "mtime": 1792758025.2526395,
+    "ast_hash": "8761c54b5a8d2e376f0b187f35113ff0",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-5-reminders-sm.webp": {
+    "mtime": 1792760464.219953,
+    "ast_hash": "59cc30007c8fd173f01eb2b7897b242e",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-6-family-sm.webp": {
+    "mtime": 1792760464.810942,
+    "ast_hash": "a1ee6efeadd14155144b7141042c2da4",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-7-guidance-sm.webp": {
+    "mtime": 1792758025.9786375,
+    "ast_hash": "717f8db6af518a336704e7688bfbc18c",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/public/assets/onboarding/step-8-ready-sm.webp": {
+    "mtime": 1792758026.2376366,
+    "ast_hash": "734e8081d41348b166aa151feb0662fd",
     "semantic_hash": ""
   }
 }

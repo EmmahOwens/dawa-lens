@@ -45,6 +45,7 @@ server/.env.*
 
 # Business & Pitch Documents
 BUSINESS_MODEL.md
+DESIGN.md
 
 # Build Artifacts & Caches
 rust/target/
