@@ -220,6 +220,33 @@ export const DRA_DATABASE: Record<string, DRAEntry> = {
     ambulance: '777 / 999',
     ambulanceService: 'Red Crescent Emergency Medical Services',
   },
+  southsudan: {
+    authority: 'South Sudan Drug and Food Control Authority (DFCA)',
+    number: '+211 912 325 224',
+    website: 'https://moh.gov.ss',
+    ambulance: '999 / 112',
+    ambulanceService: 'South Sudan Red Cross / National Emergency Medical Services',
+  },
+  somalia: {
+    authority: 'National Medicines Regulatory Authority of Somalia (NMRA)',
+    number: '+252 61 700 0000',
+    website: 'https://nmra.gov.so',
+    ambulance: '999 / 888',
+    ambulanceService: 'Aamin Ambulance / National Emergency Services',
+  },
+  djibouti: {
+    authority: 'Direction de la Pharmacie et du Médicament – Ministère de la Santé',
+    number: '+253 21 35 19 31',
+    website: 'https://sante.gouv.dj',
+    ambulance: '19 / 18',
+    ambulanceService: 'SAMU Djibouti / Sapeurs-Pompiers',
+  },
+  eritrea: {
+    authority: 'National Medicines and Food Administration (NMFA)',
+    number: '+291 1 120 297',
+    ambulance: '114 / 116',
+    ambulanceService: 'National Emergency Ambulance Service',
+  },
 
   // ── EUROPE ────────────────────────────────────────────────────────────────
   uk: {
