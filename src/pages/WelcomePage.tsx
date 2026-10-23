@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { LOGO_BASE64 } from "@/lib/logoBase64";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,13 +13,13 @@ import {
   Rocket,
   Sparkles
 } from "@/lib/icons";
-import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
 
 const ONBOARDING_STEPS = [
   {
     title: "Karibu Dawa Lens",
     subtitle: "Your intelligent companion for medication safety and health clarity.",
+    image: "/assets/onboarding/step-1-welcome.webp",
     icon: Sparkles,
     color: "rgba(99, 102, 241, 0.4)", // Indigo glow
     iconColor: "text-indigo-500",
@@ -27,6 +27,7 @@ const ONBOARDING_STEPS = [
   {
     title: "Snap. Identify. Learn.",
     subtitle: "Identify any pill or medication instantly using our AI vision technology.",
+    image: "/assets/onboarding/step-2-scan.webp",
     icon: Search,
     color: "rgba(20, 184, 166, 0.4)", // Teal glow
     iconColor: "text-teal-500",
@@ -34,6 +35,7 @@ const ONBOARDING_STEPS = [
   {
     title: "Verified Safety Data",
     subtitle: "Get detailed information on side effects, dosages, and verified health data.",
+    image: "/assets/onboarding/step-3-safety.webp",
     icon: ShieldCheck,
     color: "rgba(59, 130, 246, 0.4)", // Blue glow
     iconColor: "text-blue-500",
@@ -41,6 +43,7 @@ const ONBOARDING_STEPS = [
   {
     title: "Interaction Shield",
     subtitle: "We automatically check for dangerous conflicts between your medications.",
+    image: "/assets/onboarding/step-4-interactions.webp",
     icon: Zap,
     color: "rgba(239, 68, 68, 0.4)", // Red glow
     iconColor: "text-red-500",
@@ -48,6 +51,7 @@ const ONBOARDING_STEPS = [
   {
     title: "Never Miss a Dose",
     subtitle: "Smart, gentle reminders tailored perfectly to your daily routine.",
+    image: "/assets/onboarding/step-5-reminders.webp",
     icon: Bell,
     color: "rgba(236, 72, 153, 0.4)", // Pink glow
     iconColor: "text-pink-500",
@@ -55,6 +59,7 @@ const ONBOARDING_STEPS = [
   {
     title: "Care for Your Family",
     subtitle: "Manage medications and health profiles for your entire household.",
+    image: "/assets/onboarding/step-6-family.webp",
     icon: Users,
     color: "rgba(139, 92, 246, 0.4)", // Violet glow
     iconColor: "text-violet-500",
@@ -62,6 +67,7 @@ const ONBOARDING_STEPS = [
   {
     title: "Clear Medical Guidance",
     subtitle: "Clear, reliable medical information and safety warnings at your fingertips.",
+    image: "/assets/onboarding/step-7-guidance.webp",
     icon: Globe,
     color: "rgba(16, 185, 129, 0.4)", // Emerald glow
     iconColor: "text-emerald-500",
@@ -69,6 +75,7 @@ const ONBOARDING_STEPS = [
   {
     title: "Ready to Begin?",
     subtitle: "Join thousands of users managing their health with smarter medicine tools.",
+    image: "/assets/onboarding/step-8-ready.webp",
     icon: Rocket,
     color: "rgba(124, 58, 237, 0.4)", // Purple glow
     iconColor: "text-purple-500",
@@ -79,6 +86,14 @@ export default function WelcomePage() {
   const [currentStep, setCurrentStep] = useState(0);
   const navigate = useNavigate();
   const { setHasSeenWelcome } = useApp();
+
+  // Preload onboarding images for instant transitions
+  useEffect(() => {
+    ONBOARDING_STEPS.forEach((s) => {
+      const img = new Image();
+      img.src = s.image;
+    });
+  }, []);
 
   const handleNext = () => {
     if (currentStep < ONBOARDING_STEPS.length - 1) {
@@ -98,6 +113,16 @@ export default function WelcomePage() {
 
   return (
     <div className="h-[100dvh] min-h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+      {/* Subtle Ambient Glow */}
+      <motion.div
+        key={`glow-${currentStep}`}
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 0.35, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 sm:w-96 sm:h-96 rounded-full blur-3xl z-0"
+        style={{ background: step.color }}
+      />
+
       {/* Header (Logo & Skip) */}
       <div className="relative z-20 flex items-center justify-between p-5 sm:p-6 shrink-0 border-b border-border/40">
         <motion.div 
@@ -127,14 +152,23 @@ export default function WelcomePage() {
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="w-full flex flex-col items-center"
           >
-            {/* Apple Icon Capsule */}
+            {/* Onboarding Visual Showcase Card */}
             <motion.div 
-              className="relative w-28 h-28 sm:w-32 sm:h-32 mb-8 rounded-[24px] bg-[#f5f5f7] dark:bg-[#272729] border border-border flex items-center justify-center"
-              initial={{ scale: 0.95 }}
+              className="relative w-60 h-60 sm:w-72 sm:h-72 mb-8 rounded-[32px] bg-[#f5f5f7] dark:bg-[#272729] border border-border/80 shadow-xl overflow-hidden flex items-center justify-center"
+              initial={{ scale: 0.94 }}
               animate={{ scale: 1 }}
-              transition={{ duration: 0.4 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             >
-              <Icon size={48} className={step.iconColor} />
+              <img
+                src={step.image}
+                alt={step.title}
+                className="w-full h-full object-cover select-none"
+                draggable={false}
+              />
+              {/* Floating Icon Badge */}
+              <div className="absolute bottom-3.5 right-3.5 w-11 h-11 rounded-2xl bg-background/85 backdrop-blur-md border border-border/60 shadow-lg flex items-center justify-center">
+                <Icon size={22} className={step.iconColor} />
+              </div>
             </motion.div>
 
             {/* Typography */}
