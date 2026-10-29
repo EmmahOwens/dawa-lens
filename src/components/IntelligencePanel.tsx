@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, ChevronLeft, LayoutDashboard, Scan, Heart,
-  History, Settings, Info, Sparkles, Bot
+  History, Settings, Info
 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
@@ -116,10 +116,14 @@ export function IntelligencePanel() {
             onClick={() => handleLaunch()}
             title={isOnline ? "Ask DawaGPT" : "DawaGPT is offline"}
             disabled={!isOnline}
-            className="relative w-11 h-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-xs hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="relative w-11 h-11 rounded-full bg-card border border-border flex items-center justify-center shadow-xs hover:border-primary/50 hover:shadow-md active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed group"
           >
             <div className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background ${isOnline ? "bg-emerald-500" : "bg-amber-500"}`} />
-            <Bot size={18} />
+            <img
+              src="/dawa-gpt.webp"
+              alt="DawaGPT"
+              className="w-full h-full object-contain p-1 rounded-full transition-transform group-hover:scale-105"
+            />
           </button>
           <Info size={16} className="text-muted-foreground/30 mb-2" />
         </div>
@@ -135,7 +139,7 @@ export function IntelligencePanel() {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-8 h-8 rounded-full overflow-hidden border border-border p-0.5 bg-card">
-              <img src="/dawa-gpt.png" alt="Intelligence" className="w-full h-full object-cover rounded-full" />
+              <img src="/dawa-gpt.webp" alt="Intelligence" className="w-full h-full object-cover rounded-full" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-background rounded-full flex items-center justify-center">
               <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500" : "bg-amber-500"}`} />
@@ -221,14 +225,18 @@ function DawaGPTMiniButton({
           )}
         </AnimatePresence>
 
-        {/* The Action Blue Bot icon button */}
+        {/* The Action DawaGPT logo button */}
         <button
           onClick={() => onLaunch()}
           disabled={!isOnline}
           aria-label="Open DawaGPT AI"
-          className="relative w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          className="relative w-12 h-12 rounded-full bg-card border border-border flex items-center justify-center hover:border-primary/50 hover:shadow-md active:scale-95 transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed group"
         >
-          <Bot size={22} />
+          <img
+            src="/dawa-gpt.webp"
+            alt="DawaGPT"
+            className="w-full h-full object-contain p-1 rounded-full transition-transform group-hover:scale-105"
+          />
 
           {/* Online dot */}
           <span className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background flex items-center justify-center ${isOnline ? "bg-emerald-500" : "bg-amber-400"}`} />

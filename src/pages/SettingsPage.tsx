@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { 
   ArrowLeft, Shield, Trash2, Moon, Lock, 
   User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw,
-  Bell, Smartphone, Clock, Zap, ExternalLink, Play, ChevronDown
+  Bell, Smartphone, Clock, Zap, ExternalLink, Play, ChevronDown, Sparkles
 } from "@/lib/icons";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,81 @@ import { useApp } from "@/contexts/AppContext";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useMoodTheme, MOOD_THEME_META, type MoodLevel } from "@/hooks/useMoodTheme";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { NativeService } from "@/services/nativeService";
 import { NotificationSoundSettings } from "@/components/settings/NotificationSoundSettings";
+
+function AdaptiveMoodThemeCard() {
+  const { toast } = useToast();
+  const { moodThemeEnabled, setMoodThemeEnabled, moodMeta } = useMoodTheme();
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-primary/10 text-primary transition-colors">
+            <Sparkles size={18} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-bold text-foreground">Adaptive Mood Theme</h3>
+              {moodThemeEnabled && moodMeta && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  <span>{moodMeta.emoji}</span>
+                  <span>{moodMeta.themeName}</span>
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight opacity-70">
+              {moodThemeEnabled
+                ? moodMeta
+                  ? `Synced with today's "${moodMeta.label}" mood check-in`
+                  : "Adapts UI colors to your daily logged mood"
+                : "Using default Dawa Lens palette"}
+            </p>
+          </div>
+        </div>
+        <Switch
+          id="adaptive-mood-theme-switch"
+          aria-label="Toggle adaptive mood theme"
+          checked={moodThemeEnabled}
+          onCheckedChange={(enabled) => {
+            setMoodThemeEnabled(enabled);
+            toast({
+              title: enabled ? "Adaptive Mood Theme Enabled" : "Adaptive Mood Theme Disabled",
+              description: enabled
+                ? "UI colors will adapt to your daily mood check-in."
+                : "Restored standard Dawa Lens theme colors.",
+            });
+          }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-border/40">
+        {([1, 2, 3, 4, 5] as MoodLevel[]).map((level) => {
+          const info = MOOD_THEME_META[level];
+          const isActive = moodThemeEnabled && moodMeta?.val === level;
+          return (
+            <div
+              key={level}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl border text-[9px] font-bold uppercase tracking-tighter transition-all ${
+                isActive
+                  ? "bg-primary/10 border-primary/40 text-primary"
+                  : "bg-muted/20 border-border/40 text-muted-foreground/80"
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${info.swatchClass}`} />
+              <span className="truncate">{info.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -363,6 +433,10 @@ export default function SettingsPage() {
               </div>
             </div>
             <ThemeToggle id="theme-toggle" />
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="premium-card">
+            <AdaptiveMoodThemeCard />
           </motion.div>
 
         </div>

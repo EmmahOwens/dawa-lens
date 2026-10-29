@@ -91,6 +91,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 }
 
 import { usePatientScope } from "@/hooks/usePatientScope";
+import { useMoodTheme } from "@/hooks/useMoodTheme";
 
 function DawaGPTRoot() {
   const { isDawaGPTOfflineModalOpen, setIsDawaGPTOfflineModalOpen } = useApp();
@@ -113,6 +114,7 @@ const AppContent = () => {
     reconcileOfflineDoseLogs,
   } = useApp();
   const { scopedReminders, scopedDoseLogs, scopedMedicines } = usePatientScope();
+  useMoodTheme();
   const lastMissedCheckRef = useRef<number>(0);
 
   const runMissedDoseReconciliation = useCallback(() => {

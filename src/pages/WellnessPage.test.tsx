@@ -240,6 +240,23 @@ describe("WellnessPage - Recent Reflections ordering & limits", () => {
     expect(screen.getByText(/Recorded/i)).toBeInTheDocument();
     // Button should offer to update reflection
     expect(screen.getByRole("button", { name: /Update Daily Reflection/i })).toBeInTheDocument();
+    // Document root should reflect mood="5" (Great -> Radiant Violet)
+    expect(document.documentElement.getAttribute("data-mood")).toBe("5");
+    expect(screen.getByText("Radiant Violet")).toBeInTheDocument();
+  });
+
+  it("previews mood theme on document.documentElement when clicking a mood emoji on Today", () => {
+    localStorage.setItem("dawa_adaptive_mood_theme", "true");
+    testState.scopedWellnessLogs = [];
+
+    render(<WellnessPage />);
+
+    // Click the "Low" (😔, val=1) mood button
+    const lowBtn = screen.getByText("Low").closest("button")!;
+    fireEvent.click(lowBtn);
+
+    expect(document.documentElement.getAttribute("data-mood")).toBe("1");
+    expect(screen.getByText("Calming Indigo")).toBeInTheDocument();
   });
 
   it("defaults to 60% vitality and Check-in when today has no recorded check-in", () => {

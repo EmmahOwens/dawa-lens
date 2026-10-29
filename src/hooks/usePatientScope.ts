@@ -43,11 +43,11 @@ export interface ResolvedPatient {
 
 export function usePatientScope() {
   const {
-    medicines,
-    reminders,
-    doseLogs,
-    wellnessLogs,
-    patients,
+    medicines = [],
+    reminders = [],
+    doseLogs = [],
+    wellnessLogs = [],
+    patients = [],
     selectedPatientId,
     userProfile,
   } = useApp();

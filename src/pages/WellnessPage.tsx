@@ -26,6 +26,12 @@ import WellnessInsightCard from "@/components/wellness/WellnessInsightCard";
 import { LottieMoji } from "@/components/rive/LottieMoji";
 import { RiveMoji } from "@/components/rive/RiveMoji";
 import { useToast } from "@/hooks/use-toast";
+import {
+  useMoodTheme,
+  dispatchMoodPreview,
+  MOOD_THEME_META,
+  isValidMoodLevel,
+} from "@/hooks/useMoodTheme";
 import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
 
@@ -98,6 +104,7 @@ export default function WellnessPage() {
   const { addWellnessLog, deleteWellnessLog } = useApp();
   const { scopedWellnessLogs, scopedMedicines, scopedDoseLogs } = usePatientScope();
   const { toast } = useToast();
+  const { moodThemeEnabled } = useMoodTheme();
 
   const [activeTab, setActiveTab] = useState<"journal" | "food">("journal");
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
@@ -317,7 +324,14 @@ export default function WellnessPage() {
       setEnergy(3);
       setSymptoms([]);
     }
+    dispatchMoodPreview(null);
   }, [latestDayLog, selectedDate]);
+
+  useEffect(() => {
+    return () => {
+      dispatchMoodPreview(null);
+    };
+  }, []);
 
   // Food State
   const [meal, setMeal] = useState("");
@@ -538,13 +552,26 @@ export default function WellnessPage() {
 
                 {/* Mood Selector */}
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 mb-4">Current Mood</p>
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Current Mood</p>
+                    {moodThemeEnabled && isValidMoodLevel(mood) && (
+                      <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 transition-colors">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        {MOOD_THEME_META[mood].themeName}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex justify-between gap-2">
                     {moodEmojis.map((m) => (
                       <button
                         key={m.val}
-                        onClick={() => setMood(m.val)}
-                        className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl transition-all duration-300 ${mood === m.val ? "bg-success text-success-foreground scale-110 shadow-lg shadow-success/20 -translate-y-1" : "bg-muted/30 hover:bg-muted/50"}`}
+                        onClick={() => {
+                          setMood(m.val);
+                          if (isToday) {
+                            dispatchMoodPreview(m.val);
+                          }
+                        }}
+                        className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl transition-all duration-300 ${mood === m.val ? (moodThemeEnabled ? "bg-primary text-primary-foreground scale-110 shadow-lg shadow-primary/20 -translate-y-1" : "bg-success text-success-foreground scale-110 shadow-lg shadow-success/20 -translate-y-1") : "bg-muted/30 hover:bg-muted/50"}`}
                       >
                         <LottieMoji emoji={m.emoji} size={32} className="mb-1" active={mood === m.val} />
                         <span className={`text-[8px] font-black uppercase tracking-tighter ${mood === m.val ? "opacity-100" : "opacity-0"}`}>{m.label}</span>

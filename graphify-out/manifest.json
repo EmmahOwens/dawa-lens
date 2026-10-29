@@ -460,8 +460,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/App.tsx": {
-    "mtime": 1792511418.8183944,
-    "ast_hash": "83a42f174879ea85ee7eb914db09a3c1",
+    "mtime": 1793274494.0420816,
+    "ast_hash": "35b73c379c26db656e52299acca1fb06",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AchievementOverlay.tsx": {
@@ -520,8 +520,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/IntelligencePanel.tsx": {
-    "mtime": 1791302693.592379,
-    "ast_hash": "bf2dc51dcd220835c8b86d576ef61c66",
+    "mtime": 1793274407.9024336,
+    "ast_hash": "a680cdeedcae59af14e1b8780ff209b8",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/MedicalReportContent.tsx": {
@@ -860,8 +860,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/usePatientScope.ts": {
-    "mtime": 1787196650.2736943,
-    "ast_hash": "c0d9303ea3e1f2acee3c92a908e7a1ce",
+    "mtime": 1793274592.8397164,
+    "ast_hash": "992f870ed5ae0cd82db6e56113ce8d1f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useTheme.ts": {
@@ -1010,13 +1010,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.test.tsx": {
-    "mtime": 1790071579.4573195,
-    "ast_hash": "70dfff5c96d12053fd3ca28918939345",
+    "mtime": 1793274627.390597,
+    "ast_hash": "3f5f4a15234285dacc96214146e16635",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.tsx": {
-    "mtime": 1792508927.451702,
-    "ast_hash": "624e6b666ee47ce1f94e8336a2256b4d",
+    "mtime": 1793274767.6460226,
+    "ast_hash": "0e50d706e0174a3f01c553115e75e453",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
@@ -1035,8 +1035,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx": {
-    "mtime": 1792749557.996075,
-    "ast_hash": "9f8f24035543537cace04a322e120e72",
+    "mtime": 1793274525.1159627,
+    "ast_hash": "7b6dfbf240327a486aff46e6e6763d1e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/app-updater.ts": {
@@ -2055,8 +2055,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.test.tsx": {
-    "mtime": 1789113462.7823975,
-    "ast_hash": "68c7dd86d11ed917052f482c16c03960",
+    "mtime": 1793274630.8525853,
+    "ast_hash": "c8152bc08321c26b5849b9d3f116d83f",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/__tests__/NotificationHandler.test.tsx": {
@@ -3657,6 +3657,11 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/src/main/assets/public/assets/onboarding/step-8-ready.webp": {
     "mtime": 1792762061.0271196,
     "ast_hash": "1415ebbb65aad680486bc66f255c8245",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useMoodTheme.ts": {
+    "mtime": 1793274339.0827415,
+    "ast_hash": "17b3e8fd54a58df8de2398bb988d5f9e",
     "semantic_hash": ""
   }
 }

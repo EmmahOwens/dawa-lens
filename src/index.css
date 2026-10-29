@@ -113,6 +113,125 @@
     --sidebar-ring: 211 100% 58%;
   }
 
+  /* ─── Adaptive Mood Themes (Light Mode) ─────────────────────────────────── */
+  /* Mood 1: Low 😔 — Calming Indigo */
+  :root[data-mood="1"] {
+    --primary: 234 65% 52%;
+    --ring: 234 65% 56%;
+    --accent-foreground: 234 65% 52%;
+    --sidebar-primary: 234 65% 52%;
+    --sidebar-ring: 234 65% 56%;
+    --background: 234 45% 99%;
+    --secondary: 234 30% 96%;
+    --muted: 234 30% 96%;
+    --accent: 234 30% 96%;
+    --parchment: 234 30% 96%;
+    --sidebar-background: 234 30% 96%;
+  }
+
+  /* Mood 2: Meh 😕 — Gentle Teal */
+  :root[data-mood="2"] {
+    --primary: 188 78% 36%;
+    --ring: 188 78% 42%;
+    --accent-foreground: 188 78% 36%;
+    --sidebar-primary: 188 78% 36%;
+    --sidebar-ring: 188 78% 42%;
+    --background: 188 45% 99%;
+    --secondary: 188 30% 96%;
+    --muted: 188 30% 96%;
+    --accent: 188 30% 96%;
+    --parchment: 188 30% 96%;
+    --sidebar-background: 188 30% 96%;
+  }
+
+  /* Mood 3: Okay 😐 — Balanced Action Blue */
+  :root[data-mood="3"] {
+    --primary: 210 100% 40%;
+    --ring: 210 100% 45%;
+    --accent-foreground: 210 100% 40%;
+    --sidebar-primary: 210 100% 40%;
+    --sidebar-ring: 210 100% 45%;
+  }
+
+  /* Mood 4: Good 🙂 — Vitality Emerald */
+  :root[data-mood="4"] {
+    --primary: 152 69% 38%;
+    --ring: 152 69% 43%;
+    --accent-foreground: 152 69% 38%;
+    --sidebar-primary: 152 69% 38%;
+    --sidebar-ring: 152 69% 43%;
+    --background: 152 40% 99%;
+    --secondary: 152 28% 96%;
+    --muted: 152 28% 96%;
+    --accent: 152 28% 96%;
+    --parchment: 152 28% 96%;
+    --sidebar-background: 152 28% 96%;
+  }
+
+  /* Mood 5: Great 🤩 — Radiant Violet */
+  :root[data-mood="5"] {
+    --primary: 268 78% 52%;
+    --ring: 268 78% 56%;
+    --accent-foreground: 268 78% 52%;
+    --sidebar-primary: 268 78% 52%;
+    --sidebar-ring: 268 78% 56%;
+    --background: 268 45% 99%;
+    --secondary: 268 30% 96%;
+    --muted: 268 30% 96%;
+    --accent: 268 30% 96%;
+    --parchment: 268 30% 96%;
+    --sidebar-background: 268 30% 96%;
+  }
+
+  /* ─── Adaptive Mood Themes (Dark Mode) ──────────────────────────────────── */
+  .dark[data-mood="1"] {
+    --primary: 234 82% 68%;
+    --ring: 234 82% 68%;
+    --accent-foreground: 234 82% 68%;
+    --sidebar-primary: 234 82% 68%;
+    --sidebar-ring: 234 82% 68%;
+    --parchment: 234 20% 10%;
+    --sidebar-background: 234 20% 10%;
+  }
+
+  .dark[data-mood="2"] {
+    --primary: 188 85% 52%;
+    --ring: 188 85% 52%;
+    --accent-foreground: 188 85% 52%;
+    --sidebar-primary: 188 85% 52%;
+    --sidebar-ring: 188 85% 52%;
+    --parchment: 188 22% 10%;
+    --sidebar-background: 188 22% 10%;
+  }
+
+  .dark[data-mood="3"] {
+    --primary: 211 100% 58%;
+    --ring: 211 100% 58%;
+    --accent-foreground: 211 100% 58%;
+    --sidebar-primary: 211 100% 58%;
+    --sidebar-ring: 211 100% 58%;
+  }
+
+  .dark[data-mood="4"] {
+    --primary: 152 72% 48%;
+    --ring: 152 72% 48%;
+    --accent-foreground: 152 72% 48%;
+    --sidebar-primary: 152 72% 48%;
+    --sidebar-ring: 152 72% 48%;
+    --parchment: 152 20% 10%;
+    --sidebar-background: 152 20% 10%;
+  }
+
+  .dark[data-mood="5"] {
+    --primary: 268 85% 66%;
+    --ring: 268 85% 66%;
+    --accent-foreground: 268 85% 66%;
+    --sidebar-primary: 268 85% 66%;
+    --sidebar-ring: 268 85% 66%;
+    --parchment: 268 22% 10%;
+    --sidebar-background: 268 22% 10%;
+  }
+
   .dark .prose {
     --tw-prose-body: hsl(var(--foreground));
     --tw-prose-headings: hsl(var(--foreground));

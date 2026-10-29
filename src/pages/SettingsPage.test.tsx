@@ -319,6 +319,30 @@ describe("SettingsPage — unit tests", () => {
       );
     });
   });
+
+  it("renders Adaptive Mood Theme toggle and persists user preference", async () => {
+    localStorage.removeItem("dawa_adaptive_mood_theme");
+    renderSettingsPage();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Adaptive Mood Theme/i)).toBeInTheDocument();
+    });
+
+    const moodSwitch = screen.getByLabelText(/Toggle adaptive mood theme/i);
+    expect(moodSwitch).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(moodSwitch);
+
+    await waitFor(() => {
+      expect(moodSwitch).toHaveAttribute("aria-checked", "false");
+      expect(localStorage.getItem("dawa_adaptive_mood_theme")).toBe("false");
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Adaptive Mood Theme Disabled",
+        })
+      );
+    });
+  });
 });
 
 // ─── Property 6: Dialog state resets after any close path — SettingsPage variant ─
