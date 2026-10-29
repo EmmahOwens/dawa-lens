@@ -38,17 +38,35 @@ export function calculateVitalitySummary(
     let mood: number | null = null;
 
     if (dayWellnessLogs.length > 0) {
-      const sumEnergy = dayWellnessLogs.reduce(
-        (acc, l) => acc + (Number(l.data?.energy) || 0),
-        0
+      // Sort day logs chronologically so latest entry is prioritized
+      const sortedLogs = [...dayWellnessLogs].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
-      const sumMood = dayWellnessLogs.reduce(
-        (acc, l) => acc + (Number(l.data?.mood) || 0),
-        0
+
+      // Filter only logs that actually contain a valid energy rating (1-5)
+      const validEnergyLogs = sortedLogs.filter(
+        (l) => l.data?.energy != null && !isNaN(Number(l.data.energy)) && Number(l.data.energy) > 0
       );
-      // Scaled to 0-100 for the chart component which maps it back to 1-5
-      energy = (sumEnergy / dayWellnessLogs.length) * 20;
-      mood = (sumMood / dayWellnessLogs.length) * 20;
+      // Filter only logs that actually contain a valid mood rating (1-5)
+      const validMoodLogs = sortedLogs.filter(
+        (l) => l.data?.mood != null && !isNaN(Number(l.data.mood)) && Number(l.data.mood) > 0
+      );
+
+      if (validEnergyLogs.length > 0) {
+        // Use the latest recorded energy of the day, rounded to a clean 1-5 integer scale
+        const latestEnergy = Number(validEnergyLogs[validEnergyLogs.length - 1].data?.energy);
+        const integerEnergy = Math.max(1, Math.min(5, Math.round(latestEnergy)));
+        // Scaled to 0-100 for the chart component (20, 40, 60, 80, 100)
+        energy = integerEnergy * 20;
+      }
+
+      if (validMoodLogs.length > 0) {
+        // Use the latest recorded mood of the day, rounded to a clean 1-5 integer scale
+        const latestMood = Number(validMoodLogs[validMoodLogs.length - 1].data?.mood);
+        const integerMood = Math.max(1, Math.min(5, Math.round(latestMood)));
+        // Scaled to 0-100 for the chart component (20, 40, 60, 80, 100)
+        mood = integerMood * 20;
+      }
     }
 
     return { name: dayStr, adherence, energy, mood };

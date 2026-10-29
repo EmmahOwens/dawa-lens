@@ -42,10 +42,13 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
     return viewHeight - paddingBottom - (clamped / 100) * chartHeight;
   }, []);
 
-  // Right Axis Y mapper: Wellness rating (1 - 5 stars mapped from 0-100 score)
+  // Right Axis Y mapper: Wellness rating (1 - 5 stars mapped from 0-100 score or 1-5 scale)
   const getWellnessY = React.useCallback((val: number | null) => {
     if (val === null) return 0;
-    const rating = val / 20; // 0-100 -> 0-5
+    // Support both 0-100 score and direct 1-5 rating, rounding to nearest whole star (1-5)
+    // so values cleanly snap/align with the 1★ - 5★ grid lines
+    const rawRating = val > 5 ? val / 20 : val;
+    const rating = Math.round(rawRating);
     const clampedRating = Math.max(1, Math.min(5, rating));
     return viewHeight - paddingBottom - ((clampedRating - 1) / 4) * chartHeight;
   }, []);
@@ -537,7 +540,7 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
                     <span className="text-[10px] font-bold text-muted-foreground">Energy</span>
                   </span>
                   <span className="text-[11px] font-extrabold text-foreground tabular-nums">
-                    {(currentHoveredData.energy / 20).toFixed(1)}/5
+                    {Math.max(1, Math.min(5, Math.round(currentHoveredData.energy > 5 ? currentHoveredData.energy / 20 : currentHoveredData.energy)))}/5
                   </span>
                 </div>
               )}
@@ -549,7 +552,7 @@ export function VitalityTrends2D({ data }: VitalityTrends2DProps) {
                     <span className="text-[10px] font-bold text-muted-foreground">Mood</span>
                   </span>
                   <span className="text-[11px] font-extrabold text-foreground tabular-nums">
-                    {(currentHoveredData.mood / 20).toFixed(1)}/5
+                    {Math.max(1, Math.min(5, Math.round(currentHoveredData.mood > 5 ? currentHoveredData.mood / 20 : currentHoveredData.mood)))}/5
                   </span>
                 </div>
               )}

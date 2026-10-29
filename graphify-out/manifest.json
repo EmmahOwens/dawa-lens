@@ -810,8 +810,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/wellness/VitalityTrends2D.tsx": {
-    "mtime": 1791351946.13676,
-    "ast_hash": "c61f723b2076b6d567bcc0490d346cb7",
+    "mtime": 1793276112.0089195,
+    "ast_hash": "3646187b306a0601fcde8b312fd01547",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/wellness/WellnessInsightCard.tsx": {
@@ -915,8 +915,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/vitalityUtils.ts": {
-    "mtime": 1783769287.0852125,
-    "ast_hash": "82bf40dc904e270046934e9c577130b0",
+    "mtime": 1793276022.5888033,
+    "ast_hash": "95d7692733c73c6ee3b5746a743c51c2",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/workerBridge.ts": {
@@ -3662,6 +3662,16 @@
   "/home/iammbayo/Documents/Projects/dawa-lens/src/hooks/useMoodTheme.ts": {
     "mtime": 1793274339.0827415,
     "ast_hash": "17b3e8fd54a58df8de2398bb988d5f9e",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/components/wellness/__tests__/VitalityTrends2D.test.tsx": {
+    "mtime": 1793276400.7721984,
+    "ast_hash": "91fcde8f145c1727dfa51048c884494c",
+    "semantic_hash": ""
+  },
+  "/home/iammbayo/Documents/Projects/dawa-lens/src/lib/__tests__/vitalityUtils.test.ts": {
+    "mtime": 1793276515.3722796,
+    "ast_hash": "2705a29bcdc31726b66a041070d2c586",
     "semantic_hash": ""
   }
 }
