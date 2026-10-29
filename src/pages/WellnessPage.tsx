@@ -462,7 +462,7 @@ export default function WellnessPage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground">
             Wellness Hub
           </h1>
-          <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center text-success">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-300 ${moodThemeEnabled ? "bg-primary/10 text-primary" : "bg-success/10 text-success"}`}>
             <Heart size={18} />
           </div>
         </div>
@@ -506,7 +506,7 @@ export default function WellnessPage() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="section-title flex items-center gap-2 mb-0.5">
-                    <Smile size={16} className="text-success" /> Daily Vibe
+                    <Smile size={16} className={`transition-colors duration-300 ${moodThemeEnabled ? "text-primary" : "text-success"}`} /> Daily Vibe
                   </h3>
                   <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
                     {isToday ? "Today" : format(selectedDate, "EEEE")} • {format(selectedDate, "MMM d, yyyy")}
@@ -514,7 +514,7 @@ export default function WellnessPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {latestDayLog ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-success/15 text-success uppercase tracking-wider border border-success/20">
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border transition-colors duration-300 ${moodThemeEnabled ? "bg-primary/15 text-primary border-primary/20" : "bg-success/15 text-success border-success/20"}`}>
                       <CheckCircle2 size={11} /> Recorded
                     </span>
                   ) : (
@@ -536,7 +536,7 @@ export default function WellnessPage() {
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${energy * 20}%` }}
-                      className="absolute top-0 left-0 h-full bg-gradient-to-r from-success/40 to-success"
+                      className={`absolute top-0 left-0 h-full bg-gradient-to-r transition-colors duration-300 ${moodThemeEnabled ? "from-primary/40 to-primary" : "from-success/40 to-success"}`}
                     />
                     <input
                       type="range" min="1" max="5" value={energy}
@@ -546,7 +546,7 @@ export default function WellnessPage() {
                   </div>
                   <div className="flex justify-between mt-2 px-1">
                     <Zap size={10} className="text-muted-foreground/40" />
-                    <Zap size={10} className="text-success" />
+                    <Zap size={10} className={`transition-colors duration-300 ${moodThemeEnabled ? "text-primary" : "text-success"}`} />
                   </div>
                 </div>
 

@@ -1,7 +1,7 @@
 {
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/build.gradle": {
-    "mtime": 1792750697.235958,
-    "ast_hash": "e53d36f48b0b5f355d5154cb7892e1e9",
+    "mtime": 1793275220.711313,
+    "ast_hash": "3a86ecf52556a1479b8ec19df829b102",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/android/app/capacitor.build.gradle": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/package.json": {
-    "mtime": 1792750651.7238574,
-    "ast_hash": "65bf3b83f973b736c612730533b6c218",
+    "mtime": 1793275203.8212106,
+    "ast_hash": "aa93b23bcd34b8425729475924ae2bc0",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/postcss.config.js": {
@@ -470,13 +470,13 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AppShell.tsx": {
-    "mtime": 1791286254.332874,
-    "ast_hash": "c173a99337fbcb5a63b6090671817abe",
+    "mtime": 1793275351.0320017,
+    "ast_hash": "b8885954c754b99efdd63e88e4162a72",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/AppSidebar.tsx": {
-    "mtime": 1791286197.144904,
-    "ast_hash": "605f5fef8d38a8c3a9898e59c4e9944a",
+    "mtime": 1793275313.2898192,
+    "ast_hash": "8b2074fa9ad5810d2f425d505bd10fdd",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/BottomNav.tsx": {
@@ -540,8 +540,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/Navbar.tsx": {
-    "mtime": 1791286100.3486676,
-    "ast_hash": "c8842cad939cc84525dc6218d1bb18e0",
+    "mtime": 1793275345.337975,
+    "ast_hash": "d63a0ef0038ca5c896ac66670d9a973c",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/NotificationHandler.tsx": {
@@ -580,8 +580,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/StatusHero.tsx": {
-    "mtime": 1791361022.8915355,
-    "ast_hash": "dd3020a1d05c5f89dc2e39d339f92878",
+    "mtime": 1793275279.1056426,
+    "ast_hash": "0d2410f0458118cad2a17153481f773e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/components/StoreUpdateModal.tsx": {
@@ -1015,8 +1015,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/SettingsPage.tsx": {
-    "mtime": 1793274767.6460226,
-    "ast_hash": "0e50d706e0174a3f01c553115e75e453",
+    "mtime": 1793274770.8230674,
+    "ast_hash": "2a4cf25f20d96630a35e227553176b8e",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/TravelCompanionPage.tsx": {
@@ -1035,8 +1035,8 @@
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/pages/WellnessPage.tsx": {
-    "mtime": 1793274525.1159627,
-    "ast_hash": "7b6dfbf240327a486aff46e6e6763d1e",
+    "mtime": 1793275327.1558878,
+    "ast_hash": "3b86a90bef67cbbd4389311d3f169397",
     "semantic_hash": ""
   },
   "/home/iammbayo/Documents/Projects/dawa-lens/src/plugins/app-updater.ts": {

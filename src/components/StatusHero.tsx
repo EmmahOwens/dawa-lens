@@ -22,16 +22,34 @@ export function StatusHero({
 
   return (
     <div className="mb-8">
-      <div className="relative overflow-hidden rounded-[22px] border border-blue-500/25 bg-gradient-to-br from-[#1d4ed8] via-[#1e40af] to-[#0f172a] text-white p-5 sm:p-7 shadow-lg shadow-blue-950/20 transition-all duration-200">
+      <div
+        className="relative overflow-hidden rounded-[22px] border border-primary/30 text-white p-5 sm:p-7 shadow-lg transition-all duration-300"
+        style={{
+          backgroundImage:
+            "linear-gradient(to bottom right, hsl(var(--hero-from)), hsl(var(--hero-via)), hsl(var(--hero-to)))",
+        }}
+      >
         {/* Subtle Ambient Glows */}
-        <div className="absolute -top-16 -right-16 w-48 h-48 bg-sky-400/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-indigo-500/25 rounded-full blur-3xl pointer-events-none" />
+        <div
+          className="absolute -top-16 -right-16 w-48 h-48 rounded-full blur-3xl pointer-events-none transition-colors duration-300"
+          style={{ backgroundColor: "hsl(var(--hero-accent) / 0.22)" }}
+        />
+        <div
+          className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full blur-3xl pointer-events-none transition-colors duration-300"
+          style={{ backgroundColor: "hsl(var(--primary) / 0.28)" }}
+        />
 
         <div className="flex flex-col gap-5 sm:gap-6">
           {/* Header Row */}
           <div className="relative z-10 flex items-center justify-between">
             <div className="flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3 py-1 shadow-xs">
-              <div className="h-2 w-2 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
+              <div
+                className="h-2 w-2 rounded-full transition-colors duration-300"
+                style={{
+                  backgroundColor: "hsl(var(--hero-accent))",
+                  boxShadow: "0 0 8px hsl(var(--hero-accent))",
+                }}
+              />
               <span className="text-[11px] font-medium tracking-normal text-white">
                 Schedule Status
               </span>
@@ -53,8 +71,12 @@ export function StatusHero({
               className="flex-1 min-w-0 cursor-pointer group active:scale-[0.98] transition-transform"
               onClick={onNextDoseClick}
             >
-              <div className="flex items-center gap-1.5 mb-1.5 text-blue-100/80">
-                <Clock size={13} className="text-sky-300 shrink-0" />
+              <div className="flex items-center gap-1.5 mb-1.5 text-white/80">
+                <Clock
+                  size={13}
+                  className="shrink-0 transition-colors duration-300"
+                  style={{ color: "hsl(var(--hero-accent))" }}
+                />
                 <span className="text-[12px] font-medium tracking-normal truncate">
                   Next Scheduled Dose
                 </span>
@@ -65,7 +87,7 @@ export function StatusHero({
                   <h2 className="text-[32px] sm:text-[42px] font-bold leading-tight tracking-tight text-white mb-1">
                     {nextDose.timeUntil}
                   </h2>
-                  <p className="text-[14px] sm:text-[15px] font-normal text-blue-100/80 truncate">
+                  <p className="text-[14px] sm:text-[15px] font-normal text-white/80 truncate">
                     {nextDose.reminder.medicineName} · {nextDose.reminder.time}
                   </p>
                 </>
@@ -74,7 +96,7 @@ export function StatusHero({
                   <h2 className="text-[30px] sm:text-[38px] font-bold leading-tight tracking-tight text-white mb-1">
                     All Set
                   </h2>
-                  <p className="text-[13px] sm:text-[14px] font-normal text-blue-100/80">
+                  <p className="text-[13px] sm:text-[14px] font-normal text-white/80">
                     No remaining doses scheduled for today
                   </p>
                 </>
@@ -102,7 +124,7 @@ export function StatusHero({
                   cy="50"
                   r="38"
                   fill="transparent"
-                  stroke="#38bdf8"
+                  stroke="hsl(var(--hero-accent))"
                   strokeWidth="8"
                   strokeLinecap="round"
                   initial={{ strokeDasharray: "238.76", strokeDashoffset: "238.76" }}
@@ -116,7 +138,7 @@ export function StatusHero({
                 <span className="text-[20px] sm:text-[22px] font-bold text-white leading-none tracking-tight">
                   {takenToday}
                 </span>
-                <span className="text-[11px] sm:text-[12px] font-medium text-blue-100/80 mt-1 leading-none">
+                <span className="text-[11px] sm:text-[12px] font-medium text-white/80 mt-1 leading-none">
                   of {totalToday}
                 </span>
               </div>
@@ -129,17 +151,22 @@ export function StatusHero({
               {[...Array(Math.min(totalToday, 5))].map((_, i) => (
                 <div
                   key={i}
-                  className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-medium ${
+                  className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-medium transition-colors duration-300 ${
                     i < takenToday
-                      ? "bg-sky-400 text-slate-950 font-bold shadow-xs shadow-sky-400/40"
+                      ? "text-slate-950 font-bold shadow-xs"
                       : "bg-white/15 text-white/70"
                   }`}
+                  style={
+                    i < takenToday
+                      ? { backgroundColor: "hsl(var(--hero-accent))" }
+                      : undefined
+                  }
                 >
                   {i < takenToday ? <CheckCircle2 size={11} /> : i + 1}
                 </div>
               ))}
               {totalToday > 5 && (
-                <span className="text-[11px] font-medium text-blue-100/70 pl-1">
+                <span className="text-[11px] font-medium text-white/70 pl-1">
                   +{totalToday - 5}
                 </span>
               )}

@@ -43,7 +43,7 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
-      className="border-r border-border bg-[#f5f5f7] dark:bg-[#161617] transition-all duration-200"
+      className="border-r border-border bg-sidebar transition-all duration-200"
     >
       {/* Brand Header */}
       <div className="flex flex-col px-4 py-5 border-b border-border">
@@ -52,7 +52,7 @@ export function AppSidebar() {
             collapsed ? "justify-center" : "gap-3"
           } transition-all duration-200`}
         >
-          <div className="h-9 w-9 flex items-center justify-center rounded-xl bg-white dark:bg-[#252527] border border-border shrink-0 shadow-sm">
+          <div className="h-9 w-9 flex items-center justify-center rounded-xl bg-card border border-border shrink-0 shadow-sm">
             <img src={LOGO_BASE64} alt="Logo" className="w-5 h-5 object-contain" />
           </div>
           {!collapsed && (
@@ -106,7 +106,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-3 mt-auto border-t border-border">
         <div
-          className={`flex items-center gap-2.5 rounded-2xl p-2 bg-white dark:bg-[#252527] border border-border ${
+          className={`flex items-center gap-2.5 rounded-2xl p-2 bg-card border border-border ${
             collapsed ? "justify-center" : ""
           }`}
         >

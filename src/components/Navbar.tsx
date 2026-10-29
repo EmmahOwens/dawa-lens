@@ -14,7 +14,7 @@ export function Navbar({ className }: NavbarProps) {
   return (
     <header
       className={cn(
-        "h-[52px] flex items-center justify-between px-6 bg-white/80 dark:bg-[#161617]/80 backdrop-blur-2xl border-b border-border/80 sticky top-0 z-30",
+        "h-[52px] flex items-center justify-between px-6 bg-background/80 backdrop-blur-2xl border-b border-border/80 sticky top-0 z-30 transition-colors duration-300",
         className
       )}
     >

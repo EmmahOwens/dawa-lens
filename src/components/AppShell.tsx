@@ -17,7 +17,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <div className="h-[100dvh] min-h-[100dvh] bg-background flex flex-col overscroll-none relative overflow-hidden">
         <div className="flex-1 overflow-y-auto no-scrollbar overscroll-y-contain">
           {/* Safe-top spacer for edge-to-edge screens with notch */}
-          <div className="h-[env(safe-area-inset-top,0px)] bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-b border-border/80 sticky top-0 z-40 w-full shrink-0" />
+          <div className="h-[env(safe-area-inset-top,0px)] bg-background/80 backdrop-blur-2xl border-b border-border/80 sticky top-0 z-40 w-full shrink-0 transition-colors duration-300" />
           <PatientContextBanner />
           <main className="px-4 sm:px-6 safe-mobile-dock-bottom pt-2 w-full max-w-2xl mx-auto">
             {children}
@@ -47,7 +47,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
         {/* Column 3: Intelligence Panel */}
         <div
-          className={`hidden xl:block transition-all duration-300 ease-in-out border-l border-border bg-[#f5f5f7] dark:bg-[#161617] ${
+          className={`hidden xl:block transition-all duration-300 ease-in-out border-l border-border bg-parchment ${
             isIntelligenceCollapsed ? "w-[70px]" : "w-[340px]"
           }`}
         >

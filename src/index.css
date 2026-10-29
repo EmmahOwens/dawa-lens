@@ -57,6 +57,12 @@
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 210 100% 45%;
 
+    /* StatusHero gradient tokens (default: Action Blue) */
+    --hero-from: 221 83% 48%;
+    --hero-via: 224 76% 40%;
+    --hero-to: 222 47% 11%;
+    --hero-accent: 199 95% 60%;
+
     --font-sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Inter",
       system-ui, "Segoe UI", Roboto, sans-serif;
   }
@@ -111,6 +117,11 @@
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 240 2% 23%;
     --sidebar-ring: 211 100% 58%;
+
+    --hero-from: 221 83% 45%;
+    --hero-via: 224 76% 36%;
+    --hero-to: 222 47% 10%;
+    --hero-accent: 199 95% 60%;
   }
 
   /* ─── Adaptive Mood Themes (Light Mode) ─────────────────────────────────── */
@@ -121,12 +132,20 @@
     --accent-foreground: 234 65% 52%;
     --sidebar-primary: 234 65% 52%;
     --sidebar-ring: 234 65% 56%;
-    --background: 234 45% 99%;
-    --secondary: 234 30% 96%;
-    --muted: 234 30% 96%;
-    --accent: 234 30% 96%;
-    --parchment: 234 30% 96%;
-    --sidebar-background: 234 30% 96%;
+    --background: 234 50% 98%;
+    --card: 234 60% 99.5%;
+    --border: 234 28% 88%;
+    --input: 234 28% 88%;
+    --secondary: 234 38% 95%;
+    --muted: 234 38% 95%;
+    --accent: 234 38% 95%;
+    --parchment: 234 38% 95%;
+    --sidebar-background: 234 38% 95%;
+    --sidebar-border: 234 28% 88%;
+    --hero-from: 234 62% 48%;
+    --hero-via: 238 58% 38%;
+    --hero-to: 240 48% 14%;
+    --hero-accent: 230 92% 74%;
   }
 
   /* Mood 2: Meh 😕 — Gentle Teal */
@@ -136,12 +155,20 @@
     --accent-foreground: 188 78% 36%;
     --sidebar-primary: 188 78% 36%;
     --sidebar-ring: 188 78% 42%;
-    --background: 188 45% 99%;
-    --secondary: 188 30% 96%;
-    --muted: 188 30% 96%;
-    --accent: 188 30% 96%;
-    --parchment: 188 30% 96%;
-    --sidebar-background: 188 30% 96%;
+    --background: 188 50% 98%;
+    --card: 188 60% 99.5%;
+    --border: 188 28% 87%;
+    --input: 188 28% 87%;
+    --secondary: 188 38% 94.5%;
+    --muted: 188 38% 94.5%;
+    --accent: 188 38% 94.5%;
+    --parchment: 188 38% 94.5%;
+    --sidebar-background: 188 38% 94.5%;
+    --sidebar-border: 188 28% 87%;
+    --hero-from: 188 76% 36%;
+    --hero-via: 192 74% 28%;
+    --hero-to: 196 56% 12%;
+    --hero-accent: 184 90% 62%;
   }
 
   /* Mood 3: Okay 😐 — Balanced Action Blue */
@@ -151,6 +178,10 @@
     --accent-foreground: 210 100% 40%;
     --sidebar-primary: 210 100% 40%;
     --sidebar-ring: 210 100% 45%;
+    --hero-from: 221 83% 48%;
+    --hero-via: 224 76% 40%;
+    --hero-to: 222 47% 11%;
+    --hero-accent: 199 95% 60%;
   }
 
   /* Mood 4: Good 🙂 — Vitality Emerald */
@@ -160,12 +191,20 @@
     --accent-foreground: 152 69% 38%;
     --sidebar-primary: 152 69% 38%;
     --sidebar-ring: 152 69% 43%;
-    --background: 152 40% 99%;
-    --secondary: 152 28% 96%;
-    --muted: 152 28% 96%;
-    --accent: 152 28% 96%;
-    --parchment: 152 28% 96%;
-    --sidebar-background: 152 28% 96%;
+    --background: 152 46% 98%;
+    --card: 152 55% 99.5%;
+    --border: 152 26% 87%;
+    --input: 152 26% 87%;
+    --secondary: 152 35% 94.5%;
+    --muted: 152 35% 94.5%;
+    --accent: 152 35% 94.5%;
+    --parchment: 152 35% 94.5%;
+    --sidebar-background: 152 35% 94.5%;
+    --sidebar-border: 152 26% 87%;
+    --hero-from: 154 68% 34%;
+    --hero-via: 158 66% 26%;
+    --hero-to: 162 54% 11%;
+    --hero-accent: 148 84% 60%;
   }
 
   /* Mood 5: Great 🤩 — Radiant Violet */
@@ -175,12 +214,20 @@
     --accent-foreground: 268 78% 52%;
     --sidebar-primary: 268 78% 52%;
     --sidebar-ring: 268 78% 56%;
-    --background: 268 45% 99%;
-    --secondary: 268 30% 96%;
-    --muted: 268 30% 96%;
-    --accent: 268 30% 96%;
-    --parchment: 268 30% 96%;
-    --sidebar-background: 268 30% 96%;
+    --background: 268 50% 98%;
+    --card: 268 60% 99.5%;
+    --border: 268 28% 88%;
+    --input: 268 28% 88%;
+    --secondary: 268 38% 95%;
+    --muted: 268 38% 95%;
+    --accent: 268 38% 95%;
+    --parchment: 268 38% 95%;
+    --sidebar-background: 268 38% 95%;
+    --sidebar-border: 268 28% 88%;
+    --hero-from: 268 74% 48%;
+    --hero-via: 272 68% 36%;
+    --hero-to: 276 52% 13%;
+    --hero-accent: 265 92% 74%;
   }
 
   /* ─── Adaptive Mood Themes (Dark Mode) ──────────────────────────────────── */
@@ -190,8 +237,20 @@
     --accent-foreground: 234 82% 68%;
     --sidebar-primary: 234 82% 68%;
     --sidebar-ring: 234 82% 68%;
-    --parchment: 234 20% 10%;
-    --sidebar-background: 234 20% 10%;
+    --background: 234 32% 5%;
+    --card: 234 24% 13%;
+    --secondary: 234 22% 16%;
+    --muted: 234 20% 14%;
+    --accent: 234 22% 16%;
+    --border: 234 22% 24%;
+    --input: 234 22% 24%;
+    --parchment: 234 28% 9%;
+    --sidebar-background: 234 28% 9%;
+    --sidebar-border: 234 22% 22%;
+    --hero-from: 234 62% 44%;
+    --hero-via: 238 58% 34%;
+    --hero-to: 240 48% 12%;
+    --hero-accent: 230 92% 74%;
   }
 
   .dark[data-mood="2"] {
@@ -200,8 +259,20 @@
     --accent-foreground: 188 85% 52%;
     --sidebar-primary: 188 85% 52%;
     --sidebar-ring: 188 85% 52%;
-    --parchment: 188 22% 10%;
-    --sidebar-background: 188 22% 10%;
+    --background: 188 32% 5%;
+    --card: 188 24% 12.5%;
+    --secondary: 188 22% 15.5%;
+    --muted: 188 20% 13.5%;
+    --accent: 188 22% 15.5%;
+    --border: 188 24% 23%;
+    --input: 188 24% 23%;
+    --parchment: 188 28% 8.5%;
+    --sidebar-background: 188 28% 8.5%;
+    --sidebar-border: 188 22% 21%;
+    --hero-from: 188 76% 33%;
+    --hero-via: 192 74% 25%;
+    --hero-to: 196 56% 10%;
+    --hero-accent: 184 90% 62%;
   }
 
   .dark[data-mood="3"] {
@@ -210,6 +281,10 @@
     --accent-foreground: 211 100% 58%;
     --sidebar-primary: 211 100% 58%;
     --sidebar-ring: 211 100% 58%;
+    --hero-from: 221 83% 45%;
+    --hero-via: 224 76% 36%;
+    --hero-to: 222 47% 10%;
+    --hero-accent: 199 95% 60%;
   }
 
   .dark[data-mood="4"] {
@@ -218,8 +293,20 @@
     --accent-foreground: 152 72% 48%;
     --sidebar-primary: 152 72% 48%;
     --sidebar-ring: 152 72% 48%;
-    --parchment: 152 20% 10%;
-    --sidebar-background: 152 20% 10%;
+    --background: 152 30% 4.5%;
+    --card: 152 22% 12.5%;
+    --secondary: 152 20% 15.5%;
+    --muted: 152 18% 13.5%;
+    --accent: 152 20% 15.5%;
+    --border: 152 22% 23%;
+    --input: 152 22% 23%;
+    --parchment: 152 26% 8.5%;
+    --sidebar-background: 152 26% 8.5%;
+    --sidebar-border: 152 20% 21%;
+    --hero-from: 154 68% 31%;
+    --hero-via: 158 66% 23%;
+    --hero-to: 162 54% 9%;
+    --hero-accent: 148 84% 60%;
   }
 
   .dark[data-mood="5"] {
@@ -228,8 +315,20 @@
     --accent-foreground: 268 85% 66%;
     --sidebar-primary: 268 85% 66%;
     --sidebar-ring: 268 85% 66%;
-    --parchment: 268 22% 10%;
-    --sidebar-background: 268 22% 10%;
+    --background: 268 32% 5%;
+    --card: 268 24% 13%;
+    --secondary: 268 22% 16%;
+    --muted: 268 20% 14%;
+    --accent: 268 22% 16%;
+    --border: 268 24% 24%;
+    --input: 268 24% 24%;
+    --parchment: 268 28% 9%;
+    --sidebar-background: 268 28% 9%;
+    --sidebar-border: 268 22% 22%;
+    --hero-from: 268 74% 44%;
+    --hero-via: 272 68% 33%;
+    --hero-to: 276 52% 11%;
+    --hero-accent: 265 92% 74%;
   }
 
   .dark .prose {
