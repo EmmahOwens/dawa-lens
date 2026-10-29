@@ -723,6 +723,34 @@ export const localPersistence = {
         all.filter((p) => p.id !== id)
       );
     },
+    replaceAll: async (items: Patient[]): Promise<void> => {
+      await ensureSqliteReady();
+      if (Capacitor.isNativePlatform() && sqliteReady) {
+        try {
+          await NativeSqlite.execute({ sql: "DELETE FROM patients", params: [] });
+          for (const p of items) {
+            await NativeSqlite.execute({
+              sql: `INSERT OR REPLACE INTO patients (id,name,age,gender,weight,conditions,managed_by,created_at)
+                    VALUES (?,?,?,?,?,?,?,?)`,
+              params: [
+                p.id,
+                p.name,
+                p.age ?? null,
+                p.gender ?? null,
+                p.weight ?? null,
+                p.conditions ? JSON.stringify(p.conditions) : null,
+                p.managedBy ?? null,
+                p.createdAt || new Date().toISOString(),
+              ],
+            });
+          }
+          return;
+        } catch (err) {
+          console.warn("[localPersistence] NativeSqlite patients.replaceAll failed, falling back to storage:", err);
+        }
+      }
+      await storage.setItem(getPartitionKey(LOCAL_PATIENTS_KEY), items);
+    },
   },
 
   wellnessLogs: {
@@ -756,7 +784,7 @@ export const localPersistence = {
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
-            sql: `INSERT INTO wellness_logs (id,type,timestamp,data,user_id,patient_id)
+            sql: `INSERT OR REPLACE INTO wellness_logs (id,type,timestamp,data,user_id,patient_id)
                   VALUES (?,?,?,?,?,?)`,
             params: [
               id,
@@ -774,8 +802,9 @@ export const localPersistence = {
       }
       const all = await storage.getItem<WellnessLog[]>(getPartitionKey(LOCAL_WELLNESS_KEY), []);
       const newItem: WellnessLog = { ...data, id };
-      all.push(newItem);
-      await storage.setItem(getPartitionKey(LOCAL_WELLNESS_KEY), all);
+      const filtered = all.filter((w) => w.id !== id);
+      filtered.push(newItem);
+      await storage.setItem(getPartitionKey(LOCAL_WELLNESS_KEY), filtered);
       return newItem;
     },
     remove: async (id: string): Promise<void> => {
@@ -795,6 +824,32 @@ export const localPersistence = {
         getPartitionKey(LOCAL_WELLNESS_KEY),
         all.filter((w) => w.id !== id)
       );
+    },
+    replaceAll: async (items: WellnessLog[]): Promise<void> => {
+      await ensureSqliteReady();
+      if (Capacitor.isNativePlatform() && sqliteReady) {
+        try {
+          await NativeSqlite.execute({ sql: "DELETE FROM wellness_logs", params: [] });
+          for (const data of items) {
+            await NativeSqlite.execute({
+              sql: `INSERT OR REPLACE INTO wellness_logs (id,type,timestamp,data,user_id,patient_id)
+                    VALUES (?,?,?,?,?,?)`,
+              params: [
+                data.id,
+                data.type,
+                data.timestamp,
+                JSON.stringify(data.data),
+                data.userId ?? null,
+                data.patientId ?? null,
+              ],
+            });
+          }
+          return;
+        } catch (err) {
+          console.warn("[localPersistence] NativeSqlite wellnessLogs.replaceAll failed, falling back to storage:", err);
+        }
+      }
+      await storage.setItem(getPartitionKey(LOCAL_WELLNESS_KEY), items);
     },
   },
   scheduleAuditLogs: {

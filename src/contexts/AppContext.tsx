@@ -680,6 +680,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [isLoggedIn, rememberMe]);
 
   useEffect(() => {
+    setActiveUserScope(currentUserId);
     if (rememberMe && currentUserId) {
       storage.setItem("med_userId", currentUserId);
     } else if (!currentUserId) {
@@ -726,20 +727,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const remainingOps = getPendingOps();
 
-      const [remsSnap, logsSnap, medsSnap] = await Promise.all([
+      const [remsSnap, logsSnap, medsSnap, wellSnap] = await Promise.all([
         getDocs(query(collection(db, "reminders"), where("userId", "==", currentUserId))),
         getDocs(query(collection(db, "doseLogs"), where("userId", "==", currentUserId))),
         getDocs(query(collection(db, "medicines"), where("userId", "==", currentUserId))),
+        getDocs(query(collection(db, "wellnessLogs"), where("userId", "==", currentUserId))),
       ]);
 
       const freshRems = remsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Reminder));
       const freshLogs = logsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as DoseLog));
       const freshMeds = medsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Medicine));
+      const freshWell = wellSnap.docs.map((d) => ({ id: d.id, ...d.data() } as WellnessLog));
 
       // Only apply ops that are still pending (failed to flush)
       const mergedRems = applyPendingOps(freshRems, "reminders", remainingOps);
       const mergedLogs = applyPendingOps(freshLogs, "doseLogs", remainingOps);
       const mergedMeds = applyPendingOps(freshMeds, "medicines", remainingOps);
+      const mergedWell = applyPendingOps(freshWell, "wellnessLogs", remainingOps).sort(
+        (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime()
+      );
 
       // Clean up any phantom missed logs whose reminders no longer exist
       const validRems = new Set(mergedRems.map((r) => r.id));
@@ -754,14 +760,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReminders(mergedRems);
       setDoseLogs(cleanedLogs);
       setMedicines(mergedMeds);
+      setWellnessLogs(mergedWell);
 
       storage.setItem(CLOUD_CACHE_REMS_KEY, mergedRems);
       storage.setItem(CLOUD_CACHE_LOGS_KEY, cleanedLogs);
       storage.setItem(CLOUD_CACHE_MEDS_KEY, mergedMeds);
+      storage.setItem(CLOUD_CACHE_WELLNESS_KEY, mergedWell);
 
       localPersistence.reminders.replaceAll(mergedRems).catch(console.warn);
       localPersistence.doseLogs.replaceAll(cleanedLogs).catch(console.warn);
       localPersistence.medicines.replaceAll(mergedMeds).catch(console.warn);
+      localPersistence.wellnessLogs.replaceAll(mergedWell).catch(console.warn);
 
       setPendingOfflineOps(getPendingCount());
       console.log("[AppContext] refreshFromFirestore: state updated with fresh Firestore data.");
@@ -1146,6 +1155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         cachedAudit,
         cachedPatients,
         cachedWell,
+        localWell,
       ] = await Promise.all([
         storage.getItem<Medicine[]>(CLOUD_CACHE_MEDS_KEY, []),
         storage.getItem<Reminder[]>(CLOUD_CACHE_REMS_KEY, []),
@@ -1153,12 +1163,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         storage.getItem<ScheduleAuditLog[]>(CLOUD_CACHE_AUDIT_KEY, []),
         storage.getItem<Patient[]>(CLOUD_CACHE_PATIENTS_KEY, []),
         storage.getItem<WellnessLog[]>(CLOUD_CACHE_WELLNESS_KEY, []),
+        localPersistence.wellnessLogs.getAll().catch(() => [] as WellnessLog[]),
       ]);
 
       const pendingOps = getPendingOps();
       const finalRems = applyPendingOps(cachedRems, "reminders", pendingOps);
       const finalMeds = applyPendingOps(cachedMeds, "medicines", pendingOps);
       const finalLogs = applyPendingOps(cachedLogs, "doseLogs", pendingOps);
+      const finalPatients = applyPendingOps(cachedPatients, "patients", pendingOps);
+
+      // Merge cached cloud wellness logs with locally persisted wellness logs
+      const wellMap = new Map<string, WellnessLog>();
+      for (const w of localWell) wellMap.set(w.id, w);
+      for (const w of cachedWell) wellMap.set(w.id, w);
+      const combinedWell = Array.from(wellMap.values());
+      const finalWell = applyPendingOps(combinedWell, "wellnessLogs", pendingOps).sort(
+        (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime()
+      );
 
       // Clean up any phantom missed logs whose reminders no longer exist
       const validRemsSet = new Set(finalRems.map((r) => r.id));
@@ -1174,13 +1195,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReminders(finalRems);
       setDoseLogs(cleanedLogs);
       setScheduleAuditLogs(cachedAudit);
-      setPatients(cachedPatients);
-      setWellnessLogs(cachedWell);
+      setPatients(finalPatients);
+      setWellnessLogs(finalWell);
 
       // Keep SQLite completely aligned with the loaded cache so native background workers don't see ghosts
       localPersistence.reminders.replaceAll(finalRems).catch(console.warn);
       localPersistence.doseLogs.replaceAll(cleanedLogs).catch(console.warn);
       localPersistence.medicines.replaceAll(finalMeds).catch(console.warn);
+      localPersistence.wellnessLogs.replaceAll(finalWell).catch(console.warn);
     };
 
     const loadData = async () => {
@@ -1312,8 +1334,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const data = snap.docs.map(
             (d) => ({ id: d.id, ...d.data() } as Patient)
           );
-          setPatients(data);
-          storage.setItem(CLOUD_CACHE_PATIENTS_KEY, data);
+          const merged = applyPendingOps(data, "patients", getPendingOps());
+          setPatients(merged);
+          storage.setItem(CLOUD_CACHE_PATIENTS_KEY, merged);
+          localPersistence.patients.replaceAll(merged).catch(console.warn);
         } catch (err) {
           console.warn("[AppContext] Error processing patients snapshot:", err);
         }
@@ -1329,11 +1353,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const data = snap.docs.map(
             (d) => ({ id: d.id, ...d.data() } as WellnessLog)
           );
-          data.sort(
+          const merged = applyPendingOps(data, "wellnessLogs", getPendingOps());
+          merged.sort(
             (a, b) => toDate(b.timestamp).getTime() - toDate(a.timestamp).getTime()
           );
-          setWellnessLogs(data);
-          storage.setItem(CLOUD_CACHE_WELLNESS_KEY, data);
+          setWellnessLogs(merged);
+          storage.setItem(CLOUD_CACHE_WELLNESS_KEY, merged);
+          localPersistence.wellnessLogs.replaceAll(merged).catch(console.warn);
         } catch (err) {
           console.warn("[AppContext] Error processing wellnessLogs snapshot:", err);
         }
@@ -2328,12 +2354,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (storageMode === "local") return;
 
     if (currentUserId) {
-      const logData = sanitizeFirestoreData({
+      const allowedKeys = new Set([
+        "id", "_id", "type", "timestamp", "date", "mood", "energy",
+        "symptoms", "notes", "data", "patientId", "userId", "createdAt"
+      ]);
+      const rawLogData: Record<string, unknown> = {
         ...log,
+        id: localId,
         userId: currentUserId,
         patientId: effectivePatientId,
         timestamp,
-      });
+      };
+      const filteredLogData: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(rawLogData)) {
+        if (allowedKeys.has(key) && val !== undefined) {
+          filteredLogData[key] = val;
+        }
+      }
+      const logData = sanitizeFirestoreData(filteredLogData);
+
       if (isOnline) {
         try {
           const docRef = doc(db, "wellnessLogs", localId);

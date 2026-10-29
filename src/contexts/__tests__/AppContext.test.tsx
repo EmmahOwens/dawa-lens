@@ -53,6 +53,7 @@ const mockLocalRemUpdate = vi.fn();
 const mockLocalRemRemove = vi.fn();
 const mockLocalLogUpdate = vi.fn();
 const mockLocalAuditCreate = vi.fn().mockImplementation((data) => Promise.resolve({ ...data, id: "audit-123" }));
+const mockLocalWellCreate = vi.fn().mockImplementation((data) => Promise.resolve({ ...data, id: data.id || "well-123" }));
 
 vi.mock("../../services/localPersistence", () => ({
   localPersistence: {
@@ -69,15 +70,19 @@ vi.mock("../../services/localPersistence", () => ({
       create: (data: any) => mockLocalLogCreate(data),
       update: (id: string, updates: any) => mockLocalLogUpdate(id, updates),
       remove: vi.fn(),
+      replaceAll: vi.fn().mockResolvedValue(undefined),
     },
-    patients: { getAll: () => mockLocalPatientsGetAll(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
-    wellnessLogs: { getAll: () => mockLocalWellGetAll(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
+    patients: { getAll: () => mockLocalPatientsGetAll(), create: vi.fn(), update: vi.fn(), remove: vi.fn(), replaceAll: vi.fn().mockResolvedValue(undefined) },
+    wellnessLogs: { getAll: () => mockLocalWellGetAll(), create: (data: any) => mockLocalWellCreate(data), update: vi.fn(), remove: vi.fn(), replaceAll: vi.fn().mockResolvedValue(undefined) },
     scheduleAuditLogs: {
       getAll: () => mockLocalAuditGetAll(),
       create: (data: any) => mockLocalAuditCreate(data),
       remove: vi.fn(),
     },
   },
+  setActiveUserScope: vi.fn(),
+  clearAllLocalPersistence: vi.fn(),
+  initLocalPersistence: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock reminderService
@@ -333,5 +338,36 @@ describe("AppContext - logDose dynamic reminder time shifting", () => {
         action: "taken",
       })
     );
+  });
+
+  it("should persist wellness log locally and enqueue offline op when logged offline", async () => {
+    mockLocalWellGetAll.mockReturnValue([]);
+    const { result } = renderHook(() => useApp(), {
+      wrapper: AppProvider,
+    });
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    });
+
+    await act(async () => {
+      await result.current.addWellnessLog({
+        type: "symptom",
+        data: { mood: 4, energy: 3, symptoms: ["Headache"] },
+      });
+    });
+
+    expect(mockLocalWellCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "symptom",
+        data: expect.objectContaining({ mood: 4 }),
+      })
+    );
+
+    expect(result.current.wellnessLogs).toHaveLength(1);
+    expect(result.current.wellnessLogs[0]).toMatchObject({
+      type: "symptom",
+      data: { mood: 4, energy: 3, symptoms: ["Headache"] },
+    });
   });
 });
