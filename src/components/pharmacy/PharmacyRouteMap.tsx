@@ -664,11 +664,83 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
   }, [route, isMapLoaded, setupRouteLayers]);
 
   // ── 5. Auto Fit Camera to frame User and Selected Pharmacy ──────────────────
+  // ── 5. Auto Fit Camera to frame User, Route, and Outlets ────────────────────
   const fitCameraToBounds = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
 
+    // Calculate adaptive padding so the route and markers are never covered
+    // by top control bars, nearest cards strip, side details cards, or bottom drawers.
+    const isDesktop = typeof window !== "undefined" ? window.innerWidth >= 768 : true;
+
+    let targetPadding: { top: number; bottom: number; left: number; right: number };
+
+    if (isFullscreen) {
+      if (isDesktop) {
+        // Desktop Fullscreen:
+        // Top: Mode selector & controls (top-4) + Top 5 outlet strip (top-16 to ~140px)
+        // Right: Selected outlet card (w-80 / w-[350px] + right-4 = ~380px) unless collapsed
+        // Bottom: Satellite/recenter buttons + Legend (~60px)
+        targetPadding = {
+          top: 175,
+          bottom: 75,
+          left: 60,
+          right: isDesktopCardCollapsed ? 85 : 405,
+        };
+      } else {
+        // Mobile Fullscreen:
+        // Top: 3 rows (Row 1: Exit/Switch ~44px, Row 2: Transport/ETA ~44px, Row 3: Carousel ~72px)
+        // Bottom: Sheet peek bar (~75px) or expanded drawer (~320px) + controls
+        targetPadding = {
+          top: 190,
+          bottom: isMobileSheetExpanded ? 340 : 120,
+          left: 30,
+          right: 30,
+        };
+      }
+    } else {
+      // Normal / Embedded Mode:
+      // Top: Route badge at top-right
+      // Bottom: Controls & legend
+      targetPadding = {
+        top: 65,
+        bottom: 55,
+        left: 45,
+        right: 65,
+      };
+    }
+
+    // Safely clamp padding against map container dimensions to prevent viewport clipping
+    const container = typeof map.getContainer === "function" ? map.getContainer() : null;
+    const containerWidth = container?.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 800);
+    const containerHeight = container?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 600);
+
+    const safeTop = Math.min(targetPadding.top, Math.max(20, containerHeight - 120));
+    const safeBottom = Math.min(targetPadding.bottom, Math.max(20, containerHeight - safeTop - 50));
+    const safeRight = Math.min(targetPadding.right, Math.max(20, containerWidth - 120));
+    const safeLeft = Math.min(targetPadding.left, Math.max(20, containerWidth - safeRight - 50));
+
+    const padding = {
+      top: safeTop,
+      bottom: safeBottom,
+      left: safeLeft,
+      right: safeRight,
+    };
+
     if (!selectedPharmacy) {
+      if (topPharmacies && topPharmacies.length > 0) {
+        const bounds = new LngLatBounds();
+        bounds.extend(userCoords);
+        topPharmacies.slice(0, 5).forEach((p) => {
+          bounds.extend([p.longitude, p.latitude]);
+        });
+        map.fitBounds(bounds, {
+          padding,
+          maxZoom: 15,
+          duration: 900,
+        });
+        return;
+      }
       map.flyTo({ center: userCoords, zoom: 14, duration: 800 });
       return;
     }
@@ -677,16 +749,24 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     bounds.extend(userCoords);
     bounds.extend([selectedPharmacy.longitude, selectedPharmacy.latitude]);
 
-    if (route && route.coordinates.length > 0) {
+    if (route && route.coordinates && route.coordinates.length > 0) {
       route.coordinates.forEach((c) => bounds.extend(c));
     }
 
     map.fitBounds(bounds, {
-      padding: { top: 50, bottom: 50, left: 50, right: 50 },
+      padding,
       maxZoom: 16,
       duration: 900,
     });
-  }, [userCoords, selectedPharmacy, route]);
+  }, [
+    userCoords,
+    selectedPharmacy,
+    route,
+    isFullscreen,
+    isDesktopCardCollapsed,
+    isMobileSheetExpanded,
+    topPharmacies,
+  ]);
 
   // ── Handle Fullscreen transitions & gestures ────────────────────────────────
   useEffect(() => {
@@ -723,6 +803,26 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isFullscreen, handleToggleFullscreen]);
+
+  // Re-fit camera and resize map on window resize (e.g. orientation or window resize)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const handleResize = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        map.resize();
+        fitCameraToBounds();
+      }, 150);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [fitCameraToBounds]);
 
   useEffect(() => {
     if (isMapLoaded) {
