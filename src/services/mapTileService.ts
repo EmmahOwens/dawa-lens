@@ -79,12 +79,12 @@ export const COMPOSITE_PHARMACY_MAP_STYLE: maplibregl.StyleSpecification = {
             `https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png${cartoKeyParam}`,
           ]
         : [
-            "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
-            "https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
             "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
           ],
       tileSize: 256,
-      attribution: "© OpenStreetMap contributors, © CARTO",
+      attribution: CARTO_API_KEY
+        ? "© OpenStreetMap contributors, © CARTO"
+        : "© OpenStreetMap contributors",
       maxzoom: 19,
     },
     "satellite-source": {
@@ -197,9 +197,9 @@ export async function checkMapConnectivity(timeoutMs = 3500): Promise<boolean> {
   }
 
   const probeUrls = [
-    "https://tiles.openfreemap.org/styles/positron",
-    "https://a.basemaps.cartocdn.com/rastertiles/voyager/0/0/0.png",
     "https://tile.openstreetmap.org/0/0/0.png",
+    "https://tiles.openfreemap.org/styles/positron",
+    ...(CARTO_API_KEY ? [`https://a.basemaps.cartocdn.com/rastertiles/voyager/0/0/0.png${cartoKeyParam}`] : []),
   ];
 
   for (const url of probeUrls) {

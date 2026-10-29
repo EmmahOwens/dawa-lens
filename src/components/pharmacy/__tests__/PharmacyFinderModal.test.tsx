@@ -39,6 +39,8 @@ vi.mock("@/services/mapTileService", () => ({
   initPmtilesProtocol: vi.fn(),
   COMPOSITE_PHARMACY_MAP_STYLE: "mapbox://styles/test",
   ESRI_SATELLITE_STYLE: "mapbox://styles/test-sat",
+  checkMapConnectivity: vi.fn().mockResolvedValue(true),
+  subscribeToMapNetworkChanges: vi.fn().mockReturnValue(() => {}),
 }));
 
 const mockPharmacy = {
