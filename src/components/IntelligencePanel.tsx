@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9,6 +9,37 @@ import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+const POPUP_PHRASES = [
+  "Tap me! 👋",
+  "Want to know about your health?",
+  "Check drug interactions 💊",
+  "How's your med supply?",
+  "I'm your medical copilot!",
+  "Ask me anything health-related",
+  "Need a reminder set? 🔔",
+  "Is it safe to mix those meds?",
+  "Your AI health buddy is here!",
+  "Let's talk about your wellness ✨",
+];
+
+function usePopupPhrase(phrases: string[], intervalMs = 3000) {
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const cycle = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIndex((i) => (i + 1) % phrases.length);
+        setVisible(true);
+      }, 400);
+    }, intervalMs);
+    return () => clearInterval(cycle);
+  }, [phrases.length, intervalMs]);
+
+  return { phrase: phrases[index], visible };
+}
 
 
 // Widgets
@@ -168,8 +199,31 @@ function DawaGPTMiniButton({
   onLaunch: () => void;
   isOnline: boolean;
 }) {
+  const { phrase, visible } = usePopupPhrase(POPUP_PHRASES, 3200);
+
   return (
-    <div className="p-3 border-t border-border bg-card/80 backdrop-blur-xl shrink-0 z-20">
+    <div className="relative p-3 border-t border-border bg-card/80 backdrop-blur-xl shrink-0 z-20">
+      {/* Floating popup phrase */}
+      <AnimatePresence mode="wait">
+        {visible && (
+          <motion.div
+            key={phrase}
+            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            onClick={() => onLaunch()}
+            className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-30 cursor-pointer select-none"
+          >
+            <div className="relative bg-foreground text-background text-[11px] font-medium px-3.5 py-1.5 rounded-full shadow-md whitespace-nowrap">
+              {phrase}
+              {/* tail */}
+              <span className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-foreground rotate-45" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <button
         onClick={() => onLaunch()}
         disabled={!isOnline}
