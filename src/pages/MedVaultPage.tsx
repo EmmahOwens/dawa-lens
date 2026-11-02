@@ -6,7 +6,6 @@ import { useSwipeToDismiss } from "@/hooks/useSwipeToDismiss";
 import {
   Package2,
   Plus,
-  ArrowLeft,
   AlertTriangle,
   CheckCircle,
   RefreshCw,
@@ -786,21 +785,13 @@ export default function MedVaultPage() {
     <div className="w-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="h-9 w-9 rounded-full bg-muted/60 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all shadow-xs"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <div>
-            <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-foreground leading-none">
-              Med Vault
-            </h1>
-            <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
-              Pill Supply &amp; Stock Tracker · {tracked.length} Active
-            </p>
-          </div>
+        <div>
+          <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-foreground leading-none">
+            Med Vault
+          </h1>
+          <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
+            Pill Supply &amp; Stock Tracker · {tracked.length} Active
+          </p>
         </div>
         {/* Desktop Header Actions */}
         <div className="hidden sm:flex items-center gap-2">

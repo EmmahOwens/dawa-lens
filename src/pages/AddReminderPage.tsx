@@ -398,13 +398,9 @@ export default function AddReminderPage() {
           <ArrowLeft size={16} /> {t("common.back")}
         </button>
         
-        {!isOnline ? (
+        {!isOnline && (
           <Badge variant="outline" className="rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5">
             <WifiOff size={11} /> Saving Locally
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="rounded-lg bg-primary/5 text-primary border-primary/20">
-            <Info size={12} className="mr-1" /> Premium Experience
           </Badge>
         )}
       </div>

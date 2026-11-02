@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
-  ArrowLeft, Shield, Trash2, Moon, Lock, 
+  Shield, Trash2, Moon, Lock, 
   User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw,
   Bell, Smartphone, Clock, Zap, ExternalLink, Play, ChevronDown, Sparkles,
   Droplets, Eye, Heart, Activity
@@ -385,19 +385,6 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full">
-      {/* Back Button */}
-      <motion.button 
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        onClick={() => navigate(-1)} 
-        className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-6 hover:text-foreground transition-colors group"
-      >
-        <div className="p-1.5 rounded-full bg-secondary group-hover:bg-secondary/80">
-          <ArrowLeft size={14} />
-        </div>
-        {t("common.back")}
-      </motion.button>
-
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }}

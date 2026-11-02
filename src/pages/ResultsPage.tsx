@@ -100,8 +100,8 @@ export default function ResultsPage() {
 
   return (
     <div className="w-full pt-4">
-      <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-8 hover:text-primary transition-colors group">
-        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> {t("common.back")}
+      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground mb-6 transition-colors group active:opacity-70">
+        <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" /> {t("common.back")}
       </button>
 
       <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-6 tracking-[-0.022em] flex items-center gap-2.5">

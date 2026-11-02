@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
   Check,
   X,
   Clock,
@@ -237,13 +236,15 @@ export default function HistoryPage() {
 
   return (
     <div className="w-full pt-2">
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft size={16} /> {t("common.back")}
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-[28px] sm:text-[32px] font-semibold tracking-tight text-foreground leading-none">
+            {t("history.title", "Dose History")}
+          </h1>
+          <p className="text-[13px] text-muted-foreground mt-1.5 font-medium">
+            {scopedDoseLogs.length} logs recorded
+          </p>
+        </div>
         <div className="flex gap-2">
           {/* Desktop Export/Import buttons */}
           <div className="hidden sm:flex gap-2">

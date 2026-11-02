@@ -8,7 +8,6 @@ import {
   Tablets,
   Droplets,
   Syringe,
-  ArrowLeft,
   Plus,
   Trash2,
   Edit2,
@@ -741,21 +740,13 @@ export default function MedicationsPage() {
     <div className="w-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="h-9 w-9 rounded-full bg-muted/60 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all shadow-xs"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <div>
-            <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-foreground leading-none">
-              Medications
-            </h1>
-            <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
-              Prescription Inventory · {scopedMedicines.length} Saved
-            </p>
-          </div>
+        <div>
+          <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-foreground leading-none">
+            Medications
+          </h1>
+          <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
+            Prescription Inventory · {scopedMedicines.length} Saved
+          </p>
         </div>
 
         <button
