@@ -92,11 +92,8 @@ class MainActivity : BridgeActivity() {
     }
 
     override fun onDestroy() {
-        try {
-            bridge?.webView?.clearCache(true)
-        } catch (e: Exception) {
-            // ignore — WebView may already be destroyed
-        }
+        // Preserve WebView disk cache (clearCache(true) wipes compiled V8 bytecode in code_cache,
+        // forcing expensive JS re-parsing and JIT compilation on every cold start).
         super.onDestroy()
     }
 }

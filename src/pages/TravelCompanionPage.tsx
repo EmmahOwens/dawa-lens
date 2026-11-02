@@ -208,7 +208,7 @@ export default function TravelCompanionPage() {
                   }}
                   onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                   placeholder="Enter country (e.g. Kenya, France...)"
-                  className="w-full h-11 pl-11 pr-4 rounded-full bg-background border border-border outline-none focus:border-primary transition-colors text-sm font-medium"
+                  className="w-full h-11 pl-11 pr-4 rounded-xl bg-background border border-border outline-none focus:border-primary transition-colors text-sm font-medium"
                 />
               </div>
 
@@ -223,12 +223,12 @@ export default function TravelCompanionPage() {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-full h-11 rounded-full text-xs bg-muted/20 border-border text-muted-foreground font-medium px-4">
+                  <SelectTrigger className="w-full h-11 rounded-xl text-xs bg-muted/20 border-border text-muted-foreground font-medium px-4">
                     <SelectValue placeholder="Or select common travel corridor..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-border bg-card">
                     <SelectGroup>
-                      <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                      <SelectLabel className="text-[11px] font-medium text-primary">
                         East Africa Corridor
                       </SelectLabel>
                       {["Kenya", "Tanzania", "Rwanda", "South Sudan", "DR Congo", "Burundi"].map((c) => (
@@ -238,7 +238,7 @@ export default function TravelCompanionPage() {
                       ))}
                     </SelectGroup>
                     <SelectGroup>
-                      <SelectLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <SelectLabel className="text-[11px] font-medium text-muted-foreground">
                         Popular Global Destinations
                       </SelectLabel>
                       {["United Kingdom", "United Arab Emirates", "United States", "India", "South Africa", "Canada"].map((c) => (
@@ -255,12 +255,12 @@ export default function TravelCompanionPage() {
             <Button 
               onClick={() => handleAnalyze()}
               disabled={loading || !destination}
-              className="w-full h-11 rounded-full text-sm font-semibold active:scale-95 transition-transform"
+              className="w-full h-11 rounded-xl text-sm font-medium bg-[#0066cc] hover:bg-[#0071e3] text-white active:scale-[0.98] transition-colors"
             >
               {loading ? (
                 <Loader2 size={18} className="animate-spin mr-2" />
               ) : (
-                <Sparkles size={18} className="mr-2" />
+                <Plane size={18} className="mr-2" />
               )}
               Analyze Trip
             </Button>
@@ -279,10 +279,10 @@ export default function TravelCompanionPage() {
             className="flex flex-col items-center justify-center p-20"
           >
             <div className="relative w-24 h-24 flex items-center justify-center">
-              <Globe size={40} className="text-primary/50 absolute animate-pulse" />
+              <Globe size={40} className="text-primary/50 absolute" />
               <div className="absolute inset-0 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
-            <p className="mt-6 text-[10px] font-black uppercase tracking-[0.3em] text-primary animate-pulse">Consulting World Databases</p>
+            <p className="mt-4 text-[13px] font-medium text-muted-foreground">Checking destination medication regulations…</p>
           </motion.div>
         ) : advice ? (
           <motion.div 
@@ -300,30 +300,30 @@ export default function TravelCompanionPage() {
                   {/* Passenger / Status row */}
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Passenger</p>
-                      <h4 className="text-xl font-bold tracking-tight text-foreground">{userProfile?.name || "Member"}</h4>
+                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Passenger</p>
+                      <h4 className="text-xl font-semibold tracking-tight text-foreground">{userProfile?.name || "Member"}</h4>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Status</p>
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-[10px] font-semibold uppercase">Verified</span>
+                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Status</p>
+                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-[11px] font-medium">Verified</span>
                     </div>
                   </div>
 
                   {/* Route row */}
                   <div className="flex items-center gap-2 sm:gap-4">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">From</p>
-                      <h3 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground truncate">{originLabel}</h3>
+                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">From</p>
+                      <h3 className="text-2xl sm:text-3xl font-semibold tracking-[-0.022em] text-foreground truncate">{originLabel}</h3>
                     </div>
                     <div className="flex flex-col items-center gap-1 px-2 sm:px-6 shrink-0">
                       <div className="w-16 sm:w-24 h-[1px] bg-border relative">
                         <Plane size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
                       </div>
-                      <span className="text-[9px] font-semibold text-muted-foreground uppercase whitespace-nowrap">Direct</span>
+                      <span className="text-[11px] font-medium text-muted-foreground uppercase whitespace-nowrap">Direct</span>
                     </div>
                     <div className="flex-1 text-right min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">To</p>
-                      <h3 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-primary uppercase truncate">{destination}</h3>
+                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">To</p>
+                      <h3 className="text-2xl sm:text-3xl font-semibold tracking-[-0.022em] text-[#0066cc] dark:text-[#2997ff] uppercase truncate">{destination}</h3>
                     </div>
                   </div>
                 </div>
@@ -331,12 +331,12 @@ export default function TravelCompanionPage() {
                 {/* Stub (date + boarding) */}
                 <div className="border-t border-dashed border-border bg-background/50 px-6 py-4 flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Date</p>
+                    <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Date</p>
                     <p className="text-sm font-semibold text-foreground">{new Date().toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' })}</p>
                   </div>
                   <div className="flex-1 max-w-[180px]">
-                    <div className="w-full h-9 bg-muted/40 rounded-full border border-dashed border-border flex items-center justify-center">
-                      <span className="text-[9px] font-semibold text-muted-foreground tracking-[0.3em] uppercase">BOARDING PASS</span>
+                    <div className="w-full h-8 bg-muted/30 rounded-xl border border-border flex items-center justify-center">
+                      <span className="text-[11px] font-medium text-muted-foreground uppercase">Travel Itinerary</span>
                     </div>
                   </div>
                 </div>

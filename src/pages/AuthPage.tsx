@@ -248,10 +248,6 @@ export default function AuthPage() {
         <div className="pointer-events-none absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#0066cc]/15 dark:bg-[#2997ff]/15 blur-3xl z-0" />
         <div className="pointer-events-none absolute bottom-12 right-12 w-80 h-80 rounded-full bg-[#0071e3]/10 dark:bg-[#0066cc]/20 blur-3xl z-0" />
         
-        {/* Subtle Decorative Lens Rings */}
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] h-[540px] rounded-full border border-[#0066cc]/10 dark:border-[#2997ff]/10 z-0" />
-        <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] h-[380px] rounded-full border border-[#0066cc]/15 dark:border-[#2997ff]/15 z-0" />
-
         <div className="relative z-10 p-16 flex flex-col justify-between w-full h-full">
           <div>
             {/* Logo Badge */}
@@ -260,12 +256,12 @@ export default function AuthPage() {
               animate={{ opacity: 1, scale: 1 }}
               className="flex items-center gap-3.5 mb-10"
             >
-              <div className="h-12 w-12 rounded-[16px] bg-white/90 dark:bg-[#272729]/90 backdrop-blur-md border border-[#0066cc]/20 dark:border-[#2997ff]/30 shadow-md shadow-[#0066cc]/10 flex items-center justify-center p-2.5">
+              <div className="h-12 w-12 rounded-[16px] bg-white/90 dark:bg-[#272729]/90 backdrop-blur-md border border-border shadow-xs flex items-center justify-center p-2.5">
                 <img src={LOGO_BASE64} alt="Dawa Lens" className="w-full h-full object-contain" />
               </div>
               <div>
-                <span className="text-xl font-bold tracking-tight text-foreground block">Dawa Lens</span>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0066cc] dark:text-[#2997ff]">Clinical Intelligence</span>
+                <span className="text-xl font-semibold tracking-tight text-foreground block">Dawa Lens</span>
+                <span className="text-[12px] font-medium text-[#0066cc] dark:text-[#2997ff]">Clinical Intelligence</span>
               </div>
             </motion.div>
 
@@ -274,9 +270,9 @@ export default function AuthPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-[#0066cc]/10 dark:bg-[#2997ff]/15 text-[#0066cc] dark:text-[#2997ff] border border-[#0066cc]/20 mb-6 backdrop-blur-sm"
+              className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-medium bg-[#0066cc]/10 dark:bg-[#2997ff]/15 text-[#0066cc] dark:text-[#2997ff] border border-[#0066cc]/20 mb-6"
             >
-              <span className="w-2 h-2 rounded-full bg-[#0066cc] dark:bg-[#2997ff] animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-[#0066cc] dark:bg-[#2997ff]" />
               Verified Medication Safety
             </motion.div>
             
@@ -286,9 +282,9 @@ export default function AuthPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
             >
-              <h1 className="text-4xl lg:text-5xl font-bold tracking-[-0.022em] leading-[1.1] text-foreground mb-6">
+              <h1 className="text-4xl lg:text-5xl font-semibold tracking-[-0.022em] leading-[1.1] text-foreground mb-6">
                 Precision Care.<br />
-                <span className="bg-gradient-to-r from-[#0066cc] via-[#0071e3] to-[#2997ff] bg-clip-text text-transparent">
+                <span className="text-[#0066cc] dark:text-[#2997ff]">
                   Every Dose Matters.
                 </span>
               </h1>
@@ -323,12 +319,12 @@ export default function AuthPage() {
             ].map((feature, i) => (
               <div 
                 key={i} 
-                className="p-4 rounded-[18px] bg-white/80 dark:bg-[#272729]/80 backdrop-blur-md border border-border/80 hover:border-[#0066cc]/30 dark:hover:border-[#2997ff]/30 transition-all duration-300 shadow-sm"
+                className="p-4 rounded-[18px] bg-card border border-border/80 hover:border-[#0066cc]/30 dark:hover:border-[#2997ff]/30 transition-colors duration-200 shadow-xs"
               >
                 <div className={`w-9 h-9 rounded-xl ${feature.bgBadge} border flex items-center justify-center mb-3`}>
                   <feature.icon className={feature.iconColor} size={20} />
                 </div>
-                <h3 className="font-bold text-sm text-foreground mb-0.5">{feature.title}</h3>
+                <h3 className="font-semibold text-sm text-foreground mb-0.5">{feature.title}</h3>
                 <p className="text-xs text-muted-foreground leading-normal">{feature.desc}</p>
               </div>
             ))}
@@ -338,10 +334,6 @@ export default function AuthPage() {
 
       {/* Right Panel: Auth Forms */}
       <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto no-scrollbar px-4 py-8 sm:p-8 lg:py-12 relative">
-        {/* Subtle Ambient Color in Right Panel */}
-        <div className="pointer-events-none absolute top-0 right-0 w-80 h-80 bg-[#0066cc]/5 dark:bg-[#2997ff]/5 rounded-full blur-3xl z-0" />
-        <div className="pointer-events-none absolute bottom-0 left-0 w-64 h-64 bg-[#0071e3]/5 dark:bg-[#0066cc]/5 rounded-full blur-3xl z-0" />
-
         <div className="w-full max-w-[420px] space-y-6 relative z-10">
           <div className="lg:hidden text-center mb-6">
             <div className="w-16 h-16 rounded-[20px] bg-white/90 dark:bg-[#272729]/90 backdrop-blur-md border border-[#0066cc]/20 dark:border-[#2997ff]/30 shadow-md shadow-[#0066cc]/10 flex items-center justify-center p-3 mx-auto mb-3">

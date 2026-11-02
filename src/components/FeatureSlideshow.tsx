@@ -185,39 +185,35 @@ export function FeatureSlideshow() {
 
   return (
     <div 
-      className={`relative w-full mb-8 overflow-hidden rounded-[22px] border ${theme.borderColor} ${theme.bgGradient} backdrop-blur-xl shadow-lg transition-all duration-500`}
+      className="relative w-full mb-8 overflow-hidden rounded-[22px] border border-border/80 bg-card shadow-xs transition-colors duration-200"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}
       onTouchEnd={() => setIsPaused(false)}
     >
-      {/* Ambient Slide Glow Orbs */}
-      <div className={`absolute -top-12 -right-12 w-48 h-48 ${theme.glowColor} rounded-full blur-3xl pointer-events-none transition-colors duration-500`} />
-      <div className={`absolute -bottom-10 -left-10 w-40 h-40 ${theme.glowColor} rounded-full blur-3xl pointer-events-none transition-colors duration-500`} />
-
       <AnimatePresence mode="wait">
         <motion.div
           key={current.id}
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
           onDragEnd={handleDragEnd}
-          initial={{ opacity: 0, x: 20 }}
+          initial={{ opacity: 0, x: 12 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
+          exit={{ opacity: 0, x: -12 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
           className="relative w-full p-6 sm:p-7 flex flex-col min-h-[14rem] sm:min-h-[13rem] justify-between cursor-grab active:cursor-grabbing select-none"
         >
           <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 mb-1">
-                <div className={`w-9 h-9 rounded-xl border ${theme.iconBg} ${theme.iconText} flex items-center justify-center shrink-0 shadow-xs transition-colors duration-300`}>
+                <div className="w-9 h-9 rounded-xl border border-border/60 bg-secondary text-[#0066cc] dark:text-[#2997ff] flex items-center justify-center shrink-0">
                   <current.icon size={18} />
                 </div>
-                <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${theme.pillBg} ${theme.pillText} shadow-xs`}>
+                <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full border border-border/60 bg-secondary text-foreground">
                   {current.type === "tip" ? "Health Discovery" : "Featured"}
                 </span>
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground leading-snug mt-1">
+              <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug mt-1">
                 {current.label}
               </h3>
             </div>
@@ -234,11 +230,11 @@ export function FeatureSlideshow() {
                       initial={{ width: 0 }}
                       animate={{ width: "100%" }}
                       transition={{ duration: isPaused ? 0 : 6, ease: "linear" }}
-                      className={`absolute inset-0 ${theme.barColor}`}
+                      className="absolute inset-0 bg-[#0066cc] dark:bg-[#2997ff]"
                     />
                   )}
                   {i < currentIndex && (
-                    <div className={`absolute inset-0 ${theme.barColor} opacity-50`} />
+                    <div className="absolute inset-0 bg-[#0066cc] dark:bg-[#2997ff] opacity-40" />
                   )}
                 </div>
               ))}
@@ -246,7 +242,7 @@ export function FeatureSlideshow() {
           </div>
 
           <div className="relative z-10 max-w-xl my-2">
-            <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed font-normal">
+            <p className="text-[13px] sm:text-[14px] text-muted-foreground leading-relaxed font-normal">
               {current.description}
             </p>
             {current.to && (
@@ -255,10 +251,10 @@ export function FeatureSlideshow() {
                   e.stopPropagation();
                   if (current.to) navigate(current.to);
                 }}
-                className={`mt-4 inline-flex items-center gap-2 h-9.5 px-4.5 rounded-full ${theme.btnGradient} text-white font-semibold text-xs tracking-wide shadow-md hover:brightness-105 active:scale-95 transition-all`}
+                className="mt-4 inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[#0066cc] hover:bg-[#0071e3] text-white font-medium text-[13px] shadow-xs active:scale-[0.98] transition-colors"
               >
                 <span>Try it now</span>
-                <ArrowRight size={12} />
+                <ArrowRight size={13} />
               </button>
             )}
           </div>
@@ -270,7 +266,7 @@ export function FeatureSlideshow() {
               initial={{ width: 0 }}
               animate={{ width: isPaused ? "0%" : "100%" }}
               transition={{ duration: 6, ease: "linear" }}
-              className={`h-full ${theme.barColor} opacity-50`}
+              className="h-full bg-[#0066cc] dark:bg-[#2997ff] opacity-40"
             />
           </div>
         </motion.div>

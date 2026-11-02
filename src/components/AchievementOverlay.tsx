@@ -54,25 +54,21 @@ export default function AchievementOverlay({ open, onClose, title, subtitle, emo
           onClick={onClose}
         >
           <motion.div
-            initial={{ scale: 0.9, y: 15 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            transition={{ type: "spring", damping: 20, stiffness: 300 }}
+            initial={{ scale: 0.96, opacity: 0, y: 8 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.96, opacity: 0, y: 6 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             className="max-w-sm w-full bg-card rounded-[20px] p-8 text-center shadow-xl border border-border relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative z-10 flex flex-col items-center">
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ 
-                  scale: [0, 1.15, 1],
-                  y: [0, -6, 0]
-                }}
+                initial={{ scale: 0.94, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 transition={{ 
-                  delay: 0.15, 
-                  duration: 0.6,
-                  type: "spring", 
-                  bounce: 0.5 
+                  delay: 0.1, 
+                  duration: 0.25,
+                  ease: "easeOut" 
                 }}
                 className="mb-6 relative"
               >
@@ -82,19 +78,19 @@ export default function AchievementOverlay({ open, onClose, title, subtitle, emo
               </motion.div>
 
               <motion.h2
-                initial={{ y: 8, opacity: 0 }}
+                initial={{ y: 6, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="text-2xl font-bold tracking-tight text-foreground mb-2"
+                transition={{ delay: 0.2, duration: 0.2 }}
+                className="text-2xl font-semibold tracking-tight text-foreground mb-2"
               >
                 {title}
               </motion.h2>
 
               <motion.p
-                initial={{ y: 8, opacity: 0 }}
+                initial={{ y: 6, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="text-sm text-muted-foreground font-medium mb-6 leading-relaxed"
+                transition={{ delay: 0.25, duration: 0.2 }}
+                className="text-sm text-muted-foreground font-normal mb-6 leading-relaxed"
               >
                 {subtitle}
               </motion.p>

@@ -160,7 +160,7 @@ export const NotificationSoundSettings: React.FC = () => {
           <div>
             <h3 className="font-bold text-foreground">Notification Sounds & Audio Alerts</h3>
             <p className="text-[11px] text-muted-foreground">
-              Customize audio chimes for medication doses, hydration, daily quotes, and alerts
+              Customize audio chimes for medication doses, hydration, wellness habits, and alerts
             </p>
           </div>
         </div>

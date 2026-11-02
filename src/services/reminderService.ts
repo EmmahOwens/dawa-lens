@@ -1200,7 +1200,24 @@ const executeScheduleReminders = async (
           return (
             !type ||
             type === "reminder" ||
-            !["encouragement", "streak", "wellness_nudge", "hydration", "daily_quote", "evening_checkin", "weekly_summary", "refill", "low_stock"].includes(type)
+            ![
+              "encouragement",
+              "streak",
+              "wellness_nudge",
+              "hydration",
+              "daily_quote",
+              "evening_checkin",
+              "weekly_summary",
+              "refill",
+              "low_stock",
+              "movement",
+              "activity",
+              "mindfulness",
+              "nutrition",
+              "eye_rest",
+              "outdoor_reset",
+              "wind_down",
+            ].includes(type)
           );
         });
         if (toCancel.length > 0) {

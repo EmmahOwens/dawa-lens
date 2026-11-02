@@ -129,6 +129,21 @@ export const NotificationHandler = () => {
                 duration: 5000,
               });
               return;
+            } else if (
+              notifType === "movement" ||
+              notifType === "activity" ||
+              notifType === "mindfulness" ||
+              notifType === "nutrition" ||
+              notifType === "eye_rest" ||
+              notifType === "outdoor_reset" ||
+              notifType === "wind_down"
+            ) {
+              soundService.tryPlayForCategory("quotes");
+              toast.info(notification.title || "Wellness Reminder", {
+                description: notification.body,
+                duration: 5000,
+              });
+              return;
             } else if (notifType === "schedule_adjusted" || notifType === "daily_quote" || notifType === "wellness_nudge") {
               soundService.tryPlayForCategory("quotes");
               toast.info(notification.title || "Health Reminder", {
@@ -301,9 +316,21 @@ export const NotificationHandler = () => {
                   navigateRef.current(targetPatientId ? '/family' : '/history');
                 } else if (notifType === 'daily_quote' || notifType === 'encouragement' || notifType === 'hydration' || notifType === 'evening_checkin') {
                   navigateRef.current('/');
-                } else if (notifType === 'weekly_summary' || notifType === 'streak') {
+                } else if (
+                  notifType === 'weekly_summary' ||
+                  notifType === 'streak'
+                ) {
                   navigateRef.current('/history');
-                } else if (notifType === 'wellness_nudge') {
+                } else if (
+                  notifType === 'wellness_nudge' ||
+                  notifType === 'movement' ||
+                  notifType === 'activity' ||
+                  notifType === 'mindfulness' ||
+                  notifType === 'nutrition' ||
+                  notifType === 'eye_rest' ||
+                  notifType === 'outdoor_reset' ||
+                  notifType === 'wind_down'
+                ) {
                   navigateRef.current('/wellness');
                 } else if (reminderId) {
                   navigateRef.current(targetPatientId ? '/family' : '/');

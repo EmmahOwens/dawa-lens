@@ -1,352 +1,286 @@
-mod search;
-mod interaction;
-mod scheduler;
-mod parsing;
-mod crypto;
-mod file_ops;
-mod network;
-mod db;
+pub mod crypto;
+pub mod interaction;
+pub mod search;
 
-pub use search::{fuzzy_search, DrugEntry};
+use std::cell::RefCell;
+use std::slice;
 
-/// Returns 1 — confirms the native library loaded and is functional.
-#[no_mangle]
-pub extern "C" fn dawa_core_is_available() -> i32 {
-    1
+thread_local! {
+    static WASM_OUTPUT_BUF: RefCell<Vec<u8>> = RefCell::new(Vec::with_capacity(4096));
 }
 
-#[no_mangle]
-pub extern "C" fn dawa_search_is_available() -> i32 {
-    1
+fn write_output_str(s: &str) -> *const u8 {
+    WASM_OUTPUT_BUF.with(|buf| {
+        let mut b = buf.borrow_mut();
+        b.clear();
+        b.extend_from_slice(s.as_bytes());
+        b.as_ptr()
+    })
 }
 
-// ── JNI bindings (Android only) ──────────────────────────────────────────────
+unsafe fn read_input_str<'a>(ptr: *const u8, len: usize) -> &'a str {
+    if ptr.is_null() || len == 0 {
+        return "";
+    }
+    let bytes = slice::from_raw_parts(ptr, len);
+    std::str::from_utf8(bytes).unwrap_or("")
+}
+
+// ── WebAssembly / C-ABI Exports ──────────────────────────────────────────────
+
+/// Allocates `size` bytes in WASM linear memory for passing UTF-8 strings from JS.
+#[no_mangle]
+pub extern "C" fn w_alloc(size: usize) -> *mut u8 {
+    if size == 0 {
+        return std::ptr::null_mut();
+    }
+    let mut buf = Vec::<u8>::with_capacity(size);
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
+}
+
+/// Deallocates a buffer previously allocated by `w_alloc`.
+#[no_mangle]
+pub unsafe extern "C" fn w_dealloc(ptr: *mut u8, size: usize) {
+    if !ptr.is_null() && size > 0 {
+        drop(Vec::from_raw_parts(ptr, 0, size));
+    }
+}
+
+/// Returns the byte length of the most recent string written to `WASM_OUTPUT_BUF`.
+#[no_mangle]
+pub extern "C" fn w_last_len() -> usize {
+    WASM_OUTPUT_BUF.with(|buf| buf.borrow().len())
+}
+
+/// Great-circle Haversine distance in kilometers (rounded to 0.1 km).
+#[no_mangle]
+pub extern "C" fn dawa_haversine_km(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
+    search::haversine_distance_km(lat1, lon1, lat2, lon2)
+}
+
+/// Returns 1 if `drug_a` and `drug_b` represent the same active substance, 0 otherwise.
+#[no_mangle]
+pub unsafe extern "C" fn dawa_is_same_substance(
+    ptr_a: *const u8,
+    len_a: usize,
+    ptr_b: *const u8,
+    len_b: usize,
+) -> i32 {
+    let a = read_input_str(ptr_a, len_a);
+    let b = read_input_str(ptr_b, len_b);
+    if interaction::is_same_drug_substance(a, b) {
+        1
+    } else {
+        0
+    }
+}
+
+/// Normalizes a drug string and writes the result to `WASM_OUTPUT_BUF`.
+#[no_mangle]
+pub unsafe extern "C" fn dawa_normalize_drug(ptr: *const u8, len: usize) -> *const u8 {
+    let input = read_input_str(ptr, len);
+    let norm = interaction::normalize_drug_string(input);
+    write_output_str(&norm)
+}
+
+/// Resolves a free-form drug query to a JSON `ClinicalDrugDef` (or empty string if none).
+#[no_mangle]
+pub unsafe extern "C" fn dawa_resolve_canonical_json(ptr: *const u8, len: usize) -> *const u8 {
+    let query = read_input_str(ptr, len);
+    match interaction::resolve_canonical_drug(query) {
+        Some(def) => {
+            let json = serde_json::to_string(def).unwrap_or_default();
+            write_output_str(&json)
+        }
+        None => write_output_str(""),
+    }
+}
+
+/// Evaluates clinical interaction between two drug strings and writes JSON `ParsedInteraction`
+/// (or empty string if no interaction / duplicate substance).
+#[no_mangle]
+pub unsafe extern "C" fn dawa_evaluate_interaction_json(
+    ptr_a: *const u8,
+    len_a: usize,
+    ptr_b: *const u8,
+    len_b: usize,
+) -> *const u8 {
+    let a = read_input_str(ptr_a, len_a);
+    let b = read_input_str(ptr_b, len_b);
+    match interaction::evaluate_clinical_interaction(a, b) {
+        Some(hit) => {
+            let json = serde_json::to_string(&hit).unwrap_or_default();
+            write_output_str(&json)
+        }
+        None => write_output_str(""),
+    }
+}
+
+/// Evaluates all pairs in a JSON array of drug strings and returns a JSON array of `ParsedInteraction`.
+#[no_mangle]
+pub unsafe extern "C" fn dawa_check_interactions_json(ptr: *const u8, len: usize) -> *const u8 {
+    let drugs_json = read_input_str(ptr, len);
+    let out = interaction::check_interactions(drugs_json);
+    write_output_str(&out)
+}
+
+/// Performs Jaro-Winkler fuzzy search over the embedded drug index and returns a JSON array.
+#[no_mangle]
+pub unsafe extern "C" fn dawa_fuzzy_search_json(
+    ptr: *const u8,
+    len: usize,
+    limit: usize,
+) -> *const u8 {
+    let query = read_input_str(ptr, len);
+    let results = search::fuzzy_search(query, limit);
+    let json = serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string());
+    write_output_str(&json)
+}
+
+// ── Android JNI Bridge (compiled only when `--features android` is active) ───
+
 #[cfg(feature = "android")]
-mod jni_bindings {
+mod android_jni {
+    use crate::{crypto, interaction, search};
+    use jni::objects::{JClass, JString};
+    use jni::sys::{jboolean, jdouble, jint, jstring, JNI_FALSE, JNI_TRUE};
     use jni::JNIEnv;
-    use jni::objects::{JClass, JString, JByteArray};
-    use jni::sys::{jint, jstring, jbyteArray};
-    use crate::search::fuzzy_search;
-    use crate::interaction;
-    use crate::scheduler;
-    use crate::parsing;
-    use crate::crypto;
-    use crate::db;
 
-    /// Called by NativeSearchPlugin.kt: nativeFuzzySearch(query, limit)
+    fn jstring_to_rust(env: &mut JNIEnv, s: &JString) -> String {
+        env.get_string(s).map(|j| j.into()).unwrap_or_default()
+    }
+
+    fn rust_to_jstring(env: &mut JNIEnv, s: &str, fallback: &str) -> jstring {
+        env.new_string(s)
+            .unwrap_or_else(|_| env.new_string(fallback).expect("fallback JString"))
+            .into_raw()
+    }
+
     #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeFuzzySearch(
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeFuzzySearch(
         mut env: JNIEnv,
         _class: JClass,
         query: JString,
         limit: jint,
     ) -> jstring {
-        let q: String = env.get_string(&query).map(Into::into).unwrap_or_default();
-        let results = fuzzy_search(&q, limit.max(1) as usize);
-        let json = results
-            .iter()
-            .map(|e| {
-                format!(
-                    "{{\"name\":\"{}\",\"score\":{:.4},\"rxcui\":\"{}\"}}",
-                    e.name.replace('"', "\\\""),
-                    e.score,
-                    e.rxcui.as_deref().unwrap_or("")
-                )
-            })
-            .collect::<Vec<_>>()
-            .join(",");
-        let output = format!("[{}]", json);
-        env.new_string(output)
-            .expect("failed to create jstring")
-            .into_raw()
+        let query_str = jstring_to_rust(&mut env, &query);
+        let results = search::fuzzy_search(&query_str, limit.max(1) as usize);
+        let json = serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string());
+        rust_to_jstring(&mut env, &json, "[]")
     }
 
     #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeCheckInteractions(
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeCheckInteractions(
         mut env: JNIEnv,
         _class: JClass,
-        rxcuis_json: JString,
+        drugs_json: JString,
     ) -> jstring {
-        let json_str: String = env.get_string(&rxcuis_json).map(Into::into).unwrap_or_default();
-        let rxcuis: Vec<String> = serde_json::from_str(&json_str).unwrap_or_default();
-
-        let engine = interaction::InteractionEngine::new();
-        let results = engine.check_interactions(&rxcuis);
-
-        let output = serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string());
-        env.new_string(output)
-            .expect("failed to create jstring")
-            .into_raw()
+        let json_str = jstring_to_rust(&mut env, &drugs_json);
+        let result = interaction::check_interactions(&json_str);
+        rust_to_jstring(&mut env, &result, "[]")
     }
 
     #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeIsAvailable(
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeEvaluateInteraction(
+        mut env: JNIEnv,
+        _class: JClass,
+        med_a: JString,
+        med_b: JString,
+    ) -> jstring {
+        let a = jstring_to_rust(&mut env, &med_a);
+        let b = jstring_to_rust(&mut env, &med_b);
+        let json = interaction::evaluate_clinical_interaction(&a, &b)
+            .and_then(|hit| serde_json::to_string(&hit).ok())
+            .unwrap_or_default();
+        rust_to_jstring(&mut env, &json, "")
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeIsSameDrugSubstance(
+        mut env: JNIEnv,
+        _class: JClass,
+        med_a: JString,
+        med_b: JString,
+    ) -> jboolean {
+        let a = jstring_to_rust(&mut env, &med_a);
+        let b = jstring_to_rust(&mut env, &med_b);
+        if interaction::is_same_drug_substance(&a, &b) {
+            JNI_TRUE
+        } else {
+            JNI_FALSE
+        }
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeHaversineDistance(
         _env: JNIEnv,
         _class: JClass,
-    ) -> jint {
-        1
+        lat1: jdouble,
+        lon1: jdouble,
+        lat2: jdouble,
+        lon2: jdouble,
+    ) -> jdouble {
+        search::haversine_distance_km(lat1, lon1, lat2, lon2)
     }
 
     #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeParseLargeJson(
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeComputeAuditHash(
         mut env: JNIEnv,
         _class: JClass,
-        json: JString,
+        prev_hash: JString,
+        payload: JString,
     ) -> jstring {
-        let j: String = env.get_string(&json).map(Into::into).unwrap_or_default();
-        let result = match parsing::parse_large_json(&j) {
-            Ok(v) => v.to_string(),
-            Err(e) => e,
-        };
-        env.new_string(result)
-            .expect("failed to create jstring")
-            .into_raw()
-    }
-
-    #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeHashData(
-        mut env: JNIEnv,
-        _class: JClass,
-        data: JByteArray,
-    ) -> jbyteArray {
-        let input = env.convert_byte_array(&data).unwrap_or_default();
-        let hashed = crypto::hash_data(&input);
-        env.byte_array_from_slice(&hashed)
-            .expect("failed to create byte array")
-            .into_raw()
-    }
-
-    #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSqlitePlugin_nativeInitialize(
-        mut env: JNIEnv,
-        _class: JClass,
-        path: JString,
-    ) -> jint {
-        let path_str: String = env.get_string(&path).map(Into::into).unwrap_or_default();
-        match crate::db::db_initialize(&path_str) {
-            Ok(_) => 1,
-            Err(e) => {
-                let _ = env.throw_new("java/lang/Exception", e);
-                0
-            }
-        }
-    }
-
-    #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSqlitePlugin_nativeExecute(
-        mut env: JNIEnv,
-        _class: JClass,
-        sql: JString,
-        params_json: JString,
-    ) -> jstring {
-        let sql_str: String = env.get_string(&sql).map(Into::into).unwrap_or_default();
-        let params_str: String = env.get_string(&params_json).map(Into::into).unwrap_or_default();
-        match crate::db::db_execute(&sql_str, &params_str) {
-            Ok((rows_affected, last_insert_id)) => {
-                let res_json = format!(
-                    "{{\"rowsAffected\":{},\"lastInsertId\":{}}}",
-                    rows_affected, last_insert_id
-                );
-                env.new_string(res_json).expect("failed to create jstring").into_raw()
-            }
-            Err(e) => {
-                let _ = env.throw_new("java/lang/Exception", e);
-                std::ptr::null_mut()
-            }
-        }
-    }
-
-    #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSqlitePlugin_nativeQuery(
-        mut env: JNIEnv,
-        _class: JClass,
-        sql: JString,
-        params_json: JString,
-    ) -> jstring {
-        let sql_str: String = env.get_string(&sql).map(Into::into).unwrap_or_default();
-        let params_str: String = env.get_string(&params_json).map(Into::into).unwrap_or_default();
-        match crate::db::db_query(&sql_str, &params_str) {
-            Ok(json_res) => {
-                env.new_string(json_res).expect("failed to create jstring").into_raw()
-            }
-            Err(e) => {
-                let _ = env.throw_new("java/lang/Exception", e);
-                std::ptr::null_mut()
-            }
-        }
-    }
-
-    #[no_mangle]
-    pub extern "C" fn Java_com_dawainnovation_lens_NativeSqlitePlugin_nativeClose(
-        _env: JNIEnv,
-        _class: JClass,
-    ) -> jint {
-        match crate::db::db_close() {
-            Ok(_) => 1,
-            Err(_) => 0,
-        }
+        let prev = jstring_to_rust(&mut env, &prev_hash);
+        let pay = jstring_to_rust(&mut env, &payload);
+        let result = crypto::compute_audit_hash(&prev, &pay);
+        rust_to_jstring(&mut env, &result, "")
     }
 }
 
-#[no_mangle]
-pub extern "C" fn dawa_search_fuzzy(
-    query_ptr: *const u8,
-    query_len: usize,
-    limit: i32,
-    out_buf: *mut u8,
-    out_buf_len: usize,
-) -> i32 {
-    if query_ptr.is_null() || out_buf.is_null() || out_buf_len == 0 {
-        return -1;
+// ── Unit Tests ───────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use crate::{interaction, search};
+
+    #[test]
+    fn exact_prefix_ranks_first() {
+        let results = search::fuzzy_search("paracet", 5);
+        assert!(!results.is_empty());
+        assert_eq!(results[0].name.to_lowercase(), "paracetamol");
     }
 
-    let query = unsafe {
-        match std::str::from_utf8(std::slice::from_raw_parts(query_ptr, query_len)) {
-            Ok(s) => s,
-            Err(_) => return -1,
-        }
-    };
-
-    let results = fuzzy_search(query, limit.max(1) as usize);
-
-    // Encode: records separated by ASCII RS (0x1E), fields by ASCII US (0x1F).
-    let encoded: String = results
-        .iter()
-        .map(|e| {
-            format!(
-                "{}\x1f{:.4}\x1f{}",
-                e.name,
-                e.score,
-                e.rxcui.as_deref().unwrap_or("")
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("\x1e");
-
-    let bytes = encoded.as_bytes();
-    // Leave room for the null terminator
-    let to_copy = bytes.len().min(out_buf_len - 1);
-    unsafe {
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), out_buf, to_copy);
-        *out_buf.add(to_copy) = 0; // null-terminate
+    #[test]
+    fn typo_tolerant_search() {
+        let results = search::fuzzy_search("amoxicilin", 5);
+        assert!(!results.is_empty());
+        assert!(results[0].name.to_lowercase().contains("amoxicillin"));
     }
-    results.len() as i32
-}
 
-#[no_mangle]
-pub extern "C" fn dawa_db_initialize(
-    path_ptr: *const u8,
-    path_len: usize,
-) -> i32 {
-    if path_ptr.is_null() || path_len == 0 {
-        return -1;
+    #[test]
+    fn empty_query_returns_empty() {
+        let results = search::fuzzy_search("", 10);
+        assert!(results.is_empty());
     }
-    let path = unsafe {
-        match std::str::from_utf8(std::slice::from_raw_parts(path_ptr, path_len)) {
-            Ok(s) => s,
-            Err(_) => return -1,
-        }
-    };
-    match db::db_initialize(path) {
-        Ok(_) => 1,
-        Err(_) => -2,
-    }
-}
 
-#[no_mangle]
-pub extern "C" fn dawa_db_execute(
-    sql_ptr: *const u8,
-    sql_len: usize,
-    params_ptr: *const u8,
-    params_len: usize,
-    out_buf: *mut u8,
-    out_buf_len: usize,
-) -> i32 {
-    if sql_ptr.is_null() || out_buf.is_null() || out_buf_len == 0 {
-        return -1;
+    #[test]
+    fn limit_is_respected() {
+        let results = search::fuzzy_search("a", 3);
+        assert!(results.len() <= 3);
     }
-    let sql = unsafe {
-        match std::str::from_utf8(std::slice::from_raw_parts(sql_ptr, sql_len)) {
-            Ok(s) => s,
-            Err(_) => return -1,
-        }
-    };
-    let params_json = if params_ptr.is_null() || params_len == 0 {
-        "[]"
-    } else {
-        unsafe {
-            match std::str::from_utf8(std::slice::from_raw_parts(params_ptr, params_len)) {
-                Ok(s) => s,
-                Err(_) => "[]",
-            }
-        }
-    };
-    
-    match db::db_execute(sql, params_json) {
-        Ok((rows_affected, last_insert_id)) => {
-            let res_json = format!(
-                "{{\"rowsAffected\":{},\"lastInsertId\":{}}}",
-                rows_affected, last_insert_id
-            );
-            let bytes = res_json.as_bytes();
-            let to_copy = bytes.len().min(out_buf_len - 1);
-            unsafe {
-                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out_buf, to_copy);
-                *out_buf.add(to_copy) = 0; // null-terminate
-            }
-            rows_affected as i32
-        }
-        Err(_) => -2,
-    }
-}
 
-#[no_mangle]
-pub extern "C" fn dawa_db_query(
-    sql_ptr: *const u8,
-    sql_len: usize,
-    params_ptr: *const u8,
-    params_len: usize,
-    out_buf: *mut u8,
-    out_buf_len: usize,
-) -> i32 {
-    if sql_ptr.is_null() || out_buf.is_null() || out_buf_len == 0 {
-        return -1;
+    #[test]
+    fn haversine_kampala_to_entebbe() {
+        // Kampala (0.3476, 32.5825) to Entebbe (0.0512, 32.4637) ~ 35.5 km
+        let dist = search::haversine_distance_km(0.3476, 32.5825, 0.0512, 32.4637);
+        assert!(dist > 30.0 && dist < 40.0, "dist was {}", dist);
     }
-    let sql = unsafe {
-        match std::str::from_utf8(std::slice::from_raw_parts(sql_ptr, sql_len)) {
-            Ok(s) => s,
-            Err(_) => return -1,
-        }
-    };
-    let params_json = if params_ptr.is_null() || params_len == 0 {
-        "[]"
-    } else {
-        unsafe {
-            match std::str::from_utf8(std::slice::from_raw_parts(params_ptr, params_len)) {
-                Ok(s) => s,
-                Err(_) => "[]",
-            }
-        }
-    };
-    
-    match db::db_query(sql, params_json) {
-        Ok(json_res) => {
-            let bytes = json_res.as_bytes();
-            let to_copy = bytes.len().min(out_buf_len - 1);
-            unsafe {
-                std::ptr::copy_nonoverlapping(bytes.as_ptr(), out_buf, to_copy);
-                *out_buf.add(to_copy) = 0; // null-terminate
-            }
-            1
-        }
-        Err(_) => -2,
-    }
-}
 
-#[no_mangle]
-pub extern "C" fn dawa_db_close() -> i32 {
-    match db::db_close() {
-        Ok(_) => 1,
-        Err(_) => -1,
+    #[test]
+    fn check_interactions_json_array() {
+        let json = interaction::check_interactions(r#"["Warfarin", "Ibuprofen 400mg"]"#);
+        assert!(json.contains("Severe Gastrointestinal Hemorrhage Risk"));
     }
 }

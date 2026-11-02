@@ -38,12 +38,19 @@ import {
   MINDFULNESS_QUOTES,
   LIFESTYLE_QUOTES,
   INSPIRATION_QUOTES,
+  getHealthQuoteAt,
 } from "@/data/quotesData";
 import {
   HYDRATION_MESSAGES,
   EVENING_CHECKIN_MESSAGES,
   WEEKLY_SUMMARY_MESSAGES,
   WELLNESS_NUDGE_MESSAGES,
+  MOVEMENT_MESSAGES,
+  MINDFULNESS_MESSAGES,
+  NUTRITION_MESSAGES,
+  EYE_REST_MESSAGES,
+  OUTDOOR_RESET_MESSAGES,
+  WIND_DOWN_MESSAGES,
 } from "@/data/engagementQuotes";
 
 export {
@@ -54,10 +61,17 @@ export {
   MINDFULNESS_QUOTES,
   LIFESTYLE_QUOTES,
   INSPIRATION_QUOTES,
+  getHealthQuoteAt,
   HYDRATION_MESSAGES,
   EVENING_CHECKIN_MESSAGES,
   WEEKLY_SUMMARY_MESSAGES,
   WELLNESS_NUDGE_MESSAGES,
+  MOVEMENT_MESSAGES,
+  MINDFULNESS_MESSAGES,
+  NUTRITION_MESSAGES,
+  EYE_REST_MESSAGES,
+  OUTDOOR_RESET_MESSAGES,
+  WIND_DOWN_MESSAGES,
 };
 
 // ─── Channel IDs ────────────────────────────────────────────────────────────
@@ -184,7 +198,7 @@ export function getQuoteIndexForDate(date: Date = new Date()): number {
 
 export function getDailyQuote(date: Date = new Date()): string {
   const index = getQuoteIndexForDate(date);
-  return HEALTH_QUOTES[index] ?? HEALTH_QUOTES[0] ?? "💊 Stay consistent with your health journey.";
+  return getHealthQuoteAt(index) || HEALTH_QUOTES[index] || "💊 Stay consistent with your health journey.";
 }
 
 export function getQuoteForDayOffset(dayOffset: number, baseDate: Date = new Date()): string {
@@ -351,7 +365,7 @@ export function getHydrationQuote(date: Date = new Date(), hourSlotIndex: number
   return HYDRATION_MESSAGES[index] ?? HYDRATION_MESSAGES[0];
 }
 
-async function scheduleHydrationReminders(
+export async function scheduleHydrationReminders(
   localBatch: LocalNotificationSchema[],
   alarmBatch: AlarmNotification[],
   ids: number[]
@@ -368,6 +382,227 @@ async function scheduleHydrationReminders(
       const body = getHydrationQuote(fireDate, hIdx);
       localBatch.push({ id, title: "💧 Hydration Reminder", body, schedule: { at: fireDate, allowWhileIdle: true }, channelId: soundService.getChannelIdForCategory("hydration"), sound: soundService.getCapacitorSound("hydration"), extra: { type: "hydration", route: "/", soundName: soundService.getAndroidResourceForCategory("hydration") } });
       alarmBatch.push({ id, title: "💧 Hydration Reminder", body, triggerAtMillis: fireDate.getTime(), extra: JSON.stringify({ type: "hydration" }) });
+      ids.push(id);
+    }
+  }
+}
+
+// ─── 4b. Expanded Daily Health & Wellness Reminders ──────────────────────────
+
+/**
+ * Returns a calendar-day rotating movement and posture stretch quote.
+ */
+export function getMovementQuote(date: Date = new Date()): string {
+  if (!MOVEMENT_MESSAGES || MOVEMENT_MESSAGES.length === 0) {
+    return "🚶 Time to move! Stand up, stretch, and get your blood circulating.";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOffset = Math.round((localDayUtc - ANCHOR_UTC) / 86400000);
+  const index = ((dayOffset % MOVEMENT_MESSAGES.length) + MOVEMENT_MESSAGES.length) % MOVEMENT_MESSAGES.length;
+  return MOVEMENT_MESSAGES[index] ?? MOVEMENT_MESSAGES[0];
+}
+
+/**
+ * Returns a calendar-day rotating mindful breath and stress reset quote.
+ */
+export function getMindfulnessQuote(date: Date = new Date()): string {
+  if (!MINDFULNESS_MESSAGES || MINDFULNESS_MESSAGES.length === 0) {
+    return "🧘 Mindful pause: Close your eyes, drop your shoulders, and take three deep breaths.";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOffset = Math.round((localDayUtc - ANCHOR_UTC) / 86400000);
+  const index = ((dayOffset % MINDFULNESS_MESSAGES.length) + MINDFULNESS_MESSAGES.length) % MINDFULNESS_MESSAGES.length;
+  return MINDFULNESS_MESSAGES[index] ?? MINDFULNESS_MESSAGES[0];
+}
+
+/**
+ * Returns a calendar-day rotating balanced nutrition & meal fueling quote.
+ */
+export function getNutritionQuote(date: Date = new Date()): string {
+  if (!NUTRITION_MESSAGES || NUTRITION_MESSAGES.length === 0) {
+    return "🥗 Fuel your body: Nourish your cells with wholesome, colorful foods today.";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOffset = Math.round((localDayUtc - ANCHOR_UTC) / 86400000);
+  const index = ((dayOffset % NUTRITION_MESSAGES.length) + NUTRITION_MESSAGES.length) % NUTRITION_MESSAGES.length;
+  return NUTRITION_MESSAGES[index] ?? NUTRITION_MESSAGES[0];
+}
+
+/**
+ * Returns a calendar-day rotating 20-20-20 eye rest & screen break quote.
+ */
+export function getEyeRestQuote(date: Date = new Date()): string {
+  if (!EYE_REST_MESSAGES || EYE_REST_MESSAGES.length === 0) {
+    return "👁️ 20-20-20 Eye break: Look 20 feet away for 20 seconds to ease digital eye strain.";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOffset = Math.round((localDayUtc - ANCHOR_UTC) / 86400000);
+  const index = ((dayOffset % EYE_REST_MESSAGES.length) + EYE_REST_MESSAGES.length) % EYE_REST_MESSAGES.length;
+  return EYE_REST_MESSAGES[index] ?? EYE_REST_MESSAGES[0];
+}
+
+/**
+ * Returns a calendar-day rotating sunlight and fresh air reset quote.
+ */
+export function getOutdoorResetQuote(date: Date = new Date()): string {
+  if (!OUTDOOR_RESET_MESSAGES || OUTDOOR_RESET_MESSAGES.length === 0) {
+    return "☀️ Daylight pause: Step outside or open a window for fresh air and natural sunlight.";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOffset = Math.round((localDayUtc - ANCHOR_UTC) / 86400000);
+  const index = ((dayOffset % OUTDOOR_RESET_MESSAGES.length) + OUTDOOR_RESET_MESSAGES.length) % OUTDOOR_RESET_MESSAGES.length;
+  return OUTDOOR_RESET_MESSAGES[index] ?? OUTDOOR_RESET_MESSAGES[0];
+}
+
+/**
+ * Returns a calendar-day rotating wind-down and sleep hygiene quote.
+ */
+export function getWindDownQuote(date: Date = new Date()): string {
+  if (!WIND_DOWN_MESSAGES || WIND_DOWN_MESSAGES.length === 0) {
+    return "🌙 Wind-down time: Dim screens, relax your muscles, and prepare for restorative sleep.";
+  }
+  const d = new Date(date);
+  const localDayUtc = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayOffset = Math.round((localDayUtc - ANCHOR_UTC) / 86400000);
+  const index = ((dayOffset % WIND_DOWN_MESSAGES.length) + WIND_DOWN_MESSAGES.length) % WIND_DOWN_MESSAGES.length;
+  return WIND_DOWN_MESSAGES[index] ?? WIND_DOWN_MESSAGES[0];
+}
+
+/**
+ * Schedules rich, holistic daily health & wellness reminders across 7 days.
+ * Instead of only sending hydration reminders, this scheduler rotates across:
+ * - 08:00: Morning Hydration & Wake-Up (type: "hydration")
+ * - 10:00: Posture & Movement Break / Daylight Pause (type: "movement" | "outdoor_reset")
+ * - 12:00: Balanced Fuel & Nutrition Pause (type: "nutrition")
+ * - 14:00: 20-20-20 Eye Rest Break (type: "eye_rest")
+ * - 16:00: Mindful Breath & Stress Reset (type: "mindfulness")
+ * - 18:00: Evening Hydration / Posture & Movement Break (type: "hydration" | "movement")
+ * - 21:30: Wind-Down & Sleep Preparation (type: "wind_down")
+ */
+export async function scheduleDailyWellnessReminders(
+  localBatch: LocalNotificationSchema[],
+  alarmBatch: AlarmNotification[],
+  ids: number[]
+): Promise<void> {
+  const now = new Date();
+  for (let i = 0; i < 7; i++) {
+    const dayStart = startOfDay(addDays(now, i));
+    const dayIndex = i;
+
+    const slots = [
+      {
+        hour: 8,
+        minute: 0,
+        type: "hydration",
+        title: "💧 Morning Hydration",
+        getBody: (d: Date) => getHydrationQuote(d, 0),
+        channel: soundService.getChannelIdForCategory("hydration"),
+        sound: soundService.getCapacitorSound("hydration"),
+        soundRes: soundService.getAndroidResourceForCategory("hydration"),
+        route: "/",
+      },
+      {
+        hour: 10,
+        minute: 0,
+        type: dayIndex % 2 === 0 ? "movement" : "outdoor_reset",
+        title: dayIndex % 2 === 0 ? "🚶 Posture & Movement Break" : "☀️ Daylight & Fresh Air Pause",
+        getBody: (d: Date) => (dayIndex % 2 === 0 ? getMovementQuote(d) : getOutdoorResetQuote(d)),
+        channel: soundService.getChannelIdForCategory("quotes"),
+        sound: soundService.getCapacitorSound("quotes"),
+        soundRes: soundService.getAndroidResourceForCategory("quotes"),
+        route: "/wellness",
+      },
+      {
+        hour: 12,
+        minute: 0,
+        type: "nutrition",
+        title: "🥗 Balanced Fuel & Nutrition",
+        getBody: (d: Date) => getNutritionQuote(d),
+        channel: soundService.getChannelIdForCategory("quotes"),
+        sound: soundService.getCapacitorSound("quotes"),
+        soundRes: soundService.getAndroidResourceForCategory("quotes"),
+        route: "/wellness",
+      },
+      {
+        hour: 14,
+        minute: 0,
+        type: "eye_rest",
+        title: "👁️ 20-20-20 Eye Rest Break",
+        getBody: (d: Date) => getEyeRestQuote(d),
+        channel: soundService.getChannelIdForCategory("quotes"),
+        sound: soundService.getCapacitorSound("quotes"),
+        soundRes: soundService.getAndroidResourceForCategory("quotes"),
+        route: "/wellness",
+      },
+      {
+        hour: 16,
+        minute: 0,
+        type: "mindfulness",
+        title: "🧘 Mindful Breath & Stress Reset",
+        getBody: (d: Date) => getMindfulnessQuote(d),
+        channel: soundService.getChannelIdForCategory("quotes"),
+        sound: soundService.getCapacitorSound("quotes"),
+        soundRes: soundService.getAndroidResourceForCategory("quotes"),
+        route: "/wellness",
+      },
+      {
+        hour: 18,
+        minute: 0,
+        type: dayIndex % 2 === 0 ? "hydration" : "movement",
+        title: dayIndex % 2 === 0 ? "💧 Evening Hydration" : "🚶 Movement & Posture Break",
+        getBody: (d: Date) => (dayIndex % 2 === 0 ? getHydrationQuote(d, 5) : getMovementQuote(d)),
+        channel: dayIndex % 2 === 0 ? soundService.getChannelIdForCategory("hydration") : soundService.getChannelIdForCategory("quotes"),
+        sound: dayIndex % 2 === 0 ? soundService.getCapacitorSound("hydration") : soundService.getCapacitorSound("quotes"),
+        soundRes: dayIndex % 2 === 0 ? soundService.getAndroidResourceForCategory("hydration") : soundService.getAndroidResourceForCategory("quotes"),
+        route: dayIndex % 2 === 0 ? "/" : "/wellness",
+      },
+      {
+        hour: 21,
+        minute: 30,
+        type: "wind_down",
+        title: "🌙 Wind-Down & Sleep Preparation",
+        getBody: (d: Date) => getWindDownQuote(d),
+        channel: soundService.getChannelIdForCategory("quotes"),
+        sound: soundService.getCapacitorSound("quotes"),
+        soundRes: soundService.getAndroidResourceForCategory("quotes"),
+        route: "/wellness",
+      },
+    ];
+
+    for (const slot of slots) {
+      const fireDate = setTime(dayStart, slot.hour, slot.minute);
+      if (fireDate <= now) continue;
+      const dateKey = `${dayStart.toISOString()}_${slot.hour}_${slot.minute}_${slot.type}`;
+      const id = stringToHash("dawa_wellness_" + dateKey);
+      const body = slot.getBody(fireDate);
+
+      localBatch.push({
+        id,
+        title: slot.title,
+        body,
+        schedule: { at: fireDate, allowWhileIdle: true },
+        channelId: slot.channel,
+        sound: slot.sound,
+        extra: {
+          type: slot.type,
+          route: slot.route,
+          soundName: slot.soundRes,
+        },
+      });
+
+      alarmBatch.push({
+        id,
+        title: slot.title,
+        body,
+        triggerAtMillis: fireDate.getTime(),
+        extra: JSON.stringify({ type: slot.type, route: slot.route }),
+      });
+
       ids.push(id);
     }
   }
@@ -545,7 +780,7 @@ export async function scheduleEngagementNotifications(
     const ids: number[] = [];
     await scheduleDailyQuoteNotifications(localBatch, alarmBatch, ids);
     await scheduleEveningCheckIns(reminders, localBatch, alarmBatch, ids);
-    await scheduleHydrationReminders(localBatch, alarmBatch, ids);
+    await scheduleDailyWellnessReminders(localBatch, alarmBatch, ids);
     await scheduleWeeklyAdherenceSummary(localBatch, alarmBatch, ids);
     await scheduleNotif(localBatch, alarmBatch);
     saveEngagementIds(ids);

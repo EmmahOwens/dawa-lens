@@ -293,7 +293,7 @@ export default function RemindersPage() {
                 },
               })
             }
-            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 text-white px-5 py-2 rounded-full text-[13px] font-semibold hover:brightness-105 active:scale-95 transition-all shadow-md shadow-indigo-500/20"
+            className="inline-flex items-center gap-1.5 bg-[#0066cc] hover:bg-[#0071e3] text-white px-5 py-2 rounded-full text-[13px] font-medium active:scale-[0.98] transition-colors shadow-xs"
           >
             <Plus size={15} />
             Add
@@ -302,23 +302,19 @@ export default function RemindersPage() {
       </div>
 
       {/* Hero Stats Tile */}
-      <div className="relative overflow-hidden rounded-[26px] border border-indigo-500/30 p-6 mb-6 bg-gradient-to-br from-[#4338ca] via-[#6366f1] to-[#7c3aed] text-white shadow-xl shadow-indigo-950/20 transition-all">
-        {/* Ambient Jewel Glows */}
-        <div className="absolute -top-20 -right-20 w-60 h-60 bg-indigo-300/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-purple-300/20 rounded-full blur-3xl pointer-events-none" />
-
+      <div className="relative overflow-hidden rounded-[22px] border border-black/10 dark:border-white/10 bg-[#1c1c1e] text-white p-6 mb-6 shadow-sm transition-colors duration-200">
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3.5 py-1 shadow-xs">
-              <div className="h-2 w-2 rounded-full bg-indigo-200 shadow-[0_0_8px_#c7d2fe] animate-pulse" />
-              <span className="text-[11px] font-semibold tracking-normal text-white">
+            <div className="flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3.5 py-1">
+              <div className="h-2 w-2 rounded-full bg-[#2997ff]" />
+              <span className="text-[12px] font-medium tracking-normal text-white/90">
                 Live Dosing &amp; Schedule
               </span>
             </div>
 
             <button
               onClick={() => navigate("/medvault")}
-              className="hidden sm:inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[11px] font-medium transition-all active:scale-95 shadow-xs"
+              className="hidden sm:inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 text-white text-[12px] font-medium transition-colors active:scale-[0.98]"
             >
               <Pill size={12} />
               <span>Med Vault</span>
@@ -327,26 +323,26 @@ export default function RemindersPage() {
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-[30px] sm:text-[38px] font-black leading-tight tracking-tight text-white">
+              <p className="text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-white">
                 {enabledCount}
               </p>
-              <p className="text-[12px] font-medium text-indigo-100/85 mt-0.5">
+              <p className="text-[12px] font-medium text-white/70 mt-0.5">
                 Active Schedules
               </p>
             </div>
             <div>
-              <p className="text-[30px] sm:text-[38px] font-black leading-tight tracking-tight text-white">
+              <p className="text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-white">
                 {takenToday}
               </p>
-              <p className="text-[12px] font-medium text-indigo-100/85 mt-0.5">
+              <p className="text-[12px] font-medium text-white/70 mt-0.5">
                 Taken Today
               </p>
             </div>
             <div>
-              <p className={`text-[30px] sm:text-[38px] font-black leading-tight tracking-tight ${missedToday > 0 ? "text-rose-200 drop-shadow-sm" : "text-white"}`}>
+              <p className={`text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight ${missedToday > 0 ? "text-rose-300" : "text-white"}`}>
                 {missedToday}
               </p>
-              <p className="text-[12px] font-medium text-indigo-100/85 mt-0.5">
+              <p className="text-[12px] font-medium text-white/70 mt-0.5">
                 Missed Today
               </p>
             </div>

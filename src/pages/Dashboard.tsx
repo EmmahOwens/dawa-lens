@@ -461,19 +461,17 @@ export default function Dashboard() {
           {/* Metric Tile: Adherence (col-span-1) */}
           <motion.button
             variants={item}
-            whileTap={{ scale: 0.97 }}
-            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/history")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-sky-500/25 dark:border-sky-500/20 bg-gradient-to-br from-sky-500/12 via-cyan-500/6 to-card dark:from-sky-950/40 dark:via-cyan-950/20 dark:to-card/80 backdrop-blur-xl hover:border-sky-500/50 hover:shadow-lg hover:shadow-sky-500/10 group relative overflow-hidden transition-all duration-300"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
           >
-            <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-sky-500/20 rounded-full blur-2xl pointer-events-none group-hover:bg-sky-500/30 transition-all duration-500" />
             <div className="flex items-center justify-between w-full relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:scale-110 transition-transform duration-300 shadow-xs">
-                <History size={17} className="group-hover:-rotate-45 transition-transform duration-500" />
+              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-[#0066cc] dark:text-[#2997ff] transition-colors">
+                <History size={17} />
               </div>
               {/* Apple Activity Progress Ring */}
               <svg width="32" height="32" viewBox="0 0 36 36" className="transform -rotate-90 shrink-0">
-                <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-sky-500/15" />
+                <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted/40" />
                 <circle
                   cx="18"
                   cy="18"
@@ -484,44 +482,38 @@ export default function Dashboard() {
                   strokeDasharray="88"
                   strokeDashoffset={88 - (88 * Math.min(Math.max(adherencePercent, 0), 100)) / 100}
                   strokeLinecap="round"
-                  className="text-sky-500 transition-all duration-1000 ease-out"
+                  className="text-[#0066cc] dark:text-[#2997ff] transition-all duration-700 ease-out"
                 />
               </svg>
             </div>
             <div className="relative z-10 pt-3">
               <p className="text-[22px] font-semibold leading-none tracking-tight text-foreground flex items-baseline">
-                {adherencePercent}<span className="text-[13px] font-bold text-sky-600 dark:text-sky-400 ml-0.5">%</span>
+                {adherencePercent}<span className="text-[13px] font-medium text-muted-foreground ml-0.5">%</span>
               </p>
-              <p className="text-[12px] text-sky-700 dark:text-sky-300/90 font-medium mt-1">Adherence</p>
+              <p className="text-[12px] text-muted-foreground font-medium mt-1">Adherence</p>
             </div>
           </motion.button>
 
           {/* Metric Tile: Pill Stock / Med Vault (col-span-1) */}
           <motion.button
             variants={item}
-            whileTap={{ scale: 0.97 }}
-            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/medvault")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-emerald-500/25 dark:border-emerald-500/20 bg-gradient-to-br from-emerald-500/12 via-teal-500/6 to-card dark:from-emerald-950/40 dark:via-teal-950/20 dark:to-card/80 backdrop-blur-xl hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10 group relative overflow-hidden transition-all duration-300"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
           >
-            <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/30 transition-all duration-500" />
             <div className="flex items-center justify-between w-full relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-300 shadow-xs">
-                <Package2 size={17} className="group-hover:-translate-y-0.5 transition-transform duration-300" />
+              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground transition-colors">
+                <Package2 size={17} />
               </div>
-              {/* Dynamic Inventory Level Equalizer Bars */}
-              <div className="flex items-end gap-[3px] h-5.5 px-0.5 shrink-0">
-                <span className="w-[3px] rounded-full bg-emerald-500 animate-bento-bar-1" />
-                <span className="w-[3px] rounded-full bg-emerald-500 animate-bento-bar-2" />
-                <span className="w-[3px] rounded-full bg-emerald-500 animate-bento-bar-3" />
-                <span className="w-[3px] rounded-full bg-emerald-500 animate-bento-bar-4" />
-              </div>
+              <span className="text-[11px] font-medium text-muted-foreground bg-secondary px-2 py-0.5 rounded-full border border-border/60">
+                Vault
+              </span>
             </div>
             <div className="relative z-10 pt-3">
               <p className="text-[22px] font-semibold leading-none tracking-tight text-foreground">
-                {formatCompactNumber(totalPillsCount)}<span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 ml-1">units</span>
+                {formatCompactNumber(totalPillsCount)}<span className="text-[12px] font-normal text-muted-foreground ml-1">units</span>
               </p>
-              <p className="text-[12px] text-emerald-700 dark:text-emerald-300/90 font-medium mt-1">Med Vault</p>
+              <p className="text-[12px] text-muted-foreground font-medium mt-1">Med Vault</p>
             </div>
           </motion.button>
 
@@ -529,20 +521,18 @@ export default function Dashboard() {
           <motion.button
             variants={item}
             whileTap={{ scale: 0.98 }}
-            whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[1].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-teal-500/25 dark:border-teal-500/20 bg-gradient-to-br from-teal-500/12 via-emerald-500/6 to-card dark:from-teal-950/40 dark:via-emerald-950/20 dark:to-card/80 backdrop-blur-xl hover:border-teal-500/50 hover:shadow-lg hover:shadow-teal-500/10 group relative overflow-hidden transition-all duration-300"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
           >
-            <div className="absolute -right-10 -bottom-10 w-36 h-36 bg-teal-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-teal-500/30 transition-all duration-500" />
-            <div className="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-600 dark:text-teal-400 group-hover:scale-110 transition-transform duration-300 shrink-0 shadow-xs">
-              <Users size={19} />
+            <div className="w-10 h-10 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-[#0066cc] dark:text-[#2997ff] shrink-0">
+              <Users size={18} />
             </div>
             <div className="flex-1 text-left min-w-0 relative z-10">
-              <p className="text-[15px] font-medium leading-tight text-foreground truncate">
+              <p className="text-[15px] font-semibold leading-tight text-foreground truncate">
                 {quickActions[1].label}
               </p>
-              <p className="text-[12px] text-teal-700 dark:text-teal-300/90 font-medium mt-0.5 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />
+              <p className="text-[12px] text-muted-foreground font-normal mt-0.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Circle of Care
               </p>
             </div>
@@ -550,13 +540,13 @@ export default function Dashboard() {
               {patients.slice(0, 3).map((p, idx) => (
                 <div
                   key={p.id || idx}
-                  className="w-7 h-7 rounded-full border-2 border-card bg-teal-500/15 text-[10px] font-bold text-teal-800 dark:text-teal-200 flex items-center justify-center uppercase shadow-xs group-hover:translate-x-0.5 transition-transform"
+                  className="w-7 h-7 rounded-full border-2 border-card bg-secondary text-[11px] font-semibold text-foreground flex items-center justify-center uppercase shadow-xs"
                 >
                   {p.name.charAt(0)}
                 </div>
               ))}
               {patients.length === 0 && (
-                <div className="w-7 h-7 rounded-full border-2 border-dashed border-teal-500/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full border border-dashed border-border text-muted-foreground flex items-center justify-center">
                   <Plus size={12} />
                 </div>
               )}
@@ -566,23 +556,21 @@ export default function Dashboard() {
           {/* Metric Tile: Reminders (col-span-1) */}
           <motion.button
             variants={item}
-            whileTap={{ scale: 0.97 }}
-            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/reminders")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-violet-500/25 dark:border-violet-500/20 bg-gradient-to-br from-violet-500/12 via-purple-500/6 to-card dark:from-violet-950/40 dark:via-purple-950/20 dark:to-card/80 backdrop-blur-xl hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 group relative overflow-hidden transition-all duration-300"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
           >
-            <div className="absolute -top-6 -right-6 w-24 h-24 bg-violet-500/20 rounded-full blur-2xl pointer-events-none group-hover:bg-violet-500/30 transition-all duration-500" />
             <div className="flex items-center justify-between w-full relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 group-hover:scale-110 transition-transform duration-300 shadow-xs">
-                <Bell size={17} className="animate-bento-bell" />
+              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground transition-colors">
+                <Bell size={17} />
               </div>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-500/30">
+              <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border/60">
                 {takenToday}/{expectedDosesToday}
               </span>
             </div>
             <div className="relative z-10 pt-3">
-              <p className="text-[14px] font-medium text-foreground leading-tight">Reminders</p>
-              <p className="text-[12px] text-violet-700 dark:text-violet-300/90 font-medium mt-0.5">
+              <p className="text-[15px] font-semibold text-foreground leading-tight">Reminders</p>
+              <p className="text-[12px] text-muted-foreground font-normal mt-0.5">
                 {expectedDosesToday - takenToday <= 0 ? "Completed" : `${expectedDosesToday - takenToday} remaining`}
               </p>
             </div>
@@ -591,62 +579,56 @@ export default function Dashboard() {
           {/* Small Tile: Wellness (col-span-1) */}
           <motion.button
             variants={item}
-            whileTap={{ scale: 0.97 }}
-            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[2].to)}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-rose-500/25 dark:border-rose-500/20 bg-gradient-to-br from-rose-500/12 via-pink-500/6 to-card dark:from-rose-950/40 dark:via-pink-950/20 dark:to-card/80 backdrop-blur-xl hover:border-rose-500/50 hover:shadow-lg hover:shadow-rose-500/10 group relative overflow-hidden transition-all duration-300"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
           >
-            <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-rose-500/20 rounded-full blur-2xl pointer-events-none group-hover:bg-rose-500/30 transition-all duration-500" />
             <div className="flex items-center justify-between w-full relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-600 dark:text-rose-400 group-hover:scale-110 transition-transform duration-300 shadow-xs">
-                <Heart size={17} className="animate-bento-heartbeat" />
+              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-rose-500 transition-colors">
+                <Heart size={17} />
               </div>
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
             </div>
             <div className="relative z-10 pt-3">
-              <p className="text-[14px] font-medium text-foreground leading-tight">Wellness</p>
-              <p className="text-[12px] text-rose-700 dark:text-rose-300/90 font-medium mt-0.5">Health Log</p>
+              <p className="text-[15px] font-semibold text-foreground leading-tight">Wellness</p>
+              <p className="text-[12px] text-muted-foreground font-normal mt-0.5">Health Log</p>
             </div>
           </motion.button>
 
           {/* Metric Tile: Medications Cabinet (col-span-1) */}
           <motion.button
             variants={item}
-            whileTap={{ scale: 0.97 }}
-            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/medications")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-indigo-500/25 dark:border-indigo-500/20 bg-gradient-to-br from-indigo-500/12 via-blue-500/6 to-card dark:from-indigo-950/40 dark:via-blue-950/20 dark:to-card/80 backdrop-blur-xl hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 group relative overflow-hidden transition-all duration-300"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
           >
-            <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none group-hover:bg-indigo-500/30 transition-all duration-500" />
             <div className="flex items-center justify-between relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300 shadow-xs">
-                <Pill size={17} className="animate-bento-pill group-hover:rotate-45 transition-transform duration-500" />
+              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground transition-colors">
+                <Pill size={17} />
               </div>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
+              <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border/60">
                 {scopedMedicines.length}
               </span>
             </div>
             <div className="relative z-10 pt-3">
-              <p className="text-[14px] font-medium text-foreground leading-tight">Medications</p>
-              <p className="text-[12px] text-indigo-700 dark:text-indigo-300/90 font-medium mt-0.5">Cabinet</p>
+              <p className="text-[15px] font-semibold text-foreground leading-tight">Medications</p>
+              <p className="text-[12px] text-muted-foreground font-normal mt-0.5">Cabinet</p>
             </div>
           </motion.button>
 
           {/* Small Tile: Travel (col-span-1) */}
           <motion.button
             variants={item}
-            whileTap={{ scale: 0.97 }}
-            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[3].to)}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-blue-500/25 dark:border-blue-500/20 bg-gradient-to-br from-blue-500/12 via-sky-500/6 to-card dark:from-blue-950/40 dark:via-sky-950/20 dark:to-card/80 backdrop-blur-xl hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 group relative overflow-hidden transition-all duration-300"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
           >
-            <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl pointer-events-none group-hover:bg-blue-500/30 transition-all duration-500" />
-            <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300 relative z-10 shadow-xs">
-              <Plane size={17} className="animate-bento-plane" />
+            <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground transition-colors relative z-10">
+              <Plane size={17} />
             </div>
             <div className="relative z-10 pt-3">
-              <p className="text-[14px] font-medium text-foreground leading-tight">Travel</p>
-              <p className="text-[12px] text-blue-700 dark:text-blue-300/90 font-medium mt-0.5">Companion</p>
+              <p className="text-[15px] font-semibold text-foreground leading-tight">Travel</p>
+              <p className="text-[12px] text-muted-foreground font-normal mt-0.5">Companion</p>
             </div>
           </motion.button>
 
@@ -654,20 +636,17 @@ export default function Dashboard() {
           <motion.button
             variants={item}
             whileTap={{ scale: 0.98 }}
-            whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[4].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-amber-500/25 dark:border-amber-500/20 bg-gradient-to-br from-amber-500/12 via-orange-500/6 to-card dark:from-amber-950/40 dark:via-orange-950/20 dark:to-card/80 backdrop-blur-xl hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10 group relative overflow-hidden transition-all duration-300"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
           >
-            <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-amber-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/30 transition-all duration-500" />
-            <div className="relative w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform duration-300 shrink-0 shadow-xs">
-              <span className="absolute inset-0 rounded-xl bg-amber-500/25 animate-bento-ping pointer-events-none" />
-              <ShieldAlert size={19} className="animate-bento-shield relative z-10" />
+            <div className="w-10 h-10 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-amber-500 shrink-0">
+              <ShieldAlert size={18} />
             </div>
             <div className="flex-1 text-left min-w-0 relative z-10">
-              <p className="text-[15px] font-medium leading-tight text-foreground">Safety Check</p>
-              <p className="text-[12px] text-amber-700 dark:text-amber-300/90 font-medium mt-0.5">Rx Interactions &amp; Allergies</p>
+              <p className="text-[15px] font-semibold leading-tight text-foreground">Safety Check</p>
+              <p className="text-[12px] text-muted-foreground font-normal mt-0.5">Rx Interactions &amp; Allergies</p>
             </div>
-            <span className="text-[12px] font-semibold px-3.5 py-1 rounded-full bg-amber-500/15 group-hover:bg-amber-500/25 text-amber-800 dark:text-amber-200 border border-amber-500/30 transition-colors shrink-0 relative z-10">
+            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground border border-border/60 transition-colors shrink-0 relative z-10">
               Review
             </span>
           </motion.button>
@@ -676,33 +655,31 @@ export default function Dashboard() {
           <motion.button
             variants={item}
             whileTap={{ scale: 0.98 }}
-            whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[7].to)}
-            className="col-span-2 sm:col-span-4 rounded-[22px] p-5 sm:p-6 min-h-[92px] flex items-center gap-4 border border-purple-500/25 dark:border-purple-500/20 bg-gradient-to-br from-purple-500/12 via-indigo-500/6 to-card dark:from-purple-950/40 dark:via-indigo-950/20 dark:to-card/80 backdrop-blur-xl hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 group relative overflow-hidden transition-all duration-300"
+            className="col-span-2 sm:col-span-4 rounded-[22px] p-5 sm:p-6 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
           >
-            <div className="absolute -left-6 -bottom-6 w-36 h-36 bg-purple-500/20 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-500/30 transition-all duration-500" />
-            <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform duration-300 shrink-0 shadow-xs">
-              <FileText size={19} className="group-hover:rotate-6 transition-transform duration-300" />
+            <div className="w-10 h-10 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-[#0066cc] dark:text-[#2997ff] shrink-0">
+              <FileText size={18} />
             </div>
             <div className="flex-1 text-left min-w-0 relative z-10">
-              <p className="text-[15px] font-medium leading-tight text-foreground">Medical Reports</p>
-              <p className="text-[12px] text-purple-700 dark:text-purple-300/90 font-medium mt-0.5">Clinical PDF Export &amp; Analytics</p>
+              <p className="text-[15px] font-semibold leading-tight text-foreground">Medical Reports</p>
+              <p className="text-[12px] text-muted-foreground font-normal mt-0.5">Clinical PDF Export &amp; Analytics</p>
             </div>
             {/* Clinical ECG / Sparkline Trend Graphic */}
-            <div className="hidden sm:block shrink-0 w-24 h-7 opacity-85 group-hover:opacity-100 transition-opacity relative z-10">
+            <div className="hidden sm:block shrink-0 w-24 h-7 opacity-75 group-hover:opacity-100 transition-opacity relative z-10">
               <svg className="w-full h-full" viewBox="0 0 70 22" fill="none">
                 <path
                   d="M2 18 C 12 18, 16 7, 26 12 C 36 17, 42 3, 52 8 C 60 12, 64 5, 68 4"
                   stroke="currentColor"
-                  strokeWidth="2.5"
+                  strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="text-purple-600 dark:text-purple-400"
+                  className="text-muted-foreground"
                 />
-                <circle cx="68" cy="4" r="2.5" fill="currentColor" className="text-purple-500 dark:text-purple-400 animate-pulse" />
+                <circle cx="68" cy="4" r="2" fill="currentColor" className="text-[#0066cc] dark:text-[#2997ff]" />
               </svg>
             </div>
-            <span className="text-[12px] font-semibold px-3.5 py-1 rounded-full bg-purple-500/15 group-hover:bg-purple-500/25 text-purple-800 dark:text-purple-200 border border-purple-500/30 transition-colors shrink-0 relative z-10">
+            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground border border-border/60 transition-colors shrink-0 relative z-10">
               Export
             </span>
           </motion.button>

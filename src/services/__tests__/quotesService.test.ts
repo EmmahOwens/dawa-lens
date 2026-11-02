@@ -11,6 +11,12 @@ import {
   EVENING_CHECKIN_MESSAGES,
   WEEKLY_SUMMARY_MESSAGES,
   WELLNESS_NUDGE_MESSAGES,
+  MOVEMENT_MESSAGES,
+  MINDFULNESS_MESSAGES,
+  NUTRITION_MESSAGES,
+  EYE_REST_MESSAGES,
+  OUTDOOR_RESET_MESSAGES,
+  WIND_DOWN_MESSAGES,
   getQuoteIndexForDate,
   getDailyQuote,
   getQuoteForDayOffset,
@@ -19,6 +25,13 @@ import {
   getEveningCheckInQuote,
   getWeeklySummaryQuote,
   getWellnessNudgeQuote,
+  getMovementQuote,
+  getMindfulnessQuote,
+  getNutritionQuote,
+  getEyeRestQuote,
+  getOutdoorResetQuote,
+  getWindDownQuote,
+  scheduleDailyWellnessReminders,
 } from "../quotesService";
 import { addDays, subDays } from "date-fns";
 
@@ -292,6 +305,199 @@ describe("Hydration & Engagement Quotes Datasets & Rotation Engines", () => {
         visited.add(quote);
       }
       expect(visited.size).toBe(20);
+    });
+  });
+
+  describe("Movement & Posture Messages (MOVEMENT_MESSAGES)", () => {
+    it("contains at least 40 unique movement quotes", () => {
+      expect(MOVEMENT_MESSAGES).toBeDefined();
+      expect(MOVEMENT_MESSAGES.length).toBeGreaterThanOrEqual(40);
+      const set = new Set(MOVEMENT_MESSAGES);
+      expect(set.size).toBe(MOVEMENT_MESSAGES.length);
+    });
+
+    it("every quote has an emoji and valid text", () => {
+      for (const quote of MOVEMENT_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getMovementQuote rotates day-by-day across consecutive days", () => {
+      const baseDate = new Date("2026-09-01T10:00:00Z");
+      const visited = new Set<string>();
+      for (let day = 0; day < 20; day++) {
+        const quote = getMovementQuote(addDays(baseDate, day));
+        visited.add(quote);
+      }
+      expect(visited.size).toBe(20);
+    });
+  });
+
+  describe("Mindfulness Messages (MINDFULNESS_MESSAGES)", () => {
+    it("contains at least 40 unique mindfulness quotes", () => {
+      expect(MINDFULNESS_MESSAGES).toBeDefined();
+      expect(MINDFULNESS_MESSAGES.length).toBeGreaterThanOrEqual(40);
+      const set = new Set(MINDFULNESS_MESSAGES);
+      expect(set.size).toBe(MINDFULNESS_MESSAGES.length);
+    });
+
+    it("every quote has an emoji and valid text", () => {
+      for (const quote of MINDFULNESS_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getMindfulnessQuote rotates day-by-day across consecutive days", () => {
+      const baseDate = new Date("2026-09-01T10:00:00Z");
+      const visited = new Set<string>();
+      for (let day = 0; day < 20; day++) {
+        const quote = getMindfulnessQuote(addDays(baseDate, day));
+        visited.add(quote);
+      }
+      expect(visited.size).toBe(20);
+    });
+  });
+
+  describe("Nutrition Messages (NUTRITION_MESSAGES)", () => {
+    it("contains at least 40 unique nutrition quotes", () => {
+      expect(NUTRITION_MESSAGES).toBeDefined();
+      expect(NUTRITION_MESSAGES.length).toBeGreaterThanOrEqual(40);
+      const set = new Set(NUTRITION_MESSAGES);
+      expect(set.size).toBe(NUTRITION_MESSAGES.length);
+    });
+
+    it("every quote has an emoji and valid text", () => {
+      for (const quote of NUTRITION_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getNutritionQuote rotates day-by-day across consecutive days", () => {
+      const baseDate = new Date("2026-09-01T10:00:00Z");
+      const visited = new Set<string>();
+      for (let day = 0; day < 20; day++) {
+        const quote = getNutritionQuote(addDays(baseDate, day));
+        visited.add(quote);
+      }
+      expect(visited.size).toBe(20);
+    });
+  });
+
+  describe("Eye Rest Messages (EYE_REST_MESSAGES)", () => {
+    it("contains at least 35 unique eye rest quotes", () => {
+      expect(EYE_REST_MESSAGES).toBeDefined();
+      expect(EYE_REST_MESSAGES.length).toBeGreaterThanOrEqual(35);
+      const set = new Set(EYE_REST_MESSAGES);
+      expect(set.size).toBe(EYE_REST_MESSAGES.length);
+    });
+
+    it("every quote has an emoji and valid text", () => {
+      for (const quote of EYE_REST_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getEyeRestQuote rotates day-by-day across consecutive days", () => {
+      const baseDate = new Date("2026-09-01T10:00:00Z");
+      const visited = new Set<string>();
+      for (let day = 0; day < 20; day++) {
+        const quote = getEyeRestQuote(addDays(baseDate, day));
+        visited.add(quote);
+      }
+      expect(visited.size).toBe(20);
+    });
+  });
+
+  describe("Outdoor Reset Messages (OUTDOOR_RESET_MESSAGES)", () => {
+    it("contains at least 35 unique outdoor reset quotes", () => {
+      expect(OUTDOOR_RESET_MESSAGES).toBeDefined();
+      expect(OUTDOOR_RESET_MESSAGES.length).toBeGreaterThanOrEqual(35);
+      const set = new Set(OUTDOOR_RESET_MESSAGES);
+      expect(set.size).toBe(OUTDOOR_RESET_MESSAGES.length);
+    });
+
+    it("every quote has an emoji and valid text", () => {
+      for (const quote of OUTDOOR_RESET_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getOutdoorResetQuote rotates day-by-day across consecutive days", () => {
+      const baseDate = new Date("2026-09-01T10:00:00Z");
+      const visited = new Set<string>();
+      for (let day = 0; day < 20; day++) {
+        const quote = getOutdoorResetQuote(addDays(baseDate, day));
+        visited.add(quote);
+      }
+      expect(visited.size).toBe(20);
+    });
+  });
+
+  describe("Wind-Down Messages (WIND_DOWN_MESSAGES)", () => {
+    it("contains at least 40 unique wind-down quotes", () => {
+      expect(WIND_DOWN_MESSAGES).toBeDefined();
+      expect(WIND_DOWN_MESSAGES.length).toBeGreaterThanOrEqual(40);
+      const set = new Set(WIND_DOWN_MESSAGES);
+      expect(set.size).toBe(WIND_DOWN_MESSAGES.length);
+    });
+
+    it("every quote has an emoji and valid text", () => {
+      for (const quote of WIND_DOWN_MESSAGES) {
+        expect(typeof quote).toBe("string");
+        expect(quote.trim().length).toBeGreaterThan(15);
+        expect(emojiRegex.test(quote)).toBe(true);
+      }
+    });
+
+    it("getWindDownQuote rotates day-by-day across consecutive days", () => {
+      const baseDate = new Date("2026-09-01T10:00:00Z");
+      const visited = new Set<string>();
+      for (let day = 0; day < 20; day++) {
+        const quote = getWindDownQuote(addDays(baseDate, day));
+        visited.add(quote);
+      }
+      expect(visited.size).toBe(20);
+    });
+  });
+
+  describe("scheduleDailyWellnessReminders", () => {
+    it("schedules diverse wellness reminders beyond hydration", async () => {
+      const localBatch: any[] = [];
+      const alarmBatch: any[] = [];
+      const ids: number[] = [];
+
+      await scheduleDailyWellnessReminders(localBatch, alarmBatch, ids);
+
+      // Verify reminders were generated
+      expect(localBatch.length).toBeGreaterThan(0);
+      expect(alarmBatch.length).toBe(localBatch.length);
+      expect(ids.length).toBe(localBatch.length);
+
+      // Verify that types other than hydration are scheduled
+      const types = new Set(localBatch.map((n) => n.extra?.type));
+      expect(types.has("hydration")).toBe(true);
+      expect(types.has("movement") || types.has("outdoor_reset")).toBe(true);
+      expect(types.has("nutrition")).toBe(true);
+      expect(types.has("eye_rest")).toBe(true);
+      expect(types.has("mindfulness")).toBe(true);
+      expect(types.has("wind_down")).toBe(true);
+
+      // Every scheduled item has valid content and IDs
+      for (const item of localBatch) {
+        expect(item.id).toBeGreaterThan(0);
+        expect(item.title.length).toBeGreaterThan(3);
+        expect(item.body.length).toBeGreaterThan(10);
+      }
     });
   });
 });

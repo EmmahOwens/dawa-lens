@@ -1,32 +1,84 @@
+use serde::{Deserialize, Serialize};
+
 /// A drug entry returned by a search query.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DrugEntry {
     pub name: String,
     pub score: f32,
     pub rxcui: Option<String>,
 }
 
-/// Jaro similarity between two strings.
+/// Fast, allocation-free Jaro similarity for ASCII strings (with fallback for non-ASCII).
 fn jaro(s1: &str, s2: &str) -> f32 {
     if s1 == s2 {
         return 1.0;
     }
-    let s1_chars: Vec<char> = s1.chars().collect();
-    let s2_chars: Vec<char> = s2.chars().collect();
-    let s1_len = s1_chars.len();
-    let s2_len = s2_chars.len();
+    let b1 = s1.as_bytes();
+    let b2 = s2.as_bytes();
+    let s1_len = b1.len();
+    let s2_len = b2.len();
     if s1_len == 0 || s2_len == 0 {
         return 0.0;
     }
 
-    let match_distance = (s1_len.max(s2_len) / 2).saturating_sub(1);
-    let mut s1_matches = vec![false; s1_len];
-    let mut s2_matches = vec![false; s2_len];
+    // Use stack bitmasks for typical drug names (<= 64 bytes) to eliminate heap allocations
+    if s1_len <= 64 && s2_len <= 64 && s1.is_ascii() && s2.is_ascii() {
+        let match_distance = (s1_len.max(s2_len) / 2).saturating_sub(1);
+        let mut s1_mask: u64 = 0;
+        let mut s2_mask: u64 = 0;
+        let mut matches = 0usize;
+        let mut transpositions = 0usize;
+
+        for i in 0..s1_len {
+            let start = i.saturating_sub(match_distance);
+            let end = (i + match_distance + 1).min(s2_len);
+            for j in start..end {
+                if (s2_mask & (1u64 << j)) != 0 || b1[i] != b2[j] {
+                    continue;
+                }
+                s1_mask |= 1u64 << i;
+                s2_mask |= 1u64 << j;
+                matches += 1;
+                break;
+            }
+        }
+
+        if matches == 0 {
+            return 0.0;
+        }
+
+        let mut k = 0;
+        for i in 0..s1_len {
+            if (s1_mask & (1u64 << i)) == 0 {
+                continue;
+            }
+            while (s2_mask & (1u64 << k)) == 0 {
+                k += 1;
+            }
+            if b1[i] != b2[k] {
+                transpositions += 1;
+            }
+            k += 1;
+        }
+
+        let m = matches as f32;
+        let t = (transpositions / 2) as f32;
+        return (m / s1_len as f32 + m / s2_len as f32 + (m - t) / m) / 3.0;
+    }
+
+    let s1_chars: Vec<char> = s1.chars().collect();
+    let s2_chars: Vec<char> = s2.chars().collect();
+    let c1_len = s1_chars.len();
+    let c2_len = s2_chars.len();
+    let match_distance = (c1_len.max(c2_len) / 2).saturating_sub(1);
+    let mut s1_matches = vec![false; c1_len];
+    let mut s2_matches = vec![false; c2_len];
     let mut matches = 0usize;
     let mut transpositions = 0usize;
 
-    for i in 0..s1_len {
+    for i in 0..c1_len {
         let start = i.saturating_sub(match_distance);
-        let end = (i + match_distance + 1).min(s2_len);
+        let end = (i + match_distance + 1).min(c2_len);
         for j in start..end {
             if s2_matches[j] || s1_chars[i] != s2_chars[j] {
                 continue;
@@ -43,7 +95,7 @@ fn jaro(s1: &str, s2: &str) -> f32 {
     }
 
     let mut k = 0;
-    for i in 0..s1_len {
+    for i in 0..c1_len {
         if !s1_matches[i] {
             continue;
         }
@@ -58,19 +110,35 @@ fn jaro(s1: &str, s2: &str) -> f32 {
 
     let m = matches as f32;
     let t = (transpositions / 2) as f32;
-    (m / s1_len as f32 + m / s2_len as f32 + (m - t) / m) / 3.0
+    (m / c1_len as f32 + m / c2_len as f32 + (m - t) / m) / 3.0
 }
 
 /// Jaro-Winkler similarity — boosts strings that share a common prefix (up to 4 chars).
-fn jaro_winkler(s1: &str, s2: &str) -> f32 {
+pub fn jaro_winkler(s1: &str, s2: &str) -> f32 {
     let jaro_sim = jaro(s1, s2);
     let prefix_len = s1
-        .chars()
-        .zip(s2.chars())
+        .bytes()
+        .zip(s2.bytes())
         .take(4)
         .take_while(|(a, b)| a == b)
         .count() as f32;
     jaro_sim + (prefix_len * 0.1 * (1.0 - jaro_sim))
+}
+
+/// Calculates great-circle distance between two coordinates in kilometers (rounded to 0.1 km),
+/// matching `calculateHaversineDistance` in `src/services/pharmacyService.ts`.
+pub fn haversine_distance_km(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
+    const EARTH_RADIUS_KM: f64 = 6371.0;
+    let d_lat = (lat2 - lat1).to_radians();
+    let d_lon = (lon2 - lon1).to_radians();
+    let r_lat1 = lat1.to_radians();
+    let r_lat2 = lat2.to_radians();
+
+    let a = (d_lat / 2.0).sin().powi(2)
+        + r_lat1.cos() * r_lat2.cos() * (d_lon / 2.0).sin().powi(2);
+    let c = 2.0 * a.sqrt().atan2((1.0 - a).max(0.0).sqrt());
+    let distance = EARTH_RADIUS_KM * c;
+    (distance * 10.0).round() / 10.0
 }
 
 /// Perform a case-insensitive fuzzy search over the embedded drug index.
@@ -83,14 +151,13 @@ pub fn fuzzy_search(query: &str, limit: usize) -> Vec<DrugEntry> {
     if query.is_empty() {
         return Vec::new();
     }
-    let q = query.to_lowercase();
-    let lim = limit.max(1).min(20);
+    let q = query.to_ascii_lowercase();
+    let lim = limit.clamp(1, 20);
 
     let mut scored: Vec<(&str, &str, f32)> = DRUG_INDEX
         .iter()
         .map(|(name, rxcui)| {
-            let name_lower = name.to_lowercase();
-            // Exact prefix match → float to the top with a tiny length-based tiebreaker
+            let name_lower = name.to_ascii_lowercase();
             let score = if name_lower.starts_with(&q) {
                 1.0f32 - (name_lower.len() as f32 - q.len() as f32) * 0.001
             } else {
@@ -121,18 +188,19 @@ pub fn fuzzy_search(query: &str, limit: usize) -> Vec<DrugEntry> {
 /// Embedded drug index: (generic/brand name, RxCUI) pairs.
 ///
 /// Sources: Uganda Essential Medicines List (EMLU), WHO Model List of Essential Medicines,
-/// and common Ugandan national formulary entries.
-///
-/// For production use, replace this slice with a compressed binary index generated
-/// from the full RxNorm RXNCONSO table (~15 000 drug names, ~120 KB with zstd).
+/// and common Ugandan national formulary & brand entries.
 static DRUG_INDEX: &[(&str, &str)] = &[
-    // ── Analgesics ──────────────────────────────────────────────────────────
+    // ── Analgesics & NSAIDs ─────────────────────────────────────────────────
     ("Paracetamol", "161"),
     ("Acetaminophen", "161"),
+    ("Panadol", "161"),
     ("Ibuprofen", "5640"),
+    ("Brufen", "5640"),
     ("Aspirin", "1191"),
     ("Diclofenac", "3407"),
     ("Naproxen", "7258"),
+    ("Meloxicam", "41493"),
+    ("Celecoxib", "140587"),
     ("Tramadol", "10689"),
     ("Morphine", "7052"),
     ("Codeine", "2670"),
@@ -140,15 +208,18 @@ static DRUG_INDEX: &[(&str, &str)] = &[
     // ── Antibiotics ─────────────────────────────────────────────────────────
     ("Amoxicillin", "723"),
     ("Amoxicillin-Clavulanate", ""),
+    ("Augmentin", ""),
     ("Ampicillin", "733"),
     ("Ciprofloxacin", "2551"),
     ("Metronidazole", "6922"),
+    ("Flagyl", "6922"),
     ("Doxycycline", "3640"),
     ("Azithromycin", "18631"),
     ("Erythromycin", "4053"),
     ("Clindamycin", "2582"),
     ("Trimethoprim", "10829"),
     ("Cotrimoxazole", ""),
+    ("Septrin", ""),
     ("Tetracycline", "10528"),
     ("Penicillin V", "7980"),
     ("Benzylpenicillin", ""),
@@ -158,8 +229,10 @@ static DRUG_INDEX: &[(&str, &str)] = &[
     ("Gentamicin", "4333"),
     ("Nitrofurantoin", "7454"),
     ("Levofloxacin", "82122"),
+    ("Linezolid", "190376"),
     // ── Antimalarials ────────────────────────────────────────────────────────
     ("Artemether-Lumefantrine", ""),
+    ("Coartem", ""),
     ("Artesunate", ""),
     ("Chloroquine", "2468"),
     ("Quinine", "9071"),
@@ -184,21 +257,34 @@ static DRUG_INDEX: &[(&str, &str)] = &[
     ("Dolutegravir", ""),
     ("Acyclovir", "2551"),
     ("Oseltamivir", ""),
-    // ── Antihypertensives ────────────────────────────────────────────────────
+    // ── Cardiovascular & Antihypertensives ───────────────────────────────────
     ("Amlodipine", "17767"),
     ("Nifedipine", "7417"),
     ("Atenolol", "1202"),
     ("Metoprolol", "6918"),
+    ("Carvedilol", "20352"),
     ("Lisinopril", "29046"),
     ("Enalapril", "3826"),
+    ("Ramipril", "35296"),
     ("Captopril", "1827"),
     ("Losartan", "203160"),
+    ("Valsartan", "69749"),
+    ("Telmisartan", "73494"),
     ("Hydrochlorothiazide", "5487"),
     ("Furosemide", "4603"),
     ("Spironolactone", "9997"),
+    ("Potassium Chloride", "8591"),
     ("Methyldopa", "6807"),
     ("Propranolol", "8787"),
     ("Verapamil", "11170"),
+    ("Diltiazem", "3443"),
+    ("Amiodarone", "703"),
+    ("Nitroglycerin", "4917"),
+    ("Isosorbide", "6058"),
+    ("Sildenafil", "136411"),
+    ("Tadalafil", "358263"),
+    ("Apixaban", "1364430"),
+    ("Rivaroxaban", "1114195"),
     ("Amlodipine-Valsartan", ""),
     // ── Antidiabetics ────────────────────────────────────────────────────────
     ("Metformin", "6809"),
@@ -209,7 +295,7 @@ static DRUG_INDEX: &[(&str, &str)] = &[
     ("Insulin NPH", ""),
     ("Pioglitazone", ""),
     ("Sitagliptin", ""),
-    // ── Respiratory ──────────────────────────────────────────────────────────
+    // ── Respiratory & Allergy ────────────────────────────────────────────────
     ("Salbutamol", "9180"),
     ("Albuterol", "435"),
     ("Budesonide", "28029"),
@@ -222,8 +308,10 @@ static DRUG_INDEX: &[(&str, &str)] = &[
     ("Montelukast", ""),
     ("Fluticasone", ""),
     ("Salmeterol", ""),
+    ("Cetirizine", "20610"),
     // ── Gastrointestinal ─────────────────────────────────────────────────────
     ("Omeprazole", "40790"),
+    ("Esomeprazole", "283742"),
     ("Pantoprazole", ""),
     ("Ranitidine", "9143"),
     ("Domperidone", ""),
@@ -235,7 +323,7 @@ static DRUG_INDEX: &[(&str, &str)] = &[
     ("Antacid", ""),
     ("Cimetidine", "2517"),
     ("Hyoscine", ""),
-    // ── Mental health ────────────────────────────────────────────────────────
+    // ── Mental Health & Neurology ────────────────────────────────────────────
     ("Haloperidol", "5613"),
     ("Chlorpromazine", "2456"),
     ("Diazepam", "3322"),
@@ -243,12 +331,16 @@ static DRUG_INDEX: &[(&str, &str)] = &[
     ("Amitriptyline", "704"),
     ("Fluoxetine", "41493"),
     ("Sertraline", "36437"),
+    ("Escitalopram", "321988"),
+    ("Citalopram", "2556"),
+    ("Lithium", "6448"),
+    ("Levodopa", "6375"),
     ("Carbamazepine", "2002"),
     ("Phenytoin", "8123"),
     ("Sodium Valproate", ""),
     ("Valproic Acid", "11118"),
     ("Phenobarbital", "8134"),
-    // ── Vitamins & supplements ───────────────────────────────────────────────
+    // ── Vitamins & Supplements ───────────────────────────────────────────────
     ("Folic Acid", "4511"),
     ("Ferrous Sulphate", ""),
     ("Iron", "4978"),
@@ -274,7 +366,9 @@ static DRUG_INDEX: &[(&str, &str)] = &[
     ("Chloramphenicol Eye Drops", ""),
     ("Timolol Eye Drops", ""),
     ("Pilocarpine Eye Drops", ""),
-    // ── Other common ─────────────────────────────────────────────────────────
+    // ── Immunosuppressants & Other Common ────────────────────────────────────
+    ("Methotrexate", "6851"),
+    ("Azathioprine", "1256"),
     ("Rabipur", ""),
     ("ORS", ""),
     ("Quinine Sulphate", ""),

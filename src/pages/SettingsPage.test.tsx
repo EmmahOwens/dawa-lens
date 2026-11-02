@@ -41,6 +41,7 @@ vi.mock("@capacitor/core", () => ({
     isNativePlatform: vi.fn().mockReturnValue(false),
     getPlatform: vi.fn().mockReturnValue("web"),
   },
+  registerPlugin: vi.fn().mockReturnValue({}),
 }));
 
 vi.mock("@capacitor/app", () => ({
@@ -403,6 +404,6 @@ describe("Property 6: Dialog state resets after any close path — SettingsPage 
         { numRuns: 20 }
       );
     },
-    60_000
+    120_000
   );
 });

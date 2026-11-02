@@ -146,7 +146,7 @@ export const SOUND_CATEGORIES: SoundCategoryMeta[] = [
   {
     key: "quotes",
     label: "Daily Quotes & Wellness",
-    description: "Morning health inspiration and evening wellness nudges",
+    description: "Morning inspiration, movement, mindfulness, nutrition & sleep wind-down nudges",
     iconName: "Sparkles",
     defaultSoundId: "uplifting-flute",
   },

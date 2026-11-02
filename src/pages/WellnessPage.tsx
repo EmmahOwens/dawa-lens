@@ -571,10 +571,10 @@ export default function WellnessPage() {
                             dispatchMoodPreview(m.val);
                           }
                         }}
-                        className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-2xl transition-all duration-300 ${mood === m.val ? (moodThemeEnabled ? "bg-primary text-primary-foreground scale-110 shadow-lg shadow-primary/20 -translate-y-1" : "bg-success text-success-foreground scale-110 shadow-lg shadow-success/20 -translate-y-1") : "bg-muted/30 hover:bg-muted/50"}`}
+                        className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-colors duration-200 ${mood === m.val ? (moodThemeEnabled ? "bg-primary text-primary-foreground shadow-xs" : "bg-success text-success-foreground shadow-xs") : "bg-muted/30 hover:bg-muted/50"}`}
                       >
-                        <LottieMoji emoji={m.emoji} size={32} className="mb-1" active={mood === m.val} />
-                        <span className={`text-[8px] font-black uppercase tracking-tighter ${mood === m.val ? "opacity-100" : "opacity-0"}`}>{m.label}</span>
+                        <LottieMoji emoji={m.emoji} size={30} className="mb-0.5" active={mood === m.val} />
+                        <span className={`text-[11px] font-medium ${mood === m.val ? "opacity-100" : "opacity-70"}`}>{m.label}</span>
                       </button>
                     ))}
                   </div>
@@ -593,7 +593,7 @@ export default function WellnessPage() {
               {/* Mobile Quick Symptom Selector */}
               <div className="sm:hidden mb-6 space-y-2">
                 <div className="flex items-center justify-between px-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-[12px] font-medium text-muted-foreground">
                     Quick Add Symptom
                   </span>
                   {symptoms.length > 0 && (
@@ -686,7 +686,7 @@ export default function WellnessPage() {
               <Button
                 onClick={handleLogWellness}
                 disabled={loading || reflectionLoading}
-                className="w-full mt-8 h-14 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full mt-8 h-12 rounded-xl text-sm font-medium bg-[#0066cc] hover:bg-[#0071e3] text-white shadow-xs active:scale-[0.98] transition-colors"
               >
                 {reflectionLoading ? (
                   <><Loader2 className="animate-spin mr-2" size={16} /> Generating Reflection…</>
@@ -695,7 +695,7 @@ export default function WellnessPage() {
                 ) : latestDayLog ? (
                   <><CheckCircle2 className="mr-2" size={16} /> Update Daily Reflection</>
                 ) : (
-                  <><CheckCircle2 className="mr-2" size={16} /> Secure Daily Reflection</>
+                  <><CheckCircle2 className="mr-2" size={16} /> Save Daily Reflection</>
                 )}
               </Button>
             </div>
@@ -714,7 +714,6 @@ export default function WellnessPage() {
                 <h3 className="section-title flex items-center gap-2 mb-0">
                   <Utensils size={16} className="text-warning" /> Plate Analysis
                 </h3>
-                <Sparkles size={16} className="text-warning/40 animate-pulse" />
               </div>
 
               <div className="relative">
@@ -724,15 +723,15 @@ export default function WellnessPage() {
                   placeholder="What's on your plate?"
                   className="w-full h-36 p-5 rounded-2xl bg-muted/20 border-2 border-transparent focus:border-warning/30 outline-none transition-all font-medium text-sm leading-relaxed resize-none shadow-inner"
                 />
-                <div className="absolute bottom-4 right-4 flex items-center gap-1.5 opacity-40">
+                <div className="absolute bottom-4 right-4 flex items-center gap-1.5 opacity-50">
                   <Info size={12} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">AI Assisted</span>
+                  <span className="text-[11px] font-medium text-muted-foreground">Nutrition Analysis</span>
                 </div>
               </div>
 
               {/* Desktop Suggestions */}
               <div className="hidden sm:block mt-4 mb-6">
-                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 mb-3 ml-1">Local Favorites</p>
+                <p className="text-[12px] font-medium text-muted-foreground mb-3 ml-1">Local Favorites</p>
                 <div className="flex flex-wrap gap-2">
                   {["Matooke & G-nut Sauce", "Fish Stew & Kalo", "Katogo with Beans", "Steamed Luwombo", "Mukene & Posho", "Nakati & Sweet Potatoes", "Nsenene (Grasshoppers)", "Roasted Gonja"].map(s => (
                     <button

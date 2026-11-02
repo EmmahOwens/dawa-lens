@@ -4,8 +4,20 @@ import { motion } from "framer-motion";
 import { 
   ArrowLeft, Shield, Trash2, Moon, Lock, 
   User, Mail, Database, CheckCircle2, ShieldCheck, ShieldAlert, RefreshCw,
-  Bell, Smartphone, Clock, Zap, ExternalLink, Play, ChevronDown, Sparkles
+  Bell, Smartphone, Clock, Zap, ExternalLink, Play, ChevronDown, Sparkles,
+  Droplets, Eye, Heart, Activity
 } from "@/lib/icons";
+import { toast as sonnerToast } from "sonner";
+import { soundService } from "@/services/soundService";
+import {
+  getMovementQuote,
+  getMindfulnessQuote,
+  getNutritionQuote,
+  getEyeRestQuote,
+  getOutdoorResetQuote,
+  getWindDownQuote,
+  getHydrationQuote,
+} from "@/services/quotesService";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/AppContext";
@@ -241,6 +253,55 @@ export default function SettingsPage() {
     } catch (err) {
       console.warn("Test alarm error:", err);
     }
+  };
+
+  const previewIndexRef = useRef(0);
+  const handlePreviewWellnessReminder = () => {
+    const previews = [
+      {
+        title: "🚶 Posture & Movement Break",
+        body: getMovementQuote(),
+        category: "quotes" as const,
+      },
+      {
+        title: "🧘 Mindful Breath & Stress Reset",
+        body: getMindfulnessQuote(),
+        category: "quotes" as const,
+      },
+      {
+        title: "🥗 Balanced Fuel & Nutrition",
+        body: getNutritionQuote(),
+        category: "quotes" as const,
+      },
+      {
+        title: "👁️ 20-20-20 Eye Rest Break",
+        body: getEyeRestQuote(),
+        category: "quotes" as const,
+      },
+      {
+        title: "☀️ Daylight & Fresh Air Pause",
+        body: getOutdoorResetQuote(),
+        category: "quotes" as const,
+      },
+      {
+        title: "💧 Hydration Reminder",
+        body: getHydrationQuote(new Date(), 0),
+        category: "hydration" as const,
+      },
+      {
+        title: "🌙 Wind-Down & Sleep Preparation",
+        body: getWindDownQuote(),
+        category: "quotes" as const,
+      },
+    ];
+
+    const current = previews[previewIndexRef.current % previews.length];
+    previewIndexRef.current++;
+    soundService.tryPlayForCategory(current.category);
+    sonnerToast.info(current.title, {
+      description: current.body,
+      duration: 5000,
+    });
   };
 
   const handleConfigureAutostart = async () => {
@@ -716,6 +777,79 @@ export default function SettingsPage() {
               disabled={isTogglingGuardian}
               onCheckedChange={handleToggleGuardian}
             />
+          </div>
+
+          {/* Daily Health & Wellness Reminders Overview */}
+          <div className="mb-4 p-4 rounded-2xl bg-muted/30 border border-border/50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Heart size={16} className="text-rose-500" />
+                <h4 className="text-xs font-bold text-foreground">Active Daily Wellness Reminders</h4>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                7 Daily Touchpoints
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+              DawaLens delivers evidence-informed wellness nudges throughout your day to support circulation, posture, recovery, eyesight, and calm alongside your medication schedule:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 flex items-start gap-2.5">
+                <Droplets size={15} className="text-cyan-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-foreground text-[11px]">Hydration &amp; Metabolism</p>
+                  <p className="text-[10px] text-muted-foreground">08:00 &amp; 18:00 • Flushes waste &amp; assists drug dissolution</p>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 flex items-start gap-2.5">
+                <Activity size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-foreground text-[11px]">Movement &amp; Posture Break</p>
+                  <p className="text-[10px] text-muted-foreground">10:00 • Spinal decompression &amp; circulation boost</p>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 flex items-start gap-2.5">
+                <Sparkles size={15} className="text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-foreground text-[11px]">Balanced Fuel &amp; Nutrition</p>
+                  <p className="text-[10px] text-muted-foreground">12:00 • GI protection &amp; stable midday stamina</p>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 flex items-start gap-2.5">
+                <Eye size={15} className="text-blue-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-foreground text-[11px]">20-20-20 Eye Rest</p>
+                  <p className="text-[10px] text-muted-foreground">14:00 • Relaxes ciliary muscles &amp; screens strain</p>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 flex items-start gap-2.5">
+                <Zap size={15} className="text-purple-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-foreground text-[11px]">Mindful Breath &amp; Stress Reset</p>
+                  <p className="text-[10px] text-muted-foreground">16:00 • 4-7-8 breathing &amp; cortisol regulation</p>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 flex items-start gap-2.5">
+                <Moon size={15} className="text-indigo-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-foreground text-[11px]">Wind-Down &amp; Sleep Hygiene</p>
+                  <p className="text-[10px] text-muted-foreground">21:30 • Screen dimming &amp; overnight cellular repair</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-border/40 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-muted-foreground">Hear audio chimes &amp; toast preview:</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviewWellnessReminder}
+                className="h-7 px-2.5 text-xs font-semibold rounded-lg hover:bg-muted"
+              >
+                <Play size={11} className="mr-1 fill-current" />
+                Preview Sample
+              </Button>
+            </div>
           </div>
 
           {/* Diagnostic 10-Second Test Alarm */}

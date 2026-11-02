@@ -109,18 +109,14 @@ export function DashboardBanner() {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="relative mb-8 rounded-[22px] bg-gradient-to-br from-emerald-500/12 via-teal-500/8 to-cyan-500/12 dark:from-emerald-950/40 dark:via-teal-950/25 dark:to-cyan-950/35 border border-emerald-500/30 dark:border-emerald-500/25 p-6 sm:p-7 overflow-hidden backdrop-blur-xl shadow-lg shadow-emerald-950/5 transition-all"
+      transition={{ duration: 0.2 }}
+      className="relative mb-8 rounded-[22px] bg-card border border-border/80 p-6 sm:p-7 overflow-hidden shadow-xs transition-colors"
     >
-      {/* Ambient Apple Health Glow Orbs */}
-      <div className="absolute -top-12 -right-12 w-52 h-52 bg-emerald-400/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-10 -left-10 w-44 h-44 bg-teal-400/20 rounded-full blur-3xl pointer-events-none" />
-
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-4 max-w-xl">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold uppercase tracking-wider shadow-xs">
-              <Sparkles size={12} className="animate-pulse text-emerald-500" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary border border-border/60 text-foreground text-[12px] font-medium">
+              <TrendingUp size={13} className="text-[#0066cc] dark:text-[#2997ff]" />
               Wellness Pulse
             </span>
           </div>
@@ -129,23 +125,23 @@ export function DashboardBanner() {
 
           <div className="flex items-center gap-6 pt-1">
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300/80">7-Day Consistency</span>
+              <span className="text-[12px] font-medium text-muted-foreground">7-Day Consistency</span>
               <div className="flex items-center gap-2 mt-1.5">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                  <TrendingUp size={15} />
+                <div className="w-7 h-7 rounded-lg bg-secondary border border-border/60 flex items-center justify-center text-foreground">
+                  <TrendingUp size={14} />
                 </div>
-                <span className="text-xl font-bold text-foreground tracking-tight">{adherencePercent}<span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 ml-0.5">%</span></span>
+                <span className="text-xl font-semibold text-foreground tracking-tight">{adherencePercent}<span className="text-xs font-normal text-muted-foreground ml-0.5">%</span></span>
               </div>
             </div>
-            <div className="w-px h-9 bg-emerald-500/25" />
+            <div className="w-px h-9 bg-border" />
             <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300/80">Success Streak</span>
+              <span className="text-[12px] font-medium text-muted-foreground">Success Streak</span>
               <div className="flex items-center gap-2 mt-1.5">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                  <Calendar size={15} />
+                <div className="w-7 h-7 rounded-lg bg-secondary border border-border/60 flex items-center justify-center text-foreground">
+                  <Calendar size={14} />
                 </div>
-                <span className="text-xl font-bold text-foreground tracking-tight">
-                  {streak} <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">{streak === 1 ? 'Day' : 'Days'}</span>
+                <span className="text-xl font-semibold text-foreground tracking-tight">
+                  {streak} <span className="text-xs font-normal text-muted-foreground">{streak === 1 ? 'Day' : 'Days'}</span>
                 </span>
               </div>
             </div>
@@ -154,7 +150,7 @@ export function DashboardBanner() {
 
         <button 
           onClick={() => navigate('/report')}
-          className="self-start md:self-center flex items-center gap-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white h-11 px-5.5 rounded-full font-semibold text-xs tracking-wide shadow-md shadow-emerald-600/25 hover:shadow-emerald-600/35 hover:brightness-105 transition-all active:scale-95 shrink-0"
+          className="self-start md:self-center flex items-center gap-2 bg-[#0066cc] hover:bg-[#0071e3] text-white h-10 px-5 rounded-full font-medium text-[13px] shadow-xs active:scale-[0.98] transition-colors shrink-0"
         >
           <span>Detailed Report</span>
           <ArrowRight size={14} />
