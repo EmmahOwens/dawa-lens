@@ -10,11 +10,15 @@ export const getUserProfile = async (uid) => {
 };
 
 export const upsertUserProfile = async (uid, data) => {
+  const existingDoc = await usersCol.doc(uid).get();
+  const existingData = existingDoc.exists ? existingDoc.data() : {};
+
   const payload = {
     name: data.name || '',
     dateOfBirth: data.dateOfBirth || null,
     gender: data.gender || null,
-    isProfessional: data.isProfessional ?? false,
+    // Preserve existing status; cannot be self-promoted via public profile endpoint
+    isProfessional: existingData.isProfessional ?? false,
     language: data.language || 'en',
     timezone: data.timezone || null,
     currentCity: data.currentCity || null,

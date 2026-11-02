@@ -4,9 +4,9 @@
 //! Android Native (JNI) and WebAssembly (`wasm32-unknown-unknown`).
 //! Mirrors `src/services/clinicalInteractionsData.ts` 1:1.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ClinicalDrugDef {
     pub canonical_id: &'static str,
@@ -15,7 +15,7 @@ pub struct ClinicalDrugDef {
     pub synonyms: &'static [&'static str],
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ClinicalDetails {
     pub title: &'static str,
@@ -26,7 +26,7 @@ pub struct ClinicalDetails {
     pub organ_risk: &'static str,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ParsedInteraction {
     pub drug1: String,
@@ -942,6 +942,10 @@ const DOSAGE_UNITS: &[&str] = &[
     "tablets", "tablet", "tabs", "tab", "caps", "cap", "mcg", "mg", "ml", "g",
 ];
 
+const FORM_WORDS: &[&str] = &[
+    "tablets", "tablet", "tabs", "tab", "capsules", "capsule", "caps", "cap",
+];
+
 fn is_word_char(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
@@ -956,8 +960,26 @@ pub fn normalize_drug_string(input: &str) -> String {
     let mut i = 0;
 
     while i < len {
-        // Check word boundary before digit
+        // Check word boundary
         let at_word_start = i == 0 || !is_word_char(bytes[i - 1]);
+        if at_word_start {
+            // Strip standalone dosage form words like "tablets", "tabs"
+            let rest = &lower[i..];
+            let mut matched_form_len = None;
+            for form in FORM_WORDS {
+                if rest.starts_with(form) {
+                    let after = i + form.len();
+                    if after == len || !is_word_char(bytes[after]) {
+                        matched_form_len = Some(form.len());
+                        break;
+                    }
+                }
+            }
+            if let Some(f_len) = matched_form_len {
+                i += f_len;
+                continue;
+            }
+        }
         if at_word_start && bytes[i].is_ascii_digit() {
             let mut j = i;
             while j < len && bytes[j].is_ascii_digit() {

@@ -77,9 +77,9 @@ service cloud.firestore {
     // Schema validation allowlists
     function hasValidUserKeys() {
       return request.resource.data.keys().hasOnly([
-        'name', 'email', 'age', 'gender', 'allergies', 'conditions',
+        'id', 'name', 'email', 'age', 'gender', 'allergies', 'conditions',
         'isProfessional', 'role', 'isAdmin', 'createdAt', 'updatedAt',
-        'preferences', 'fcmTokens', 'photoURL', 'displayName'
+        'preferences', 'fcmTokens', 'photoURL', 'displayName', 'lastLogin'
       ]);
     }
 

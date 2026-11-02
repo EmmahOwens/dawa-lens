@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const createReminderSchema = z.object({
   body: z.object({
+    _id: z.string().max(128).optional(),
     userId: z.string({ required_error: 'userId is required' }),
     medicineName: z.string({ required_error: 'Medicine name is required' }).max(200),
     dose: z.string({ required_error: 'Dose is required' }).max(100),

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
-import { X, Send, Bot, Sparkles, ChevronDown, RotateCcw, WifiOff, Navigation } from "@/lib/icons";
+import { X, Send, Bot, Sparkles, ChevronDown, RotateCcw, WifiOff, Navigation, AlertTriangle } from "@/lib/icons";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
@@ -175,6 +175,8 @@ export default function DawaGPT() {
   const [isFocused, setIsFocused] = useState(false);
   // Track which bot message ID needs the visible "Retry Action" button
   const [actionMissingBotId, setActionMissingBotId] = useState<string | null>(null);
+  // Human-in-the-loop confirmation for destructive or high-risk AI actions
+  const [pendingConfirmAction, setPendingConfirmAction] = useState<{ botId: string; action: any } | null>(null);
   // Store the original user message text for the retry
   const retryUserTextRef = useRef<string | null>(null);
 
@@ -548,7 +550,23 @@ export default function DawaGPT() {
         }
       }
 
-      if (effectiveAction) {
+      const DESTRUCTIVE_ACTIONS = new Set([
+        "REMOVE_MEDICINE", "DELETE_MEDICINE",
+        "DISCONTINUE_MEDICINE",
+        "REMOVE_REMINDER", "DELETE_REMINDER",
+        "REMOVE_PATIENT", "DELETE_PATIENT"
+      ]);
+      const userExplicitlyRequestedDestructive = /\b(delete|remove|discontinue|stop taking|cancel|drop|clear|purge)\b/i.test(text);
+
+      if (effectiveAction && DESTRUCTIVE_ACTIONS.has(effectiveAction.type) && !userExplicitlyRequestedDestructive) {
+        console.warn("[DawaGPT] Discarding unsolicited destructive action:", effectiveAction.type);
+        effectiveAction = null;
+      }
+
+      if (effectiveAction && DESTRUCTIVE_ACTIONS.has(effectiveAction.type)) {
+        // Enforce explicit user confirmation before executing destructive mutations
+        setPendingConfirmAction({ botId, action: effectiveAction });
+      } else if (effectiveAction) {
         try {
           await dispatchAIAction(effectiveAction);
           // Visually confirm the action was performed — no text change needed (toast handles it)
@@ -850,6 +868,41 @@ export default function DawaGPT() {
                                         <RotateCcw className="w-3 h-3" />
                                         Retry action
                                       </button>
+                                    </motion.div>
+                                  )}
+                                  {/* User confirmation card for destructive or high-impact actions */}
+                                  {pendingConfirmAction && m.id === pendingConfirmAction.botId && !isTyping && (
+                                    <motion.div
+                                      initial={{ opacity: 0, y: 6 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      className="mt-3 p-3 rounded-xl border border-destructive/30 bg-destructive/5 dark:bg-destructive/10 flex flex-col gap-2"
+                                    >
+                                      <div className="flex items-center gap-2 text-xs font-semibold text-destructive">
+                                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                                        <span>Confirm Action: {pendingConfirmAction.action.confirmMessage || "Modify or delete clinical record"}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <button
+                                          onClick={async () => {
+                                            const act = pendingConfirmAction.action;
+                                            setPendingConfirmAction(null);
+                                            try {
+                                              await dispatchAIAction(act);
+                                            } catch (err) {
+                                              console.error("Action execution error:", err);
+                                            }
+                                          }}
+                                          className="px-3 py-1.5 rounded-lg text-xs font-bold bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors cursor-pointer"
+                                        >
+                                          Approve & Execute
+                                        </button>
+                                        <button
+                                          onClick={() => setPendingConfirmAction(null)}
+                                          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
                                     </motion.div>
                                   )}
                                 </div>

@@ -84,6 +84,9 @@ export const createDoseLog = async (data) => {
 
       if (medDoc.exists) {
         const medData = medDoc.data();
+        if (medData?.userId && medData.userId !== data.userId) {
+          throw new AppError('Permission denied: Referenced medicine is owned by another user', 403);
+        }
         const currentStock = medData?.currentQuantity !== undefined 
           ? medData.currentQuantity 
           : (medData?.totalQuantity !== undefined ? medData.totalQuantity : null);
@@ -122,6 +125,9 @@ export const createDoseLog = async (data) => {
 
       if (remDoc.exists) {
         const reminder = remDoc.data();
+        if (reminder?.userId && reminder.userId !== data.userId) {
+          throw new AppError('Permission denied: Referenced reminder is owned by another user', 403);
+        }
         if (reminder && reminder.repeatSchedule !== 'once' && reminder.time) {
           const scheduledDate = data.scheduledTime ? new Date(data.scheduledTime) : new Date(data.actionTime);
           const actualDate = new Date(data.actionTime);

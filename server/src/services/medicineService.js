@@ -27,7 +27,11 @@ export const createMedicine = async (data) => {
   
   let result;
   if (_id) {
-    // If ID is provided, use it (prevents duplicates from frontend double-write)
+    // If ID is provided, verify it does not belong to another user before upsert
+    const existingSnap = await medicinesCol.doc(_id).get();
+    if (existingSnap.exists && existingSnap.data()?.userId !== rest.userId) {
+      throw new AppError('Permission denied: Target medicine document is owned by another user', 403);
+    }
     await medicinesCol.doc(_id).set(rest, { merge: true });
     result = { id: _id, _id, ...rest };
   } else {

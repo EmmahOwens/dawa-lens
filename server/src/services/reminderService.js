@@ -41,7 +41,11 @@ export const createReminder = async (data) => {
   }
 
   if (_id) {
-    // Prevents duplicates from frontend double-write (Firestore + API both called)
+    // If ID is provided, verify it does not belong to another user before upsert
+    const existingSnap = await remindersCol.doc(_id).get();
+    if (existingSnap.exists && existingSnap.data()?.userId !== rest.userId) {
+      throw new AppError('Permission denied: Target reminder document is owned by another user', 403);
+    }
     await remindersCol.doc(_id).set(rest, { merge: true });
     return { id: _id, _id, ...rest };
   } else {
