@@ -110,13 +110,13 @@ export function DashboardBanner() {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="relative mb-8 rounded-[22px] bg-gradient-to-br from-card via-card to-emerald-500/[0.03] border border-emerald-500/20 p-6 sm:p-7 overflow-hidden shadow-xs hover:border-emerald-500/30 transition-all"
+      className="relative mb-8 rounded-[22px] bg-gradient-to-br from-emerald-500/[0.08] via-card to-teal-500/[0.05] dark:from-emerald-950/30 dark:via-card/90 dark:to-teal-950/20 border border-emerald-500/25 p-6 sm:p-7 overflow-hidden shadow-sm hover:border-emerald-500/40 transition-all duration-300"
     >
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-4 max-w-xl">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-[12px] font-medium shadow-xs">
-              <TrendingUp size={13} className="text-emerald-500" />
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-[12px] font-semibold shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />
               Wellness Pulse
             </span>
           </div>
@@ -127,21 +127,23 @@ export function DashboardBanner() {
             <div className="flex flex-col">
               <span className="text-[12px] font-medium text-muted-foreground">7-Day Consistency</span>
               <div className="flex items-center gap-2 mt-1.5">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs">
-                  <TrendingUp size={14} />
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs">
+                  <TrendingUp size={15} />
                 </div>
-                <span className="text-xl font-semibold text-foreground tracking-tight">{adherencePercent}<span className="text-xs font-normal text-muted-foreground ml-0.5">%</span></span>
+                <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
+                  {adherencePercent}<span className="text-xs font-semibold ml-0.5">%</span>
+                </span>
               </div>
             </div>
-            <div className="w-px h-9 bg-border" />
+            <div className="w-px h-9 bg-border/80" />
             <div className="flex flex-col">
               <span className="text-[12px] font-medium text-muted-foreground">Success Streak</span>
               <div className="flex items-center gap-2 mt-1.5">
-                <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs">
-                  <Calendar size={14} />
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs">
+                  <Calendar size={15} />
                 </div>
-                <span className="text-xl font-semibold text-foreground tracking-tight">
-                  {streak} <span className="text-xs font-normal text-muted-foreground">{streak === 1 ? 'Day' : 'Days'}</span>
+                <span className="text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
+                  {streak} <span className="text-xs font-semibold text-muted-foreground">{streak === 1 ? 'Day' : 'Days'}</span>
                 </span>
               </div>
             </div>
@@ -150,7 +152,7 @@ export function DashboardBanner() {
 
         <button 
           onClick={() => navigate('/report')}
-          className="self-start md:self-center flex items-center gap-2 bg-[#0066cc] hover:bg-[#0071e3] text-white h-10 px-5 rounded-full font-medium text-[13px] shadow-xs active:scale-[0.98] transition-colors shrink-0"
+          className="self-start md:self-center flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white h-10 px-5 rounded-full font-medium text-[13px] shadow-sm shadow-emerald-950/20 active:scale-[0.98] transition-all shrink-0"
         >
           <span>Detailed Report</span>
           <ArrowRight size={14} />

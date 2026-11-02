@@ -409,7 +409,7 @@ export default function Dashboard() {
       {/* 7. Bento Grid Tools & Actions */}
       <div className="mb-10">
         <h2 className="section-title flex items-center gap-2">
-          <Plus size={13} />
+          <Plus size={14} className="text-[#0066cc] dark:text-[#2997ff]" />
           Tools &amp; Services
         </h2>
 
@@ -462,7 +462,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/history")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-emerald-500/40 hover:bg-emerald-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-emerald-500/20 bg-gradient-to-br from-card via-card to-emerald-500/[0.05] dark:to-emerald-500/[0.08] hover:border-emerald-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs transition-colors">
@@ -486,7 +486,7 @@ export default function Dashboard() {
               </svg>
             </div>
             <div className="relative z-10 pt-3">
-              <p className="text-[22px] font-semibold leading-none tracking-tight text-foreground flex items-baseline">
+              <p className="text-[22px] font-bold leading-none tracking-tight text-emerald-600 dark:text-emerald-400 flex items-baseline">
                 {adherencePercent}<span className="text-[13px] font-medium text-muted-foreground ml-0.5">%</span>
               </p>
               <p className="text-[12px] text-muted-foreground font-medium mt-1">Adherence</p>
@@ -498,18 +498,18 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/medvault")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-amber-500/40 hover:bg-amber-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-amber-500/20 bg-gradient-to-br from-card via-card to-amber-500/[0.05] dark:to-amber-500/[0.08] hover:border-amber-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs transition-colors">
                 <Package2 size={17} />
               </div>
-              <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/25">
+              <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30">
                 Vault
               </span>
             </div>
             <div className="relative z-10 pt-3">
-              <p className="text-[22px] font-semibold leading-none tracking-tight text-foreground">
+              <p className="text-[22px] font-bold leading-none tracking-tight text-amber-600 dark:text-amber-400">
                 {formatCompactNumber(totalPillsCount)}<span className="text-[12px] font-normal text-muted-foreground ml-1">units</span>
               </p>
               <p className="text-[12px] text-muted-foreground font-medium mt-1">Med Vault</p>
@@ -521,7 +521,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[1].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-teal-500/40 hover:bg-teal-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-teal-500/20 bg-gradient-to-br from-card via-card to-teal-500/[0.05] dark:to-teal-500/[0.08] hover:border-teal-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0 shadow-xs">
               <Users size={18} />
@@ -557,13 +557,13 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/reminders")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-indigo-500/40 hover:bg-indigo-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-indigo-500/20 bg-gradient-to-br from-card via-card to-indigo-500/[0.05] dark:to-indigo-500/[0.08] hover:border-indigo-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-xs transition-colors">
                 <Bell size={17} />
               </div>
-              <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25">
+              <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
                 {takenToday}/{expectedDosesToday}
               </span>
             </div>
@@ -580,7 +580,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[2].to)}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-rose-500/40 hover:bg-rose-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-rose-500/20 bg-gradient-to-br from-card via-card to-rose-500/[0.05] dark:to-rose-500/[0.08] hover:border-rose-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 dark:text-rose-400 shadow-xs transition-colors">
@@ -599,13 +599,13 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/medications")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-blue-500/40 hover:bg-blue-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-blue-500/20 bg-gradient-to-br from-card via-card to-blue-500/[0.05] dark:to-blue-500/[0.08] hover:border-blue-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between relative z-10">
               <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs transition-colors">
                 <Pill size={17} />
               </div>
-              <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+              <span className="text-[12px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30">
                 {scopedMedicines.length}
               </span>
             </div>
@@ -620,7 +620,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[3].to)}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-sky-500/40 hover:bg-sky-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-sky-500/20 bg-gradient-to-br from-card via-card to-sky-500/[0.05] dark:to-sky-500/[0.08] hover:border-sky-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400 shadow-xs transition-colors relative z-10">
               <Plane size={17} />
@@ -636,7 +636,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[4].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-orange-500/40 hover:bg-orange-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-orange-500/20 bg-gradient-to-br from-card via-card to-orange-500/[0.05] dark:to-orange-500/[0.08] hover:border-orange-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0 shadow-xs">
               <ShieldAlert size={18} />
@@ -645,7 +645,7 @@ export default function Dashboard() {
               <p className="text-[15px] font-semibold leading-tight text-foreground">Safety Check</p>
               <p className="text-[12px] text-muted-foreground font-normal mt-0.5">Rx Interactions &amp; Allergies</p>
             </div>
-            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/25 transition-colors shrink-0 relative z-10">
+            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-orange-500/15 hover:bg-orange-500/25 text-orange-700 dark:text-orange-300 border border-orange-500/30 transition-colors shrink-0 relative z-10">
               Review
             </span>
           </motion.button>
@@ -655,7 +655,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[7].to)}
-            className="col-span-2 sm:col-span-4 rounded-[22px] p-5 sm:p-6 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-purple-500/40 hover:bg-purple-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-2 sm:col-span-4 rounded-[22px] p-5 sm:p-6 min-h-[92px] flex items-center gap-4 border border-purple-500/20 bg-gradient-to-br from-card via-card to-purple-500/[0.05] dark:to-purple-500/[0.08] hover:border-purple-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0 shadow-xs">
               <FileText size={18} />
@@ -665,7 +665,7 @@ export default function Dashboard() {
               <p className="text-[12px] text-muted-foreground font-normal mt-0.5">Clinical PDF Export &amp; Analytics</p>
             </div>
             {/* Clinical ECG / Sparkline Trend Graphic */}
-            <div className="hidden sm:block shrink-0 w-24 h-7 opacity-85 group-hover:opacity-100 transition-opacity relative z-10">
+            <div className="hidden sm:block shrink-0 w-24 h-7 opacity-90 group-hover:opacity-100 transition-opacity relative z-10">
               <svg className="w-full h-full" viewBox="0 0 70 22" fill="none">
                 <path
                   d="M2 18 C 12 18, 16 7, 26 12 C 36 17, 42 3, 52 8 C 60 12, 64 5, 68 4"
@@ -678,7 +678,7 @@ export default function Dashboard() {
                 <circle cx="68" cy="4" r="2.5" fill="currentColor" className="text-purple-500 shadow-[0_0_6px_rgba(168,85,247,0.7)]" />
               </svg>
             </div>
-            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/25 transition-colors shrink-0 relative z-10">
+            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-purple-500/15 hover:bg-purple-500/25 text-purple-700 dark:text-purple-300 border border-purple-500/30 transition-colors shrink-0 relative z-10">
               Export
             </span>
           </motion.button>
@@ -691,8 +691,8 @@ export default function Dashboard() {
       {/* 9. Discover / Slideshow */}
       <div className="mb-8">
         <h2 className="section-title flex items-center gap-2">
-          <Sparkles size={14} />
-          Discover & Learn
+          <Sparkles size={14} className="text-amber-500" />
+          Discover &amp; Learn
         </h2>
         <FeatureSlideshow />
       </div>

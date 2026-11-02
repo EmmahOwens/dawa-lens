@@ -185,7 +185,7 @@ export function FeatureSlideshow() {
 
   return (
     <div 
-      className={`relative w-full mb-8 overflow-hidden rounded-[22px] border ${theme.borderColor} bg-card shadow-xs transition-colors duration-300`}
+      className={`relative w-full mb-8 overflow-hidden rounded-[22px] border ${theme.borderColor} ${theme.bgGradient} shadow-sm transition-all duration-300`}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}
@@ -209,7 +209,7 @@ export function FeatureSlideshow() {
                 <div className={`w-9 h-9 rounded-xl border ${theme.iconBg} ${theme.iconText} flex items-center justify-center shrink-0 shadow-xs`}>
                   <current.icon size={18} />
                 </div>
-                <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${theme.pillBg} ${theme.pillText}`}>
+                <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${theme.pillBg} ${theme.pillText} shadow-2xs`}>
                   {current.type === "tip" ? "Health Discovery" : "Featured"}
                 </span>
               </div>
@@ -251,7 +251,7 @@ export function FeatureSlideshow() {
                   e.stopPropagation();
                   if (current.to) navigate(current.to);
                 }}
-                className="mt-4 inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-[#0066cc] hover:bg-[#0071e3] text-white font-medium text-[13px] shadow-xs active:scale-[0.98] transition-colors"
+                className={`mt-4 inline-flex items-center gap-1.5 h-9 px-4 rounded-full ${theme.btnGradient} text-white font-medium text-[13px] shadow-sm active:scale-[0.98] transition-all`}
               >
                 <span>Try it now</span>
                 <ArrowRight size={13} />
@@ -266,7 +266,7 @@ export function FeatureSlideshow() {
               initial={{ width: 0 }}
               animate={{ width: isPaused ? "0%" : "100%" }}
               transition={{ duration: 6, ease: "linear" }}
-              className="h-full bg-[#0066cc] dark:bg-[#2997ff] opacity-40"
+              className={`h-full ${theme.barColor} opacity-40`}
             />
           </div>
         </motion.div>
