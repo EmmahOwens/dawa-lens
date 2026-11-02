@@ -114,15 +114,15 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
   }, [adherencePercent]);
 
   return (
-    <div className="mb-8 overflow-hidden rounded-[18px] border border-border bg-card p-6 text-foreground transition-all duration-200">
+    <div className="mb-8 overflow-hidden rounded-[20px] border border-blue-500/20 bg-gradient-to-br from-card via-card to-blue-500/[0.03] p-5 sm:p-6 text-foreground shadow-xs transition-all duration-200">
       <div className="relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+            <div className="h-7 w-7 bg-blue-500/15 border border-blue-500/25 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
               <Sparkles size={14} />
             </div>
-            <span className="text-[12px] font-medium uppercase tracking-[0.05em] text-muted-foreground">
+            <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-blue-600 dark:text-blue-400">
               Clinical Insight
             </span>
           </div>
@@ -137,7 +137,13 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
         {(mood != null || energy != null) && (
           <div className="flex gap-2 mb-4 flex-wrap">
             {mood != null && (
-              <span className="text-[12px] font-normal bg-muted border border-border px-3 py-1 rounded-full text-foreground flex items-center gap-1.5">
+              <span className={`text-[12px] font-normal border px-3 py-1 rounded-full flex items-center gap-1.5 ${
+                mood >= 4
+                  ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-700 dark:text-emerald-300"
+                  : mood <= 2
+                  ? "bg-rose-500/10 border-rose-500/25 text-rose-700 dark:text-rose-300"
+                  : "bg-muted border-border text-foreground"
+              }`}>
                 Mood:{" "}
                 {mood >= 4 ? (
                   <span className="flex items-center gap-1 font-medium"><RiveMoji emoji="😊" size={13} /> Positive</span>
@@ -149,7 +155,13 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
               </span>
             )}
             {energy != null && (
-              <span className="text-[12px] font-normal bg-muted border border-border px-3 py-1 rounded-full text-foreground flex items-center gap-1.5">
+              <span className={`text-[12px] font-normal border px-3 py-1 rounded-full flex items-center gap-1.5 ${
+                energy >= 4
+                  ? "bg-amber-500/10 border-amber-500/25 text-amber-700 dark:text-amber-300"
+                  : energy <= 2
+                  ? "bg-rose-500/10 border-rose-500/25 text-rose-700 dark:text-rose-300"
+                  : "bg-sky-500/10 border-sky-500/25 text-sky-700 dark:text-sky-300"
+              }`}>
                 Energy:{" "}
                 {energy >= 4 ? (
                   <span className="flex items-center gap-1 font-medium"><RiveMoji emoji="⚡" size={13} /> High</span>

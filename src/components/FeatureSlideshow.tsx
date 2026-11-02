@@ -185,7 +185,7 @@ export function FeatureSlideshow() {
 
   return (
     <div 
-      className="relative w-full mb-8 overflow-hidden rounded-[22px] border border-border/80 bg-card shadow-xs transition-colors duration-200"
+      className={`relative w-full mb-8 overflow-hidden rounded-[22px] border ${theme.borderColor} bg-card shadow-xs transition-colors duration-300`}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}
@@ -206,10 +206,10 @@ export function FeatureSlideshow() {
           <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 mb-1">
-                <div className="w-9 h-9 rounded-xl border border-border/60 bg-secondary text-[#0066cc] dark:text-[#2997ff] flex items-center justify-center shrink-0">
+                <div className={`w-9 h-9 rounded-xl border ${theme.iconBg} ${theme.iconText} flex items-center justify-center shrink-0 shadow-xs`}>
                   <current.icon size={18} />
                 </div>
-                <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full border border-border/60 bg-secondary text-foreground">
+                <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${theme.pillBg} ${theme.pillText}`}>
                   {current.type === "tip" ? "Health Discovery" : "Featured"}
                 </span>
               </div>
@@ -230,11 +230,11 @@ export function FeatureSlideshow() {
                       initial={{ width: 0 }}
                       animate={{ width: "100%" }}
                       transition={{ duration: isPaused ? 0 : 6, ease: "linear" }}
-                      className="absolute inset-0 bg-[#0066cc] dark:bg-[#2997ff]"
+                      className={`absolute inset-0 ${theme.barColor}`}
                     />
                   )}
                   {i < currentIndex && (
-                    <div className="absolute inset-0 bg-[#0066cc] dark:bg-[#2997ff] opacity-40" />
+                    <div className={`absolute inset-0 ${theme.barColor} opacity-40`} />
                   )}
                 </div>
               ))}

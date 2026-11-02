@@ -110,13 +110,13 @@ export function DashboardBanner() {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className="relative mb-8 rounded-[22px] bg-card border border-border/80 p-6 sm:p-7 overflow-hidden shadow-xs transition-colors"
+      className="relative mb-8 rounded-[22px] bg-gradient-to-br from-card via-card to-emerald-500/[0.03] border border-emerald-500/20 p-6 sm:p-7 overflow-hidden shadow-xs hover:border-emerald-500/30 transition-all"
     >
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-4 max-w-xl">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary border border-border/60 text-foreground text-[12px] font-medium">
-              <TrendingUp size={13} className="text-[#0066cc] dark:text-[#2997ff]" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-[12px] font-medium shadow-xs">
+              <TrendingUp size={13} className="text-emerald-500" />
               Wellness Pulse
             </span>
           </div>
@@ -127,7 +127,7 @@ export function DashboardBanner() {
             <div className="flex flex-col">
               <span className="text-[12px] font-medium text-muted-foreground">7-Day Consistency</span>
               <div className="flex items-center gap-2 mt-1.5">
-                <div className="w-7 h-7 rounded-lg bg-secondary border border-border/60 flex items-center justify-center text-foreground">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs">
                   <TrendingUp size={14} />
                 </div>
                 <span className="text-xl font-semibold text-foreground tracking-tight">{adherencePercent}<span className="text-xs font-normal text-muted-foreground ml-0.5">%</span></span>
@@ -137,7 +137,7 @@ export function DashboardBanner() {
             <div className="flex flex-col">
               <span className="text-[12px] font-medium text-muted-foreground">Success Streak</span>
               <div className="flex items-center gap-2 mt-1.5">
-                <div className="w-7 h-7 rounded-lg bg-secondary border border-border/60 flex items-center justify-center text-foreground">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs">
                   <Calendar size={14} />
                 </div>
                 <span className="text-xl font-semibold text-foreground tracking-tight">

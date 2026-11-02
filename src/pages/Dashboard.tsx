@@ -317,13 +317,13 @@ export default function Dashboard() {
           {selectedPatientId ? (
             <button
               onClick={() => setSelectedPatientId(null)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card text-[12px] font-normal text-foreground hover:bg-muted active:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-[12px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-500/15 active:scale-95 transition-all"
             >
               <User size={14} className="text-primary" />
               <span>Switch Profile</span>
             </button>
           ) : (
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-foreground font-medium text-[15px] border border-border">
+            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-primary font-semibold text-[15px] border border-blue-500/25 shadow-xs">
               {userProfile?.name?.charAt(0) || "U"}
             </div>
           )}
@@ -354,17 +354,17 @@ export default function Dashboard() {
       {/* 4. Critical Stock & Refill Alerts */}
       {refillStatuses.length > 0 && (
         <div className="mb-8 space-y-3">
-          <h2 className="section-title flex items-center gap-2 text-warning">
-            <AlertTriangle size={13} />
-            Stock & Refill Alerts
+          <h2 className="section-title flex items-center gap-2 text-amber-600 dark:text-amber-400">
+            <AlertTriangle size={14} className="text-amber-500" />
+            Stock &amp; Refill Alerts
           </h2>
           {refillStatuses.map((status) => (
             <div
               key={status.medicineId}
-              className="rounded-[18px] border border-border bg-card p-4 flex items-center justify-between transition-all"
+              className="rounded-[18px] border border-amber-500/25 bg-amber-500/[0.03] hover:border-amber-500/40 p-4 flex items-center justify-between transition-all shadow-xs"
             >
               <div className="flex items-center gap-3.5">
-                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-warning">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 shadow-xs">
                   <Package2 size={18} />
                 </div>
                 <div>
@@ -382,7 +382,7 @@ export default function Dashboard() {
               </div>
               <button
                 onClick={() => navigate("/medvault")}
-                className="h-8 px-4 rounded-full bg-primary text-primary-foreground text-[12px] font-normal hover:brightness-105 active:scale-95 transition-all"
+                className="h-8 px-4 rounded-full bg-amber-500 hover:bg-amber-600 text-slate-950 text-[12px] font-medium shadow-xs active:scale-95 transition-all"
               >
                 Refill
               </button>
@@ -426,22 +426,21 @@ export default function Dashboard() {
             whileTap={{ scale: 0.98 }}
             whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[0].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 sm:p-6 min-h-[180px] sm:min-h-[200px] flex flex-col justify-between items-start text-left border border-cyan-500/30 bg-gradient-to-br from-[#121629] via-[#0d1224] to-[#1a1435] text-white relative overflow-hidden group shadow-lg shadow-cyan-950/20 hover:shadow-cyan-500/15 hover:border-cyan-400/50 transition-all duration-300"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 sm:p-6 min-h-[180px] sm:min-h-[200px] flex flex-col justify-between items-start text-left border border-blue-500/30 bg-gradient-to-br from-[#0b1b36] via-[#0e2448] to-[#071326] text-white relative overflow-hidden group shadow-lg shadow-blue-950/25 hover:shadow-blue-500/10 hover:border-blue-400/50 transition-all duration-300"
           >
             {/* Animated Laser Scanning Beam */}
-            <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_14px_rgba(34,211,238,0.9)] animate-bento-scanner pointer-events-none" />
+            <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_rgba(56,189,248,0.8)] animate-bento-scanner pointer-events-none" />
 
-            {/* Ambient Apple Intelligence Glows */}
-            <div className="absolute -top-12 -right-12 w-48 h-48 bg-cyan-400/20 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-400/30 transition-all duration-700" />
-            <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-violet-600/25 rounded-full blur-3xl pointer-events-none group-hover:bg-violet-600/35 transition-all duration-700" />
+            {/* Subtle Clinical Vignette */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
 
             {/* Header: Camera Squircle + AI Vision Badge */}
             <div className="flex items-center justify-between w-full relative z-10">
-              <div className="w-10 h-10 rounded-2xl bg-cyan-500/20 backdrop-blur-md border border-cyan-400/30 flex items-center justify-center text-cyan-300 group-hover:scale-105 group-hover:border-cyan-400/50 transition-all duration-300 shadow-sm">
+              <div className="w-10 h-10 rounded-2xl bg-blue-500/25 backdrop-blur-md border border-blue-400/40 flex items-center justify-center text-blue-200 group-hover:scale-105 transition-all duration-200 shadow-xs">
                 <Camera size={20} className="group-hover:rotate-6 transition-transform duration-300" />
               </div>
-              <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-cyan-500/15 backdrop-blur-md border border-cyan-400/30 text-cyan-100 flex items-center gap-1.5 shadow-xs">
-                <Sparkles size={11} className="text-cyan-300 animate-pulse" />
+              <span className="text-[11px] font-medium px-3 py-1 rounded-full bg-blue-500/20 backdrop-blur-md border border-blue-400/35 text-blue-100 flex items-center gap-1.5 shadow-xs">
+                <Sparkles size={11} className="text-cyan-300" />
                 <span>AI Vision</span>
               </span>
             </div>
@@ -452,7 +451,7 @@ export default function Dashboard() {
               <h3 className="text-[22px] sm:text-[24px] font-semibold leading-tight tracking-tight text-white">
                 Quick Scan
               </h3>
-              <p className="text-[13px] text-cyan-100/70 mt-1 font-normal leading-snug">
+              <p className="text-[13px] text-blue-100/75 mt-1 font-normal leading-snug">
                 Identify pills, bottles, and prescriptions instantly
               </p>
             </div>
@@ -463,10 +462,10 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/history")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-emerald-500/40 hover:bg-emerald-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between w-full relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-[#0066cc] dark:text-[#2997ff] transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs transition-colors">
                 <History size={17} />
               </div>
               {/* Apple Activity Progress Ring */}
@@ -482,7 +481,7 @@ export default function Dashboard() {
                   strokeDasharray="88"
                   strokeDashoffset={88 - (88 * Math.min(Math.max(adherencePercent, 0), 100)) / 100}
                   strokeLinecap="round"
-                  className="text-[#0066cc] dark:text-[#2997ff] transition-all duration-700 ease-out"
+                  className="text-emerald-500 dark:text-emerald-400 transition-all duration-700 ease-out"
                 />
               </svg>
             </div>
@@ -499,13 +498,13 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/medvault")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-amber-500/40 hover:bg-amber-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between w-full relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs transition-colors">
                 <Package2 size={17} />
               </div>
-              <span className="text-[11px] font-medium text-muted-foreground bg-secondary px-2 py-0.5 rounded-full border border-border/60">
+              <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/25">
                 Vault
               </span>
             </div>
@@ -522,9 +521,9 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[1].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-teal-500/40 hover:bg-teal-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
           >
-            <div className="w-10 h-10 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-[#0066cc] dark:text-[#2997ff] shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0 shadow-xs">
               <Users size={18} />
             </div>
             <div className="flex-1 text-left min-w-0 relative z-10">
@@ -532,7 +531,7 @@ export default function Dashboard() {
                 {quickActions[1].label}
               </p>
               <p className="text-[12px] text-muted-foreground font-normal mt-0.5 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shadow-[0_0_6px_rgba(20,184,166,0.6)]" />
                 Circle of Care
               </p>
             </div>
@@ -540,7 +539,7 @@ export default function Dashboard() {
               {patients.slice(0, 3).map((p, idx) => (
                 <div
                   key={p.id || idx}
-                  className="w-7 h-7 rounded-full border-2 border-card bg-secondary text-[11px] font-semibold text-foreground flex items-center justify-center uppercase shadow-xs"
+                  className="w-7 h-7 rounded-full border-2 border-card bg-teal-500/15 text-teal-700 dark:text-teal-300 text-[11px] font-semibold flex items-center justify-center uppercase shadow-xs"
                 >
                   {p.name.charAt(0)}
                 </div>
@@ -558,13 +557,13 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/reminders")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-indigo-500/40 hover:bg-indigo-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between w-full relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-xs transition-colors">
                 <Bell size={17} />
               </div>
-              <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border/60">
+              <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25">
                 {takenToday}/{expectedDosesToday}
               </span>
             </div>
@@ -581,13 +580,13 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[2].to)}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-rose-500/40 hover:bg-rose-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between w-full relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-rose-500 transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 dark:text-rose-400 shadow-xs transition-colors">
                 <Heart size={17} />
               </div>
-              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.7)]" />
             </div>
             <div className="relative z-10 pt-3">
               <p className="text-[15px] font-semibold text-foreground leading-tight">Wellness</p>
@@ -600,13 +599,13 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/medications")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-blue-500/40 hover:bg-blue-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
           >
             <div className="flex items-center justify-between relative z-10">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground transition-colors">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs transition-colors">
                 <Pill size={17} />
               </div>
-              <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-secondary text-foreground border border-border/60">
+              <span className="text-[12px] font-medium px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
                 {scopedMedicines.length}
               </span>
             </div>
@@ -621,9 +620,9 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[3].to)}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-border/80 bg-card hover:border-sky-500/40 hover:bg-sky-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
           >
-            <div className="w-9 h-9 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-foreground transition-colors relative z-10">
+            <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400 shadow-xs transition-colors relative z-10">
               <Plane size={17} />
             </div>
             <div className="relative z-10 pt-3">
@@ -637,16 +636,16 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[4].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-orange-500/40 hover:bg-orange-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
           >
-            <div className="w-10 h-10 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-amber-500 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0 shadow-xs">
               <ShieldAlert size={18} />
             </div>
             <div className="flex-1 text-left min-w-0 relative z-10">
               <p className="text-[15px] font-semibold leading-tight text-foreground">Safety Check</p>
               <p className="text-[12px] text-muted-foreground font-normal mt-0.5">Rx Interactions &amp; Allergies</p>
             </div>
-            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground border border-border/60 transition-colors shrink-0 relative z-10">
+            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-orange-500/10 hover:bg-orange-500/20 text-orange-700 dark:text-orange-300 border border-orange-500/25 transition-colors shrink-0 relative z-10">
               Review
             </span>
           </motion.button>
@@ -656,9 +655,9 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[7].to)}
-            className="col-span-2 sm:col-span-4 rounded-[22px] p-5 sm:p-6 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 shadow-xs group relative overflow-hidden transition-colors duration-200"
+            className="col-span-2 sm:col-span-4 rounded-[22px] p-5 sm:p-6 min-h-[92px] flex items-center gap-4 border border-border/80 bg-card hover:border-purple-500/40 hover:bg-purple-500/[0.02] shadow-xs group relative overflow-hidden transition-all duration-200"
           >
-            <div className="w-10 h-10 rounded-xl bg-secondary border border-border/60 flex items-center justify-center text-[#0066cc] dark:text-[#2997ff] shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0 shadow-xs">
               <FileText size={18} />
             </div>
             <div className="flex-1 text-left min-w-0 relative z-10">
@@ -666,7 +665,7 @@ export default function Dashboard() {
               <p className="text-[12px] text-muted-foreground font-normal mt-0.5">Clinical PDF Export &amp; Analytics</p>
             </div>
             {/* Clinical ECG / Sparkline Trend Graphic */}
-            <div className="hidden sm:block shrink-0 w-24 h-7 opacity-75 group-hover:opacity-100 transition-opacity relative z-10">
+            <div className="hidden sm:block shrink-0 w-24 h-7 opacity-85 group-hover:opacity-100 transition-opacity relative z-10">
               <svg className="w-full h-full" viewBox="0 0 70 22" fill="none">
                 <path
                   d="M2 18 C 12 18, 16 7, 26 12 C 36 17, 42 3, 52 8 C 60 12, 64 5, 68 4"
@@ -674,12 +673,12 @@ export default function Dashboard() {
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="text-muted-foreground"
+                  className="text-purple-500/70"
                 />
-                <circle cx="68" cy="4" r="2" fill="currentColor" className="text-[#0066cc] dark:text-[#2997ff]" />
+                <circle cx="68" cy="4" r="2.5" fill="currentColor" className="text-purple-500 shadow-[0_0_6px_rgba(168,85,247,0.7)]" />
               </svg>
             </div>
-            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-secondary hover:bg-secondary/80 text-foreground border border-border/60 transition-colors shrink-0 relative z-10">
+            <span className="text-[12px] font-medium px-3.5 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/25 transition-colors shrink-0 relative z-10">
               Export
             </span>
           </motion.button>
