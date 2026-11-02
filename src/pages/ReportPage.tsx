@@ -44,9 +44,6 @@ import { toDate } from "@/lib/utils";
 import { calculateVitalitySummary } from "@/lib/vitalityUtils";
 import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
-import { Filesystem, Directory } from "@capacitor/filesystem";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 import {
   Dialog,
   DialogContent,
@@ -57,7 +54,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MedicalReportContent } from "@/components/MedicalReportContent";
 import { toast } from "sonner";
 import { usePatientScope } from "@/hooks/usePatientScope";
-import { NativePdf, NativeReportData } from "@/plugins/nativePdf";
+import type { NativeReportData } from "@/plugins/nativePdf";
+import {
+  precompileReport,
+  downloadOrSharePdf,
+  getPreparedReport,
+} from "@/services/pdfReportService";
 
 const container = {
   hidden: {},
@@ -342,225 +344,140 @@ export default function ReportPage() {
 
   const [downloading, setDownloading] = useState(false);
 
+  const reportSignature = useMemo(() => {
+    return [
+      resolvedPatient.id || "default",
+      patientName,
+      adherenceScore,
+      scopedDoseLogs.length,
+      medicinesLast7Days.length,
+      insights?.summary ? insights.summary.slice(0, 30) : "no-insight",
+      format(new Date(), "yyyyMMdd"),
+    ].join("_");
+  }, [
+    resolvedPatient.id,
+    patientName,
+    adherenceScore,
+    scopedDoseLogs.length,
+    medicinesLast7Days.length,
+    insights?.summary,
+  ]);
+
+  const safePatientName = useMemo(() => {
+    return patientName.replace(/[^a-z0-9]/gi, "-").replace(/-+/g, "-");
+  }, [patientName]);
+
+  const reportFileName = useMemo(() => {
+    return `DawaLens-Report-${safePatientName}-${format(new Date(), "yyyyMMdd")}.pdf`;
+  }, [safePatientName]);
+
+  const nativeReportData = useMemo<NativeReportData>(() => {
+    return {
+      patientName,
+      patientAge,
+      dateRange: `${format(subDays(new Date(), 6), "MMM d")}–${format(
+        new Date(),
+        "MMM d, yyyy"
+      )}`,
+      adherenceScore,
+      chartData: chartData.map((d) => ({
+        name: d.name,
+        adherence: d.adherence,
+        mood: d.mood ?? null,
+        energy: d.energy ?? null,
+      })),
+      medicines: medicinesLast7Days.map((m) => ({
+        name: m.name,
+        dosage: m.dosage,
+        daysRemaining: undefined,
+      })),
+      topSymptoms: emotionalStats?.topSymptoms ?? [],
+      averageMood: emotionalStats?.avgMood ?? 0,
+      averageEnergy: emotionalStats?.avgEnergy ?? 0,
+      generatedAt: new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    };
+  }, [
+    patientName,
+    patientAge,
+    adherenceScore,
+    chartData,
+    medicinesLast7Days,
+    emotionalStats,
+  ]);
+
+  // Speculative Background Pre-compilation:
+  // Prepares the PDF in memory while the user is viewing the report.
+  // When the user taps Download, it delivers immediately with 0ms wait.
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    const triggerBackgroundPrecompile = () => {
+      const element = document.getElementById("medical-report-content-download");
+      if (!element) return;
+      if (getPreparedReport(reportSignature)) return;
+
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        (window as any).requestIdleCallback(
+          () => {
+            precompileReport(reportSignature, element, reportFileName, nativeReportData);
+          },
+          { timeout: 1500 }
+        );
+      } else {
+        timer = setTimeout(() => {
+          precompileReport(reportSignature, element, reportFileName, nativeReportData);
+        }, 300);
+      }
+    };
+
+    const initialTimer = setTimeout(triggerBackgroundPrecompile, 150);
+
+    return () => {
+      clearTimeout(initialTimer);
+      if (timer) clearTimeout(timer);
+    };
+  }, [reportSignature, reportFileName, nativeReportData]);
+
   const handleDownloadPDF = async () => {
     if (downloading) return;
     setDownloading(true);
-    const toastId = toast.loading("Generating professional PDF report...");
 
-    // On native platforms: use the native PDF engine (no DOM snapshot, low memory)
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const reportData: NativeReportData = {
-          patientName,
-          patientAge,
-          dateRange: `${format(subDays(new Date(), 6), "MMM d")}–${format(
-            new Date(),
-            "MMM d, yyyy"
-          )}`,
-          adherenceScore,
-          chartData: chartData.map((d) => ({
-            name: d.name,
-            adherence: d.adherence,
-            mood: d.mood ?? null,
-            energy: d.energy ?? null,
-          })),
-          medicines: medicinesLast7Days.map((m) => ({
-            name: m.name,
-            dosage: m.dosage,
-            daysRemaining: undefined,
-          })),
-          topSymptoms: emotionalStats?.topSymptoms ?? [],
-          averageMood: emotionalStats?.avgMood ?? 0,
-          averageEnergy: emotionalStats?.avgEnergy ?? 0,
-          generatedAt: new Date().toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }),
-        };
+    const isAlreadyPrepared = Boolean(getPreparedReport(reportSignature));
+    let toastId: string | number | undefined;
 
-        const { fileUri } = await NativePdf.generateReport(reportData);
-        await Share.share({
-          title: `Dawa Lens Report - ${patientName}`,
-          url: fileUri,
-        });
-        toast.success("Report generated successfully!", { id: toastId });
-        setDownloading(false);
-        return;
-      } catch (nativePdfErr) {
-        console.warn(
-          "[ReportPage] Native PDF failed, falling back to html2canvas:",
-          nativePdfErr
-        );
-        // Fall through to existing html2canvas path
-      }
+    if (!isAlreadyPrepared) {
+      toastId = toast.loading("Preparing Care Report...");
     }
 
     try {
-      // Find the element to capture (the hidden print template)
-      const element = document.getElementById(
-        "medical-report-content-download"
-      );
+      const element = document.getElementById("medical-report-content-download");
       if (!element) throw new Error("Report content not found");
 
-      // Wait a bit to ensure everything is rendered
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Find all PDF blocks to process pagination
-      const blocks = Array.from(element.querySelectorAll(".pdf-block")) as HTMLElement[];
-      if (blocks.length === 0) {
-        throw new Error("No PDF content blocks found");
-      }
-
-      // Distribute blocks into pages
-      const pages: HTMLElement[][] = [[]];
-      let currentPageHeight = 0;
-      const maxPageHeightPx = 1050; // Target height limit per page
-      const gapPx = 24; // Compact spacing gap between blocks (1.5rem / 24px)
-
-      blocks.forEach((block) => {
-        const rect = block.getBoundingClientRect();
-        const blockHeight = rect.height;
-        
-        let totalBlockHeight = blockHeight;
-        if (pages[pages.length - 1].length > 0) {
-          totalBlockHeight += gapPx;
-        }
-
-        if (currentPageHeight + totalBlockHeight > maxPageHeightPx && pages[pages.length - 1].length > 0) {
-          pages.push([block]);
-          currentPageHeight = blockHeight;
-        } else {
-          pages[pages.length - 1].push(block);
-          currentPageHeight += totalBlockHeight;
-        }
+      await downloadOrSharePdf({
+        signature: reportSignature,
+        container: element,
+        fileName: reportFileName,
+        patientName,
+        nativeReportData,
       });
 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
-      const marginX = 15;
-      const marginY = 15;
-      const printableWidth = pdfWidth - 2 * marginX;
-
-      const scale = Capacitor.getPlatform() === "web" ? 2 : 1.5;
-
-      // Create a temporary container off-screen to render pages
-      const tempContainer = document.createElement("div");
-      tempContainer.style.position = "absolute";
-      tempContainer.style.left = "-9999px";
-      tempContainer.style.top = "0";
-      tempContainer.style.width = "800px";
-      tempContainer.style.background = "#ffffff";
-      document.body.appendChild(tempContainer);
-
-      for (let i = 0; i < pages.length; i++) {
-        const pageBlocks = pages[i];
-
-        const pageWrapper = document.createElement("div");
-        pageWrapper.className = "font-sans text-slate-900 bg-white w-full px-12 py-8 flex flex-col gap-6";
-        pageWrapper.style.width = "800px";
-        pageWrapper.style.boxSizing = "border-box";
-
-        pageBlocks.forEach((block) => {
-          const clone = block.cloneNode(true) as HTMLElement;
-          // Reset margin-bottom on clones so that the flexbox gap regulates spacing exactly
-          clone.style.setProperty("margin-bottom", "0", "important");
-          pageWrapper.appendChild(clone);
-        });
-
-        tempContainer.appendChild(pageWrapper);
-
-        const canvas = await html2canvas(pageWrapper, {
-          scale: scale,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          width: 800,
-        });
-
-        tempContainer.removeChild(pageWrapper);
-
-        const imgData = canvas.toDataURL("image/jpeg", 0.95);
-
-        if (i > 0) {
-          pdf.addPage();
-        }
-
-        const canvasHeightToWidthRatio = canvas.height / canvas.width;
-        const imgPdfHeight = printableWidth * canvasHeightToWidthRatio;
-
-        pdf.addImage(
-          imgData,
-          "JPEG",
-          marginX,
-          marginY,
-          printableWidth,
-          imgPdfHeight,
-          undefined,
-          "FAST"
-        );
-
-        pdf.setFontSize(8);
-        pdf.setTextColor(150, 150, 150);
-        pdf.text(
-          `Page ${i + 1} of ${pages.length}`,
-          pdfWidth / 2,
-          pdfHeight - 10,
-          { align: "center" }
-        );
-      }
-
-      document.body.removeChild(tempContainer);
-
-      // Sanitize filename: remove characters that might cause issues on some file systems
-      const safePatientName = patientName
-        .replace(/[^a-z0-9]/gi, "-")
-        .replace(/-+/g, "-");
-      const fileName = `DawaLens-Report-${safePatientName}-${format(
-        new Date(),
-        "yyyyMMdd"
-      )}.pdf`;
-
-      if (Capacitor.isNativePlatform()) {
-        try {
-          // Handle Capacitor download
-          const pdfBase64 = pdf.output("datauristring").split(",")[1];
-
-          const savedFile = await Filesystem.writeFile({
-            path: fileName,
-            data: pdfBase64,
-            directory: Directory.Cache,
-          });
-
-          await Share.share({
-            title: "Care Report",
-            text: `Medical Report for ${patientName}`,
-            url: savedFile.uri,
-            dialogTitle: "Save or Share Report",
-          });
-        } catch (fsError) {
-          console.error("FileSystem/Share error:", fsError);
-          // Fallback to basic download if share fails
-          pdf.save(fileName);
-        }
+      if (toastId) {
+        toast.success("Care Report generated successfully!", { id: toastId });
       } else {
-        // Handle Web download
-        pdf.save(fileName);
+        toast.success("Care Report downloaded!");
       }
-
-      toast.success("Care Report generated successfully!", { id: toastId });
     } catch (err) {
       console.error("PDF generation failed", err);
-      toast.error("Failed to generate PDF report. Please try again.", {
-        id: toastId,
-      });
+      if (toastId) {
+        toast.error("Failed to generate PDF report. Please try again.", {
+          id: toastId,
+        });
+      } else {
+        toast.error("Failed to generate PDF report. Please try again.");
+      }
     } finally {
       setDownloading(false);
     }
@@ -1199,10 +1116,11 @@ export default function ReportPage() {
       </Dialog>
 
       {/* -------------------- HIDDEN DOWNLOAD/PRINT TEMPLATE -------------------- */}
-      {/* We use an off-screen container for PDF generation to ensure html2canvas can capture it */}
+      {/* Off-screen container for PDF generation, with natural layout dimensions captured in a single fast pass */}
       <div
-        className="fixed -left-[9999px] top-0 w-[800px] h-0 overflow-hidden pointer-events-none"
+        className="fixed -left-[9999px] top-0 w-[800px] pointer-events-none bg-white opacity-0"
         id="medical-report-content-download"
+        aria-hidden="true"
       >
         <MedicalReportContent
           patientName={patientName}
