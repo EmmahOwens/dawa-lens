@@ -1,46 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight, ChevronLeft, LayoutDashboard, Scan, Heart,
-  History, Settings, Info
+  History, Settings, Info, Sparkles, Bot, AlertCircle
 } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
 import { useTranslation } from "react-i18next";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { AlertCircle } from "@/lib/icons";
-
-
-const POPUP_PHRASES = [
-  "Tap me! 👋",
-  "Want to know about your health?",
-  "Check drug interactions 💊",
-  "How's your med supply?",
-  "I'm your medical copilot!",
-  "Ask me anything health-related",
-  "Need a reminder set? 🔔",
-  "Is it safe to mix those meds?",
-  "Your AI health buddy is here!",
-  "Let's talk about your wellness ✨",
-];
-
-function usePopupPhrase(phrases: string[], intervalMs = 3000) {
-  const [index, setIndex] = useState(0);
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const cycle = setInterval(() => {
-      setVisible(false);
-      setTimeout(() => {
-        setIndex((i) => (i + 1) % phrases.length);
-        setVisible(true);
-      }, 400);
-    }, intervalMs);
-    return () => clearInterval(cycle);
-  }, [phrases.length, intervalMs]);
-
-  return { phrase: phrases[index], visible };
-}
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 
 // Widgets
@@ -183,7 +151,7 @@ export function IntelligencePanel() {
         </AnimatePresence>
       </div>
 
-      {/* Pinned Bottom DawaGPT AI — Compact Icon with Animated Popups */}
+      {/* Pinned Bottom DawaGPT AI — Compact Card */}
       <DawaGPTMiniButton onLaunch={handleLaunch} isOnline={isOnline} />
 
     </aside>
@@ -191,7 +159,7 @@ export function IntelligencePanel() {
 }
 
 // ---------------------------------------------------------------------------
-// DawaGPT Mini Button — animated icon-only compact section
+// DawaGPT Footer Card — compact card matching the account section design
 // ---------------------------------------------------------------------------
 function DawaGPTMiniButton({
   onLaunch,
@@ -200,53 +168,45 @@ function DawaGPTMiniButton({
   onLaunch: () => void;
   isOnline: boolean;
 }) {
-  const { phrase, visible } = usePopupPhrase(POPUP_PHRASES, 3200);
-
   return (
-    <div className="px-4 pb-4 pt-2 border-t border-border bg-card/80 backdrop-blur-xl shrink-0 z-20">
-      <div className="relative flex items-center justify-center py-2">
-        {/* Floating popup phrase */}
-        <AnimatePresence mode="wait">
-          {visible && (
-            <motion.div
-              key={phrase}
-              initial={{ opacity: 0, y: 6, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -6, scale: 0.95 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="absolute bottom-full mb-2.5 left-1/2 -translate-x-1/2 pointer-events-none z-30"
-            >
-              <div className="bg-foreground text-background text-[11px] font-medium px-3.5 py-1.5 rounded-full shadow-md whitespace-nowrap">
-                {phrase}
-                {/* tail */}
-                <span className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-foreground rotate-45" />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* The Action DawaGPT logo button */}
-        <button
-          onClick={() => onLaunch()}
-          disabled={!isOnline}
-          aria-label="Open DawaGPT AI"
-          className="relative w-12 h-12 rounded-full bg-card border border-border flex items-center justify-center hover:border-primary/50 hover:shadow-md active:scale-95 transition-all shadow-xs disabled:opacity-40 disabled:cursor-not-allowed group"
-        >
-          <img
-            src="/dawa-gpt.webp"
-            alt="DawaGPT"
-            className="w-full h-full object-contain p-1 rounded-full transition-transform group-hover:scale-105"
+    <div className="p-3 border-t border-border bg-card/80 backdrop-blur-xl shrink-0 z-20">
+      <button
+        onClick={() => onLaunch()}
+        disabled={!isOnline}
+        aria-label="Open DawaGPT AI"
+        className="w-full flex items-center gap-2.5 rounded-2xl p-2 bg-card border border-border hover:border-primary/50 hover:bg-muted/40 transition-all text-left shadow-xs active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
+      >
+        <div className="relative shrink-0">
+          <Avatar className="h-7 w-7 border border-border bg-card">
+            <AvatarImage src="/dawa-gpt.webp" alt="DawaGPT" className="p-0.5 object-contain" />
+            <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-[11px]">
+              D
+            </AvatarFallback>
+          </Avatar>
+          <span
+            className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-background ${
+              isOnline ? "bg-emerald-500" : "bg-amber-400"
+            }`}
           />
+        </div>
 
-          {/* Online dot */}
-          <span className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background flex items-center justify-center ${isOnline ? "bg-emerald-500" : "bg-amber-400"}`} />
-        </button>
-      </div>
-
-      {/* Sub-label */}
-      <p className="text-center text-[10px] font-medium text-muted-foreground select-none">
-        Ask DawaGPT
-      </p>
+        <div className="flex-1 min-w-0 flex items-center justify-between gap-1">
+          <div className="min-w-0">
+            <p className="text-[12px] font-medium truncate text-foreground group-hover:text-primary transition-colors">
+              DawaGPT
+            </p>
+            <div className="flex items-center gap-1">
+              <Sparkles size={10} className="text-primary shrink-0" />
+              <span className="text-[10px] text-muted-foreground truncate">
+                {isOnline ? "AI Health Copilot" : "Offline"}
+              </span>
+            </div>
+          </div>
+          <div className="shrink-0 p-1 text-muted-foreground group-hover:text-primary rounded-lg transition-colors">
+            <Bot size={14} />
+          </div>
+        </div>
+      </button>
     </div>
   );
 }
