@@ -465,9 +465,14 @@ export default function ReportPage() {
       });
 
       if (toastId) {
-        toast.success("Care Report generated successfully!", { id: toastId });
+        toast.success(
+          isNative ? "Care Report downloaded & ready to share!" : "Care Report generated successfully!",
+          { id: toastId }
+        );
       } else {
-        toast.success("Care Report downloaded!");
+        toast.success(
+          isNative ? "Care Report downloaded & ready to share!" : "Care Report downloaded!"
+        );
       }
     } catch (err) {
       console.error("PDF generation failed", err);

@@ -76,12 +76,13 @@ export function calculateBlockAwarePageCuts(
 }
 
 /**
- * Generates an A4 PDF from an offscreen or onscreen container using single-pass
- * canvas rasterization and high-speed in-memory canvas slicing.
+ * Generates an A4 PDF from an offscreen or onscreen container.
+ * If container has .pdf-page elements, it renders each page cleanly without slicing.
+ * Otherwise, it falls back to single-pass block-aware canvas slicing.
  */
 export async function compilePdfFromElement(
   container: HTMLElement,
-  fileName: string
+  _fileName: string
 ): Promise<{ pdf: jsPDF; blob: Blob }> {
   // Fast font readiness check without artificial timeouts
   if (typeof document !== "undefined" && document.fonts && document.fonts.status !== "loaded") {
@@ -93,7 +94,76 @@ export async function compilePdfFromElement(
     } catch {}
   }
 
-  // Calculate clean cuts based on .pdf-block sections
+  const pages = Array.from(container.querySelectorAll(".pdf-page")) as HTMLElement[];
+
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
+
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const marginX = 12;
+  const marginY = 12;
+  const printableWidth = pdfWidth - 2 * marginX; // 186mm
+  const printableHeight = pdfHeight - 2 * marginY; // 273mm
+
+  if (pages.length > 0) {
+    // Multi-page deterministic flow: render each page cleanly without slicing
+    for (let i = 0; i < pages.length; i++) {
+      const pageEl = pages[i];
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      const canvas = await html2canvas(pageEl, {
+        scale: 1.5,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        width: 800,
+        windowWidth: 800,
+        onclone: (_clonedDoc, clonedEl) => {
+          clonedEl.style.position = "static";
+          clonedEl.style.left = "0";
+          clonedEl.style.top = "0";
+          clonedEl.style.width = "800px";
+          clonedEl.style.opacity = "1";
+          clonedEl.style.visibility = "visible";
+          clonedEl.style.pointerEvents = "auto";
+          clonedEl.style.overflow = "visible";
+
+          // Ensure parent container in cloned document is also visible
+          let parent = clonedEl.parentElement;
+          while (parent) {
+            parent.style.opacity = "1";
+            parent.style.visibility = "visible";
+            parent = parent.parentElement;
+          }
+        },
+      });
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      const imgPdfHeight = printableWidth * (canvas.height / canvas.width);
+
+      pdf.addImage(
+        imgData,
+        "JPEG",
+        marginX,
+        marginY,
+        printableWidth,
+        Math.min(imgPdfHeight, printableHeight),
+        undefined,
+        "FAST"
+      );
+    }
+
+    const blob = pdf.output("blob");
+    return { pdf, blob };
+  }
+
+  // Fallback: calculate clean cuts based on .pdf-block sections
   const cuts = calculateBlockAwarePageCuts(container, 1120);
 
   // Single-pass html2canvas capture (1.5x scale offers crisp 150 DPI with 50% less RAM & ~3x faster than 2.0x)
@@ -116,19 +186,7 @@ export async function compilePdfFromElement(
     },
   });
 
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-  });
-
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = pdf.internal.pageSize.getHeight();
-  const marginX = 15;
-  const marginY = 15;
-  const printableWidth = pdfWidth - 2 * marginX; // 180mm
   const scale = 1.5;
-
   const totalPages = cuts.length - 1;
 
   for (let i = 0; i < totalPages; i++) {
@@ -212,7 +270,7 @@ export function precompileReport(
   signature: string,
   container: HTMLElement,
   fileName: string,
-  nativeReportData?: any
+  _nativeReportData?: any
 ): Promise<PreparedPdfResult> {
   // If already compiled for this exact signature, return immediately
   const existing = getPreparedReport(signature);
@@ -228,25 +286,13 @@ export function precompileReport(
   activeCompilationSignature = signature;
   activeCompilationPromise = (async () => {
     try {
-      // 1. Try native pre-generation first if on Capacitor native platform
       let nativeUri: string | undefined = undefined;
-      if (Capacitor.isNativePlatform() && nativeReportData) {
-        try {
-          const { NativePdf } = await import("@/plugins/nativePdf");
-          const nativeRes = await NativePdf.generateReport(nativeReportData);
-          if (nativeRes?.fileUri) {
-            nativeUri = nativeRes.fileUri;
-          }
-        } catch (nativeErr) {
-          console.warn("[pdfReportService] Native precompile failed, using web generator:", nativeErr);
-        }
-      }
 
-      // 2. Compile via optimized single-pass engine
+      // Compile via optimized report engine
       const { pdf, blob } = await compilePdfFromElement(container, fileName);
 
-      // If on native platform and nativeUri wasn't created by plugin, write blob to cache
-      if (Capacitor.isNativePlatform() && !nativeUri) {
+      // On native platform (Android & iOS), write to Documents (download) and Cache (share)
+      if (Capacitor.isNativePlatform()) {
         try {
           const base64Data = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
@@ -258,14 +304,27 @@ export function precompileReport(
             reader.readAsDataURL(blob);
           });
 
-          const savedFile = await Filesystem.writeFile({
+          // 1. Write to Documents directory for permanent device storage
+          try {
+            await Filesystem.writeFile({
+              path: fileName,
+              data: base64Data,
+              directory: Directory.Documents,
+              recursive: true,
+            });
+          } catch (docErr) {
+            console.warn("[pdfReportService] Writing to Documents folder failed:", docErr);
+          }
+
+          // 2. Write to Cache directory for immediate FileProvider sharing
+          const cacheFile = await Filesystem.writeFile({
             path: fileName,
             data: base64Data,
             directory: Directory.Cache,
           });
-          nativeUri = savedFile.uri;
+          nativeUri = cacheFile.uri;
         } catch (fsErr) {
-          console.warn("[pdfReportService] Filesystem write failed:", fsErr);
+          console.warn("[pdfReportService] Native filesystem write failed:", fsErr);
         }
       }
 
@@ -317,15 +376,60 @@ export async function downloadOrSharePdf({
 
   // Delivery
   if (Capacitor.isNativePlatform()) {
-    if (prepared.nativeUri) {
-      await Share.share({
-        title: "Care Report",
-        text: `Medical Report for ${patientName}`,
-        url: prepared.nativeUri,
-        dialogTitle: "Save or Share Report",
-      });
-      return;
+    let targetUri = prepared.nativeUri;
+
+    // Fallback if not written during precompile
+    if (!targetUri) {
+      try {
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const res = reader.result as string;
+            resolve(res.split(",")[1] || "");
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(prepared.blob);
+        });
+
+        try {
+          await Filesystem.writeFile({
+            path: fileName,
+            data: base64Data,
+            directory: Directory.Documents,
+            recursive: true,
+          });
+        } catch {}
+
+        const cacheFile = await Filesystem.writeFile({
+          path: fileName,
+          data: base64Data,
+          directory: Directory.Cache,
+        });
+        targetUri = cacheFile.uri;
+      } catch (err) {
+        console.warn("[pdfReportService] Cache write fallback error:", err);
+      }
     }
+
+    if (targetUri) {
+      try {
+        await Share.share({
+          title: "Care Report",
+          text: `Medical Report for ${patientName}`,
+          url: targetUri,
+          dialogTitle: "Save or Share Report",
+        });
+        return;
+      } catch (shareErr: any) {
+        const msg = String(shareErr?.message || shareErr || "").toLowerCase();
+        // If the user cancelled or dismissed the share sheet, treat as success/complete
+        if (msg.includes("cancel") || msg.includes("dismiss")) {
+          return;
+        }
+        console.warn("[pdfReportService] Native share failed, falling back to pdf.save():", shareErr);
+      }
+    }
+
     // Fallback on native if share uri unavailable
     prepared.pdf.save(fileName);
   } else {
@@ -347,4 +451,3 @@ export function invalidatePreparedPdfCache() {
   activeCompilationPromise = null;
   activeCompilationSignature = null;
 }
-
