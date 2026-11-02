@@ -162,6 +162,8 @@ export default function RemindersPage() {
       new Date(l.actionTime).toDateString() === todayStr
   ).length;
 
+  const isComplete = takenToday > 0 && enabledCount > 0 && takenToday >= enabledCount;
+
   // Filtered Reminders List
   const filteredReminders = useMemo(() => {
     return sorted.filter((reminder) => {
@@ -302,19 +304,41 @@ export default function RemindersPage() {
       </div>
 
       {/* Hero Stats Tile */}
-      <div className="relative overflow-hidden rounded-[22px] border border-black/10 dark:border-white/10 bg-[#1c1c1e] text-white p-6 mb-6 shadow-sm transition-colors duration-200">
+      <div
+        className={`relative overflow-hidden rounded-[22px] border p-6 mb-6 shadow-xl transition-all duration-300 text-white ${
+          isComplete
+            ? "bg-gradient-to-br from-[#092019] via-[#0d2a21] to-[#071712] border-emerald-500/30 shadow-emerald-950/25"
+            : "bg-gradient-to-br from-[#0c182b] via-[#0f213d] to-[#0a1526] border-blue-500/25 shadow-blue-950/25"
+        }`}
+      >
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-3.5 py-1">
-              <div className="h-2 w-2 rounded-full bg-[#2997ff]" />
-              <span className="text-[12px] font-medium tracking-normal text-white/90">
+            <div
+              className={`flex items-center gap-2 rounded-full px-3.5 py-1 border transition-colors ${
+                isComplete
+                  ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-200"
+                  : "bg-blue-500/20 border-blue-400/30 text-blue-200"
+              }`}
+            >
+              <div
+                className={`h-2 w-2 rounded-full ${
+                  isComplete
+                    ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
+                    : "bg-[#2997ff] shadow-[0_0_8px_#2997ff]"
+                }`}
+              />
+              <span className="text-[12px] font-medium tracking-normal">
                 Live Dosing &amp; Schedule
               </span>
             </div>
 
             <button
               onClick={() => navigate("/medvault")}
-              className="hidden sm:inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 text-white text-[12px] font-medium transition-colors active:scale-[0.98]"
+              className={`hidden sm:inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[12px] font-medium transition-colors active:scale-[0.98] ${
+                isComplete
+                  ? "bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-400/30 text-emerald-100"
+                  : "bg-blue-500/20 hover:bg-blue-500/30 border-blue-400/30 text-blue-100"
+              }`}
             >
               <Pill size={12} />
               <span>Med Vault</span>
@@ -348,22 +372,22 @@ export default function RemindersPage() {
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/15">
-            <div className="flex items-center gap-2 text-[12px] text-indigo-100 font-medium">
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
+            <div className="flex items-center gap-2 text-[12px] font-medium">
               {missedToday > 0 ? (
                 <>
                   <AlertTriangle size={14} className="text-rose-300 animate-pulse flex-shrink-0" />
-                  <span>{missedToday} dose{missedToday > 1 ? "s" : ""} recorded as missed today</span>
+                  <span className="text-white/80">{missedToday} dose{missedToday > 1 ? "s" : ""} recorded as missed today</span>
                 </>
-              ) : takenToday > 0 && enabledCount > 0 && takenToday >= enabledCount ? (
+              ) : isComplete ? (
                 <>
-                  <Check size={14} className="text-emerald-300 flex-shrink-0" />
-                  <span>All scheduled doses logged for today! Outstanding routine 🎉</span>
+                  <Check size={14} className="text-emerald-400 flex-shrink-0" />
+                  <span className="text-emerald-200">All scheduled doses logged for today! Outstanding routine 🎉</span>
                 </>
               ) : (
                 <>
-                  <Clock size={14} className="text-indigo-200 flex-shrink-0" />
-                  <span>
+                  <Clock size={14} className="text-[#2997ff] flex-shrink-0" />
+                  <span className="text-white/80">
                     {totalCount === 0
                       ? "Add medication reminders to track daily doses and smart shift alerts"
                       : `${enabledCount} active reminder${enabledCount !== 1 ? "s" : ""} running for ${resolvedPatient.isOwner ? "you" : resolvedPatient.name}`}
@@ -381,7 +405,11 @@ export default function RemindersPage() {
                   },
                 })
               }
-              className="h-8 px-4 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[12px] font-semibold transition-all active:scale-95 shadow-xs flex items-center gap-1.5"
+              className={`inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full border text-[12px] font-medium transition-colors active:scale-[0.98] ${
+                isComplete
+                  ? "bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-400/30 text-emerald-100"
+                  : "bg-blue-500/20 hover:bg-blue-500/30 border-blue-400/30 text-blue-100"
+              }`}
             >
               <Plus size={13} />
               <span>New Reminder</span>
