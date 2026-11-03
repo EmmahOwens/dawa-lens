@@ -115,11 +115,21 @@ interface ExtractedWellnessData {
   notes: string;
 }
 
+/**
+ * Normalizes occurrences of "Dawa-Lens" in user-facing text to "Dawa Lens",
+ * avoiding URLs or email domains.
+ */
+export function normalizeDawaLensName(text: string): string {
+  if (typeof text !== "string") return "";
+  return text.replace(/(^|[^/\w@.-])Dawa-Lens\b/g, "$1Dawa Lens");
+}
+
 function sanitizeMarkdownLinks(text: string): string {
   if (typeof text !== "string") return "";
 
   let cleaned = text.replace(/support@dawalens\.ug/gi, "[Settings](/settings)");
   cleaned = cleaned.replace(/https?:\/\/(?:www\.)?dawalens\.ug[^\s)\]]*/gi, "/settings");
+  cleaned = normalizeDawaLensName(cleaned);
 
   return cleaned.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, label, rawHref) => {
     const resolved = resolveToInternalRoute(rawHref, label);
@@ -205,6 +215,22 @@ const PERSONA_KEYWORDS = [
   "tell me about you", "introduce yourself"
 ];
 
+const APP_NAME_KEYWORDS = [
+  "what is this app",
+  "what app is this",
+  "what is this app called",
+  "what is the app called",
+  "what's this app called",
+  "what's the app called",
+  "what is the name of this app",
+  "what's the name of this app",
+  "name of this app",
+  "tell me about this app",
+  "what is dawa lens",
+  "what is dawa-lens",
+  "what is dawalens"
+];
+
 function handleSupportOrPersonaQuery(normalizedQuery: string, honorific: string): ChatMessage | null {
   const isAskingForSupport =
     SUPPORT_KEYWORDS.some((k) => normalizedQuery.includes(k)) ||
@@ -231,13 +257,32 @@ function handleSupportOrPersonaQuery(normalizedQuery: string, honorific: string)
     };
   }
 
+  if (APP_NAME_KEYWORDS.some((k) => normalizedQuery.includes(k))) {
+    const greeting = honorific ? ` ${honorific}` : "";
+    return {
+      id: Date.now().toString(),
+      role: "assistant",
+      text:
+        `Oli otya${greeting}! This app is **Dawa Lens**, your dedicated Ugandan AI health and medication companion.\n\n` +
+        `Here is how Dawa Lens can support you:\n` +
+        `• 💊 **Medication Safety & Dosage**: Track your active prescriptions and dosages in [My Medications](/medications).\n` +
+        `• ⚠️ **Drug & Food Interactions**: Screen safety against local foods and other medicines in [Interactions](/interactions).\n` +
+        `• ⏰ **Smart Reminders**: Keep your regimen on time with alarms in [Medication Reminders](/reminders).\n` +
+        `• 📦 **Med Vault**: Monitor pill counts and calculate supply in [Med Vault](/medvault).\n` +
+        `• 👨‍👩‍👧 **Family Hub**: Manage schedules for dependent profiles in [Family Hub](/family).\n\n` +
+        `How can I assist you with Dawa Lens today?`,
+      source: "System",
+      suggestions: ["Check my medications", "How is my pill stock?", "Check drug interactions"]
+    };
+  }
+
   if (PERSONA_KEYWORDS.some((k) => normalizedQuery.includes(k))) {
     const greeting = honorific ? ` ${honorific}` : "";
     return {
       id: Date.now().toString(),
       role: "assistant",
       text:
-        `Oli otya${greeting}! I'm **DawaGPT**, your dedicated Ugandan AI health and medication companion built for DawaLens.\n\n` +
+        `Oli otya${greeting}! I'm **DawaGPT**, your dedicated Ugandan AI health and medication companion built for Dawa Lens.\n\n` +
         `Here is how I can support you:\n` +
         `• 💊 **Medication Safety & Dosage**: Provide clear dosage explanations, side effect alerts, and National Drug Authority (NDA) Uganda standards.\n` +
         `• ⚠️ **Drug & Food Interactions**: Screen your prescriptions against local foods (like *Matooke*, *Posho*, *G-nut sauce*) and alcohol (*Waragi*).\n` +
@@ -931,7 +976,7 @@ export const generateDawaGPTResponse = async (
 
   return {
     ...resp,
-    text: enforceGenderHonorifics(resp.text, targetGender, targetName)
+    text: normalizeDawaLensName(enforceGenderHonorifics(resp.text, targetGender, targetName))
   };
 };
 
@@ -1017,7 +1062,7 @@ async function consumeSseStream(
         const data = JSON.parse(trimmed.slice(6));
         allText += data.choices?.[0]?.delta?.content || "";
         const visibleText = extractVisibleStreamingText(allText);
-        onChunk(enforceGenderHonorifics(visibleText, activeGender, activeName));
+        onChunk(normalizeDawaLensName(enforceGenderHonorifics(visibleText, activeGender, activeName)));
       } catch {
         // Ignore parse errors during partial chunks
       }
@@ -1154,7 +1199,7 @@ export const chatWithDawaGPTStream = async (
     const activeName = activePatient?.name || userProfile?.name || "";
     const allText = await consumeSseStream(stream, activeGender, activeName, onChunk);
     const { displayText, metadata } = splitStreamTextAndMetadata(allText);
-    const fullText = enforceGenderHonorifics(displayText, activeGender, activeName);
+    const fullText = normalizeDawaLensName(enforceGenderHonorifics(displayText, activeGender, activeName));
     const resolvedAction = resolveCandidateStreamAction(
       metadata.action,
       lastUserQuery,

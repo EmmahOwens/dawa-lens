@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateDawaGPTResponse } from "../aiAssistantService";
+import { generateDawaGPTResponse, normalizeDawaLensName } from "../aiAssistantService";
 import { UserProfile } from "@/contexts/AppContext";
 
 describe("DawaGPT Uganda Support Directory (NDA & Mental Health Support)", () => {
@@ -137,5 +137,46 @@ describe("DawaGPT Uganda Support Directory (NDA & Mental Health Support)", () =>
     );
 
     expect(response.text).not.toContain("Support Directory for Uganda");
+  });
+
+  it("calls this app 'Dawa Lens' and not 'Dawa-Lens' when introducing itself", async () => {
+    const response = await generateDawaGPTResponse(
+      "who are you and what can you do?",
+      null,
+      dummyProfile,
+      [],
+      [],
+      [],
+      [],
+      null
+    );
+
+    expect(response.text).toContain("Dawa Lens");
+    expect(response.text).not.toContain("Dawa-Lens");
+    expect(response.text).not.toContain("DawaLens");
+  });
+
+  it("calls this app 'Dawa Lens' and not 'Dawa-Lens' when asked about the app name", async () => {
+    const response = await generateDawaGPTResponse(
+      "what is this app called?",
+      null,
+      dummyProfile,
+      [],
+      [],
+      [],
+      [],
+      null
+    );
+
+    expect(response.text).toContain("Dawa Lens");
+    expect(response.text).not.toContain("Dawa-Lens");
+    expect(response.text).not.toContain("DawaLens");
+  });
+
+  it("normalizes 'Dawa-Lens' to 'Dawa Lens' while preserving external links/emails", () => {
+    expect(normalizeDawaLensName("Welcome to Dawa-Lens! We hope you love Dawa-Lens."))
+      .toBe("Welcome to Dawa Lens! We hope you love Dawa Lens.");
+    expect(normalizeDawaLensName("Contact support@dawa-lens.com or visit https://dawa-lens.onrender.com"))
+      .toBe("Contact support@dawa-lens.com or visit https://dawa-lens.onrender.com");
   });
 });

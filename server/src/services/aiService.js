@@ -195,7 +195,7 @@ const buildGeminiContentsAndInstruction = (finalMessages, customSystemPrompt = n
       const newline = rawSystemMsg.indexOf('\n');
       const firstParagraphEnd = rawSystemMsg.indexOf('\n\n') !== -1 ? rawSystemMsg.indexOf('\n\n') : (newline !== -1 ? newline : 1500);
       const distilledHead = rawSystemMsg.slice(0, Math.min(firstParagraphEnd + 1, 1500)).trim();
-      const isDawaGpt = rawSystemMsg.includes('DawaGPT') || rawSystemMsg.includes('Dawa-Lens');
+      const isDawaGpt = rawSystemMsg.includes('DawaGPT') || rawSystemMsg.includes('Dawa-Lens') || rawSystemMsg.includes('Dawa Lens');
       const guidance = isDawaGpt
         ? 'Follow the complete detailed instructions provided in the first message of this conversation for all mandatory agentic rules, Ugandan regional context, navigation links, action schemas, Med Vault calculations, and Family Hub intelligence.'
         : 'Follow the complete detailed operational instructions and format specifications provided in the first message of this conversation strictly.';
@@ -1086,7 +1086,7 @@ export const getWellnessQuote = async (userName, priority = 'medium') => {
 
 export const getCoachAdvice = async (logs, medicines, userName, priority = 'high') => {
   const prompt = `
-    You are the "Dawa-Lens Adherence Coach", a supportive health assistant for users in Uganda.
+    You are the "Dawa Lens Adherence Coach", a supportive health assistant for users in Uganda.
     User Name: ${userName || 'User'}
     Current Medications: ${JSON.stringify(medicines)}
     Recent Medication Activity (Logs): ${JSON.stringify(logs)}
@@ -1147,7 +1147,7 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors = [], prio
     : '';
 
   const prompt = `
-    You are the "Dawa-Lens Clinical Holistic & Dietary Safety Engine".
+    You are the "Dawa Lens Clinical Holistic & Dietary Safety Engine".
     Your role is to provide rigorous, realistic, and pharmacologically accurate food, herb, beverage, and lifestyle interaction analysis for a patient taking specific medications.
 
     === PATIENT MEDICATIONS ===
@@ -1253,7 +1253,7 @@ export const checkHolisticSafety = async (medicines, lifestyleFactors = [], prio
 export const getTravelAdvice = async ({ medicines, destination, currentCity, homeTimezone, targetTimezone }, priority = 'high') => {
   const medList = Array.isArray(medicines) ? medicines : [];
   const prompt = `
-    You are the "Dawa-Lens Global Travel Companion".
+    You are the "Dawa Lens Global Travel Companion".
     Travel: ${currentCity || 'Home'} (${homeTimezone}) to ${destination} (${targetTimezone || 'Unknown'}).
     Medicines: ${JSON.stringify(medList.map(m => ({ name: m.name, generic: m.genericName, dosage: m.dosage })))}
     
@@ -1355,7 +1355,7 @@ export const getWellnessInsight = async (doseLogs = [], wellnessLogs = [], medic
   ` : '';
 
   const prompt = `
-    You are the "Dawa-Lens Medical Data Analyst".
+    You are the "Dawa Lens Medical Data Analyst".
     
     === PATIENT CONTEXT ===
     ${patientInfo || 'General patient profile.'}
@@ -1438,7 +1438,7 @@ export const getWellnessInsight = async (doseLogs = [], wellnessLogs = [], medic
 
 export const checkMealSafety = async (medicines, mealDescription, priority = 'high') => {
   const prompt = `
-    You are "Dawa-Lens Meal Safety Checker".
+    You are "Dawa Lens Meal Safety Checker".
     Medicines: ${JSON.stringify(medicines.map(m => m.name + (m.genericName ? ` (${m.genericName})` : '')))}
     Meal: "${mealDescription}"
 
@@ -1458,7 +1458,7 @@ export const getNutritionalGuidance = async (medicines, priority = 'high') => {
 
   return withCache(cacheKey, 24 * 60 * 60 * 1000, async () => {
     const prompt = `
-      You are the "Dawa-Lens Nutritional Guard".
+      You are the "Dawa Lens Nutritional Guard".
       Active Medications: ${JSON.stringify(medicines.map(m => ({ name: m.name, generic: m.genericName })))}
 
       Task:
@@ -1629,6 +1629,15 @@ const shouldRetrieveMedicalKnowledge = (text) => {
 };
 
 /**
+ * Normalizes occurrences of "Dawa-Lens" in user-facing text to "Dawa Lens",
+ * avoiding URLs or email domains.
+ */
+export function normalizeDawaLensName(text) {
+  if (typeof text !== 'string') return text;
+  return text.replace(/(^|[^/\w@.-])Dawa-Lens\b/g, '$1Dawa Lens');
+}
+
+/**
  * Sanitizes markdown links in DawaGPT outputs to ensure all links resolve
  * strictly to internal in-app routes and strips non-existent or external URLs.
  */
@@ -1638,6 +1647,7 @@ function sanitizeMarkdownLinks(text) {
   // Remove support@dawalens.ug and any dawalens.ug references
   let cleaned = text.replace(/support@dawalens\.ug/gi, '[Settings](/settings)');
   cleaned = cleaned.replace(/https?:\/\/(?:www\.)?dawalens\.ug[^\s)\]]*/gi, '/settings');
+  cleaned = normalizeDawaLensName(cleaned);
 
   // Match markdown links [label](url)
   return cleaned.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, rawHref) => {
@@ -2650,13 +2660,14 @@ async function prepareDawaGPTContext({ messages, medicines, userProfile, doseLog
   const knowledgeContext = knowledgeSnippets.length > 0 ? `=== VERIFIED MEDICAL KNOWLEDGE (Context) ===\n${knowledgeSnippets.join('\n\n')}\n\n` : "";
   const duplicateGroundingContext = formatDuplicateTherapyWatchdogContext(duplicateGrounding);
 
-  const STATIC_SYSTEM_PROMPT = `You are "DawaGPT", a warm, empathetic medical AI assistant in the Dawa-Lens app (Uganda).
+  const STATIC_SYSTEM_PROMPT = `You are "DawaGPT", a warm, empathetic medical AI assistant in the Dawa Lens app (Uganda).
 All responses and actions must come dynamically from your clinical AI reasoning engine.
 
 ${getFoodKnowledgePrompt()}
 
 === PERSONALITY, TONE & LUGANDA ===
 - VOICE: Empathetic health companion and knowledgeable pharmacist. Natural contractions, warm and practical.
+- APP NAME: Always call and refer to this application as "Dawa Lens" (two words with a space: "Dawa Lens"). NEVER call it "Dawa-Lens" (with a hyphen) or "DawaLens" (without space).
 - GREETINGS: "Oli otya" / "Muli mutya" (How are you), "Wasuze otya" (Good morning), "Osiibye otya" (Good afternoon/evening), "Gyebaleko" (Well done), "Ki kati" (What's up), "Webale" / "Webale nnyo" (Thank you / very much), "Kale" (Okay/welcome), "Bambi" (Empathy: I'm so sorry / please).
 - MANDATORY GENDER HONORIFICS (CRITICAL):
   * "Nyabo" -> "Madam" (female honorific of respect), "Ssebo" (or "Sebbo") -> "Sir" (male honorific of respect).
@@ -2714,7 +2725,7 @@ ${getFoodKnowledgePrompt()}
 
 === APPLICATION NAVIGATION (STRICT IN-APP INTERNAL LINKS ONLY) ===
 CRITICAL LINKING & NAVIGATION RULES:
-1. ALL markdown links MUST strictly be internal relative routes starting with "/" leading to pages within the Dawa-Lens application.
+1. ALL markdown links MUST strictly be internal relative routes starting with "/" leading to pages within the Dawa Lens application.
 2. NEVER output external URLs, website domains (no "http://", "https://", "dawalens.ug", or any external websites), non-existent routes, or anchor tags (#).
 3. The ONLY allowed navigation routes are:
    - /medications: Active prescriptions, medication cabinet, and adding medications (e.g. [check your active medications](/medications) or [add medication in My Medications](/medications))
@@ -2974,7 +2985,7 @@ export const getEmotionReflection = async (mood, energy, symptoms, medicines = [
   const symptomList = symptoms && symptoms.length > 0 ? symptoms.join(', ') : 'None reported';
   const medList = medicines.length > 0 ? medicines.map(m => m.name).join(', ') : 'Not specified';
   const prompt = `
-    You are "Dawa-Lens Wellness Companion".
+    You are "Dawa Lens Wellness Companion".
     Check-in: Mood ${moodLabel}, Energy ${energyLabel}, Symptoms ${symptomList}, Meds ${medList}.
     Task: Warm 2-3 sentence reflection, short affirmation, concrete tip.
     Respond in JSON: { "reflection": "...", "affirmation": "...", "tip": "..." }
