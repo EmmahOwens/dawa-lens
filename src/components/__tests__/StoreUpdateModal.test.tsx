@@ -73,7 +73,7 @@ describe("StoreUpdateModal", () => {
 
     expect(container.firstChild).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.queryByText(/New Update Live!/i)).toBeNull();
+    expect(screen.queryByText(/New Update Ready/i)).toBeNull();
   });
 
   it("does not render on non-Android platforms", () => {
@@ -106,9 +106,9 @@ describe("StoreUpdateModal", () => {
     );
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("New Update Live!")).toBeInTheDocument();
+    expect(screen.getByText("New Update Ready ✨")).toBeInTheDocument();
     expect(screen.getByText("1.7.18")).toBeInTheDocument();
     expect(screen.getByText("1.7.19")).toBeInTheDocument();
-    expect(screen.getByText(/Download v1.7.19/i)).toBeInTheDocument();
+    expect(screen.getByText(/Download Update \(v1.7.19\)/i)).toBeInTheDocument();
   });
 });

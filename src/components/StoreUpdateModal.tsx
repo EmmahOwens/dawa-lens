@@ -61,7 +61,7 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
     } catch (err: unknown) {
       console.error('Update download failed:', err);
       setDownloadState('error');
-      setErrorMessage((err as Error)?.message || 'Download failed. Please try again.');
+      setErrorMessage((err as Error)?.message || 'We couldn’t finish downloading the update. Please check your connection and try again.');
     } finally {
       listenerRef.current?.remove();
       listenerRef.current = null;
@@ -80,13 +80,13 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
   const getStatusText = () => {
     switch (downloadState) {
       case 'downloading':
-        return progress < 100 ? `Downloading... ${progress}%` : 'Preparing install...';
+        return progress < 100 ? `Downloading Update... ${progress}%` : 'Verifying & preparing...';
       case 'installing':
-        return 'Opening installer...';
+        return 'Launching installer...';
       case 'error':
-        return 'Retry In-App Download';
+        return 'Try Again in App';
       default:
-        return `Download v${newVersion}`;
+        return `Download Update (v${newVersion})`;
     }
   };
 
@@ -127,7 +127,11 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
             </div>
             
             <h3 className="text-xl font-bold text-foreground mb-1.5 tracking-tight">
-              {downloadState === 'error' ? 'Update Failed' : downloadState === 'installing' ? 'Almost Done' : 'Software Update'}
+              {downloadState === 'error'
+                ? 'Update Interrupted ⚠️'
+                : downloadState === 'installing'
+                ? 'Ready to Install 🎉'
+                : 'New Update Ready ✨'}
             </h3>
             
             <div className="inline-flex items-center gap-2 mb-5 bg-muted/60 px-3 py-1 rounded-full border border-border">
@@ -147,7 +151,7 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1.5 font-mono">{progress}% complete</p>
+                <p className="text-xs text-muted-foreground mt-1.5 font-mono">{progress}% downloaded</p>
               </div>
             )}
 
@@ -155,8 +159,8 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
               {downloadState === 'error'
                 ? errorMessage
                 : downloadState === 'installing'
-                ? 'The installer will launch shortly. Follow the prompts to finish updating.'
-                : 'A new version of Dawa Lens is available with performance and security enhancements.'}
+                ? 'Your update is ready! Tap "Install" on the next prompt to finish upgrading Dawa Lens.'
+                : 'A fresher, faster Dawa Lens is here — featuring smarter medication safety checks, and smoother performance.'}
             </p>
 
             <div className="w-full space-y-2.5">
@@ -166,7 +170,7 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
                     className="w-full h-11 rounded-full font-semibold text-xs bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95 transition-all flex items-center justify-center gap-2"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    <span>Download via Browser</span>
+                    <span>Download Directly via Browser</span>
                   </button>
                 )}
 
@@ -200,7 +204,7 @@ const StoreUpdateModal: React.FC<StoreUpdateModalProps> = ({ currentVersion, new
                       onClick={onClose}
                       className="w-full h-10 rounded-full text-muted-foreground font-semibold hover:bg-muted transition-colors text-xs active:scale-95"
                   >
-                      {downloadState === 'installing' ? 'Close' : 'Later'}
+                      {downloadState === 'installing' ? 'Done' : 'Maybe Later'}
                   </button>
                 )}
             </div>
