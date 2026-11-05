@@ -104,7 +104,7 @@ export default function WellnessPage() {
   const { addWellnessLog, deleteWellnessLog } = useApp();
   const { scopedWellnessLogs, scopedMedicines, scopedDoseLogs } = usePatientScope();
   const { toast } = useToast();
-  const { moodThemeEnabled } = useMoodTheme();
+  const { moodThemeEnabled, activeMood } = useMoodTheme();
 
   const [activeTab, setActiveTab] = useState<"journal" | "food">("journal");
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
@@ -557,7 +557,9 @@ export default function WellnessPage() {
                     {moodThemeEnabled && isValidMoodLevel(mood) && (
                       <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 transition-colors">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        {MOOD_THEME_META[mood].themeName}
+                        {isToday && !latestDayLog && !activeMood
+                          ? "Default Blue"
+                          : MOOD_THEME_META[mood].themeName}
                       </span>
                     )}
                   </div>

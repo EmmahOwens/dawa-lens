@@ -251,12 +251,16 @@ describe("WellnessPage - Recent Reflections ordering & limits", () => {
 
     render(<WellnessPage />);
 
+    // Before logging or clicking a mood, default Action Blue is active (no data-mood attribute)
+    expect(document.documentElement.getAttribute("data-mood")).toBeNull();
+    expect(screen.getByText("Default Blue")).toBeInTheDocument();
+
     // Click the "Low" (😔, val=1) mood button
     const lowBtn = screen.getByText("Low").closest("button")!;
     fireEvent.click(lowBtn);
 
     expect(document.documentElement.getAttribute("data-mood")).toBe("1");
-    expect(screen.getByText("Calming Indigo")).toBeInTheDocument();
+    expect(screen.getByText("Warm Terracotta")).toBeInTheDocument();
   });
 
   it("defaults to 60% vitality and Check-in when today has no recorded check-in", () => {

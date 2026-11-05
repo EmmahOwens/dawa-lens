@@ -125,63 +125,75 @@
   }
 
   /* ─── Adaptive Mood Themes (Light Mode) ─────────────────────────────────── */
-  /* Mood 1: Low 😔 — Calming Indigo */
+  /* Default (no data-mood attribute): Action Blue (210 100% 40%) is strictly reserved for when no mood is logged. */
+
+  /* Mood 1: Low 😔 — Warm Terracotta / Comfort Rose (#D9534F) */
   :root[data-mood="1"] {
-    --primary: 234 65% 52%;
-    --ring: 234 65% 56%;
-    --accent-foreground: 234 65% 52%;
-    --sidebar-primary: 234 65% 52%;
-    --sidebar-ring: 234 65% 56%;
-    --background: 234 50% 98%;
-    --card: 234 60% 99.5%;
-    --border: 234 28% 88%;
-    --input: 234 28% 88%;
-    --secondary: 234 38% 95%;
-    --muted: 234 38% 95%;
-    --accent: 234 38% 95%;
-    --parchment: 234 38% 95%;
-    --sidebar-background: 234 38% 95%;
-    --sidebar-border: 234 28% 88%;
-    --hero-from: 234 62% 48%;
-    --hero-via: 238 58% 38%;
-    --hero-to: 240 48% 14%;
-    --hero-accent: 230 92% 74%;
+    --primary: 8 68% 52%;
+    --ring: 8 68% 56%;
+    --accent-foreground: 8 68% 52%;
+    --sidebar-primary: 8 68% 52%;
+    --sidebar-ring: 8 68% 56%;
+    --background: 8 50% 98.5%;
+    --card: 8 60% 99.5%;
+    --border: 8 28% 88%;
+    --input: 8 28% 88%;
+    --secondary: 8 38% 95%;
+    --muted: 8 38% 95%;
+    --accent: 8 38% 95%;
+    --parchment: 8 38% 95%;
+    --sidebar-background: 8 38% 95%;
+    --sidebar-border: 8 28% 88%;
+    --hero-from: 8 68% 46%;
+    --hero-via: 4 64% 36%;
+    --hero-to: 358 48% 13%;
+    --hero-accent: 12 90% 72%;
   }
 
-  /* Mood 2: Meh 😕 — Gentle Teal */
+  /* Mood 2: Meh 😕 — Warm Amber / Honey Ochre (#D97706) */
   :root[data-mood="2"] {
-    --primary: 188 78% 36%;
-    --ring: 188 78% 42%;
-    --accent-foreground: 188 78% 36%;
-    --sidebar-primary: 188 78% 36%;
-    --sidebar-ring: 188 78% 42%;
-    --background: 188 50% 98%;
-    --card: 188 60% 99.5%;
-    --border: 188 28% 87%;
-    --input: 188 28% 87%;
-    --secondary: 188 38% 94.5%;
-    --muted: 188 38% 94.5%;
-    --accent: 188 38% 94.5%;
-    --parchment: 188 38% 94.5%;
-    --sidebar-background: 188 38% 94.5%;
-    --sidebar-border: 188 28% 87%;
-    --hero-from: 188 76% 36%;
-    --hero-via: 192 74% 28%;
-    --hero-to: 196 56% 12%;
-    --hero-accent: 184 90% 62%;
+    --primary: 32 88% 44%;
+    --ring: 32 88% 48%;
+    --accent-foreground: 32 88% 44%;
+    --sidebar-primary: 32 88% 44%;
+    --sidebar-ring: 32 88% 48%;
+    --background: 34 55% 98%;
+    --card: 34 60% 99.5%;
+    --border: 34 30% 87%;
+    --input: 34 30% 87%;
+    --secondary: 34 42% 94.5%;
+    --muted: 34 42% 94.5%;
+    --accent: 34 42% 94.5%;
+    --parchment: 34 42% 94.5%;
+    --sidebar-background: 34 42% 94.5%;
+    --sidebar-border: 34 30% 87%;
+    --hero-from: 32 86% 42%;
+    --hero-via: 28 82% 33%;
+    --hero-to: 24 56% 12%;
+    --hero-accent: 38 95% 64%;
   }
 
-  /* Mood 3: Okay 😐 — Balanced Action Blue */
+  /* Mood 3: Okay 😐 — Balanced Sage / Soft Teal (#0D9488) */
   :root[data-mood="3"] {
-    --primary: 210 100% 40%;
-    --ring: 210 100% 45%;
-    --accent-foreground: 210 100% 40%;
-    --sidebar-primary: 210 100% 40%;
-    --sidebar-ring: 210 100% 45%;
-    --hero-from: 221 83% 48%;
-    --hero-via: 224 76% 40%;
-    --hero-to: 222 47% 11%;
-    --hero-accent: 199 95% 60%;
+    --primary: 173 80% 36%;
+    --ring: 173 80% 42%;
+    --accent-foreground: 173 80% 36%;
+    --sidebar-primary: 173 80% 36%;
+    --sidebar-ring: 173 80% 42%;
+    --background: 173 46% 98%;
+    --card: 173 55% 99.5%;
+    --border: 173 26% 87%;
+    --input: 173 26% 87%;
+    --secondary: 173 36% 94.5%;
+    --muted: 173 36% 94.5%;
+    --accent: 173 36% 94.5%;
+    --parchment: 173 36% 94.5%;
+    --sidebar-background: 173 36% 94.5%;
+    --sidebar-border: 173 26% 87%;
+    --hero-from: 173 78% 34%;
+    --hero-via: 176 74% 26%;
+    --hero-to: 180 54% 11%;
+    --hero-accent: 168 86% 60%;
   }
 
   /* Mood 4: Good 🙂 — Vitality Emerald */
@@ -231,60 +243,73 @@
   }
 
   /* ─── Adaptive Mood Themes (Dark Mode) ──────────────────────────────────── */
+  /* Mood 1: Low 😔 — Warm Terracotta / Comfort Rose */
   .dark[data-mood="1"] {
-    --primary: 234 82% 68%;
-    --ring: 234 82% 68%;
-    --accent-foreground: 234 82% 68%;
-    --sidebar-primary: 234 82% 68%;
-    --sidebar-ring: 234 82% 68%;
-    --background: 234 32% 5%;
-    --card: 234 24% 13%;
-    --secondary: 234 22% 16%;
-    --muted: 234 20% 14%;
-    --accent: 234 22% 16%;
-    --border: 234 22% 24%;
-    --input: 234 22% 24%;
-    --parchment: 234 28% 9%;
-    --sidebar-background: 234 28% 9%;
-    --sidebar-border: 234 22% 22%;
-    --hero-from: 234 62% 44%;
-    --hero-via: 238 58% 34%;
-    --hero-to: 240 48% 12%;
-    --hero-accent: 230 92% 74%;
+    --primary: 8 80% 64%;
+    --ring: 8 80% 64%;
+    --accent-foreground: 8 80% 64%;
+    --sidebar-primary: 8 80% 64%;
+    --sidebar-ring: 8 80% 64%;
+    --background: 8 30% 5%;
+    --card: 8 24% 13%;
+    --secondary: 8 22% 16%;
+    --muted: 8 20% 14%;
+    --accent: 8 22% 16%;
+    --border: 8 22% 24%;
+    --input: 8 22% 24%;
+    --parchment: 8 26% 9%;
+    --sidebar-background: 8 26% 9%;
+    --sidebar-border: 8 22% 22%;
+    --hero-from: 8 68% 42%;
+    --hero-via: 4 64% 32%;
+    --hero-to: 358 48% 11%;
+    --hero-accent: 12 90% 72%;
   }
 
+  /* Mood 2: Meh 😕 — Warm Amber / Honey Ochre */
   .dark[data-mood="2"] {
-    --primary: 188 85% 52%;
-    --ring: 188 85% 52%;
-    --accent-foreground: 188 85% 52%;
-    --sidebar-primary: 188 85% 52%;
-    --sidebar-ring: 188 85% 52%;
-    --background: 188 32% 5%;
-    --card: 188 24% 12.5%;
-    --secondary: 188 22% 15.5%;
-    --muted: 188 20% 13.5%;
-    --accent: 188 22% 15.5%;
-    --border: 188 24% 23%;
-    --input: 188 24% 23%;
-    --parchment: 188 28% 8.5%;
-    --sidebar-background: 188 28% 8.5%;
-    --sidebar-border: 188 22% 21%;
-    --hero-from: 188 76% 33%;
-    --hero-via: 192 74% 25%;
-    --hero-to: 196 56% 10%;
-    --hero-accent: 184 90% 62%;
+    --primary: 35 92% 56%;
+    --ring: 35 92% 56%;
+    --accent-foreground: 35 92% 56%;
+    --sidebar-primary: 35 92% 56%;
+    --sidebar-ring: 35 92% 56%;
+    --background: 32 30% 5%;
+    --card: 32 24% 12.5%;
+    --secondary: 32 22% 15.5%;
+    --muted: 32 20% 13.5%;
+    --accent: 32 22% 15.5%;
+    --border: 32 24% 23%;
+    --input: 32 24% 23%;
+    --parchment: 32 26% 8.5%;
+    --sidebar-background: 32 26% 8.5%;
+    --sidebar-border: 32 22% 21%;
+    --hero-from: 32 86% 38%;
+    --hero-via: 28 82% 29%;
+    --hero-to: 24 56% 10%;
+    --hero-accent: 38 95% 64%;
   }
 
+  /* Mood 3: Okay 😐 — Balanced Sage / Soft Teal */
   .dark[data-mood="3"] {
-    --primary: 211 100% 58%;
-    --ring: 211 100% 58%;
-    --accent-foreground: 211 100% 58%;
-    --sidebar-primary: 211 100% 58%;
-    --sidebar-ring: 211 100% 58%;
-    --hero-from: 221 83% 45%;
-    --hero-via: 224 76% 36%;
-    --hero-to: 222 47% 10%;
-    --hero-accent: 199 95% 60%;
+    --primary: 173 82% 50%;
+    --ring: 173 82% 50%;
+    --accent-foreground: 173 82% 50%;
+    --sidebar-primary: 173 82% 50%;
+    --sidebar-ring: 173 82% 50%;
+    --background: 173 30% 4.5%;
+    --card: 173 22% 12.5%;
+    --secondary: 173 20% 15.5%;
+    --muted: 173 18% 13.5%;
+    --accent: 173 20% 15.5%;
+    --border: 173 22% 23%;
+    --input: 173 22% 23%;
+    --parchment: 173 26% 8.5%;
+    --sidebar-background: 173 26% 8.5%;
+    --sidebar-border: 173 20% 21%;
+    --hero-from: 173 78% 31%;
+    --hero-via: 176 74% 23%;
+    --hero-to: 180 54% 9%;
+    --hero-accent: 168 86% 60%;
   }
 
   .dark[data-mood="4"] {
