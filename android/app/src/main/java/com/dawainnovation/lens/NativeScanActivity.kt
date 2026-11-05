@@ -215,8 +215,9 @@ class NativeScanActivity : AppCompatActivity() {
                     image.close()
                     if (bitmap != null) {
                         val processed = preprocessBitmap(bitmap)
-                        val out = ByteArrayOutputStream()
-                        processed.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                        val out = ByteArrayOutputStream(163840)
+                        processed.compress(Bitmap.CompressFormat.JPEG, 82, out)
+                        processed.recycle()
                         val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
                         val dataUrl = "data:image/jpeg;base64,$base64"
                         runOnUiThread {
@@ -259,7 +260,18 @@ class NativeScanActivity : AppCompatActivity() {
      * The original bitmap is recycled; callers must use the returned bitmap.
      */
     private fun preprocessBitmap(input: Bitmap): Bitmap {
-        val output = Bitmap.createBitmap(input.width, input.height, Bitmap.Config.ARGB_8888)
+        val maxDim = 1280
+        val inW = input.width
+        val inH = input.height
+        val scale = if (inW > maxDim || inH > maxDim) {
+            maxDim.toFloat() / maxOf(inW, inH).toFloat()
+        } else {
+            1f
+        }
+        val outW = (inW * scale).toInt().coerceAtLeast(1)
+        val outH = (inH * scale).toInt().coerceAtLeast(1)
+
+        val output = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(output)
         val contrast  = 1.25f
         val translate = (-(0.5f * contrast) + 0.5f) * 255f + 8f
@@ -269,10 +281,11 @@ class NativeScanActivity : AppCompatActivity() {
             0f, 0f, contrast, 0f, translate,
             0f, 0f, 0f, 1f, 0f
         ))
-        val paint = android.graphics.Paint().apply {
+        val paint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG).apply {
             colorFilter = android.graphics.ColorMatrixColorFilter(cm)
         }
-        canvas.drawBitmap(input, 0f, 0f, paint)
+        val dstRect = android.graphics.Rect(0, 0, outW, outH)
+        canvas.drawBitmap(input, null, dstRect, paint)
         input.recycle()
         return output
     }

@@ -82,6 +82,9 @@ class MainActivity : BridgeActivity() {
         val settings = webView.settings
         settings.domStorageEnabled = true
         settings.cacheMode = WebSettings.LOAD_DEFAULT
+        // Harden WebView against local file:// and content:// cross-origin disclosure
+        settings.allowFileAccess = false
+        settings.allowContentAccess = false
         
         // Modern renderer priority policy
         try {

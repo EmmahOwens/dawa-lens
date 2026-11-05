@@ -5,7 +5,7 @@ import { NativeLocation } from "@/plugins/nativeLocation";
 import {
   saveLastKnownLocation,
   getLastKnownLocation,
-} from "../services/pharmacyService";
+} from "../services/pharmacyLocationStore";
 
 interface UserLocation {
   latitude: number;

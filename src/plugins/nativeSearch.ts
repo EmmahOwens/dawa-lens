@@ -1,17 +1,15 @@
 /**
  * NativeSearch — Capacitor plugin for offline drug name fuzzy search.
  *
- * Backed by a Rust library (libdawa_search) compiled as a native binary
- * for each platform. Uses Jaro-Winkler similarity ranking over a bundled
- * index of ~1,000 common drug names from the Uganda Essential Medicines List (EMLU).
+ * Backed by the Rust `dawa-search` crate:
+ * - On Android: executed via JNI (`libdawa_search.so`) with automatic WebAssembly fallback.
+ * - On Web / PWA: executed via WebAssembly (`/wasm/dawa_search.wasm`), using the exact same
+ *   Rust Jaro-Winkler similarity ranking over the bundled Uganda Essential Medicines List (EMLU).
  *
- * Results are returned in < 1 ms with no network call, enabling true
- * offline autocomplete in the drug interaction checker.
- *
- * Falls back gracefully: if the native library is unavailable (simulator,
- * older OS), isAvailable() returns false and callers use the NLM API.
+ * Results are returned in < 1 ms with no network call, enabling true offline autocomplete.
  */
-import { registerPlugin } from '@capacitor/core';
+import { registerPlugin, WebPlugin } from "@capacitor/core";
+import { initDawaWasm, wasmFuzzySearch } from "@/lib/dawaWasm";
 
 export interface DrugSearchResult {
   name: string;
@@ -24,5 +22,31 @@ export interface NativeSearchPlugin {
   isAvailable(): Promise<{ available: boolean }>;
 }
 
-const NativeSearch = registerPlugin<NativeSearchPlugin>('NativeSearch');
+class NativeSearchWeb extends WebPlugin implements NativeSearchPlugin {
+  async isAvailable(): Promise<{ available: boolean }> {
+    const ready = await initDawaWasm();
+    return { available: ready };
+  }
+
+  async fuzzySearch(options: { query: string; limit?: number }): Promise<{ results: DrugSearchResult[] }> {
+    await initDawaWasm();
+    const raw = wasmFuzzySearch(options.query || "", options.limit ?? 8) || [];
+    const results: DrugSearchResult[] = raw.map((item) => {
+      const entry: DrugSearchResult = {
+        name: item.name,
+        score: item.score,
+      };
+      if (item.rxcui) {
+        entry.rxcui = item.rxcui;
+      }
+      return entry;
+    });
+    return { results };
+  }
+}
+
+const NativeSearch = registerPlugin<NativeSearchPlugin>("NativeSearch", {
+  web: () => new NativeSearchWeb(),
+});
+
 export { NativeSearch };

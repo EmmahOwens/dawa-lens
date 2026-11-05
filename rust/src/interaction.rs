@@ -1017,8 +1017,7 @@ pub fn normalize_drug_string(input: &str) -> String {
         i += 1;
     }
 
-    // Safe because all pushed bytes are ASCII alphanumeric
-    unsafe { String::from_utf8_unchecked(cleaned) }
+    String::from_utf8(cleaned).unwrap_or_default()
 }
 
 /// Resolves any free-form drug name, brand synonym, or generic string to its canonical definition.

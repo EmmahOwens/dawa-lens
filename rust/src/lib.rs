@@ -5,6 +5,9 @@ pub mod search;
 use std::cell::RefCell;
 use std::slice;
 
+/// Hard cap on WASM FFI string buffers (64 KiB) to prevent integer overflow or heap exhaustion.
+const MAX_WASM_ALLOC_BYTES: usize = 64 * 1024;
+
 thread_local! {
     static WASM_OUTPUT_BUF: RefCell<Vec<u8>> = RefCell::new(Vec::with_capacity(4096));
 }
@@ -13,13 +16,16 @@ fn write_output_str(s: &str) -> *const u8 {
     WASM_OUTPUT_BUF.with(|buf| {
         let mut b = buf.borrow_mut();
         b.clear();
+        if s.is_empty() {
+            return std::ptr::null();
+        }
         b.extend_from_slice(s.as_bytes());
         b.as_ptr()
     })
 }
 
 unsafe fn read_input_str<'a>(ptr: *const u8, len: usize) -> &'a str {
-    if ptr.is_null() || len == 0 {
+    if ptr.is_null() || len == 0 || len > MAX_WASM_ALLOC_BYTES {
         return "";
     }
     let bytes = slice::from_raw_parts(ptr, len);
@@ -28,23 +34,23 @@ unsafe fn read_input_str<'a>(ptr: *const u8, len: usize) -> &'a str {
 
 // ── WebAssembly / C-ABI Exports ──────────────────────────────────────────────
 
-/// Allocates `size` bytes in WASM linear memory for passing UTF-8 strings from JS.
+/// Allocates a zero-initialized buffer of exactly `size` bytes (up to `MAX_WASM_ALLOC_BYTES`)
+/// in WASM linear memory for passing UTF-8 strings from JS.
 #[no_mangle]
 pub extern "C" fn w_alloc(size: usize) -> *mut u8 {
-    if size == 0 {
+    if size == 0 || size > MAX_WASM_ALLOC_BYTES {
         return std::ptr::null_mut();
     }
-    let mut buf = Vec::<u8>::with_capacity(size);
-    let ptr = buf.as_mut_ptr();
-    std::mem::forget(buf);
-    ptr
+    let boxed: Box<[u8]> = vec![0u8; size].into_boxed_slice();
+    Box::into_raw(boxed) as *mut u8
 }
 
-/// Deallocates a buffer previously allocated by `w_alloc`.
+/// Deallocates a buffer previously allocated by `w_alloc` with matching `size`.
 #[no_mangle]
 pub unsafe extern "C" fn w_dealloc(ptr: *mut u8, size: usize) {
-    if !ptr.is_null() && size > 0 {
-        drop(Vec::from_raw_parts(ptr, 0, size));
+    if !ptr.is_null() && size > 0 && size <= MAX_WASM_ALLOC_BYTES {
+        let slice_ptr = slice::from_raw_parts_mut(ptr, size);
+        drop(Box::from_raw(slice_ptr));
     }
 }
 
@@ -156,6 +162,14 @@ mod android_jni {
         env.new_string(s)
             .unwrap_or_else(|_| env.new_string(fallback).expect("fallback JString"))
             .into_raw()
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeIsAvailable(
+        _env: JNIEnv,
+        _class: JClass,
+    ) -> jint {
+        1
     }
 
     #[no_mangle]

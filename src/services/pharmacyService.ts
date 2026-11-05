@@ -1,5 +1,27 @@
 import rawNdaData from "../data/ndaPharmacies.json";
 import rawDrugShopData from "../data/ndaDrugShops.json";
+import { wasmHaversineKm } from "../lib/dawaWasm";
+import {
+  DEFAULT_KAMPALA_COORDS,
+  type SavedPharmacyLocation,
+  saveLastKnownLocation,
+  getLastKnownLocation,
+  clearLastKnownLocation,
+  type ResolveCoordinatesOptions,
+  type ResolvedCoordinates,
+  resolvePharmacyCoordinates,
+} from "./pharmacyLocationStore";
+
+export {
+  DEFAULT_KAMPALA_COORDS,
+  type SavedPharmacyLocation,
+  saveLastKnownLocation,
+  getLastKnownLocation,
+  clearLastKnownLocation,
+  type ResolveCoordinatesOptions,
+  type ResolvedCoordinates,
+  resolvePharmacyCoordinates,
+};
 
 export interface NdaPharmacy {
   id: string;
@@ -50,168 +72,33 @@ export interface PharmacyFilterOptions {
   limit?: number;
 }
 
-export const DEFAULT_KAMPALA_COORDS: [number, number] = [32.5825, 0.3476]; // [lng, lat]
-const LAST_KNOWN_LOCATION_STORAGE_KEY = "dawa_pharmacy_last_location";
-
-export interface SavedPharmacyLocation {
-  latitude: number;
-  longitude: number;
-  country?: string | null;
-  countryCode?: string | null;
-  district?: string | null;
-  timestamp: number;
-}
-
-let inMemorySavedLocation: SavedPharmacyLocation | null = null;
-
-export function saveLastKnownLocation(location: {
-  latitude: number;
-  longitude: number;
-  country?: string | null;
-  countryCode?: string | null;
-  district?: string | null;
-}): void {
-  if (
-    typeof location?.latitude !== "number" ||
-    isNaN(location.latitude) ||
-    typeof location?.longitude !== "number" ||
-    isNaN(location.longitude) ||
-    location.latitude < -90 ||
-    location.latitude > 90 ||
-    location.longitude < -180 ||
-    location.longitude > 180
-  ) {
-    return;
-  }
-
-  const saved: SavedPharmacyLocation = {
-    latitude: location.latitude,
-    longitude: location.longitude,
-    country: location.country ?? null,
-    countryCode: location.countryCode ?? null,
-    district: location.district ?? null,
-    timestamp: Date.now(),
-  };
-
-  inMemorySavedLocation = saved;
-
-  try {
-    if (typeof localStorage !== "undefined") {
-      localStorage.setItem(LAST_KNOWN_LOCATION_STORAGE_KEY, JSON.stringify(saved));
-    }
-  } catch (err) {
-    console.warn("[pharmacyService] Failed to persist last known location to localStorage:", err);
-  }
-}
-
-export function getLastKnownLocation(): SavedPharmacyLocation | null {
-  try {
-    if (typeof localStorage !== "undefined") {
-      const raw =
-        localStorage.getItem(LAST_KNOWN_LOCATION_STORAGE_KEY) ||
-        localStorage.getItem("dawa_last_known_location");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (
-          typeof parsed?.latitude === "number" &&
-          !isNaN(parsed.latitude) &&
-          typeof parsed?.longitude === "number" &&
-          !isNaN(parsed.longitude) &&
-          parsed.latitude >= -90 &&
-          parsed.latitude <= 90 &&
-          parsed.longitude >= -180 &&
-          parsed.longitude <= 180
-        ) {
-          inMemorySavedLocation = parsed as SavedPharmacyLocation;
-          return parsed as SavedPharmacyLocation;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("[pharmacyService] Failed to read last known location from localStorage:", err);
-  }
-
-  return inMemorySavedLocation;
-}
-
-export function clearLastKnownLocation(): void {
-  inMemorySavedLocation = null;
-  try {
-    if (typeof localStorage !== "undefined") {
-      localStorage.removeItem(LAST_KNOWN_LOCATION_STORAGE_KEY);
-      localStorage.removeItem("dawa_last_known_location");
-    }
-  } catch {}
-}
-
-export interface ResolveCoordinatesOptions {
-  liveLocation?: { latitude: number; longitude: number } | null;
-  hasNetworkIssue?: boolean;
-  hasGpsIssue?: boolean;
-}
-
-export interface ResolvedCoordinates {
-  coords: [number, number]; // [lng, lat]
-  source: "live" | "previous" | "default";
-}
-
-/**
- * Resolves user coordinates for the NDA Pharmacy locator:
- * - If online and live GPS location is available (without GPS or network issues) -> uses live location.
- * - If there is a network issue, GPS issue, or live location is unavailable:
- *     1. Uses the previous location if one was previously recorded.
- *     2. If no previous location exists (e.g. first-time user with network/GPS issue), defaults to Kampala.
- */
-export function resolvePharmacyCoordinates(
-  options: ResolveCoordinatesOptions = {}
-): ResolvedCoordinates {
-  const { liveLocation, hasNetworkIssue = false, hasGpsIssue = false } = options;
-
-  const hasValidLive =
-    liveLocation &&
-    typeof liveLocation.latitude === "number" &&
-    !isNaN(liveLocation.latitude) &&
-    typeof liveLocation.longitude === "number" &&
-    !isNaN(liveLocation.longitude);
-
-  // If we have valid live GPS and NO network/GPS issue, use live location
-  if (hasValidLive && !hasNetworkIssue && !hasGpsIssue) {
-    return {
-      coords: [liveLocation.longitude, liveLocation.latitude],
-      source: "live",
-    };
-  }
-
-  // Network issue OR live location not available:
-  // Check if a previous location exists
-  const previous = getLastKnownLocation();
-  if (previous) {
-    return {
-      coords: [previous.longitude, previous.latitude],
-      source: "previous",
-    };
-  }
-
-  // First-time users with network issues (or no previous location): default to Kampala
-  return {
-    coords: DEFAULT_KAMPALA_COORDS,
-    source: "default",
-  };
-}
-
 // In-memory cache for road routes: `${lng1},${lat1}->${lng2},${lat2}:${mode}`
 const routeCache = new Map<string, PharmacyRoute>();
 
-const PHARMACIES: NdaPharmacy[] = ((rawNdaData?.pharmacies || []) as NdaPharmacy[]).map(
-  (p) => ({ ...p, outletType: "pharmacy" as const })
-);
+let cachedPharmacies: NdaPharmacy[] | null = null;
+let cachedDrugShops: NdaPharmacy[] | null = null;
 
-const DRUG_SHOPS: NdaPharmacy[] = ((rawDrugShopData?.drugShops || []) as NdaPharmacy[]).map(
-  (d) => ({ ...d, outletType: "drug_shop" as const })
-);
+function getPharmacies(): NdaPharmacy[] {
+  if (!cachedPharmacies) {
+    cachedPharmacies = ((rawNdaData?.pharmacies || []) as NdaPharmacy[]).map(
+      (p) => ({ ...p, outletType: "pharmacy" as const })
+    );
+  }
+  return cachedPharmacies;
+}
+
+function getDrugShops(): NdaPharmacy[] {
+  if (!cachedDrugShops) {
+    cachedDrugShops = ((rawDrugShopData?.drugShops || []) as NdaPharmacy[]).map(
+      (d) => ({ ...d, outletType: "drug_shop" as const })
+    );
+  }
+  return cachedDrugShops;
+}
 
 /**
  * Calculates the great-circle distance between two points on Earth in kilometers using the Haversine formula.
+ * Delegates to the compiled Rust WebAssembly engine when available, with instant JS fallback.
  */
 export function calculateHaversineDistance(
   lat1: number,
@@ -219,6 +106,10 @@ export function calculateHaversineDistance(
   lat2: number,
   lon2: number
 ): number {
+  const wasmDist = wasmHaversineKm(lat1, lon1, lat2, lon2);
+  if (wasmDist !== null) {
+    return wasmDist;
+  }
   const R = 6371; // Earth radius in km
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -241,9 +132,10 @@ export function findTopNearestPharmacies(
   count = 5,
   onlyRetail = true
 ): NdaPharmacy[] {
-  if (!PHARMACIES || PHARMACIES.length === 0) return [];
+  const pharmacies = getPharmacies();
+  if (!pharmacies || pharmacies.length === 0) return [];
 
-  const valid = PHARMACIES.filter((p) => {
+  const valid = pharmacies.filter((p) => {
     if (onlyRetail && !p.isRetail) return false;
     return typeof p.latitude === "number" && typeof p.longitude === "number";
   });
@@ -273,7 +165,8 @@ export function findNearbyPharmacies(
     limit = 50,
   } = options;
 
-  const results = PHARMACIES.filter((p) => {
+  const pharmacies = getPharmacies();
+  const results = pharmacies.filter((p) => {
     if (onlyRetail && !p.isRetail) return false;
     if (district && district !== "ALL" && p.district.toLowerCase() !== district.toLowerCase()) {
       return false;
@@ -518,9 +411,10 @@ export function findTopNearestDrugShops(
   userLng: number,
   count = 5
 ): NdaPharmacy[] {
-  if (!DRUG_SHOPS || DRUG_SHOPS.length === 0) return [];
+  const drugShops = getDrugShops();
+  if (!drugShops || drugShops.length === 0) return [];
 
-  const withDist = DRUG_SHOPS
+  const withDist = drugShops
     .filter((d) => typeof d.latitude === "number" && typeof d.longitude === "number")
     .map((d) => ({
       ...d,
@@ -540,8 +434,9 @@ export function findNearbyDrugShops(
   options: PharmacyFilterOptions = {}
 ): NdaPharmacy[] {
   const { radiusKm = 50, district = "", query = "", limit = 60 } = options;
+  const drugShops = getDrugShops();
 
-  const results = DRUG_SHOPS.filter((d) => {
+  const results = drugShops.filter((d) => {
     if (district && district !== "ALL" && d.district.toLowerCase() !== district.toLowerCase()) {
       return false;
     }
@@ -580,7 +475,7 @@ export function findNearbyDrugShops(
  */
 export function getAllDistricts(): string[] {
   const set = new Set<string>();
-  for (const p of PHARMACIES) {
+  for (const p of getPharmacies()) {
     if (p.district && p.district !== "\\N") {
       set.add(p.district);
     }
@@ -593,7 +488,7 @@ export function getAllDistricts(): string[] {
  */
 export function getAllDrugShopDistricts(): string[] {
   const set = new Set<string>();
-  for (const d of DRUG_SHOPS) {
+  for (const d of getDrugShops()) {
     if (d.district) set.add(d.district);
   }
   return Array.from(set).sort();

@@ -8,6 +8,11 @@
  */
 
 import { ParsedInteraction } from '../types/interactions';
+import {
+  wasmEvaluateClinicalInteraction,
+  wasmIsSameDrugSubstance,
+  wasmResolveCanonicalDrug,
+} from '../lib/dawaWasm';
 
 export interface ClinicalDrugDef {
   canonicalId: string;
@@ -965,6 +970,11 @@ const normalizeDrugString = (str?: string | null): string => {
  */
 export function resolveCanonicalDrug(query?: string | null): ClinicalDrugDef | null {
   if (!query) return null;
+  const wasmResult = wasmResolveCanonicalDrug(query);
+  if (wasmResult !== undefined) {
+    return wasmResult;
+  }
+
   const raw = query.toLowerCase().trim();
   const normalized = normalizeDrugString(raw);
 
@@ -995,6 +1005,11 @@ export function resolveCanonicalDrug(query?: string | null): ClinicalDrugDef | n
  */
 export function isSameDrugSubstance(drugA?: string | null, drugB?: string | null): boolean {
   if (!drugA || !drugB) return false;
+  const wasmSame = wasmIsSameDrugSubstance(drugA, drugB);
+  if (wasmSame !== null) {
+    return wasmSame;
+  }
+
   const rawA = drugA.toLowerCase().trim();
   const rawB = drugB.toLowerCase().trim();
   if (rawA === rawB) return true;
@@ -1020,6 +1035,12 @@ export function evaluateClinicalInteraction(
   medA: string,
   medB: string
 ): ParsedInteraction | null {
+  if (!medA || !medB) return null;
+  const wasmHit = wasmEvaluateClinicalInteraction(medA, medB);
+  if (wasmHit !== undefined) {
+    return wasmHit;
+  }
+
   // CRITICAL RULE: If both represent the same drug, neglect the pair!
   if (isSameDrugSubstance(medA, medB)) {
     return null;

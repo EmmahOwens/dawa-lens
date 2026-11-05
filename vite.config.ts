@@ -29,6 +29,12 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('ndaPharmacies.json') || id.includes('ndaDrugShops.json')) {
+            return 'nda-data';
+          }
+          if (id.includes('quotesData')) {
+            return 'quotes-data';
+          }
           if (id.includes('node_modules')) {
             if (id.includes('@capacitor') || id.includes('@capgo')) {
               return 'capacitor-core';

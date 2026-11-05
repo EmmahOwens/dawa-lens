@@ -125,7 +125,7 @@ pub fn jaro_winkler(s1: &str, s2: &str) -> f32 {
     jaro_sim + (prefix_len * 0.1 * (1.0 - jaro_sim))
 }
 
-/// Calculates great-circle distance between two coordinates in kilometers (rounded to 0.1 km),
+/// Calculates great-circle distance between two coordinates in kilometers (rounded to 0.01 km),
 /// matching `calculateHaversineDistance` in `src/services/pharmacyService.ts`.
 pub fn haversine_distance_km(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     const EARTH_RADIUS_KM: f64 = 6371.0;
@@ -138,7 +138,7 @@ pub fn haversine_distance_km(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 
         + r_lat1.cos() * r_lat2.cos() * (d_lon / 2.0).sin().powi(2);
     let c = 2.0 * a.sqrt().atan2((1.0 - a).max(0.0).sqrt());
     let distance = EARTH_RADIUS_KM * c;
-    (distance * 10.0).round() / 10.0
+    (distance * 100.0).round() / 100.0
 }
 
 /// Perform a case-insensitive fuzzy search over the embedded drug index.

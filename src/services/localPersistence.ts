@@ -107,6 +107,7 @@ async function ensureSqliteReady(): Promise<boolean> {
 export const localPersistence = {
   medicines: {
     getAll: async (): Promise<Medicine[]> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           const { rows } = await NativeSqlite.query({
@@ -148,11 +149,12 @@ export const localPersistence = {
         .substring(2, 11)}`;
       const addedAt = data.addedAt || new Date().toISOString();
 
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
-            sql: `INSERT INTO medicines (id,name,generic_name,dosage,form,current_quantity,dosage_per_dose,color,icon,patient_id,user_id,added_at,updated_at,is_conflict,image_url,notes)
-                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            sql: `INSERT INTO medicines (id,name,generic_name,dosage,form,current_quantity,dosage_per_dose,frequency_per_day,color,icon,patient_id,user_id,added_at,updated_at,is_conflict,image_url,notes)
+                  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             params: [
               id,
               data.name,
@@ -161,6 +163,7 @@ export const localPersistence = {
               (data as Medicine & { form?: string }).form ?? null,
               data.currentQuantity ?? 0,
               data.dosagePerDose ?? 1,
+              data.frequencyPerDay ?? null,
               (data as Medicine & { color?: string }).color ?? null,
               (data as Medicine & { icon?: string }).icon ?? null,
               (data as Medicine & { patientId?: string | null }).patientId ??
@@ -189,6 +192,7 @@ export const localPersistence = {
       return newItem;
     },
     update: async (id: string, updates: Partial<Medicine>): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           const mapping: Record<string, string> = {
@@ -255,8 +259,8 @@ export const localPersistence = {
           await NativeSqlite.execute({ sql: "DELETE FROM medicines", params: [] });
           for (const data of items) {
             await NativeSqlite.execute({
-              sql: `INSERT INTO medicines (id,name,generic_name,dosage,form,current_quantity,dosage_per_dose,color,icon,patient_id,user_id,added_at,updated_at,is_conflict,image_url,notes)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+              sql: `INSERT INTO medicines (id,name,generic_name,dosage,form,current_quantity,dosage_per_dose,frequency_per_day,color,icon,patient_id,user_id,added_at,updated_at,is_conflict,image_url,notes)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
               params: [
                 data.id,
                 data.name,
@@ -265,6 +269,7 @@ export const localPersistence = {
                 (data as Medicine & { form?: string }).form ?? null,
                 data.currentQuantity ?? 0,
                 data.dosagePerDose ?? 1,
+                data.frequencyPerDay ?? null,
                 (data as Medicine & { color?: string }).color ?? null,
                 (data as Medicine & { icon?: string }).icon ?? null,
                 (data as Medicine & { patientId?: string | null }).patientId ?? null,
@@ -288,6 +293,7 @@ export const localPersistence = {
 
   reminders: {
     getAll: async (): Promise<Reminder[]> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           const { rows } = await NativeSqlite.query({
@@ -322,6 +328,7 @@ export const localPersistence = {
       const id = data.id || `lrem-${Date.now()}`;
       const createdAt = data.createdAt || new Date().toISOString();
 
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
@@ -453,6 +460,7 @@ export const localPersistence = {
 
   doseLogs: {
     getAll: async (): Promise<DoseLog[]> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           const { rows } = await NativeSqlite.query({
@@ -487,6 +495,7 @@ export const localPersistence = {
       const id = data.id || `llog-${Date.now()}`;
       const actionTime = data.actionTime || new Date().toISOString();
 
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
@@ -521,6 +530,7 @@ export const localPersistence = {
       return newItem;
     },
     update: async (id: string, updates: Partial<DoseLog>): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           const mapping: Record<string, string> = {
@@ -557,6 +567,7 @@ export const localPersistence = {
       }
     },
     remove: async (id: string): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
@@ -611,6 +622,7 @@ export const localPersistence = {
 
   patients: {
     getAll: async (): Promise<Patient[]> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           const { rows } = await NativeSqlite.query({
@@ -641,6 +653,7 @@ export const localPersistence = {
       const id = data.id || `lpat-${Date.now()}`;
       const createdAt = data.createdAt || new Date().toISOString();
 
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
@@ -673,6 +686,7 @@ export const localPersistence = {
       return newItem;
     },
     update: async (id: string, updates: Partial<Patient>): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           const mapping: Record<string, string> = {
@@ -706,6 +720,7 @@ export const localPersistence = {
       }
     },
     remove: async (id: string): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
@@ -755,6 +770,7 @@ export const localPersistence = {
 
   wellnessLogs: {
     getAll: async (): Promise<WellnessLog[]> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           const { rows } = await NativeSqlite.query({
@@ -781,6 +797,7 @@ export const localPersistence = {
     },
     create: async (data: Omit<WellnessLog, "id"> & { id?: string }): Promise<WellnessLog> => {
       const id = data.id || `lwell-${Date.now()}`;
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
@@ -808,6 +825,7 @@ export const localPersistence = {
       return newItem;
     },
     remove: async (id: string): Promise<void> => {
+      await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
           await NativeSqlite.execute({
@@ -880,6 +898,7 @@ export const localPersistence = {
  */
 export async function clearAllLocalPersistence(userId?: string): Promise<void> {
   const targetUser = userId || activeUserId;
+  await ensureSqliteReady();
   if (Capacitor.isNativePlatform() && sqliteReady) {
     try {
       // On user logout or account switch, always wipe SQLite tables to prevent
