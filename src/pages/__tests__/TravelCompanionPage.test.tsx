@@ -2,6 +2,15 @@ import * as React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import TravelCompanionPage from "../TravelCompanionPage";
+import {
+  COUNTRY_TRAVEL_META,
+  normalizeCountryKey,
+  resolveLocalEquivalent,
+  generateOfflineTravelAdvice,
+  cacheTravelEquivalents,
+  getCachedTravelEquivalent,
+} from "@/services/offlineTravelService";
+import { DRA_DATABASE } from "@/services/draDatabase";
 
 // ─── Hoisted mocks ────────────────────────────────────────────────────────────
 
@@ -93,6 +102,8 @@ vi.mock("framer-motion", () => ({
 describe("TravelCompanionPage - Local Pharmacy Equivalents", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStorage.clear();
+    localStorage.clear();
     testState.medicines = [
       { id: "med-1", name: "Panadol", genericName: "Paracetamol", dosage: "500mg" },
       { id: "med-2", name: "Glucophage", genericName: "Metformin", dosage: "500mg" },
@@ -184,5 +195,76 @@ describe("TravelCompanionPage - Local Pharmacy Equivalents", () => {
 
     expect(screen.getByText(/No Medications Found/i)).toBeInTheDocument();
     expect(screen.getByText(/Please add medications to your profile/i)).toBeInTheDocument();
+  });
+
+  it("Layer 1: maps every country in DRA_DATABASE and ~195 global destinations without falsely defaulting to east_africa", () => {
+    expect(Object.keys(COUNTRY_TRAVEL_META).length).toBeGreaterThanOrEqual(190);
+
+    // Every single country in DRA_DATABASE must resolve to a valid COUNTRY_TRAVEL_META entry
+    for (const draCountryKey of Object.keys(DRA_DATABASE)) {
+      const normalized = normalizeCountryKey(draCountryKey);
+      expect(COUNTRY_TRAVEL_META[normalized]).toBeDefined();
+    }
+
+    // Verify collision-safe normalization (e.g., Ukraine != UK, Jerusalem != USA, Nigeria != Niger, Romania != Oman)
+    expect(normalizeCountryKey("Ukraine")).toBe("ukraine");
+    expect(normalizeCountryKey("Jerusalem")).toBe("israel");
+    expect(normalizeCountryKey("Nigeria")).toBe("nigeria");
+    expect(normalizeCountryKey("Niger")).toBe("niger");
+    expect(normalizeCountryKey("Romania")).toBe("romania");
+    expect(normalizeCountryKey("Oman")).toBe("oman");
+    expect(normalizeCountryKey("South Korea")).toBe("southkorea");
+    expect(normalizeCountryKey("Argentina")).toBe("argentina");
+    expect(normalizeCountryKey("Poland")).toBe("poland");
+
+    // Verify non-East-African countries never get East African malaria/Yellow Card risks
+    const polandAdvice = generateOfflineTravelAdvice({
+      medicines: testState.medicines,
+      destination: "Poland",
+    });
+    expect(polandAdvice.healthRisks.join(" ")).not.toMatch(/Yellow Card/i);
+    expect(polandAdvice.equivalents[0].equivalent).toMatch(/Apap/i);
+  });
+
+  it("Layer 2 & 3: resolves country-specific brands, regional brands, and USAN/WHO INN nomenclature offline", () => {
+    const panadol = { id: "1", name: "Panadol", genericName: "" } as any;
+    const ventolin = { id: "2", name: "Ventolin", genericName: "Salbutamol" } as any;
+    const daonil = { id: "3", name: "Daonil", genericName: "Glibenclamide" } as any;
+
+    // France -> Doliprane / Efferalgan
+    expect(resolveLocalEquivalent(panadol, "France")).toMatch(/Doliprane/i);
+    // Germany -> Ben-u-ron
+    expect(resolveLocalEquivalent(panadol, "Germany")).toMatch(/Ben-u-ron/i);
+    // India -> Dolo-650 / Crocin
+    expect(resolveLocalEquivalent(panadol, "India")).toMatch(/Dolo-650/i);
+    // USA -> Tylenol + Acetaminophen (USAN)
+    expect(resolveLocalEquivalent(panadol, "United States")).toMatch(/Tylenol.*Acetaminophen/i);
+    expect(resolveLocalEquivalent(ventolin, "United States")).toMatch(/Albuterol/i);
+    expect(resolveLocalEquivalent(daonil, "United States")).toMatch(/Glyburide/i);
+    // Japan -> Calonal + Acetaminophen
+    expect(resolveLocalEquivalent(panadol, "Japan")).toMatch(/Calonal/i);
+    // Colombia -> Dolex + Acetaminofén
+    expect(resolveLocalEquivalent(panadol, "Colombia")).toMatch(/Dolex/i);
+  });
+
+  it("Layer 4: persists online AI equivalents to localStorage and serves them when offline", () => {
+    const customMed = { id: "99", name: "Cardiozen", genericName: "Bisoprolol", dosage: "5mg" } as any;
+    cacheTravelEquivalents(
+      "France",
+      [{ original: "Cardiozen", equivalent: "Cardensiel 5mg (Bisoprolol Fumarate)" }],
+      [customMed]
+    );
+
+    expect(getCachedTravelEquivalent("France", customMed)).toBe(
+      "Cardensiel 5mg (Bisoprolol Fumarate)"
+    );
+
+    const offlineAdvice = generateOfflineTravelAdvice({
+      medicines: [customMed],
+      destination: "Paris",
+    });
+    expect(offlineAdvice.equivalents[0].equivalent).toBe(
+      "Cardensiel 5mg (Bisoprolol Fumarate)"
+    );
   });
 });

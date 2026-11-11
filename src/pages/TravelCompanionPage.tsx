@@ -20,7 +20,12 @@ import {
 import { useTranslation } from "react-i18next";
 import { TravelMap } from "@/components/travel/TravelMap";
 import { lookupDRA } from "@/services/draDatabase";
-import { generateOfflineTravelAdvice } from "@/services/offlineTravelService";
+import {
+  generateOfflineTravelAdvice,
+  resolveLocalEquivalent,
+  cacheTravelEquivalents,
+  cacheOfflineTravelAdvice,
+} from "@/services/offlineTravelService";
 import { ShieldCheck, Siren } from "@/lib/icons";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import PermissionRequest from "@/components/PermissionRequest";
@@ -43,6 +48,7 @@ export default function TravelCompanionPage() {
 
   // Load cached advice if available
   useEffect(() => {
+    if (medicines.length === 0) return;
     try {
       const cachedAdvice = sessionStorage.getItem("dawa_travel_advice");
       const cachedDest = sessionStorage.getItem("dawa_travel_destination");
@@ -140,7 +146,7 @@ export default function TravelCompanionPage() {
             );
           });
 
-          if (match) {
+          if (match && !/^ask local pharmacist$/i.test(match.equivalent.trim())) {
             return {
               original: medName,
               equivalent: match.equivalent,
@@ -149,11 +155,16 @@ export default function TravelCompanionPage() {
 
           return {
             original: medName,
-            equivalent: medGeneric ? `${medGeneric} (Ask local pharmacist)` : `${medName} (Ask local pharmacist)`,
+            equivalent: resolveLocalEquivalent(med, activeDestination),
           };
         });
 
-        (res as any).equivalents = allEquivalents.length > 0 ? allEquivalents : parsedEquivalents;
+        const finalEquivalents = allEquivalents.length > 0 ? allEquivalents : parsedEquivalents;
+        (res as any).equivalents = finalEquivalents;
+
+        // Layer 4: Persist resolved equivalents & advice to localStorage for future offline use
+        cacheTravelEquivalents(activeDestination, finalEquivalents, medicines);
+        cacheOfflineTravelAdvice(activeDestination, res as any);
       }
 
       finalizeAdvice(res, 1000);
@@ -532,12 +543,25 @@ export default function TravelCompanionPage() {
             className="flex flex-col items-center justify-center p-12"
           >
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-6">
-              <Plane size={32} className="text-muted-foreground" />
+              {medicines.length === 0 ? (
+                <Pill size={32} className="text-muted-foreground" />
+              ) : (
+                <Plane size={32} className="text-muted-foreground" />
+              )}
             </div>
-            <p className="text-center text-muted-foreground font-semibold max-w-sm leading-relaxed uppercase tracking-wider text-[11px]">
-              Ready for your next adventure?<br/>
-              <span className="text-foreground/70">Enter a destination to generate your health pass.</span>
-            </p>
+            {medicines.length === 0 ? (
+              <div className="text-center max-w-sm space-y-1.5">
+                <h3 className="text-sm font-bold text-foreground">No Medications Found</h3>
+                <p className="text-xs font-medium text-muted-foreground leading-relaxed">
+                  Please add medications to your profile for personalized pharmacy equivalents, or enter a destination above for travel health advisories.
+                </p>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground font-semibold max-w-sm leading-relaxed uppercase tracking-wider text-[11px]">
+                Ready for your next adventure?<br/>
+                <span className="text-foreground/70">Enter a destination to generate your health pass.</span>
+              </p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
