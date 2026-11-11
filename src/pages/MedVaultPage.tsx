@@ -1180,7 +1180,7 @@ export default function MedVaultPage() {
           setPharmacyFinderMedicine(target);
         }}
         title="Enable Location Services"
-        description="Allow DawaLens to access your device location to discover the nearest NDA-licensed pharmacies in Uganda and display real-time walking and driving routes."
+        description="Allow Dawa Lens to access your device location to discover the nearest NDA-licensed pharmacies in Uganda and display real-time walking and driving routes."
         icon={Navigation}
         permissionName="Location"
       />

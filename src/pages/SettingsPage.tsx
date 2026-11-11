@@ -778,7 +778,7 @@ export default function SettingsPage() {
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-              DawaLens delivers evidence-informed wellness nudges throughout your day to support circulation, posture, recovery, eyesight, and calm alongside your medication schedule:
+              Dawa Lens delivers evidence-informed wellness nudges throughout your day to support circulation, posture, recovery, eyesight, and calm alongside your medication schedule:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <div className="p-2.5 rounded-xl bg-background/80 border border-border/60 flex items-start gap-2.5">

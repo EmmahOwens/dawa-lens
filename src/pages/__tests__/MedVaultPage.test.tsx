@@ -138,7 +138,7 @@ describe("MedVaultPage - Location Permission Dialog for Find NDA Pharmacy", () =
     // Permission dialog box must appear requiring location services
     expect(screen.getByText(/Enable Location Services/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/Allow DawaLens to access your device location to discover the nearest NDA-licensed pharmacies/i)
+      screen.getByText(/Allow Dawa Lens to access your device location to discover the nearest NDA-licensed pharmacies/i)
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Allow Location/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Maybe later/i })).toBeInTheDocument();

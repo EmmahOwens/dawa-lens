@@ -550,7 +550,7 @@ export default function TravelCompanionPage() {
           requestLocation();
         }}
         title="Enable Location"
-        description="Allow DawaLens to detect your current country for accurate travel health intelligence and flight-path visualization."
+        description="Allow Dawa Lens to detect your current country for accurate travel health intelligence and flight-path visualization."
         icon={Navigation}
         permissionName="Location"
       />

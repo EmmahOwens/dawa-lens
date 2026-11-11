@@ -964,7 +964,7 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
           }
         }}
         title="Enable Location Services"
-        description="Allow DawaLens to access your device location to discover the nearest NDA-licensed pharmacies and drug shops in Uganda with real-time walking and driving routes."
+        description="Allow Dawa Lens to access your device location to discover the nearest NDA-licensed pharmacies and drug shops in Uganda with real-time walking and driving routes."
         icon={Navigation}
         permissionName="Location"
       />
