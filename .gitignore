@@ -78,6 +78,14 @@ scratch/
 __pycache__/
 *.pyc
 
+# Local AI/Tooling Caches & Output
+.archify/
+.artifacts/
+.fallow/
+.freebuff/
+.gemini/
+output/
+
 # LaTeX build artifacts (report)
 report/*.aux
 report/*.bbl
