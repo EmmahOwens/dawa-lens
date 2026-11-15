@@ -140,7 +140,7 @@ export default function BottomNav() {
           className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-[21rem] md:hidden px-3"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) * 0.4 + 0.6rem)" }}
         >
-          <div className="pointer-events-auto flex items-center justify-between rounded-full bg-white/45 dark:bg-white/10 backdrop-blur-2xl backdrop-saturate-[180%] [-webkit-backdrop-filter:blur(32px)_saturate(180%)] border border-black/[0.08] dark:border-white/10 px-3 py-1.5 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6),0_12px_32px_-4px_rgba(0,0,0,0.12)] dark:shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.1),0_12px_32px_-4px_rgba(0,0,0,0.5)]">
+          <div className="pointer-events-auto relative flex items-center justify-between rounded-full bg-white/45 dark:bg-white/10 backdrop-blur-2xl backdrop-saturate-[180%] [-webkit-backdrop-filter:blur(32px)_saturate(180%)] border border-black/[0.08] dark:border-white/10 px-3 py-1.5 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6),0_12px_32px_-4px_rgba(0,0,0,0.12)] dark:shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.1),0_12px_32px_-4px_rgba(0,0,0,0.5)]">
             {/* Left Side Items */}
             <div className="flex flex-1 justify-around items-center">
               {navItems.slice(0, 2).map((item) => (
@@ -148,15 +148,19 @@ export default function BottomNav() {
               ))}
             </div>
 
-            {/* Central Apple Action Blue Scan Button */}
+            {/* Central Floating / Protruding Scan Button */}
             <NavLink
               to="/scan"
               aria-label={t("nav.scan")}
               onClick={() => NativeService.haptics.impact(ImpactStyle.Medium)}
-              className="relative flex h-11 w-11 items-center justify-center shrink-0 mx-1 rounded-full active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="relative -mt-6 flex h-14 w-14 items-center justify-center shrink-0 mx-1.5 rounded-full active:scale-95 hover:scale-[1.03] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <div className="h-full w-full rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.35)] ring-1 ring-black/5 dark:ring-white/10">
-                <Camera size={20} aria-hidden="true" />
+              <div
+                className={`h-full w-full rounded-full bg-primary flex items-center justify-center text-primary-foreground ring-4 ring-background shadow-[0_8px_22px_-4px_hsl(var(--primary)/0.5),inset_0_1px_1px_0_rgba(255,255,255,0.4)] transition-all duration-200 ${
+                  location.pathname === "/scan" ? "brightness-110" : ""
+                }`}
+              >
+                <Camera size={24} aria-hidden="true" />
               </div>
             </NavLink>
 
