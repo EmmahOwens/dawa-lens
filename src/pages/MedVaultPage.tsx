@@ -33,6 +33,7 @@ import PermissionRequest from "@/components/PermissionRequest";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 import {
   Select,
   SelectContent,
@@ -849,6 +850,14 @@ export default function MedVaultPage() {
           </DropdownMenu>
         </div>
       </div>
+
+      <ScreenHeroImage
+        src="/assets/screens/med-vault.webp"
+        alt="Organized smart medicine cabinet and pill bottles"
+        eyebrow="Smart Inventory"
+        title="Track every refill before it runs low"
+        subtitle="Monitor pill counts, days remaining, and nearby verified pharmacies"
+      />
 
       {/* Hero Stats Tile */}
       <div className="relative overflow-hidden rounded-[26px] border border-teal-500/30 p-6 mb-6 bg-gradient-to-br from-[#0d9488] via-[#0f766e] to-[#042f2e] text-white shadow-xl shadow-teal-950/20 transition-all">

@@ -58,6 +58,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 
 /**
  * Apple Design System Palette for Family / Care Profiles
@@ -476,14 +477,23 @@ export default function FamilyHubPage() {
             </p>
           </div>
           <button
+            type="button"
             onClick={handleOpenAdd}
-            className="w-10 h-10 rounded-full bg-[#0066cc] dark:bg-[#0071e3] text-white flex items-center justify-center active:scale-95 transition-transform"
+            className="w-10 h-10 rounded-full bg-[#0066cc] dark:bg-[#0071e3] text-white flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Add new profile"
           >
-            <UserPlus size={18} />
+            <UserPlus size={18} aria-hidden="true" />
           </button>
         </div>
       </motion.div>
+
+      <ScreenHeroImage
+        src="/assets/screens/family-hub.webp"
+        alt="Multi-generational family caring for each other at home"
+        eyebrow="Circle of Care"
+        title={isProfessionalMode ? "Manage every patient profile in one place" : "Keep your loved ones on track"}
+        subtitle="Switch profiles anytime to review schedules, refills, and safety checks"
+      />
 
       {/* Circle Health Pulse Overview Bar */}
       <motion.div

@@ -31,6 +31,7 @@ import { useGeolocation } from "@/hooks/useGeolocation";
 import PermissionRequest from "@/components/PermissionRequest";
 import { useToast } from "@/hooks/use-toast";
 import MessageRenderer from "@/components/MessageRenderer";
+import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -198,6 +199,14 @@ export default function TravelCompanionPage() {
           </div>
         </div>
       </motion.div>
+
+      <ScreenHeroImage
+        src="/assets/screens/travel-companion.webp"
+        alt="Passport, travel medicine kit, and flight route illustration"
+        eyebrow="Travel Companion"
+        title="Cross-border medication readiness"
+        subtitle="Check local equivalents, carry rules, and time-zone dosing adjustments"
+      />
 
       {/* Main Map & Input Card */}
       <div className="space-y-4 mb-8">
