@@ -94,7 +94,7 @@ export default function PageLoader({
       className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md overflow-hidden p-6"
     >
       {/* Content layout card */}
-      <div className="relative z-10 flex flex-col items-center max-w-xs sm:max-w-sm w-full p-6 rounded-[22px] border border-border bg-card/95 shadow-xl backdrop-blur-md">
+      <div className="relative z-10 flex flex-col items-center max-w-xs sm:max-w-sm w-full p-6 rounded-[22px] glass-card">
         {routeMedia ? (
           <div className="w-full h-32 sm:h-36 rounded-2xl overflow-hidden border border-border/70 mb-5 bg-muted/40">
             <img

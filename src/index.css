@@ -461,22 +461,68 @@
     @apply hover:border-primary/40;
   }
 
-  /* Frosted Glass - Apple standard: saturate(180%) blur(20px) */
+  /* Frosted Glass - Glassmorphism: saturate(180%) blur(18px) + specular rim + Z-depth */
   .blur-frost {
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
   }
 
   .frost-nav {
-    @apply bg-white/80 dark:bg-black/75 border-b border-border/80 blur-frost;
+    @apply bg-white/75 dark:bg-[#161617]/75 border-b border-black/[0.08] dark:border-white/[0.1] blur-frost;
+    box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.4), 0 4px 20px -6px rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .frost-nav {
+    box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.05), 0 4px 24px -6px rgba(0, 0, 0, 0.45);
   }
 
   .glass-card {
-    @apply rounded-[18px] border border-border bg-card/80 blur-frost;
+    @apply rounded-[18px] border border-white/60 dark:border-white/[0.12] bg-white/75 dark:bg-[#1c1c1e]/75 blur-frost;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 12px 32px -8px rgba(15, 23, 42, 0.1);
+  }
+
+  .dark .glass-card {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 14px 36px -8px rgba(0, 0, 0, 0.5);
   }
 
   .liquid-glass {
-    @apply bg-white/80 dark:bg-[#1d1d1f]/80 border border-border blur-frost;
+    @apply bg-white/70 dark:bg-[#1c1c1e]/75 border border-white/60 dark:border-white/[0.12] blur-frost;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.75), 0 12px 32px -4px rgba(15, 23, 42, 0.12);
+  }
+
+  .dark .liquid-glass {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 14px 36px -4px rgba(0, 0, 0, 0.55);
+  }
+
+  /* Subtle Accessible Neumorphism (Soft UI) — dual-light elevation with crisp hairline border */
+  .neu-surface {
+    @apply bg-card border border-border/80 transition-all duration-150;
+    box-shadow: -4px -4px 12px rgba(255, 255, 255, 0.85), 4px 4px 12px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .dark .neu-surface {
+    box-shadow: -3px -3px 10px rgba(255, 255, 255, 0.025), 5px 5px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .neu-inset {
+    @apply bg-secondary/80 border border-border/70 transition-all duration-150;
+    box-shadow: inset 2px 2px 6px rgba(15, 23, 42, 0.06), inset -2px -2px 6px rgba(255, 255, 255, 0.8);
+  }
+
+  .dark .neu-inset {
+    box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.45), inset -2px -2px 6px rgba(255, 255, 255, 0.04);
+  }
+
+  .neu-pill {
+    @apply neu-surface active:scale-[0.97];
+  }
+
+  .neu-pill:active {
+    box-shadow: inset 2px 2px 5px rgba(15, 23, 42, 0.08), inset -2px -2px 5px rgba(255, 255, 255, 0.7);
+  }
+
+  .dark .neu-pill:active {
+    box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.5), inset -2px -2px 5px rgba(255, 255, 255, 0.04);
   }
 
   /* Apple Signature Single Product Shadow: applied only to product renders resting on a surface */

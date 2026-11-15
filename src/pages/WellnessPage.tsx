@@ -477,16 +477,18 @@ export default function WellnessPage() {
       </div>
 
       {/* Apple Segmented Pill Switcher */}
-      <div className="flex gap-1 mb-8 p-1 bg-secondary rounded-full border border-border">
+      <div className="flex gap-1 mb-8 p-1.5 neu-inset rounded-full">
         <button
+          type="button"
           onClick={() => setActiveTab("journal")}
-          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${activeTab === "journal" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${activeTab === "journal" ? "neu-surface text-foreground" : "text-muted-foreground hover:text-foreground"}`}
         >
           Daily Journal
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab("food")}
-          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${activeTab === "food" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${activeTab === "food" ? "neu-surface text-foreground" : "text-muted-foreground hover:text-foreground"}`}
         >
           Food Log
         </button>

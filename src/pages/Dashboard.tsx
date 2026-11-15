@@ -466,7 +466,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/history")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-emerald-500/20 bg-gradient-to-br from-card via-card to-emerald-500/[0.05] dark:to-emerald-500/[0.08] hover:border-emerald-500/40 shadow-xs group relative overflow-hidden transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left neu-pill bg-gradient-to-br from-card via-card to-emerald-500/[0.05] dark:to-emerald-500/[0.08] border-emerald-500/20 hover:border-emerald-500/40 group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs transition-colors">
@@ -503,7 +503,7 @@ export default function Dashboard() {
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/medvault")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-amber-500/20 bg-gradient-to-br from-card via-card to-amber-500/[0.05] dark:to-amber-500/[0.08] hover:border-amber-500/40 shadow-xs group relative overflow-hidden transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left neu-pill bg-gradient-to-br from-card via-card to-amber-500/[0.05] dark:to-amber-500/[0.08] border-amber-500/20 hover:border-amber-500/40 group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs transition-colors">

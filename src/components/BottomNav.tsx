@@ -140,7 +140,7 @@ export default function BottomNav() {
           className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-[21rem] md:hidden px-3"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) * 0.4 + 0.6rem)" }}
         >
-          <div className="pointer-events-auto relative flex items-center justify-between rounded-full bg-white/45 dark:bg-white/10 backdrop-blur-2xl backdrop-saturate-[180%] [-webkit-backdrop-filter:blur(32px)_saturate(180%)] border border-black/[0.08] dark:border-white/10 px-3 py-1.5 shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.6),0_12px_32px_-4px_rgba(0,0,0,0.12)] dark:shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.1),0_12px_32px_-4px_rgba(0,0,0,0.5)]">
+          <div className="pointer-events-auto relative flex items-center justify-between rounded-full liquid-glass px-3 py-1.5">
             {/* Left Side Items */}
             <div className="flex flex-1 justify-around items-center">
               {navItems.slice(0, 2).map((item) => (

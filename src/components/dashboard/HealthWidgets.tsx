@@ -246,7 +246,7 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
           </p>
 
           {/* 5-Step Mood Selector */}
-          <div className="relative flex justify-between items-center bg-secondary/80 dark:bg-muted/40 border border-border/80 p-1.5 rounded-2xl gap-1.5 sm:gap-2 shadow-inner">
+          <div className="relative flex justify-between items-center neu-inset p-1.5 rounded-2xl gap-1.5 sm:gap-2">
             {MOOD_OPTIONS.map((mood) => {
               const isActive = latestMood === mood.value;
               const isLoading = savingMood === mood.value;
@@ -257,10 +257,10 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
                   key={mood.value}
                   onClick={() => handleMoodTap(mood.value)}
                   disabled={savingMood !== null}
-                  className={`group relative flex-1 flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 rounded-xl transition-all duration-200 active:scale-95 cursor-pointer ${
+                  className={`group relative flex-1 flex flex-col items-center justify-center py-2 sm:py-2.5 px-1 rounded-xl transition-all duration-150 active:scale-95 cursor-pointer ${
                     isActive
-                      ? `bg-card dark:bg-card border ${mood.border} ring-2 ${mood.activePill} shadow-md scale-102`
-                      : "hover:bg-card/70 hover:scale-105 border border-transparent"
+                      ? `neu-pill ${mood.border} ring-2 ${mood.activePill}`
+                      : "hover:bg-card/70 border border-transparent"
                   } ${savingMood !== null && !isLoading ? "opacity-40" : ""}`}
                   title={`${mood.label} – ${mood.sublabel}`}
                 >
