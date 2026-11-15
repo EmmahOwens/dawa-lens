@@ -523,10 +523,11 @@ export default function Dashboard() {
 
           {/* Wide Tile: Family Hub / Circle of Care (col-span-2) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[1].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-teal-500/20 bg-gradient-to-br from-card via-card to-teal-500/[0.05] dark:to-teal-500/[0.08] hover:border-teal-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 neu-pill border-teal-500/20 bg-gradient-to-br from-card via-card to-teal-500/[0.05] dark:to-teal-500/[0.08] hover:border-teal-500/40 group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0 shadow-xs">
               <Users size={18} />
@@ -559,10 +560,11 @@ export default function Dashboard() {
 
           {/* Metric Tile: Reminders (col-span-1) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/reminders")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-indigo-500/20 bg-gradient-to-br from-card via-card to-indigo-500/[0.05] dark:to-indigo-500/[0.08] hover:border-indigo-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left neu-pill border-indigo-500/20 bg-gradient-to-br from-card via-card to-indigo-500/[0.05] dark:to-indigo-500/[0.08] hover:border-indigo-500/40 group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-xs transition-colors">
@@ -582,10 +584,11 @@ export default function Dashboard() {
 
           {/* Small Tile: Wellness (col-span-1) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[2].to)}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-rose-500/20 bg-gradient-to-br from-card via-card to-rose-500/[0.05] dark:to-rose-500/[0.08] hover:border-rose-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left neu-pill border-rose-500/20 bg-gradient-to-br from-card via-card to-rose-500/[0.05] dark:to-rose-500/[0.08] hover:border-rose-500/40 group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-500 dark:text-rose-400 shadow-xs transition-colors">
@@ -601,10 +604,11 @@ export default function Dashboard() {
 
           {/* Metric Tile: Medications Cabinet (col-span-1) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/medications")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-blue-500/20 bg-gradient-to-br from-card via-card to-blue-500/[0.05] dark:to-blue-500/[0.08] hover:border-blue-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left neu-pill border-blue-500/20 bg-gradient-to-br from-card via-card to-blue-500/[0.05] dark:to-blue-500/[0.08] hover:border-blue-500/40 group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between relative z-10">
               <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-xs transition-colors">
@@ -622,10 +626,11 @@ export default function Dashboard() {
 
           {/* Small Tile: Travel (col-span-1) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[3].to)}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-sky-500/20 bg-gradient-to-br from-card via-card to-sky-500/[0.05] dark:to-sky-500/[0.08] hover:border-sky-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left neu-pill border-sky-500/20 bg-gradient-to-br from-card via-card to-sky-500/[0.05] dark:to-sky-500/[0.08] hover:border-sky-500/40 group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-600 dark:text-sky-400 shadow-xs transition-colors relative z-10">
               <Plane size={17} />
@@ -638,10 +643,11 @@ export default function Dashboard() {
 
           {/* Wide Tile: Safety Check (col-span-2) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[4].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 border border-orange-500/20 bg-gradient-to-br from-card via-card to-orange-500/[0.05] dark:to-orange-500/[0.08] hover:border-orange-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 min-h-[92px] flex items-center gap-4 neu-pill border-orange-500/20 bg-gradient-to-br from-card via-card to-orange-500/[0.05] dark:to-orange-500/[0.08] hover:border-orange-500/40 group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-600 dark:text-orange-400 shrink-0 shadow-xs">
               <ShieldAlert size={18} />
@@ -657,10 +663,11 @@ export default function Dashboard() {
 
           {/* Wide Tile: Medical Reports (col-span-2, sm:col-span-4) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(quickActions[7].to)}
-            className="col-span-2 sm:col-span-4 rounded-[22px] p-5 sm:p-6 min-h-[92px] flex items-center gap-4 border border-purple-500/20 bg-gradient-to-br from-card via-card to-purple-500/[0.05] dark:to-purple-500/[0.08] hover:border-purple-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-2 sm:col-span-4 rounded-[22px] p-5 sm:p-6 min-h-[92px] flex items-center gap-4 neu-pill border-purple-500/20 bg-gradient-to-br from-card via-card to-purple-500/[0.05] dark:to-purple-500/[0.08] hover:border-purple-500/40 group relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 shrink-0 shadow-xs">
               <FileText size={18} />

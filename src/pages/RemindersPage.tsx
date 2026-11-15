@@ -659,12 +659,13 @@ export default function RemindersPage() {
             const isActive = statusFilter === tab.id;
             return (
               <button
+                type="button"
                 key={tab.id}
                 onClick={() => setStatusFilter(tab.id as typeof statusFilter)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap active:scale-95 shadow-xs ${
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap active:scale-95 ${
                   isActive
                     ? "bg-foreground text-background shadow-sm"
-                    : "bg-card border border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    : "neu-pill text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {tab.dot && (

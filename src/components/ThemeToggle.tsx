@@ -8,10 +8,10 @@ export function ThemeToggle({ id }: { id?: string }) {
   return (
     <div
       id={id}
-      className="flex bg-[#f5f5f7] dark:bg-[#252527] rounded-full p-1 overflow-hidden relative w-fit border border-border/80"
+      className="flex neu-inset rounded-full p-1 overflow-hidden relative w-fit"
     >
       <motion.div
-        className="absolute top-1 bottom-1 w-[calc(33.333%-2px)] bg-white dark:bg-[#1d1d1f] rounded-full border border-border/40 z-0 pointer-events-none"
+        className="absolute top-1 bottom-1 w-[calc(33.333%-2px)] neu-surface rounded-full z-0 pointer-events-none"
         initial={false}
         animate={{
           x: theme === "light" ? 0 : theme === "dark" ? "100%" : "200%",

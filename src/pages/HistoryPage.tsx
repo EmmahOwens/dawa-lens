@@ -470,12 +470,13 @@ export default function HistoryPage() {
         <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
           {(["All", "taken", "skipped", "missed"] as const).map((status) => (
             <button
+              type="button"
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold capitalize whitespace-nowrap transition-all border ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold capitalize whitespace-nowrap transition-all ${
                 statusFilter === status
-                  ? "bg-[#0066cc] dark:bg-[#0071e3] border-transparent text-white"
-                  : "bg-card border-border text-muted-foreground hover:text-foreground"
+                  ? "bg-[#0066cc] dark:bg-[#0071e3] border border-transparent text-white shadow-sm"
+                  : "neu-pill text-muted-foreground hover:text-foreground"
               }`}
             >
               {status}

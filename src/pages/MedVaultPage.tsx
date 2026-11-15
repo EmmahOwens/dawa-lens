@@ -961,12 +961,13 @@ export default function MedVaultPage() {
           const isActive = filter === tab.id;
           return (
             <button
+              type="button"
               key={tab.id}
               onClick={() => setFilter(tab.id as typeof filter)}
               className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
                 isActive
                   ? "bg-teal-600 text-white shadow-sm shadow-teal-600/25"
-                  : "bg-card border border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  : "neu-pill text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab.dot && (

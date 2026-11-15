@@ -91,16 +91,16 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                 initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.03 }}
-                className={`flex-shrink-0 w-48 snap-start rounded-[22px] p-4 border transition-all relative overflow-hidden shadow-xs ${
+                className={`flex-shrink-0 w-48 snap-start rounded-[22px] p-4 border transition-all relative overflow-hidden ${
                   isNextDose
-                    ? `bg-card ${theme.border} ring-2 ring-primary/60 shadow-lg shadow-primary/10`
+                    ? `neu-surface ${theme.border} ring-2 ring-primary/60 shadow-lg shadow-primary/10`
                     : isActionable
-                      ? `bg-card ${theme.border} hover:border-primary/60 hover:shadow-md`
+                      ? `neu-surface ${theme.border} hover:border-primary/60`
                       : isTaken
-                        ? "bg-muted/40 border-border/60 opacity-75"
+                        ? "neu-inset border-border/60 opacity-75"
                         : isActioned
-                          ? "bg-muted/30 border-border/50 opacity-65"
-                          : `bg-card ${theme.border} hover:shadow-md`
+                          ? "neu-inset border-border/50 opacity-65"
+                          : `neu-surface ${theme.border}`
                 }`}
               >
                 {/* Ambient theme glow */}

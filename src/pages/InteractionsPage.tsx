@@ -689,22 +689,24 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
       </motion.div>
 
       {/* Apple Segmented Pill Switcher */}
-      <div className="flex p-1 bg-secondary border border-border rounded-full mb-6">
+      <div className="flex p-1.5 neu-inset rounded-full mb-6">
         <button
+          type="button"
           onClick={() => handleTabChange("cabinet")}
           className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${
             activeTab === "cabinet"
-              ? "bg-card text-foreground shadow-sm"
+              ? "neu-surface text-foreground"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
           Cabinet Safety
         </button>
         <button
+          type="button"
           onClick={() => handleTabChange("sandbox")}
           className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${
             activeTab === "sandbox"
-              ? "bg-card text-foreground shadow-sm"
+              ? "neu-surface text-foreground"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -1356,7 +1358,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none ${
                       active 
                         ? "bg-primary text-primary-foreground border-primary shadow-sm ring-1 ring-primary/20" 
-                        : "bg-card border-border/40 text-muted-foreground hover:border-primary/30"
+                        : "neu-pill text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Utensils size={12} className={active ? "text-primary-foreground" : "text-muted-foreground/60"} />
@@ -1462,7 +1464,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all select-none ${
                     lifestyleFactors.includes(id) 
                       ? "bg-primary border-primary text-primary-foreground shadow-md ring-1 ring-primary/20 font-bold" 
-                      : "bg-card border-border/50 text-muted-foreground hover:border-primary/20 font-medium"
+                      : "neu-pill text-muted-foreground hover:text-foreground font-medium"
                   }`}
                 >
                   <Icon size={14} />

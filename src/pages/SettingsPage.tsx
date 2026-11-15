@@ -532,7 +532,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Android Battery Optimization & Reliability Quick Status */}
-          <div className="mt-3 p-4 rounded-2xl bg-muted/30 border border-border/50 flex items-center justify-between gap-3 transition-all hover:bg-muted/50">
+          <div className="mt-3 p-4 rounded-2xl neu-inset flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className={`p-2 rounded-xl shrink-0 transition-colors ${
                 batteryExempt
