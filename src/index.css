@@ -21,7 +21,7 @@
     --secondary-foreground: 240 3% 12%;
 
     --muted: 240 6% 97%; /* Parchment (#f5f5f7) */
-    --muted-foreground: 0 0% 48%; /* Ink Muted 48 (#7a7a7a) */
+    --muted-foreground: 0 0% 40%; /* Ink Muted 40 (#666666) - >= 4.5:1 WCAG AA on white */
 
     --accent: 240 6% 97%;
     --accent-foreground: 210 100% 40%;
@@ -410,6 +410,12 @@
   [contenteditable="true"] {
     user-select: text;
   }
+
+  /* Crisp keyboard focus indicator (WCAG 2.2 focus appearance) */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
 }
 
 @layer utilities {
@@ -719,8 +725,18 @@ main,
   .animate-bento-bar-1,
   .animate-bento-bar-2,
   .animate-bento-bar-3,
-  .animate-bento-bar-4 {
+  .animate-bento-bar-4,
+  .page-transition-enter {
     animation: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

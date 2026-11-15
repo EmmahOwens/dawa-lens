@@ -753,12 +753,12 @@ export default function DawaGPT() {
             setIsOpen(true);
           }
         }}
-        className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border bg-card active:scale-95 transition-transform"
+        className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border bg-card active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.35 + 4.5rem)' }}
         aria-label="Open DawaGPT"
       >
         <div className="w-full h-full flex items-center justify-center overflow-hidden">
-          <img src="/dawa-gpt.png" alt="Dawa GPT" className="w-9 h-9 object-contain transition-transform group-hover:scale-105" />
+          <img src="/dawa-gpt.png" alt="" className="w-9 h-9 object-contain transition-transform group-hover:scale-105" />
         </div>
       </motion.button>
 
@@ -768,6 +768,7 @@ export default function DawaGPT() {
             <motion.div
               role="dialog"
               aria-modal="true"
+              aria-label="DawaGPT AI Assistant"
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}

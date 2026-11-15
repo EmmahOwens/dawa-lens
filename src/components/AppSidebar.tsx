@@ -53,7 +53,7 @@ export function AppSidebar() {
           } transition-all duration-200`}
         >
           <div className="h-9 w-9 flex items-center justify-center rounded-xl bg-card border border-border shrink-0 shadow-sm">
-            <img src={LOGO_BASE64} alt="Logo" className="w-5 h-5 object-contain" />
+            <img src={LOGO_BASE64} alt="" className="w-5 h-5 object-contain" />
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
@@ -87,7 +87,7 @@ export function AppSidebar() {
                         }`}
                         activeClassName=""
                       >
-                        <item.icon size={18} />
+                        <item.icon size={18} aria-hidden="true" />
 
                         {!collapsed && (
                           <span className="text-[14px] leading-none tracking-normal truncate">
@@ -126,18 +126,19 @@ export function AppSidebar() {
                   {userProfile?.name || "Health User"}
                 </p>
                 <div className="flex items-center gap-1">
-                  <ShieldCheck size={10} className="text-primary shrink-0" />
+                  <ShieldCheck size={10} className="text-primary shrink-0" aria-hidden="true" />
                   <span className="text-[10px] text-muted-foreground truncate">
                     {isProfessionalMode ? "Professional" : "Verified"}
                   </span>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={logoutUser}
                 aria-label="Log out"
-                className="shrink-0 p-1 text-muted-foreground hover:text-destructive rounded-lg transition-colors"
+                className="shrink-0 h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <LogOut size={14} />
+                <LogOut size={14} aria-hidden="true" />
               </button>
             </div>
           )}

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { MotionConfig } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Route, Routes, Navigate, Outlet, useLocation } from "react-router-dom";
 import { Suspense } from "react";
@@ -306,7 +307,8 @@ const App = () => {
         attribute="class"
       >
         <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
+          <MotionConfig reducedMotion="user">
+            <TooltipProvider>
             <AppProvider>
               <ErrorBoundary name="AppRoot" resetKey={location.pathname}>
                 <AppContent />
@@ -408,6 +410,7 @@ const App = () => {
               </ErrorBoundary>
             </AppProvider>
           </TooltipProvider>
+          </MotionConfig>
         </QueryClientProvider>
       </ThemeProvider>
     </BatteryOptimizationGate>

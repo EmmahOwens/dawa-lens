@@ -37,9 +37,9 @@ export function Navbar({ className }: NavbarProps) {
         <button
           type="button"
           onClick={() => navigate("/scan")}
-          className="hidden sm:inline-flex items-center gap-1.5 h-8 px-4 rounded-full bg-primary text-primary-foreground text-[13px] font-normal hover:brightness-105 active:scale-95 transition-all"
+          className="hidden sm:inline-flex items-center gap-1.5 h-8 px-4 rounded-full bg-primary text-primary-foreground text-[13px] font-normal hover:brightness-105 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <Camera size={14} />
+          <Camera size={14} aria-hidden="true" />
           <span>Scan Medicine</span>
         </button>
 

@@ -123,7 +123,7 @@ export default function BottomNav() {
 
   const navItems = [
     { to: "/", icon: Home, label: t("nav.home") },
-    { to: "/reminders", icon: Bell, label: t("nav.reminders", "Reminders"), badge: pendingReminderCount > 0 },
+    { to: "/reminders", icon: Bell, label: t("nav.reminders", "Reminders"), badgeCount: pendingReminderCount },
     { to: "/history", icon: History, label: t("nav.history") },
     { to: "/settings", icon: Settings, label: t("nav.settings") },
   ];
@@ -136,6 +136,7 @@ export default function BottomNav() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: "spring", stiffness: 400, damping: 32 }}
+          aria-label={t("nav.primary", "Primary navigation")}
           className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-[21rem] md:hidden px-3"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) * 0.4 + 0.6rem)" }}
         >
@@ -152,10 +153,10 @@ export default function BottomNav() {
               to="/scan"
               aria-label={t("nav.scan")}
               onClick={() => NativeService.haptics.impact(ImpactStyle.Medium)}
-              className="relative flex h-11 w-11 items-center justify-center shrink-0 mx-1 active:scale-95 transition-transform"
+              className="relative flex h-11 w-11 items-center justify-center shrink-0 mx-1 rounded-full active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <div className="h-full w-full rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-[inset_0_1px_1px_0_rgba(255,255,255,0.35)] ring-1 ring-black/5 dark:ring-white/10">
-                <Camera size={20} />
+                <Camera size={20} aria-hidden="true" />
               </div>
             </NavLink>
 
@@ -184,24 +185,25 @@ function NavItem({
   icon: Icon,
   label,
   active,
-  badge,
+  badgeCount = 0,
 }: {
   to: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean }>;
   label: string;
   active: boolean;
-  badge?: boolean;
+  badgeCount?: number;
 }) {
   return (
     <NavLink
       to={to}
-      aria-label={label}
+      aria-label={badgeCount > 0 ? `${label} (${badgeCount} pending)` : label}
       onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
-      className="relative flex flex-col items-center justify-center w-11 h-11 rounded-full active:scale-95 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all"
+      className="relative flex flex-col items-center justify-center w-11 h-11 rounded-full active:scale-95 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="relative flex flex-col items-center">
         <Icon
           size={20}
+          aria-hidden={true}
           className={`transition-colors duration-200 ${
             active
               ? "text-primary font-semibold"
@@ -209,8 +211,11 @@ function NavItem({
           }`}
         />
 
-        {badge && (
-          <div className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-white/60 dark:ring-black/60" />
+        {badgeCount > 0 && (
+          <div
+            aria-hidden="true"
+            className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive ring-2 ring-white/60 dark:ring-black/60"
+          />
         )}
 
         {/* Apple subtle active dot */}

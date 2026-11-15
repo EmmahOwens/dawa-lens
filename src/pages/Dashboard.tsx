@@ -316,10 +316,11 @@ export default function Dashboard() {
           </div>
           {selectedPatientId ? (
             <button
+              type="button"
               onClick={() => setSelectedPatientId(null)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-[12px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-500/15 active:scale-95 transition-all"
+              className="flex items-center gap-1.5 min-h-[36px] px-3 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-[12px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-500/15 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <User size={14} className="text-primary" />
+              <User size={14} className="text-primary" aria-hidden="true" />
               <span>Switch Profile</span>
             </button>
           ) : (
@@ -381,8 +382,9 @@ export default function Dashboard() {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => navigate("/medvault")}
-                className="h-8 px-4 rounded-full bg-amber-500 hover:bg-amber-600 text-slate-950 text-[12px] font-medium shadow-xs active:scale-95 transition-all"
+                className="min-h-[36px] px-4 rounded-full bg-amber-500 hover:bg-amber-600 text-slate-950 text-[12px] font-medium shadow-xs active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Refill
               </button>
@@ -422,11 +424,12 @@ export default function Dashboard() {
         >
           {/* Hero Tile: Quick Scan (col-span-2) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             whileHover={{ y: -2 }}
             onClick={() => navigate(quickActions[0].to)}
-            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 sm:p-6 min-h-[180px] sm:min-h-[200px] flex flex-col justify-between items-start text-left border border-blue-500/30 bg-gradient-to-br from-[#0b1b36] via-[#0e2448] to-[#071326] text-white relative overflow-hidden group shadow-lg shadow-blue-950/25 hover:shadow-blue-500/10 hover:border-blue-400/50 transition-all duration-300"
+            className="col-span-2 sm:col-span-2 rounded-[22px] p-5 sm:p-6 min-h-[180px] sm:min-h-[200px] flex flex-col justify-between items-start text-left border border-blue-500/30 bg-gradient-to-br from-[#0b1b36] via-[#0e2448] to-[#071326] text-white relative overflow-hidden group shadow-lg shadow-blue-950/25 hover:shadow-blue-500/10 hover:border-blue-400/50 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {/* Animated Laser Scanning Beam */}
             <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_rgba(56,189,248,0.8)] animate-bento-scanner pointer-events-none" />
@@ -459,17 +462,18 @@ export default function Dashboard() {
 
           {/* Metric Tile: Adherence (col-span-1) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/history")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-emerald-500/20 bg-gradient-to-br from-card via-card to-emerald-500/[0.05] dark:to-emerald-500/[0.08] hover:border-emerald-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-emerald-500/20 bg-gradient-to-br from-card via-card to-emerald-500/[0.05] dark:to-emerald-500/[0.08] hover:border-emerald-500/40 shadow-xs group relative overflow-hidden transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs transition-colors">
-                <History size={17} />
+                <History size={17} aria-hidden="true" />
               </div>
               {/* Apple Activity Progress Ring */}
-              <svg width="32" height="32" viewBox="0 0 36 36" className="transform -rotate-90 shrink-0">
+              <svg width="32" height="32" viewBox="0 0 36 36" className="transform -rotate-90 shrink-0" aria-hidden="true">
                 <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-muted/40" />
                 <circle
                   cx="18"
@@ -495,10 +499,11 @@ export default function Dashboard() {
 
           {/* Metric Tile: Pill Stock / Med Vault (col-span-1) */}
           <motion.button
+            type="button"
             variants={item}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate("/medvault")}
-            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-amber-500/20 bg-gradient-to-br from-card via-card to-amber-500/[0.05] dark:to-amber-500/[0.08] hover:border-amber-500/40 shadow-xs group relative overflow-hidden transition-all duration-200"
+            className="col-span-1 rounded-[22px] p-5 min-h-[142px] flex flex-col justify-between text-left border border-amber-500/20 bg-gradient-to-br from-card via-card to-amber-500/[0.05] dark:to-amber-500/[0.08] hover:border-amber-500/40 shadow-xs group relative overflow-hidden transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs transition-colors">

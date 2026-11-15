@@ -15,11 +15,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
   if (isMobile) {
     return (
       <div className="h-[100dvh] min-h-[100dvh] bg-background flex flex-col overscroll-none relative overflow-hidden">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-full focus:bg-primary focus:text-primary-foreground focus:text-sm focus:font-medium focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
         <div className="flex-1 overflow-y-auto no-scrollbar overscroll-y-contain">
           {/* Safe-top spacer for edge-to-edge screens with notch */}
           <div className="h-[env(safe-area-inset-top,0px)] bg-background/80 backdrop-blur-2xl border-b border-border/80 sticky top-0 z-40 w-full shrink-0 transition-colors duration-300" />
           <PatientContextBanner />
-          <main className="px-4 sm:px-6 safe-mobile-dock-bottom pt-2 w-full max-w-2xl mx-auto">
+          <main id="main-content" tabIndex={-1} className="px-4 sm:px-6 safe-mobile-dock-bottom pt-2 w-full max-w-2xl mx-auto focus:outline-none">
             {children}
           </main>
         </div>
@@ -31,12 +37,18 @@ export default function AppShell({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <div className="h-[100dvh] min-h-[100dvh] flex w-full bg-background overflow-hidden">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-full focus:bg-primary focus:text-primary-foreground focus:text-sm focus:font-medium focus:shadow-lg"
+        >
+          Skip to main content
+        </a>
         {/* Column 1: Apple Desktop Sidebar */}
         <AppSidebar />
 
         {/* Column 2: Content Canvas */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <main className="flex-1 overflow-y-auto no-scrollbar">
+          <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto no-scrollbar focus:outline-none">
             <Navbar />
             <PatientContextBanner />
             <div className="mx-auto w-full max-w-5xl px-6 py-8 lg:px-12 lg:py-10">
