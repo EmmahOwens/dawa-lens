@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import BottomNav from "./BottomNav";
@@ -7,10 +7,15 @@ import { IntelligencePanel } from "./IntelligencePanel";
 import { useApp } from "@/contexts/AppContext";
 import { Navbar } from "./Navbar";
 import { PatientContextBanner } from "./PatientContextBanner";
+import { preloadScreenImages } from "@/lib/preloadScreenImages";
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const isMobile = useIsMobile();
   const { isIntelligenceCollapsed } = useApp();
+
+  useEffect(() => {
+    preloadScreenImages();
+  }, []);
 
   if (isMobile) {
     return (

@@ -28,6 +28,7 @@ import { checkFdaMultiSafety, FdaMultiSafetyResult } from "@/services/openFdaCli
 import FdaBoxedWarningBadge from "@/components/fda/FdaBoxedWarningBadge";
 import { MobileWatchdogResolveButton } from "@/components/intelligence/MobileWatchdogResolveButton";
 import { buildSafetyConsultPrompt } from "@/lib/safetyPromptBuilder";
+import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 import {
   Select,
   SelectContent,
@@ -664,6 +665,18 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
         animate={{ opacity: 1, y: 0 }} 
         className="mb-6"
       >
+        <ScreenHeroImage
+          src="/assets/screens/interactions-safety.webp"
+          alt="Pharmacist consulting with a patient about medication safety"
+          eyebrow="Clinical Safety"
+          title={activeTab === "cabinet" ? t("safety.title") : "Safety Sandbox"}
+          subtitle={
+            activeTab === "cabinet"
+              ? t("safety.subtitle")
+              : "Test interactions between arbitrary medicines"
+          }
+          className="mb-5"
+        />
         <div className="flex items-center justify-between mb-2">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground flex items-center gap-2">

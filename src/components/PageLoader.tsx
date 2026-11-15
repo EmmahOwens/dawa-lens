@@ -1,75 +1,13 @@
-import { motion, type Transition } from "framer-motion";
 import { BouncingPillsLoader } from "./BouncingPillsLoader";
-import { LOGO_BASE64 } from "@/lib/logoBase64";
 
 interface PageLoaderProps {
-  /** "full" renders a full-screen overlay with backdrop blur (default).
+  /** "full" renders a lightweight in-flow route transition state without blocking shell chrome.
    *  "inline" renders only the pill animation — useful inside cards/panels. */
   variant?: "full" | "inline";
   /** Optional descriptive label shown below the animation (full variant only). */
   label?: string;
 }
 
-const ROUTE_LOADER_MEDIA: Array<{
-  prefix: string;
-  image: string;
-  alt: string;
-  label: string;
-}> = [
-  {
-    prefix: "/family",
-    image: "/assets/screens/family-hub.webp",
-    alt: "Family Hub care preview",
-    label: "Opening Family Hub...",
-  },
-  {
-    prefix: "/medvault",
-    image: "/assets/screens/med-vault.webp",
-    alt: "Med Vault inventory preview",
-    label: "Opening Med Vault...",
-  },
-  {
-    prefix: "/travel",
-    image: "/assets/screens/travel-companion.webp",
-    alt: "Travel Companion preview",
-    label: "Opening Travel Companion...",
-  },
-];
-
-function getRouteMedia(pathname: string) {
-  return ROUTE_LOADER_MEDIA.find((entry) => pathname.startsWith(entry.prefix));
-}
-
-// ─── Decorative premium scanning laser line ─────────────────────────────────
-function ScanBeam() {
-  return (
-    <motion.div
-      aria-hidden
-      animate={{ 
-        top: ["5%", "95%", "5%"],
-        opacity: [0.3, 0.9, 0.3]
-      }}
-      transition={{ 
-        duration: 4.2, 
-        repeat: Infinity, 
-        ease: "easeInOut" 
-      }}
-      style={{
-        position: "absolute",
-        left: "5%",
-        right: "5%",
-        height: "2px",
-        background:
-          "linear-gradient(90deg, transparent 0%, hsl(var(--primary)) 30%, hsl(var(--primary)) 70%, transparent 100%)",
-        boxShadow: "0 0 15px 3px hsl(var(--primary) / 0.5), 0 0 4px 1px hsl(var(--primary))",
-        zIndex: 5,
-        pointerEvents: "none",
-      }}
-    />
-  );
-}
-
-// ─── Main export ─────────────────────────────────────────────────────────────
 export default function PageLoader({
   variant = "full",
   label,
@@ -82,66 +20,30 @@ export default function PageLoader({
     );
   }
 
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
-  const routeMedia = getRouteMedia(pathname);
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md overflow-hidden p-6"
+    <div
+      role="status"
+      aria-label={label ?? "Loading"}
+      className="w-full min-h-[60vh] flex flex-col items-center justify-center px-4 py-10"
     >
-      {/* Content layout card */}
-      <div className="relative z-10 flex flex-col items-center max-w-xs sm:max-w-sm w-full p-6 rounded-[22px] glass-card">
-        {routeMedia ? (
-          <div className="w-full h-32 sm:h-36 rounded-2xl overflow-hidden border border-border/70 mb-5 bg-muted/40">
-            <img
-              src={routeMedia.image}
-              alt={routeMedia.alt}
-              loading="eager"
-              decoding="async"
-              className="w-full h-full object-cover object-center"
-            />
-          </div>
-        ) : (
-          /* Animated App Logo with subtle pulse */
-          <motion.div
-            animate={{
-              scale: [1, 1.04, 1],
-              opacity: [0.85, 1, 0.85],
-            }}
-            transition={{
-              duration: 2.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="mb-6"
-          >
-            <img
-              src={LOGO_BASE64}
-              alt="Dawa Lens"
-              style={{ width: 56, height: 56, objectFit: "contain" }}
-            />
-          </motion.div>
-        )}
+      <div className="w-full max-w-2xl space-y-5">
+        {/* Lightweight hero placeholder matching ScreenHeroImage dimensions to prevent layout shift */}
+        <div className="w-full h-40 sm:h-48 rounded-[22px] bg-muted/50 border border-border/50 animate-pulse" />
 
-        {/* Pill loader */}
-        <div className="mb-4">
+        {/* Centered pill loader & status label */}
+        <div className="flex flex-col items-center justify-center py-4 gap-3">
           <BouncingPillsLoader size="md" />
+          <p className="text-xs font-medium text-muted-foreground text-center">
+            {label ?? "Loading view..."}
+          </p>
         </div>
 
-        {/* Dynamic scanning label */}
-        <motion.p
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-xs font-medium text-muted-foreground text-center"
-        >
-          {label ?? routeMedia?.label ?? "Loading..."}
-        </motion.p>
+        {/* Subtle content card skeletons */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="h-24 rounded-2xl bg-muted/40 border border-border/40 animate-pulse" />
+          <div className="h-24 rounded-2xl bg-muted/40 border border-border/40 animate-pulse" />
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
