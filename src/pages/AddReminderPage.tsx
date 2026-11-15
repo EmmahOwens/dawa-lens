@@ -930,7 +930,7 @@ export default function AddReminderPage() {
 
               {/* Live Doses vs Days Breakdown Preview in Add Reminder */}
               {!isNaN(parsedStockQty) && parsedStockQty >= 0 && (
-                <div className="p-3.5 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-foreground space-y-1.5 mt-2">
+                <div className="p-3.5 rounded-2xl neu-inset border-teal-500/20 text-foreground space-y-1.5 mt-2">
                   <div className="flex items-center justify-between text-xs font-bold text-teal-800 dark:text-teal-300">
                     <span>Daily Intake:</span>
                     <span>
@@ -941,13 +941,13 @@ export default function AddReminderPage() {
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-3 pt-1 border-t border-teal-500/20">
-                    <div className="bg-background/60 p-2 rounded-xl border border-teal-500/10">
+                    <div className="neu-surface p-2 rounded-xl border-teal-500/15">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Doses on Hand</p>
                       <p className="text-base font-black text-teal-600 dark:text-teal-400 mt-0.5">
                         {Math.floor(parsedStockQty / (parseFloat(stockPerDose) || 1))} <span className="text-xs font-semibold text-muted-foreground">doses</span>
                       </p>
                     </div>
-                    <div className="bg-background/60 p-2 rounded-xl border border-teal-500/10">
+                    <div className="neu-surface p-2 rounded-xl border-teal-500/15">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Days of Supply</p>
                       <p className="text-base font-black text-teal-600 dark:text-teal-400 mt-0.5">
                         ~{Math.floor(parsedStockQty / ((parseFloat(stockPerDose) || 1) * Math.max(1, times.length)))} <span className="text-xs font-semibold text-muted-foreground">days</span>

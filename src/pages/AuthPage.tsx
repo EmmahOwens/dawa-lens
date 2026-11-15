@@ -442,7 +442,7 @@ export default function AuthPage() {
 
                 <button 
                   type="button" 
-                  className="w-full h-12 rounded-full border border-border/80 bg-card hover:bg-secondary/70 text-foreground text-sm font-semibold flex items-center justify-center gap-2.5 transition-all duration-200 active:scale-95 shadow-sm" 
+                  className="w-full h-12 rounded-full neu-pill hover:bg-secondary/70 text-foreground text-sm font-semibold flex items-center justify-center gap-2.5 transition-all duration-200" 
                   onClick={handleGoogleSignIn} 
                   disabled={loading}
                 >

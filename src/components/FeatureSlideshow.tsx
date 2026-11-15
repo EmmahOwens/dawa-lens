@@ -185,7 +185,7 @@ export function FeatureSlideshow() {
 
   return (
     <div 
-      className={`relative w-full mb-8 overflow-hidden rounded-[22px] border ${theme.borderColor} ${theme.bgGradient} shadow-sm transition-all duration-300`}
+      className={`relative w-full mb-8 overflow-hidden rounded-[22px] neu-surface ${theme.borderColor} ${theme.bgGradient} transition-all duration-300`}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}

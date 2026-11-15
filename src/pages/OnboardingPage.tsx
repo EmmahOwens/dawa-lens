@@ -91,7 +91,7 @@ export default function OnboardingPage() {
               </div>
 
               <div className="mb-4">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[22px] bg-white/90 dark:bg-[#272729]/90 border border-[#0066cc]/20 dark:border-[#2997ff]/30 shadow-md shadow-[#0066cc]/10 flex items-center justify-center p-3.5 mx-auto">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[22px] neu-surface border-[#0066cc]/20 dark:border-[#2997ff]/30 flex items-center justify-center p-3.5 mx-auto">
                   <img src={LOGO_BASE64} alt="Dawa Lens Logo" className="w-full h-full object-contain" />
                 </div>
               </div>

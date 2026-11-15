@@ -501,7 +501,7 @@ export default function FamilyHubPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5"
       >
-        <div className="p-3.5 rounded-[14px] bg-[#fafafc] dark:bg-[#272729] border border-border flex items-center gap-3">
+        <div className="p-3.5 rounded-[14px] neu-surface flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-[#0066cc]/10 dark:bg-[#2997ff]/15 text-[#0066cc] dark:text-[#2997ff] flex items-center justify-center shrink-0">
             <UserRound size={17} />
           </div>
@@ -515,7 +515,7 @@ export default function FamilyHubPage() {
           </div>
         </div>
 
-        <div className="p-3.5 rounded-[14px] bg-[#fafafc] dark:bg-[#272729] border border-border flex items-center gap-3">
+        <div className="p-3.5 rounded-[14px] neu-surface flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-[#0066cc]/10 dark:bg-[#2997ff]/15 text-[#0066cc] dark:text-[#2997ff] flex items-center justify-center shrink-0">
             <Pill size={17} />
           </div>
@@ -529,7 +529,7 @@ export default function FamilyHubPage() {
           </div>
         </div>
 
-        <div className="p-3.5 rounded-[14px] bg-[#fafafc] dark:bg-[#272729] border border-border flex items-center gap-3">
+        <div className="p-3.5 rounded-[14px] neu-surface flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
             <TrendingUp size={17} />
           </div>
@@ -543,7 +543,7 @@ export default function FamilyHubPage() {
           </div>
         </div>
 
-        <div className="p-3.5 rounded-[14px] bg-[#fafafc] dark:bg-[#272729] border border-border flex items-center gap-3">
+        <div className="p-3.5 rounded-[14px] neu-surface flex items-center gap-3">
           <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
             circleOverview.totalMissedToday > 0
               ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
