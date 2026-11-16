@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { isScreenImageReady } from "@/lib/preloadScreenImages";
+import { getScreenLqip } from "@/lib/screenMedia";
 
 interface ScreenHeroImageProps {
   src: string;
+  lqip?: string;
   alt: string;
   eyebrow?: string;
   title?: string;
@@ -12,11 +14,13 @@ interface ScreenHeroImageProps {
 }
 
 /**
- * Responsive editorial hero banner for feature screens.
- * Uses preloaded WebP photography with instant cache-aware display and high-contrast scrim overlay.
+ * Compact split editorial header with instant LQIP blur-up WebP loading.
+ * Mobile: compact horizontal thumbnail card keeping tools above the fold.
+ * Desktop: richer asymmetrical editorial card with generous visual framing.
  */
 export function ScreenHeroImage({
   src,
+  lqip,
   alt,
   eyebrow,
   title,
@@ -25,6 +29,7 @@ export function ScreenHeroImage({
 }: ScreenHeroImageProps) {
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [loaded, setLoaded] = useState(() => isScreenImageReady(src));
+  const resolvedLqip = lqip ?? getScreenLqip(src);
 
   useEffect(() => {
     if (isScreenImageReady(src)) {
@@ -40,49 +45,58 @@ export function ScreenHeroImage({
   return (
     <div
       className={cn(
-        "group relative w-full overflow-hidden rounded-[22px] border border-border/80 bg-gradient-to-br from-muted/70 via-muted/40 to-muted/60 shadow-sm mb-6",
-        "h-40 sm:h-48 md:h-56 lg:h-60",
+        "group relative w-full rounded-[20px] glass-card p-3.5 sm:p-4 md:p-5 mb-5",
+        "flex items-center justify-between gap-3.5 sm:gap-5 md:gap-6",
         className
       )}
     >
-      <img
-        ref={imgRef}
-        src={src}
-        alt={alt}
-        loading="eager"
-        decoding="sync"
-        onLoad={() => setLoaded(true)}
-        className={cn(
-          "h-full w-full object-cover object-center transition-all duration-300 ease-out sm:group-hover:scale-[1.02]",
-          loaded ? "opacity-100" : "opacity-0"
+      {/* Left: Crisp Editorial Text */}
+      <div className="min-w-0 flex-1 space-y-1">
+        {eyebrow && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-[0.08em]">
+            {eyebrow}
+          </span>
         )}
-      />
+        {title && (
+          <h2 className="text-[16px] sm:text-[18px] md:text-[20px] font-semibold leading-snug tracking-tight text-foreground truncate">
+            {title}
+          </h2>
+        )}
+        {subtitle && (
+          <p className="text-[12px] sm:text-[13px] text-muted-foreground leading-snug line-clamp-2">
+            {subtitle}
+          </p>
+        )}
+      </div>
 
-      {(eyebrow || title || subtitle) && (
-        <>
-          <div
+      {/* Right: Compact on mobile, richer on desktop — Instant Blur-Up LQIP */}
+      <div
+        className={cn(
+          "relative shrink-0 overflow-hidden rounded-2xl border border-border/70 bg-muted/40 shadow-xs",
+          "w-20 h-20 sm:w-36 sm:h-24 md:w-52 md:h-32"
+        )}
+      >
+        {resolvedLqip && !loaded && (
+          <img
+            src={resolvedLqip}
+            alt=""
             aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/5 pointer-events-none"
+            className="absolute inset-0 h-full w-full object-cover object-center scale-110 blur-md"
           />
-          <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:p-6 flex flex-col justify-end text-white">
-            {eyebrow && (
-              <span className="inline-flex self-start items-center px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/20 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.08em] text-white mb-1.5">
-                {eyebrow}
-              </span>
-            )}
-            {title && (
-              <h2 className="text-[18px] sm:text-[22px] font-semibold leading-tight tracking-tight text-white drop-shadow-xs">
-                {title}
-              </h2>
-            )}
-            {subtitle && (
-              <p className="text-[12px] sm:text-[13px] text-white/90 mt-0.5 line-clamp-1">
-                {subtitle}
-              </p>
-            )}
-          </div>
-        </>
-      )}
+        )}
+        <img
+          ref={imgRef}
+          src={src}
+          alt={alt}
+          loading="eager"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          className={cn(
+            "relative h-full w-full object-cover object-center transition-opacity duration-300 ease-out sm:group-hover:scale-[1.03]",
+            loaded ? "opacity-100" : "opacity-0"
+          )}
+        />
+      </div>
     </div>
   );
 }

@@ -27,8 +27,8 @@ export default function PageLoader({
       className="w-full min-h-[60vh] flex flex-col items-center justify-center px-4 py-10"
     >
       <div className="w-full max-w-2xl space-y-5">
-        {/* Lightweight hero placeholder matching ScreenHeroImage dimensions to prevent layout shift */}
-        <div className="w-full h-40 sm:h-48 rounded-[22px] bg-muted/50 border border-border/50 animate-pulse" />
+        {/* Lightweight hero placeholder matching compact split ScreenHeroImage dimensions */}
+        <div className="w-full h-28 sm:h-32 md:h-40 rounded-[20px] bg-muted/50 border border-border/50 animate-pulse" />
 
         {/* Centered pill loader & status label */}
         <div className="flex flex-col items-center justify-center py-4 gap-3">

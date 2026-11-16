@@ -34,6 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
+import { SCREEN_MEDIA } from "@/lib/screenMedia";
 import {
   Select,
   SelectContent,
@@ -852,7 +853,8 @@ export default function MedVaultPage() {
       </div>
 
       <ScreenHeroImage
-        src="/assets/screens/med-vault.webp"
+        src={SCREEN_MEDIA.medVault.src}
+        lqip={SCREEN_MEDIA.medVault.lqip}
         alt="Organized smart medicine cabinet and pill bottles"
         eyebrow="Smart Inventory"
         title="Track every refill before it runs low"

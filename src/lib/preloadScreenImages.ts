@@ -1,11 +1,6 @@
-export const SCREEN_IMAGE_PATHS = [
-  "/assets/screens/family-hub.webp",
-  "/assets/screens/med-vault.webp",
-  "/assets/screens/travel-companion.webp",
-  "/assets/screens/interactions-safety.webp",
-  "/assets/screens/wellness-tracker.webp",
-  "/assets/screens/reminders-schedule.webp",
-] as const;
+import { SCREEN_MEDIA } from "@/lib/screenMedia";
+
+export const SCREEN_IMAGE_PATHS = Object.values(SCREEN_MEDIA).map((m) => m.src);
 
 const decodedCache = new Set<string>();
 let preloadStarted = false;
@@ -15,8 +10,8 @@ export function isScreenImageReady(src: string): boolean {
 }
 
 /**
- * Silently preloads and decodes screen hero WebP assets during browser idle time
- * so navigating to feature pages shows images instantaneously without decode lag.
+ * Silently preloads and decodes bundled screen hero WebP assets during browser idle time
+ * so navigating to feature pages shows full-resolution images instantaneously.
  */
 export function preloadScreenImages(): void {
   if (preloadStarted || typeof window === "undefined") return;
@@ -49,11 +44,12 @@ export function preloadScreenImages(): void {
   };
 
   if ("requestIdleCallback" in window) {
-    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback(
-      run,
-      { timeout: 1500 }
-    );
+    (
+      window as Window & {
+        requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number;
+      }
+    ).requestIdleCallback(run, { timeout: 1200 });
   } else {
-    setTimeout(run, 300);
+    setTimeout(run, 250);
   }
 }

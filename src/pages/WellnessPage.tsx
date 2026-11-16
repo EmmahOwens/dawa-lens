@@ -35,6 +35,7 @@ import {
 import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
+import { SCREEN_MEDIA } from "@/lib/screenMedia";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
@@ -458,7 +459,8 @@ export default function WellnessPage() {
   return (
     <div className="w-full">
       <ScreenHeroImage
-        src="/assets/screens/wellness-tracker.webp"
+        src={SCREEN_MEDIA.wellnessTracker.src}
+        lqip={SCREEN_MEDIA.wellnessTracker.lqip}
         alt="Person checking daily wellness on a smartphone with warm morning tea"
         eyebrow="Daily Check-in"
         title="Wellness Hub"

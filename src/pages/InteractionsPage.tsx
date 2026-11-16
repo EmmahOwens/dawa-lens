@@ -29,6 +29,7 @@ import FdaBoxedWarningBadge from "@/components/fda/FdaBoxedWarningBadge";
 import { MobileWatchdogResolveButton } from "@/components/intelligence/MobileWatchdogResolveButton";
 import { buildSafetyConsultPrompt } from "@/lib/safetyPromptBuilder";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
+import { SCREEN_MEDIA } from "@/lib/screenMedia";
 import {
   Select,
   SelectContent,
@@ -666,7 +667,8 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
         className="mb-6"
       >
         <ScreenHeroImage
-          src="/assets/screens/interactions-safety.webp"
+          src={SCREEN_MEDIA.interactionsSafety.src}
+          lqip={SCREEN_MEDIA.interactionsSafety.lqip}
           alt="Pharmacist consulting with a patient about medication safety"
           eyebrow="Clinical Safety"
           title={activeTab === "cabinet" ? t("safety.title") : "Safety Sandbox"}

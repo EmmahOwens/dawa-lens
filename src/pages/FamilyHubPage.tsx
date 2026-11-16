@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
+import { SCREEN_MEDIA } from "@/lib/screenMedia";
 
 /**
  * Apple Design System Palette for Family / Care Profiles
@@ -488,7 +489,8 @@ export default function FamilyHubPage() {
       </motion.div>
 
       <ScreenHeroImage
-        src="/assets/screens/family-hub.webp"
+        src={SCREEN_MEDIA.familyHub.src}
+        lqip={SCREEN_MEDIA.familyHub.lqip}
         alt="Multi-generational family caring for each other at home"
         eyebrow="Circle of Care"
         title={isProfessionalMode ? "Manage every patient profile in one place" : "Keep your loved ones on track"}
