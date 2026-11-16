@@ -140,7 +140,13 @@ export default function BottomNav() {
           className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-[21rem] md:hidden px-3"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) * 0.4 + 0.6rem)" }}
         >
-          <div className="pointer-events-auto relative flex items-center justify-between rounded-full frosted-bottom-dock px-3 py-1.5">
+          <div
+            className="pointer-events-auto relative flex items-center justify-between rounded-full frosted-bottom-dock backdrop-blur-2xl backdrop-saturate-150 px-3 py-1.5"
+            style={{
+              WebkitBackdropFilter: "saturate(180%) blur(28px)",
+              backdropFilter: "saturate(180%) blur(28px)",
+            }}
+          >
             {/* Left Side Items */}
             <div className="flex flex-1 justify-around items-center">
               {navItems.slice(0, 2).map((item) => (
