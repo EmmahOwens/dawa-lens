@@ -60,6 +60,8 @@ import {
   downloadOrSharePdf,
   getPreparedReport,
 } from "@/services/pdfReportService";
+import { ScreenHeroImage } from "@/components/ScreenHeroImage";
+import { SCREEN_MEDIA } from "@/lib/screenMedia";
 
 const container = {
   hidden: {},
@@ -528,6 +530,14 @@ export default function ReportPage() {
     <div className="w-full min-w-0 print:p-0 print:m-0 print:bg-white print:text-black">
       {/* -------------------- WEB VIEW -------------------- */}
       <div className="print:hidden">
+        <ScreenHeroImage
+          src={SCREEN_MEDIA.careReport.src}
+          lqip={SCREEN_MEDIA.careReport.lqip}
+          alt="Doctor and patient reviewing a printed health summary report together"
+          eyebrow="Clinical Summary"
+          title="Care Report"
+          subtitle={`Shareable adherence & wellness summary for ${patientName}`}
+        />
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}

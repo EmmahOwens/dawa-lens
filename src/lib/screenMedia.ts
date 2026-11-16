@@ -4,6 +4,7 @@ import travelCompanionImg from "@/assets/screens/travel-companion.webp";
 import interactionsSafetyImg from "@/assets/screens/interactions-safety.webp";
 import wellnessTrackerImg from "@/assets/screens/wellness-tracker.webp";
 import remindersScheduleImg from "@/assets/screens/reminders-schedule.webp";
+import careReportImg from "@/assets/screens/care-report.webp";
 
 export interface ScreenMediaAsset {
   src: string;
@@ -34,6 +35,10 @@ export const SCREEN_MEDIA = {
   remindersSchedule: {
     src: remindersScheduleImg,
     lqip: "data:image/webp;base64,UklGRrIAAABXRUJQVlA4IKYAAAAQBACdASoYAA0APt1apkyopSOiMAgBEBuJQBOmUAAqiMMaVtlld7Mk9ADyX8WQfMDUFj+5ewAr/ls/k2RlmXQblE9oQe+4D1HmBn+FWHfhYpE5bZiXt1byQvb8IMouUcd4J4YBrkAZw28TvxoMbz+mNuBrl8QrAGksk1HrSqwULPgkWQ/vB1d+JG1eRMiu25blIDdaRLjXtoYJ8URhl1/i/0FvgAAA",
+  },
+  careReport: {
+    src: careReportImg,
+    lqip: "data:image/webp;base64,UklGRswAAABXRUJQVlA4IMAAAACQBACdASoYAA0APt1cpkyopSOiMAgBEBuJYgC7AYv+rVtWKMB37TJ9h14tOAAA/dM3x2JcQahkvwCs7bdzLXrgy0NtcxvMhsbkmp5bWcax03A7QCWhvhVPy+LCHnhC7QBmsrguxy8VLSLqnQCUHMC2zX+H9FZr9UTF6Ms3iiREyNUvYNAijeXvw4lu/s/KL6HJcMaZKPme8X0u8Vsf20BG9+eaIhAroHfeCtReudMN3jOID+S2AkFNehf/4HyAAAA=",
   },
 } as const satisfies Record<string, ScreenMediaAsset>;
 
