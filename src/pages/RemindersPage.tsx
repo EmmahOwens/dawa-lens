@@ -63,6 +63,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getMedicineTheme, iconMap } from "@/lib/medicineTheme";
+import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 
 const container = {
   hidden: {},
@@ -268,6 +269,13 @@ export default function RemindersPage() {
 
   return (
     <div className="w-full pb-8">
+      <ScreenHeroImage
+        src="/assets/screens/reminders-schedule.webp"
+        alt="Morning medication routine with water, daily pill case, and smartphone"
+        eyebrow="Daily Schedule"
+        title={t("reminders.title", "Reminders")}
+        subtitle={`${enabledCount} active · ${takenToday} taken today`}
+      />
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>

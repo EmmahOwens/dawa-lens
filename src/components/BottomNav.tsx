@@ -140,7 +140,7 @@ export default function BottomNav() {
           className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-[21rem] md:hidden px-3"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) * 0.4 + 0.6rem)" }}
         >
-          <div className="pointer-events-auto relative flex items-center justify-between rounded-full liquid-glass px-3 py-1.5">
+          <div className="pointer-events-auto relative flex items-center justify-between rounded-full frosted-bottom-dock px-3 py-1.5">
             {/* Left Side Items */}
             <div className="flex flex-1 justify-around items-center">
               {navItems.slice(0, 2).map((item) => (
@@ -156,7 +156,7 @@ export default function BottomNav() {
               className="relative -mt-6 flex h-14 w-14 items-center justify-center shrink-0 mx-1.5 rounded-full active:scale-95 hover:scale-[1.03] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <div
-                className={`h-full w-full rounded-full bg-primary flex items-center justify-center text-primary-foreground ring-4 ring-background shadow-[0_8px_22px_-4px_hsl(var(--primary)/0.5),inset_0_1px_1px_0_rgba(255,255,255,0.4)] transition-all duration-200 ${
+                className={`h-full w-full rounded-full bg-primary/95 backdrop-blur-md flex items-center justify-center text-primary-foreground ring-4 ring-white/65 dark:ring-zinc-900/70 shadow-[0_10px_24px_-4px_hsl(var(--primary)/0.55),inset_0_1px_1px_0_rgba(255,255,255,0.45)] transition-all duration-200 ${
                   location.pathname === "/scan" ? "brightness-110" : ""
                 }`}
               >
@@ -202,7 +202,11 @@ function NavItem({
       to={to}
       aria-label={badgeCount > 0 ? `${label} (${badgeCount} pending)` : label}
       onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
-      className="relative flex flex-col items-center justify-center w-11 h-11 rounded-full active:scale-95 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className={`relative flex flex-col items-center justify-center w-11 h-11 rounded-full active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+        active
+          ? "bg-white/60 dark:bg-white/15 shadow-xs"
+          : "hover:bg-white/35 dark:hover:bg-white/10"
+      }`}
     >
       <div className="relative flex flex-col items-center">
         <Icon
@@ -211,7 +215,7 @@ function NavItem({
           className={`transition-colors duration-200 ${
             active
               ? "text-primary font-semibold"
-              : "text-muted-foreground/85 dark:text-white/75 hover:text-foreground dark:hover:text-white"
+              : "text-foreground/75 dark:text-white/80 hover:text-foreground dark:hover:text-white"
           }`}
         />
 

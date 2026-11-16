@@ -3,6 +3,8 @@ export const SCREEN_IMAGE_PATHS = [
   "/assets/screens/med-vault.webp",
   "/assets/screens/travel-companion.webp",
   "/assets/screens/interactions-safety.webp",
+  "/assets/screens/wellness-tracker.webp",
+  "/assets/screens/reminders-schedule.webp",
 ] as const;
 
 const decodedCache = new Set<string>();
