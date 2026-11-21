@@ -93,6 +93,8 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
 import { usePatientScope } from "@/hooks/usePatientScope";
 import { useMoodTheme } from "@/hooks/useMoodTheme";
+import { useNativeExperience } from "@/hooks/useNativeExperience";
+import { NativeService } from "@/services/nativeService";
 
 function DawaGPTRoot() {
   const { isDawaGPTOfflineModalOpen, setIsDawaGPTOfflineModalOpen } = useApp();
@@ -116,6 +118,7 @@ const AppContent = () => {
   } = useApp();
   const { scopedReminders, scopedDoseLogs, scopedMedicines } = usePatientScope();
   useMoodTheme();
+  useNativeExperience();
   const lastMissedCheckRef = useRef<number>(0);
 
   const runMissedDoseReconciliation = useCallback(() => {
@@ -288,7 +291,15 @@ const App = () => {
         window.location.pathname === "/welcome" ||
         window.location.pathname === "/auth"
       ) {
-        CapApp.exitApp();
+        // Like native Android Kotlin apps, move task to background on root Back
+        // so returning to Dawa Lens is an instant warm resume instead of a cold boot.
+        if (Capacitor.getPlatform() === "android") {
+          NativeService.system.moveToBackground().then((moved) => {
+            if (!moved) CapApp.exitApp();
+          });
+        } else {
+          CapApp.exitApp();
+        }
       } else {
         window.history.back();
       }

@@ -63,6 +63,11 @@
     --hero-to: 222 47% 11%;
     --hero-accent: 199 95% 60%;
 
+    /* Native-feel canonical motion tokens */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
     --font-sans: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Inter",
       system-ui, "Segoe UI", Roboto, sans-serif;
   }
@@ -389,15 +394,37 @@
     font-size: 17px;
     line-height: 1.47;
     letter-spacing: -0.374px;
-    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
-    user-select: none;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    -webkit-text-size-adjust: 100%;
     -webkit-user-drag: none;
     -webkit-overflow-scrolling: touch;
     overflow-x: hidden;
     width: 100%;
     height: 100%;
-    overscroll-behavior-y: none;
+    overscroll-behavior: none;
     touch-action: manipulation;
+  }
+
+  /* Native controls never select text or pop long-press callouts */
+  button,
+  a,
+  [role="button"],
+  nav,
+  [role="tab"],
+  [role="switch"] {
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Prevent mobile browsers from auto-zooming on touch inputs < 16px */
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
   }
 
   /* Apple tight typography on display sizes */
@@ -407,8 +434,11 @@
 
   input,
   textarea,
-  [contenteditable="true"] {
+  [contenteditable="true"],
+  .prose,
+  [data-selectable="true"] {
     user-select: text;
+    -webkit-user-select: text;
   }
 
   /* Crisp keyboard focus indicator (WCAG 2.2 focus appearance) */
@@ -441,16 +471,16 @@
 
   /* Apple Utility Card: 18px radius, 1px hairline border, flat background */
   .apple-card {
-    @apply rounded-[18px] border border-border bg-card p-6 transition-all duration-200;
+    @apply rounded-[18px] border border-border bg-card p-6 transition-[transform,border-color,background-color,opacity] duration-150 ease-out;
   }
 
   .apple-card:active {
-    @apply scale-[0.99];
+    @apply scale-[0.985];
   }
 
   /* Backward compatibility for previous premium-card references */
   .premium-card {
-    @apply rounded-[18px] border border-border bg-card p-5 transition-all duration-200;
+    @apply rounded-[18px] border border-border bg-card p-5 transition-[transform,border-color,background-color,opacity] duration-150 ease-out;
   }
 
   .premium-card:active {
@@ -461,14 +491,14 @@
     @apply hover:border-primary/40;
   }
 
-  /* Frosted Glass - Glassmorphism: saturate(180%) blur(18px) + specular rim + Z-depth */
+  /* Frosted Glass - GPU-safe blur budget (<= 16px avoids Android compositor readback stalls) */
   .blur-frost {
-    backdrop-filter: saturate(180%) blur(18px);
-    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    backdrop-filter: saturate(165%) blur(14px);
+    -webkit-backdrop-filter: saturate(165%) blur(14px);
   }
 
   .frost-nav {
-    @apply bg-white/75 dark:bg-[#161617]/75 border-b border-black/[0.08] dark:border-white/[0.1] blur-frost;
+    @apply bg-white/80 dark:bg-[#161617]/80 border-b border-black/[0.08] dark:border-white/[0.1] blur-frost;
     box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.4), 0 4px 20px -6px rgba(0, 0, 0, 0.06);
   }
 
@@ -477,7 +507,7 @@
   }
 
   .glass-card {
-    @apply rounded-[18px] border border-white/60 dark:border-white/[0.12] bg-white/75 dark:bg-[#1c1c1e]/75 blur-frost;
+    @apply rounded-[18px] border border-white/60 dark:border-white/[0.12] bg-white/80 dark:bg-[#1c1c1e]/85 blur-frost;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 12px 32px -8px rgba(15, 23, 42, 0.1);
   }
 
@@ -486,7 +516,7 @@
   }
 
   .liquid-glass {
-    @apply bg-white/70 dark:bg-[#1c1c1e]/75 border border-white/60 dark:border-white/[0.12] blur-frost;
+    @apply bg-white/80 dark:bg-[#1c1c1e]/80 border border-white/60 dark:border-white/[0.12] blur-frost;
     box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.75), 0 12px 32px -4px rgba(15, 23, 42, 0.12);
   }
 
@@ -494,28 +524,44 @@
     box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12), 0 14px 36px -4px rgba(0, 0, 0, 0.55);
   }
 
-  /* Frosted Glass Bottom Navigation Dock — milky translucent frosted blur */
+  /* Frosted Glass Bottom Navigation Dock — GPU-friendly 16px blur */
   .frosted-bottom-dock {
-    background: rgba(255, 255, 255, 0.58);
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    -webkit-backdrop-filter: saturate(180%) blur(28px);
-    backdrop-filter: saturate(180%) blur(28px);
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: saturate(170%) blur(16px);
+    backdrop-filter: saturate(170%) blur(16px);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.85),
-      0 12px 34px -4px rgba(15, 23, 42, 0.16);
+      0 10px 28px -4px rgba(15, 23, 42, 0.14);
   }
 
   .dark .frosted-bottom-dock {
-    background: rgba(22, 22, 28, 0.62);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(22, 22, 28, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.16),
-      0 14px 36px -4px rgba(0, 0, 0, 0.65);
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 12px 30px -4px rgba(0, 0, 0, 0.6);
   }
 
-  /* Subtle Accessible Neumorphism (Soft UI) — dual-light elevation with crisp hairline border */
+  /* Adaptive degradation on low-RAM Android handsets: swap expensive real-time backdrop blur
+     for crisp translucent surfaces to guarantee locked 60fps scrolling. */
+  html.android-low-ram .blur-frost,
+  html.android-low-ram .frosted-bottom-dock {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  html.android-low-ram .frosted-bottom-dock {
+    background: rgba(255, 255, 255, 0.96);
+  }
+
+  html.android-low-ram.dark .frosted-bottom-dock {
+    background: rgba(24, 24, 29, 0.96);
+  }
+
+  /* Subtle Accessible Neumorphism (Soft UI) — explicit properties only */
   .neu-surface {
-    @apply bg-card border border-border/80 transition-all duration-150;
+    @apply bg-card border border-border/80 transition-[transform,background-color,border-color,opacity] duration-150 ease-out;
     box-shadow: -4px -4px 12px rgba(255, 255, 255, 0.85), 4px 4px 12px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
   }
 
@@ -524,7 +570,7 @@
   }
 
   .neu-inset {
-    @apply bg-secondary/80 border border-border/70 transition-all duration-150;
+    @apply bg-secondary/80 border border-border/70 transition-[background-color,border-color,opacity] duration-150 ease-out;
     box-shadow: inset 2px 2px 6px rgba(15, 23, 42, 0.06), inset -2px -2px 6px rgba(255, 255, 255, 0.8);
   }
 
@@ -614,21 +660,56 @@
   }
 }
 
-/* Page transitions */
-.page-transition-enter {
-  animation: pageSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+/* Native Android Directional GPU Page Transitions (Composite-only: transform + opacity) */
+.page-transition-enter,
+.page-transition-tab {
+  animation: pageTabFade 170ms var(--ease-out) both;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
-@keyframes pageSlideIn {
+.page-transition-push {
+  animation: pageSharedAxisForward 220ms var(--ease-out) both;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.page-transition-pop {
+  animation: pageSharedAxisBack 200ms var(--ease-out) both;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+@keyframes pageTabFade {
   from {
     opacity: 0;
-    transform: translateY(6px) translateZ(0);
+    transform: translate3d(0, 4px, 0);
   }
   to {
     opacity: 1;
-    transform: translateY(0) translateZ(0);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes pageSharedAxisForward {
+  from {
+    opacity: 0;
+    transform: translate3d(18px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes pageSharedAxisBack {
+  from {
+    opacity: 0;
+    transform: translate3d(-14px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -637,10 +718,10 @@ main,
   overscroll-behavior: contain;
 }
 
-/* Bento Grid Micro-animations & Interactive Effects */
+/* Bento Grid Micro-animations — strictly composite-only (transform + opacity, zero layout reflow) */
 @keyframes bento-scanner {
   0% {
-    top: 4%;
+    transform: translate3d(0, 8px, 0);
     opacity: 0;
   }
   15% {
@@ -650,12 +731,13 @@ main,
     opacity: 1;
   }
   100% {
-    top: 94%;
+    transform: translate3d(0, 176px, 0);
     opacity: 0;
   }
 }
 
 .animate-bento-scanner {
+  top: 0;
   animation: bento-scanner 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
@@ -769,15 +851,20 @@ main,
   animation: bento-radar-ping 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-@keyframes bento-bar-1 { 0%, 100% { height: 35%; } 50% { height: 85%; } }
-@keyframes bento-bar-2 { 0%, 100% { height: 75%; } 50% { height: 40%; } }
-@keyframes bento-bar-3 { 0%, 100% { height: 50%; } 50% { height: 95%; } }
-@keyframes bento-bar-4 { 0%, 100% { height: 90%; } 50% { height: 30%; } }
+@keyframes bento-bar-1 { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(0.85); } }
+@keyframes bento-bar-2 { 0%, 100% { transform: scaleY(0.75); } 50% { transform: scaleY(0.4); } }
+@keyframes bento-bar-3 { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(0.95); } }
+@keyframes bento-bar-4 { 0%, 100% { transform: scaleY(0.9); } 50% { transform: scaleY(0.3); } }
 
-.animate-bento-bar-1 { animation: bento-bar-1 2s ease-in-out infinite; }
-.animate-bento-bar-2 { animation: bento-bar-2 2.3s ease-in-out infinite; }
-.animate-bento-bar-3 { animation: bento-bar-3 1.8s ease-in-out infinite; }
-.animate-bento-bar-4 { animation: bento-bar-4 2.1s ease-in-out infinite; }
+.animate-bento-bar-1 { transform-origin: bottom; animation: bento-bar-1 2s ease-in-out infinite; }
+.animate-bento-bar-2 { transform-origin: bottom; animation: bento-bar-2 2.3s ease-in-out infinite; }
+.animate-bento-bar-3 { transform-origin: bottom; animation: bento-bar-3 1.8s ease-in-out infinite; }
+.animate-bento-bar-4 { transform-origin: bottom; animation: bento-bar-4 2.1s ease-in-out infinite; }
+
+@keyframes reducedFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .animate-bento-scanner,
@@ -790,9 +877,15 @@ main,
   .animate-bento-bar-1,
   .animate-bento-bar-2,
   .animate-bento-bar-3,
-  .animate-bento-bar-4,
-  .page-transition-enter {
+  .animate-bento-bar-4 {
     animation: none !important;
+  }
+
+  .page-transition-enter,
+  .page-transition-tab,
+  .page-transition-push,
+  .page-transition-pop {
+    animation: reducedFade 140ms ease !important;
   }
 
   *,
@@ -803,5 +896,15 @@ main,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+html.reduced-motion-os .animate-bento-scanner,
+html.reduced-motion-os .animate-bento-plane,
+html.reduced-motion-os .animate-bento-heartbeat,
+html.reduced-motion-os .animate-bento-bell,
+html.reduced-motion-os .animate-bento-shield,
+html.reduced-motion-os .animate-bento-pill,
+html.reduced-motion-os .animate-bento-ping {
+  animation: none !important;
 }
 

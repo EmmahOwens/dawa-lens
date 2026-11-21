@@ -1,5 +1,5 @@
 import { Capacitor } from "@capacitor/core";
-import { NativeSqlite, type SqlParam } from "@/plugins/nativeSqlite";
+import { NativeSqlite, type SqlParam, type SqlStatement } from "@/plugins/nativeSqlite";
 import { storage } from "../lib/storage";
 import type { Medicine, Reminder, DoseLog, Patient, WellnessLog, ScheduleAuditLog } from "../contexts/AppContext";
 
@@ -102,6 +102,22 @@ async function ensureSqliteReady(): Promise<boolean> {
     await initLocalPersistence();
   }
   return sqliteReady;
+}
+
+/**
+ * Executes an array of SQL mutations atomically inside a single WAL transaction via
+ * `NativeSqlite.executeBatch` (1 bridge call instead of N), falling back cleanly to
+ * sequential `execute` when running against older native builds or test mocks.
+ */
+async function executeSqlBatch(statements: SqlStatement[]): Promise<void> {
+  if (statements.length === 0) return;
+  if (typeof NativeSqlite.executeBatch === "function") {
+    await NativeSqlite.executeBatch({ statements });
+    return;
+  }
+  for (const stmt of statements) {
+    await NativeSqlite.execute(stmt);
+  }
 }
 
 export const localPersistence = {
@@ -256,9 +272,9 @@ export const localPersistence = {
       await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
-          await NativeSqlite.execute({ sql: "DELETE FROM medicines", params: [] });
-          for (const data of items) {
-            await NativeSqlite.execute({
+          const statements: SqlStatement[] = [
+            { sql: "DELETE FROM medicines", params: [] },
+            ...items.map((data) => ({
               sql: `INSERT INTO medicines (id,name,generic_name,dosage,form,current_quantity,dosage_per_dose,frequency_per_day,color,icon,patient_id,user_id,added_at,updated_at,is_conflict,image_url,notes)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
               params: [
@@ -280,8 +296,9 @@ export const localPersistence = {
                 data.imageUrl ?? null,
                 data.notes ?? null,
               ],
-            });
-          }
+            })),
+          ];
+          await executeSqlBatch(statements);
           return;
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite medicines.replaceAll failed, falling back to storage:", err);
@@ -428,9 +445,9 @@ export const localPersistence = {
       await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
-          await NativeSqlite.execute({ sql: "DELETE FROM reminders", params: [] });
-          for (const data of items) {
-            await NativeSqlite.execute({
+          const statements: SqlStatement[] = [
+            { sql: "DELETE FROM reminders", params: [] },
+            ...items.map((data) => ({
               sql: `INSERT INTO reminders (id,medicine_id,medicine_name,dose,time,repeat_schedule,repeat_days,notes,enabled,created_at,patient_id,patient_name)
                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
               params: [
@@ -447,8 +464,9 @@ export const localPersistence = {
                 (data as Reminder & { patientId?: string | null }).patientId ?? null,
                 (data as Reminder & { patientName?: string | null }).patientName ?? null,
               ],
-            });
-          }
+            })),
+          ];
+          await executeSqlBatch(statements);
           return;
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite reminders.replaceAll failed, falling back to storage:", err);
@@ -592,9 +610,9 @@ export const localPersistence = {
       await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
-          await NativeSqlite.execute({ sql: "DELETE FROM dose_logs", params: [] });
-          for (const data of items) {
-            await NativeSqlite.execute({
+          const statements: SqlStatement[] = [
+            { sql: "DELETE FROM dose_logs", params: [] },
+            ...items.map((data) => ({
               sql: `INSERT INTO dose_logs (id,reminder_id,medicine_name,dose,scheduled_time,action_time,action,is_snoozed,snooze_until,patient_id)
                     VALUES (?,?,?,?,?,?,?,?,?,?)`,
               params: [
@@ -609,8 +627,9 @@ export const localPersistence = {
                 data.snoozeUntil ?? null,
                 data.patientId ?? null,
               ],
-            });
-          }
+            })),
+          ];
+          await executeSqlBatch(statements);
           return;
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite doseLogs.replaceAll failed, falling back to storage:", err);
@@ -742,9 +761,9 @@ export const localPersistence = {
       await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
-          await NativeSqlite.execute({ sql: "DELETE FROM patients", params: [] });
-          for (const p of items) {
-            await NativeSqlite.execute({
+          const statements: SqlStatement[] = [
+            { sql: "DELETE FROM patients", params: [] },
+            ...items.map((p) => ({
               sql: `INSERT OR REPLACE INTO patients (id,name,age,gender,weight,conditions,managed_by,created_at)
                     VALUES (?,?,?,?,?,?,?,?)`,
               params: [
@@ -757,8 +776,9 @@ export const localPersistence = {
                 p.managedBy ?? null,
                 p.createdAt || new Date().toISOString(),
               ],
-            });
-          }
+            })),
+          ];
+          await executeSqlBatch(statements);
           return;
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite patients.replaceAll failed, falling back to storage:", err);
@@ -847,9 +867,9 @@ export const localPersistence = {
       await ensureSqliteReady();
       if (Capacitor.isNativePlatform() && sqliteReady) {
         try {
-          await NativeSqlite.execute({ sql: "DELETE FROM wellness_logs", params: [] });
-          for (const data of items) {
-            await NativeSqlite.execute({
+          const statements: SqlStatement[] = [
+            { sql: "DELETE FROM wellness_logs", params: [] },
+            ...items.map((data) => ({
               sql: `INSERT OR REPLACE INTO wellness_logs (id,type,timestamp,data,user_id,patient_id)
                     VALUES (?,?,?,?,?,?)`,
               params: [
@@ -860,8 +880,9 @@ export const localPersistence = {
                 data.userId ?? null,
                 data.patientId ?? null,
               ],
-            });
-          }
+            })),
+          ];
+          await executeSqlBatch(statements);
           return;
         } catch (err) {
           console.warn("[localPersistence] NativeSqlite wellnessLogs.replaceAll failed, falling back to storage:", err);

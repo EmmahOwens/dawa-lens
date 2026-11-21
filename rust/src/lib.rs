@@ -1,12 +1,15 @@
 pub mod crypto;
 pub mod interaction;
+pub mod pharmacy;
+pub mod scheduler;
 pub mod search;
 
 use std::cell::RefCell;
 use std::slice;
 
-/// Hard cap on WASM FFI string buffers (64 KiB) to prevent integer overflow or heap exhaustion.
-const MAX_WASM_ALLOC_BYTES: usize = 64 * 1024;
+/// Hard cap on WASM FFI string buffers (8 MiB) to allow bulk outlet dataset loading
+/// while guarding against integer overflow or heap exhaustion.
+const MAX_WASM_ALLOC_BYTES: usize = 8 * 1024 * 1024;
 
 thread_local! {
     static WASM_OUTPUT_BUF: RefCell<Vec<u8>> = RefCell::new(Vec::with_capacity(4096));
@@ -60,7 +63,7 @@ pub extern "C" fn w_last_len() -> usize {
     WASM_OUTPUT_BUF.with(|buf| buf.borrow().len())
 }
 
-/// Great-circle Haversine distance in kilometers (rounded to 0.1 km).
+/// Great-circle Haversine distance in kilometers (rounded to 0.01 km).
 #[no_mangle]
 pub extern "C" fn dawa_haversine_km(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
     search::haversine_distance_km(lat1, lon1, lat2, lon2)
@@ -145,11 +148,56 @@ pub unsafe extern "C" fn dawa_fuzzy_search_json(
     write_output_str(&json)
 }
 
+/// Bulk-loads NDA pharmacy (`dataset_id = 0`) or drug shop (`dataset_id = 1`) coordinates & search
+/// index into Rust memory once, returning the indexed outlet count (or -1 on error).
+#[no_mangle]
+pub unsafe extern "C" fn dawa_load_outlets_json(
+    dataset_id: u32,
+    ptr: *const u8,
+    len: usize,
+) -> i32 {
+    let json = read_input_str(ptr, len);
+    pharmacy::load_outlets(dataset_id, json)
+}
+
+/// Filters and ranks the preloaded outlet dataset by Haversine distance in O(N) time.
+/// Writes a compact JSON array of `{"i": originalIndex, "d": distanceKm}` hits.
+#[no_mangle]
+pub unsafe extern "C" fn dawa_query_outlets_json(ptr: *const u8, len: usize) -> *const u8 {
+    let query_json = read_input_str(ptr, len);
+    let hits = pharmacy::query_outlets(query_json);
+    let json = serde_json::to_string(&hits).unwrap_or_else(|_| "[]".to_string());
+    write_output_str(&json)
+}
+
+/// Computes the 7-day vitality & adherence summary in a single linear pass.
+#[no_mangle]
+pub unsafe extern "C" fn dawa_compute_vitality_json(ptr: *const u8, len: usize) -> *const u8 {
+    let req_json = read_input_str(ptr, len);
+    let summary = scheduler::compute_vitality_summary(req_json);
+    let json = serde_json::to_string(&summary).unwrap_or_else(|_| "[]".to_string());
+    write_output_str(&json)
+}
+
+/// Computes a SHA-256 tamper-evident audit hash chaining `prev_hash` and `payload`.
+#[no_mangle]
+pub unsafe extern "C" fn dawa_compute_audit_hash(
+    ptr_prev: *const u8,
+    len_prev: usize,
+    ptr_payload: *const u8,
+    len_payload: usize,
+) -> *const u8 {
+    let prev = read_input_str(ptr_prev, len_prev);
+    let payload = read_input_str(ptr_payload, len_payload);
+    let digest = crypto::compute_audit_hash(prev, payload);
+    write_output_str(&digest)
+}
+
 // ── Android JNI Bridge (compiled only when `--features android` is active) ───
 
 #[cfg(feature = "android")]
 mod android_jni {
-    use crate::{crypto, interaction, search};
+    use crate::{crypto, interaction, pharmacy, scheduler, search};
     use jni::objects::{JClass, JString};
     use jni::sys::{jboolean, jdouble, jint, jstring, JNI_FALSE, JNI_TRUE};
     use jni::JNIEnv;
@@ -251,13 +299,48 @@ mod android_jni {
         let result = crypto::compute_audit_hash(&prev, &pay);
         rust_to_jstring(&mut env, &result, "")
     }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeLoadOutlets(
+        mut env: JNIEnv,
+        _class: JClass,
+        dataset_id: jint,
+        outlets_json: JString,
+    ) -> jint {
+        let json = jstring_to_rust(&mut env, &outlets_json);
+        pharmacy::load_outlets(dataset_id.max(0) as u32, &json)
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeQueryOutlets(
+        mut env: JNIEnv,
+        _class: JClass,
+        query_json: JString,
+    ) -> jstring {
+        let json = jstring_to_rust(&mut env, &query_json);
+        let hits = pharmacy::query_outlets(&json);
+        let out = serde_json::to_string(&hits).unwrap_or_else(|_| "[]".to_string());
+        rust_to_jstring(&mut env, &out, "[]")
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_dawainnovation_lens_NativeSearchPlugin_nativeComputeVitality(
+        mut env: JNIEnv,
+        _class: JClass,
+        request_json: JString,
+    ) -> jstring {
+        let json = jstring_to_rust(&mut env, &request_json);
+        let summary = scheduler::compute_vitality_summary(&json);
+        let out = serde_json::to_string(&summary).unwrap_or_else(|_| "[]".to_string());
+        rust_to_jstring(&mut env, &out, "[]")
+    }
 }
 
 // ── Unit Tests ───────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
-    use crate::{interaction, search};
+    use crate::{crypto, interaction, search};
 
     #[test]
     fn exact_prefix_ranks_first() {
@@ -296,5 +379,13 @@ mod tests {
     fn check_interactions_json_array() {
         let json = interaction::check_interactions(r#"["Warfarin", "Ibuprofen 400mg"]"#);
         assert!(json.contains("Severe Gastrointestinal Hemorrhage Risk"));
+    }
+
+    #[test]
+    fn audit_hash_is_deterministic_sha256_hex() {
+        let h1 = crypto::compute_audit_hash("genesis", "dose_taken:amox");
+        let h2 = crypto::compute_audit_hash("genesis", "dose_taken:amox");
+        assert_eq!(h1.len(), 64);
+        assert_eq!(h1, h2);
     }
 }

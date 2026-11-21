@@ -10,6 +10,7 @@ import {
   getCircularDiffMinutes,
   computeDailyTimelineSlots,
 } from "@/lib/timelineSchedule";
+import { NativeService } from "@/services/nativeService";
 
 export {
   todayAt,
@@ -31,6 +32,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
     scheduledISO: string
   ) => {
     if (action === "taken") {
+      void NativeService.haptics.success();
       const rect = e.currentTarget.getBoundingClientRect();
       const x = (rect.left + rect.width / 2) / (window.innerWidth || 1);
       const y = (rect.top + rect.height / 2) / (window.innerHeight || 1);
@@ -41,6 +43,8 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
         colors: ["#0066cc", "#34c759", "#ff9500"],
         zIndex: 150,
       });
+    } else {
+      void NativeService.haptics.tap();
     }
     onAction(r, action, scheduledISO);
   };
@@ -88,10 +92,10 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
             return (
               <motion.div
                 key={`${r.id}-${slotIndex}`}
-                initial={{ opacity: 0, x: 15 }}
+                initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.03 }}
-                className={`flex-shrink-0 w-48 snap-start rounded-[22px] p-4 border transition-all relative overflow-hidden ${
+                transition={{ delay: Math.min(index * 0.03, 0.18), duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className={`flex-shrink-0 w-48 snap-start rounded-[22px] p-4 border transition-[transform,border-color,opacity] duration-150 relative overflow-hidden ${
                   isNextDose
                     ? `neu-surface ${theme.border} ring-2 ring-primary/60 shadow-lg shadow-primary/10`
                     : isActionable
@@ -145,7 +149,7 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                       </div>
 
                       {isNextDose && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground shadow-xs animate-pulse">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary text-primary-foreground shadow-xs">
                           Next
                         </span>
                       )}
@@ -184,15 +188,16 @@ export function DailyTimeline({ reminders, doseLogs, onAction }: DailyTimelinePr
                     <div className="flex gap-2 pt-2">
                       <button
                         onClick={(e) => handleActionWithConfetti(e, r, "taken", scheduledISO)}
-                        className="flex-1 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:brightness-105 active:scale-95 transition-all"
+                        className="flex-1 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:brightness-105 active:scale-[0.96] transition-[transform,filter] duration-150 ease-out"
                         title="Take dose"
                         aria-label="Take dose"
                       >
                         <Check size={14} />
                       </button>
                       <button
+                        onPointerDown={() => void NativeService.haptics.tap()}
                         onClick={() => onAction(r, "skipped", scheduledISO)}
-                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-muted active:scale-95 transition-all"
+                        className="h-8 w-8 rounded-full border border-border flex items-center justify-center text-muted-foreground hover:bg-muted active:scale-[0.95] transition-[transform,background-color] duration-150 ease-out"
                         title="Mark skipped"
                         aria-label="Mark skipped"
                       >

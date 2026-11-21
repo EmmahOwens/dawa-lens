@@ -17,6 +17,7 @@ import {
   CameraSource,
 } from "@capacitor/camera";
 import PermissionRequest from "@/components/PermissionRequest";
+import { NativeService } from "@/services/nativeService";
 
 export default function ScanPage() {
   const navigate = useNavigate();
@@ -256,12 +257,16 @@ export default function ScanPage() {
               animate={{ opacity: 1 }}
               className="relative w-[80%] sm:w-[60%] md:w-[50%] aspect-square max-w-xs sm:max-w-sm md:max-w-md"
             >
-              {/* Animated scanning line */}
-              <motion.div
-                className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent z-30 shadow-[0_0_15px_rgba(var(--primary-rgb),0.8)]"
-                animate={{ top: ["5%", "95%", "5%"] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-              />
+              {/* GPU-composited scanning line (transform only — zero layout reflow over live camera) */}
+              <div className="absolute inset-x-0 top-[5%] bottom-[5%] overflow-hidden pointer-events-none z-30">
+                <motion.div
+                  className="h-full w-full"
+                  animate={{ y: ["0%", "96%", "0%"] }}
+                  transition={{ duration: 3.6, repeat: Infinity, ease: "linear" }}
+                >
+                  <div className="h-1 w-full bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_15px_rgba(var(--primary-rgb),0.8)]" />
+                </motion.div>
+              </div>
 
               <div className="absolute inset-0 border-[0.5px] border-white/10 rounded-3xl overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-primary/5" />
@@ -328,10 +333,13 @@ export default function ScanPage() {
 
           {/* Shutter button */}
           <motion.button
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.94 }}
+            onPointerDown={() => {
+              if (streaming) void NativeService.haptics.impact();
+            }}
             onClick={capture}
             disabled={!streaming}
-            className="flex items-center justify-center w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 rounded-full border-[4px] border-white/40 bg-transparent disabled:opacity-20 transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] relative group"
+            className="flex items-center justify-center w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 rounded-full border-[4px] border-white/40 bg-transparent disabled:opacity-20 transition-[transform,opacity] duration-150 shadow-[0_0_30px_rgba(255,255,255,0.1)] relative group"
           >
             <motion.div
               whileTap={{ scale: 0.88 }}

@@ -1,24 +1,36 @@
 import { ReactNode } from "react";
+import { useLocation, useNavigationType } from "react-router-dom";
 
 interface PageTransitionProps {
   children: ReactNode;
 }
 
+const PRIMARY_TAB_PATHS = new Set(["/", "/reminders", "/history", "/settings"]);
+
 /**
- * GPU-accelerated page transition using CSS animations only.
+ * Native-feel directional GPU page transition using CSS composite-only animations.
  *
- * Replaces framer-motion spring animations with CSS transforms so all
- * compositing happens on the GPU thread with zero main-thread JS cost.
- * Matches lichobile's approach: only `transform` and `opacity` are
- * animated to avoid layout triggers.
+ * - Primary bottom-nav tab switches use a subtle 170ms crossfade (`.page-transition-tab`).
+ * - Detail screen pushes use a subtle Material shared-axis forward slide (`.page-transition-push`).
+ * - Back pops use a matching reverse shared-axis slide (`.page-transition-pop`).
  *
- * Android/Web uses a vertical fade-up (Material-style).
+ * Zero Framer Motion main-thread overhead during route hydration or data loading.
  */
 const PageTransition = ({ children }: PageTransitionProps) => {
+  const location = useLocation();
+  const navType = useNavigationType();
+
+  const transitionClass = PRIMARY_TAB_PATHS.has(location.pathname)
+    ? "page-transition-tab"
+    : navType === "POP"
+      ? "page-transition-pop"
+      : "page-transition-push";
+
   return (
     <div
-      className="w-full h-full will-change-transform page-transition-enter"
-      style={{ transform: "translateZ(0)", backfaceVisibility: "hidden" }}
+      key={location.key || location.pathname}
+      className={`w-full h-full ${transitionClass}`}
+      style={{ backfaceVisibility: "hidden" }}
     >
       {children}
     </div>

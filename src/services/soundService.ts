@@ -335,6 +335,23 @@ class SoundService {
   }
 
   /**
+   * Preloads all bundled `res/raw/mixkit_*.mp3` chimes into Android's hardware SoundPool
+   * during idle startup so dose-taken and UI confirmations play in < 5ms.
+   */
+  public async preloadNativeSounds(): Promise<void> {
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== "android") return;
+      const { NativeSound } = await import("@/plugins/nativeSound");
+      await NativeSound.preload({
+        resources: AVAILABLE_SOUNDS.map((s) => s.androidResource),
+      });
+    } catch {
+      // Non-fatal: falls back to HTML5 Audio
+    }
+  }
+
+  /**
    * Stop any sound currently playing.
    */
   public stopSound(): void {
@@ -348,6 +365,14 @@ class SoundService {
       this.currentAudio = null;
     }
     this.currentPlayingId = null;
+    // Also stop any active Android SoundPool stream asynchronously
+    import("@capacitor/core")
+      .then(({ Capacitor }) => {
+        if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+          return import("@/plugins/nativeSound").then(({ NativeSound }) => NativeSound.stop());
+        }
+      })
+      .catch(() => {});
   }
 
   /**
@@ -530,6 +555,37 @@ class SoundService {
 
     this.stopSound();
 
+    const targetVolume = Math.max(
+      0,
+      Math.min(1, volumeOverride !== undefined ? volumeOverride : prefs.volume)
+    );
+
+    // Fast path on native Android: play preloaded res/raw asset directly via SoundPool
+    // (<5ms latency, zero HTML5 autoplay blocks, never pauses user's background music).
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android") {
+        const { NativeSound } = await import("@/plugins/nativeSound");
+        const res = await NativeSound.play({
+          resource: soundDef.androidResource,
+          volume: targetVolume,
+        });
+        if (res?.played) {
+          this.currentPlayingId = soundId;
+          this.notifyListeners();
+          setTimeout(() => {
+            if (this.currentPlayingId === soundId) {
+              this.currentPlayingId = null;
+              this.notifyListeners();
+            }
+          }, 1200);
+          return true;
+        }
+      }
+    } catch {
+      // Fall through cleanly to HTML5 Audio
+    }
+
     try {
       if (typeof window === "undefined" || typeof Audio === "undefined") {
         return false;
@@ -539,8 +595,7 @@ class SoundService {
       const cleanBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
       const audioUrl = `${cleanBase}notification_sounds/${soundDef.filename}`;
       const audio = new Audio(audioUrl);
-      const targetVolume = volumeOverride !== undefined ? volumeOverride : prefs.volume;
-      audio.volume = Math.max(0, Math.min(1, targetVolume));
+      audio.volume = targetVolume;
 
       this.currentAudio = audio;
       this.currentPlayingId = soundId;

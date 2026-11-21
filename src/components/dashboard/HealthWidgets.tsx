@@ -7,6 +7,7 @@ import { RiveMoji } from "../rive/RiveMoji";
 import { WellnessLog } from "@/contexts/AppContext";
 import { aiApi } from "@/services/api";
 import { useApp } from "@/contexts/AppContext";
+import { NativeService } from "@/services/nativeService";
 
 interface HealthWidgetsProps {
   wellnessLogs: WellnessLog[];
@@ -147,6 +148,7 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
 
   const handleMoodTap = async (moodValue: number) => {
     if (savingMood !== null) return;
+    void NativeService.haptics.selection();
     setSavingMood(moodValue);
 
     try {
@@ -175,17 +177,16 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
 
   return (
     <div className="mb-8">
-      <motion.div
-        layout
+      <div
         className={`group relative overflow-hidden rounded-[24px] border ${
           activeMoodCfg ? activeMoodCfg.border : DEFAULT_THEME.border
-        } bg-card p-5 sm:p-6 flex flex-col shadow-sm hover:shadow-md transition-all duration-300`}
+        } bg-card p-5 sm:p-6 flex flex-col shadow-sm hover:shadow-md transition-[border-color,background-color] duration-200 ease-out`}
       >
         {/* Dynamic Ambient Glow */}
         <div
           className={`absolute inset-0 bg-gradient-to-br ${
             activeMoodCfg ? activeMoodCfg.glow : DEFAULT_THEME.glow
-          } pointer-events-none transition-all duration-500`}
+          } pointer-events-none transition-opacity duration-300`}
         />
 
         {/* Ambient Jewel Blur Orb */}
@@ -337,7 +338,7 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
             </motion.p>
           )}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

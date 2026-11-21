@@ -1,5 +1,6 @@
 /**
- * WebAssembly (WASM) Bridge for the Rust `dawa-search` Clinical, Fuzzy Search & Geospatial Engine.
+ * WebAssembly (WASM) Bridge for the Rust `dawa-search` Clinical, Fuzzy Search,
+ * Geospatial Pharmacy Index & Vitality Analytics Engine.
  *
  * Compiles `rust/` (`wasm32-unknown-unknown`) into `public/wasm/dawa_search.wasm` so both the
  * Web/PWA build and the Capacitor Android WebView execute the exact same memory-safe Rust core
@@ -21,12 +22,61 @@ interface DawaWasmExports extends WebAssembly.Exports {
   dawa_evaluate_interaction_json: (ptrA: number, lenA: number, ptrB: number, lenB: number) => number;
   dawa_check_interactions_json: (ptr: number, len: number) => number;
   dawa_fuzzy_search_json: (ptr: number, len: number, limit: number) => number;
+  dawa_load_outlets_json?: (datasetId: number, ptr: number, len: number) => number;
+  dawa_query_outlets_json?: (ptr: number, len: number) => number;
+  dawa_compute_vitality_json?: (ptr: number, len: number) => number;
+  dawa_compute_audit_hash?: (ptrPrev: number, lenPrev: number, ptrPayload: number, lenPayload: number) => number;
 }
 
 export interface WasmDrugSearchResult {
   name: string;
   score: number;
   rxcui?: string | null;
+}
+
+export interface WasmOutletInput {
+  i: number;
+  la: number;
+  lo: number;
+  r: boolean;
+  d: string;
+  s: string;
+}
+
+export interface WasmOutletQuery {
+  datasetId: 0 | 1;
+  userLat: number;
+  userLng: number;
+  radiusKm?: number;
+  district?: string;
+  query?: string;
+  onlyRetail?: boolean;
+  limit?: number;
+  ignoreRadius?: boolean;
+}
+
+export interface WasmOutletHit {
+  i: number;
+  d: number;
+}
+
+export interface WasmVitalityRequest {
+  dayKeys: number[];
+  dayNames: string[];
+  doseLogs: Array<{ dayKey: number; taken: boolean }>;
+  wellnessLogs: Array<{
+    dayKey: number;
+    ts: number;
+    mood: number | null;
+    energy: number | null;
+  }>;
+}
+
+export interface WasmVitalityPoint {
+  name: string;
+  adherence: number;
+  energy: number | null;
+  mood: number | null;
 }
 
 const encoder = new TextEncoder();
@@ -127,7 +177,7 @@ export function isDawaWasmReady(): boolean {
   return getWasm() !== null;
 }
 
-const MAX_WASM_STRING_BYTES = 64 * 1024;
+const MAX_WASM_STRING_BYTES = 8 * 1024 * 1024;
 
 function withWasmString<T>(
   wasm: DawaWasmExports,
@@ -251,4 +301,76 @@ export function wasmFuzzySearch(
       return [];
     }
   });
+}
+
+/**
+ * Bulk-loads compact outlet records into the Rust spatial & text index once per dataset
+ * (`0` = NDA pharmacies, `1` = NDA drug shops). Returns indexed count, or `null` if unavailable.
+ */
+export function wasmLoadOutlets(datasetId: 0 | 1, outlets: WasmOutletInput[]): number | null {
+  const wasm = getWasm();
+  if (!wasm || typeof wasm.dawa_load_outlets_json !== "function") return null;
+  const payload = JSON.stringify(outlets);
+  return withWasmString(wasm, payload, (ptr, len) => {
+    if (!ptr || len === 0) return null;
+    const count = wasm.dawa_load_outlets_json!(datasetId, ptr, len);
+    return count >= 0 ? count : null;
+  });
+}
+
+/**
+ * Filters and ranks preloaded outlets by Haversine distance in Rust in O(N) time.
+ */
+export function wasmQueryOutlets(query: WasmOutletQuery): WasmOutletHit[] | null {
+  const wasm = getWasm();
+  if (!wasm || typeof wasm.dawa_query_outlets_json !== "function") return null;
+  const payload = JSON.stringify(query);
+  return withWasmString(wasm, payload, (ptr, len) => {
+    if (!ptr || len === 0) return null;
+    const outPtr = wasm.dawa_query_outlets_json!(ptr, len);
+    const json = readOutputString(wasm, outPtr);
+    if (!json) return [];
+    try {
+      return JSON.parse(json) as WasmOutletHit[];
+    } catch {
+      return null;
+    }
+  });
+}
+
+/**
+ * Computes the 7-day vitality & adherence summary in a single O(N) Rust pass.
+ */
+export function wasmComputeVitality(
+  request: WasmVitalityRequest
+): WasmVitalityPoint[] | null {
+  const wasm = getWasm();
+  if (!wasm || typeof wasm.dawa_compute_vitality_json !== "function") return null;
+  const payload = JSON.stringify(request);
+  return withWasmString(wasm, payload, (ptr, len) => {
+    if (!ptr || len === 0) return null;
+    const outPtr = wasm.dawa_compute_vitality_json!(ptr, len);
+    const json = readOutputString(wasm, outPtr);
+    if (!json) return null;
+    try {
+      return JSON.parse(json) as WasmVitalityPoint[];
+    } catch {
+      return null;
+    }
+  });
+}
+
+/**
+ * Computes a SHA-256 tamper-evident audit hash chaining `prevHash` and `payload`.
+ */
+export function wasmComputeAuditHash(prevHash: string, payload: string): string | null {
+  const wasm = getWasm();
+  if (!wasm || typeof wasm.dawa_compute_audit_hash !== "function") return null;
+  return withWasmString(wasm, prevHash, (ptrPrev, lenPrev) =>
+    withWasmString(wasm, payload, (ptrPay, lenPay) => {
+      const outPtr = wasm.dawa_compute_audit_hash!(ptrPrev, lenPrev, ptrPay, lenPay);
+      const hash = readOutputString(wasm, outPtr);
+      return hash || null;
+    })
+  );
 }

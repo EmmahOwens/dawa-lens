@@ -40,7 +40,11 @@ createRoot(document.getElementById("root")!).render(
 // the first frame has been committed.
 // capacitor.config.ts sets launchAutoHide: false to give us manual control.
 if (Capacitor.isNativePlatform()) {
-  // Hide native splash immediately since we have a web splash screen
-  // that takes over to provide a smooth transition.
-  SplashScreen.hide();
+  // Wait for React's first painted frame before fading out Android's native splash
+  // so there is never an intermediate black/blank frame gap.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      SplashScreen.hide({ fadeOutDuration: 220 }).catch(() => {});
+    });
+  });
 }

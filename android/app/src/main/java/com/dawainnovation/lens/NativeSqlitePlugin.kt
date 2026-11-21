@@ -324,6 +324,66 @@ class NativeSqlitePlugin : Plugin() {
     }
 
     @PluginMethod
+    fun executeBatch(call: PluginCall) {
+        val statements = call.getArray("statements") ?: run {
+            call.reject("Missing statements array")
+            return
+        }
+
+        dbExecutor.execute {
+            try {
+                // Validate every statement upfront before mutating anything
+                val validated = ArrayList<Pair<String, JSArray>>(statements.length())
+                for (i in 0 until statements.length()) {
+                    val obj = statements.optJSONObject(i)
+                        ?: throw IllegalArgumentException("Statement at index $i is not an object")
+                    val rawSql = obj.optString("sql", "")
+                    val sql = validateBridgeSql(rawSql, isQuery = false)
+                    val paramsArr = obj.optJSONArray("params")
+                    val jsParams = JSArray()
+                    if (paramsArr != null) {
+                        for (p in 0 until paramsArr.length()) {
+                            jsParams.put(paramsArr.get(p))
+                        }
+                    }
+                    validated.add(Pair(sql, jsParams))
+                }
+
+                val db = getOrInitDatabase()
+                var totalRowsAffected = 0
+
+                db.beginTransactionNonExclusive()
+                try {
+                    for ((sql, params) in validated) {
+                        val trimmedUpper = sql.uppercase(Locale.ROOT)
+                        db.compileStatement(sql).use { stmt ->
+                            bindParams(stmt, params)
+                            if (trimmedUpper.startsWith("INSERT")) {
+                                val rowId = stmt.executeInsert()
+                                if (rowId != -1L) {
+                                    totalRowsAffected += 1
+                                }
+                            } else {
+                                totalRowsAffected += stmt.executeUpdateDelete()
+                            }
+                        }
+                    }
+                    db.setTransactionSuccessful()
+                } finally {
+                    db.endTransaction()
+                }
+
+                val res = JSObject()
+                res.put("totalRowsAffected", totalRowsAffected)
+                res.put("statementCount", validated.size)
+                call.resolve(res)
+            } catch (e: Exception) {
+                call.reject("Native SQLite executeBatch failed: ${e.message}", e)
+            }
+        }
+    }
+
+    @PluginMethod
     fun query(call: PluginCall) {
         val rawSql = call.getString("sql") ?: run {
             call.reject("Missing sql")

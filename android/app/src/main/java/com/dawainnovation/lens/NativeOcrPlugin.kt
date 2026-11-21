@@ -100,6 +100,11 @@ class NativeOcrPlugin : Plugin() {
                     .addOnFailureListener { e ->
                         call.reject("Text recognition failed", e)
                     }
+                    .addOnCompleteListener {
+                        if (!bitmap.isRecycled) {
+                            bitmap.recycle()
+                        }
+                    }
             } catch (e: Exception) {
                 call.reject("OCR pipeline failed: ${e.message}", e)
             }

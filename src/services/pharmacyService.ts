@@ -1,6 +1,11 @@
 import rawNdaData from "../data/ndaPharmacies.json";
 import rawDrugShopData from "../data/ndaDrugShops.json";
-import { wasmHaversineKm } from "../lib/dawaWasm";
+import {
+  wasmHaversineKm,
+  wasmLoadOutlets,
+  wasmQueryOutlets,
+  type WasmOutletInput,
+} from "../lib/dawaWasm";
 import {
   DEFAULT_KAMPALA_COORDS,
   type SavedPharmacyLocation,
@@ -77,6 +82,8 @@ const routeCache = new Map<string, PharmacyRoute>();
 
 let cachedPharmacies: NdaPharmacy[] | null = null;
 let cachedDrugShops: NdaPharmacy[] | null = null;
+let pharmaciesIndexedInWasm = false;
+let drugShopsIndexedInWasm = false;
 
 function getPharmacies(): NdaPharmacy[] {
   if (!cachedPharmacies) {
@@ -94,6 +101,40 @@ function getDrugShops(): NdaPharmacy[] {
     );
   }
   return cachedDrugShops;
+}
+
+function ensureOutletsIndexedInWasm(datasetId: 0 | 1): boolean {
+  if (datasetId === 0 && pharmaciesIndexedInWasm) return true;
+  if (datasetId === 1 && drugShopsIndexedInWasm) return true;
+
+  const list = datasetId === 0 ? getPharmacies() : getDrugShops();
+  if (!list || list.length === 0) return false;
+
+  const compact: WasmOutletInput[] = [];
+  for (let i = 0; i < list.length; i++) {
+    const o = list[i];
+    if (typeof o.latitude !== "number" || typeof o.longitude !== "number") continue;
+    const searchBlob =
+      datasetId === 0
+        ? `${o.name || ""}\x1f${o.address || ""}\x1f${o.street || ""}\x1f${o.pharmacist || ""}\x1f${o.district || ""}`
+        : `${o.name || ""}\x1f${o.district || ""}\x1f${o.address || ""}\x1f${o.region || ""}`;
+    compact.push({
+      i,
+      la: o.latitude,
+      lo: o.longitude,
+      r: Boolean(o.isRetail),
+      d: o.district || "",
+      s: searchBlob,
+    });
+  }
+
+  const count = wasmLoadOutlets(datasetId, compact);
+  if (count !== null && count > 0) {
+    if (datasetId === 0) pharmaciesIndexedInWasm = true;
+    else drugShopsIndexedInWasm = true;
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -135,6 +176,20 @@ export function findTopNearestPharmacies(
   const pharmacies = getPharmacies();
   if (!pharmacies || pharmacies.length === 0) return [];
 
+  if (ensureOutletsIndexedInWasm(0)) {
+    const hits = wasmQueryOutlets({
+      datasetId: 0,
+      userLat,
+      userLng,
+      onlyRetail,
+      limit: count,
+      ignoreRadius: true,
+    });
+    if (hits) {
+      return hits.map((h) => ({ ...pharmacies[h.i], distanceKm: h.d }));
+    }
+  }
+
   const valid = pharmacies.filter((p) => {
     if (onlyRetail && !p.isRetail) return false;
     return typeof p.latitude === "number" && typeof p.longitude === "number";
@@ -166,6 +221,23 @@ export function findNearbyPharmacies(
   } = options;
 
   const pharmacies = getPharmacies();
+
+  if (ensureOutletsIndexedInWasm(0)) {
+    const hits = wasmQueryOutlets({
+      datasetId: 0,
+      userLat,
+      userLng,
+      radiusKm,
+      district,
+      query,
+      onlyRetail,
+      limit,
+    });
+    if (hits) {
+      return hits.map((h) => ({ ...pharmacies[h.i], distanceKm: h.d }));
+    }
+  }
+
   const results = pharmacies.filter((p) => {
     if (onlyRetail && !p.isRetail) return false;
     if (district && district !== "ALL" && p.district.toLowerCase() !== district.toLowerCase()) {
@@ -414,6 +486,20 @@ export function findTopNearestDrugShops(
   const drugShops = getDrugShops();
   if (!drugShops || drugShops.length === 0) return [];
 
+  if (ensureOutletsIndexedInWasm(1)) {
+    const hits = wasmQueryOutlets({
+      datasetId: 1,
+      userLat,
+      userLng,
+      onlyRetail: false,
+      limit: count,
+      ignoreRadius: true,
+    });
+    if (hits) {
+      return hits.map((h) => ({ ...drugShops[h.i], distanceKm: h.d }));
+    }
+  }
+
   const withDist = drugShops
     .filter((d) => typeof d.latitude === "number" && typeof d.longitude === "number")
     .map((d) => ({
@@ -435,6 +521,22 @@ export function findNearbyDrugShops(
 ): NdaPharmacy[] {
   const { radiusKm = 50, district = "", query = "", limit = 60 } = options;
   const drugShops = getDrugShops();
+
+  if (ensureOutletsIndexedInWasm(1)) {
+    const hits = wasmQueryOutlets({
+      datasetId: 1,
+      userLat,
+      userLng,
+      radiusKm,
+      district,
+      query,
+      onlyRetail: false,
+      limit,
+    });
+    if (hits) {
+      return hits.map((h) => ({ ...drugShops[h.i], distanceKm: h.d }));
+    }
+  }
 
   const results = drugShops.filter((d) => {
     if (district && district !== "ALL" && d.district.toLowerCase() !== district.toLowerCase()) {

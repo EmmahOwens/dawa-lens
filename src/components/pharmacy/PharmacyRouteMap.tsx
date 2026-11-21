@@ -11,6 +11,7 @@ import {
   PharmacyTransportMode,
   getDirectionsUrl,
 } from "@/services/pharmacyService";
+import { NativeService } from "@/services/nativeService";
 import { Medicine } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -126,7 +127,8 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
     }
   };
 
-  const handleNavigate = (pharmacy: NdaPharmacy) => {
+  const handleNavigate = async (pharmacy: NdaPharmacy) => {
+    void NativeService.haptics.tap();
     if (onNavigate) {
       onNavigate(pharmacy);
     } else {
@@ -134,7 +136,16 @@ export const PharmacyRouteMap: React.FC<PharmacyRouteMapProps> = ({
         userCoords,
         mode: currentTransport,
       });
-      window.open(url, "_blank", "noopener,noreferrer");
+      const openedNatively = await NativeService.system.openNativeMaps({
+        lat: pharmacy.latitude,
+        lng: pharmacy.longitude,
+        label: pharmacy.name,
+        mode: currentTransport,
+        fallbackUrl: url,
+      });
+      if (!openedNatively) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
     }
   };
 

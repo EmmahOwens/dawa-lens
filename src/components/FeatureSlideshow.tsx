@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useAnimation } from "framer-motion";
 import { Camera, Users, Heart, FileText, History, Plane, Sparkles, Lightbulb, ArrowRight, Package } from "@/lib/icons";
 import { aiApi } from "@/services/api";
+import { NativeService } from "@/services/nativeService";
 
 interface SlideItem {
   id: string;
@@ -178,14 +179,19 @@ export function FeatureSlideshow() {
   const current = slides[currentIndex];
   const theme = SLIDE_THEMES[current.id] || SLIDE_THEMES.scan;
 
-  const handleDragEnd = (_event: unknown, info: { offset: { x: number } }) => {
-    if (info.offset.x < -50) nextSlide();
-    else if (info.offset.x > 50) prevSlide();
+  const handleDragEnd = (_event: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
+    if (info.offset.x < -45 || info.velocity.x < -300) {
+      void NativeService.haptics.selection();
+      nextSlide();
+    } else if (info.offset.x > 45 || info.velocity.x > 300) {
+      void NativeService.haptics.selection();
+      prevSlide();
+    }
   };
 
   return (
-    <div 
-      className={`relative w-full mb-8 overflow-hidden rounded-[22px] neu-surface ${theme.borderColor} ${theme.bgGradient} transition-all duration-300`}
+    <div
+      className={`relative w-full mb-8 overflow-hidden rounded-[22px] neu-surface ${theme.borderColor} ${theme.bgGradient} transition-[border-color,background-color] duration-200 ease-out`}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}
@@ -196,12 +202,13 @@ export function FeatureSlideshow() {
           key={current.id}
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.18}
           onDragEnd={handleDragEnd}
-          initial={{ opacity: 0, x: 12 }}
+          initial={{ opacity: 0, x: 14 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -12 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="relative w-full p-6 sm:p-7 flex flex-col min-h-[14rem] sm:min-h-[13rem] justify-between cursor-grab active:cursor-grabbing select-none"
+          exit={{ opacity: 0, x: -14 }}
+          transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+          className="relative w-full p-6 sm:p-7 flex flex-col min-h-[14rem] sm:min-h-[13rem] justify-between cursor-grab active:cursor-grabbing select-none touch-pan-y"
         >
           <div className="relative z-10 flex items-start justify-between gap-4">
             <div className="flex flex-col gap-1">
@@ -218,7 +225,7 @@ export function FeatureSlideshow() {
               </h3>
             </div>
             
-            {/* Story style progress pills */}
+            {/* Story style progress pills — GPU-only scaleX (zero layout reflow) */}
             <div className="flex items-center gap-1.5 shrink-0 pt-1">
               {slides.map((_, i) => (
                 <div 
@@ -227,10 +234,10 @@ export function FeatureSlideshow() {
                 >
                   {i === currentIndex && (
                     <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: "100%" }}
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: isPaused ? 0 : 1 }}
                       transition={{ duration: isPaused ? 0 : 6, ease: "linear" }}
-                      className={`absolute inset-0 ${theme.barColor}`}
+                      className={`absolute inset-0 origin-left ${theme.barColor}`}
                     />
                   )}
                   {i < currentIndex && (
@@ -247,11 +254,12 @@ export function FeatureSlideshow() {
             </p>
             {current.to && (
               <button 
+                onPointerDown={() => void NativeService.haptics.tap()}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (current.to) navigate(current.to);
                 }}
-                className={`mt-4 inline-flex items-center gap-1.5 h-9 px-4 rounded-full ${theme.btnGradient} text-white font-medium text-[13px] shadow-sm active:scale-[0.98] transition-all`}
+                className={`mt-4 inline-flex items-center gap-1.5 h-9 px-4 rounded-full ${theme.btnGradient} text-white font-medium text-[13px] shadow-sm active:scale-[0.97] transition-[transform,filter] duration-150 ease-out`}
               >
                 <span>Try it now</span>
                 <ArrowRight size={13} />
@@ -259,14 +267,14 @@ export function FeatureSlideshow() {
             )}
           </div>
           
-          {/* Subtle bottom progress indicator */}
+          {/* Subtle bottom progress indicator — GPU-only scaleX */}
           <div className="absolute bottom-0 left-0 h-0.5 bg-border/40 w-full overflow-hidden">
             <motion.div 
               key={currentIndex}
-              initial={{ width: 0 }}
-              animate={{ width: isPaused ? "0%" : "100%" }}
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: isPaused ? 0 : 1 }}
               transition={{ duration: 6, ease: "linear" }}
-              className={`h-full ${theme.barColor} opacity-40`}
+              className={`h-full w-full origin-left ${theme.barColor} opacity-40`}
             />
           </div>
         </motion.div>

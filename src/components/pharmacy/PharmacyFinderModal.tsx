@@ -10,6 +10,7 @@ import { PharmacyRouteMap } from "./PharmacyRouteMap";
 import { PharmacyLocationSearch } from "./PharmacyLocationSearch";
 import { PharmacyVerificationModal } from "./PharmacyVerificationModal";
 import { getDirectionsUrl, formatDuration, NdaPharmacy, PharmacyTransportMode } from "@/services/pharmacyService";
+import { NativeService } from "@/services/nativeService";
 import { Medicine } from "@/contexts/AppContext";
 import {
   Navigation,
@@ -393,12 +394,22 @@ export const PharmacyFinderModal: React.FC<PharmacyFinderModalProps> = ({
     ? "bg-teal-600 text-white shadow-sm"
     : "bg-amber-600 text-white shadow-sm";
 
-  const handleOpenExternalMaps = (outlet: NdaPharmacy) => {
+  const handleOpenExternalMaps = async (outlet: NdaPharmacy) => {
+    void NativeService.haptics.tap();
     const url = getDirectionsUrl(outlet.latitude, outlet.longitude, outlet.name, {
       userCoords,
       mode: transportMode,
     });
-    window.open(url, "_blank", "noopener,noreferrer");
+    const openedNatively = await NativeService.system.openNativeMaps({
+      lat: outlet.latitude,
+      lng: outlet.longitude,
+      label: outlet.name,
+      mode: transportMode,
+      fallbackUrl: url,
+    });
+    if (!openedNatively) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
   };
 
   const handleShareOutlet = (outlet: NdaPharmacy) => {

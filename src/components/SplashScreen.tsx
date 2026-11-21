@@ -18,78 +18,6 @@ import React from "react";
 import { useTheme } from "next-themes";
 import { LOGO_BASE64 } from "@/lib/logoBase64";
 
-// ─── Pill shape helper ────────────────────────────────────────────────────────
-interface PillProps {
-  width: number;
-  height: number;
-  color: string;
-  colorB?: string; // second half color (split-capsule style)
-  rotate?: number;
-  style?: React.CSSProperties;
-}
-
-const Pill: React.FC<PillProps> = ({
-  width,
-  height,
-  color,
-  colorB,
-  rotate = 0,
-  style,
-}) => {
-  const r = height / 2;
-  return (
-    <div
-      style={{
-        width,
-        height,
-        borderRadius: r,
-        transform: `rotate(${rotate}deg)`,
-        overflow: "hidden",
-        flexShrink: 0,
-        boxShadow: `0 4px 16px rgba(0,0,0,0.22), inset 0 1px 2px rgba(255,255,255,0.35)`,
-        ...style,
-      }}
-    >
-      {colorB ? (
-        // Split capsule: left half + right half
-        <div style={{ display: "flex", width: "100%", height: "100%" }}>
-          <div style={{ width: "50%", background: color }} />
-          <div style={{ width: "50%", background: colorB }} />
-        </div>
-      ) : (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
-// ─── Round tablet helper ──────────────────────────────────────────────────────
-interface TabletProps {
-  size: number;
-  color: string;
-  style?: React.CSSProperties;
-}
-
-const Tablet: React.FC<TabletProps> = ({ size, color, style }) => (
-  <div
-    style={{
-      width: size,
-      height: size,
-      borderRadius: "50%",
-      background: `radial-gradient(circle at 38% 38%, ${color}ee, ${color}99)`,
-      boxShadow: `0 4px 14px rgba(0,0,0,0.22), inset 0 1px 2px rgba(255,255,255,0.4)`,
-      flexShrink: 0,
-      ...style,
-    }}
-  />
-);
-
 // ─── Spinner (the only animated element) ─────────────────────────────────────
 const Spinner: React.FC<{ dark: boolean }> = ({ dark }) => {
   const color = dark ? "rgba(255,255,255,0.55)" : "rgba(80,80,100,0.55)";
@@ -164,55 +92,23 @@ const OrbitalCenter: React.FC<{ dark: boolean }> = ({ dark }) => (
   </div>
 );
 
-// ─── Scattered background pills ───────────────────────────────────────────────
-// Mimics the blurred scattered pills in the concept images.
-// We render them at fixed positions with blur applied, so they feel
-// like out-of-focus medicine scattered on a surface.
-const BackgroundPills: React.FC<{ dark: boolean }> = ({ dark }) => {
-  // [x%, y%, rotate, blur, opacity, width, height, color, colorB?]
-  const pills: [number, number, number, number, number, number, number, string, string?][] = [
-    [5,  4,  -30, 6, 0.55, 40, 18, "#e8e0d0"],
-    [80, 3,  20,  5, 0.50, 36, 15, "#ccc9c0"],
-    [92, 8,  -10, 4, 0.45, 28, 12, "#e07070"],
-    [2,  20, 45,  7, 0.40, 44, 19, "#4dc0e0"],
-    [88, 22, -50, 6, 0.50, 38, 16, "#e8a030"],
-    [7,  75, -15, 5, 0.55, 46, 20, "#4dc0e0"],
-    [85, 70, 30,  6, 0.45, 42, 18, "#d4a017"],
-    [15, 90, 10,  4, 0.50, 36, 15, "#e07070", "#fff"],
-    [70, 88, -25, 5, 0.48, 40, 17, "#888", "#aaa"],
-    [50, 6,  60,  7, 0.35, 30, 13, "#d4c0b0"],
-    [95, 45, -40, 8, 0.30, 38, 16, "#e8c0c0"],
-    [3,  50, 20,  6, 0.35, 32, 14, "#b0c0d8"],
-    [60, 92, 15,  5, 0.42, 38, 16, "#e8a020"],
-    [25, 5,  -5,  4, 0.30, 24, 11, "#d0d0c0"],
-  ];
-
-  return (
-    <>
-      {pills.map(([x, y, rot, blur, opacity, w, h, c, cB], i) => (
-        <div
-          key={i}
-          style={{
-            position: "absolute",
-            left: `${x}%`,
-            top: `${y}%`,
-            transform: `rotate(${rot}deg)`,
-            filter: `blur(${blur}px)`,
-            opacity: dark ? opacity * 0.75 : opacity,
-            pointerEvents: "none",
-            zIndex: 1,
-          }}
-        >
-          {h === w ? (
-            <Tablet size={w} color={c} />
-          ) : (
-            <Pill width={w} height={h} color={c} colorB={cB} />
-          )}
-        </div>
-      ))}
-    </>
-  );
-};
+// ─── Lightweight GPU-composited ambient backdrop ─────────────────────────────
+// Replaces 14 individual `filter: blur()` DOM elements with two zero-cost radial
+// gradients so cold-start splash rendering never stalls low-RAM Android compositors.
+const BackgroundPills: React.FC<{ dark: boolean }> = ({ dark }) => (
+  <div
+    aria-hidden="true"
+    style={{
+      position: "absolute",
+      inset: 0,
+      pointerEvents: "none",
+      zIndex: 1,
+      background: dark
+        ? "radial-gradient(circle at 18% 20%, rgba(41, 151, 255, 0.14), transparent 46%), radial-gradient(circle at 82% 78%, rgba(224, 92, 48, 0.14), transparent 48%)"
+        : "radial-gradient(circle at 18% 20%, rgba(0, 102, 204, 0.11), transparent 46%), radial-gradient(circle at 82% 78%, rgba(224, 92, 48, 0.10), transparent 48%)",
+    }}
+  />
+);
 
 // ─── SplashScreen ────────────────────────────────────────────────────────────
 const SplashScreen: React.FC = () => {

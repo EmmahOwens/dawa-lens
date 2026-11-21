@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Home, Camera, Bell, History, Settings } from "@/lib/icons";
 import { useTranslation } from "react-i18next";
@@ -62,39 +62,41 @@ function useSmartHideBottomNav() {
     };
   }, []);
 
-  // 3. Dialog / Sheet open
+  // 3. Dialog / Sheet open — lightweight top-level portal observer only (NO subtree: true!)
+  // Radix portals and custom modals mount directly under document.body (or lock body style),
+  // so observing direct body children eliminates per-frame DOM mutation storms during animations.
   useEffect(() => {
     const checkDialogs = () => {
-      const dialogElement = document.querySelector(
-        '[role="dialog"], [role="alertdialog"]'
-      );
-      const hasModal = !!dialogElement || document.body.style.pointerEvents === "none";
-      setIsDialogOpen(hasModal);
+      const hasModal =
+        document.body.style.pointerEvents === "none" ||
+        document.querySelector('[role="dialog"], [role="alertdialog"]') !== null;
+      setIsDialogOpen((prev) => (prev === hasModal ? prev : hasModal));
     };
 
     checkDialogs();
 
     let rafId: number | null = null;
-    const observer = new MutationObserver(() => {
+    const scheduleCheck = () => {
       if (rafId !== null) return;
       rafId = requestAnimationFrame(() => {
         rafId = null;
         checkDialogs();
       });
-    });
+    };
 
+    const observer = new MutationObserver(scheduleCheck);
     observer.observe(document.body, {
       childList: true,
-      subtree: true,
+      subtree: false,
       attributes: true,
-      attributeFilter: ["style", "class", "data-state"],
+      attributeFilter: ["style", "data-scroll-locked"],
     });
 
     return () => {
       observer.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-  }, []);
+  }, [location.pathname]);
 
   // 4. Form routes
   const isFormRoute =
@@ -111,15 +113,21 @@ export default function BottomNav() {
   const { reminders, doseLogs } = useApp();
   const shouldHide = useSmartHideBottomNav();
 
-  // Count reminders that haven't been logged today
-  const pendingReminderCount = reminders.filter((r) => {
-    if (!r.enabled) return false;
-    return !doseLogs.some(
-      (l) =>
-        l.reminderId === r.id &&
-        new Date(l.actionTime).toDateString() === new Date().toDateString()
-    );
-  }).length;
+  // Memoized count of reminders not yet logged today (avoids repeated Date allocations per render)
+  const pendingReminderCount = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    const loggedTodayIds = new Set<string>();
+    for (const l of doseLogs) {
+      if (new Date(l.actionTime).toDateString() === todayStr) {
+        loggedTodayIds.add(l.reminderId);
+      }
+    }
+    let count = 0;
+    for (const r of reminders) {
+      if (r.enabled && !loggedTodayIds.has(r.id)) count++;
+    }
+    return count;
+  }, [reminders, doseLogs]);
 
   const navItems = [
     { to: "/", icon: Home, label: t("nav.home") },
@@ -132,21 +140,15 @@ export default function BottomNav() {
     <AnimatePresence>
       {!shouldHide && (
         <motion.nav
-          initial={{ y: 80, opacity: 0 }}
+          initial={{ y: 72, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 80, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 32 }}
+          exit={{ y: 72, opacity: 0 }}
+          transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
           aria-label={t("nav.primary", "Primary navigation")}
           className="fixed bottom-3 left-0 right-0 z-50 mx-auto max-w-[21rem] md:hidden px-3"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) * 0.4 + 0.6rem)" }}
         >
-          <div
-            className="pointer-events-auto relative flex items-center justify-between rounded-full frosted-bottom-dock backdrop-blur-2xl backdrop-saturate-150 px-3 py-1.5"
-            style={{
-              WebkitBackdropFilter: "saturate(180%) blur(28px)",
-              backdropFilter: "saturate(180%) blur(28px)",
-            }}
-          >
+          <div className="pointer-events-auto relative flex items-center justify-between rounded-full frosted-bottom-dock px-3 py-1.5">
             {/* Left Side Items */}
             <div className="flex flex-1 justify-around items-center">
               {navItems.slice(0, 2).map((item) => (
@@ -158,11 +160,13 @@ export default function BottomNav() {
             <NavLink
               to="/scan"
               aria-label={t("nav.scan")}
-              onClick={() => NativeService.haptics.impact(ImpactStyle.Medium)}
-              className="relative -mt-6 flex h-14 w-14 items-center justify-center shrink-0 mx-1.5 rounded-full active:scale-95 hover:scale-[1.03] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onPointerDown={() => {
+                void NativeService.haptics.impact(ImpactStyle.Medium);
+              }}
+              className="relative -mt-6 flex h-14 w-14 items-center justify-center shrink-0 mx-1.5 rounded-full active:scale-95 hover:scale-[1.03] transition-transform duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <div
-                className={`h-full w-full rounded-full bg-primary/95 backdrop-blur-md flex items-center justify-center text-primary-foreground ring-4 ring-white/65 dark:ring-zinc-900/70 shadow-[0_10px_24px_-4px_hsl(var(--primary)/0.55),inset_0_1px_1px_0_rgba(255,255,255,0.45)] transition-all duration-200 ${
+                className={`h-full w-full rounded-full bg-primary/95 flex items-center justify-center text-primary-foreground ring-4 ring-white/65 dark:ring-zinc-900/70 shadow-[0_10px_24px_-4px_hsl(var(--primary)/0.55),inset_0_1px_1px_0_rgba(255,255,255,0.45)] transition-[filter,transform] duration-150 ${
                   location.pathname === "/scan" ? "brightness-110" : ""
                 }`}
               >
@@ -207,10 +211,14 @@ function NavItem({
     <NavLink
       to={to}
       aria-label={badgeCount > 0 ? `${label} (${badgeCount} pending)` : label}
-      onClick={() => NativeService.haptics.impact(ImpactStyle.Light)}
-      className={`relative flex flex-col items-center justify-center w-11 h-11 rounded-full active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+      onPointerDown={() => {
+        if (!active) {
+          void NativeService.haptics.selection();
+        }
+      }}
+      className={`relative flex flex-col items-center justify-center w-11 h-11 rounded-full active:scale-[0.92] transition-[transform,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
         active
-          ? "bg-white/60 dark:bg-white/15 shadow-xs"
+          ? "bg-white/65 dark:bg-white/15 shadow-xs"
           : "hover:bg-white/35 dark:hover:bg-white/10"
       }`}
     >
@@ -218,7 +226,7 @@ function NavItem({
         <Icon
           size={20}
           aria-hidden={true}
-          className={`transition-colors duration-200 ${
+          className={`transition-colors duration-150 ${
             active
               ? "text-primary font-semibold"
               : "text-foreground/75 dark:text-white/80 hover:text-foreground dark:hover:text-white"
@@ -232,14 +240,13 @@ function NavItem({
           />
         )}
 
-        {/* Apple subtle active dot */}
-        {active && (
-          <motion.div
-            layoutId="apple-nav-dot"
-            className="absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary"
-            transition={{ type: "spring", stiffness: 450, damping: 35 }}
-          />
-        )}
+        {/* GPU-composited active indicator dot (off main thread during route transitions) */}
+        <span
+          aria-hidden="true"
+          className={`absolute -bottom-1.5 w-1 h-1 rounded-full bg-primary transition-[transform,opacity] duration-200 ease-out ${
+            active ? "opacity-100 scale-100" : "opacity-0 scale-50"
+          }`}
+        />
       </div>
     </NavLink>
   );

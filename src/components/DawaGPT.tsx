@@ -20,6 +20,7 @@ import { PharmacyFinderModal } from "@/components/pharmacy/PharmacyFinderModal";
 import PermissionRequest from "@/components/PermissionRequest";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { Medicine } from "@/contexts/AppContext";
+import { NativeService } from "@/services/nativeService";
 
 const SAMPLE_PROMPTS = [
   "Does Panadol interact with Ibuprofen?",
@@ -740,12 +741,12 @@ export default function DawaGPT() {
       {/* Floating Toggle Button - Claude Inspired */}
       <motion.button
         key="dawagpt-floating-trigger"
-        initial={{ scale: 0, opacity: 0 }}
+        initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 350, damping: 25 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+        whileTap={{ scale: 0.94 }}
+        onPointerDown={() => void NativeService.haptics.tap()}
         onClick={() => {
           if (!isOnline) {
             setIsDawaGPTOfflineModalOpen(true);
@@ -753,35 +754,50 @@ export default function DawaGPT() {
             setIsOpen(true);
           }
         }}
-        className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border bg-card active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className="fixed bottom-16 right-4 z-40 p-0 rounded-full shadow-lg flex items-center justify-center md:hidden overflow-hidden w-14 h-14 group border border-border bg-card active:scale-95 transition-transform duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) * 0.35 + 4.5rem)' }}
         aria-label="Open DawaGPT"
       >
         <div className="w-full h-full flex items-center justify-center overflow-hidden">
-          <img src="/dawa-gpt.png" alt="" className="w-9 h-9 object-contain transition-transform group-hover:scale-105" />
+          <img src="/dawa-gpt.png" alt="" className="w-9 h-9 object-contain transition-transform duration-150 group-hover:scale-105" />
         </div>
       </motion.button>
 
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center pointer-events-none p-0 md:p-6 bg-black/40 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                void NativeService.haptics.tap();
+                setIsOpen(false);
+              }
+            }}
+            className="fixed inset-0 z-[60] flex items-end md:items-center justify-center p-0 md:p-6 bg-black/45 backdrop-blur-sm"
+          >
             <motion.div
               role="dialog"
               aria-modal="true"
               aria-label="DawaGPT AI Assistant"
-              initial={{ y: "100%", opacity: 0 }}
+              initial={{ y: "100%", opacity: 0.92 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              exit={{ y: "100%", opacity: 0.92 }}
+              transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
               drag="y"
               dragControls={dragControls}
               dragListener={false}
               dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0.03, bottom: 0.25 }}
+              dragElastic={{ top: 0.04, bottom: 0.28 }}
               onDragEnd={(_e, info) => {
-                if (info.offset.y > 60 || info.velocity.y > 500) setIsOpen(false);
+                if (info.offset.y > 60 || info.velocity.y > 420) {
+                  void NativeService.haptics.gesture("end");
+                  setIsOpen(false);
+                }
               }}
-              className="bg-[#f5f5f7] dark:bg-[#161617] w-full md:max-w-3xl h-[88dvh] md:h-[90dvh] max-h-[100dvh] rounded-t-[28px] md:rounded-[24px] shadow-2xl border border-border flex flex-col pointer-events-auto overflow-hidden"
+              className="bg-[#f5f5f7] dark:bg-[#161617] w-full md:max-w-3xl h-[88dvh] md:h-[90dvh] max-h-[100dvh] rounded-t-[28px] md:rounded-[24px] shadow-2xl border border-border flex flex-col pointer-events-auto overflow-hidden safe-bottom"
             >
               {/* Top Drag Header Zone */}
               <div
@@ -993,7 +1009,8 @@ export default function DawaGPT() {
                       }
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}
-                      className="bg-transparent border-none text-sm resize-none outline-none px-3 py-2 min-h-[40px] max-h-[160px] placeholder:text-muted-foreground text-foreground w-full font-normal disabled:opacity-50 disabled:cursor-not-allowed"
+                      enterKeyHint="send"
+                      className="bg-transparent border-none text-base sm:text-sm resize-none outline-none px-3 py-2 min-h-[40px] max-h-[160px] placeholder:text-muted-foreground text-foreground w-full font-normal disabled:opacity-50 disabled:cursor-not-allowed"
                       rows={1}
                     />
                     <Button
@@ -1013,7 +1030,7 @@ export default function DawaGPT() {
                 </div>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

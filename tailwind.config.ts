@@ -4,6 +4,9 @@ import typography from "@tailwindcss/typography";
 
 export default {
   darkMode: ["class"],
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
@@ -139,6 +142,11 @@ export default {
         product: "rgba(0, 0, 0, 0.22) 3px 5px 30px 0px",
         "product-dark": "rgba(0, 0, 0, 0.55) 3px 5px 30px 0px",
         subtle: "0 1px 2px 0 rgba(0, 0, 0, 0.04)",
+      },
+      transitionTimingFunction: {
+        "out-native": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "in-out-native": "cubic-bezier(0.77, 0, 0.175, 1)",
+        drawer: "cubic-bezier(0.32, 0.72, 0, 1)",
       },
       keyframes: {
         "accordion-down": {

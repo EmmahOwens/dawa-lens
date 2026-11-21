@@ -3,6 +3,11 @@ import { Preferences } from "@capacitor/preferences";
 import { Device } from "@capacitor/device";
 import { Dialog } from "@capacitor/dialog";
 import { Capacitor } from "@capacitor/core";
+import { NativeHaptics } from "@/plugins/nativeHaptics";
+import { NativeNavigation, type DevicePerformanceProfile } from "@/plugins/nativeNavigation";
+
+const isAndroidNative = () =>
+  Capacitor.isNativePlatform() && Capacitor.getPlatform() === "android";
 
 /**
  * Unified service to handle native device features with safety checks
@@ -10,90 +15,177 @@ import { Capacitor } from "@capacitor/core";
  */
 export const NativeService = {
   /**
-   * Contextual haptic feedback patterns — adapted from lichobile's 7-pattern system.
-   * Each pattern maps to a specific interaction type for a native feel.
+   * Contextual haptic feedback patterns.
+   * On Android, routes directly through `NativeHaptics` (`View.performHapticFeedback` LRA
+   * hardware constants) for < 2ms single-call tactile feedback that honors system Touch Feedback
+   * settings; falls back to `@capacitor/haptics` on iOS / older bridges.
    */
   haptics: {
     // Light tap for button presses and list item selections
     tap: async () => {
-      if (Capacitor.isNativePlatform()) {
+      if (!Capacitor.isNativePlatform()) return;
+      if (isAndroidNative()) {
         try {
-          await Haptics.impact({ style: ImpactStyle.Light });
-        } catch (err) {
-          console.warn("[NativeService] haptics.tap failed:", err);
+          await NativeHaptics.impact({ style: "light" });
+          return;
+        } catch {
+          // fall through to Capacitor Haptics
         }
+      }
+      try {
+        await Haptics.impact({ style: ImpactStyle.Light });
+      } catch (err) {
+        console.warn("[NativeService] haptics.tap failed:", err);
       }
     },
     // Medium impact for standard interactions
     impact: async (style: ImpactStyle = ImpactStyle.Medium) => {
-      if (Capacitor.isNativePlatform()) {
+      if (!Capacitor.isNativePlatform()) return;
+      if (isAndroidNative()) {
+        const mapped =
+          style === ImpactStyle.Light
+            ? "light"
+            : style === ImpactStyle.Heavy
+              ? "heavy"
+              : "medium";
         try {
-          await Haptics.impact({ style });
-        } catch (err) {
-          console.warn("[NativeService] haptics.impact failed:", err);
+          await NativeHaptics.impact({ style: mapped });
+          return;
+        } catch {
+          // fall through
         }
+      }
+      try {
+        await Haptics.impact({ style });
+      } catch (err) {
+        console.warn("[NativeService] haptics.impact failed:", err);
       }
     },
     // Heavy impact for destructive or high-emphasis actions
     heavy: async () => {
-      if (Capacitor.isNativePlatform()) {
+      if (!Capacitor.isNativePlatform()) return;
+      if (isAndroidNative()) {
         try {
-          await Haptics.impact({ style: ImpactStyle.Heavy });
-        } catch (err) {
-          console.warn("[NativeService] haptics.heavy failed:", err);
+          await NativeHaptics.impact({ style: "heavy" });
+          return;
+        } catch {
+          // fall through
         }
+      }
+      try {
+        await Haptics.impact({ style: ImpactStyle.Heavy });
+      } catch (err) {
+        console.warn("[NativeService] haptics.heavy failed:", err);
       }
     },
     // Success notification for completed actions (scan result, saved, etc.)
     success: async () => {
-      if (Capacitor.isNativePlatform()) {
+      if (!Capacitor.isNativePlatform()) return;
+      if (isAndroidNative()) {
         try {
-          await Haptics.notification({ type: NotificationType.Success });
-        } catch (err) {
-          console.warn("[NativeService] haptics.success failed:", err);
+          await NativeHaptics.notification({ type: "success" });
+          return;
+        } catch {
+          // fall through
         }
+      }
+      try {
+        await Haptics.notification({ type: NotificationType.Success });
+      } catch (err) {
+        console.warn("[NativeService] haptics.success failed:", err);
       }
     },
     // Warning pattern for cautionary alerts
     warn: async () => {
-      if (Capacitor.isNativePlatform()) {
+      if (!Capacitor.isNativePlatform()) return;
+      if (isAndroidNative()) {
         try {
-          await Haptics.notification({ type: NotificationType.Warning });
-        } catch (err) {
-          console.warn("[NativeService] haptics.warn failed:", err);
+          await NativeHaptics.notification({ type: "warning" });
+          return;
+        } catch {
+          // fall through
         }
+      }
+      try {
+        await Haptics.notification({ type: NotificationType.Warning });
+      } catch (err) {
+        console.warn("[NativeService] haptics.warn failed:", err);
       }
     },
     // Error pattern for failures and invalid actions
     error: async () => {
-      if (Capacitor.isNativePlatform()) {
+      if (!Capacitor.isNativePlatform()) return;
+      if (isAndroidNative()) {
         try {
-          await Haptics.notification({ type: NotificationType.Error });
-        } catch (err) {
-          console.warn("[NativeService] haptics.error failed:", err);
+          await NativeHaptics.notification({ type: "error" });
+          return;
+        } catch {
+          // fall through
         }
       }
+      try {
+        await Haptics.notification({ type: NotificationType.Error });
+      } catch (err) {
+        console.warn("[NativeService] haptics.error failed:", err);
+      }
     },
-    // Selection feedback for switches, toggles, and pickers
+    // Crisp single-call selection tick for switches, toggles, tabs, and pickers
     selection: async () => {
-      if (Capacitor.isNativePlatform()) {
+      if (!Capacitor.isNativePlatform()) return;
+      if (isAndroidNative()) {
         try {
-          await Haptics.selectionStart();
-          await Haptics.selectionChanged();
-          await Haptics.selectionEnd();
-        } catch (err) {
-          console.warn("[NativeService] haptics.selection failed:", err);
+          await NativeHaptics.selection();
+          return;
+        } catch {
+          // fall through
         }
+      }
+      try {
+        await Haptics.selectionStart();
+        await Haptics.selectionChanged();
+        await Haptics.selectionEnd();
+      } catch (err) {
+        console.warn("[NativeService] haptics.selection failed:", err);
+      }
+    },
+    // Gesture boundary detent for bottom sheets and swipe-to-dismiss thresholds
+    gesture: async (phase: "start" | "end" = "start") => {
+      if (!Capacitor.isNativePlatform()) return;
+      if (isAndroidNative()) {
+        try {
+          await NativeHaptics.gesture({ phase });
+          return;
+        } catch {
+          // fall through
+        }
+      }
+      try {
+        await Haptics.impact({ style: ImpactStyle.Light });
+      } catch {
+        // non-fatal
       }
     },
     // Generic notification (kept for backward compatibility)
     notification: async (type: NotificationType) => {
-      if (Capacitor.isNativePlatform()) {
+      if (!Capacitor.isNativePlatform()) return;
+      if (isAndroidNative()) {
+        const mapped =
+          type === NotificationType.Error
+            ? "error"
+            : type === NotificationType.Warning
+              ? "warning"
+              : "success";
         try {
-          await Haptics.notification({ type });
-        } catch (err) {
-          console.warn("[NativeService] haptics.notification failed:", err);
+          await NativeHaptics.notification({ type: mapped });
+          return;
+        } catch {
+          // fall through
         }
+      }
+      try {
+        await Haptics.notification({ type });
+      } catch (err) {
+        console.warn("[NativeService] haptics.notification failed:", err);
       }
     },
     // Generic vibrate (kept for backward compatibility)
@@ -104,6 +196,56 @@ export const NativeService = {
         } catch (err) {
           console.warn("[NativeService] haptics.vibrate failed:", err);
         }
+      }
+    },
+  },
+
+  /**
+   * Native Android System UI, Warm Backgrounding, Hardware Profiling & Native Intents.
+   */
+  system: {
+    setSystemBarsStyle: async (options: {
+      isDark: boolean;
+      statusBarColor?: string;
+      navigationBarColor?: string;
+    }): Promise<void> => {
+      if (!isAndroidNative()) return;
+      try {
+        await NativeNavigation.setSystemBarsStyle(options);
+      } catch {
+        // non-fatal
+      }
+    },
+    moveToBackground: async (): Promise<boolean> => {
+      if (!isAndroidNative()) return false;
+      try {
+        const { moved } = await NativeNavigation.moveToBackground();
+        return moved;
+      } catch {
+        return false;
+      }
+    },
+    getPerformanceProfile: async (): Promise<DevicePerformanceProfile | null> => {
+      if (!isAndroidNative()) return null;
+      try {
+        return await NativeNavigation.getDevicePerformanceProfile();
+      } catch {
+        return null;
+      }
+    },
+    openNativeMaps: async (options: {
+      lat: number;
+      lng: number;
+      label?: string;
+      mode?: "driving" | "walking" | "boda_boda";
+      fallbackUrl?: string;
+    }): Promise<boolean> => {
+      if (!isAndroidNative()) return false;
+      try {
+        const { opened } = await NativeNavigation.openNativeMaps(options);
+        return opened;
+      } catch {
+        return false;
       }
     },
   },
