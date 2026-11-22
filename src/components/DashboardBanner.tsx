@@ -1,61 +1,57 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Sparkles, TrendingUp, Calendar, ArrowRight } from "@/lib/icons";
+import { ArrowRight } from "@/lib/icons";
 import { useApp } from "@/contexts/AppContext";
-import { useTranslation } from "react-i18next";
 import { usePatientScope } from "@/hooks/usePatientScope";
-import { format, subDays, isSameDay } from "date-fns";
+import { subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
 import { getNextWellnessPulseQuote } from "@/data/wellnessPulseQuotes";
+import {
+  EDITORIAL_EASE,
+  EditorialEyebrow,
+  EditorialMetricStrip,
+} from "@/components/editorial/EditorialPrimitives";
 
 export function DashboardBanner() {
   const navigate = useNavigate();
   const { userProfile } = useApp();
   const { scopedDoseLogs } = usePatientScope();
-  const { t } = useTranslation();
 
   const firstName = userProfile?.name?.split(" ")[0];
   const [quote, setQuote] = useState<string>(() => getNextWellnessPulseQuote(firstName));
 
-  // Keep quote personalized if profile loads asynchronously
   useEffect(() => {
     setQuote(getNextWellnessPulseQuote(firstName));
   }, [firstName]);
 
-  // 2. Calculate 7-Day Consistency (Matching VitalityTrends logic)
   const adherencePercent = useMemo(() => {
     const days = Array.from({ length: 7 }).map((_, i) => subDays(new Date(), i));
-    const dayScores = days.map(date => {
-      const dayLogs = scopedDoseLogs.filter((l) =>
-        isSameDay(toDate(l.actionTime), date)
-      );
+    const dayScores = days.map((date) => {
+      const dayLogs = scopedDoseLogs.filter((l) => isSameDay(toDate(l.actionTime), date));
       const taken = dayLogs.filter((l) => l.action === "taken").length;
       const total = dayLogs.length;
-      // If no doses scheduled, it's 100% adherence for that day
       return total > 0 ? (taken / total) * 100 : 100;
     });
 
     return Math.round(dayScores.reduce((acc, score) => acc + score, 0) / 7);
   }, [scopedDoseLogs]);
 
-  // 3. Calculate Success Streak
   const streak = useMemo(() => {
     if (scopedDoseLogs.length === 0) return 0;
 
     let currentStreak = 0;
-    // Find the oldest log to know when to stop counting backwards
-    const oldestLogTimestamp = Math.min(...scopedDoseLogs.map(l => toDate(l.actionTime).getTime()));
+    const oldestLogTimestamp = Math.min(
+      ...scopedDoseLogs.map((l) => toDate(l.actionTime).getTime())
+    );
     const oldestDate = new Date(oldestLogTimestamp);
     oldestDate.setHours(0, 0, 0, 0);
 
-    // Check up to 100 days back
     for (let i = 0; i < 100; i++) {
       const date = subDays(new Date(), i);
       const comparisonDate = new Date(date);
       comparisonDate.setHours(0, 0, 0, 0);
 
-      // Stop if we go before the user's first ever log
       if (comparisonDate < oldestDate) break;
 
       const dayLogs = scopedDoseLogs.filter((l) =>
@@ -63,31 +59,24 @@ export function DashboardBanner() {
       );
 
       if (dayLogs.length === 0) {
-        // No logs for this day. Following the requirement to be similar to adherence,
-        // days with no scheduled doses don't break the streak.
         currentStreak++;
         continue;
       }
 
       const total = dayLogs.length;
       const taken = dayLogs.filter((l) => l.action === "taken").length;
-      const failed = dayLogs.filter((l) => l.action === "missed" || l.action === "skipped").length;
+      const failed = dayLogs.filter(
+        (l) => l.action === "missed" || l.action === "skipped"
+      ).length;
 
-      if (failed > 0) {
-        // Any failure (missed or skipped) resets the streak immediately.
-        break;
-      }
+      if (failed > 0) break;
 
       if (taken === total) {
         currentStreak++;
       } else {
-        // Some taken, some pending.
         if (i === 0) {
-          // If it's today and no failures yet, keep the streak alive (it's in progress).
           currentStreak++;
         } else {
-          // If it's a past day and it's not fully taken (and not a failure),
-          // we treat it as a break in consistency.
           break;
         }
       }
@@ -95,69 +84,58 @@ export function DashboardBanner() {
     return currentStreak;
   }, [scopedDoseLogs]);
 
-  const renderQuote = () => {
-    if (!quote) return null;
-
-    return (
-      <h2 className="text-2xl font-bold text-foreground max-w-sm leading-tight tracking-tight">
-        {quote}
-      </h2>
-    );
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
+    <motion.section
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="relative mb-8 rounded-[22px] bg-gradient-to-br from-emerald-500/[0.08] via-card to-teal-500/[0.05] dark:from-emerald-950/30 dark:via-card/90 dark:to-teal-950/20 border border-emerald-500/25 p-6 sm:p-7 overflow-hidden shadow-sm hover:border-emerald-500/40 transition-all duration-300"
+      transition={{ duration: 0.55, ease: EDITORIAL_EASE }}
+      className="editorial-card relative mb-8 p-6 sm:p-8 overflow-hidden"
     >
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="space-y-4 max-w-xl">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-[12px] font-semibold shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />
-              Wellness Pulse
-            </span>
-          </div>
+      <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-7">
+        <div className="space-y-5 max-w-xl">
+          <EditorialEyebrow
+            index="05"
+            label="Wellness Pulse"
+            dotColor="bg-emerald-500"
+          />
 
-          {renderQuote()}
+          {quote && (
+            <h2 className="editorial-serif text-[26px] sm:text-[32px] leading-[1.12] text-foreground max-w-lg">
+              &ldquo;{quote}&rdquo;
+            </h2>
+          )}
 
-          <div className="flex items-center gap-6 pt-1">
-            <div className="flex flex-col">
-              <span className="text-[12px] font-medium text-muted-foreground">7-Day Consistency</span>
-              <div className="flex items-center gap-2 mt-1.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-xs">
-                  <TrendingUp size={15} />
-                </div>
-                <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400 tracking-tight">
-                  {adherencePercent}<span className="text-xs font-semibold ml-0.5">%</span>
-                </span>
-              </div>
-            </div>
-            <div className="w-px h-9 bg-border/80" />
-            <div className="flex flex-col">
-              <span className="text-[12px] font-medium text-muted-foreground">Success Streak</span>
-              <div className="flex items-center gap-2 mt-1.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-xs">
-                  <Calendar size={15} />
-                </div>
-                <span className="text-xl font-bold text-amber-600 dark:text-amber-400 tracking-tight">
-                  {streak} <span className="text-xs font-semibold text-muted-foreground">{streak === 1 ? 'Day' : 'Days'}</span>
-                </span>
-              </div>
-            </div>
+          <div className="pt-2 border-t border-border/70">
+            <EditorialMetricStrip
+              items={[
+                {
+                  label: "7-Day Consistency",
+                  value: adherencePercent,
+                  unit: "%",
+                  tone: "success",
+                },
+                {
+                  label: "Success Streak",
+                  value: streak,
+                  unit: streak === 1 ? "day" : "days",
+                  tone: "default",
+                },
+              ]}
+            />
           </div>
         </div>
 
-        <button 
-          onClick={() => navigate('/report')}
-          className="self-start md:self-center flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white h-10 px-5 rounded-full font-medium text-[13px] shadow-sm shadow-emerald-950/20 active:scale-[0.98] transition-all shrink-0"
+        <button
+          type="button"
+          onClick={() => navigate("/report")}
+          className="btn-editorial-roll self-start md:self-end h-11 pl-5 pr-2 bg-foreground text-background hover:opacity-90 text-[13px] font-medium shrink-0"
         >
           <span>Detailed Report</span>
-          <ArrowRight size={14} />
+          <span className="roll-chip w-7 h-7 bg-background text-foreground">
+            <ArrowRight size={13} />
+          </span>
         </button>
       </div>
-    </motion.div>
+    </motion.section>
   );
 }

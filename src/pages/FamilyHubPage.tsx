@@ -60,6 +60,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 import { SCREEN_MEDIA } from "@/lib/screenMedia";
+import {
+  EditorialEyebrow,
+  EditorialMetricStrip,
+} from "@/components/editorial/EditorialPrimitives";
 
 /**
  * Apple Design System Palette for Family / Care Profiles
@@ -461,119 +465,73 @@ export default function FamilyHubPage() {
   };
 
   return (
-    <div className="w-full pb-12">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground">
-              {isProfessionalMode ? "Client Hub" : "Family Hub"}
-            </h1>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1">
-              {circleOverview.totalProfiles} Profiles Active • Caregiver Circle
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleOpenAdd}
-            className="w-10 h-10 rounded-full bg-[#0066cc] dark:bg-[#0071e3] text-white flex items-center justify-center active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Add new profile"
-          >
-            <UserPlus size={18} aria-hidden="true" />
-          </button>
-        </div>
-      </motion.div>
-
+    <div className="w-full pt-2 sm:pt-4 pb-12">
+      {/* Unified Editorial Split Hero */}
       <ScreenHeroImage
+        asH1
+        indexLabel="01"
         src={SCREEN_MEDIA.familyHub.src}
         lqip={SCREEN_MEDIA.familyHub.lqip}
         alt="Multi-generational family caring for each other at home"
-        eyebrow="Circle of Care"
-        title={isProfessionalMode ? "Manage every patient profile in one place" : "Keep your loved ones on track"}
-        subtitle="Switch profiles anytime to review schedules, refills, and safety checks"
+        eyebrow={`Circle of Care · ${circleOverview.totalProfiles} Active`}
+        title={isProfessionalMode ? "Client Hub & Care Profiles" : "Family Hub & Care Circle"}
+        accentWord={isProfessionalMode ? "Care Profiles" : "Care Circle"}
+        subtitle="Switch profiles anytime to coordinate schedules, pill refills, and real-time safety checks."
+        actions={
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="btn-editorial-roll h-10 pl-4 pr-2 bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium"
+            aria-label="Add new profile"
+          >
+            <span>Add Profile</span>
+            <span className="w-6 h-6 rounded-full bg-background text-foreground inline-flex items-center justify-center">
+              <UserPlus size={13} aria-hidden="true" />
+            </span>
+          </button>
+        }
       />
 
-      {/* Circle Health Pulse Overview Bar */}
+      {/* Editorial Circle Pulse Strip */}
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5"
+        className="editorial-card p-5 sm:p-6 mb-7"
       >
-        <div className="p-3.5 rounded-[14px] neu-surface flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-[#0066cc]/10 dark:bg-[#2997ff]/15 text-[#0066cc] dark:text-[#2997ff] flex items-center justify-center shrink-0">
-            <UserRound size={17} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Circle
-            </p>
-            <p className="text-base font-bold text-foreground leading-tight">
-              {circleOverview.totalProfiles} {circleOverview.totalProfiles === 1 ? "Profile" : "Profiles"}
-            </p>
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-[14px] neu-surface flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-[#0066cc]/10 dark:bg-[#2997ff]/15 text-[#0066cc] dark:text-[#2997ff] flex items-center justify-center shrink-0">
-            <Pill size={17} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Medications
-            </p>
-            <p className="text-base font-bold text-foreground leading-tight">
-              {circleOverview.totalMeds} Active
-            </p>
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-[14px] neu-surface flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <TrendingUp size={17} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Circle Rate
-            </p>
-            <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 leading-tight">
-              {circleOverview.averageAdherence !== null ? `${circleOverview.averageAdherence}%` : "—"}
-            </p>
-          </div>
-        </div>
-
-        <div className="p-3.5 rounded-[14px] neu-surface flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
-            circleOverview.totalMissedToday > 0
-              ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
-              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-          }`}>
-            <AlertTriangle size={17} />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Missed Today
-            </p>
-            <p className={`text-base font-bold leading-tight ${
-              circleOverview.totalMissedToday > 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground"
-            }`}>
-              {circleOverview.totalMissedToday}
-            </p>
-          </div>
-        </div>
+        <EditorialMetricStrip
+          items={[
+            {
+              label: "Circle",
+              value: circleOverview.totalProfiles,
+              unit: circleOverview.totalProfiles === 1 ? "profile" : "profiles",
+            },
+            {
+              label: "Active Meds",
+              value: circleOverview.totalMeds,
+            },
+            {
+              label: "Circle Rate",
+              value:
+                circleOverview.averageAdherence !== null
+                  ? `${circleOverview.averageAdherence}%`
+                  : "—",
+              tone: "success",
+            },
+            {
+              label: "Missed Today",
+              value: circleOverview.totalMissedToday,
+              tone: circleOverview.totalMissedToday > 0 ? "danger" : "default",
+            },
+          ]}
+        />
       </motion.div>
 
       {/* Circle of Care - Horizontal Avatar Switcher Strip */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2.5 px-0.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-            Circle of Care Switcher
-          </span>
-          <span className="text-[11px] font-medium text-muted-foreground">
-            Tap to select profile
+      <div className="mb-7">
+        <div className="flex items-center justify-between mb-3 px-0.5">
+          <EditorialEyebrow index="02" label="Profile Switcher" />
+          <span className="text-[11.5px] text-muted-foreground">
+            Tap to switch active care view
           </span>
         </div>
         <div className="flex items-center gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
@@ -679,14 +637,14 @@ export default function FamilyHubPage() {
       {/* Active Member Spotlight Hero Card */}
       <motion.div
         layout
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="mb-8 rounded-[18px] border border-border bg-[#fafafc] dark:bg-[#272729] relative overflow-hidden transition-colors"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 editorial-card relative overflow-hidden"
       >
-        {/* Accent Top Color Bar */}
-        <div className={`h-1.5 w-full ${activeScheme.accentBar}`} />
+        {/* Crisp Hairline Semantic Accent */}
+        <div className={`h-[3px] w-full ${activeScheme.accentBar}`} />
 
-        <div className="p-6 relative z-10">
+        <div className="p-6 sm:p-7 relative z-10">
           {/* Profile Header Row */}
           <div className="flex items-start justify-between mb-5">
             <div className="flex items-center gap-4">

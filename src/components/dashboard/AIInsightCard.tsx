@@ -7,6 +7,7 @@ import { aiApi } from "@/services/api";
 import { generateLocalClinicalAssessment } from "@/services/clinicalAssessmentService";
 import { toDate } from "@/lib/utils";
 import { RiveMoji } from "../rive/RiveMoji";
+import { EditorialEyebrow } from "@/components/editorial/EditorialPrimitives";
 
 interface AIInsightCardProps {
   adherencePercent: number;
@@ -114,18 +115,15 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
   }, [adherencePercent]);
 
   return (
-    <div className="mb-8 overflow-hidden rounded-[20px] border border-blue-500/20 bg-gradient-to-br from-card via-card to-blue-500/[0.03] p-5 sm:p-6 text-foreground shadow-xs transition-all duration-200">
+    <div className="editorial-card mb-8 p-6 sm:p-7 text-foreground">
       <div className="relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 bg-blue-500/15 border border-blue-500/25 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400">
-              <Sparkles size={14} />
-            </div>
-            <span className="text-[12px] font-semibold uppercase tracking-[0.05em] text-blue-600 dark:text-blue-400">
-              Clinical Insight
-            </span>
-          </div>
+          <EditorialEyebrow
+            index="02"
+            label="Clinical Insight"
+            dotColor="bg-primary"
+          />
           {insightLoading ? (
             <Loader2 size={14} className="text-muted-foreground animate-spin" />
           ) : (
@@ -194,13 +192,16 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
           </p>
         )}
 
-        {/* Apple Pill CTA */}
+        {/* Editorial Roll Pill CTA */}
         <button
+          type="button"
           onClick={() => openDawaGPTWithPrompt()}
-          className="inline-flex items-center gap-1.5 h-9 px-5 rounded-full bg-primary text-primary-foreground text-[13px] font-normal hover:brightness-105 active:scale-95 transition-all"
+          className="btn-editorial-roll h-10 pl-4 pr-1.5 bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium"
         >
           <span>Ask DawaGPT</span>
-          <ArrowRight size={12} />
+          <span className="roll-chip w-6 h-6 bg-background text-foreground">
+            <ArrowRight size={12} />
+          </span>
         </button>
       </div>
     </div>

@@ -65,6 +65,22 @@ export default {
           "system-ui",
           "sans-serif",
         ],
+        editorial: [
+          "Instrument Serif",
+          "Georgia",
+          "Cambria",
+          "Times New Roman",
+          "serif",
+        ],
+        mono: [
+          "JetBrains Mono",
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "monospace",
+        ],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -145,6 +161,8 @@ export default {
       },
       transitionTimingFunction: {
         "out-native": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "out-quint": "cubic-bezier(0.22, 1, 0.36, 1)",
         "in-out-native": "cubic-bezier(0.77, 0, 0.175, 1)",
         drawer: "cubic-bezier(0.32, 0.72, 0, 1)",
       },

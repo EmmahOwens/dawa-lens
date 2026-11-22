@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import MessageRenderer from "@/components/MessageRenderer";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 import { SCREEN_MEDIA } from "@/lib/screenMedia";
+import { EditorialEyebrow } from "@/components/editorial/EditorialPrimitives";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 15 }, show: { opacity: 1, y: 0 } };
@@ -183,59 +184,55 @@ export default function TravelCompanionPage() {
   };
 
   return (
-    <div className="w-full min-w-0 max-w-5xl mx-auto">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-[16px] bg-[#f5f5f7] dark:bg-[#272729] border border-border flex items-center justify-center text-primary shrink-0">
-            <Plane size={24} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-[-0.022em] text-foreground">
-              Travel Companion
-            </h1>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1">
-              Global Health Intelligence
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
+    <div className="w-full min-w-0 max-w-5xl mx-auto pt-2 sm:pt-4 pb-10">
       <ScreenHeroImage
+        asH1
+        indexLabel="01"
         src={SCREEN_MEDIA.travelCompanion.src}
         lqip={SCREEN_MEDIA.travelCompanion.lqip}
         alt="Passport, travel medicine kit, and flight route illustration"
-        eyebrow="Travel Companion"
+        eyebrow="Global Health Intelligence · Travel Companion"
         title="Cross-border medication readiness"
-        subtitle="Check local equivalents, carry rules, and time-zone dosing adjustments"
+        accentWord="readiness"
+        subtitle="Check local equivalents, customs rules, and time-zone dosing adjustments before you depart."
+        metrics={[
+          { label: "Origin", value: originLabel },
+          { label: "Cabinet Meds", value: medicines.length },
+        ]}
       />
 
       {/* Main Map & Input Card */}
       <div className="space-y-4 mb-8">
-        <TravelMap isAnimating={isAnimating} destination={destination} userCoords={userCoords} userCountry={userCountry} />
+        <TravelMap
+          isAnimating={isAnimating}
+          destination={destination}
+          userCoords={userCoords}
+          userCountry={userCountry}
+        />
 
-        <div className="p-6 rounded-[18px] border border-border bg-card overflow-hidden">
+        <div className="editorial-card p-6 sm:p-7 overflow-hidden">
           <div className="flex flex-col gap-4">
-            <div className="w-full space-y-2">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
-                Where are you heading?
-              </label>
-              <div className="relative group">
-                <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input 
+            <div className="w-full space-y-2.5">
+              <EditorialEyebrow index="02" label="Destination Corridor" />
+              <div className="relative group pt-1">
+                <Globe
+                  size={17}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+                <input
                   value={destination}
                   onChange={(e) => {
                     setDestination(e.target.value);
                     if (!e.target.value) setIsAnimating(false);
                   }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-                  placeholder="Enter country (e.g. Kenya, France...)"
-                  className="w-full h-11 pl-11 pr-4 rounded-xl bg-background border border-border outline-none focus:border-primary transition-colors text-sm font-medium"
+                  onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
+                  placeholder="Enter country (e.g. Kenya, Rwanda, United Kingdom...)"
+                  className="w-full h-12 pl-11 pr-4 rounded-2xl bg-secondary/50 focus:bg-card border border-border/80 outline-none focus:border-primary transition-colors text-[14.5px] font-normal"
                 />
               </div>
 
               {/* Quick corridor preset selector */}
-              <div className="pt-1">
+              <div className="pt-0.5">
                 <Select
                   value={destination}
                   onValueChange={(val) => {
@@ -245,25 +242,34 @@ export default function TravelCompanionPage() {
                     }
                   }}
                 >
-                  <SelectTrigger className="w-full h-11 rounded-xl text-xs bg-muted/20 border-border text-muted-foreground font-medium px-4">
+                  <SelectTrigger className="w-full h-11 rounded-2xl text-[13px] bg-secondary/40 border-border/80 text-muted-foreground font-normal px-4">
                     <SelectValue placeholder="Or select common travel corridor..." />
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl border-border bg-card">
                     <SelectGroup>
-                      <SelectLabel className="text-[11px] font-medium text-primary">
+                      <SelectLabel className="editorial-mono text-[9.5px] text-primary">
                         East Africa Corridor
                       </SelectLabel>
-                      {["Kenya", "Tanzania", "Rwanda", "South Sudan", "DR Congo", "Burundi"].map((c) => (
-                        <SelectItem key={c} value={c} className="text-xs">
-                          {c}
-                        </SelectItem>
-                      ))}
+                      {["Kenya", "Tanzania", "Rwanda", "South Sudan", "DR Congo", "Burundi"].map(
+                        (c) => (
+                          <SelectItem key={c} value={c} className="text-xs">
+                            {c}
+                          </SelectItem>
+                        )
+                      )}
                     </SelectGroup>
                     <SelectGroup>
-                      <SelectLabel className="text-[11px] font-medium text-muted-foreground">
+                      <SelectLabel className="editorial-mono text-[9.5px] text-muted-foreground">
                         Popular Global Destinations
                       </SelectLabel>
-                      {["United Kingdom", "United Arab Emirates", "United States", "India", "South Africa", "Canada"].map((c) => (
+                      {[
+                        "United Kingdom",
+                        "United Arab Emirates",
+                        "United States",
+                        "India",
+                        "South Africa",
+                        "Canada",
+                      ].map((c) => (
                         <SelectItem key={c} value={c} className="text-xs">
                           {c}
                         </SelectItem>
@@ -273,19 +279,21 @@ export default function TravelCompanionPage() {
                 </Select>
               </div>
             </div>
-            
-            <Button 
+
+            <button
+              type="button"
               onClick={() => handleAnalyze()}
               disabled={loading || !destination}
-              className="w-full h-11 rounded-xl text-sm font-medium bg-[#0066cc] hover:bg-[#0071e3] text-white active:scale-[0.98] transition-colors"
+              className="btn-editorial-roll w-full h-12 pl-6 pr-2.5 bg-foreground text-background hover:opacity-90 text-[14px] font-medium justify-between disabled:opacity-45"
             >
-              {loading ? (
-                <Loader2 size={18} className="animate-spin mr-2" />
-              ) : (
-                <Plane size={18} className="mr-2" />
-              )}
-              Analyze Trip
-            </Button>
+              <span className="inline-flex items-center gap-2">
+                {loading ? <Loader2 size={16} className="animate-spin" /> : <Plane size={16} />}
+                <span>Analyze Trip &amp; Dosing Drift</span>
+              </span>
+              <span className="roll-chip w-8 h-8 bg-background text-foreground">
+                <ArrowRight size={14} />
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -293,74 +301,87 @@ export default function TravelCompanionPage() {
       {/* Main Content Area */}
       <AnimatePresence mode="wait">
         {loading ? (
-          <motion.div 
+          <motion.div
             key="loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="flex flex-col items-center justify-center p-20"
           >
-            <div className="relative w-24 h-24 flex items-center justify-center">
-              <Globe size={40} className="text-primary/50 absolute" />
-              <div className="absolute inset-0 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            <div className="relative w-20 h-20 flex items-center justify-center">
+              <Globe size={32} className="text-primary/50 absolute" />
+              <div className="absolute inset-0 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
-            <p className="mt-4 text-[13px] font-medium text-muted-foreground">Checking destination medication regulations…</p>
+            <p className="mt-5 editorial-mono text-[10px] text-muted-foreground">
+              Checking destination medication regulations...
+            </p>
           </motion.div>
         ) : advice ? (
-          <motion.div 
+          <motion.div
             key="results"
-            variants={container} 
-            initial="hidden" 
-            animate="show" 
-            className="space-y-8"
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="space-y-7"
           >
-            {/* Boarding Pass Header */}
+            {/* Nocturnal Obsidian Clinical Boarding Pass */}
             <motion.div variants={item}>
-              <div className="rounded-[18px] overflow-hidden border border-border bg-[#f5f5f7] dark:bg-[#272729]">
-                {/* Main pass body */}
-                <div className="p-6">
-                  {/* Passenger / Status row */}
-                  <div className="flex justify-between items-start mb-6">
+              <div className="editorial-panel-dark rounded-[26px] text-white">
+                <div className="editorial-grain" aria-hidden="true" />
+                <div className="relative z-10 p-6 sm:p-8">
+                  <div className="flex justify-between items-start mb-7">
                     <div>
-                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Passenger</p>
-                      <h4 className="text-xl font-semibold tracking-tight text-foreground">{userProfile?.name || "Member"}</h4>
+                      <p className="editorial-mono text-[9.5px] text-white/50 mb-1">Passenger</p>
+                      <h4 className="text-[19px] font-medium tracking-[-0.02em] text-white">
+                        {userProfile?.name || "Member"}
+                      </h4>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Status</p>
-                      <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 text-[11px] font-medium">Verified</span>
-                    </div>
+                    <span className="editorial-glass-dark px-3 py-1 rounded-full editorial-mono text-[9.5px] text-emerald-300">
+                      Verified Itinerary
+                    </span>
                   </div>
 
-                  {/* Route row */}
-                  <div className="flex items-center gap-2 sm:gap-4">
+                  {/* Route Display */}
+                  <div className="flex items-center gap-3 sm:gap-6">
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">From</p>
-                      <h3 className="text-2xl sm:text-3xl font-semibold tracking-[-0.022em] text-foreground truncate">{originLabel}</h3>
+                      <p className="editorial-mono text-[9.5px] text-white/45 mb-1">From</p>
+                      <h3 className="editorial-display text-[26px] sm:text-[36px] font-light text-white truncate">
+                        {originLabel}
+                      </h3>
                     </div>
-                    <div className="flex flex-col items-center gap-1 px-2 sm:px-6 shrink-0">
-                      <div className="w-16 sm:w-24 h-[1px] bg-border relative">
-                        <Plane size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary" />
+                    <div className="flex flex-col items-center gap-1.5 px-2 sm:px-6 shrink-0">
+                      <div className="w-16 sm:w-28 h-px bg-white/25 relative">
+                        <Plane
+                          size={14}
+                          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white"
+                        />
                       </div>
-                      <span className="text-[11px] font-medium text-muted-foreground uppercase whitespace-nowrap">Direct</span>
+                      <span className="editorial-mono text-[9px] text-white/50">Direct</span>
                     </div>
                     <div className="flex-1 text-right min-w-0">
-                      <p className="text-[11px] font-medium text-muted-foreground mb-0.5">To</p>
-                      <h3 className="text-2xl sm:text-3xl font-semibold tracking-[-0.022em] text-[#0066cc] dark:text-[#2997ff] uppercase truncate">{destination}</h3>
+                      <p className="editorial-mono text-[9.5px] text-white/45 mb-1">To</p>
+                      <h3 className="editorial-display text-[26px] sm:text-[36px] font-light text-sky-300 uppercase truncate">
+                        {destination}
+                      </h3>
                     </div>
                   </div>
                 </div>
 
-                {/* Stub (date + boarding) */}
-                <div className="border-t border-dashed border-border bg-background/50 px-6 py-4 flex items-center justify-between gap-4">
+                {/* Boarding Pass Stub */}
+                <div className="relative z-10 border-t border-dashed border-white/15 bg-white/[0.03] px-6 sm:px-8 py-4 flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Date</p>
-                    <p className="text-sm font-semibold text-foreground">{new Date().toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' })}</p>
+                    <p className="editorial-mono text-[9px] text-white/45 mb-0.5">Issued</p>
+                    <p className="text-[13px] font-medium text-white/90 editorial-tabular">
+                      {new Date().toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "2-digit",
+                        year: "numeric",
+                      })}
+                    </p>
                   </div>
-                  <div className="flex-1 max-w-[180px]">
-                    <div className="w-full h-8 bg-muted/30 rounded-xl border border-border flex items-center justify-center">
-                      <span className="text-[11px] font-medium text-muted-foreground uppercase">Travel Itinerary</span>
-                    </div>
-                  </div>
+                  <span className="editorial-mono text-[9.5px] text-white/60">
+                    Clinical Travel Dossier
+                  </span>
                 </div>
               </div>
             </motion.div>

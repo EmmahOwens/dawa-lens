@@ -30,6 +30,7 @@ import { MobileWatchdogResolveButton } from "@/components/intelligence/MobileWat
 import { buildSafetyConsultPrompt } from "@/lib/safetyPromptBuilder";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 import { SCREEN_MEDIA } from "@/lib/screenMedia";
+import { EditorialEyebrow, EditorialSectionHeader } from "@/components/editorial/EditorialPrimitives";
 import {
   Select,
   SelectContent,
@@ -652,65 +653,58 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full pt-2 sm:pt-4 pb-10">
       {activeTab === "cabinet" && medicines.length >= 2 && loading && !animationComplete && (
-        <PremiumLoader 
-          onComplete={() => setAnimationComplete(true)} 
-          durationPerStep={1000} 
+        <PremiumLoader
+          onComplete={() => setAnimationComplete(true)}
+          durationPerStep={1000}
         />
       )}
 
-      {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        className="mb-6"
-      >
-        <ScreenHeroImage
-          src={SCREEN_MEDIA.interactionsSafety.src}
-          lqip={SCREEN_MEDIA.interactionsSafety.lqip}
-          alt="Pharmacist consulting with a patient about medication safety"
-          eyebrow="Clinical Safety"
-          title={activeTab === "cabinet" ? t("safety.title") : "Safety Sandbox"}
-          subtitle={
-            activeTab === "cabinet"
-              ? t("safety.subtitle")
-              : "Test interactions between arbitrary medicines"
-          }
-          className="mb-5"
-        />
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground flex items-center gap-2">
-              {activeTab === "cabinet" ? t("safety.title") : "Safety Sandbox"}
-            </h1>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1">
-              {activeTab === "cabinet" ? t("safety.subtitle") : "Test interactions between arbitrary medicines"}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button 
-              onClick={handleShareReport}
-              className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all active:scale-95"
-              title="Share Report"
-            >
-              <Share2 size={16} />
-            </button>
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <ShieldAlert size={18} />
-            </div>
-          </div>
-        </div>
-      </motion.div>
+      {/* Unified Editorial Split Hero (eliminates duplicate H1) */}
+      <ScreenHeroImage
+        asH1
+        indexLabel="01"
+        src={SCREEN_MEDIA.interactionsSafety.src}
+        lqip={SCREEN_MEDIA.interactionsSafety.lqip}
+        alt="Pharmacist consulting with a patient about medication safety"
+        eyebrow="Clinical Safety · Interaction Guard"
+        title={activeTab === "cabinet" ? t("safety.title") : "Safety Sandbox"}
+        accentWord={activeTab === "cabinet" ? "Interactions" : "Sandbox"}
+        subtitle={
+          activeTab === "cabinet"
+            ? t("safety.subtitle")
+            : "Test pharmacological interactions between arbitrary medicines and local Ugandan diets."
+        }
+        metrics={[
+          { label: "Active Meds", value: distinctMedications.length },
+          {
+            label: "Conflicts",
+            value:
+              activeTab === "cabinet" ? interactions.length : sandboxInteractions.length,
+          },
+        ]}
+        actions={
+          <button
+            type="button"
+            onClick={handleShareReport}
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-full border border-border bg-card hover:bg-secondary text-foreground text-[12.5px] font-medium transition-colors active:scale-95"
+            title="Share Report"
+          >
+            <Share2 size={14} />
+            <span>Share Report</span>
+          </button>
+        }
+      />
 
-      {/* Apple Segmented Pill Switcher */}
-      <div className="flex p-1.5 neu-inset rounded-full mb-6">
+      {/* Editorial Segmented Pill Switcher */}
+      <div className="editorial-segment-rail w-full grid grid-cols-2 mb-6">
         <button
           type="button"
           onClick={() => handleTabChange("cabinet")}
-          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${
+          className={`py-2.5 rounded-full text-[13px] font-medium transition-all ${
             activeTab === "cabinet"
-              ? "neu-surface text-foreground"
+              ? "editorial-segment-active"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -719,9 +713,9 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
         <button
           type="button"
           onClick={() => handleTabChange("sandbox")}
-          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${
+          className={`py-2.5 rounded-full text-[13px] font-medium transition-all ${
             activeTab === "sandbox"
-              ? "neu-surface text-foreground"
+              ? "editorial-segment-active"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -729,22 +723,18 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
         </button>
       </div>
 
-      {/* Disclaimer */}
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="mb-8 p-4 rounded-xl border border-warning/20 bg-warning/5 transition-all hover:bg-warning/10"
-      >
-        <div className="flex items-start gap-3 text-warning">
-          <Info size={16} className="mt-0.5 shrink-0 opacity-80" />
-          <div className="text-[11px] leading-relaxed">
-            <p className="font-bold mb-1 uppercase tracking-wider">{t("safety.disclaimer_title")}</p>
-            <p className="opacity-90">
-              {t("safety.disclaimer_body")}
+      {/* Clinical Disclaimer */}
+      <div className="mb-8 p-4 rounded-[20px] border border-border/75 bg-secondary/45">
+        <div className="flex items-start gap-3 text-muted-foreground">
+          <Info size={15} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="text-[12px] leading-relaxed">
+            <p className="editorial-mono text-[9.5px] text-foreground mb-1">
+              {t("safety.disclaimer_title")}
             </p>
+            <p>{t("safety.disclaimer_body")}</p>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* TAB 1: CABINET SAFETY */}
       {activeTab === "cabinet" && (
@@ -935,52 +925,72 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                 const key = `cabinet-${idx}`;
                 const isExpanded = expandedExplanation === key;
                 return (
-                  <motion.div 
-                    key={idx} 
+                  <motion.div
+                    key={idx}
                     variants={item}
-                    className="rounded-[18px] border border-border bg-card p-5 overflow-hidden relative transition-all hover:border-foreground/20"
+                    className="editorial-card p-5 sm:p-6 overflow-hidden relative"
                   >
-                    <div className={`absolute top-0 left-0 w-1 h-full ${interaction.severity === 'high' ? 'bg-destructive' : 'bg-warning'}`} />
-                    
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="font-bold text-sm text-card-foreground lowercase capitalize tracking-tight">{interaction.drug1}</span>
-                        <span className="text-muted-foreground text-[10px] font-bold uppercase opacity-50">&</span>
-                        <span className="font-bold text-sm text-card-foreground lowercase capitalize tracking-tight">{interaction.drug2}</span>
+                    <div
+                      className={`absolute top-5 bottom-5 left-0 w-[3px] rounded-r-full ${
+                        interaction.severity === "high" ? "bg-destructive" : "bg-amber-500"
+                      }`}
+                    />
+
+                    <div className="flex justify-between items-start gap-3 mb-2.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-[16px] text-card-foreground capitalize tracking-[-0.02em]">
+                          {interaction.drug1}
+                        </span>
+                        <span className="editorial-mono text-[9.5px] text-muted-foreground/60">
+                          +
+                        </span>
+                        <span className="font-medium text-[16px] text-card-foreground capitalize tracking-[-0.02em]">
+                          {interaction.drug2}
+                        </span>
                       </div>
-                      {interaction.severity === 'high' ? (
-                        <Badge variant="destructive" className="ml-2 px-2.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full">{t("safety.severe")}</Badge>
+                      {interaction.severity === "high" ? (
+                        <Badge
+                          variant="destructive"
+                          className="ml-2 px-2.5 py-0.5 editorial-mono text-[9px] rounded-full"
+                        >
+                          {t("safety.severe")}
+                        </Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-warning/10 text-amber-800 dark:text-amber-300 px-2.5 py-0.5 text-[9px] uppercase font-bold tracking-widest rounded-full">{t("safety.warning")}</Badge>
+                        <Badge
+                          variant="secondary"
+                          className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25 px-2.5 py-0.5 editorial-mono text-[9px] rounded-full"
+                        >
+                          {t("safety.warning")}
+                        </Badge>
                       )}
                     </div>
 
                     {/* Clinical Details Badges */}
                     {interaction.clinicalDetails && (
-                      <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
                         {interaction.clinicalDetails.title && (
-                          <span className="text-xs font-bold text-foreground mr-1">
+                          <span className="text-[13px] font-medium text-foreground mr-1">
                             {interaction.clinicalDetails.title}
                           </span>
                         )}
                         {interaction.clinicalDetails.spacingHours !== undefined ? (
-                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full">
-                            ⏰ Space by {interaction.clinicalDetails.spacingHours}+ hours
+                          <span className="editorial-mono text-[9.5px] text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2.5 py-0.5 rounded-full">
+                            Space by {interaction.clinicalDetails.spacingHours}+ hrs
                           </span>
-                        ) : interaction.severity === 'high' ? (
-                          <span className="text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2.5 py-0.5 rounded-full">
-                            🚫 Avoid Combination
+                        ) : interaction.severity === "high" ? (
+                          <span className="editorial-mono text-[9.5px] text-destructive bg-destructive/10 border border-destructive/25 px-2.5 py-0.5 rounded-full">
+                            Avoid Combination
                           </span>
                         ) : null}
                         {interaction.clinicalDetails.organRisk && (
-                          <span className="text-[10px] font-semibold text-muted-foreground bg-muted/40 border border-border/40 px-2.5 py-0.5 rounded-full">
+                          <span className="editorial-mono text-[9.5px] text-muted-foreground bg-secondary border border-border/70 px-2.5 py-0.5 rounded-full">
                             Target: {interaction.clinicalDetails.organRisk}
                           </span>
                         )}
                       </div>
                     )}
 
-                    <p className="text-xs text-muted-foreground leading-relaxed font-medium mb-3">
+                    <p className="text-[13.5px] text-muted-foreground leading-[1.58] mb-4">
                       {interaction.description}
                     </p>
 
@@ -1293,26 +1303,34 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
       )}
 
       {/* Holistic Safety Section (Used dynamically on active medication set) */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mt-12 pt-12 border-t border-border/50"
+        className="mt-12 pt-10 border-t border-border/70"
       >
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 tracking-tight">
-                <Sparkles size={20} className="text-primary" />
-                Holistic & Food Safety
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+          <div className="space-y-1.5">
+            <EditorialEyebrow
+              index="02"
+              label="Local Diet & Lifestyle Matrix"
+              dotColor="bg-primary"
+            />
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h2 className="editorial-display text-[26px] sm:text-[30px] font-medium text-foreground leading-[1.06]">
+                Holistic &amp; Food Safety
               </h2>
               {lifestyleFactors.length > 0 && (
-                <Badge variant="outline" className="text-[10px] font-bold bg-primary/10 text-primary border-primary/20">
+                <Badge
+                  variant="outline"
+                  className="editorial-mono text-[9.5px] bg-primary/10 text-primary border-primary/25 rounded-full px-2.5 py-0.5"
+                >
                   {lifestyleFactors.length} selected
                 </Badge>
               )}
             </div>
-            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mt-1 opacity-80">
-              Check specific foods, herbs & lifestyle factors for {activeTab === "cabinet" ? "cabinet" : "sandbox"} meds
+            <p className="text-[13px] text-muted-foreground">
+              Check specific foods, Ugandan staples, herbs, and drinks against your{" "}
+              {activeTab === "cabinet" ? "cabinet" : "sandbox"} medications.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -1320,17 +1338,26 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
               <button
                 type="button"
                 onClick={clearSelectedFactors}
-                className="h-10 px-3.5 rounded-lg border border-border/50 text-muted-foreground hover:text-foreground text-[10px] font-bold uppercase tracking-wider transition-all hover:bg-muted/40"
+                className="h-10 px-4 rounded-full border border-border text-muted-foreground hover:text-foreground text-[12px] font-medium transition-colors hover:bg-secondary"
               >
                 Clear
               </button>
             )}
-            <button 
+            <button
+              type="button"
               onClick={checkHolistic}
-              disabled={holisticLoading || lifestyleFactors.length === 0 || (activeTab === "cabinet" ? medicines.length === 0 : sandboxDrugs.length === 0)}
-              className="h-10 px-5 rounded-lg bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-primary/10 disabled:opacity-50 transition-all active:scale-95 flex items-center gap-2"
+              disabled={
+                holisticLoading ||
+                lifestyleFactors.length === 0 ||
+                (activeTab === "cabinet" ? medicines.length === 0 : sandboxDrugs.length === 0)
+              }
+              className="h-10 px-5 rounded-full bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium disabled:opacity-45 transition-opacity active:scale-95 inline-flex items-center gap-2"
             >
-              {holisticLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              {holisticLoading ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Sparkles size={13} />
+              )}
               Analyze {lifestyleFactors.length > 0 ? `(${lifestyleFactors.length})` : ""}
             </button>
           </div>
@@ -1344,14 +1371,14 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
               placeholder="Add any food, herb, or drink (e.g. Matooke, Mukene, Nakati, Avocado)..."
               value={customFactor}
               onChange={(e) => setCustomFactor(e.target.value)}
-              className="w-full px-4 py-2.5 text-xs rounded-xl bg-card border border-border/50 focus:outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground/60 shadow-inner"
+              className="w-full h-11 px-4 text-[13.5px] rounded-full bg-card border border-border/80 focus:outline-none focus:border-primary text-foreground placeholder:text-muted-foreground/70 transition-colors"
             />
           </div>
           <button
             type="submit"
             onClick={handleAddCustomFactor}
             disabled={!customFactor.trim()}
-            className="h-9 px-4 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-40"
+            className="h-11 px-5 rounded-full bg-secondary hover:bg-secondary/80 text-foreground border border-border text-[12.5px] font-medium transition-colors disabled:opacity-40"
           >
             Add
           </button>

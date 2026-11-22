@@ -1,7 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { Clock, CheckCircle2, ChevronRight } from "@/lib/icons";
+import { Clock, CheckCircle2, ArrowRight } from "@/lib/icons";
 import { NextDoseInfo } from "@/services/reminderService";
+import { EDITORIAL_EASE, EditorialEyebrow } from "@/components/editorial/EditorialPrimitives";
 
 interface StatusHeroProps {
   nextDose: NextDoseInfo | null;
@@ -19,51 +20,56 @@ export function StatusHero({
   onProgressClick,
 }: StatusHeroProps) {
   const progress = totalToday > 0 ? (takenToday / totalToday) * 100 : 0;
-
   const isComplete = progress === 100 && totalToday > 0;
+  const pct = totalToday > 0 ? Math.round(progress) : 0;
 
   return (
-    <div className="mb-8">
-      <div className={`relative overflow-hidden rounded-[22px] border p-5 sm:p-7 shadow-xl transition-all duration-300 text-white ${
-        isComplete
-          ? "bg-gradient-to-br from-[#092019] via-[#0d2a21] to-[#071712] border-emerald-500/30 shadow-emerald-950/25"
-          : "bg-gradient-to-br from-[#0c182b] via-[#0f213d] to-[#0a1526] border-blue-500/25 shadow-blue-950/25"
-      }`}>
-        <div className="flex flex-col gap-5 sm:gap-6">
-          {/* Header Row */}
-          <div className="relative z-10 flex items-center justify-between">
-            <div className={`flex items-center gap-2 rounded-full px-3 py-1 border transition-colors ${
-              isComplete
-                ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-200"
-                : "bg-blue-500/20 border-blue-400/30 text-blue-200"
-            }`}>
-              <div className={`h-2 w-2 rounded-full ${
-                isComplete
-                  ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
-                  : "bg-[#2997ff] shadow-[0_0_8px_#2997ff]"
-              }`} />
-              <span className="text-[12px] font-medium tracking-normal">
-                {isComplete ? "Schedule Completed" : "Schedule Status"}
-              </span>
-            </div>
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: EDITORIAL_EASE }}
+      className="mb-8"
+    >
+      <div className="editorial-panel-dark rounded-[28px] p-6 sm:p-8 text-white">
+        {/* Subtle static film grain */}
+        <div className="editorial-grain" aria-hidden="true" />
+
+        {/* Subtle restrained semantic corner wash */}
+        <div
+          className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-25 blur-3xl"
+          style={{
+            background: isComplete
+              ? "radial-gradient(circle, rgba(52,211,153,0.45), transparent 70%)"
+              : "radial-gradient(circle, rgba(41,151,255,0.4), transparent 70%)",
+          }}
+          aria-hidden="true"
+        />
+
+        <div className="relative z-10 flex flex-col gap-6 sm:gap-7">
+          {/* Top Mono Telemetry Row */}
+          <div className="flex items-center justify-between gap-3">
+            <EditorialEyebrow
+              index="01"
+              label={isComplete ? "Regimen Completed" : "Daily Schedule"}
+              dotColor={isComplete ? "bg-emerald-400" : "bg-[#2997ff]"}
+              onDark
+            />
 
             {isComplete ? (
-              <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 px-3 py-1">
-                <CheckCircle2 size={13} className="text-emerald-400" aria-hidden="true" />
-                <span className="text-[12px] font-medium text-emerald-200">
-                  All doses completed
-                </span>
-              </div>
+              <span className="editorial-glass-dark inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium text-emerald-300">
+                <CheckCircle2 size={12} aria-hidden="true" />
+                <span>100% Completed</span>
+              </span>
             ) : totalToday > 0 ? (
-              <span className="text-[12px] font-medium text-white/80">
-                {takenToday} of {totalToday} taken
+              <span className="editorial-mono text-[10px] editorial-tabular text-white/60">
+                {takenToday} / {totalToday} Doses Taken
               </span>
             ) : null}
           </div>
 
-          {/* Main Hero Metrics */}
-          <div className="relative z-10 flex items-center justify-between gap-4 sm:gap-6">
-            {/* Left: Next Dose Info */}
+          {/* Main Editorial Metric Row */}
+          <div className="flex items-center justify-between gap-5 sm:gap-8">
+            {/* Left: Next Scheduled Dose */}
             <button
               type="button"
               onClick={onNextDoseClick}
@@ -72,106 +78,125 @@ export function StatusHero({
                   ? `Next scheduled dose: ${nextDose.reminder.medicineName} ${nextDose.timeUntil}. Open schedule.`
                   : "View medication schedule"
               }
-              className="flex-1 min-w-0 text-left cursor-pointer group active:scale-[0.98] transition-transform duration-150 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+              className="flex-1 min-w-0 text-left cursor-pointer group active:scale-[0.99] transition-transform duration-150 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             >
-              <div className="flex items-center gap-1.5 mb-1.5 text-white/80">
+              <div className="flex items-center gap-1.5 mb-2 text-white/55">
                 <Clock
-                  size={14}
+                  size={13}
                   aria-hidden="true"
-                  className={`shrink-0 ${isComplete ? "text-emerald-400" : "text-[#2997ff]"}`}
+                  className={isComplete ? "text-emerald-400" : "text-[#2997ff]"}
                 />
-                <span className="text-[13px] font-medium tracking-normal truncate">
+                <span className="text-[12.5px] font-normal tracking-normal truncate">
                   {isComplete ? "Daily Target Achieved" : "Next Scheduled Dose"}
                 </span>
               </div>
 
               {nextDose ? (
                 <>
-                  <h2 className="text-[32px] sm:text-[40px] font-semibold leading-tight tracking-tight text-white mb-1">
+                  <h2 className="editorial-display editorial-tabular text-[clamp(34px,5.2vw,52px)] font-light leading-[0.96] tracking-[-0.04em] text-white mb-2">
                     {nextDose.timeUntil}
                   </h2>
-                  <p className="text-[14px] sm:text-[15px] font-normal text-white/80 truncate">
-                    {nextDose.reminder.medicineName} · {nextDose.reminder.time}
+                  <p className="text-[14px] sm:text-[15px] font-normal text-white/70 truncate">
+                    <span className="text-white font-medium">{nextDose.reminder.medicineName}</span>
+                    <span className="mx-2 text-white/30">·</span>
+                    <span className="editorial-tabular">{nextDose.reminder.time}</span>
                   </p>
                 </>
               ) : (
                 <>
-                  <h2 className="text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-white mb-1">
-                    {isComplete ? "Great Job Today!" : "All Set"}
+                  <h2 className="editorial-display text-[clamp(30px,4.5vw,44px)] font-medium leading-[1.02] tracking-[-0.035em] text-white mb-2">
+                    {isComplete ? (
+                      <>
+                        Regimen{" "}
+                        <em className="editorial-serif text-[1.08em] text-emerald-300/90 font-normal">
+                          complete.
+                        </em>
+                      </>
+                    ) : (
+                      <>
+                        All{" "}
+                        <em className="editorial-serif text-[1.08em] text-white/65 font-normal">
+                          clear.
+                        </em>
+                      </>
+                    )}
                   </h2>
-                  <p className="text-[13px] sm:text-[14px] font-normal text-white/80">
+                  <p className="text-[13.5px] sm:text-[14.5px] font-normal text-white/65 max-w-md">
                     {isComplete
-                      ? "100% adherence logged for today's regimen"
-                      : "No remaining doses scheduled for today"}
+                      ? "100% adherence logged for today's scheduled medications."
+                      : "No remaining doses scheduled for today."}
                   </p>
                 </>
               )}
             </button>
 
-            {/* Right: Circular Progress Meter */}
+            {/* Right: Precision SVG Adherence Ring */}
             <button
               type="button"
               onClick={onProgressClick}
               aria-label={`Today's progress: ${takenToday} of ${totalToday} doses taken. View history.`}
-              className="relative flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 cursor-pointer items-center justify-center rounded-full active:scale-[0.97] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+              className="relative flex h-24 w-24 sm:h-28 sm:w-28 shrink-0 cursor-pointer items-center justify-center rounded-full active:scale-[0.97] transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             >
               <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100" aria-hidden="true">
-                {/* Background Ring */}
                 <circle
                   cx="50"
                   cy="50"
-                  r="38"
+                  r="41"
                   fill="transparent"
-                  stroke="rgba(255, 255, 255, 0.12)"
-                  strokeWidth="8"
+                  stroke="rgba(255, 255, 255, 0.1)"
+                  strokeWidth="4"
                 />
-                {/* Active Progress Arc */}
                 <motion.circle
                   cx="50"
                   cy="50"
-                  r="38"
+                  r="41"
                   fill="transparent"
                   stroke={isComplete ? "#34d399" : "#2997ff"}
-                  strokeWidth="8"
+                  strokeWidth="4"
                   strokeLinecap="round"
-                  initial={{ strokeDasharray: "238.76", strokeDashoffset: "238.76" }}
+                  initial={{ strokeDasharray: "257.61", strokeDashoffset: "257.61" }}
                   animate={{
-                    strokeDashoffset: 238.76 - (progress / 100) * 238.76,
+                    strokeDashoffset: 257.61 - (progress / 100) * 257.61,
                   }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  transition={{ duration: 0.9, ease: EDITORIAL_EASE }}
                 />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center select-none text-center p-1">
-                <span className="text-[20px] sm:text-[22px] font-semibold text-white leading-none tracking-tight">
-                  {takenToday}
+              <div className="absolute inset-0 flex flex-col items-center justify-center select-none text-center">
+                <span className="editorial-tabular text-[22px] sm:text-[26px] font-light text-white leading-none tracking-[-0.03em]">
+                  {totalToday > 0 ? `${pct}%` : "—"}
                 </span>
-                <span className="text-[12px] font-medium text-white/80 mt-1 leading-none">
-                  of {totalToday}
+                <span className="editorial-mono text-[8.5px] text-white/50 mt-1.5 editorial-tabular">
+                  {takenToday}/{totalToday}
                 </span>
               </div>
             </button>
           </div>
 
-          {/* Action Footer */}
-          <div className="relative z-10 flex items-center justify-between pt-4 border-t border-white/10">
+          {/* Hairline Footer: Dose Slot Pips + Tactile Schedule Pill */}
+          <div className="flex items-center justify-between gap-4 pt-5 border-t border-white/10">
             <div className="flex items-center gap-1.5" aria-hidden="true">
-              {[...Array(Math.min(totalToday, 5))].map((_, i) => (
+              {[...Array(Math.min(totalToday, 6))].map((_, i) => (
                 <div
                   key={i}
-                  className={`h-5 w-5 rounded-full flex items-center justify-center text-[11px] font-medium transition-colors duration-200 ${
+                  className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] editorial-tabular font-medium transition-colors duration-200 ${
                     i < takenToday
                       ? isComplete
-                        ? "bg-emerald-400 text-slate-950 font-semibold"
-                        : "bg-[#2997ff] text-slate-950 font-semibold"
-                      : "bg-white/10 text-white/70 border border-white/10"
+                        ? "bg-emerald-400 text-[#080a0e]"
+                        : "bg-white text-[#080a0e]"
+                      : "bg-white/[0.07] text-white/55 border border-white/15"
                   }`}
                 >
-                  {i < takenToday ? <CheckCircle2 size={12} /> : i + 1}
+                  {i < takenToday ? <CheckCircle2 size={11} /> : i + 1}
                 </div>
               ))}
-              {totalToday > 5 && (
-                <span className="text-[12px] font-medium text-white/75 pl-1">
-                  +{totalToday - 5}
+              {totalToday > 6 && (
+                <span className="editorial-mono text-[10px] text-white/55 pl-1">
+                  +{totalToday - 6}
+                </span>
+              )}
+              {totalToday === 0 && (
+                <span className="editorial-mono text-[10px] text-white/45">
+                  No active doses today
                 </span>
               )}
             </div>
@@ -179,18 +204,16 @@ export function StatusHero({
             <button
               type="button"
               onClick={onNextDoseClick}
-              className={`inline-flex items-center gap-1.5 min-h-[36px] px-3.5 rounded-full border text-[13px] font-medium transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 ${
-                isComplete
-                  ? "bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-400/30 text-emerald-100"
-                  : "bg-blue-500/20 hover:bg-blue-500/30 border-blue-400/30 text-blue-100"
-              }`}
+              className="btn-editorial-roll editorial-glass-dark h-9 pl-4 pr-1.5 text-[12px] text-white hover:bg-white/10 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             >
               <span>View Schedule</span>
-              <ChevronRight size={13} aria-hidden="true" />
+              <span className="roll-chip w-6 h-6 bg-white text-[#080a0e]">
+                <ArrowRight size={12} aria-hidden="true" />
+              </span>
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

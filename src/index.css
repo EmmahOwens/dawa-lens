@@ -658,6 +658,177 @@
     content-visibility: auto;
     contain-intrinsic-size: 0 100px;
   }
+
+  /* ─── Editorial Clinical Precision System (Light + Dark Parity) ─────────── */
+
+  .editorial-mono {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10.5px;
+    line-height: 1.25;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .editorial-display {
+    font-family: "SF Pro Display", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+  }
+
+  .editorial-serif {
+    font-family: "Instrument Serif", Georgia, Cambria, "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.015em;
+  }
+
+  .editorial-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* True Liquid-Glass Lens Rim over photography & dark hero surfaces */
+  .editorial-glass-dark {
+    position: relative;
+    overflow: hidden;
+    border: none;
+    background: rgba(255, 255, 255, 0.04);
+    background-blend-mode: luminosity;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.14);
+  }
+
+  .editorial-glass-dark::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.2px;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.14) 22%,
+      rgba(255, 255, 255, 0.02) 45%,
+      rgba(255, 255, 255, 0.02) 55%,
+      rgba(255, 255, 255, 0.14) 78%,
+      rgba(255, 255, 255, 0.36) 100%
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+  }
+
+  /* Adaptive Light + Dark Editorial Glass Surface */
+  .editorial-glass {
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(29, 29, 31, 0.09);
+    -webkit-backdrop-filter: saturate(160%) blur(12px);
+    backdrop-filter: saturate(160%) blur(12px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.85),
+      0 6px 24px -10px rgba(15, 23, 42, 0.08);
+  }
+
+  .dark .editorial-glass {
+    background: rgba(22, 22, 25, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 10px 30px -10px rgba(0, 0, 0, 0.55);
+  }
+
+  html.android-low-ram .editorial-glass,
+  html.android-low-ram .editorial-glass-dark {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  html.android-low-ram .editorial-glass {
+    background: hsl(var(--card));
+  }
+
+  html.android-low-ram .editorial-glass-dark {
+    background: rgba(14, 16, 22, 0.92);
+  }
+
+  /* Architectural Gallery Card (replaces noisy multi-gradient bento tiles) */
+  .editorial-card {
+    @apply rounded-[24px] border border-border/80 bg-card text-card-foreground transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  }
+
+  .editorial-card:hover {
+    @apply border-foreground/20;
+    box-shadow: 0 10px 28px -14px rgba(15, 23, 42, 0.1);
+  }
+
+  .dark .editorial-card {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .dark .editorial-card:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 14px 32px -12px rgba(0, 0, 0, 0.55);
+  }
+
+  /* Nocturnal Obsidian Clinical Panel (StatusHero, Vault Hero, Showcase Canvas) */
+  .editorial-panel-dark {
+    position: relative;
+    overflow: hidden;
+    background: #0a0c10;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 20px 44px -20px rgba(0, 0, 0, 0.5);
+  }
+
+  .editorial-panel-dark::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(560px circle at 50% 0%, rgba(255, 255, 255, 0.07), transparent 68%);
+  }
+
+  /* Subtle Static Film Grain Overlay (unifies photography & kills gradient banding) */
+  .editorial-grain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.38;
+    background-size: 200px 200px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E");
+  }
+
+  /* Tactile Pill Action Button with Rotating Arrow Chip */
+  .btn-editorial-roll {
+    @apply inline-flex items-center gap-2.5 rounded-full font-medium whitespace-nowrap transition-[transform,background-color,color,box-shadow,border-color] duration-200 ease-out active:scale-[0.97];
+  }
+
+  .btn-editorial-roll .roll-chip {
+    @apply inline-flex items-center justify-center rounded-full shrink-0 transition-transform duration-300;
+    transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  .btn-editorial-roll:hover .roll-chip,
+  .btn-editorial-roll:focus-visible .roll-chip {
+    transform: rotate(-45deg);
+  }
+
+  /* Editorial Segmented Pill Rail */
+  .editorial-segment-rail {
+    @apply grid grid-cols-2 w-full p-1 rounded-full bg-secondary/85 dark:bg-[#161619] border border-border/75;
+  }
+
+  .editorial-segment-active {
+    @apply bg-background dark:bg-[#27272b] text-foreground shadow-subtle border border-border/60 dark:border-white/10;
+  }
 }
 
 /* Native Android Directional GPU Page Transitions (Composite-only: transform + opacity) */

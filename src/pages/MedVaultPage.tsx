@@ -36,6 +36,11 @@ import { Button } from "@/components/ui/button";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 import { SCREEN_MEDIA } from "@/lib/screenMedia";
 import {
+  EditorialEyebrow,
+  EditorialMetricStrip,
+  EditorialSectionHeader,
+} from "@/components/editorial/EditorialPrimitives";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -784,134 +789,82 @@ export default function MedVaultPage() {
   };
 
   return (
-    <div className="w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-foreground leading-none">
-            Med Vault
-          </h1>
-          <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
-            Pill Supply &amp; Stock Tracker · {tracked.length} Active
-          </p>
-        </div>
-        {/* Desktop Header Actions */}
-        <div className="hidden sm:flex items-center gap-2">
-          <button
-            onClick={() => handleOpenPharmacyFinder(null)}
-            className="flex items-center gap-1.5 text-[12px] font-semibold bg-muted/60 border border-border/70 hover:bg-muted text-foreground px-4 py-2 rounded-full transition-all active:scale-95 shadow-xs"
-          >
-            <Compass className="size-3.5 text-teal-600 dark:text-teal-400" />
-            <span>NDA Pharmacies</span>
-          </button>
-          <button
-            onClick={() => navigate("/medications")}
-            className="flex items-center gap-1.5 text-[12px] font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-full transition-all active:scale-95 shadow-md shadow-blue-500/20 hover:brightness-105"
-          >
-            <Pill className="size-3.5 text-white" />
-            <span>Medications</span>
-          </button>
-        </div>
-
-        {/* Mobile Header Actions */}
-        <div className="sm:hidden flex items-center gap-1.5">
-          <button
-            onClick={() => handleOpenPharmacyFinder(null)}
-            aria-label="Find NDA Pharmacies"
-            className="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300 transition-all active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center shadow-xs"
-            title="Find NDA Pharmacies"
-          >
-            <Compass className="size-4 text-teal-600 dark:text-teal-400" />
-          </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="p-2.5 rounded-xl bg-muted/40 border border-border/60 text-muted-foreground hover:text-foreground transition-all active:scale-95 min-h-[40px] min-w-[40px] flex items-center justify-center shadow-xs"
-                aria-label="More navigation options"
-              >
-                <MoreVertical size={16} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem
-                onClick={() => navigate("/medications")}
-                className="text-xs font-semibold gap-2 py-2"
-              >
-                <Pill className="size-3.5 text-primary" />
-                <span>All Medications</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleOpenPharmacyFinder(null)}
-                className="text-xs font-semibold gap-2 py-2 text-teal-700 dark:text-teal-300"
-              >
-                <Compass className="size-3.5 text-teal-600 dark:text-teal-400" />
-                <span>NDA Pharmacies</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
+    <div className="w-full pt-2 sm:pt-4 pb-10">
+      {/* Unified Editorial Split Hero + Actions */}
       <ScreenHeroImage
+        asH1
+        indexLabel="01"
         src={SCREEN_MEDIA.medVault.src}
         lqip={SCREEN_MEDIA.medVault.lqip}
         alt="Organized smart medicine cabinet and pill bottles"
-        eyebrow="Smart Inventory"
+        eyebrow="Smart Inventory · Med Vault"
         title="Track every refill before it runs low"
-        subtitle="Monitor pill counts, days remaining, and nearby verified pharmacies"
+        accentWord="runs low"
+        subtitle="Monitor live pill counts, projected days remaining, and 1,800+ verified NDA Uganda pharmacies."
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => handleOpenPharmacyFinder(null)}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium transition-opacity active:scale-95"
+            >
+              <Compass className="size-3.5" />
+              <span>NDA Pharmacies</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/medications")}
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-full border border-border bg-card hover:bg-secondary text-foreground text-[12.5px] font-medium transition-colors active:scale-95"
+            >
+              <Pill className="size-3.5 text-primary" />
+              <span>All Medications</span>
+            </button>
+          </>
+        }
       />
 
-      {/* Hero Stats Tile */}
-      <div className="relative overflow-hidden rounded-[26px] border border-teal-500/30 p-6 mb-6 bg-gradient-to-br from-[#0d9488] via-[#0f766e] to-[#042f2e] text-white shadow-xl shadow-teal-950/20 transition-all">
-        {/* Ambient Jewel Glows */}
-        <div className="absolute -top-20 -right-20 w-56 h-56 bg-teal-300/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-20 -left-20 w-56 h-56 bg-emerald-400/15 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md border border-white/20 px-3.5 py-1 shadow-xs">
-              <div className="h-2 w-2 rounded-full bg-teal-300 shadow-[0_0_8px_#5eead4]" />
-              <span className="text-[11px] font-semibold tracking-normal text-white">
-                Live Inventory Overview
-              </span>
-            </div>
+      {/* Nocturnal Obsidian Inventory Telemetry Panel */}
+      <div className="editorial-panel-dark rounded-[26px] p-6 sm:p-7 mb-7 text-white">
+        <div className="editorial-grain" aria-hidden="true" />
+        <div className="relative z-10 space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <EditorialEyebrow
+              index="02"
+              label="Live Inventory Overview"
+              dotColor={criticalCount > 0 ? "bg-rose-400" : "bg-emerald-400"}
+              onDark
+            />
 
             <button
+              type="button"
               onClick={() => handleOpenPharmacyFinder(null)}
-              className="hidden sm:inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[11px] font-medium transition-all active:scale-95 shadow-xs"
+              className="hidden sm:inline-flex items-center gap-1.5 editorial-glass-dark h-8 px-3.5 rounded-full text-white text-[11.5px] font-medium hover:bg-white/10 transition-colors active:scale-95"
             >
               <Compass size={12} />
               <span>Nearby Pharmacies</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-[30px] sm:text-[38px] font-black leading-tight tracking-tight text-white">{tracked.length}</p>
-              <p className="text-[12px] font-medium text-teal-100/80 mt-0.5">
-                Tracked Meds
-              </p>
-            </div>
-            <div>
-              <p className="text-[30px] sm:text-[38px] font-black leading-tight tracking-tight text-white">{totalTablets}</p>
-              <p className="text-[12px] font-medium text-teal-100/80 mt-0.5">
-                Total Units
-              </p>
-            </div>
-            <div>
-              <p className={`text-[30px] sm:text-[38px] font-black leading-tight tracking-tight ${criticalCount > 0 ? "text-rose-300 drop-shadow-sm" : "text-white"}`}>
-                {criticalCount}
-              </p>
-              <p className="text-[12px] font-medium text-teal-100/80 mt-0.5">
-                Critical Needs
-              </p>
-            </div>
-          </div>
+          <EditorialMetricStrip
+            onDark
+            items={[
+              { label: "Tracked Meds", value: tracked.length },
+              { label: "Total Units", value: totalTablets },
+              {
+                label: "Critical Needs",
+                value: criticalCount,
+                tone: criticalCount > 0 ? "danger" : "default",
+              },
+            ]}
+          />
 
           {(criticalCount > 0 || warningCount > 0) && (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/15">
-              <div className="flex items-center gap-2 text-[12px] text-teal-100 font-medium">
-                <AlertTriangle size={14} className={criticalCount > 0 ? "text-rose-300 animate-pulse" : "text-amber-300"} />
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
+              <div className="flex items-center gap-2 text-[12.5px] text-white/80">
+                <AlertTriangle
+                  size={14}
+                  className={criticalCount > 0 ? "text-rose-400" : "text-amber-300"}
+                />
                 <span>
                   {criticalCount > 0
                     ? `${criticalCount} medicine${criticalCount > 1 ? "s" : ""} critically low or depleted`
@@ -920,8 +873,9 @@ export default function MedVaultPage() {
               </div>
 
               <button
+                type="button"
                 onClick={() => handleOpenPharmacyFinder(null)}
-                className="h-8 px-4 rounded-full bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 text-white text-[12px] font-semibold transition-all active:scale-95 shadow-xs flex items-center gap-1.5"
+                className="editorial-glass-dark h-8 px-4 rounded-full text-white text-[12px] font-medium hover:bg-white/10 transition-colors active:scale-95 inline-flex items-center gap-1.5"
               >
                 <Compass size={13} />
                 <span>Find NDA Pharmacy</span>
@@ -932,17 +886,21 @@ export default function MedVaultPage() {
       </div>
 
       {/* Search Bar */}
-      <div className="relative mb-3">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+      <div className="relative mb-3.5">
+        <Search
+          size={15}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+        />
         <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search inventory by medicine or generic name..."
-          className="h-11 rounded-full border-border/80 bg-card/90 pl-11 pr-10 text-[14px] focus:border-teal-500 shadow-xs transition-all"
+          className="h-11 rounded-full border-border/80 bg-card pl-11 pr-10 text-[14px] focus:border-primary transition-colors"
         />
         {searchQuery && (
           <button
+            type="button"
             onClick={() => setSearchQuery("")}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -956,9 +914,9 @@ export default function MedVaultPage() {
         {[
           { id: "all", label: "All Inventory", count: tracked.length },
           { id: "in-stock", label: "Good Supply", count: inStockCount, dot: "bg-emerald-500" },
-          { id: "low-stock", label: "Running Low", count: warningCount, dot: "bg-amber-500", pulse: warningCount > 0 },
-          { id: "critical", label: "Critical", count: criticalCount, dot: "bg-rose-500", pulse: criticalCount > 0 },
-          { id: "untracked", label: "Untracked", count: untracked.length, dot: "bg-slate-400" },
+          { id: "low-stock", label: "Running Low", count: warningCount, dot: "bg-amber-500" },
+          { id: "critical", label: "Critical", count: criticalCount, dot: "bg-rose-500" },
+          { id: "untracked", label: "Untracked", count: untracked.length, dot: "bg-muted-foreground/50" },
         ].map((tab) => {
           const isActive = filter === tab.id;
           return (
@@ -966,25 +924,17 @@ export default function MedVaultPage() {
               type="button"
               key={tab.id}
               onClick={() => setFilter(tab.id as typeof filter)}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-all active:scale-95 border ${
                 isActive
-                  ? "bg-teal-600 text-white shadow-sm shadow-teal-600/25"
-                  : "neu-pill text-muted-foreground hover:text-foreground"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card border-border/80 text-muted-foreground hover:text-foreground hover:border-foreground/25"
               }`}
             >
-              {tab.dot && (
-                <span
-                  className={`size-2 rounded-full ${tab.dot} ${
-                    tab.pulse && !isActive ? "animate-pulse" : ""
-                  }`}
-                />
-              )}
+              {tab.dot && <span className={`size-1.5 rounded-full ${tab.dot}`} />}
               <span>{tab.label}</span>
               <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "bg-muted text-muted-foreground"
+                className={`editorial-tabular text-[11px] ${
+                  isActive ? "text-background/70" : "text-muted-foreground"
                 }`}
               >
                 {tab.count}
@@ -1053,10 +1003,12 @@ export default function MedVaultPage() {
           {/* Tracked medicines */}
           {filteredTracked.length > 0 && (
             <div className="mb-8">
-              <h2 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-                <CheckCircle size={12} className="text-teal-500" />
-                Tracked Inventory ({filteredTracked.length})
-              </h2>
+              <EditorialSectionHeader
+                index="03"
+                label={`Tracked Inventory · ${filteredTracked.length}`}
+                title="Active"
+                accent="supply"
+              />
               <motion.div
                 variants={container}
                 initial="hidden"

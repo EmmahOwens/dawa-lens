@@ -44,6 +44,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ConfirmationDialog from "@/components/ConfirmationDialog";
+import {
+  EDITORIAL_EASE,
+  EditorialEyebrow,
+  EditorialMetricStrip,
+} from "@/components/editorial/EditorialPrimitives";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 export {
@@ -737,47 +742,84 @@ export default function MedicationsPage() {
   };
 
   return (
-    <div className="w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-foreground leading-none">
-            Medications
-          </h1>
-          <p className="text-[12px] text-muted-foreground mt-0.5 font-medium">
-            Prescription Inventory · {scopedMedicines.length} Saved
-          </p>
+    <div className="w-full pt-2 sm:pt-4 pb-10">
+      {/* Editorial Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55, ease: EDITORIAL_EASE }}
+        className="editorial-glass rounded-[26px] p-5 sm:p-7 mb-7 space-y-5"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1.5 min-w-0">
+            <EditorialEyebrow
+              index="01"
+              label="Prescription Cabinet"
+              dotColor="bg-primary"
+            />
+            <h1 className="editorial-display text-[30px] sm:text-[38px] font-medium text-foreground leading-[1.02]">
+              Active{" "}
+              <em className="editorial-serif text-[1.08em] text-muted-foreground font-normal">
+                medications.
+              </em>
+            </h1>
+            <p className="text-[13.5px] text-muted-foreground max-w-lg">
+              Manage dosages, clinical notes, and live inventory across your active prescriptions.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedMed(null);
+              setIsSheetOpen(true);
+            }}
+            aria-label="Add Medicine"
+            title="Add Medicine"
+            className="btn-editorial-roll h-10 sm:h-11 px-3.5 sm:pl-5 sm:pr-2.5 bg-foreground text-background hover:opacity-90 text-[13px] font-medium shrink-0"
+          >
+            <span className="hidden sm:inline">Add Medicine</span>
+            <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-background text-foreground inline-flex items-center justify-center">
+              <Plus size={14} />
+            </span>
+          </button>
         </div>
 
-        <button
-          onClick={() => {
-            setSelectedMed(null);
-            setIsSheetOpen(true);
-          }}
-          aria-label="Add Medicine"
-          title="Add Medicine"
-          className="h-9 w-9 sm:h-auto sm:w-auto p-0 sm:px-5 sm:py-2.5 inline-flex items-center justify-center gap-1.5 bg-[#0066cc] hover:bg-[#0071e3] text-white rounded-full text-[13px] font-medium active:scale-[0.98] transition-colors shadow-xs flex-shrink-0"
-        >
-          <Plus size={18} className="sm:w-[15px] sm:h-[15px]" />
-          <span className="hidden sm:inline">Add Medicine</span>
-        </button>
-      </div>
+        <div className="pt-4 border-t border-border/65">
+          <EditorialMetricStrip
+            items={[
+              { label: "Saved", value: stats.total },
+              { label: "In Stock", value: stats.inStock, tone: "success" },
+              {
+                label: "Low / Out",
+                value: stats.lowStock,
+                tone: stats.lowStock > 0 ? "warning" : "default",
+              },
+              { label: "Untracked", value: stats.untracked },
+            ]}
+          />
+        </div>
+      </motion.div>
 
       {/* Patient Scoped Context Banner */}
       {!resolvedPatient.isOwner && resolvedPatient.name && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-primary/10 border border-primary/20 shadow-xs"
+          className="mb-6 flex items-center gap-3 px-5 py-3.5 rounded-[20px] bg-primary/[0.06] border border-primary/20"
         >
-          <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
-            <UserRound size={16} />
+          <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center text-primary flex-shrink-0">
+            <UserRound size={15} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium text-primary/80 leading-none mb-0.5">Viewing Cabinet For</p>
-            <p className="text-[15px] font-semibold text-primary tracking-tight truncate">{resolvedPatient.name}</p>
+            <p className="editorial-mono text-[9.5px] text-primary/80 leading-none mb-1">
+              Viewing Cabinet For
+            </p>
+            <p className="text-[15px] font-medium text-foreground tracking-tight truncate">
+              {resolvedPatient.name}
+            </p>
           </div>
-          <span className="text-[11px] font-medium text-primary/80 bg-primary/10 px-2.5 py-0.5 rounded-full flex-shrink-0 border border-primary/20">
+          <span className="editorial-mono text-[9.5px] text-primary bg-primary/10 px-2.5 py-1 rounded-full flex-shrink-0 border border-primary/20">
             Family Hub
           </span>
         </motion.div>
@@ -786,51 +828,61 @@ export default function MedicationsPage() {
       {/* Quick Navigation Panel */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <button
+          type="button"
           onClick={() => navigate("/medvault")}
-          className="group relative overflow-hidden flex items-center justify-between p-4 rounded-[20px] border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 transition-colors text-left active:scale-[0.98]"
+          className="editorial-card group flex items-center justify-between p-4 sm:p-5 text-left active:scale-[0.985]"
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 bg-secondary border border-border/60 text-[#0066cc] dark:text-[#2997ff] rounded-xl flex items-center justify-center shrink-0">
-              <Package2 size={18} />
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="h-10 w-10 bg-secondary border border-border/75 text-foreground rounded-xl flex items-center justify-center shrink-0">
+              <Package2 size={17} />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-[14px] text-foreground leading-tight">Med Vault</span>
-              </div>
-              <span className="text-[12px] text-muted-foreground block truncate mt-0.5">Track pill supply & refills</span>
+              <span className="font-medium text-[14.5px] text-foreground leading-tight block">
+                Med Vault
+              </span>
+              <span className="text-[12px] text-muted-foreground block truncate mt-0.5">
+                Pill supply &amp; NDA refills
+              </span>
             </div>
           </div>
         </button>
         <button
+          type="button"
           onClick={() => navigate("/reminders/new")}
-          className="group relative overflow-hidden flex items-center justify-between p-4 rounded-[20px] border border-border/80 bg-card hover:border-foreground/20 hover:bg-card/90 transition-colors text-left active:scale-[0.98]"
+          className="editorial-card group flex items-center justify-between p-4 sm:p-5 text-left active:scale-[0.985]"
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 bg-secondary border border-border/60 text-[#0066cc] dark:text-[#2997ff] rounded-xl flex items-center justify-center shrink-0">
-              <PlusCircle size={18} />
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="h-10 w-10 bg-secondary border border-border/75 text-foreground rounded-xl flex items-center justify-center shrink-0">
+              <PlusCircle size={17} />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-[14px] text-foreground leading-tight">Add Reminder</span>
-              </div>
-              <span className="text-[12px] text-muted-foreground block truncate mt-0.5">Schedule dose & alerts</span>
+              <span className="font-medium text-[14.5px] text-foreground leading-tight block">
+                Add Reminder
+              </span>
+              <span className="text-[12px] text-muted-foreground block truncate mt-0.5">
+                Schedule dose &amp; alerts
+              </span>
             </div>
           </div>
         </button>
       </div>
 
       {/* Search Bar */}
-      <div className="relative mb-3">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+      <div className="relative mb-3.5">
+        <Search
+          size={15}
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+        />
         <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search saved medications or generic names..."
-          className="h-11 rounded-xl border-border/80 bg-card pl-11 pr-10 text-[14px] focus:border-primary shadow-xs transition-colors"
+          className="h-11 rounded-full border-border/80 bg-card pl-11 pr-10 text-[14px] focus:border-primary transition-colors"
         />
         {searchQuery && (
           <button
+            type="button"
             onClick={() => setSearchQuery("")}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -844,8 +896,8 @@ export default function MedicationsPage() {
         {[
           { id: "all", label: "All", count: stats.total },
           { id: "in-stock", label: "In Stock", count: stats.inStock, dot: "bg-emerald-500" },
-          { id: "low-stock", label: "Low / Out", count: stats.lowStock, dot: "bg-amber-500", pulse: stats.lowStock > 0 },
-          { id: "untracked", label: "Untracked", count: stats.untracked, dot: "bg-slate-400" },
+          { id: "low-stock", label: "Low / Out", count: stats.lowStock, dot: "bg-amber-500" },
+          { id: "untracked", label: "Untracked", count: stats.untracked, dot: "bg-muted-foreground/50" },
         ].map((tab) => {
           const isActive = filter === tab.id;
           return (
@@ -853,25 +905,17 @@ export default function MedicationsPage() {
               type="button"
               key={tab.id}
               onClick={() => setFilter(tab.id as typeof filter)}
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 ${
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-all active:scale-95 border ${
                 isActive
-                  ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25"
-                  : "neu-pill text-muted-foreground hover:text-foreground"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-card border-border/80 text-muted-foreground hover:text-foreground hover:border-foreground/25"
               }`}
             >
-              {tab.dot && (
-                <span
-                  className={`size-2 rounded-full ${tab.dot} ${
-                    tab.pulse && !isActive ? "animate-pulse" : ""
-                  }`}
-                />
-              )}
+              {tab.dot && <span className={`size-1.5 rounded-full ${tab.dot}`} />}
               <span>{tab.label}</span>
               <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  isActive
-                    ? "bg-white/20 text-white"
-                    : "bg-muted text-muted-foreground"
+                className={`editorial-tabular text-[11px] ${
+                  isActive ? "text-background/70" : "text-muted-foreground"
                 }`}
               >
                 {tab.count}
@@ -885,165 +929,163 @@ export default function MedicationsPage() {
       {isInitializing ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 rounded-3xl bg-muted/40 animate-pulse" />
+            <div key={i} className="h-28 rounded-[24px] bg-muted/40 animate-pulse" />
           ))}
         </div>
       ) : filteredMedicines.length === 0 ? (
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-20 rounded-[2rem] border border-dashed border-border/50 bg-accent/10 text-center gap-4 px-6"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="editorial-card flex flex-col items-center justify-center py-16 border-dashed text-center gap-4 px-6"
         >
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-            <Pill size={28} />
+          <div className="w-14 h-14 rounded-2xl bg-secondary border border-border/80 flex items-center justify-center text-foreground">
+            <Pill size={24} />
           </div>
           <div>
-            <p className="text-base font-black text-foreground mb-1">
-              {searchQuery ? "No matches found" : "Medicine cabinet is empty"}
+            <p className="editorial-display text-[22px] font-medium text-foreground mb-1">
+              {searchQuery ? "No matches found" : "Cabinet is empty"}
             </p>
-            <p className="text-sm text-muted-foreground max-w-[260px] mx-auto">
+            <p className="text-[13.5px] text-muted-foreground max-w-[280px] mx-auto leading-relaxed">
               {searchQuery
-                ? "Try searching for a different name or spelling."
-                : `Add medications for ${resolvedPatient.name} to view them here and track stock.`}
+                ? "Try searching for a different brand or generic name."
+                : `Add medications for ${resolvedPatient.name} to track schedules and refill stock.`}
             </p>
           </div>
           {!searchQuery && (
             <button
+              type="button"
               onClick={() => {
                 setSelectedMed(null);
                 setIsSheetOpen(true);
               }}
-              className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/20 mt-1"
+              className="inline-flex items-center gap-2 bg-foreground text-background px-5 py-2.5 rounded-full text-[13px] font-medium hover:opacity-90 transition-opacity mt-1"
             >
               <Plus size={14} /> Add First Medicine
             </button>
           )}
         </motion.div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           {filteredMedicines.map((med) => {
             const theme = getMedicineTheme(med);
             const IconComp = iconMap[med.icon || "pill"] || Pill;
 
-            // Refill / Stock Details
             const isTracked = med.currentQuantity !== undefined;
             const refillStatus = calculateRefillStatus(med, scopedReminders);
             const isOutOfStock = med.currentQuantity === 0;
 
             const stockCountText = isTracked
               ? `${med.currentQuantity} ${med.unit || "units"} left`
-              : "Stock not tracked";
+              : "Not tracked";
 
             const badgeCls = !isTracked
-              ? "bg-muted/70 text-muted-foreground border-border/50"
-              : isOutOfStock
-              ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
-              : refillStatus?.isLow
-              ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
-              : refillStatus?.isWarning
-              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
-              : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+              ? "bg-secondary text-muted-foreground border-border/70"
+              : isOutOfStock || refillStatus?.isLow
+                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/25"
+                : refillStatus?.isWarning
+                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25"
+                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25";
 
             const badgeDotCls = !isTracked
-              ? "bg-slate-400"
+              ? "bg-muted-foreground/50"
               : isOutOfStock || refillStatus?.isLow
-              ? "bg-rose-500"
-              : refillStatus?.isWarning
-              ? "bg-amber-500"
-              : "bg-emerald-500";
+                ? "bg-rose-500"
+                : refillStatus?.isWarning
+                  ? "bg-amber-500"
+                  : "bg-emerald-500";
 
             const badgeText = !isTracked
               ? "Untracked"
               : isOutOfStock
-              ? "Out of Stock"
-              : refillStatus?.isLow
-              ? "Critical Stock"
-              : refillStatus?.isWarning
-              ? "Low Stock"
-              : "In Stock";
+                ? "Out of Stock"
+                : refillStatus?.isLow
+                  ? "Critical"
+                  : refillStatus?.isWarning
+                    ? "Low Stock"
+                    : "In Stock";
 
             const stockPercentage =
               isTracked && med.totalQuantity && med.totalQuantity > 0
-                ? Math.min(100, Math.max(0, Math.round(((med.currentQuantity ?? 0) / med.totalQuantity) * 100)))
+                ? Math.min(
+                    100,
+                    Math.max(0, Math.round(((med.currentQuantity ?? 0) / med.totalQuantity) * 100))
+                  )
                 : null;
 
             return (
               <motion.div
                 key={med.id}
                 layout
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.98 }}
-                className={`group relative overflow-hidden rounded-[22px] border ${theme.border} bg-card p-5 transition-all duration-200 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/25 ${theme.borderHover}`}
+                className="editorial-card group relative overflow-hidden p-5 sm:p-6"
               >
-                {/* Soft ambient gradient wash */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${theme.bgGlow} pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity`} />
+                {/* Hairline semantic color indicator */}
+                <div
+                  className={`absolute left-0 top-5 bottom-5 w-[3px] rounded-r-full ${theme.accentBar}`}
+                />
 
-                {/* Vertical accent strip on left border */}
-                <div className={`absolute left-0 top-3 bottom-3 w-1.25 rounded-r-full ${theme.accentBar} opacity-90`} />
-
-                <div className="relative z-10 flex items-start justify-between gap-3.5">
-                  {/* Left Side: Avatar & Information */}
+                <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3.5 min-w-0 flex-1">
-                    {/* Vibrant Gradient Icon Avatar */}
                     <div
-                      className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-br ${theme.gradient} text-white shadow-md shadow-black/10 border border-white/20 group-hover:scale-105 transition-transform duration-200`}
+                      className={`flex-shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center ${theme.bgLight} ${theme.text} border ${theme.border}`}
                     >
-                      <IconComp className="size-6 text-white" />
+                      <IconComp className="size-5" />
                     </div>
 
-                    <div className="min-w-0 pt-0.5 flex-1">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-[16px] font-bold tracking-tight text-foreground leading-tight truncate">
+                        <h3 className="text-[16.5px] font-medium tracking-[-0.02em] text-foreground leading-tight truncate">
                           {med.name}
                         </h3>
-                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${theme.bgLight} ${theme.text} border ${theme.border}`}>
+                        <span className="editorial-mono text-[9.5px] px-2.5 py-0.5 rounded-full bg-secondary border border-border/75 text-foreground/80">
                           {med.dosage}
                         </span>
                       </div>
 
                       {med.genericName && (
-                        <p className="text-[12px] text-muted-foreground/80 italic truncate mt-0.5">
+                        <p className="text-[12.5px] text-muted-foreground truncate mt-0.5">
                           {med.genericName}
                         </p>
                       )}
 
                       {med.notes && (
-                        <div className="mt-2 text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2.5 py-1 rounded-xl border border-amber-500/20 w-fit flex items-center gap-1.5 shadow-xs">
-                          <span>💡</span>
-                          <span className="truncate max-w-[200px] sm:max-w-[340px]">{med.notes}</span>
+                        <div className="mt-2.5 text-[12px] text-muted-foreground bg-secondary/65 px-3 py-1.5 rounded-xl border border-border/60 w-fit flex items-center gap-1.5">
+                          <Info size={13} className="text-primary shrink-0" />
+                          <span className="truncate max-w-[200px] sm:max-w-[360px]">
+                            {med.notes}
+                          </span>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Right Side: Status Badge & Stock */}
-                  <div className="flex flex-col items-end gap-1 shrink-0 pt-0.5">
-                    <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${badgeCls} flex items-center gap-1.5 shadow-xs`}>
-                      <span
-                        className={`size-1.5 rounded-full ${badgeDotCls} ${
-                          refillStatus?.isLow || isOutOfStock ? "animate-pulse" : ""
-                        }`}
-                      />
+                  {/* Right Status & Count */}
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <span
+                      className={`editorial-mono text-[9px] px-2.5 py-1 rounded-full border ${badgeCls} inline-flex items-center gap-1.5`}
+                    >
+                      <span className={`size-1.5 rounded-full ${badgeDotCls}`} />
                       {badgeText}
                     </span>
-                    <span className="text-[11px] font-bold text-foreground">
+                    <span className="editorial-tabular text-[12px] font-medium text-foreground">
                       {stockCountText}
                     </span>
                   </div>
                 </div>
 
-                {/* Stock Level Progress Bar if tracked */}
+                {/* Precision Hairline Stock Progress Bar */}
                 {stockPercentage !== null && (
-                  <div className="relative z-10 mt-3 pt-0.5">
-                    <div className="h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
+                  <div className="mt-4">
+                    <div className="h-[3px] w-full bg-secondary rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           isOutOfStock || refillStatus?.isLow
                             ? "bg-rose-500"
                             : refillStatus?.isWarning
-                            ? "bg-amber-500"
-                            : theme.accentBar
+                              ? "bg-amber-500"
+                              : "bg-emerald-500"
                         }`}
                         style={{ width: `${Math.max(4, stockPercentage)}%` }}
                       />
@@ -1051,60 +1093,66 @@ export default function MedicationsPage() {
                   </div>
                 )}
 
-                {/* Bottom Row Actions & Supply Meta */}
-                <div className="relative z-10 mt-3.5 pt-3 border-t border-border/40 flex justify-between items-center">
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                {/* Bottom Row Actions */}
+                <div className="mt-4 pt-3.5 border-t border-border/60 flex justify-between items-center">
+                  <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                     {!isTracked ? (
                       <button
+                        type="button"
                         onClick={() => {
                           setSelectedMed(med);
                           setIsSheetOpen(true);
                         }}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline"
+                        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-primary hover:underline"
                       >
                         <Package2 size={13} />
                         <span>Enable Stock Tracker</span>
                       </button>
                     ) : refillStatus?.daysRemaining !== null ? (
-                      <div className="flex items-center gap-1.5 font-medium text-foreground/80">
-                        <Clock size={12} className="text-muted-foreground" />
+                      <div className="flex items-center gap-1.5 editorial-tabular text-muted-foreground">
+                        <Clock size={12} />
                         <span>
-                          {refillStatus.dosesRemaining !== null ? `${refillStatus.dosesRemaining} doses · ` : ""}
-                          ~{refillStatus.daysRemaining} days left
+                          {refillStatus.dosesRemaining !== null
+                            ? `${refillStatus.dosesRemaining} doses · `
+                            : ""}
+                          ~{refillStatus.daysRemaining} days remaining
                         </span>
                       </div>
                     ) : (
-                      <span className="text-[10px] italic text-muted-foreground">No active schedule</span>
+                      <span className="text-[11.5px] text-muted-foreground">No active schedule</span>
                     )}
                   </div>
 
-                  {/* Desktop action buttons */}
+                  {/* Desktop actions */}
                   <div className="hidden sm:flex items-center gap-1.5">
                     <button
+                      type="button"
                       onClick={() => {
                         setSelectedMed(med);
                         setIsSheetOpen(true);
                       }}
-                      className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-border/40 transition-all active:scale-90"
+                      className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/70 transition-colors active:scale-95"
                       title="Edit"
                     >
                       <Edit2 size={13} />
                     </button>
                     <button
+                      type="button"
                       onClick={() => setDeleteTarget(med)}
-                      className="p-2 rounded-xl text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 border border-border/40 transition-all active:scale-90"
+                      className="p-2 rounded-full text-muted-foreground hover:text-rose-600 hover:bg-rose-500/10 border border-border/70 transition-colors active:scale-95"
                       title="Delete"
                     >
                       <Trash2 size={13} />
                     </button>
                   </div>
 
-                  {/* Mobile 3-dots DropdownMenu */}
+                  {/* Mobile Menu */}
                   <div className="sm:hidden">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button
-                          className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/60 border border-border/40 transition-all active:scale-90 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                          type="button"
+                          className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary border border-border/70 transition-colors active:scale-95 min-h-[36px] min-w-[36px] flex items-center justify-center"
                           aria-label="Medication options"
                         >
                           <MoreVertical size={15} />
@@ -1116,7 +1164,7 @@ export default function MedicationsPage() {
                             setSelectedMed(med);
                             setIsSheetOpen(true);
                           }}
-                          className="text-xs font-semibold gap-2 py-2"
+                          className="text-xs font-medium gap-2 py-2"
                         >
                           <Edit2 size={14} />
                           <span>Edit Details</span>
@@ -1126,14 +1174,16 @@ export default function MedicationsPage() {
                             setSelectedMed(med);
                             setIsSheetOpen(true);
                           }}
-                          className="text-xs font-semibold gap-2 py-2"
+                          className="text-xs font-medium gap-2 py-2"
                         >
                           <Package2 size={14} />
-                          <span>{isTracked ? "Adjust Stock Tracking" : "Enable Stock Tracker"}</span>
+                          <span>
+                            {isTracked ? "Adjust Stock Tracking" : "Enable Stock Tracker"}
+                          </span>
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => setDeleteTarget(med)}
-                          className="text-xs font-semibold gap-2 py-2 text-destructive focus:text-destructive"
+                          className="text-xs font-medium gap-2 py-2 text-destructive focus:text-destructive"
                         >
                           <Trash2 size={14} />
                           <span>Delete Medication</span>

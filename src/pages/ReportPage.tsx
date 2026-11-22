@@ -62,6 +62,7 @@ import {
 } from "@/services/pdfReportService";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 import { SCREEN_MEDIA } from "@/lib/screenMedia";
+import { EditorialEyebrow } from "@/components/editorial/EditorialPrimitives";
 
 const container = {
   hidden: {},
@@ -527,121 +528,107 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="w-full min-w-0 print:p-0 print:m-0 print:bg-white print:text-black">
+    <div className="w-full min-w-0 pt-2 sm:pt-4 pb-10 print:p-0 print:m-0 print:bg-white print:text-black">
       {/* -------------------- WEB VIEW -------------------- */}
       <div className="print:hidden">
+        {/* Unified Editorial Split Hero with Primary Export Actions */}
         <ScreenHeroImage
+          asH1
+          indexLabel="01"
           src={SCREEN_MEDIA.careReport.src}
           lqip={SCREEN_MEDIA.careReport.lqip}
           alt="Doctor and patient reviewing a printed health summary report together"
-          eyebrow="Clinical Summary"
+          eyebrow="Clinical Dossier · Physician Ready"
           title="Care Report"
-          subtitle={`Shareable adherence & wellness summary for ${patientName}`}
+          accentWord="Report"
+          subtitle={`Shareable 7-day adherence, active regimen, and wellness summary for ${patientName}.`}
+          actions={
+            <div className="flex items-center flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleDownloadPDF}
+                disabled={downloading}
+                className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium transition-opacity active:scale-95 disabled:opacity-50"
+                title="Download PDF Report"
+              >
+                {downloading ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Download size={14} />
+                )}
+                <span>Download PDF</span>
+              </button>
+
+              <div className="hidden sm:flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(true)}
+                  className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-border bg-card hover:bg-secondary text-foreground text-[12.5px] font-medium transition-colors active:scale-95"
+                >
+                  <Eye size={14} />
+                  <span>Preview</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="w-9 h-9 rounded-full border border-border bg-card hover:bg-secondary text-foreground inline-flex items-center justify-center transition-colors active:scale-95"
+                  title="Share Report"
+                >
+                  <Share2 size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="w-9 h-9 rounded-full border border-border bg-card hover:bg-secondary text-foreground inline-flex items-center justify-center transition-colors active:scale-95"
+                  title="Print Medical Report"
+                >
+                  <Printer size={15} />
+                </button>
+              </div>
+
+              <div className="sm:hidden">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full w-9 h-9 border-border"
+                    >
+                      <MoreVertical size={15} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="rounded-2xl p-1.5 min-w-[170px] border-border bg-card"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => setShowPreview(true)}
+                      className="gap-2.5 font-medium text-xs rounded-xl p-2.5 cursor-pointer"
+                    >
+                      <Eye size={15} className="text-primary" />
+                      Preview Report
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleShare}
+                      className="gap-2.5 font-medium text-xs rounded-xl p-2.5 cursor-pointer"
+                    >
+                      <Share2 size={15} />
+                      Share Summary
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="my-1 bg-border/40" />
+                    <DropdownMenuItem
+                      onClick={handlePrint}
+                      className="gap-2.5 font-medium text-xs rounded-xl p-2.5 cursor-pointer"
+                    >
+                      <Printer size={15} />
+                      Print Report
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          }
         />
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex flex-wrap items-start justify-between gap-4"
-        >
-          <div className="min-w-0">
-            <h1 className="text-3xl font-bold tracking-[-0.022em] text-foreground">
-              Care Report
-            </h1>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80 mt-1 truncate">
-              Health summary for {patientName}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Primary Download PDF button */}
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleDownloadPDF}
-              disabled={downloading}
-              className="rounded-full h-10 px-4 text-xs font-semibold gap-2 active:scale-95 transition-transform"
-              title="Download PDF Report"
-            >
-              {downloading ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <Download size={15} />
-              )}
-              <span className="hidden xs:inline">Download PDF</span>
-              <span className="xs:hidden">PDF</span>
-            </Button>
-
-            {/* Desktop Actions */}
-            <div className="hidden sm:flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowPreview(true)}
-                className="rounded-full h-10 px-4 border-border text-xs font-semibold gap-2 active:scale-95 transition-transform"
-              >
-                <Eye size={15} />
-                <span>Preview</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleShare}
-                className="rounded-full w-10 h-10 border-border active:scale-95 transition-transform"
-                title="Share Report"
-              >
-                <Share2 size={16} />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handlePrint}
-                className="rounded-full w-10 h-10 border-border active:scale-95 transition-transform"
-                title="Print Medical Report"
-              >
-                <Printer size={16} />
-              </Button>
-            </div>
-
-            {/* Mobile More Actions Dropdown */}
-            <div className="sm:hidden">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-full w-10 h-10 border-border"
-                  >
-                    <MoreVertical size={16} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-2xl p-1.5 min-w-[170px] border-border bg-card">
-                  <DropdownMenuItem
-                    onClick={() => setShowPreview(true)}
-                    className="gap-2.5 font-semibold text-xs rounded-xl p-2.5 cursor-pointer"
-                  >
-                    <Eye size={15} className="text-primary" />
-                    Preview Report
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleShare}
-                    className="gap-2.5 font-semibold text-xs rounded-xl p-2.5 cursor-pointer"
-                  >
-                    <Share2 size={15} />
-                    Share Summary
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="my-1 bg-border/40" />
-                  <DropdownMenuItem
-                    onClick={handlePrint}
-                    className="gap-2.5 font-semibold text-xs rounded-xl p-2.5 cursor-pointer"
-                  >
-                    <Printer size={15} />
-                    Print Report
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </motion.div>
 
         <motion.div
           variants={container}
@@ -649,32 +636,52 @@ export default function ReportPage() {
           animate="show"
           className="space-y-6"
         >
-          {/* Adherence Score Card */}
+          {/* Nocturnal Obsidian Adherence Score Panel */}
           <motion.div
             variants={item}
-            className="p-6 sm:p-7 rounded-[18px] border border-border bg-[#f5f5f7] dark:bg-[#272729] text-foreground relative overflow-hidden transition-all active:scale-[0.99]"
+            className="editorial-panel-dark p-6 sm:p-8 rounded-[26px] text-white"
           >
-            <div className="absolute top-0 right-0 p-6 opacity-5 dark:opacity-10 pointer-events-none text-foreground">
-              <Activity size={96} />
+            <div className="editorial-grain" aria-hidden="true" />
+            <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+              <div className="space-y-3">
+                <EditorialEyebrow
+                  index="02"
+                  label="7-Day Adherence Rating"
+                  dotColor={
+                    adherenceScore >= 85
+                      ? "bg-emerald-400"
+                      : adherenceScore >= 65
+                        ? "bg-amber-400"
+                        : "bg-rose-400"
+                  }
+                  onDark
+                />
+                <div className="flex items-baseline gap-3">
+                  <h2 className="editorial-tabular text-[52px] sm:text-[64px] font-light tracking-[-0.04em] leading-none text-white">
+                    {adherenceScore}
+                    <span className="text-[26px] text-white/50 ml-0.5">%</span>
+                  </h2>
+                  <span className="editorial-mono text-[10px] text-white/55">
+                    Overall Score
+                  </span>
+                </div>
+                <p className="text-[13.5px] font-normal text-white/70 leading-relaxed max-w-md">
+                  {adherenceScore >= 90
+                    ? "Excellent tracking consistency across the past 7 days."
+                    : adherenceScore >= 70
+                      ? "Steady adherence with a few missed intervals to review."
+                      : "Adherence is below target. Consider adding backup reminder windows."}
+                </p>
+              </div>
+
+              <div className="editorial-glass-dark rounded-2xl px-4 py-3 shrink-0 self-start sm:self-end">
+                <p className="editorial-mono text-[9px] text-white/50 mb-1">Patient Profile</p>
+                <p className="text-[14px] font-medium text-white">{patientName}</p>
+                <p className="editorial-mono text-[9.5px] text-white/55 mt-0.5">
+                  {patientAge} · {patientGender}
+                </p>
+              </div>
             </div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
-              7-Day Adherence Rating
-            </p>
-            <div className="flex items-baseline gap-3">
-              <h2 className="text-5xl font-bold tracking-[-0.022em] text-foreground">
-                {adherenceScore}%
-              </h2>
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Overall Score
-              </span>
-            </div>
-            <p className="mt-3 text-xs font-normal text-muted-foreground leading-relaxed max-w-[320px]">
-              {adherenceScore >= 90
-                ? "Excellent tracking consistency. Keep it up!"
-                : adherenceScore >= 70
-                ? "Good tracking, but some doses were missed."
-                : "Adherence is below average. Consider setting extra reminders."}
-            </p>
           </motion.div>
 
           {/* Vitality Trends Section */}
@@ -684,14 +691,15 @@ export default function ReportPage() {
 
           {/* Emotional Wellness Summary */}
           {emotionalStats && (
-            <motion.div variants={item} className="p-6 rounded-[18px] border border-border bg-card">
+            <motion.div variants={item} className="editorial-card p-6 sm:p-7">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="section-title flex items-center gap-2 mb-0">
-                  <Heart size={14} className="text-destructive" /> Emotional
-                  Wellness
-                </h3>
+                <EditorialEyebrow
+                  index="03"
+                  label="Emotional Wellness"
+                  dotColor="bg-rose-500"
+                />
                 <span
-                  className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full ${emotionalStats.moodBg} ${emotionalStats.moodColor}`}
+                  className={`editorial-mono text-[9.5px] px-3 py-1 rounded-full ${emotionalStats.moodBg} ${emotionalStats.moodColor}`}
                 >
                   {emotionalStats.moodLabel}
                 </span>
@@ -699,27 +707,27 @@ export default function ReportPage() {
 
               <div className="grid grid-cols-2 gap-4 mb-6">
                 {/* Avg Mood */}
-                <div className="p-4 rounded-[14px] bg-muted/30 border border-border">
+                <div className="p-4 rounded-2xl bg-secondary/50 border border-border/75">
                   <div className="flex items-center gap-2 mb-2">
-                    <Smile size={14} className="text-success" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-success/70">
+                    <Smile size={14} className="text-emerald-600 dark:text-emerald-400" />
+                    <p className="editorial-mono text-[9.5px] text-muted-foreground">
                       Avg Mood
                     </p>
                   </div>
-                  <p className="text-2xl font-black text-foreground">
+                  <p className="editorial-tabular text-[28px] font-light tracking-[-0.03em] text-foreground leading-none">
                     {emotionalStats.avgMood.toFixed(1)}
-                    <span className="text-xs text-muted-foreground font-bold ml-1">
-                      /5
+                    <span className="text-[12px] text-muted-foreground font-normal ml-1">
+                      / 5
                     </span>
                   </p>
-                  <div className="mt-2 flex gap-0.5">
+                  <div className="mt-3 flex gap-1">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <div
                         key={n}
-                        className={`flex-1 h-1.5 rounded-full ${
+                        className={`flex-1 h-1 rounded-full ${
                           n <= Math.round(emotionalStats.avgMood)
-                            ? "bg-success"
-                            : "bg-muted/40"
+                            ? "bg-emerald-500"
+                            : "bg-border"
                         }`}
                       />
                     ))}
@@ -727,27 +735,27 @@ export default function ReportPage() {
                 </div>
 
                 {/* Avg Energy */}
-                <div className="p-4 rounded-[14px] bg-muted/30 border border-border">
+                <div className="p-4 rounded-2xl bg-secondary/50 border border-border/75">
                   <div className="flex items-center gap-2 mb-2">
                     <Zap size={14} className="text-primary" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">
+                    <p className="editorial-mono text-[9.5px] text-muted-foreground">
                       Avg Energy
                     </p>
                   </div>
-                  <p className="text-2xl font-black text-foreground">
+                  <p className="editorial-tabular text-[28px] font-light tracking-[-0.03em] text-foreground leading-none">
                     {emotionalStats.avgEnergy.toFixed(1)}
-                    <span className="text-xs text-muted-foreground font-bold ml-1">
-                      /5
+                    <span className="text-[12px] text-muted-foreground font-normal ml-1">
+                      / 5
                     </span>
                   </p>
-                  <div className="mt-2 flex gap-0.5">
+                  <div className="mt-3 flex gap-1">
                     {[1, 2, 3, 4, 5].map((n) => (
                       <div
                         key={n}
-                        className={`flex-1 h-1.5 rounded-full ${
+                        className={`flex-1 h-1 rounded-full ${
                           n <= Math.round(emotionalStats.avgEnergy)
                             ? "bg-primary"
-                            : "bg-muted/40"
+                            : "bg-border"
                         }`}
                       />
                     ))}
@@ -802,15 +810,16 @@ export default function ReportPage() {
           )}
 
           {/* AI Clinical Summary */}
-          <motion.div variants={item} className="p-6 rounded-[18px] border border-border bg-card">
+          <motion.div variants={item} className="editorial-card p-6 sm:p-7">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <h3 className="section-title flex items-center gap-2 mb-0">
-                  <Sparkles size={14} className="text-primary" /> AI Clinical
-                  Assessment
-                </h3>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <EditorialEyebrow
+                  index="04"
+                  label="AI Clinical Assessment"
+                  dotColor="bg-primary"
+                />
                 {insights?.source === "local" && (
-                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  <span className="editorial-mono text-[9px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                     Calculated from logs
                   </span>
                 )}

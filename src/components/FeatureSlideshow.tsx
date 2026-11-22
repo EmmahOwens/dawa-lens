@@ -1,116 +1,97 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence, useAnimation } from "framer-motion";
-import { Camera, Users, Heart, FileText, History, Plane, Sparkles, Lightbulb, ArrowRight, Package } from "@/lib/icons";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Camera,
+  Users,
+  Heart,
+  Sparkles,
+  Lightbulb,
+  ArrowRight,
+  Package,
+} from "@/lib/icons";
 import { aiApi } from "@/services/api";
 import { NativeService } from "@/services/nativeService";
+import { EDITORIAL_EASE, EditorialEyebrow } from "@/components/editorial/EditorialPrimitives";
 
 interface SlideItem {
   id: string;
-  icon: React.ComponentType<{ size?: number }>;
+  index: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
+  accentWord: string;
   to?: string;
-  color: string;
   description: string;
   type: "feature" | "tip";
 }
 
 const SLIDES: SlideItem[] = [
-  { id: "scan", icon: Camera, label: "Quick Scan", to: "/scan", color: "from-blue-600 to-blue-400", description: "Identify pills instantly with Vision AI Recognition", type: "feature" },
-  { id: "tip1", icon: Lightbulb, label: "Health Tip", color: "from-amber-500 to-orange-400", description: "Taking meds with water instead of juice improves absorption", type: "tip" },
-  { id: "family", icon: Users, label: "Family Hub", to: "/family", color: "from-emerald-600 to-teal-400", description: "Keep track of your loved ones' health in one place", type: "feature" },
-  { id: "medvault", icon: Package, label: "Med Vault", to: "/medvault", color: "from-teal-600 to-cyan-400", description: "Track your pill stock — know exactly when to refill", type: "feature" },
-  { id: "wellness", icon: Heart, label: "Wellness Tracker", to: "/wellness", color: "from-rose-600 to-pink-400", description: "Log your mood and energy to see health patterns", type: "feature" },
-  { id: "tip2", icon: Sparkles, label: "Did you know?", color: "from-indigo-600 to-violet-400", description: "Consistency is key. 12 days streak improves recovery odds by 40%", type: "tip" },
+  {
+    id: "scan",
+    index: "01",
+    icon: Camera,
+    label: "Quick",
+    accentWord: "Scan",
+    to: "/scan",
+    description: "Identify pills, blister foils, and prescription slips instantly with Vision AI.",
+    type: "feature",
+  },
+  {
+    id: "tip1",
+    index: "02",
+    icon: Lightbulb,
+    label: "Clinical",
+    accentWord: "Insight",
+    description: "Taking oral medications with plain water instead of juice improves absorption consistency.",
+    type: "tip",
+  },
+  {
+    id: "family",
+    index: "03",
+    icon: Users,
+    label: "Family",
+    accentWord: "Hub",
+    to: "/family",
+    description: "Coordinate dependent profiles, refills, and live dose confirmations in one calm space.",
+    type: "feature",
+  },
+  {
+    id: "medvault",
+    index: "04",
+    icon: Package,
+    label: "Med",
+    accentWord: "Vault",
+    to: "/medvault",
+    description: "Track pill counts, projected run-out dates, and nearby licensed Uganda NDA pharmacies.",
+    type: "feature",
+  },
+  {
+    id: "wellness",
+    index: "05",
+    icon: Heart,
+    label: "Wellness",
+    accentWord: "Journal",
+    to: "/wellness",
+    description: "Log daily mood, energy, and meals to uncover patterns alongside your active regimen.",
+    type: "feature",
+  },
+  {
+    id: "tip2",
+    index: "06",
+    icon: Sparkles,
+    label: "Did you",
+    accentWord: "know?",
+    description: "Maintaining a 12-day adherence streak measurably improves treatment recovery outcomes.",
+    type: "tip",
+  },
 ];
-
-interface SlideTheme {
-  bgGradient: string;
-  borderColor: string;
-  glowColor: string;
-  iconBg: string;
-  iconText: string;
-  pillBg: string;
-  pillText: string;
-  btnGradient: string;
-  barColor: string;
-}
-
-const SLIDE_THEMES: Record<string, SlideTheme> = {
-  scan: {
-    bgGradient: "bg-gradient-to-br from-blue-500/12 via-indigo-500/6 to-card dark:from-blue-950/40 dark:via-indigo-950/20 dark:to-card/80",
-    borderColor: "border-blue-500/30 dark:border-blue-500/25",
-    glowColor: "bg-blue-400/20",
-    iconBg: "bg-blue-500/15 border-blue-500/30",
-    iconText: "text-blue-600 dark:text-blue-400",
-    pillBg: "bg-blue-500/15 border-blue-500/30",
-    pillText: "text-blue-700 dark:text-blue-300",
-    btnGradient: "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 shadow-blue-500/25",
-    barColor: "bg-blue-500",
-  },
-  tip1: {
-    bgGradient: "bg-gradient-to-br from-amber-500/12 via-orange-500/6 to-card dark:from-amber-950/40 dark:via-orange-950/20 dark:to-card/80",
-    borderColor: "border-amber-500/30 dark:border-amber-500/25",
-    glowColor: "bg-amber-400/20",
-    iconBg: "bg-amber-500/15 border-amber-500/30",
-    iconText: "text-amber-600 dark:text-amber-400",
-    pillBg: "bg-amber-500/15 border-amber-500/30",
-    pillText: "text-amber-700 dark:text-amber-300",
-    btnGradient: "bg-gradient-to-r from-amber-600 via-orange-600 to-amber-600 shadow-amber-500/25",
-    barColor: "bg-amber-500",
-  },
-  family: {
-    bgGradient: "bg-gradient-to-br from-emerald-500/12 via-teal-500/6 to-card dark:from-emerald-950/40 dark:via-teal-950/20 dark:to-card/80",
-    borderColor: "border-emerald-500/30 dark:border-emerald-500/25",
-    glowColor: "bg-emerald-400/20",
-    iconBg: "bg-emerald-500/15 border-emerald-500/30",
-    iconText: "text-emerald-600 dark:text-emerald-400",
-    pillBg: "bg-emerald-500/15 border-emerald-500/30",
-    pillText: "text-emerald-700 dark:text-emerald-300",
-    btnGradient: "bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 shadow-emerald-500/25",
-    barColor: "bg-emerald-500",
-  },
-  medvault: {
-    bgGradient: "bg-gradient-to-br from-teal-500/12 via-cyan-500/6 to-card dark:from-teal-950/40 dark:via-cyan-950/20 dark:to-card/80",
-    borderColor: "border-teal-500/30 dark:border-teal-500/25",
-    glowColor: "bg-teal-400/20",
-    iconBg: "bg-teal-500/15 border-teal-500/30",
-    iconText: "text-teal-600 dark:text-teal-400",
-    pillBg: "bg-teal-500/15 border-teal-500/30",
-    pillText: "text-teal-700 dark:text-teal-300",
-    btnGradient: "bg-gradient-to-r from-teal-600 via-cyan-600 to-teal-600 shadow-teal-500/25",
-    barColor: "bg-teal-500",
-  },
-  wellness: {
-    bgGradient: "bg-gradient-to-br from-rose-500/12 via-pink-500/6 to-card dark:from-rose-950/40 dark:via-pink-950/20 dark:to-card/80",
-    borderColor: "border-rose-500/30 dark:border-rose-500/25",
-    glowColor: "bg-rose-400/20",
-    iconBg: "bg-rose-500/15 border-rose-500/30",
-    iconText: "text-rose-600 dark:text-rose-400",
-    pillBg: "bg-rose-500/15 border-rose-500/30",
-    pillText: "text-rose-700 dark:text-rose-300",
-    btnGradient: "bg-gradient-to-r from-rose-600 via-pink-600 to-rose-600 shadow-rose-500/25",
-    barColor: "bg-rose-500",
-  },
-  tip2: {
-    bgGradient: "bg-gradient-to-br from-indigo-500/12 via-violet-500/6 to-card dark:from-indigo-950/40 dark:via-violet-950/20 dark:to-card/80",
-    borderColor: "border-indigo-500/30 dark:border-indigo-500/25",
-    glowColor: "bg-indigo-400/20",
-    iconBg: "bg-indigo-500/15 border-indigo-500/30",
-    iconText: "text-indigo-600 dark:text-indigo-400",
-    pillBg: "bg-indigo-500/15 border-indigo-500/30",
-    pillText: "text-indigo-700 dark:text-indigo-300",
-    btnGradient: "bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 shadow-indigo-500/25",
-    barColor: "bg-indigo-500",
-  },
-};
 
 export function FeatureSlideshow() {
   const navigate = useNavigate();
   const [slides, setSlides] = useState<SlideItem[]>(SLIDES);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const cachedData = (() => {
@@ -177,9 +158,12 @@ export function FeatureSlideshow() {
   }, [isPaused, nextSlide]);
 
   const current = slides[currentIndex];
-  const theme = SLIDE_THEMES[current.id] || SLIDE_THEMES.scan;
+  const SlideIcon = current.icon;
 
-  const handleDragEnd = (_event: unknown, info: { offset: { x: number }; velocity: { x: number } }) => {
+  const handleDragEnd = (
+    _event: unknown,
+    info: { offset: { x: number }; velocity: { x: number } }
+  ) => {
     if (info.offset.x < -45 || info.velocity.x < -300) {
       void NativeService.haptics.selection();
       nextSlide();
@@ -191,7 +175,7 @@ export function FeatureSlideshow() {
 
   return (
     <div
-      className={`relative w-full mb-8 overflow-hidden rounded-[22px] neu-surface ${theme.borderColor} ${theme.bgGradient} transition-[border-color,background-color] duration-200 ease-out`}
+      className="editorial-card relative w-full mb-8 overflow-hidden"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onTouchStart={() => setIsPaused(true)}
@@ -202,80 +186,83 @@ export function FeatureSlideshow() {
           key={current.id}
           drag="x"
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.18}
+          dragElastic={0.16}
           onDragEnd={handleDragEnd}
           initial={{ opacity: 0, x: 14 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -14 }}
-          transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
-          className="relative w-full p-6 sm:p-7 flex flex-col min-h-[14rem] sm:min-h-[13rem] justify-between cursor-grab active:cursor-grabbing select-none touch-pan-y"
+          transition={{ duration: 0.28, ease: EDITORIAL_EASE }}
+          className="relative w-full p-6 sm:p-7 flex flex-col min-h-[13.5rem] justify-between cursor-grab active:cursor-grabbing select-none touch-pan-y"
         >
-          <div className="relative z-10 flex items-start justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 mb-1">
-                <div className={`w-9 h-9 rounded-xl border ${theme.iconBg} ${theme.iconText} flex items-center justify-center shrink-0 shadow-xs`}>
-                  <current.icon size={18} />
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-secondary border border-border/80 text-foreground flex items-center justify-center shrink-0">
+                  <SlideIcon size={17} />
                 </div>
-                <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${theme.pillBg} ${theme.pillText} shadow-2xs`}>
-                  {current.type === "tip" ? "Health Discovery" : "Featured"}
-                </span>
+                <EditorialEyebrow
+                  index={current.index}
+                  label={current.type === "tip" ? "Health Discovery" : "Featured Capability"}
+                  dotColor={current.type === "tip" ? "bg-amber-500" : "bg-primary"}
+                />
               </div>
-              <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-snug mt-1">
-                {current.label}
+
+              <h3 className="editorial-display text-[24px] sm:text-[28px] font-medium text-foreground leading-[1.06]">
+                {current.label}{" "}
+                <em className="editorial-serif text-[1.08em] text-muted-foreground font-normal">
+                  {current.accentWord}
+                </em>
               </h3>
             </div>
-            
-            {/* Story style progress pills — GPU-only scaleX (zero layout reflow) */}
+
+            {/* Minimal Hairline Progress Rail */}
             <div className="flex items-center gap-1.5 shrink-0 pt-1">
-              {slides.map((_, i) => (
-                <div 
-                  key={i}
-                  className="relative h-1.5 w-6 rounded-full bg-muted/60 overflow-hidden"
+              {slides.map((s, i) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  aria-label={`View slide ${i + 1}`}
+                  onClick={() => setCurrentIndex(i)}
+                  className="py-1.5"
                 >
-                  {i === currentIndex && (
-                    <motion.div 
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: isPaused ? 0 : 1 }}
-                      transition={{ duration: isPaused ? 0 : 6, ease: "linear" }}
-                      className={`absolute inset-0 origin-left ${theme.barColor}`}
-                    />
-                  )}
-                  {i < currentIndex && (
-                    <div className={`absolute inset-0 ${theme.barColor} opacity-40`} />
-                  )}
-                </div>
+                  <span className="block relative h-[2px] w-5 sm:w-6 rounded-full bg-border overflow-hidden">
+                    {i === currentIndex && (
+                      <motion.span
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: isPaused ? 0 : 1 }}
+                        transition={{ duration: isPaused ? 0 : 6, ease: "linear" }}
+                        className="absolute inset-0 origin-left bg-foreground"
+                      />
+                    )}
+                    {i < currentIndex && (
+                      <span className="absolute inset-0 bg-foreground/45" />
+                    )}
+                  </span>
+                </button>
               ))}
             </div>
           </div>
 
-          <div className="relative z-10 max-w-xl my-2">
-            <p className="text-[13px] sm:text-[14px] text-muted-foreground leading-relaxed font-normal">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-4">
+            <p className="text-[14px] text-muted-foreground leading-[1.58] max-w-xl">
               {current.description}
             </p>
             {current.to && (
-              <button 
+              <button
+                type="button"
                 onPointerDown={() => void NativeService.haptics.tap()}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (current.to) navigate(current.to);
                 }}
-                className={`mt-4 inline-flex items-center gap-1.5 h-9 px-4 rounded-full ${theme.btnGradient} text-white font-medium text-[13px] shadow-sm active:scale-[0.97] transition-[transform,filter] duration-150 ease-out`}
+                className="btn-editorial-roll self-start sm:self-end h-9 pl-4 pr-1.5 bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium shrink-0"
               >
-                <span>Try it now</span>
-                <ArrowRight size={13} />
+                <span>Open</span>
+                <span className="roll-chip w-6 h-6 bg-background text-foreground">
+                  <ArrowRight size={12} />
+                </span>
               </button>
             )}
-          </div>
-          
-          {/* Subtle bottom progress indicator — GPU-only scaleX */}
-          <div className="absolute bottom-0 left-0 h-0.5 bg-border/40 w-full overflow-hidden">
-            <motion.div 
-              key={currentIndex}
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: isPaused ? 0 : 1 }}
-              transition={{ duration: 6, ease: "linear" }}
-              className={`h-full w-full origin-left ${theme.barColor} opacity-40`}
-            />
           </div>
         </motion.div>
       </AnimatePresence>

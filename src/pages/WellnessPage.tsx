@@ -36,6 +36,7 @@ import { format, subDays, isSameDay } from "date-fns";
 import { toDate } from "@/lib/utils";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 import { SCREEN_MEDIA } from "@/lib/screenMedia";
+import { EditorialEyebrow } from "@/components/editorial/EditorialPrimitives";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
@@ -457,48 +458,49 @@ export default function WellnessPage() {
   const sparklineData = useEmotionSparkline(scopedWellnessLogs);
 
   return (
-    <div className="w-full">
+    <div className="w-full pt-2 sm:pt-4 pb-10">
       <ScreenHeroImage
+        asH1
+        indexLabel="01"
         src={SCREEN_MEDIA.wellnessTracker.src}
         lqip={SCREEN_MEDIA.wellnessTracker.lqip}
         alt="Person checking daily wellness on a smartphone with warm morning tea"
-        eyebrow="Daily Check-in"
+        eyebrow="Daily Check-in · Mind & Body"
         title="Wellness Hub"
-        subtitle="Track mood, energy, symptoms, and nutrition alongside your treatment"
+        accentWord="Hub"
+        subtitle="Sync your mood, energy, symptoms, and daily Ugandan nutrition alongside your treatment."
       />
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.022em] text-foreground">
-            Wellness Hub
-          </h1>
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-300 ${moodThemeEnabled ? "bg-primary/10 text-primary" : "bg-success/10 text-success"}`}>
-            <Heart size={18} />
-          </div>
-        </div>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider opacity-80">
-          Sync your body and treatment
-        </p>
-      </motion.div>
 
       {/* AI Insight Card */}
-      <div className="mb-8">
-        <WellnessInsightCard insight={insight} loading={insightLoading} onRefresh={() => fetchWellnessInsight(true)} />
+      <div className="mb-7">
+        <WellnessInsightCard
+          insight={insight}
+          loading={insightLoading}
+          onRefresh={() => fetchWellnessInsight(true)}
+        />
       </div>
 
-      {/* Apple Segmented Pill Switcher */}
-      <div className="flex gap-1 mb-8 p-1.5 neu-inset rounded-full">
+      {/* Editorial Segmented Pill Switcher */}
+      <div className="editorial-segment-rail w-full grid grid-cols-2 mb-7">
         <button
           type="button"
           onClick={() => setActiveTab("journal")}
-          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${activeTab === "journal" ? "neu-surface text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          className={`py-2.5 rounded-full text-[13px] font-medium transition-all ${
+            activeTab === "journal"
+              ? "editorial-segment-active"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
         >
           Daily Journal
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("food")}
-          className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all ${activeTab === "food" ? "neu-surface text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          className={`py-2.5 rounded-full text-[13px] font-medium transition-all ${
+            activeTab === "food"
+              ? "editorial-segment-active"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
         >
           Food Log
         </button>
@@ -508,29 +510,38 @@ export default function WellnessPage() {
         {activeTab === "journal" ? (
           <motion.div
             key="journal"
-            initial={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 10 }}
             className="space-y-6"
           >
             {/* Mood & Energy */}
-            <div className="premium-card overflow-hidden">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="section-title flex items-center gap-2 mb-0.5">
-                    <Smile size={16} className={`transition-colors duration-300 ${moodThemeEnabled ? "text-primary" : "text-success"}`} /> Daily Vibe
-                  </h3>
-                  <p className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-                    {isToday ? "Today" : format(selectedDate, "EEEE")} • {format(selectedDate, "MMM d, yyyy")}
+            <div className="editorial-card p-6 sm:p-7 overflow-hidden">
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="space-y-1">
+                  <EditorialEyebrow
+                    index="02"
+                    label="Daily Vibe"
+                    dotColor={moodThemeEnabled ? "bg-primary" : "bg-emerald-500"}
+                  />
+                  <p className="text-[13px] text-muted-foreground pt-1">
+                    {isToday ? "Today" : format(selectedDate, "EEEE")} ·{" "}
+                    {format(selectedDate, "MMM d, yyyy")}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   {latestDayLog ? (
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border transition-colors duration-300 ${moodThemeEnabled ? "bg-primary/15 text-primary border-primary/20" : "bg-success/15 text-success border-success/20"}`}>
+                    <span
+                      className={`inline-flex items-center gap-1.5 editorial-mono text-[9.5px] px-3 py-1 rounded-full border transition-colors duration-300 ${
+                        moodThemeEnabled
+                          ? "bg-primary/10 text-primary border-primary/25"
+                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
+                      }`}
+                    >
                       <CheckCircle2 size={11} /> Recorded
                     </span>
                   ) : (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-muted/70 text-muted-foreground uppercase tracking-wider border border-border/50">
+                    <span className="editorial-mono text-[9.5px] px-3 py-1 rounded-full bg-secondary text-muted-foreground border border-border/75">
                       Check-in
                     </span>
                   )}
@@ -540,34 +551,50 @@ export default function WellnessPage() {
               <div className="space-y-8">
                 {/* Energy Slider */}
                 <div>
-                  <div className="flex justify-between items-end mb-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Vitality Level</p>
-                    <p className="text-lg font-black text-foreground">{energy * 20}%</p>
+                  <div className="flex justify-between items-baseline mb-3">
+                    <p className="editorial-mono text-[10px] text-muted-foreground">
+                      Vitality Level
+                    </p>
+                    <p className="editorial-tabular text-[28px] font-light tracking-[-0.03em] text-foreground leading-none">
+                      {energy * 20}%
+                    </p>
                   </div>
-                  <div className="relative h-2 w-full bg-muted/50 rounded-full overflow-hidden">
+                  <div className="relative h-2 w-full bg-secondary rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${energy * 20}%` }}
-                      className={`absolute top-0 left-0 h-full bg-gradient-to-r transition-colors duration-300 ${moodThemeEnabled ? "from-primary/40 to-primary" : "from-success/40 to-success"}`}
+                      className={`absolute top-0 left-0 h-full rounded-full transition-colors duration-300 ${
+                        moodThemeEnabled ? "bg-primary" : "bg-emerald-500"
+                      }`}
                     />
                     <input
-                      type="range" min="1" max="5" value={energy}
+                      type="range"
+                      min="1"
+                      max="5"
+                      value={energy}
                       onChange={(e) => setEnergy(parseInt(e.target.value))}
                       className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10"
                     />
                   </div>
-                  <div className="flex justify-between mt-2 px-1">
-                    <Zap size={10} className="text-muted-foreground/40" />
-                    <Zap size={10} className={`transition-colors duration-300 ${moodThemeEnabled ? "text-primary" : "text-success"}`} />
+                  <div className="flex justify-between mt-2 px-0.5">
+                    <Zap size={11} className="text-muted-foreground/45" />
+                    <Zap
+                      size={11}
+                      className={`transition-colors duration-300 ${
+                        moodThemeEnabled ? "text-primary" : "text-emerald-500"
+                      }`}
+                    />
                   </div>
                 </div>
 
                 {/* Mood Selector */}
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Current Mood</p>
+                  <div className="flex items-center justify-between mb-3.5">
+                    <p className="editorial-mono text-[10px] text-muted-foreground">
+                      Current Mood
+                    </p>
                     {moodThemeEnabled && isValidMoodLevel(mood) && (
-                      <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 transition-colors">
+                      <span className="inline-flex items-center gap-1.5 editorial-mono text-[9.5px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 transition-colors">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                         {isToday && !latestDayLog && !activeMood
                           ? "Default Blue"
@@ -578,6 +605,7 @@ export default function WellnessPage() {
                   <div className="flex justify-between gap-2">
                     {moodEmojis.map((m) => (
                       <button
+                        type="button"
                         key={m.val}
                         onClick={() => {
                           setMood(m.val);
@@ -585,10 +613,27 @@ export default function WellnessPage() {
                             dispatchMoodPreview(m.val);
                           }
                         }}
-                        className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-colors duration-200 ${mood === m.val ? (moodThemeEnabled ? "bg-primary text-primary-foreground shadow-xs" : "bg-success text-success-foreground shadow-xs") : "bg-muted/30 hover:bg-muted/50"}`}
+                        className={`flex-1 flex flex-col items-center gap-1.5 py-3.5 rounded-2xl border transition-all duration-200 ${
+                          mood === m.val
+                            ? moodThemeEnabled
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : "bg-foreground border-foreground text-background"
+                            : "bg-secondary/50 border-border/70 hover:bg-secondary text-foreground"
+                        }`}
                       >
-                        <LottieMoji emoji={m.emoji} size={30} className="mb-0.5" active={mood === m.val} />
-                        <span className={`text-[11px] font-medium ${mood === m.val ? "opacity-100" : "opacity-70"}`}>{m.label}</span>
+                        <LottieMoji
+                          emoji={m.emoji}
+                          size={28}
+                          className="mb-0.5"
+                          active={mood === m.val}
+                        />
+                        <span
+                          className={`text-[11px] font-medium ${
+                            mood === m.val ? "opacity-100" : "opacity-75"
+                          }`}
+                        >
+                          {m.label}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -597,11 +642,9 @@ export default function WellnessPage() {
             </div>
 
             {/* Symptom Categorization */}
-            <div className="premium-card">
+            <div className="editorial-card p-6 sm:p-7">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="section-title flex items-center gap-2 mb-0">
-                  <Activity size={16} className="text-primary" /> Body Scan
-                </h3>
+                <EditorialEyebrow index="03" label="Body Scan" dotColor="bg-primary" />
               </div>
 
               {/* Mobile Quick Symptom Selector */}
@@ -700,7 +743,7 @@ export default function WellnessPage() {
               <Button
                 onClick={handleLogWellness}
                 disabled={loading || reflectionLoading}
-                className="w-full mt-8 h-12 rounded-xl text-sm font-medium bg-[#0066cc] hover:bg-[#0071e3] text-white shadow-xs active:scale-[0.98] transition-colors"
+                className="w-full mt-8 h-12 rounded-full text-[13.5px] font-medium bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition-opacity"
               >
                 {reflectionLoading ? (
                   <><Loader2 className="animate-spin mr-2" size={16} /> Generating Reflection…</>
@@ -717,41 +760,53 @@ export default function WellnessPage() {
         ) : (
           <motion.div
             key="food"
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
             className="space-y-6"
           >
             {/* Meal Entry */}
-            <div className="premium-card">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="section-title flex items-center gap-2 mb-0">
-                  <Utensils size={16} className="text-warning" /> Plate Analysis
-                </h3>
+            <div className="editorial-card p-6 sm:p-7">
+              <div className="flex items-center justify-between mb-5">
+                <EditorialEyebrow index="02" label="Plate Analysis" dotColor="bg-amber-500" />
               </div>
 
               <div className="relative">
                 <textarea
                   value={meal}
                   onChange={(e) => setMeal(e.target.value)}
-                  placeholder="What's on your plate?"
-                  className="w-full h-36 p-5 rounded-2xl bg-muted/20 border-2 border-transparent focus:border-warning/30 outline-none transition-all font-medium text-sm leading-relaxed resize-none shadow-inner"
+                  placeholder="What's on your plate? (e.g. Matooke & G-nut sauce, Mukene, chai...)"
+                  className="w-full h-36 p-5 rounded-2xl bg-secondary/45 focus:bg-card border border-border/80 focus:border-primary outline-none transition-colors font-normal text-[14.5px] leading-relaxed resize-none"
                 />
-                <div className="absolute bottom-4 right-4 flex items-center gap-1.5 opacity-50">
+                <div className="absolute bottom-4 right-4 flex items-center gap-1.5 opacity-60">
                   <Info size={12} />
-                  <span className="text-[11px] font-medium text-muted-foreground">Nutrition Analysis</span>
+                  <span className="editorial-mono text-[9px] text-muted-foreground">
+                    Nutrition Analysis
+                  </span>
                 </div>
               </div>
 
               {/* Desktop Suggestions */}
               <div className="hidden sm:block mt-4 mb-6">
-                <p className="text-[12px] font-medium text-muted-foreground mb-3 ml-1">Local Favorites</p>
+                <p className="editorial-mono text-[9.5px] text-muted-foreground mb-3 ml-0.5">
+                  Ugandan &amp; Local Favorites
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {["Matooke & G-nut Sauce", "Fish Stew & Kalo", "Katogo with Beans", "Steamed Luwombo", "Mukene & Posho", "Nakati & Sweet Potatoes", "Nsenene (Grasshoppers)", "Roasted Gonja"].map(s => (
+                  {[
+                    "Matooke & G-nut Sauce",
+                    "Fish Stew & Kalo",
+                    "Katogo with Beans",
+                    "Steamed Luwombo",
+                    "Mukene & Posho",
+                    "Nakati & Sweet Potatoes",
+                    "Nsenene (Grasshoppers)",
+                    "Roasted Gonja",
+                  ].map((s) => (
                     <button
+                      type="button"
                       key={s}
                       onClick={() => setMeal(s)}
-                      className="px-3 py-1.5 rounded-lg bg-warning/5 border border-warning/10 text-warning text-[10px] font-bold hover:bg-warning/10 transition-colors"
+                      className="px-3.5 py-1.5 rounded-full bg-secondary/70 border border-border/80 text-foreground/85 text-[12px] font-medium hover:bg-secondary hover:border-foreground/25 transition-colors"
                     >
                       {s}
                     </button>

@@ -18,6 +18,7 @@ import {
 } from "@capacitor/camera";
 import PermissionRequest from "@/components/PermissionRequest";
 import { NativeService } from "@/services/nativeService";
+import { EDITORIAL_EASE } from "@/components/editorial/EditorialPrimitives";
 
 export default function ScanPage() {
   const navigate = useNavigate();
@@ -25,14 +26,11 @@ export default function ScanPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [streaming, setStreaming] = useState(false);
-  const [facingMode, setFacingMode] = useState<"environment" | "user">(
-    "environment"
-  );
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [capturing, setCapturing] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
   const [flashlightOn, setFlashlightOn] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
-  // Guard so the mount effect only fires once even if callbacks are recreated
   const hasFiredRef = useRef(false);
 
   const scanMode = "text" as const;
@@ -51,7 +49,7 @@ export default function ScanPage() {
         c.getContext("2d")!.drawImage(img, 0, 0, w, h);
         resolve(c.toDataURL("image/jpeg", quality));
       };
-      img.onerror = () => resolve(dataUrl); // fallback: send original
+      img.onerror = () => resolve(dataUrl);
       img.src = dataUrl;
     });
 
@@ -59,15 +57,12 @@ export default function ScanPage() {
     try {
       const track = streamRef.current?.getVideoTracks()[0];
       if (track) {
-        interface ExtendedMediaTrackCapabilities
-          extends MediaTrackCapabilities {
+        interface ExtendedMediaTrackCapabilities extends MediaTrackCapabilities {
           torch?: boolean;
         }
-        const capabilities =
-          track.getCapabilities() as ExtendedMediaTrackCapabilities;
+        const capabilities = track.getCapabilities() as ExtendedMediaTrackCapabilities;
         if (capabilities.torch) {
-          interface ExtendedMediaTrackConstraints
-            extends MediaTrackConstraints {
+          interface ExtendedMediaTrackConstraints extends MediaTrackConstraints {
             advanced?: Array<MediaTrackConstraintSet & { torch?: boolean }>;
           }
           await track.applyConstraints({
@@ -102,16 +97,13 @@ export default function ScanPage() {
     }
   }, [facingMode]);
 
-  // Switch camera: stop existing stream then restart with the new facing mode
   const switchCamera = useCallback(() => {
     setStreaming(false);
     setFacingMode((m) => (m === "environment" ? "user" : "environment"));
   }, []);
 
-  // Start camera on mount and restart whenever facingMode changes
   useEffect(() => {
     if (hasFiredRef.current) {
-      // facingMode changed after mount — restart with new facing
       startCamera();
     } else {
       hasFiredRef.current = true;
@@ -121,9 +113,7 @@ export default function ScanPage() {
     return () => {
       streamRef.current?.getTracks().forEach((tk) => tk.stop());
     };
-  // startCamera is stable between facingMode changes; including it here
-  // ensures the camera restarts when switchCamera() updates facingMode.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facingMode]);
 
   const handleRequestPermission = async () => {
@@ -156,7 +146,6 @@ export default function ScanPage() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext("2d")!.drawImage(video, 0, 0);
-    // Capture at native resolution first, then downscale to ≤800px to reduce AI token cost
     const rawDataUrl = canvas.toDataURL("image/jpeg", 0.85);
     const dataUrl = await downscaleImage(rawDataUrl);
 
@@ -165,7 +154,6 @@ export default function ScanPage() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (Capacitor.isNativePlatform()) {
-      // Use native photo picker on Capacitor for proper gallery access
       try {
         const image = await CapCamera.getPhoto({
           quality: 70,
@@ -198,48 +186,50 @@ export default function ScanPage() {
 
   const triggerNativeUpload = (e: React.MouseEvent) => {
     if (Capacitor.isNativePlatform()) {
-      e.preventDefault(); // Stop the <input> from opening the Web file picker
+      e.preventDefault();
       handleFileUpload(e as unknown as React.ChangeEvent<HTMLInputElement>);
     }
   };
 
   return (
-    <div className="relative h-[100dvh] min-h-[100dvh] overflow-hidden bg-foreground flex flex-col items-center">
-      {/* Top App Bar with X, Mode Selector, and Flashlight */}
-      <div className="absolute top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top,2rem)] px-4 sm:px-6 pb-4 bg-gradient-to-b from-black/80 to-transparent">
+    <div className="relative h-[100dvh] min-h-[100dvh] overflow-hidden bg-[#060709] flex flex-col items-center select-none">
+      {/* Top Floating Liquid-Glass Telemetry HUD */}
+      <div className="absolute top-0 left-0 right-0 z-50 pt-[max(1.25rem,env(safe-area-inset-top))] px-4 sm:px-6 pb-6 bg-gradient-to-b from-black/85 via-black/40 to-transparent">
         <div className="flex items-center justify-between gap-4 max-w-2xl mx-auto">
-          {/* Top Left: Exit Button */}
           <button
+            type="button"
             onClick={() => navigate("/")}
-            className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90"
+            aria-label="Close scanner"
+            className="editorial-glass-dark flex items-center justify-center w-11 h-11 rounded-full text-white hover:bg-white/10 transition-colors active:scale-95"
           >
-            <X size={20} />
+            <X size={19} />
           </button>
 
-          {/* Center: Static mode label */}
-          <div className="flex items-center justify-center gap-2 bg-white/10 backdrop-blur-xl px-4 sm:px-6 h-11 sm:h-12 rounded-full border border-white/10 shadow-2xl">
-            <FileText size={16} strokeWidth={2.5} className="text-primary" />
-            <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-white">
-              {t("scan.text")}
+          <div className="editorial-glass-dark flex items-center justify-center gap-2.5 px-5 h-11 rounded-full">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+            <FileText size={14} strokeWidth={2} className="text-white/85" />
+            <span className="editorial-mono text-[10px] text-white">
+              {t("scan.text")} · Optical OCR
             </span>
           </div>
 
-          {/* Top Right: Flashlight Toggle */}
           <button
+            type="button"
             onClick={toggleFlashlight}
-            className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full backdrop-blur-md border transition-all ${
+            aria-label={flashlightOn ? "Turn off flashlight" : "Turn on flashlight"}
+            className={`flex items-center justify-center w-11 h-11 rounded-full transition-all active:scale-95 ${
               flashlightOn
-                ? "bg-primary border-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.5)]"
-                : "bg-white/10 border-white/10 text-white hover:bg-white/20"
+                ? "bg-white text-[#060709] shadow-[0_0_24px_rgba(255,255,255,0.45)]"
+                : "editorial-glass-dark text-white hover:bg-white/10"
             }`}
           >
-            <Zap size={20} set={flashlightOn ? "bold" : "light"} />
+            <Zap size={18} set={flashlightOn ? "bold" : "light"} />
           </button>
         </div>
       </div>
 
-      {/* Camera view — centred column on wide screens */}
-      <div className="flex-1 w-full max-w-2xl bg-black relative self-center">
+      {/* Centered Live Camera Optical Stage */}
+      <div className="flex-1 w-full max-w-2xl bg-black relative self-center overflow-hidden">
         <video
           ref={videoRef}
           className="absolute inset-0 h-full w-full object-cover"
@@ -249,64 +239,58 @@ export default function ScanPage() {
         />
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Scan overlays */}
+        {/* Architectural Optical Reticle */}
         {streaming && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="relative w-[80%] sm:w-[60%] md:w-[50%] aspect-square max-w-xs sm:max-w-sm md:max-w-md"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.45, ease: EDITORIAL_EASE }}
+              className="relative w-[78%] sm:w-[62%] md:w-[52%] aspect-square max-w-xs sm:max-w-sm md:max-w-md"
             >
-              {/* GPU-composited scanning line (transform only — zero layout reflow over live camera) */}
-              <div className="absolute inset-x-0 top-[5%] bottom-[5%] overflow-hidden pointer-events-none z-30">
+              {/* Subtle composite-only optical scan line */}
+              <div className="absolute inset-x-2 top-[5%] bottom-[5%] overflow-hidden pointer-events-none z-30">
                 <motion.div
                   className="h-full w-full"
                   animate={{ y: ["0%", "96%", "0%"] }}
-                  transition={{ duration: 3.6, repeat: Infinity, ease: "linear" }}
+                  transition={{ duration: 3.8, repeat: Infinity, ease: "linear" }}
                 >
-                  <div className="h-1 w-full bg-gradient-to-r from-transparent via-primary to-transparent shadow-[0_0_15px_rgba(var(--primary-rgb),0.8)]" />
+                  <div className="h-[1.5px] w-full bg-gradient-to-r from-transparent via-white/90 to-transparent shadow-[0_0_12px_rgba(255,255,255,0.55)]" />
                 </motion.div>
               </div>
 
-              <div className="absolute inset-0 border-[0.5px] border-white/10 rounded-3xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-primary/5" />
+              {/* Hairline frame border */}
+              <div className="absolute inset-0 border border-white/15 rounded-[26px]" />
+
+              {/* Precision Optical Corner Brackets */}
+              <div className="absolute -top-px -left-px w-9 h-9 border-t-2 border-l-2 border-white rounded-tl-[26px]" />
+              <div className="absolute -top-px -right-px w-9 h-9 border-t-2 border-r-2 border-white rounded-tr-[26px]" />
+              <div className="absolute -bottom-px -left-px w-9 h-9 border-b-2 border-l-2 border-white rounded-bl-[26px]" />
+              <div className="absolute -bottom-px -right-px w-9 h-9 border-b-2 border-r-2 border-white rounded-br-[26px]" />
+
+              {/* Center crosshair micro-tick */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-35">
+                <div className="w-4 h-px bg-white" />
+                <div className="h-4 w-px bg-white absolute" />
               </div>
 
-              {/* Corners */}
-              <div className="absolute top-0 left-0 w-10 h-10 sm:w-12 sm:h-12 border-t-[3px] border-l-[3px] border-primary rounded-tl-3xl" />
-              <div className="absolute top-0 right-0 w-10 h-10 sm:w-12 sm:h-12 border-t-[3px] border-r-[3px] border-primary rounded-tr-3xl" />
-              <div className="absolute bottom-0 left-0 w-10 h-10 sm:w-12 sm:h-12 border-b-[3px] border-l-[3px] border-primary rounded-bl-3xl" />
-              <div className="absolute bottom-0 right-0 w-10 h-10 sm:w-12 sm:h-12 border-b-[3px] border-r-[3px] border-primary rounded-br-3xl" />
-
-              {/* Radar pulsing ring */}
-              <motion.div
-                className="absolute inset-[-4px] border border-primary/30 rounded-3xl"
-                animate={{
-                  scale: [1, 1.05, 1],
-                  opacity: [0.2, 0.6, 0.2]
-                }}
-                transition={{
-                  duration: 2.5,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              />
-
-              <p className="absolute -bottom-12 left-0 right-0 text-center text-[10px] sm:text-xs font-bold text-white/40 uppercase tracking-[0.3em]">
-                Align Label
-              </p>
+              <div className="absolute -bottom-11 left-0 right-0 flex justify-center">
+                <span className="editorial-glass-dark rounded-full px-3.5 py-1 editorial-mono text-[9.5px] text-white/80">
+                  Align Label or Blister Strip
+                </span>
+              </div>
             </motion.div>
           </div>
         )}
 
         {!streaming && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-50">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#060709]/95 z-40 px-6 text-center">
             <motion.div
-              animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-16 h-16 rounded-full border-4 border-primary/30 border-t-primary"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
+              className="w-11 h-11 rounded-full border-2 border-white/15 border-t-white"
             />
-            <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mt-6">
+            <p className="editorial-mono text-[10px] text-white/65 mt-5">
               {t("scan.camera_loading")}
             </p>
           </div>
@@ -314,7 +298,7 @@ export default function ScanPage() {
 
         {capturing && (
           <motion.div
-            initial={{ opacity: 1 }}
+            initial={{ opacity: 0.9 }}
             animate={{ opacity: 0 }}
             transition={{ duration: 0.35, ease: "easeOut" }}
             className="absolute inset-0 bg-white z-50 pointer-events-none"
@@ -322,66 +306,61 @@ export default function ScanPage() {
         )}
       </div>
 
-      {/* Controls */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent pt-24 sm:pt-32 pb-10 sm:pb-14 px-6 sm:px-10 safe-bottom z-30">
+      {/* Bottom Precision Shutter & Controls Bar */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#060709] via-[#060709]/85 to-transparent pt-20 sm:pt-28 pb-[max(2.25rem,env(safe-area-inset-bottom))] px-6 sm:px-10 z-30">
         <div className="flex items-center justify-between max-w-sm sm:max-w-md mx-auto">
-          {/* Spacer matching the right-side buttons */}
-          <div className="flex items-center gap-2 sm:gap-3 opacity-0 pointer-events-none">
-            <div className="w-12 h-12 sm:w-14 sm:h-14" />
-            <div className="w-12 h-12 sm:w-14 sm:h-14" />
-          </div>
+          {/* Upload Pill (Left) */}
+          <label
+            onClick={triggerNativeUpload}
+            className="editorial-glass-dark flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white hover:bg-white/10 transition-colors active:scale-95 cursor-pointer"
+          >
+            <Upload size={19} />
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
+          </label>
 
-          {/* Shutter button */}
+          {/* Machined Precision Shutter Button (Center) */}
           <motion.button
+            type="button"
             whileTap={{ scale: 0.94 }}
             onPointerDown={() => {
               if (streaming) void NativeService.haptics.impact();
             }}
             onClick={capture}
             disabled={!streaming}
-            className="flex items-center justify-center w-20 h-20 sm:w-[88px] sm:h-[88px] md:w-24 md:h-24 rounded-full border-[4px] border-white/40 bg-transparent disabled:opacity-20 transition-[transform,opacity] duration-150 shadow-[0_0_30px_rgba(255,255,255,0.1)] relative group"
+            aria-label="Capture medication photo"
+            className="flex items-center justify-center w-20 h-20 sm:w-[84px] sm:h-[84px] rounded-full border-[2.5px] border-white/80 bg-white/5 disabled:opacity-25 transition-opacity relative group"
           >
             <motion.div
-              whileTap={{ scale: 0.88 }}
-              className="w-[60px] h-[60px] sm:w-[68px] sm:h-[68px] md:w-[76px] md:h-[76px] rounded-full bg-white shadow-xl flex items-center justify-center group-active:bg-primary transition-colors"
+              whileTap={{ scale: 0.9 }}
+              className="w-[62px] h-[62px] sm:w-[66px] sm:h-[66px] rounded-full bg-white shadow-[0_0_24px_rgba(255,255,255,0.28)] flex items-center justify-center transition-colors group-active:bg-white/80"
             >
               {capturing && (
                 <motion.div
-                  className="w-6 h-6 rounded-full border-2 border-primary border-t-transparent"
+                  className="w-6 h-6 rounded-full border-2 border-[#060709] border-t-transparent"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
                 />
               )}
             </motion.div>
-            <div className="absolute inset-[-8px] border border-white/5 rounded-full animate-pulse" />
           </motion.button>
 
-          {/* Camera flip + upload */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={switchCamera}
-              className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90"
-            >
-              <SwitchCamera size={20} className="sm:hidden" />
-              <SwitchCamera size={22} className="hidden sm:block" />
-            </button>
-            <label
-              onClick={triggerNativeUpload}
-              className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/10 backdrop-blur-2xl border border-white/10 text-white hover:bg-white/20 transition-all active:scale-90 cursor-pointer"
-            >
-              <Upload size={20} className="sm:hidden" />
-              <Upload size={22} className="hidden sm:block" />
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
-            </label>
-          </div>
+          {/* Switch Camera Pill (Right) */}
+          <button
+            type="button"
+            onClick={switchCamera}
+            aria-label="Switch camera"
+            className="editorial-glass-dark flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white hover:bg-white/10 transition-colors active:scale-95"
+          >
+            <SwitchCamera size={19} />
+          </button>
         </div>
 
-        <p className="text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white/40 mt-8 sm:mt-10">
+        <p className="text-center editorial-mono text-[9.5px] text-white/50 mt-6">
           {t("scan.capture_hint")}
         </p>
       </div>

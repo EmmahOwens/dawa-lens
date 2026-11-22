@@ -178,47 +178,29 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
   return (
     <div className="mb-8">
       <div
-        className={`group relative overflow-hidden rounded-[24px] border ${
-          activeMoodCfg ? activeMoodCfg.border : DEFAULT_THEME.border
-        } bg-card p-5 sm:p-6 flex flex-col shadow-sm hover:shadow-md transition-[border-color,background-color] duration-200 ease-out`}
+        className={`editorial-card group relative overflow-hidden p-5 sm:p-6 flex flex-col ${
+          activeMoodCfg ? activeMoodCfg.border : ""
+        }`}
       >
-        {/* Dynamic Ambient Glow */}
+        {/* Hairline Left Semantic Accent */}
         <div
-          className={`absolute inset-0 bg-gradient-to-br ${
-            activeMoodCfg ? activeMoodCfg.glow : DEFAULT_THEME.glow
-          } pointer-events-none transition-opacity duration-300`}
-        />
-
-        {/* Ambient Jewel Blur Orb */}
-        <div
-          className={`absolute -top-12 -right-12 w-36 h-36 rounded-full ${
-            activeMoodCfg ? "bg-primary/10" : "bg-violet-500/10"
-          } blur-2xl pointer-events-none`}
-        />
-
-        {/* Left Vertical Accent Indicator Bar */}
-        <div
-          className={`absolute left-0 top-3.5 bottom-3.5 w-1.25 rounded-r-full ${
-            activeMoodCfg ? activeMoodCfg.accentBar : DEFAULT_THEME.accentBar
+          className={`absolute left-0 top-5 bottom-5 w-[3px] rounded-r-full ${
+            activeMoodCfg ? activeMoodCfg.accentBar : "bg-primary/60"
           } transition-colors duration-300`}
         />
 
         <div className="relative z-10 flex flex-col">
           {/* Header Row */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2.5">
-              <div
-                className={`w-8 h-8 rounded-xl bg-gradient-to-tr ${
-                  activeMoodCfg ? activeMoodCfg.gradient : DEFAULT_THEME.gradient
-                } text-white flex items-center justify-center shadow-xs shadow-black/10`}
-              >
-                <Activity size={15} className="text-white" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/75 text-foreground flex items-center justify-center shrink-0">
+                <Activity size={16} />
               </div>
               <div>
-                <h3 className="text-[15px] sm:text-[16px] font-bold text-foreground leading-tight tracking-tight">
+                <h3 className="text-[15.5px] sm:text-[16.5px] font-medium text-foreground leading-tight tracking-[-0.02em]">
                   Daily Wellness Check
                 </h3>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-[12px] text-muted-foreground mt-0.5">
                   Track mood &amp; daily vitality
                 </p>
               </div>
