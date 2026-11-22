@@ -548,7 +548,7 @@ export default function ReportPage() {
                 type="button"
                 onClick={handleDownloadPDF}
                 disabled={downloading}
-                className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium transition-opacity active:scale-95 disabled:opacity-50"
+                className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[12.5px] font-medium transition-all active:scale-95 disabled:opacity-50"
                 title="Download PDF Report"
               >
                 {downloading ? (
@@ -636,10 +636,10 @@ export default function ReportPage() {
           animate="show"
           className="space-y-6"
         >
-          {/* Nocturnal Obsidian Adherence Score Panel */}
+          {/* Luminous Clinical Sapphire / Emerald Adherence Score Panel */}
           <motion.div
             variants={item}
-            className="editorial-panel-dark p-6 sm:p-8 rounded-[26px] text-white"
+            className={`${adherenceScore >= 85 ? "editorial-panel-emerald" : "editorial-panel-dark"} p-6 sm:p-8 rounded-[26px] text-white`}
           >
             <div className="editorial-grain" aria-hidden="true" />
             <div className="relative z-10 flex flex-col sm:flex-row sm:items-end justify-between gap-6">

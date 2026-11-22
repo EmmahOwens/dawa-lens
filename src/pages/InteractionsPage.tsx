@@ -1351,7 +1351,7 @@ Technical Description: "${technicalDesc}" between "${drug1}" and "${drug2}".`
                 lifestyleFactors.length === 0 ||
                 (activeTab === "cabinet" ? medicines.length === 0 : sandboxDrugs.length === 0)
               }
-              className="h-10 px-5 rounded-full bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium disabled:opacity-45 transition-opacity active:scale-95 inline-flex items-center gap-2"
+              className="h-10 px-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[12.5px] font-medium disabled:opacity-45 transition-all active:scale-95 inline-flex items-center gap-2"
             >
               {holisticLoading ? (
                 <Loader2 size={13} className="animate-spin" />

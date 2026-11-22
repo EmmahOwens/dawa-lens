@@ -481,11 +481,11 @@ export default function FamilyHubPage() {
           <button
             type="button"
             onClick={handleOpenAdd}
-            className="btn-editorial-roll h-10 pl-4 pr-2 bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium"
+            className="btn-editorial-roll h-10 pl-4 pr-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[12.5px] font-medium"
             aria-label="Add new profile"
           >
             <span>Add Profile</span>
-            <span className="w-6 h-6 rounded-full bg-background text-foreground inline-flex items-center justify-center">
+            <span className="w-6 h-6 rounded-full bg-white text-primary inline-flex items-center justify-center">
               <UserPlus size={13} aria-hidden="true" />
             </span>
           </button>

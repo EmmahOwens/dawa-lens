@@ -184,10 +184,10 @@ export default function OnboardingPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="btn-editorial-roll w-full h-12 sm:h-[52px] pl-6 pr-2.5 bg-foreground text-background hover:opacity-90 text-[14.5px] font-medium justify-between disabled:opacity-50"
+                className="btn-editorial-roll w-full h-12 sm:h-[52px] pl-6 pr-2.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[14.5px] font-medium justify-between disabled:opacity-50"
               >
                 <span>{loading ? "Preparing Health Lens..." : "Continue to Dashboard"}</span>
-                <span className="roll-chip w-8 h-8 bg-background text-foreground">
+                <span className="roll-chip w-8 h-8 bg-white text-primary">
                   {loading ? (
                     <Loader2 size={14} className="animate-spin" />
                   ) : (

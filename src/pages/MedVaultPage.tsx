@@ -806,7 +806,7 @@ export default function MedVaultPage() {
             <button
               type="button"
               onClick={() => handleOpenPharmacyFinder(null)}
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium transition-opacity active:scale-95"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[12.5px] font-medium transition-all active:scale-95"
             >
               <Compass className="size-3.5" />
               <span>NDA Pharmacies</span>
@@ -823,8 +823,8 @@ export default function MedVaultPage() {
         }
       />
 
-      {/* Nocturnal Obsidian Inventory Telemetry Panel */}
-      <div className="editorial-panel-dark rounded-[26px] p-6 sm:p-7 mb-7 text-white">
+      {/* Deep Apothecary Teal Inventory Telemetry Panel */}
+      <div className="editorial-panel-teal rounded-[26px] p-6 sm:p-7 mb-7 text-white">
         <div className="editorial-grain" aria-hidden="true" />
         <div className="relative z-10 space-y-5">
           <div className="flex items-center justify-between gap-3">
@@ -926,15 +926,15 @@ export default function MedVaultPage() {
               onClick={() => setFilter(tab.id as typeof filter)}
               className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-all active:scale-95 border ${
                 isActive
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card border-border/80 text-muted-foreground hover:text-foreground hover:border-foreground/25"
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20"
+                  : "bg-card border-border/80 text-muted-foreground hover:text-foreground hover:border-primary/30"
               }`}
             >
               {tab.dot && <span className={`size-1.5 rounded-full ${tab.dot}`} />}
               <span>{tab.label}</span>
               <span
                 className={`editorial-tabular text-[11px] ${
-                  isActive ? "text-background/70" : "text-muted-foreground"
+                  isActive ? "text-primary-foreground/80" : "text-muted-foreground"
                 }`}
               >
                 {tab.count}

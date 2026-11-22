@@ -178,14 +178,16 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
   return (
     <div className="mb-8">
       <div
-        className={`editorial-card group relative overflow-hidden p-5 sm:p-6 flex flex-col ${
-          activeMoodCfg ? activeMoodCfg.border : ""
+        className={`editorial-bento group relative overflow-hidden p-5 sm:p-6 flex flex-col bg-gradient-to-br ${
+          activeMoodCfg
+            ? `${activeMoodCfg.glow} via-card to-card ${activeMoodCfg.border}`
+            : "from-sky-50/70 via-card to-indigo-50/30 dark:from-sky-950/30 dark:via-card dark:to-indigo-950/20 border-sky-500/20 hover:border-sky-500/35"
         }`}
       >
         {/* Hairline Left Semantic Accent */}
         <div
           className={`absolute left-0 top-5 bottom-5 w-[3px] rounded-r-full ${
-            activeMoodCfg ? activeMoodCfg.accentBar : "bg-primary/60"
+            activeMoodCfg ? activeMoodCfg.accentBar : "bg-primary/70"
           } transition-colors duration-300`}
         />
 
@@ -193,7 +195,11 @@ export function HealthWidgets({ wellnessLogs, onAddLog }: HealthWidgetsProps) {
           {/* Header Row */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/75 text-foreground flex items-center justify-center shrink-0">
+              <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${
+                activeMoodCfg
+                  ? `${activeMoodCfg.badgeBg} ${activeMoodCfg.badgeBorder} ${activeMoodCfg.badgeText}`
+                  : "bg-primary/10 border-primary/20 text-primary"
+              }`}>
                 <Activity size={16} />
               </div>
               <div>

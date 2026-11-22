@@ -255,10 +255,10 @@ export function FeatureSlideshow() {
                   e.stopPropagation();
                   if (current.to) navigate(current.to);
                 }}
-                className="btn-editorial-roll self-start sm:self-end h-9 pl-4 pr-1.5 bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium shrink-0"
+                className="btn-editorial-roll self-start sm:self-end h-9 pl-4 pr-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[12.5px] font-medium shrink-0"
               >
                 <span>Open</span>
-                <span className="roll-chip w-6 h-6 bg-background text-foreground">
+                <span className="roll-chip w-6 h-6 bg-white text-primary">
                   <ArrowRight size={12} />
                 </span>
               </button>

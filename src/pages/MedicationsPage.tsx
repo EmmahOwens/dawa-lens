@@ -776,10 +776,10 @@ export default function MedicationsPage() {
             }}
             aria-label="Add Medicine"
             title="Add Medicine"
-            className="btn-editorial-roll h-10 sm:h-11 px-3.5 sm:pl-5 sm:pr-2.5 bg-foreground text-background hover:opacity-90 text-[13px] font-medium shrink-0"
+            className="btn-editorial-roll h-10 sm:h-11 px-3.5 sm:pl-5 sm:pr-2.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[13px] font-medium shrink-0"
           >
             <span className="hidden sm:inline">Add Medicine</span>
-            <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-background text-foreground inline-flex items-center justify-center">
+            <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white text-primary inline-flex items-center justify-center">
               <Plus size={14} />
             </span>
           </button>
@@ -830,10 +830,10 @@ export default function MedicationsPage() {
         <button
           type="button"
           onClick={() => navigate("/medvault")}
-          className="editorial-card group flex items-center justify-between p-4 sm:p-5 text-left active:scale-[0.985]"
+          className="editorial-bento bg-gradient-to-br from-teal-50/90 via-card to-cyan-50/35 dark:from-teal-950/40 dark:via-card dark:to-cyan-950/20 border-teal-500/25 hover:border-teal-500/45 group flex items-center justify-between p-4 sm:p-5 text-left active:scale-[0.985]"
         >
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="h-10 w-10 bg-secondary border border-border/75 text-foreground rounded-xl flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 bg-teal-500/15 border border-teal-500/25 text-teal-600 dark:text-teal-400 rounded-xl flex items-center justify-center shrink-0">
               <Package2 size={17} />
             </div>
             <div className="min-w-0">
@@ -849,10 +849,10 @@ export default function MedicationsPage() {
         <button
           type="button"
           onClick={() => navigate("/reminders/new")}
-          className="editorial-card group flex items-center justify-between p-4 sm:p-5 text-left active:scale-[0.985]"
+          className="editorial-bento bg-gradient-to-br from-indigo-50/90 via-card to-blue-50/35 dark:from-indigo-950/40 dark:via-card dark:to-blue-950/20 border-indigo-500/25 hover:border-indigo-500/45 group flex items-center justify-between p-4 sm:p-5 text-left active:scale-[0.985]"
         >
           <div className="flex items-center gap-3.5 min-w-0">
-            <div className="h-10 w-10 bg-secondary border border-border/75 text-foreground rounded-xl flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 bg-indigo-500/15 border border-indigo-500/25 text-indigo-600 dark:text-indigo-400 rounded-xl flex items-center justify-center shrink-0">
               <PlusCircle size={17} />
             </div>
             <div className="min-w-0">
@@ -907,15 +907,15 @@ export default function MedicationsPage() {
               onClick={() => setFilter(tab.id as typeof filter)}
               className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-all active:scale-95 border ${
                 isActive
-                  ? "bg-foreground text-background border-foreground"
-                  : "bg-card border-border/80 text-muted-foreground hover:text-foreground hover:border-foreground/25"
+                  ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20"
+                  : "bg-card border-border/80 text-muted-foreground hover:text-foreground hover:border-primary/30"
               }`}
             >
               {tab.dot && <span className={`size-1.5 rounded-full ${tab.dot}`} />}
               <span>{tab.label}</span>
               <span
                 className={`editorial-tabular text-[11px] ${
-                  isActive ? "text-background/70" : "text-muted-foreground"
+                  isActive ? "text-primary-foreground/80" : "text-muted-foreground"
                 }`}
               >
                 {tab.count}
@@ -958,7 +958,7 @@ export default function MedicationsPage() {
                 setSelectedMed(null);
                 setIsSheetOpen(true);
               }}
-              className="inline-flex items-center gap-2 bg-foreground text-background px-5 py-2.5 rounded-full text-[13px] font-medium hover:opacity-90 transition-opacity mt-1"
+              className="inline-flex items-center gap-2 bg-primary text-primary-foreground shadow-sm shadow-primary/20 px-5 py-2.5 rounded-full text-[13px] font-medium hover:bg-primary/90 transition-colors mt-1"
             >
               <Plus size={14} /> Add First Medicine
             </button>

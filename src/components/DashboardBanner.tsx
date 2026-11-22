@@ -89,7 +89,7 @@ export function DashboardBanner() {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: EDITORIAL_EASE }}
-      className="editorial-card relative mb-8 p-6 sm:p-8 overflow-hidden"
+      className="editorial-bento relative mb-8 p-6 sm:p-8 overflow-hidden bg-gradient-to-br from-emerald-50/80 via-card to-teal-50/40 dark:from-emerald-950/35 dark:via-card dark:to-teal-950/20 border-emerald-500/25 hover:border-emerald-500/40"
     >
       <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-7">
         <div className="space-y-5 max-w-xl">
@@ -128,10 +128,10 @@ export function DashboardBanner() {
         <button
           type="button"
           onClick={() => navigate("/report")}
-          className="btn-editorial-roll self-start md:self-end h-11 pl-5 pr-2 bg-foreground text-background hover:opacity-90 text-[13px] font-medium shrink-0"
+          className="btn-editorial-roll self-start md:self-end h-11 pl-5 pr-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[13px] font-medium shrink-0"
         >
           <span>Detailed Report</span>
-          <span className="roll-chip w-7 h-7 bg-background text-foreground">
+          <span className="roll-chip w-7 h-7 bg-white text-primary">
             <ArrowRight size={13} />
           </span>
         </button>

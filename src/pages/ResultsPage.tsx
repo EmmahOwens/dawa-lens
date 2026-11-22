@@ -408,7 +408,7 @@ export default function ResultsPage() {
                         <div className="grid grid-cols-2 gap-2.5 pt-2">
                           <button
                             type="button"
-                            className="rounded-full h-11 text-[13px] font-medium bg-foreground text-background hover:opacity-90 transition-opacity active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-45"
+                            className="rounded-full h-11 text-[13px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-45"
                             onClick={() => handleConfirm(r)}
                             disabled={!!confirmed}
                           >

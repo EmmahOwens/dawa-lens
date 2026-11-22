@@ -182,9 +182,9 @@ export default function WelcomePage() {
   const isLast = currentStep === ONBOARDING_STEPS.length - 1;
 
   return (
-    <div className="relative h-[100dvh] min-h-[100dvh] w-full bg-[#060709] sm:p-4 md:p-5 overflow-hidden select-none">
+    <div className="relative h-[100dvh] min-h-[100dvh] w-full bg-[#091529] sm:p-4 md:p-5 overflow-hidden select-none">
       {/* Inset-Frame Photographic Stage */}
-      <div className="relative h-full w-full sm:rounded-[28px] md:rounded-[34px] overflow-hidden bg-[#080a0e] sm:border sm:border-white/10 flex flex-col justify-between">
+      <div className="relative h-full w-full sm:rounded-[28px] md:rounded-[34px] overflow-hidden bg-[#0c1b36] sm:border sm:border-sky-200/15 flex flex-col justify-between">
         {/* Background Photographic Media Layer with Settle-Zoom */}
         <AnimatePresence mode="sync">
           <motion.div
@@ -373,10 +373,10 @@ export default function WelcomePage() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="btn-editorial-roll flex-1 h-12 sm:h-[52px] pl-6 pr-2.5 bg-white hover:bg-white/90 text-[#0a0c10] text-[14.5px] font-medium justify-between shadow-[0_12px_32px_rgba(0,0,0,0.35)]"
+                  className="btn-editorial-roll flex-1 h-12 sm:h-[52px] pl-6 pr-2.5 bg-white hover:bg-white/95 text-[#0d2244] text-[14.5px] font-medium justify-between shadow-[0_12px_32px_rgba(9,21,41,0.4)]"
                 >
                   <span>{isLast ? "Get Started" : "Continue"}</span>
-                  <span className="roll-chip w-8 h-8 bg-[#0a0c10] text-white">
+                  <span className="roll-chip w-8 h-8 bg-[#0066cc] text-white">
                     <ArrowRight size={14} />
                   </span>
                 </button>

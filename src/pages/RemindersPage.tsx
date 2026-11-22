@@ -65,6 +65,11 @@ import {
 import { getMedicineTheme, iconMap } from "@/lib/medicineTheme";
 import { ScreenHeroImage } from "@/components/ScreenHeroImage";
 import { SCREEN_MEDIA } from "@/lib/screenMedia";
+import {
+  EDITORIAL_EASE,
+  EditorialEyebrow,
+  EditorialMetricStrip,
+} from "@/components/editorial/EditorialPrimitives";
 
 const container = {
   hidden: {},
@@ -269,134 +274,103 @@ export default function RemindersPage() {
   };
 
   return (
-    <div className="w-full pb-8">
+    <div className="w-full pt-2 sm:pt-4 pb-10">
+      {/* Unified Editorial Split Hero (removes duplicate header) */}
       <ScreenHeroImage
+        asH1
+        indexLabel="01"
         src={SCREEN_MEDIA.remindersSchedule.src}
         lqip={SCREEN_MEDIA.remindersSchedule.lqip}
         alt="Morning medication routine with water, daily pill case, and smartphone"
-        eyebrow="Daily Schedule"
-        title={t("reminders.title", "Reminders")}
-        subtitle={`${enabledCount} active · ${takenToday} taken today`}
-      />
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-foreground leading-none">
-            {t("reminders.title", "Reminders")}
-          </h1>
-          <p className="text-[12px] text-muted-foreground mt-1 font-medium">
-            {enabledCount} active · {takenToday} taken today
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate("/medications")}
-            className="hidden sm:inline-flex items-center gap-1.5 text-[12px] font-semibold bg-muted/60 border border-border/70 hover:bg-muted text-foreground px-4 py-2 rounded-full transition-all active:scale-95 shadow-xs"
-          >
-            <Pill className="size-3.5 text-primary" />
-            <span>Medications</span>
-          </button>
-          <button
-            onClick={() =>
-              navigate("/reminders/new", {
-                state: {
-                  patientId: resolvedPatient.id,
-                  patientName: !resolvedPatient.isOwner ? resolvedPatient.name : null,
-                },
-              })
-            }
-            className="inline-flex items-center gap-1.5 bg-[#0066cc] hover:bg-[#0071e3] text-white px-5 py-2 rounded-full text-[13px] font-medium active:scale-[0.98] transition-colors shadow-xs"
-          >
-            <Plus size={15} />
-            Add
-          </button>
-        </div>
-      </div>
-
-      {/* Hero Stats Tile */}
-      <div
-        className={`relative overflow-hidden rounded-[22px] border p-6 mb-6 shadow-xl transition-all duration-300 text-white ${
-          isComplete
-            ? "bg-gradient-to-br from-[#092019] via-[#0d2a21] to-[#071712] border-emerald-500/30 shadow-emerald-950/25"
-            : "bg-gradient-to-br from-[#0c182b] via-[#0f213d] to-[#0a1526] border-blue-500/25 shadow-blue-950/25"
-        }`}
-      >
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-5">
-            <div
-              className={`flex items-center gap-2 rounded-full px-3.5 py-1 border transition-colors ${
-                isComplete
-                  ? "bg-emerald-500/20 border-emerald-400/30 text-emerald-200"
-                  : "bg-blue-500/20 border-blue-400/30 text-blue-200"
-              }`}
+        eyebrow="Daily Schedule · Active Regimen"
+        title={`Daily ${t("reminders.title", "Reminders")}`}
+        accentWord={t("reminders.title", "Reminders")}
+        subtitle={`Stay on track with smart dosing intervals, native offline alerts, and live schedule tracking for ${resolvedPatient.isOwner ? "your routine" : resolvedPatient.name}.`}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() =>
+                navigate("/reminders/new", {
+                  state: {
+                    patientId: resolvedPatient.id,
+                    patientName: !resolvedPatient.isOwner ? resolvedPatient.name : null,
+                  },
+                })
+              }
+              className="btn-editorial-roll h-10 pl-4 pr-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[12.5px] font-medium"
             >
-              <div
-                className={`h-2 w-2 rounded-full ${
-                  isComplete
-                    ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
-                    : "bg-[#2997ff] shadow-[0_0_8px_#2997ff]"
-                }`}
-              />
-              <span className="text-[12px] font-medium tracking-normal">
-                Live Dosing &amp; Schedule
+              <span>Add Reminder</span>
+              <span className="w-6 h-6 rounded-full bg-white text-primary inline-flex items-center justify-center">
+                <Plus size={13} />
               </span>
-            </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/medications")}
+              className="hidden sm:inline-flex items-center gap-2 h-10 px-4 rounded-full border border-border bg-card hover:bg-secondary text-foreground text-[12.5px] font-medium transition-colors active:scale-95"
+            >
+              <Pill className="size-3.5 text-primary" />
+              <span>Medications</span>
+            </button>
+          </>
+        }
+      />
+
+      {/* Luminous Clinical Sapphire / Emerald Live Schedule Panel */}
+      <div
+        className={`${
+          isComplete ? "editorial-panel-emerald" : "editorial-panel-dark"
+        } rounded-[26px] p-6 sm:p-7 mb-6 text-white`}
+      >
+        <div className="editorial-grain" aria-hidden="true" />
+        <div className="relative z-10 space-y-5">
+          <div className="flex items-center justify-between gap-3">
+            <EditorialEyebrow
+              index="02"
+              label="Live Dosing & Schedule"
+              dotColor={isComplete ? "bg-emerald-400" : "bg-sky-300"}
+              onDark
+            />
 
             <button
+              type="button"
               onClick={() => navigate("/medvault")}
-              className={`hidden sm:inline-flex items-center gap-1.5 h-7 px-3 rounded-full border text-[12px] font-medium transition-colors active:scale-[0.98] ${
-                isComplete
-                  ? "bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-400/30 text-emerald-100"
-                  : "bg-blue-500/20 hover:bg-blue-500/30 border-blue-400/30 text-blue-100"
-              }`}
+              className="hidden sm:inline-flex items-center gap-1.5 editorial-glass-dark h-8 px-3.5 rounded-full text-white text-[11.5px] font-medium hover:bg-white/10 transition-colors active:scale-95"
             >
               <Pill size={12} />
               <span>Med Vault</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-white">
-                {enabledCount}
-              </p>
-              <p className="text-[12px] font-medium text-white/70 mt-0.5">
-                Active Schedules
-              </p>
-            </div>
-            <div>
-              <p className="text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight text-white">
-                {takenToday}
-              </p>
-              <p className="text-[12px] font-medium text-white/70 mt-0.5">
-                Taken Today
-              </p>
-            </div>
-            <div>
-              <p className={`text-[28px] sm:text-[34px] font-semibold leading-tight tracking-tight ${missedToday > 0 ? "text-rose-300" : "text-white"}`}>
-                {missedToday}
-              </p>
-              <p className="text-[12px] font-medium text-white/70 mt-0.5">
-                Missed Today
-              </p>
-            </div>
-          </div>
+          <EditorialMetricStrip
+            onDark
+            items={[
+              { label: "Active Schedules", value: enabledCount },
+              { label: "Taken Today", value: takenToday, tone: takenToday > 0 ? "success" : "default" },
+              {
+                label: "Missed Today",
+                value: missedToday,
+                tone: missedToday > 0 ? "danger" : "default",
+              },
+            ]}
+          />
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
-            <div className="flex items-center gap-2 text-[12px] font-medium">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/15">
+            <div className="flex items-center gap-2 text-[12.5px] font-normal">
               {missedToday > 0 ? (
                 <>
                   <AlertTriangle size={14} className="text-rose-300 animate-pulse flex-shrink-0" />
-                  <span className="text-white/80">{missedToday} dose{missedToday > 1 ? "s" : ""} recorded as missed today</span>
+                  <span className="text-white/85">{missedToday} dose{missedToday > 1 ? "s" : ""} recorded as missed today</span>
                 </>
               ) : isComplete ? (
                 <>
-                  <Check size={14} className="text-emerald-400 flex-shrink-0" />
-                  <span className="text-emerald-200">All scheduled doses logged for today! Outstanding routine 🎉</span>
+                  <Check size={14} className="text-emerald-300 flex-shrink-0" />
+                  <span className="text-emerald-100">All scheduled doses logged for today. Outstanding consistency.</span>
                 </>
               ) : (
                 <>
-                  <Clock size={14} className="text-[#2997ff] flex-shrink-0" />
+                  <Clock size={14} className="text-sky-300 flex-shrink-0" />
                   <span className="text-white/80">
                     {totalCount === 0
                       ? "Add medication reminders to track daily doses and smart shift alerts"
@@ -407,6 +381,7 @@ export default function RemindersPage() {
             </div>
 
             <button
+              type="button"
               onClick={() =>
                 navigate("/reminders/new", {
                   state: {
@@ -415,11 +390,7 @@ export default function RemindersPage() {
                   },
                 })
               }
-              className={`inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full border text-[12px] font-medium transition-colors active:scale-[0.98] ${
-                isComplete
-                  ? "bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-400/30 text-emerald-100"
-                  : "bg-blue-500/20 hover:bg-blue-500/30 border-blue-400/30 text-blue-100"
-              }`}
+              className="editorial-glass-dark inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-white text-[12px] font-medium hover:bg-white/10 transition-colors active:scale-95"
             >
               <Plus size={13} />
               <span>New Reminder</span>
@@ -438,25 +409,28 @@ export default function RemindersPage() {
         >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-secondary/80 hover:bg-secondary border border-border/60 transition-all text-left shadow-xs group">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card hover:bg-secondary border border-border/80 transition-all text-left group"
+              >
                 <div className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
                   <UserRound size={12} />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                <span className="editorial-mono text-[9.5px] text-muted-foreground">
                   Viewing:
                 </span>
-                <span className="text-[11px] font-bold text-foreground group-hover:text-primary transition-colors">
+                <span className="text-[12px] font-medium text-foreground group-hover:text-primary transition-colors">
                   {resolvedPatient.isOwner
                     ? `${resolvedPatient.name} (You)`
                     : resolvedPatient.name}
                 </span>
-                <ChevronDown size={12} className="text-muted-foreground opacity-60 ml-0.5" />
+                <ChevronDown size={13} className="text-muted-foreground opacity-60 ml-0.5" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="rounded-2xl p-1.5 min-w-[210px] shadow-xl border-border/40">
+            <DropdownMenuContent align="start" className="rounded-2xl p-1.5 min-w-[210px] shadow-xl border-border/60">
               <DropdownMenuItem
                 onClick={() => setSelectedPatientId(null)}
-                className={`rounded-xl px-3 py-2 text-xs font-bold cursor-pointer ${
+                className={`rounded-xl px-3 py-2 text-xs font-medium cursor-pointer ${
                   selectedPatientId === null ? "bg-primary/10 text-primary" : ""
                 }`}
               >
@@ -467,7 +441,7 @@ export default function RemindersPage() {
                 <DropdownMenuItem
                   key={p.id}
                   onClick={() => setSelectedPatientId(p.id)}
-                  className={`rounded-xl px-3 py-2 text-xs font-bold cursor-pointer ${
+                  className={`rounded-xl px-3 py-2 text-xs font-medium cursor-pointer ${
                     selectedPatientId === p.id ? "bg-primary/10 text-primary" : ""
                   }`}
                 >
@@ -483,15 +457,15 @@ export default function RemindersPage() {
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.03 }}
-          className="flex items-center gap-2 mb-5 px-4 py-2 rounded-2xl bg-secondary/80 border border-border/60 w-fit shadow-xs"
+          className="inline-flex items-center gap-2 mb-5 px-4 py-2 rounded-full bg-card border border-border/80 w-fit"
         >
           <div className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center flex-shrink-0">
             <UserRound size={12} />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          <span className="editorial-mono text-[9.5px] text-muted-foreground">
             Viewing:
           </span>
-          <span className="text-[11px] font-bold text-foreground">
+          <span className="text-[12px] font-medium text-foreground">
             {resolvedPatient.isOwner
               ? `${resolvedPatient.name} (You)`
               : resolvedPatient.name}
@@ -508,24 +482,24 @@ export default function RemindersPage() {
             animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, y: -8, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="mb-4 overflow-hidden"
+            className="mb-5 overflow-hidden"
           >
-            <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/25">
-              <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center">
-                <WifiOff size={14} className="text-amber-500" />
+            <div className="flex items-center gap-3 px-4 py-3 rounded-[20px] bg-amber-500/10 border border-amber-500/25">
+              <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center">
+                <WifiOff size={14} className="text-amber-600 dark:text-amber-400" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                <p className="text-[12px] font-medium text-amber-700 dark:text-amber-300">
                   Offline mode
                 </p>
-                <p className="text-[10px] text-amber-600/70 dark:text-amber-400/70 leading-snug">
+                <p className="text-[11px] text-amber-700/80 dark:text-amber-300/80 leading-snug">
                   {pendingOfflineOps > 0
                     ? `${pendingOfflineOps} change${pendingOfflineOps !== 1 ? "s" : ""} will sync when you reconnect`
                     : "Changes you make will sync when you reconnect"}
                 </p>
               </div>
               {pendingOfflineOps > 0 && (
-                <span className="flex-shrink-0 text-[10px] font-black bg-amber-500/20 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full">
+                <span className="flex-shrink-0 editorial-mono text-[9.5px] bg-amber-500/20 text-amber-700 dark:text-amber-300 px-2.5 py-0.5 rounded-full">
                   {pendingOfflineOps} pending
                 </span>
               )}
@@ -534,38 +508,40 @@ export default function RemindersPage() {
         )}
       </AnimatePresence>
 
-      {/* Interactive Stats Cards Row */}
+      {/* Color-Tinted Interactive Status Bento Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         {/* Total */}
         <button
+          type="button"
           onClick={() => toggleStatusFilter("all")}
-          className={`p-4 rounded-[20px] border text-center transition-all duration-200 cursor-pointer active:scale-95 ${
+          className={`editorial-bento p-4 text-center cursor-pointer active:scale-[0.98] bg-gradient-to-br from-indigo-50/90 via-card to-indigo-50/35 dark:from-indigo-950/45 dark:via-card dark:to-indigo-950/20 ${
             statusFilter === "all"
-              ? "bg-indigo-500/15 border-indigo-500/40 ring-2 ring-indigo-500/30 shadow-md"
-              : "bg-card border-border/80 hover:border-indigo-500/30 hover:bg-indigo-500/[0.04]"
+              ? "border-indigo-500/50 ring-2 ring-indigo-500/25"
+              : "border-indigo-500/25 hover:border-indigo-500/45"
           }`}
         >
-          <p className="text-[22px] font-bold text-indigo-600 dark:text-indigo-400 leading-none">
+          <p className="editorial-tabular text-[26px] font-light text-indigo-600 dark:text-indigo-400 leading-none">
             {scopedReminders.length}
           </p>
-          <p className="text-[12px] font-medium text-muted-foreground mt-1.5">
+          <p className="editorial-mono text-[9.5px] text-indigo-700/75 dark:text-indigo-300/75 mt-2">
             Total
           </p>
         </button>
 
         {/* Active */}
         <button
+          type="button"
           onClick={() => toggleStatusFilter("active")}
-          className={`p-4 rounded-[20px] border text-center transition-all duration-200 cursor-pointer active:scale-95 ${
+          className={`editorial-bento p-4 text-center cursor-pointer active:scale-[0.98] bg-gradient-to-br from-sky-50/90 via-card to-blue-50/35 dark:from-sky-950/45 dark:via-card dark:to-blue-950/20 ${
             statusFilter === "active"
-              ? "bg-sky-500/15 border-sky-500/40 ring-2 ring-sky-500/30 shadow-md"
-              : "bg-card border-border/80 hover:border-sky-500/30 hover:bg-sky-500/[0.04]"
+              ? "border-sky-500/50 ring-2 ring-sky-500/25"
+              : "border-sky-500/25 hover:border-sky-500/45"
           }`}
         >
-          <p className="text-[22px] font-bold text-sky-600 dark:text-sky-400 leading-none">
+          <p className="editorial-tabular text-[26px] font-light text-sky-600 dark:text-sky-400 leading-none">
             {enabledCount}
           </p>
-          <p className="text-[12px] font-medium text-muted-foreground mt-1.5 flex items-center justify-center gap-1">
+          <p className="editorial-mono text-[9.5px] text-sky-700/75 dark:text-sky-300/75 mt-2 flex items-center justify-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
             Active
           </p>
@@ -573,17 +549,18 @@ export default function RemindersPage() {
 
         {/* Taken */}
         <button
+          type="button"
           onClick={() => toggleStatusFilter("taken")}
-          className={`p-4 rounded-[20px] border text-center transition-all duration-200 cursor-pointer active:scale-95 ${
+          className={`editorial-bento p-4 text-center cursor-pointer active:scale-[0.98] bg-gradient-to-br from-emerald-50/90 via-card to-teal-50/35 dark:from-emerald-950/45 dark:via-card dark:to-teal-950/20 ${
             statusFilter === "taken"
-              ? "bg-emerald-500/15 border-emerald-500/40 ring-2 ring-emerald-500/30 shadow-md"
-              : "bg-card border-border/80 hover:border-emerald-500/30 hover:bg-emerald-500/[0.04]"
+              ? "border-emerald-500/50 ring-2 ring-emerald-500/25"
+              : "border-emerald-500/25 hover:border-emerald-500/45"
           }`}
         >
-          <p className="text-[22px] font-bold text-emerald-600 dark:text-emerald-400 leading-none">
+          <p className="editorial-tabular text-[26px] font-light text-emerald-600 dark:text-emerald-400 leading-none">
             {takenToday}
           </p>
-          <p className="text-[12px] font-medium text-muted-foreground mt-1.5 flex items-center justify-center gap-1">
+          <p className="editorial-mono text-[9.5px] text-emerald-700/75 dark:text-emerald-300/75 mt-2 flex items-center justify-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             Taken
           </p>
@@ -591,17 +568,18 @@ export default function RemindersPage() {
 
         {/* Skipped */}
         <button
+          type="button"
           onClick={() => toggleStatusFilter("skipped")}
-          className={`p-4 rounded-[20px] border text-center transition-all duration-200 cursor-pointer active:scale-95 ${
+          className={`editorial-bento p-4 text-center cursor-pointer active:scale-[0.98] bg-gradient-to-br from-amber-50/90 via-card to-orange-50/35 dark:from-amber-950/40 dark:via-card dark:to-orange-950/20 ${
             statusFilter === "skipped"
-              ? "bg-amber-500/15 border-amber-500/40 ring-2 ring-amber-500/30 shadow-md"
-              : "bg-card border-border/80 hover:border-amber-500/30 hover:bg-amber-500/[0.04]"
+              ? "border-amber-500/50 ring-2 ring-amber-500/25"
+              : "border-amber-500/25 hover:border-amber-500/45"
           }`}
         >
-          <p className="text-[22px] font-bold text-amber-600 dark:text-amber-400 leading-none">
+          <p className="editorial-tabular text-[26px] font-light text-amber-600 dark:text-amber-400 leading-none">
             {skippedToday}
           </p>
-          <p className="text-[12px] font-medium text-muted-foreground mt-1.5 flex items-center justify-center gap-1">
+          <p className="editorial-mono text-[9.5px] text-amber-700/75 dark:text-amber-300/75 mt-2 flex items-center justify-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             Skipped
           </p>
@@ -609,18 +587,19 @@ export default function RemindersPage() {
 
         {/* Missed */}
         <button
+          type="button"
           onClick={() => toggleStatusFilter("missed")}
-          className={`col-span-2 sm:col-span-1 p-4 rounded-[20px] border text-center flex sm:flex-col items-center justify-between sm:justify-center transition-all duration-200 cursor-pointer active:scale-95 ${
+          className={`col-span-2 sm:col-span-1 editorial-bento p-4 text-center flex sm:flex-col items-center justify-between sm:justify-center cursor-pointer active:scale-[0.98] bg-gradient-to-br from-rose-50/90 via-card to-pink-50/35 dark:from-rose-950/40 dark:via-card dark:to-pink-950/20 ${
             statusFilter === "missed"
-              ? "bg-rose-500/15 border-rose-500/40 ring-2 ring-rose-500/30 shadow-md"
-              : "bg-card border-border/80 hover:border-rose-500/30 hover:bg-rose-500/[0.04]"
+              ? "border-rose-500/50 ring-2 ring-rose-500/25"
+              : "border-rose-500/25 hover:border-rose-500/45"
           }`}
         >
-          <p className={`text-[22px] font-bold leading-none ${missedToday > 0 ? "text-rose-600 dark:text-rose-400" : "text-foreground"}`}>
+          <p className={`editorial-tabular text-[26px] font-light leading-none ${missedToday > 0 ? "text-rose-600 dark:text-rose-400" : "text-rose-700/70 dark:text-rose-300/80"}`}>
             {missedToday}
           </p>
-          <p className="text-[12px] font-medium text-muted-foreground mt-0 sm:mt-1.5 flex items-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${missedToday > 0 ? "bg-rose-500 animate-ping" : "bg-muted-foreground/50"}`} />
+          <p className="editorial-mono text-[9.5px] text-rose-700/75 dark:text-rose-300/75 mt-0 sm:mt-2 flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${missedToday > 0 ? "bg-rose-500 animate-ping" : "bg-rose-400/60"}`} />
             Missed
           </p>
         </button>
@@ -635,17 +614,18 @@ export default function RemindersPage() {
 
       {/* Search Input Bar */}
       {scopedReminders.length > 0 && (
-        <div className="relative mb-3">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <div className="relative mb-3.5">
+          <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search reminders by medicine, dose, or time..."
-            className="h-11 rounded-full border-border/80 bg-card/90 pl-11 pr-10 text-[14px] focus:border-indigo-500 shadow-xs transition-all"
+            className="h-11 rounded-full border-border/80 bg-card pl-11 pr-10 text-[14px] focus:border-primary transition-colors"
           />
           {searchQuery && (
             <button
+              type="button"
               onClick={() => setSearchQuery("")}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -657,7 +637,7 @@ export default function RemindersPage() {
 
       {/* Filter Chips Bar */}
       {scopedReminders.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-6">
           {[
             { id: "all", label: "All Reminders", count: totalCount },
             { id: "active", label: "Active", count: enabledCount, dot: "bg-sky-500" },
@@ -672,10 +652,10 @@ export default function RemindersPage() {
                 type="button"
                 key={tab.id}
                 onClick={() => setStatusFilter(tab.id as typeof statusFilter)}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap active:scale-95 ${
+                className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[12.5px] font-medium transition-all whitespace-nowrap active:scale-95 border ${
                   isActive
-                    ? "bg-foreground text-background shadow-sm"
-                    : "neu-pill text-muted-foreground hover:text-foreground"
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm shadow-primary/20"
+                    : "bg-card border-border/80 text-muted-foreground hover:text-foreground hover:border-primary/30"
                 }`}
               >
                 {tab.dot && (
@@ -683,8 +663,8 @@ export default function RemindersPage() {
                 )}
                 <span>{tab.label}</span>
                 <span
-                  className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
-                    isActive ? "bg-background/25 text-background" : "bg-muted text-muted-foreground"
+                  className={`editorial-tabular text-[11px] ${
+                    isActive ? "text-primary-foreground/80" : "text-muted-foreground"
                   }`}
                 >
                   {tab.count}
@@ -701,35 +681,36 @@ export default function RemindersPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-24 w-full rounded-2xl bg-muted/40 animate-pulse"
+              className="h-24 w-full rounded-[24px] bg-muted/40 animate-pulse"
             />
           ))}
         </div>
       ) : scopedReminders.length === 0 ? (
-        /* Empty State: No reminders exist in vault yet */
+        /* Editorial Empty State */
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative overflow-hidden flex flex-col items-center justify-center py-16 px-6 rounded-[28px] border border-indigo-500/25 bg-gradient-to-b from-card via-card to-card/60 text-center gap-5 shadow-sm"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: EDITORIAL_EASE }}
+          className="editorial-card relative overflow-hidden flex flex-col items-center justify-center py-14 px-6 text-center gap-5"
         >
-          {/* Soft ambient background glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Icon Badge */}
-          <div className="relative w-18 h-18 rounded-3xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-500/25 flex items-center justify-center border border-white/20">
-            <Bell size={32} className="animate-bounce" />
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
+            <Bell size={28} />
           </div>
 
-          <div className="max-w-md">
-            <h3 className="text-xl font-bold text-foreground mb-1.5">
-              No reminders yet
+          <div className="max-w-md space-y-1.5">
+            <h3 className="editorial-display text-[24px] font-medium text-foreground">
+              No reminders{" "}
+              <em className="editorial-serif text-[1.08em] text-muted-foreground font-normal">
+                scheduled.
+              </em>
             </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Add your first medicine reminder to stay on schedule with notifications, dose logging, and intelligent interval shifting.
+            <p className="text-[13.5px] text-muted-foreground leading-relaxed">
+              Add your first medicine reminder to stay on schedule with native offline alarms, dose logging, and intelligent interval shifting.
             </p>
           </div>
 
-          <Button
+          <button
+            type="button"
             onClick={() =>
               navigate("/reminders/new", {
                 state: {
@@ -738,34 +719,37 @@ export default function RemindersPage() {
                 },
               })
             }
-            className="rounded-full px-6 py-2.5 h-auto text-[13px] font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/25 hover:brightness-105 active:scale-95 transition-all gap-2"
+            className="btn-editorial-roll h-11 pl-5 pr-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[13.5px] font-medium"
           >
-            <Plus size={16} /> Add Reminder
-          </Button>
+            <span>Add First Reminder</span>
+            <span className="w-7 h-7 rounded-full bg-white text-primary inline-flex items-center justify-center">
+              <Plus size={14} />
+            </span>
+          </button>
 
-          {/* Feature Highlights */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2 w-full max-w-lg pt-4 border-t border-border/50">
-            <div className="p-3 rounded-2xl bg-secondary/60 border border-border/40 text-left">
-              <p className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                <Clock size={12} className="text-indigo-500" /> Smart Intervals
+          {/* Color-Tinted Feature Highlight Bento Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2 w-full max-w-2xl pt-5 border-t border-border/60">
+            <div className="editorial-bento p-4 bg-gradient-to-br from-indigo-50/85 via-card to-indigo-50/30 dark:from-indigo-950/40 dark:via-card dark:to-indigo-950/20 border-indigo-500/20 text-left">
+              <p className="text-[12px] font-medium text-foreground flex items-center gap-1.5">
+                <Clock size={13} className="text-indigo-500" /> Smart Intervals
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-[11.5px] text-muted-foreground mt-1 leading-snug">
                 Automatically adjusts follow-up doses when taken late.
               </p>
             </div>
-            <div className="p-3 rounded-2xl bg-secondary/60 border border-border/40 text-left">
-              <p className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                <Bell size={12} className="text-violet-500" /> Native Alerts
+            <div className="editorial-bento p-4 bg-gradient-to-br from-sky-50/85 via-card to-sky-50/30 dark:from-sky-950/40 dark:via-card dark:to-sky-950/20 border-sky-500/20 text-left">
+              <p className="text-[12px] font-medium text-foreground flex items-center gap-1.5">
+                <Bell size={13} className="text-sky-500" /> Native Alerts
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Fires device notifications even when offline.
+              <p className="text-[11.5px] text-muted-foreground mt-1 leading-snug">
+                Fires authoritative device alarms even when offline.
               </p>
             </div>
-            <div className="p-3 rounded-2xl bg-secondary/60 border border-border/40 text-left">
-              <p className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
-                <UserRound size={12} className="text-sky-500" /> Family Care
+            <div className="editorial-bento p-4 bg-gradient-to-br from-emerald-50/85 via-card to-emerald-50/30 dark:from-emerald-950/40 dark:via-card dark:to-emerald-950/20 border-emerald-500/20 text-left">
+              <p className="text-[12px] font-medium text-foreground flex items-center gap-1.5">
+                <UserRound size={13} className="text-emerald-500" /> Family Care
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-[11.5px] text-muted-foreground mt-1 leading-snug">
                 Track prescriptions for dependents and loved ones.
               </p>
             </div>

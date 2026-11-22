@@ -284,13 +284,13 @@ export default function TravelCompanionPage() {
               type="button"
               onClick={() => handleAnalyze()}
               disabled={loading || !destination}
-              className="btn-editorial-roll w-full h-12 pl-6 pr-2.5 bg-foreground text-background hover:opacity-90 text-[14px] font-medium justify-between disabled:opacity-45"
+              className="btn-editorial-roll w-full h-12 pl-6 pr-2.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[14px] font-medium justify-between disabled:opacity-45"
             >
               <span className="inline-flex items-center gap-2">
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Plane size={16} />}
                 <span>Analyze Trip &amp; Dosing Drift</span>
               </span>
-              <span className="roll-chip w-8 h-8 bg-background text-foreground">
+              <span className="roll-chip w-8 h-8 bg-white text-primary">
                 <ArrowRight size={14} />
               </span>
             </button>
@@ -324,9 +324,9 @@ export default function TravelCompanionPage() {
             animate="show"
             className="space-y-7"
           >
-            {/* Nocturnal Obsidian Clinical Boarding Pass */}
+            {/* Deep Aviation Indigo Clinical Boarding Pass */}
             <motion.div variants={item}>
-              <div className="editorial-panel-dark rounded-[26px] text-white">
+              <div className="editorial-panel-indigo rounded-[26px] text-white">
                 <div className="editorial-grain" aria-hidden="true" />
                 <div className="relative z-10 p-6 sm:p-8">
                   <div className="flex justify-between items-start mb-7">

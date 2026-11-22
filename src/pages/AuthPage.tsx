@@ -603,12 +603,12 @@ export default function AuthPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="btn-editorial-roll w-full h-12 pl-6 pr-2.5 bg-foreground text-background hover:opacity-90 text-[14.5px] font-medium justify-between mt-2 disabled:opacity-50"
+                    className="btn-editorial-roll w-full h-12 pl-6 pr-2.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[14.5px] font-medium justify-between mt-2 disabled:opacity-50"
                   >
                     <span>
                       {loading ? "Authenticating..." : isLogin ? "Sign In" : "Create Account"}
                     </span>
-                    <span className="roll-chip w-8 h-8 bg-background text-foreground">
+                    <span className="roll-chip w-8 h-8 bg-white text-primary">
                       {loading ? (
                         <Loader2 className="animate-spin" size={14} />
                       ) : (
@@ -713,10 +713,10 @@ export default function AuthPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="btn-editorial-roll w-full h-12 pl-6 pr-2.5 bg-foreground text-background hover:opacity-90 text-[14.5px] font-medium justify-between"
+                    className="btn-editorial-roll w-full h-12 pl-6 pr-2.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[14.5px] font-medium justify-between"
                   >
                     <span>{loading ? "Sending Link..." : "Send Reset Link"}</span>
-                    <span className="roll-chip w-8 h-8 bg-background text-foreground">
+                    <span className="roll-chip w-8 h-8 bg-white text-primary">
                       {loading ? (
                         <Loader2 className="animate-spin" size={14} />
                       ) : (
@@ -763,7 +763,7 @@ export default function AuthPage() {
                 <div className="space-y-2.5 pt-2">
                   <button
                     type="button"
-                    className="w-full h-12 rounded-full text-[14.5px] font-medium bg-foreground text-background hover:opacity-90 transition-opacity active:scale-[0.98] flex items-center justify-center gap-2"
+                    className="w-full h-12 rounded-full text-[14.5px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                     onClick={() => window.location.reload()}
                   >
                     <CheckCircle2 size={16} /> I&apos;ve Verified My Email

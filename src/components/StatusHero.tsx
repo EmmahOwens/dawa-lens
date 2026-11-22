@@ -30,17 +30,21 @@ export function StatusHero({
       transition={{ duration: 0.6, ease: EDITORIAL_EASE }}
       className="mb-8"
     >
-      <div className="editorial-panel-dark rounded-[28px] p-6 sm:p-8 text-white">
+      <div
+        className={`${
+          isComplete ? "editorial-panel-emerald" : "editorial-panel-dark"
+        } rounded-[28px] p-6 sm:p-8 text-white`}
+      >
         {/* Subtle static film grain */}
         <div className="editorial-grain" aria-hidden="true" />
 
-        {/* Subtle restrained semantic corner wash */}
+        {/* Subtle luminous corner accent */}
         <div
-          className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-25 blur-3xl"
+          className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full opacity-35 blur-3xl"
           style={{
             background: isComplete
-              ? "radial-gradient(circle, rgba(52,211,153,0.45), transparent 70%)"
-              : "radial-gradient(circle, rgba(41,151,255,0.4), transparent 70%)",
+              ? "radial-gradient(circle, rgba(52,211,153,0.5), transparent 70%)"
+              : "radial-gradient(circle, hsl(var(--hero-accent) / 0.5), transparent 70%)",
           }}
           aria-hidden="true"
         />
@@ -207,7 +211,7 @@ export function StatusHero({
               className="btn-editorial-roll editorial-glass-dark h-9 pl-4 pr-1.5 text-[12px] text-white hover:bg-white/10 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             >
               <span>View Schedule</span>
-              <span className="roll-chip w-6 h-6 bg-white text-[#080a0e]">
+              <span className="roll-chip w-6 h-6 bg-white text-[#0d2448]">
                 <ArrowRight size={12} aria-hidden="true" />
               </span>
             </button>

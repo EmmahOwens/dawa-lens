@@ -279,7 +279,7 @@ export default function Dashboard() {
               <span>Switch Profile</span>
             </button>
           ) : (
-            <div className="w-11 h-11 rounded-full bg-secondary border border-border/80 flex items-center justify-center text-foreground font-medium text-[15px] shrink-0">
+            <div className="w-11 h-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-semibold text-[15px] shrink-0">
               {userProfile?.name?.charAt(0)?.toUpperCase() || "U"}
             </div>
           )}
@@ -340,7 +340,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => navigate("/medvault")}
-                className="min-h-[36px] px-4 rounded-full bg-foreground text-background hover:opacity-90 text-[12px] font-medium active:scale-95 transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-[36px] px-4 rounded-full bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-medium active:scale-95 transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Refill
               </button>
@@ -364,7 +364,7 @@ export default function Dashboard() {
         }
       />
 
-      {/* 7. Architectural Editorial Bento Grid */}
+      {/* 7. Color-Tinted Editorial Bento Grid */}
       <div className="mb-10">
         <EditorialSectionHeader
           index="03"
@@ -379,7 +379,7 @@ export default function Dashboard() {
           animate="show"
           className="grid grid-cols-2 sm:grid-cols-4 gap-3.5"
         >
-          {/* Spotlight Tile: Optical Quick Scan (Obsidian Focal Tile) */}
+          {/* Spotlight Tile: Optical Quick Scan (Luminous Clinical Sapphire) */}
           <motion.button
             type="button"
             variants={item}
@@ -388,13 +388,13 @@ export default function Dashboard() {
             className="col-span-2 editorial-panel-dark rounded-[24px] p-5 sm:p-6 min-h-[188px] sm:min-h-[204px] flex flex-col justify-between items-start text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="editorial-grain" aria-hidden="true" />
-            <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-sky-400/70 to-transparent animate-bento-scanner pointer-events-none" />
+            <div className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-sky-300/80 to-transparent animate-bento-scanner pointer-events-none" />
 
             <div className="flex items-center justify-between w-full relative z-10">
               <div className="editorial-glass-dark w-10 h-10 rounded-full flex items-center justify-center text-white group-hover:scale-105 transition-transform">
                 <Camera size={18} />
               </div>
-              <span className="editorial-glass-dark rounded-full px-3 py-1 editorial-mono text-[9.5px] text-white/80 flex items-center gap-1.5">
+              <span className="editorial-glass-dark rounded-full px-3 py-1 editorial-mono text-[9.5px] text-sky-100 flex items-center gap-1.5">
                 <Sparkles size={10} className="text-sky-300" />
                 Optical AI
               </span>
@@ -402,35 +402,35 @@ export default function Dashboard() {
 
             <div className="relative z-10 pt-5 w-full flex items-end justify-between gap-3">
               <div>
-                <p className="editorial-mono text-[9.5px] text-white/50 mb-1">
+                <p className="editorial-mono text-[9.5px] text-sky-200/75 mb-1">
                   01 / Recognition
                 </p>
                 <h3 className="editorial-display text-[24px] sm:text-[26px] font-medium text-white leading-tight">
                   Quick{" "}
-                  <em className="editorial-serif text-[1.08em] text-white/70 font-normal">
+                  <em className="editorial-serif text-[1.08em] text-sky-200/90 font-normal">
                     Scan
                   </em>
                 </h3>
-                <p className="text-[13px] text-white/65 mt-1 leading-snug max-w-[16rem]">
+                <p className="text-[13px] text-white/75 mt-1 leading-snug max-w-[16rem]">
                   Identify loose pills, blister strips, and prescriptions instantly
                 </p>
               </div>
-              <span className="w-8 h-8 rounded-full bg-white text-[#0a0c10] inline-flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:-rotate-45">
+              <span className="w-8 h-8 rounded-full bg-white text-primary inline-flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:-rotate-45 shadow-sm">
                 <ArrowRight size={14} />
               </span>
             </div>
           </motion.button>
 
-          {/* Metric Tile: Adherence */}
+          {/* Metric Tile: Adherence (Botanical Emerald Tint) */}
           <motion.button
             type="button"
             variants={item}
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate("/history")}
-            className="col-span-1 editorial-card p-5 min-h-[148px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-1 editorial-bento bg-gradient-to-br from-emerald-50/90 via-card to-emerald-50/35 dark:from-emerald-950/45 dark:via-card dark:to-emerald-950/20 border-emerald-500/25 hover:border-emerald-500/45 p-5 min-h-[148px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/70 flex items-center justify-center text-foreground">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <History size={16} aria-hidden="true" />
               </div>
               <svg
@@ -447,7 +447,7 @@ export default function Dashboard() {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2.5"
-                  className="text-border"
+                  className="text-emerald-500/20"
                 />
                 <circle
                   cx="18"
@@ -466,54 +466,54 @@ export default function Dashboard() {
               </svg>
             </div>
             <div className="pt-3">
-              <p className="editorial-tabular text-[26px] font-light leading-none tracking-[-0.03em] text-foreground">
+              <p className="editorial-tabular text-[26px] font-light leading-none tracking-[-0.03em] text-emerald-700 dark:text-emerald-300">
                 {adherencePercent}
-                <span className="text-[13px] font-normal text-muted-foreground ml-0.5">%</span>
+                <span className="text-[13px] font-normal text-emerald-600/70 dark:text-emerald-400/70 ml-0.5">%</span>
               </p>
-              <p className="editorial-mono text-[9.5px] text-muted-foreground mt-2">
+              <p className="editorial-mono text-[9.5px] text-emerald-700/75 dark:text-emerald-300/75 mt-2">
                 Adherence
               </p>
             </div>
           </motion.button>
 
-          {/* Metric Tile: Med Vault */}
+          {/* Metric Tile: Med Vault (Apothecary Teal Tint) */}
           <motion.button
             type="button"
             variants={item}
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate("/medvault")}
-            className="col-span-1 editorial-card p-5 min-h-[148px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-1 editorial-bento bg-gradient-to-br from-teal-50/90 via-card to-cyan-50/35 dark:from-teal-950/45 dark:via-card dark:to-cyan-950/20 border-teal-500/25 hover:border-teal-500/45 p-5 min-h-[148px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/70 flex items-center justify-center text-foreground">
+              <div className="w-9 h-9 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center text-teal-600 dark:text-teal-400">
                 <Package2 size={16} />
               </div>
-              <span className="editorial-mono text-[9px] text-muted-foreground">
+              <span className="editorial-mono text-[9px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
                 NDA
               </span>
             </div>
             <div className="pt-3">
-              <p className="editorial-tabular text-[26px] font-light leading-none tracking-[-0.03em] text-foreground">
+              <p className="editorial-tabular text-[26px] font-light leading-none tracking-[-0.03em] text-teal-700 dark:text-teal-300">
                 {formatCompactNumber(totalPillsCount)}
-                <span className="text-[12px] font-normal text-muted-foreground ml-1">
+                <span className="text-[12px] font-normal text-teal-600/70 dark:text-teal-400/70 ml-1">
                   units
                 </span>
               </p>
-              <p className="editorial-mono text-[9.5px] text-muted-foreground mt-2">
+              <p className="editorial-mono text-[9.5px] text-teal-700/75 dark:text-teal-300/75 mt-2">
                 Med Vault
               </p>
             </div>
           </motion.button>
 
-          {/* Wide Tile: Family Hub */}
+          {/* Wide Tile: Family Hub (Sky Cobalt Tint) */}
           <motion.button
             type="button"
             variants={item}
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate(quickActions[1].to)}
-            className="col-span-2 editorial-card p-5 min-h-[92px] flex items-center gap-4 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-2 editorial-bento bg-gradient-to-br from-sky-50/90 via-card to-blue-50/40 dark:from-sky-950/40 dark:via-card dark:to-blue-950/20 border-sky-500/25 hover:border-sky-500/45 p-5 min-h-[92px] flex items-center gap-4 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <div className="w-10 h-10 rounded-xl bg-secondary border border-border/70 flex items-center justify-center text-foreground shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center text-sky-600 dark:text-sky-400 shrink-0">
               <Users size={17} />
             </div>
             <div className="flex-1 min-w-0">
@@ -529,32 +529,32 @@ export default function Dashboard() {
               {patients.slice(0, 3).map((p, idx) => (
                 <div
                   key={p.id || idx}
-                  className="w-7 h-7 rounded-full border-2 border-card bg-secondary text-foreground text-[11px] font-medium flex items-center justify-center uppercase"
+                  className="w-7 h-7 rounded-full border-2 border-card bg-sky-600 text-white text-[11px] font-medium flex items-center justify-center uppercase"
                 >
                   {p.name.charAt(0)}
                 </div>
               ))}
               {patients.length === 0 && (
-                <div className="w-7 h-7 rounded-full border border-dashed border-border text-muted-foreground flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full border border-dashed border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
                   <Plus size={12} />
                 </div>
               )}
             </div>
           </motion.button>
 
-          {/* Tile: Reminders */}
+          {/* Tile: Reminders (Royal Indigo Tint) */}
           <motion.button
             type="button"
             variants={item}
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate("/reminders")}
-            className="col-span-1 editorial-card p-5 min-h-[138px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-1 editorial-bento bg-gradient-to-br from-indigo-50/90 via-card to-indigo-50/35 dark:from-indigo-950/45 dark:via-card dark:to-indigo-950/20 border-indigo-500/25 hover:border-indigo-500/45 p-5 min-h-[138px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/70 flex items-center justify-center text-foreground">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                 <Bell size={16} />
               </div>
-              <span className="editorial-mono editorial-tabular text-[10px] text-primary">
+              <span className="editorial-mono editorial-tabular text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20">
                 {takenToday}/{expectedDosesToday}
               </span>
             </div>
@@ -570,19 +570,19 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* Tile: Wellness */}
+          {/* Tile: Wellness (Warm Rose Tint) */}
           <motion.button
             type="button"
             variants={item}
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate(quickActions[2].to)}
-            className="col-span-1 editorial-card p-5 min-h-[138px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-1 editorial-bento bg-gradient-to-br from-rose-50/90 via-card to-pink-50/35 dark:from-rose-950/40 dark:via-card dark:to-pink-950/20 border-rose-500/25 hover:border-rose-500/45 p-5 min-h-[138px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/70 flex items-center justify-center text-foreground">
+              <div className="w-9 h-9 rounded-xl bg-rose-500/15 border border-rose-500/25 flex items-center justify-center text-rose-600 dark:text-rose-400">
                 <Heart size={16} />
               </div>
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
             </div>
             <div className="pt-3">
               <p className="text-[15px] font-medium text-foreground leading-tight">
@@ -594,19 +594,19 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* Tile: Medications Cabinet */}
+          {/* Tile: Medications Cabinet (Clinical Blue Tint) */}
           <motion.button
             type="button"
             variants={item}
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate("/medications")}
-            className="col-span-1 editorial-card p-5 min-h-[138px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-1 editorial-bento bg-gradient-to-br from-blue-50/90 via-card to-sky-50/35 dark:from-blue-950/45 dark:via-card dark:to-sky-950/20 border-blue-500/25 hover:border-blue-500/45 p-5 min-h-[138px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <div className="flex items-center justify-between w-full">
-              <div className="w-9 h-9 rounded-xl bg-secondary border border-border/70 flex items-center justify-center text-foreground">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-600 dark:text-blue-400">
                 <Pill size={16} />
               </div>
-              <span className="editorial-mono editorial-tabular text-[10px] text-muted-foreground">
+              <span className="editorial-mono editorial-tabular text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
                 {scopedMedicines.length}
               </span>
             </div>
@@ -620,15 +620,15 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* Tile: Travel */}
+          {/* Tile: Travel (Violet Periwinkle Tint) */}
           <motion.button
             type="button"
             variants={item}
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate(quickActions[3].to)}
-            className="col-span-1 editorial-card p-5 min-h-[138px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-1 editorial-bento bg-gradient-to-br from-violet-50/90 via-card to-indigo-50/35 dark:from-violet-950/40 dark:via-card dark:to-indigo-950/20 border-violet-500/25 hover:border-violet-500/45 p-5 min-h-[138px] flex flex-col justify-between text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <div className="w-9 h-9 rounded-xl bg-secondary border border-border/70 flex items-center justify-center text-foreground">
+            <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center text-violet-600 dark:text-violet-400">
               <Plane size={16} />
             </div>
             <div className="pt-3">
@@ -641,15 +641,15 @@ export default function Dashboard() {
             </div>
           </motion.button>
 
-          {/* Wide Tile: Safety Check */}
+          {/* Wide Tile: Safety Check (Warm Amber Tint) */}
           <motion.button
             type="button"
             variants={item}
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate(quickActions[4].to)}
-            className="col-span-2 editorial-card p-5 min-h-[92px] flex items-center gap-4 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-2 editorial-bento bg-gradient-to-br from-amber-50/90 via-card to-orange-50/35 dark:from-amber-950/40 dark:via-card dark:to-orange-950/20 border-amber-500/30 hover:border-amber-500/50 p-5 min-h-[92px] flex items-center gap-4 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
               <ShieldAlert size={17} />
             </div>
             <div className="flex-1 min-w-0">
@@ -660,20 +660,20 @@ export default function Dashboard() {
                 Rx Interactions &amp; Local Diet Matrix
               </p>
             </div>
-            <span className="editorial-mono text-[10px] px-3 py-1.5 rounded-full border border-border bg-secondary/70 text-foreground shrink-0 group-hover:border-foreground/30 transition-colors">
+            <span className="editorial-mono text-[10px] px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300 shrink-0 group-hover:bg-amber-500/25 transition-colors">
               Review
             </span>
           </motion.button>
 
-          {/* Full-Span Tile: Medical Reports */}
+          {/* Full-Span Tile: Medical Reports (Clinical Sapphire-Teal Tint) */}
           <motion.button
             type="button"
             variants={item}
             whileTap={{ scale: 0.985 }}
             onClick={() => navigate(quickActions[7].to)}
-            className="col-span-2 sm:col-span-4 editorial-card p-5 sm:p-6 min-h-[92px] flex items-center gap-4 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="col-span-2 sm:col-span-4 editorial-bento bg-gradient-to-r from-blue-50/90 via-card to-teal-50/60 dark:from-blue-950/40 dark:via-card dark:to-teal-950/25 border-primary/25 hover:border-primary/45 p-5 sm:p-6 min-h-[92px] flex items-center gap-4 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            <div className="w-10 h-10 rounded-xl bg-secondary border border-border/70 flex items-center justify-center text-foreground shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 flex items-center justify-center text-primary shrink-0">
               <FileText size={17} />
             </div>
             <div className="flex-1 min-w-0">
@@ -684,7 +684,7 @@ export default function Dashboard() {
                 Doctor-Ready Clinical PDF Export &amp; 7-Day Adherence Analytics
               </p>
             </div>
-            <div className="hidden sm:block shrink-0 w-24 h-7 opacity-75 group-hover:opacity-100 transition-opacity">
+            <div className="hidden sm:block shrink-0 w-24 h-7 opacity-85 group-hover:opacity-100 transition-opacity">
               <svg className="w-full h-full" viewBox="0 0 70 22" fill="none" aria-hidden="true">
                 <path
                   d="M2 18 C 12 18, 16 7, 26 12 C 36 17, 42 3, 52 8 C 60 12, 64 5, 68 4"
@@ -697,7 +697,7 @@ export default function Dashboard() {
                 <circle cx="68" cy="4" r="2.2" fill="currentColor" className="text-primary" />
               </svg>
             </div>
-            <span className="editorial-mono text-[10px] px-3.5 py-1.5 rounded-full bg-foreground text-background shrink-0">
+            <span className="editorial-mono text-[10px] px-3.5 py-1.5 rounded-full bg-primary text-primary-foreground shadow-sm shadow-primary/20 shrink-0">
               Export
             </span>
           </motion.button>

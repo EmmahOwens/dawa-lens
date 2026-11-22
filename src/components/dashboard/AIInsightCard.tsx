@@ -115,7 +115,7 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
   }, [adherencePercent]);
 
   return (
-    <div className="editorial-card mb-8 p-6 sm:p-7 text-foreground">
+    <div className="editorial-bento mb-8 p-6 sm:p-7 text-foreground bg-gradient-to-br from-blue-50/75 via-card to-sky-50/35 dark:from-blue-950/35 dark:via-card dark:to-sky-950/20 border-primary/20 hover:border-primary/35">
       <div className="relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -196,10 +196,10 @@ export function AIInsightCard({ adherencePercent }: AIInsightCardProps) {
         <button
           type="button"
           onClick={() => openDawaGPTWithPrompt()}
-          className="btn-editorial-roll h-10 pl-4 pr-1.5 bg-foreground text-background hover:opacity-90 text-[12.5px] font-medium"
+          className="btn-editorial-roll h-10 pl-4 pr-1.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 text-[12.5px] font-medium"
         >
           <span>Ask DawaGPT</span>
-          <span className="roll-chip w-6 h-6 bg-background text-foreground">
+          <span className="roll-chip w-6 h-6 bg-white text-primary">
             <ArrowRight size={12} />
           </span>
         </button>

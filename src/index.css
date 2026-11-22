@@ -753,17 +753,17 @@
   }
 
   html.android-low-ram .editorial-glass-dark {
-    background: rgba(14, 16, 22, 0.92);
+    background: rgba(14, 30, 58, 0.94);
   }
 
-  /* Architectural Gallery Card (replaces noisy multi-gradient bento tiles) */
+  /* Architectural Gallery Card */
   .editorial-card {
     @apply rounded-[24px] border border-border/80 bg-card text-card-foreground transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
   }
 
   .editorial-card:hover {
-    @apply border-foreground/20;
+    @apply border-primary/25;
     box-shadow: 0 10px 28px -14px rgba(15, 23, 42, 0.1);
   }
 
@@ -772,20 +772,23 @@
   }
 
   .dark .editorial-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(147, 197, 253, 0.24);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 14px 32px -12px rgba(0, 0, 0, 0.55);
   }
 
-  /* Nocturnal Obsidian Clinical Panel (StatusHero, Vault Hero, Showcase Canvas) */
+  /* Luminous Adaptive Clinical Sapphire Panel (respects Light, Dark & Mood themes) */
   .editorial-panel-dark {
     position: relative;
     overflow: hidden;
-    background: #0a0c10;
+    background:
+      radial-gradient(520px circle at 12% 0%, hsl(var(--hero-from) / 0.58), transparent 62%),
+      radial-gradient(460px circle at 92% 10%, hsl(var(--hero-accent) / 0.26), transparent 60%),
+      linear-gradient(142deg, hsl(var(--hero-via)) 0%, hsl(var(--hero-to)) 100%);
     color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.11);
+    border: 1px solid hsl(var(--hero-accent) / 0.28);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08),
-      0 20px 44px -20px rgba(0, 0, 0, 0.5);
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 22px 46px -20px hsl(var(--hero-to) / 0.52);
   }
 
   .editorial-panel-dark::after {
@@ -793,7 +796,79 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(560px circle at 50% 0%, rgba(255, 255, 255, 0.07), transparent 68%);
+    background: radial-gradient(520px circle at 50% 0%, rgba(255, 255, 255, 0.1), transparent 65%);
+  }
+
+  /* Semantic Clinical Jewel Panels (Apothecary Teal, Botanical Emerald, Midnight Indigo) */
+  .editorial-panel-teal {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(460px circle at 10% 0%, rgba(45, 212, 191, 0.28), transparent 62%),
+      radial-gradient(420px circle at 94% 12%, rgba(56, 189, 248, 0.22), transparent 60%),
+      linear-gradient(142deg, #0f4c5c 0%, #0d3a49 54%, #092936 100%);
+    color: #ffffff;
+    border: 1px solid rgba(94, 234, 212, 0.26);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 22px 46px -20px rgba(9, 41, 54, 0.48);
+  }
+
+  .editorial-panel-emerald {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(460px circle at 12% 0%, rgba(52, 211, 153, 0.3), transparent 62%),
+      radial-gradient(420px circle at 92% 12%, rgba(45, 212, 191, 0.2), transparent 60%),
+      linear-gradient(142deg, #0e5343 0%, #0b3e32 54%, #082b23 100%);
+    color: #ffffff;
+    border: 1px solid rgba(110, 231, 183, 0.28);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 22px 46px -20px rgba(8, 43, 35, 0.48);
+  }
+
+  .editorial-panel-indigo {
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(480px circle at 14% 0%, rgba(99, 102, 241, 0.36), transparent 62%),
+      radial-gradient(420px circle at 90% 10%, rgba(56, 189, 248, 0.22), transparent 60%),
+      linear-gradient(142deg, #1d3274 0%, #16265c 54%, #101c45 100%);
+    color: #ffffff;
+    border: 1px solid rgba(165, 180, 252, 0.28);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 22px 46px -20px rgba(16, 28, 69, 0.48);
+  }
+
+  .editorial-panel-teal::after,
+  .editorial-panel-emerald::after,
+  .editorial-panel-indigo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(500px circle at 50% 0%, rgba(255, 255, 255, 0.09), transparent 65%);
+  }
+
+  /* Refined Tinted Editorial Bento Tile Base */
+  .editorial-bento {
+    @apply rounded-[24px] border transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out;
+    box-shadow: 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+  }
+
+  .editorial-bento:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px -16px rgba(15, 23, 42, 0.14);
+  }
+
+  .dark .editorial-bento {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .dark .editorial-bento:hover {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 34px -14px rgba(0, 0, 0, 0.55);
   }
 
   /* Subtle Static Film Grain Overlay (unifies photography & kills gradient banding) */

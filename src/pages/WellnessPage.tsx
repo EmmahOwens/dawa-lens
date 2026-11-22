@@ -743,7 +743,7 @@ export default function WellnessPage() {
               <Button
                 onClick={handleLogWellness}
                 disabled={loading || reflectionLoading}
-                className="w-full mt-8 h-12 rounded-full text-[13.5px] font-medium bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition-opacity"
+                className="w-full mt-8 h-12 rounded-full text-[13.5px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm shadow-primary/20 active:scale-[0.98] transition-all"
               >
                 {reflectionLoading ? (
                   <><Loader2 className="animate-spin mr-2" size={16} /> Generating Reflection…</>

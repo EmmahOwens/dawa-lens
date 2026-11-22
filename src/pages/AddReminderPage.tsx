@@ -1,7 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound, WifiOff, Package, AlertTriangle } from "@/lib/icons";
+import { ArrowLeft, ArrowRight, Save, Pill, Syringe, Droplets, Tablets, Info, Check, UserRound, WifiOff, Package, AlertTriangle } from "@/lib/icons";
+import {
+  EDITORIAL_EASE,
+  EditorialEyebrow,
+} from "@/components/editorial/EditorialPrimitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppleTimePicker } from "@/components/ui/time-picker";
@@ -41,12 +45,54 @@ interface LocationState {
 }
 
 const COLORS = [
-  { name: "blue", value: "bg-blue-500", border: "border-blue-500/20", text: "text-blue-500" },
-  { name: "green", value: "bg-emerald-500", border: "border-emerald-500/20", text: "text-emerald-500" },
-  { name: "purple", value: "bg-violet-500", border: "border-violet-500/20", text: "text-violet-500" },
-  { name: "rose", value: "bg-rose-500", border: "border-rose-500/20", text: "text-rose-500" },
-  { name: "amber", value: "bg-amber-500", border: "border-amber-500/20", text: "text-amber-500" },
-  { name: "slate", value: "bg-slate-600", border: "border-slate-600/20", text: "text-slate-600" },
+  {
+    name: "blue",
+    value: "bg-blue-500",
+    border: "border-blue-500/30",
+    text: "text-blue-600 dark:text-blue-400",
+    tint: "from-blue-50/90 via-card to-sky-50/40 dark:from-blue-950/45 dark:via-card dark:to-sky-950/20",
+    iconBg: "bg-blue-500/15 border-blue-500/25",
+  },
+  {
+    name: "green",
+    value: "bg-emerald-500",
+    border: "border-emerald-500/30",
+    text: "text-emerald-600 dark:text-emerald-400",
+    tint: "from-emerald-50/90 via-card to-teal-50/40 dark:from-emerald-950/45 dark:via-card dark:to-teal-950/20",
+    iconBg: "bg-emerald-500/15 border-emerald-500/25",
+  },
+  {
+    name: "purple",
+    value: "bg-violet-500",
+    border: "border-violet-500/30",
+    text: "text-violet-600 dark:text-violet-400",
+    tint: "from-violet-50/90 via-card to-indigo-50/40 dark:from-violet-950/45 dark:via-card dark:to-indigo-950/20",
+    iconBg: "bg-violet-500/15 border-violet-500/25",
+  },
+  {
+    name: "rose",
+    value: "bg-rose-500",
+    border: "border-rose-500/30",
+    text: "text-rose-600 dark:text-rose-400",
+    tint: "from-rose-50/90 via-card to-pink-50/40 dark:from-rose-950/45 dark:via-card dark:to-pink-950/20",
+    iconBg: "bg-rose-500/15 border-rose-500/25",
+  },
+  {
+    name: "amber",
+    value: "bg-amber-500",
+    border: "border-amber-500/30",
+    text: "text-amber-600 dark:text-amber-400",
+    tint: "from-amber-50/90 via-card to-orange-50/40 dark:from-amber-950/45 dark:via-card dark:to-orange-950/20",
+    iconBg: "bg-amber-500/15 border-amber-500/25",
+  },
+  {
+    name: "slate",
+    value: "bg-slate-600",
+    border: "border-slate-500/30",
+    text: "text-slate-600 dark:text-slate-300",
+    tint: "from-slate-100/90 via-card to-slate-50/40 dark:from-slate-900/55 dark:via-card dark:to-slate-950/25",
+    iconBg: "bg-slate-500/15 border-slate-500/25",
+  },
 ];
 
 const ICONS = [
@@ -388,18 +434,21 @@ export default function AddReminderPage() {
     }
   };
 
+  const activeColorCfg = COLORS.find((c) => c.name === color) || COLORS[0];
+
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-6">
+    <div className="w-full pt-2 sm:pt-4 pb-12">
+      <div className="flex items-center justify-between mb-5">
         <button
+          type="button"
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-2 h-9 px-3.5 rounded-full border border-border/80 bg-card hover:bg-secondary text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft size={16} /> {t("common.back")}
+          <ArrowLeft size={15} /> {t("common.back")}
         </button>
-        
+
         {!isOnline && (
-          <Badge variant="outline" className="rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5">
+          <Badge variant="outline" className="rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1.5 px-3 py-1">
             <WifiOff size={11} /> Saving Locally
           </Badge>
         )}
@@ -408,83 +457,108 @@ export default function AddReminderPage() {
       {/* Patient Context Banner — shown when scheduling for a family member / client */}
       {contextPatientName && (
         <motion.div
-          initial={{ opacity: 0, y: -8, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          className="mb-6 flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-primary/10 border border-primary/25 shadow-sm"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex items-center gap-3 px-5 py-3.5 rounded-[20px] bg-primary/[0.08] border border-primary/25"
         >
-          <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center text-primary flex-shrink-0">
             <UserRound size={16} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 leading-none mb-0.5">Scheduling for</p>
-            <p className="text-sm font-black text-primary tracking-tight truncate">{contextPatientName}</p>
+            <p className="editorial-mono text-[9.5px] text-primary/80 leading-none mb-1">Scheduling For</p>
+            <p className="text-[15px] font-medium text-foreground tracking-tight truncate">{contextPatientName}</p>
           </div>
-          <span className="text-[9px] font-black uppercase tracking-widest text-primary/50 bg-primary/10 px-2 py-1 rounded-lg flex-shrink-0">
+          <span className="editorial-mono text-[9.5px] text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full flex-shrink-0">
             Family Hub
           </span>
         </motion.div>
       )}
 
+      {/* Editorial Header + Color-Reactive Live Preview */}
       <motion.div
-        initial={{ opacity: 0, y: -8 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        transition={{ duration: 0.45, ease: EDITORIAL_EASE }}
+        className="editorial-card p-6 sm:p-7 mb-6"
       >
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-[-0.022em]">
-          {isEditing
-            ? t("reminders.edit_title", "Edit Reminder")
-            : t("reminders.add_title")}
+        <EditorialEyebrow
+          index="01"
+          label={isEditing ? "Schedule Studio · Edit" : "Schedule Studio · New"}
+          dotColor="bg-primary"
+          className="mb-2"
+        />
+        <h1 className="editorial-display text-[30px] sm:text-[38px] font-medium text-foreground leading-[1.02] mb-2">
+          {isEditing ? (
+            <>
+              Edit{" "}
+              <em className="editorial-serif text-[1.08em] text-muted-foreground font-normal">
+                reminder.
+              </em>
+            </>
+          ) : (
+            <>
+              Add{" "}
+              <em className="editorial-serif text-[1.08em] text-muted-foreground font-normal">
+                reminder.
+              </em>
+            </>
+          )}
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-[13.5px] text-muted-foreground max-w-lg">
           {contextPatientName
             ? `Setting up a medication schedule for ${contextPatientName}.`
-            : "Configure your medication schedule with precision."}
+            : "Configure your medication schedule, interval timing, and refill vault tracking with precision."}
         </p>
-      </motion.div>
 
-      {/* Live Preview - Apple Tile */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="mb-8"
-      >
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2.5 ml-1">Live Preview</p>
-        <div className={`relative flex items-center gap-4 p-4 rounded-[18px] border bg-[#f5f5f7] dark:bg-[#272729] transition-all duration-300 ${COLORS.find(c => c.name === color)?.border || 'border-border'}`}>
-          <div className={`flex-shrink-0 w-11 h-11 rounded-[11px] flex items-center justify-center transition-colors ${COLORS.find(c => c.name === color)?.value || 'bg-primary'} bg-opacity-10 ${COLORS.find(c => c.name === color)?.text || 'text-primary'}`}>
-            {(() => {
-              const IconComp = ICONS.find(i => i.name === icon)?.icon || Pill;
-              return <IconComp size={22} />;
-            })()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-bold text-foreground leading-tight truncate">
-              {medicineName || "Medicine Name"}
-            </p>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-semibold text-muted-foreground">{dose || "Dose"}</span>
-              <span className="text-muted-foreground/30">•</span>
-              <span className="text-xs font-semibold text-muted-foreground">{times.join(", ")}</span>
+        {/* Color-Reactive Bento Live Preview */}
+        <div className="mt-6 pt-5 border-t border-border/65">
+          <p className="editorial-mono text-[9.5px] text-muted-foreground mb-2.5">
+            Live Schedule Preview
+          </p>
+          <div
+            className={`editorial-bento relative flex items-center gap-4 p-4 sm:p-5 bg-gradient-to-br ${activeColorCfg.tint} ${activeColorCfg.border}`}
+          >
+            <div
+              className={`flex-shrink-0 w-12 h-12 rounded-2xl border flex items-center justify-center transition-colors ${activeColorCfg.iconBg} ${activeColorCfg.text}`}
+            >
+              {(() => {
+                const IconComp = ICONS.find((i) => i.name === icon)?.icon || Pill;
+                return <IconComp size={22} />;
+              })()}
             </div>
-          </div>
-          <div className="flex-shrink-0">
-            <div className={`w-2.5 h-2.5 rounded-full ${COLORS.find(c => c.name === color)?.value || 'bg-primary'}`} />
+            <div className="flex-1 min-w-0">
+              <p className="text-[16.5px] font-medium text-foreground leading-tight truncate">
+                {medicineName || "Medicine Name"}
+              </p>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <span className={`text-[12px] font-medium px-2 py-0.5 rounded-full border ${activeColorCfg.iconBg} ${activeColorCfg.text}`}>
+                  {dose || "Dose"}
+                </span>
+                <span className="editorial-mono editorial-tabular text-[11px] text-muted-foreground">
+                  {times.join(" · ")}
+                </span>
+              </div>
+            </div>
+            <div className="flex-shrink-0">
+              <div className={`w-3 h-3 rounded-full ${activeColorCfg.value} shadow-sm`} />
+            </div>
           </div>
         </div>
       </motion.div>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Medication Info Section */}
         <motion.section
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="premium-card space-y-6"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.05, ease: EDITORIAL_EASE }}
+          className="editorial-card p-6 sm:p-7 space-y-6"
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1 h-4 bg-primary rounded-full" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Medication Details</h2>
-          </div>
+          <EditorialEyebrow
+            index="02"
+            label="Medication Details"
+            dotColor="bg-blue-500"
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -636,15 +710,16 @@ export default function AddReminderPage() {
 
         {/* Schedule Section */}
         <motion.section
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="premium-card space-y-6"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.1, ease: EDITORIAL_EASE }}
+          className="editorial-card p-6 sm:p-7 space-y-6"
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1 h-4 bg-primary rounded-full" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Schedule & Timing</h2>
-          </div>
+          <EditorialEyebrow
+            index="03"
+            label="Schedule & Timing"
+            dotColor="bg-indigo-500"
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -757,18 +832,19 @@ export default function AddReminderPage() {
         
         {/* Stock Tracking (Med Vault) Section */}
         <motion.section
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.35 }}
-          className="premium-card space-y-6"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.15, ease: EDITORIAL_EASE }}
+          className="editorial-card p-6 sm:p-7 space-y-6"
         >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-4 bg-primary rounded-full" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Stock Tracking (Med Vault)</h2>
-            </div>
+          <div className="flex items-center justify-between gap-2">
+            <EditorialEyebrow
+              index="04"
+              label="Stock Tracking · Med Vault"
+              dotColor="bg-teal-500"
+            />
             {isAlreadyTracked && !isEditingStock && (
-              <span className="text-[9px] font-black uppercase tracking-widest text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2.5 py-1 rounded-lg">
+              <span className="editorial-mono text-[9.5px] text-teal-600 dark:text-teal-400 bg-teal-500/10 border border-teal-500/25 px-2.5 py-1 rounded-full">
                 Tracked
               </span>
             )}
@@ -971,45 +1047,52 @@ export default function AddReminderPage() {
 
         {/* Notes Section */}
         <motion.section
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="premium-card space-y-4"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.2, ease: EDITORIAL_EASE }}
+          className="editorial-card p-6 sm:p-7 space-y-4"
         >
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1 h-4 bg-primary rounded-full" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">{t("reminders.notes")}</h2>
-          </div>
+          <EditorialEyebrow
+            index="05"
+            label={t("reminders.notes")}
+            dotColor="bg-amber-500"
+          />
           <Textarea
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t("reminders.notes_placeholder")}
-            className="min-h-[100px] rounded-2xl border-border/50 bg-muted/20 focus:bg-background transition-all resize-none p-4"
+            className="min-h-[104px] rounded-2xl border-border/70 bg-secondary/50 focus:bg-card transition-all resize-none p-4"
           />
         </motion.section>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, type: "spring", damping: 25, stiffness: 200 }}
-          className="mt-8 flex justify-center w-full z-40"
+          transition={{ delay: 0.25, duration: 0.45, ease: EDITORIAL_EASE }}
+          className="pt-2 flex justify-center w-full z-40"
         >
           <div className="w-full max-w-lg pointer-events-auto">
             <button
+              type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="w-full h-12 rounded-full text-base font-semibold bg-[#0066cc] dark:bg-[#0071e3] text-white hover:opacity-95 transition-transform active:scale-95 flex items-center justify-center gap-2"
+              className="btn-editorial-roll w-full h-12 sm:h-[52px] pl-6 pr-2.5 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/25 text-[15px] font-medium justify-between disabled:opacity-50"
             >
-              <Save size={18} />
-              <span>
-                {isSaving
-                  ? "Saving Schedule..."
-                  : isEditing
-                  ? t("reminders.save_reminder", "Update Reminder")
-                  : !isOnline
-                  ? "Save Offline"
-                  : t("reminders.save_reminder")}
+              <span className="inline-flex items-center gap-2.5">
+                <Save size={17} />
+                <span>
+                  {isSaving
+                    ? "Saving Schedule..."
+                    : isEditing
+                    ? t("reminders.save_reminder", "Update Reminder")
+                    : !isOnline
+                    ? "Save Offline"
+                    : t("reminders.save_reminder")}
+                </span>
+              </span>
+              <span className="roll-chip w-8 h-8 bg-white text-primary">
+                <ArrowRight size={14} />
               </span>
             </button>
           </div>
